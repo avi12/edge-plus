@@ -31,12 +31,17 @@ inline constexpr uintptr_t IsEdgeSplitWindowEnabled             = 0x0fb9f2d;
 
 // --- struct field offsets ---
 namespace off {
-// MultiContentsView (a views::View subclass)
+// MultiContentsView : public views::View, public views::LayoutManagerBase.
+// The View base is at +0; the LayoutManagerBase subobject is embedded at +0x340
+// (verified: CalculateProposedLayout's `this` is that subobject, and it recovers
+// the MCV with `lea rax,[this-0x340]` before calling the MCV-relative helpers).
+inline constexpr uintptr_t MCV_layout_base      = 0x340; // LayoutManagerBase subobject within MCV
 inline constexpr uintptr_t MCV_containers_data = 0x368;  // ContentsContainerView** (vector begin)
 inline constexpr uintptr_t MCV_containers_count = 0x370; // size_t
 inline constexpr uintptr_t MCV_resize_area      = 0x3f0; // EdgeMultiContentsResizeArea* (single)
-inline constexpr uintptr_t MCV_active_index     = 0x428; // int (0/1 today)
-inline constexpr uintptr_t MCV_drop_target_view = 0x0b0; // views::View*
+inline constexpr uintptr_t MCV_orientation      = 0x428; // SplitTabLayout enum (0 = one axis, != 0 the other)
+inline constexpr uintptr_t MCV_split_ratio      = 0x430; // double (default 0.5)
+inline constexpr uintptr_t MCV_drop_target_view = 0x0b0; // views::View* (relative to the View base)
 // ContentsContainerView
 inline constexpr uintptr_t CCV_contents_web_view = 0x3a8; // ContentsWebView*
 inline constexpr uintptr_t CCV_is_active         = 0x38d; // bool

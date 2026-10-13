@@ -28,7 +28,29 @@ Every RVA and offset below is pinned to this build; re-verify after an Edge upda
 
 ## Struct layout (verified from disassembly)
 
-### `MultiContentsView` (a `views::View` subclass)
+### Layout entry point — the multiple-inheritance adjustment (verified 2026-10-13)
+
+`MultiContentsView : public views::View, public views::LayoutManagerBase`. The
+`views::View` base is at `+0`; the **`LayoutManagerBase` subobject is embedded at
+`+0x340`**. `CalculateProposedLayout` (rva `0x2b22540`) is the *LayoutManagerBase*
+virtual override, so **its `this` is the subobject at `MCV+0x340`, not the MCV**.
+It immediately does `lea r14,[this-0x340]` to recover the MCV, then calls the
+MCV-relative helpers with that:
+
+- `GetViewSizes(rcx = MCV)` — reads count `[MCV+0x370]`, data `[MCV+0x368]`,
+  resize area `[MCV+0x3f0]`, orientation `[MCV+0x428]`. (So these helpers take the
+  **MCV**; only `CalculateProposedLayout` takes the subobject.)
+- Inside `CalculateProposedLayout`, `[this+0xb0]` = `MCV+0x3f0` (resize area,
+  `GetVisible`-checked) and `[this+0xe8]` = `MCV+0x428` (orientation). Earlier these
+  were mis-read as MCV `+0xb0`/`+0xe8`; they are subobject-relative.
+
+**Hook consequence:** a detour on `CalculateProposedLayout` receives
+`this = MCV + 0x340`; recover `mcv = this - 0x340` before touching any MCV field.
+`rdx` = out `views::ProposedLayout*` (its ctor zeroes `0x20` bytes: `gfx::Size
+host_size` at `+0`, `std::vector<ChildLayout> child_layouts` at `+8`), `r8` = a
+2-entry `{int size @+0, bool visible @+4}` array (stride 8).
+
+### `MultiContentsView` (a `views::View` + `views::LayoutManagerBase` subclass)
 | offset | type | meaning | evidence |
 |---|---|---|---|
 | `+0x368` | `ContentsContainerView** ` | vector data begin | `[this+0x368][i*8]` in GetViewSizes/ShowSplitView/SetWebContentsAtIndex |

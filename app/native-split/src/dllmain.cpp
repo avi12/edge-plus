@@ -56,15 +56,17 @@ static void* __fastcall h_SetWC(void* self, void* wc, uint32_t index) {
   return o_SetWC(self, wc, index);
 }
 
-// ---- hook: CalculateProposedLayout(self, out, bounds) ----
-// Fires on every relayout of a split. Reads the live pane count + active index.
-using CalcLayout_t = void*(__fastcall*)(void* self, void* out, void* bounds);
+// ---- hook: LayoutManagerBase::CalculateProposedLayout(self, out, sizes) ----
+// Fires on every relayout of a split. `self` is the LayoutManagerBase subobject
+// embedded in the MultiContentsView, so the MCV is self - MCV_layout_base.
+using CalcLayout_t = void*(__fastcall*)(void* self, void* out, void* sizes);
 static CalcLayout_t o_CalcLayout = nullptr;
-static void* __fastcall h_CalcLayout(void* self, void* out, void* bounds) {
-  Log("[hook] CalculateProposedLayout self=%p paneCount=%llu active=%d",
-      self, (unsigned long long)U64(self, off::MCV_containers_count),
-      (int)U32(self, off::MCV_active_index));
-  return o_CalcLayout(self, out, bounds);
+static void* __fastcall h_CalcLayout(void* self, void* out, void* sizes) {
+  void* mcv = reinterpret_cast<uint8_t*>(self) - off::MCV_layout_base;
+  Log("[hook] CalculateProposedLayout mcv=%p paneCount=%llu orientation=%d",
+      mcv, (unsigned long long)U64(mcv, off::MCV_containers_count),
+      (int)U32(mcv, off::MCV_orientation));
+  return o_CalcLayout(self, out, sizes);
 }
 
 template <class T>
