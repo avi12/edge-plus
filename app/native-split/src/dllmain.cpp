@@ -94,7 +94,12 @@ static DWORD WINAPI Init(LPVOID) {
   Log("[init] hooks installed; waiting for a split to be created");
 
   // Toggle-off from the app: wait for the unload signal, then cleanly detach.
+  // Manual-reset, so the panel's IsActive() sees it the instant we are loaded.
   HANDLE ev = CreateEventW(nullptr, TRUE, FALSE, kUnloadEvent);
+  // A prior load cycle can leave the named object alive and still signalled for
+  // a moment after its DLL woke; clear it so a quick off->on re-toggle does not
+  // make this fresh instance unload itself immediately.
+  ResetEvent(ev);
   WaitForSingleObject(ev, INFINITE);
   Log("[unload] signalled; removing hooks");
   MH_DisableHook(MH_ALL_HOOKS);
