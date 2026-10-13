@@ -147,10 +147,18 @@ kbd {
   }
 }
 
-.merge {
+.wide {
   inline-size: 100%;
   justify-content: center;
+}
+
+.tile,
+.merge {
   margin-block-start: 14px;
+}
+
+.tile + .merge {
+  margin-block-start: 6px;
 }
 
 .note {

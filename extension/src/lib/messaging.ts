@@ -7,6 +7,8 @@ export enum MessageType {
   splitRight = "splitRight",
   splitDown = "splitDown",
   applyPreset = "applyPreset",
+  addSelectedTabs = "addSelectedTabs",
+  tile = "tile",
   merge = "merge"
 }
 
@@ -14,6 +16,8 @@ export enum MessageType {
 type SplitDescription = {
   isEnabled: boolean;
   panes: number;
+  /** Tabs selected in the tab strip that could become panes, the current one included */
+  selectedTabs: number;
 };
 
 type ProtocolMap = {
@@ -22,6 +26,8 @@ type ProtocolMap = {
   [MessageType.splitDown](windowId: number): void;
   [MessageType.applyPreset](request: { windowId: number; presetId: PresetId }): void;
   [MessageType.merge](windowId: number): void;
+  [MessageType.addSelectedTabs](windowId: number): void;
+  [MessageType.tile](windowId: number): void;
 };
 
 export const { sendMessage, onMessage } = defineExtensionMessaging<ProtocolMap>();

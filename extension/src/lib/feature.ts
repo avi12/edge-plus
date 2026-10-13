@@ -5,6 +5,8 @@ export enum Command {
   splitRight = "split-right",
   splitDown = "split-down",
   unsplit = "unsplit",
+  addSelectedTabs = "add-selected-tabs",
+  tile = "tile",
   focusLeft = "focus-left",
   focusRight = "focus-right",
   focusUp = "focus-up",

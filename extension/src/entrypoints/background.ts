@@ -81,7 +81,7 @@ export default defineBackground(() => {
 
   onMessage(MessageType.describeSplit, async ({ data: windowId }) => {
     if (!await isSplitEnabled()) {
-      return { isEnabled: false, panes: 1 };
+      return { isEnabled: false, panes: 1, selectedTabs: 0 };
     }
     return { isEnabled: true, ...await SplitPanes.describe(windowId) };
   });
@@ -101,6 +101,18 @@ export default defineBackground(() => {
   onMessage(MessageType.applyPreset, async ({ data }) => {
     if (await isSplitEnabled()) {
       await SplitPanes.applyPreset(data);
+    }
+  });
+
+  onMessage(MessageType.addSelectedTabs, async ({ data: windowId }) => {
+    if (await isSplitEnabled()) {
+      await SplitPanes.addSelectedTabs(windowId);
+    }
+  });
+
+  onMessage(MessageType.tile, async ({ data: windowId }) => {
+    if (await isSplitEnabled()) {
+      await SplitPanes.tile(windowId);
     }
   });
 

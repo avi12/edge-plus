@@ -37,7 +37,9 @@ export default defineConfig({
       [Command.focusDown]: { suggested_key: { default: "Alt+Shift+Down" }, description: "Move to the pane below" },
       [Command.splitRight]: { description: "Split the focused pane to the right" },
       [Command.splitDown]: { description: "Split the focused pane downward" },
-      [Command.unsplit]: { description: "Merge every pane back into one window" }
+      [Command.unsplit]: { description: "Merge every pane back into one window" },
+      [Command.addSelectedTabs]: { description: "Put the selected tabs into panes of one tab" },
+      [Command.tile]: { description: "Lay the panes out as an even grid" }
     },
     homepage_url: "https://avi12.com"
   },

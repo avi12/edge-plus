@@ -77,6 +77,18 @@
     </section>
 
     <section>
+      <h2>Add tabs</h2>
+      {#if state.selectedTabs > 1}
+        <button class="wide" onclick={() => run(() => sendMessage(MessageType.addSelectedTabs, state.windowId))}>
+          Put the {state.selectedTabs} selected tabs in panes
+          {@render shortcut(Command.addSelectedTabs)}
+        </button>
+      {:else}
+        <p class="meta">Ctrl + click tabs in the tab strip to pick as many as you like, then add them here</p>
+      {/if}
+    </section>
+
+    <section>
       <h2>Arrange this tab</h2>
       <p class="meta">The tabs to its right fill the other panes</p>
       <div class="presets">
@@ -96,8 +108,15 @@
       </div>
     </section>
 
+    {#if state.panes > 2}
+      <button class="wide tile" onclick={() => run(() => sendMessage(MessageType.tile, state.windowId))}>
+        Even out into a grid
+        {@render shortcut(Command.tile)}
+      </button>
+    {/if}
+
     {#if state.panes > 1}
-      <button class="merge" onclick={() => run(() => sendMessage(MessageType.merge, state.windowId))}>
+      <button class="wide merge" onclick={() => run(() => sendMessage(MessageType.merge, state.windowId))}>
         Merge back into one window
         {@render shortcut(Command.unsplit)}
       </button>

@@ -42,6 +42,9 @@ async function activeTab(windowId?: number) {
   return isSplittable ? tab : null;
 }
 
+/** The tab's own shape, so new panes split across their longer side on screen */
+const aspectOf = (tab: Browser.tabs.Tab) => tab.width && tab.height ? tab.width / tab.height : Layout.DEFAULT_ASPECT;
+
 async function writeState({ tab, state }: { tab: Browser.tabs.Tab; state: SplitState }) {
   await allowFramesInSplitTabs(tab.id);
   await browser.tabs.update(tab.id!, { url: splitPageUrl(state) });
@@ -62,6 +65,52 @@ async function addPane({ windowId, axis, url = "" }: { windowId?: number; axis: 
     tab,
     state: { root: Layout.split({ root, targetId, newPane: pane, axis }), activePaneId: pane.id }
   });
+}
+
+/**
+ * Every tab selected in the tab strip (Ctrl + click) moves into panes of one tab, the way Arc
+ * makes a split from a selection. A selected split tab takes the rest in; otherwise the tab you
+ * are on does. A selected split brings all its panes; Edge's own pages cannot be framed, so they
+ * stay tabs
+ */
+export async function addSelectedTabs(windowId?: number) {
+  const tab = await activeTab(windowId);
+  if (!tab) {
+    return;
+  }
+  const selected = await selectedTabs(tab.windowId);
+  const host = selected.find(other => isSplitPageUrl(other.url)) ?? tab;
+  const guests = selected.filter(other => other.id !== host.id);
+  if (guests.length === 0) {
+    return;
+  }
+  const current = stateOfTab(host.url);
+  const first = current ? null : newPane(frameable(host.url));
+  const added = guests.flatMap(guest => {
+    const guestState = stateOfTab(guest.url);
+    return guestState ? Layout.panes(guestState.root) : [newPane(guest.url)];
+  });
+  const root = Layout.grow({ root: current?.root ?? first!, newPanes: added, aspect: aspectOf(host) });
+  await writeState({ tab: host, state: { root, activePaneId: added[0]!.id } });
+  await browser.tabs.remove(guests.map(guest => guest.id!));
+  await browser.tabs.update(host.id!, { active: true });
+}
+
+/** Rebuilds the split as an even grid of its panes in reading order; focus stays where it was */
+export async function tile(windowId?: number) {
+  const tab = await activeTab(windowId);
+  const state = stateOfTab(tab?.url);
+  if (!tab || !state) {
+    return;
+  }
+  const root = Layout.tile({ panes: Layout.panes(state.root), aspect: aspectOf(tab) });
+  await writeState({ tab, state: { ...state, root } });
+}
+
+/** The selected tabs a pane can show: split tabs and framable pages, never another window's */
+async function selectedTabs(windowId: number) {
+  const highlighted = await browser.tabs.query({ windowId, highlighted: true });
+  return highlighted.filter(other => !other.incognito && (isSplitPageUrl(other.url) || frameable(other.url)));
 }
 
 /**
@@ -111,7 +160,10 @@ export async function merge(windowId?: number) {
 export async function describe(windowId: number) {
   const tab = await activeTab(windowId);
   const state = stateOfTab(tab?.url);
-  return { panes: state ? Layout.panes(state.root).length : 1 };
+  return {
+    panes: state ? Layout.panes(state.root).length : 1,
+    selectedTabs: tab ? (await selectedTabs(tab.windowId)).length : 0
+  };
 }
 
 /** Moves the focused pane to its neighbour on that side, the way a tiling window manager does */
@@ -205,7 +257,9 @@ export const splitPanes: FeatureModule = {
   commands: {
     [Command.splitRight]: splitRight,
     [Command.splitDown]: splitDown,
-    [Command.unsplit]: merge
+    [Command.unsplit]: merge,
+    [Command.addSelectedTabs]: addSelectedTabs,
+    [Command.tile]: tile
   },
   async onMenu(info, tab) {
     const windowId = tab?.windowId;
