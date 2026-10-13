@@ -1,0 +1,438 @@
+0x00fa5300	EdgeContentsContainerView::GetChildrenInZOrder
+0x0104261c	MultiContentsView::IsInSplitView
+0x01042628	MultiContentsView::GetActiveContentsView
+0x02664880	EdgeContentsContainerView::ClearParentContainerBorder
+0x026b8b28	MultiContentsView::GetInactiveContentsView
+0x026f16e0	edge::split_screen::SplitWindowControllerImplV2::MaybeCloseMainTabForUnloadEvents
+0x026fe190	std::__Cr::vector<base::raw_ptr<ContentsContainerView,1>,std::__Cr::allocator<base::raw_ptr<ContentsContainerView,1> > >::__base_destruct_at_end
+0x02705358	BrowserView::GetActiveContentsContainerView
+0x02705364	MultiContentsView::GetActiveContentsContainerView
+0x028adaae	BrowserViewLayoutImplOld::LayoutContentsContainerView
+0x028ade58	MultiContentsView::EdgeGetFirstContentsView
+0x028adea0	MultiContentsView::EdgeUpdateBorderVisibility
+0x028ae8f0	MultiContentsView::SetShouldShowTopSeparator
+0x028fa660	MultiContentsView::BeforeApplyLayout
+0x028fa716	ContentsContainerView::SetTargetContentBounds
+0x029427c0	ContentsContainerView::Layout
+0x02942814	ContentsContainerView::UpdateContentsClip
+0x029a2cb0	EdgeContentsContainerView::CalculateProposedLayout
+0x029a34bc	std::__Cr::vector<views::ChildLayout,std::__Cr::allocator<views::ChildLayout> >::emplace_back<edge::split_screen::EdgeMultiContentsResizeArea *,bool,gfx::Rect &>
+0x02a0c1ca	std::__Cr::vector<base::raw_ptr<ContentsContainerView,1>,std::__Cr::allocator<base::raw_ptr<ContentsContainerView,1> > >::__destroy_vector::operator()
+0x02b22540	MultiContentsView::CalculateProposedLayout
+0x02b22900	MultiContentsView::IsDragAndDropEnabled
+0x02b229e0	MultiContentsView::GetViewSizes
+0x02b22aa2	MultiContentsView::ClampToMinSize
+0x02b22ae6	MultiContentsView::CalculateSeparatorLayouts
+0x02b56844	MultiContentsView::ExecuteOnEachVisibleContentsView
+0x02b58432	ContentsContainerView::SetContentsResizingStrategy
+0x02b58cc8	MultiContentsView::GetFocusableViewsMapFor
+0x02c061c0	MultiContentsView::GetClassMetaData
+0x02c061c6	MultiContentsView::MetaData
+0x02c06232	MultiContentsView::MultiContentsView_MetaData::MultiContentsView_MetaData
+0x02c22fd0	MultiContentsViewDropTargetController::OnTabStripModelChanged
+0x02c23020	MultiContentsViewDropTargetController::HideDropTarget
+0x02ca672c	BrowserView::GetContentsContainerViews
+0x02ca6b88	ui::UserDataFactoryWithOwner<BrowserWindowInterface>::CreateInstance<DevtoolsUIController,base::raw_ptr<BrowserWindowInterface,0> &,std::__Cr::vector<base::raw_ptr<ContentsContainerView,1>,std::__Cr::allocator<base::raw_ptr<ContentsContainerView,1> > >,DevtoolsUIController>
+0x02ca7146	ui::UserDataFactoryWithOwner<BrowserWindowInterface>::CreateInstance<split_tabs::SplitTabHighlightController,BrowserWindowInterface *,MultiContentsView *,split_tabs::SplitTabHighlightController>
+0x02ca839a	std::__Cr::__tree<std::__Cr::__value_type<ContentsContainerView *,std::__Cr::unique_ptr<DevtoolsUIController::DevtoolsWebViewController,std::__Cr::default_delete<DevtoolsUIController::DevtoolsWebViewController> > >,std::__Cr::__map_value_compare<ContentsContainerView *,std::__Cr::pair<ContentsContainerView *const,std::__Cr::unique_ptr<DevtoolsUIController::DevtoolsWebViewController,std::__Cr::default_delete<DevtoolsUIController::DevtoolsWebViewController> > >,std::__Cr::less<ContentsContainerView *> >,std::__Cr::allocator<std::__Cr::pair<ContentsContainerView *const,std::__Cr::unique_ptr<DevtoolsUIController::DevtoolsWebViewController,std::__Cr::default_delete<DevtoolsUIController::DevtoolsWebViewController> > > > >::__emplace_unique<const std::__Cr::piecewise_construct_t &,std::__Cr::tuple<ContentsContainerView *const &>,std::__Cr::tuple<> >::<lambda_1>::operator()
+0x02ccd442	MultiContentsViewDelegateImpl::MultiContentsViewDelegateImpl
+0x02ccf346	ContentsContainerView::ApplyWatermarkSettings
+0x02ccfac2	edge::split_screen::SplitWindowControllerImplV2::SplitWindowControllerImplV2
+0x02cd0f00	edge::split_screen::EdgeMultiContentsResizeArea::SetVisible
+0x02cd1230	edge::split_screen::EdgeMultiContentsResizeArea::UpdateAccessibleDescription
+0x02cd1284	edge::split_screen::EdgeMultiContentsResizeArea::UpdateAccessibleName
+0x02cdf896	MultiContentsView::MultiContentsView
+0x02ce0508	std::__Cr::vector<base::raw_ptr<ContentsContainerView,1>,std::__Cr::allocator<base::raw_ptr<ContentsContainerView,1> > >::emplace_back<base::raw_ptr<ContentsContainerView,1> >
+0x02ce089c	base::flat_map<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > >,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > >,std::__Cr::allocator<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > > > > >::operator[]<base::raw_ptr<ContentsContainerView,1> >
+0x02ce096c	std::__Cr::vector<base::raw_ptr<ContentsContainerView,1>,std::__Cr::allocator<base::raw_ptr<ContentsContainerView,1> > >::__emplace_back_slow_path<base::raw_ptr<ContentsContainerView,1> >
+0x02ce0c8e	std::__Cr::vector<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > >,std::__Cr::allocator<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > > > >::emplace<const base::raw_ptr<ContentsContainerView,1> &,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > >
+0x02ce0dde	std::__Cr::__split_buffer<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > >,std::__Cr::allocator<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > > >,std::__Cr::__split_buffer_size_layout>::~__split_buffer
+0x02ce0e7e	std::__Cr::__split_buffer<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > >,std::__Cr::allocator<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > > >,std::__Cr::__split_buffer_size_layout>::emplace_back<const base::raw_ptr<ContentsContainerView,1> &,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > >
+0x02ce0f4a	std::__Cr::__split_buffer_size_layout<std::__Cr::__split_buffer<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > >,std::__Cr::allocator<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > > >,std::__Cr::__split_buffer_size_layout>,std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > >,std::__Cr::allocator<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > > > >::__re
+0x02ce1016	std::__Cr::__uninitialized_allocator_relocate<std::__Cr::allocator<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > > >,std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > > *>
+0x02ce11b0	edge::split_screen::EdgeMultiContentsResizeArea::EdgeMultiContentsResizeArea
+0x02ce12b0	EdgeContentsContainerView::EdgeContentsContainerView
+0x02ce170c	MultiContentsViewDropTargetController::MultiContentsViewDropTargetController
+0x02ce1ace	base::ScopedObservation<TabStripModel,MultiContentsViewDropTargetController,1>::Observe
+0x02ce1b32	ContentsContainerView::ContentsContainerView
+0x02d084a0	EdgeContentsContainerView::EdgeUpdateBorderAndOverlay
+0x02d2d300	EdgeContentsContainerView::GetClassMetaData
+0x02d2d306	EdgeContentsContainerView::MetaData
+0x02d2d372	EdgeContentsContainerView::EdgeContentsContainerView_MetaData::EdgeContentsContainerView_MetaData
+0x02d2d406	ContentsContainerView::MetaData
+0x02d2d470	ContentsContainerView::ContentsContainerView_MetaData::ContentsContainerView_MetaData
+0x02e0c120	MultiContentsView::OnThemeChanged
+0x02e0c13a	MultiContentsView::UpdateContentsBorderAndOverlay
+0x02e0c232	ContentsContainerView::SetRoundedCorners
+0x02e0c2a2	ContentsContainerView::UpdateBorderAndOverlay
+0x02ed6210	edge::split_screen::SplitWindowControllerImplV2::Init
+0x02f3d0c0	edge::split_screen::EdgeMultiContentsResizeArea::GetClassMetaData
+0x02f3d0c6	edge::split_screen::EdgeMultiContentsResizeArea::MetaData
+0x02f3d130	edge::split_screen::EdgeMultiContentsResizeArea::EdgeMultiContentsResizeArea_MetaData::EdgeMultiContentsResizeArea_MetaData
+0x02fe5590	edge::split_screen::SplitWindowControllerImplV2::OnTabStripModelChanged
+0x02fe5672	edge::split_screen::SplitWindowControllerImplV2::OnActiveTabChanged
+0x02fe5794	edge::split_screen::SplitWindowControllerImplV2::IsTabChangeInSplitView
+0x02ff48b0	edge::split_screen::SplitWindowControllerImplV2::`scalar deleting destructor'
+0x02ff48b0	edge::split_screen::SplitWindowControllerImplV2::`vector deleting destructor'
+0x02ff48de	edge::split_screen::SplitWindowControllerImplV2::~SplitWindowControllerImplV2
+0x02ff4ad6	edge::split_screen::SplitWindowControllerImplV2::NotifyControllerDestroyed
+0x0300b42a	std::__Cr::__tree<std::__Cr::__value_type<ContentsContainerView *,std::__Cr::unique_ptr<DevtoolsUIController::DevtoolsWebViewController,std::__Cr::default_delete<DevtoolsUIController::DevtoolsWebViewController> > >,std::__Cr::__map_value_compare<ContentsContainerView *,std::__Cr::pair<ContentsContainerView *const,std::__Cr::unique_ptr<DevtoolsUIController::DevtoolsWebViewController,std::__Cr::default_delete<DevtoolsUIController::DevtoolsWebViewController> > >,std::__Cr::less<ContentsContainerView *> >,std::__Cr::allocator<std::__Cr::pair<ContentsContainerView *const,std::__Cr::unique_ptr<DevtoolsUIController::DevtoolsWebViewController,std::__Cr::default_delete<DevtoolsUIController::DevtoolsWebViewController> > > > >::__tree_deleter::operator()
+0x0300b46b	std::__Cr::__destroy_at<std::__Cr::pair<ContentsContainerView *const,std::__Cr::unique_ptr<DevtoolsUIController::DevtoolsWebViewController,std::__Cr::default_delete<DevtoolsUIController::DevtoolsWebViewController> > > >
+0x0306f120	edge::split_screen::SplitWindowControllerImplV2::TearDownPreBrowserViewDestruction
+0x0306f296	MultiContentsView::EdgeGetContentsContainerViews
+0x030ae2d0	MultiContentsViewDelegateImpl::`scalar deleting destructor'
+0x030ae2d0	MultiContentsViewDelegateImpl::`vector deleting destructor'
+0x030ae2fe	MultiContentsViewDelegateImpl::~MultiContentsViewDelegateImpl
+0x0317a460	EdgeContentsContainerView::~EdgeContentsContainerView
+0x0317a498	EdgeContentsContainerView::~EdgeContentsContainerView
+0x0317a5e2	ContentsContainerView::~ContentsContainerView
+0x0317a932	EdgeContentsContainerViewBase::~EdgeContentsContainerViewBase
+0x03224590	MultiContentsView::~MultiContentsView
+0x032245c8	MultiContentsView::~MultiContentsView
+0x03224a0a	std::__Cr::vector<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > >,std::__Cr::allocator<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > > > >::__destroy_vector::operator()
+0x03224a8c	MultiContentsView::ContentsSeparators::~ContentsSeparators
+0x03224b1e	MultiContentsView::ContentsSeparators::Reset
+0x03224bb0	MultiContentsViewDropTargetController::~MultiContentsViewDropTargetController
+0x03224d2e	base::ScopedObservation<TabStripModel,MultiContentsViewDropTargetController,1>::~ScopedObservation
+0x03224d88	base::ScopedObservation<TabStripModel,MultiContentsViewDropTargetController,1>::Reset
+0x033c3f50	edge::split_screen::EdgeMultiContentsResizeArea::~EdgeMultiContentsResizeArea
+0x033c3f90	edge::split_screen::SplitWindowControllerImplV2::GetLocationBarModel
+0x033c4020	edge::split_screen::SplitWindowControllerImplV2::OnBrowserViewRemovedFromWidget
+0x033c4030	edge::split_screen::SplitWindowControllerImplV2::AddObserver
+0x033c4040	edge::split_screen::SplitWindowControllerImplV2::RemoveObserver
+0x033f9060	MultiContentsView::OnWebContentsFocused
+0x03425d20	edge::split_screen::SplitWindowControllerImplV2::IsSplitViewVisible
+0x03425d30	edge::split_screen::SplitWindowControllerImplV2::TearDownPreBrowserWindowDestruction
+0x03425d50	edge::split_screen::SplitWindowControllerImplV2::OnTabChangedAt
+0x034352c0	EdgeContentsContainerView::use_edge_devtools
+0x05412ba0	edge::split_screen::SplitWindowControllerImplV2::IsAnyValidSplitWindowOpened
+0x05466b60	MultiContentsViewDropTargetController::OnTabDragEntered
+0x05466b60	edge::split_screen::SplitWindowControllerImplV2::ContinueDragging
+0x05466b60	edge::split_screen::SplitWindowControllerImplV2::ExitFullscreenFromBrowserView
+0x05466b60	edge::split_screen::SplitWindowControllerImplV2::MaybeDuplicateSplitWindowForTab
+0x05466b60	edge::split_screen::SplitWindowControllerImplV2::OnDidChangeFocus
+0x05466b60	edge::split_screen::SplitWindowControllerImplV2::StartDrag
+0x05466b60	edge::split_screen::SplitWindowControllerImplV2::UpdateUIForTabFullscreenFromBrowserView
+0x0546d340	edge::split_screen::SplitWindowControllerImplV2::EndDrag
+0x0546d340	edge::split_screen::SplitWindowControllerImplV2::GetBubbleViewAnchorArrow
+0x055043b0	ContentsContainerView::`scalar deleting destructor'
+0x055043b0	ContentsContainerView::`vector deleting destructor'
+0x055043b0	EdgeContentsContainerViewBase::`scalar deleting destructor'
+0x055043b0	EdgeContentsContainerViewBase::`vector deleting destructor'
+0x0550a5c0	std::__Cr::vector<base::raw_ptr<ContentsContainerView,1>,std::__Cr::allocator<base::raw_ptr<ContentsContainerView,1> > >::__throw_length_error
+0x05546e80	MultiContentsViewDropTargetController::OnDragUpdated
+0x05651030	EdgeContentsContainerView::edge_devtools_resize_area_view
+0x05842710	edge::split_screen::SplitWindowControllerImplV2::GetToolbarCommandController
+0x05937e30	EdgeContentsContainerView::edge_contents_resizing_strategy
+0x05970890	edge::split_screen::SplitWindowControllerImplV2::GetWebContentsModalDialogHost
+0x059708a0	edge::split_screen::SplitWindowControllerImplV2::GetSplitWebContentsDelegate
+0x05a3fcb0	ContentsContainerView::`vector deleting destructor'
+0x05a693f0	ContentsContainerView::`vector deleting destructor'
+0x05a69400	ContentsContainerView::`vector deleting destructor'
+0x05c75ed0	ContentsContainerView::`vector deleting destructor'
+0x0675a0e0	edge::split_screen::SplitWindowControllerImplV2::DropWebContentsToSplitWindow
+0x07d2ff30	ContentsContainerView::`vector deleting destructor'
+0x08628ca0	ContentsContainerView::ContentsContainerView_MetaData::`scalar deleting destructor'
+0x08628ca0	ContentsContainerView::ContentsContainerView_MetaData::`vector deleting destructor'
+0x08628ca0	EdgeContentsContainerView::EdgeContentsContainerView_MetaData::`scalar deleting destructor'
+0x08628ca0	EdgeContentsContainerView::EdgeContentsContainerView_MetaData::`vector deleting destructor'
+0x08628ca0	MultiContentsView::MultiContentsView_MetaData::`scalar deleting destructor'
+0x08628ca0	MultiContentsView::MultiContentsView_MetaData::`vector deleting destructor'
+0x08628ca0	MultiContentsViewMiniToolbar::MultiContentsViewMiniToolbar_MetaData::`scalar deleting destructor'
+0x08628ca0	MultiContentsViewMiniToolbar::MultiContentsViewMiniToolbar_MetaData::`vector deleting destructor'
+0x08628ca0	edge::split_screen::EdgeMultiContentsResizeArea::EdgeMultiContentsResizeArea_MetaData::`scalar deleting destructor'
+0x08628ca0	edge::split_screen::EdgeMultiContentsResizeArea::EdgeMultiContentsResizeArea_MetaData::`vector deleting destructor'
+0x0873e140	edge::split_screen::SplitWindowControllerImplV2::AddRestoredSplitTab
+0x08f55420	ContentsContainerView::`vector deleting destructor'
+0x08f55430	ContentsContainerView::`vector deleting destructor'
+0x08f55450	ContentsContainerView::`vector deleting destructor'
+0x09ae82d0	ContentsContainerView::`vector deleting destructor'
+0x09ae82e0	ContentsContainerView::`vector deleting destructor'
+0x0a01606c	edge::split_screen::EdgeMultiContentsResizeArea::SetLayout
+0x0a0160e0	edge::split_screen::EdgeMultiContentsResizeArea::OnMouseEntered
+0x0a016110	edge::split_screen::EdgeMultiContentsResizeArea::OnMouseExited
+0x0a016140	edge::split_screen::EdgeMultiContentsResizeArea::OnFocus
+0x0a016170	edge::split_screen::EdgeMultiContentsResizeArea::OnBlur
+0x0a0161a0	edge::split_screen::EdgeMultiContentsResizeArea::OnPaint
+0x0a016260	edge::split_screen::EdgeMultiContentsResizeArea::`vector deleting destructor'
+0x0a016270	edge::split_screen::EdgeMultiContentsResizeArea::`vector deleting destructor'
+0x0a016280	edge::split_screen::EdgeMultiContentsResizeArea::`vector deleting destructor'
+0x0a016290	edge::split_screen::EdgeMultiContentsResizeArea::`vector deleting destructor'
+0x0a0162a0	edge::split_screen::EdgeMultiContentsResizeArea::`vector deleting destructor'
+0x0a0162b0	edge::split_screen::EdgeMultiContentsResizeArea::`vector deleting destructor'
+0x0a0162c0	edge::split_screen::EdgeMultiContentsResizeArea::`vector deleting destructor'
+0x0a01ee90	edge::split_screen::SplitWindowControllerImplV2::GetBubbleViewHighlightElementId
+0x0a01fa70	edge::split_screen::SplitWindowControllerImplV2::ShowSplitView
+0x0a01fc50	edge::split_screen::SplitWindowControllerImplV2::GetSplitData
+0x0a01fd38	edge::split_screen::SplitWindowControllerImplV2::EnsureControlButtons
+0x0a01fe4e	edge::split_screen::SplitWindowControllerImplV2::ListenWebContentsInputEvent
+0x0a01fe9a	edge::split_screen::SplitWindowControllerImplV2::ListenBrowserViewFocusChange
+0x0a01fef2	edge::split_screen::SplitWindowControllerImplV2::SetToolbarButtonChecked
+0x0a01ffc0	edge::split_screen::SplitWindowControllerImplV2::UpdateLinkedModeState
+0x0a02000a	edge::split_screen::SplitWindowControllerImplV2::NotifySplitWindowVisibilityChanged
+0x0a0201f0	edge::split_screen::SplitWindowControllerImplV2::HideSplitView
+0x0a0202f0	edge::split_screen::SplitWindowControllerImplV2::IsSplitViewVisibleAndFocused
+0x0a020360	edge::split_screen::SplitWindowControllerImplV2::AddWebContentsAtActiveTab
+0x0a0204f2	edge::split_screen::SplitWindowControllerImplV2::MaybeShareCopilotHostBetweenTabs
+0x0a020550	edge::split_screen::SplitWindowControllerImplV2::AddSplitTabAtActiveTab
+0x0a0206b0	edge::split_screen::SplitWindowControllerImplV2::DetachSplitWindowWebContentsForInsertion
+0x0a020710	edge::split_screen::SplitWindowControllerImplV2::GetSplitContainer
+0x0a020730	edge::split_screen::SplitWindowControllerImplV2::GetActiveWebContents
+0x0a0207e0	edge::split_screen::SplitWindowControllerImplV2::UpdateSplitToolbar
+0x0a020860	edge::split_screen::SplitWindowControllerImplV2::IsLinkedModeEnabledForTab
+0x0a020880	edge::split_screen::SplitWindowControllerImplV2::SetLinkedModeStateForTab
+0x0a020930	edge::split_screen::SplitWindowControllerImplV2::IsVerticalSplitEnabledForTab
+0x0a020960	edge::split_screen::SplitWindowControllerImplV2::SetVerticalSplitStateForTab
+0x0a0209e0	edge::split_screen::SplitWindowControllerImplV2::DoNavigationInActiveSplitWindowWebContents
+0x0a020e40	edge::split_screen::SplitWindowControllerImplV2::ShowControlButton
+0x0a020f80	edge::split_screen::SplitWindowControllerImplV2::HideControlButton
+0x0a021020	edge::split_screen::SplitWindowControllerImplV2::DoActionToSplitWindow
+0x0a021340	edge::split_screen::SplitWindowControllerImplV2::GetStartingPageNotifier
+0x0a0213b0	edge::split_screen::SplitWindowControllerImplV2::OpenTabInCurrentSplitWindow
+0x0a021580	edge::split_screen::SplitWindowControllerImplV2::SwapSplitWebContents
+0x0a021650	edge::split_screen::SplitWindowControllerImplV2::MaybeCloseCurrentActiveWebContents
+0x0a0216c0	edge::split_screen::SplitWindowControllerImplV2::HandleDropEvent
+0x0a0218f0	edge::split_screen::SplitWindowControllerImplV2::UpdateReloadStopState
+0x0a021980	edge::split_screen::SplitWindowControllerImplV2::ChangeActiveSide
+0x0a021a50	edge::split_screen::SplitWindowControllerImplV2::GetSplitWindowStatusBubble
+0x0a021a90	edge::split_screen::SplitWindowControllerImplV2::GetWeakPtr
+0x0a021b00	edge::split_screen::SplitWindowControllerImplV2::OnStartingPageCreated
+0x0a021b60	edge::split_screen::SplitWindowControllerImplV2::OnStartingPageDestroyed
+0x0a021bc0	edge::split_screen::SplitWindowControllerImplV2::UnSplitAllSplitTabs
+0x0a021d40	edge::split_screen::SplitWindowControllerImplV2::OnSplitTabChanged
+0x0a021d62	edge::split_screen::SplitWindowControllerImplV2::OnSplitTabAdded
+0x0a021fd8	edge::split_screen::SplitWindowControllerImplV2::OnSplitTabUpdated
+0x0a022106	edge::split_screen::SplitWindowControllerImplV2::OnSplitTabRemoved
+0x0a022330	edge::split_screen::SplitWindowControllerImplV2::OnViewBoundsChanged
+0x0a022340	edge::split_screen::SplitWindowControllerImplV2::OnWillChangeFocus
+0x0a02234c	edge::split_screen::SplitWindowControllerImplV2::MaybeChangeActiveSideForToolbar
+0x0a0223f0	edge::split_screen::SplitWindowControllerImplV2::GetBubbleViewAnchor
+0x0a022454	edge::split_screen::SplitWindowControllerImplV2::HideSplitViewInternal
+0x0a022562	edge::split_screen::SplitWindowControllerImplV2::SetToolbarButtonUnChecked
+0x0a022668	edge::split_screen::SplitWindowControllerImplV2::SetupHelpersForSplitWindowWebContents
+0x0a0227f6	edge::split_screen::SplitWindowControllerImplV2::NotifySplitWindowInserted
+0x0a022a96	edge::split_screen::SplitWindowControllerImplV2::TearDownHelpersForSplitWindowWebContents
+0x0a022b56	edge::split_screen::SplitWindowControllerImplV2::NotifySplitWindowRemoved
+0x0a022e10	edge::split_screen::SplitWindowControllerImplV2::`vector deleting destructor'
+0x0a022e20	edge::split_screen::SplitWindowControllerImplV2::`vector deleting destructor'
+0x0a022e30	edge::split_screen::SplitWindowControllerImplV2::`vector deleting destructor'
+0x0a4f471e	ContentsBorderController::ContentsContainerViewBorderController::~ContentsContainerViewBorderController
+0x0a4f4797	std::__Cr::__destroy_at<std::__Cr::unique_ptr<ContentsBorderController::ContentsContainerViewBorderController,std::__Cr::default_delete<ContentsBorderController::ContentsContainerViewBorderController> > >
+0x0a4f47d2	std::__Cr::vector<std::__Cr::unique_ptr<ContentsBorderController::ContentsContainerViewBorderController,std::__Cr::default_delete<ContentsBorderController::ContentsContainerViewBorderController> >,std::__Cr::allocator<std::__Cr::unique_ptr<ContentsBorderController::ContentsContainerViewBorderController,std::__Cr::default_delete<ContentsBorderController::ContentsContainerViewBorderController> > > >::__destroy_vector::operator()
+0x0a4ff6c0	MultiContentsViewDelegateImpl::WebContentsFocused
+0x0a4ff8b0	MultiContentsViewDelegateImpl::ReverseWebContents
+0x0a4ff9b0	MultiContentsViewDelegateImpl::EdgeIsActiveTabSplitInTabStripModel
+0x0a4ffa00	MultiContentsViewDelegateImpl::ResizeWebContents
+0x0a4ffbf0	MultiContentsViewDelegateImpl::HandleLinkDrop
+0x0a5000d0	MultiContentsViewDelegateImpl::HandleTabDrop
+0x0a500560	MultiContentsViewDropTargetController::OnDragAndDropNudgeShownCountChange
+0x0a5005d0	MultiContentsViewDropTargetController::OnDragAndDropNudgeUsedCountChange
+0x0a500640	MultiContentsViewDropTargetController::OnTabDragUpdated
+0x0a500814	MultiContentsViewDropTargetController::PointOverlapsWithOSDropTarget
+0x0a500a04	MultiContentsViewDropTargetController::HandleDragUpdate
+0x0a500d90	MultiContentsViewDropTargetController::OnTabDragEnded
+0x0a500d90	MultiContentsViewDropTargetController::OnTabDragExited
+0x0a500d90	MultiContentsViewDropTargetController::OnWebContentsDragEnded
+0x0a500de0	MultiContentsViewDropTargetController::CanDropTab
+0x0a500e00	MultiContentsViewDropTargetController::GetDropFormats
+0x0a500e70	MultiContentsViewDropTargetController::CanDrop
+0x0a500f00	MultiContentsViewDropTargetController::OnDragEntered
+0x0a500fa0	MultiContentsViewDropTargetController::OnDragExited
+0x0a501014	MultiContentsViewDropTargetController::StartDropTargetHideTimer
+0x0a501100	MultiContentsViewDropTargetController::OnDragDone
+0x0a501110	MultiContentsViewDropTargetController::GetDropCallback
+0x0a501190	MultiContentsViewDropTargetController::DoDrop
+0x0a5012f0	MultiContentsViewDropTargetController::HandleTabDrop
+0x0a501380	MultiContentsViewDropTargetController::RegisterWillDestroyCallback
+0x0a5013fe	MultiContentsViewDropTargetController::OnWebContentsDragUpdate
+0x0a5014dc	MultiContentsViewDropTargetController::OnWebContentsDragExit
+0x0a50154a	MultiContentsViewDropTargetController::ShouldShowNudge
+0x0a5015e6	MultiContentsViewDropTargetController::StartNudgeShowTimer
+0x0a501712	MultiContentsViewDropTargetController::StartOrUpdateDropTargetTimer
+0x0a501adc	base::OneShotTimer::Start<MultiContentsViewDropTargetController>
+0x0a501bb0	MultiContentsViewDropTargetController::ShowTimerDelayedDropTarget
+0x0a501c40	MultiContentsViewDropTargetController::ShowTimerDelayedNudge
+0x0a501d00	MultiContentsViewDropTargetController::`vector deleting destructor'
+0x0a501d10	MultiContentsViewDropTargetController::`vector deleting destructor'
+0x0a501d20	base::internal::Invoker<base::internal::FunctorTraits<void (MultiContentsViewDropTargetController::*&&)(const ui::DropTargetEvent &, ui::mojom::DragOperation &, std::__Cr::unique_ptr<ui::LayerTreeOwner,std::__Cr::default_delete<ui::LayerTreeOwner> >),MultiContentsViewDropTargetController *>,base::internal::BindState<1,1,0,void (MultiContentsViewDropTargetController::*)(const ui::DropTargetEvent &, ui::mojom::DragOperation &, std::__Cr::unique_ptr<ui::LayerTreeOwner,std::__Cr::default_delete<ui::LayerTreeOwner> >),base::internal::UnretainedWrapper<MultiContentsViewDropTargetController,base::unretained_traits::MayNotDangle,0> >,void (const ui::DropTargetEvent &, ui::mojom::DragOperation &, std::__Cr::unique_ptr<ui::LayerTreeOwner,std::__Cr::default_delete<ui::LayerTreeOwner> >)>::RunOnce
+0x0a501db0	MultiContentsViewDropTargetController::`scalar deleting destructor'
+0x0a501db0	MultiContentsViewDropTargetController::`vector deleting destructor'
+0x0a501dde	MultiContentsViewMiniToolbar::MultiContentsViewMiniToolbar
+0x0a502630	MultiContentsViewMiniToolbar::CloseCurrentView
+0x0a5026c0	MultiContentsViewMiniToolbar::UpdateWebContents
+0x0a502770	MultiContentsViewMiniToolbar::ClearWebContents
+0x0a5027d2	MultiContentsViewMiniToolbar::RegisterTabSubscriptions
+0x0a5029b8	MultiContentsViewMiniToolbar::~MultiContentsViewMiniToolbar
+0x0a502b5c	MultiContentsViewMiniToolbar::UpdateState
+0x0a502c90	MultiContentsViewMiniToolbar::UpdateContents
+0x0a5031be	MultiContentsViewMiniToolbar::UpdateFavicon
+0x0a503330	MultiContentsViewMiniToolbar::OnAlertStatusIndicatorChanged
+0x0a503460	MultiContentsViewMiniToolbar::OnPaint
+0x0a503480	MultiContentsViewMiniToolbar::OnThemeChanged
+0x0a503526	MultiContentsViewMiniToolbar::MetaData
+0x0a5035a0	MultiContentsViewMiniToolbar::GetClassMetaData
+0x0a5035b0	MultiContentsViewMiniToolbar::`vector deleting destructor'
+0x0a5035c0	MultiContentsViewMiniToolbar::`vector deleting destructor'
+0x0a5035d0	MultiContentsViewMiniToolbar::`vector deleting destructor'
+0x0a5035e0	MultiContentsViewMiniToolbar::`vector deleting destructor'
+0x0a5035f0	MultiContentsViewMiniToolbar::`vector deleting destructor'
+0x0a503600	MultiContentsViewMiniToolbar::`vector deleting destructor'
+0x0a503610	MultiContentsViewMiniToolbar::`vector deleting destructor'
+0x0a50361c	MultiContentsViewMiniToolbar::MultiContentsViewMiniToolbar_MetaData::MultiContentsViewMiniToolbar_MetaData
+0x0a5036c0	MultiContentsViewMiniToolbar::`scalar deleting destructor'
+0x0a5036c0	MultiContentsViewMiniToolbar::`vector deleting destructor'
+0x0bd526d0	EdgeContentsContainerView::GetDevtoolsPreferredWidth
+0x0c930bb0	MultiContentsView::OnNtpFooterFocused
+0x0c930c80	MultiContentsView::OnActorOverlayFocused
+0x0c930d50	MultiContentsView::OnDragAndDropPrefStateChange
+0x0c930de0	MultiContentsView::EdgeGetContentsContainerViewAtIndex
+0x0c930dfa	MultiContentsView::EdgeGetResizeAreaView
+0x0c930e02	MultiContentsView::SetBackgroundRadii
+0x0c930eac	MultiContentsView::GetContentsContainerViewFor
+0x0c930f18	MultiContentsView::SetWebContentsAtIndex
+0x0c930ffc	MultiContentsView::ShowSplitView
+0x0c9310ec	MultiContentsView::UpdateSplitVisualData
+0x0c93117a	MultiContentsView::CloseSplitView
+0x0c931278	MultiContentsView::SwapContentsInSplitView
+0x0c93137e	MultiContentsView::SetActiveIndex
+0x0c931420	MultiContentsView::SetHighlightActiveContentsView
+0x0c93143c	MultiContentsView::SetTargetContentBounds
+0x0c93149e	MultiContentsView::SetIsAnimatingContent
+0x0c9314e6	MultiContentsView::GetAccessiblePanes
+0x0c9315e0	MultiContentsView::OnResize
+0x0c9317e0	MultiContentsView::GetMinimumRangeValue
+0x0c9318a0	MultiContentsView::GetMaximumRangeValue
+0x0c9318e0	MultiContentsView::GetCurrentRangeValue
+0x0c931920	MultiContentsView::ResetToDefaultSize
+0x0c931940	MultiContentsView::CalculateDropTargetLayout
+0x0c931ae0	MultiContentsView::drop_target_controller
+0x0c931b02	MultiContentsView::SetSplitViewInsets
+0x0c931b50	MultiContentsView::`vector deleting destructor'
+0x0c931b60	MultiContentsView::`vector deleting destructor'
+0x0c931b70	MultiContentsView::`vector deleting destructor'
+0x0c931b80	MultiContentsView::`vector deleting destructor'
+0x0c931b90	MultiContentsView::`vector deleting destructor'
+0x0c931ba0	MultiContentsView::`vector deleting destructor'
+0x0c931bb0	MultiContentsView::`vector deleting destructor'
+0x0c931bc0	MultiContentsView::`vector deleting destructor'
+0x0c931bd0	MultiContentsView::`vector deleting destructor'
+0x0c931be0	MultiContentsView::`vector deleting destructor'
+0x0c931bec	std::__Cr::vector<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > >,std::__Cr::allocator<std::__Cr::pair<ContentsContainerView *,base::flat_map<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *,std::__Cr::less<void>,std::__Cr::vector<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *>,std::__Cr::allocator<std::__Cr::pair<std::__Cr::basic_string<char,std::__Cr::char_traits<char>,std::__Cr::allocator<char> >,views::View *> > > > > > >::__move_range
+0x0c931d1c	MultiContentsView::TargetContentBounds::operator==
+0x0c931d5c	ContentsContainerView::GetAccessiblePanes
+0x0c931e30	ContentsContainerView::SetBorderRoundedCornersFrom
+0x0c932080	ContentsContainerView::ChildVisibilityChanged
+0x0c932110	ContentsContainerView::GetChildrenInZOrder
+0x0c932120	ContentsContainerView::OnViewBoundsChanged
+0x0c9321aa	ContentsContainerView::UpdateDevToolsDockedPlacement
+0x0c932312	ContentsContainerView::GetContentsViewBounds
+0x0c9323b0	ContentsContainerView::CalculateProposedLayout
+0x0c932e60	ContentsContainerView::GetClassMetaData
+0x0c934bc4	BrowserView::GetContentsContainerViewFor
+0x0dccbac0	EdgeContentsContainerView::OnMouseMoved
+0x0dccbb54	EdgeContentsContainerView::HandleMouseEvent
+0x0dccbc40	EdgeContentsContainerView::SetControlButtons
+0x0dccbd70	EdgeContentsContainerView::IsSplitWindow
+0x0dccbe30	EdgeContentsContainerView::SetControlButtonsVisible
+0x0dccbea0	EdgeContentsContainerView::GetStatusBubble
+0x0dccbeb0	EdgeContentsContainerView::EdgeUpdateBorderVisibility
+0x0dccbec0	EdgeContentsContainerView::EdgeSetEdgeContentsResizingStrategy
+0x0dccbf30	EdgeContentsContainerView::EdgeOnDevtoolsResize
+0x0dccc0de	EdgeContentsContainerView::UpdateContentsResizingStrategy
+0x0dccc130	EdgeContentsContainerView::GetDevtoolsMinimumRangeValue
+0x0dccc140	EdgeContentsContainerView::GetDevtoolsMaximumRangeValue
+0x0dccc160	EdgeContentsContainerView::GetDevtoolsCurrentRangeValue
+0x0dccc170	EdgeContentsContainerView::SetResizingStrategyChangedCallback
+0x0dccc1cc	EdgeContentsContainerView::GetControlButtonsBounds
+0x0dccc358	EdgeContentsContainerView::SetAreaSelectionOverlayView
+0x0dccc3b0	EdgeContentsContainerView::OnMouseEvent
+0x0dccc3c6	EdgeContentsContainerView::RouteEventToWebContent
+0x0dccc520	EdgeContentsContainerView::`vector deleting destructor'
+0x0dccc530	EdgeContentsContainerView::`vector deleting destructor'
+0x0dccc540	EdgeContentsContainerView::`vector deleting destructor'
+0x0dccc550	EdgeContentsContainerView::`vector deleting destructor'
+0x0dccc560	EdgeContentsContainerView::`vector deleting destructor'
+0x0dccc570	EdgeContentsContainerView::`vector deleting destructor'
+0x0dccc580	EdgeContentsContainerView::`vector deleting destructor'
+0x0dccc590	EdgeContentsContainerView::`vector deleting destructor'
+0x0dccc5a0	EdgeContentsContainerView::`vector deleting destructor'
+0x0dccc5b0	EdgeContentsContainerView::`vector deleting destructor'
+0x11152b58	ContentsContainerView::ContentsContainerView_MetaData::`vftable'
+0x11152b58	EdgeContentsContainerView::EdgeContentsContainerView_MetaData::`vftable'
+0x11152b58	MultiContentsView::MultiContentsView_MetaData::`vftable'
+0x11152b58	MultiContentsViewMiniToolbar::MultiContentsViewMiniToolbar_MetaData::`vftable'
+0x11152b58	edge::split_screen::EdgeMultiContentsResizeArea::EdgeMultiContentsResizeArea_MetaData::`vftable'
+0x1116dad0	ContentsContainerView::`vftable'
+0x1116daf0	ContentsContainerView::`vftable'
+0x1116db30	ContentsContainerView::`vftable'
+0x1116db70	ContentsContainerView::`vftable'
+0x1116dbc0	ContentsContainerView::`vftable'
+0x1121f770	edge::split_screen::EdgeMultiContentsResizeArea::`vftable'
+0x1121f790	edge::split_screen::EdgeMultiContentsResizeArea::`vftable'
+0x1121f7b0	edge::split_screen::EdgeMultiContentsResizeArea::`vftable'
+0x1121f7d0	edge::split_screen::EdgeMultiContentsResizeArea::`vftable'
+0x1121f810	edge::split_screen::EdgeMultiContentsResizeArea::`vftable'
+0x1121f860	edge::split_screen::EdgeMultiContentsResizeArea::`vftable'
+0x1121f878	edge::split_screen::EdgeMultiContentsResizeArea::`vftable'
+0x1121fd50	edge::split_screen::SplitWindowControllerImplV2::`vftable'
+0x1121fe20	edge::split_screen::SplitWindowControllerImplV2::`vftable'
+0x1121fed0	edge::split_screen::SplitWindowControllerImplV2::`vftable'
+0x1121ff00	edge::split_screen::SplitWindowControllerImplV2::`vftable'
+0x11271ee0	ContentsContainerView::`vftable'
+0x1127bf10	MultiContentsViewDelegateImpl::`vftable'
+0x1127bf50	MultiContentsViewDropTargetController::`vftable'
+0x1127c020	MultiContentsViewMiniToolbar::`vftable'
+0x1127c040	MultiContentsViewMiniToolbar::`vftable'
+0x1127c060	MultiContentsViewMiniToolbar::`vftable'
+0x1127c080	MultiContentsViewMiniToolbar::`vftable'
+0x1127c0c0	MultiContentsViewMiniToolbar::`vftable'
+0x1127c110	MultiContentsViewMiniToolbar::`vftable'
+0x1127c128	MultiContentsViewMiniToolbar::`vftable'
+0x113895a0	MultiContentsView::`vftable'
+0x113895c0	MultiContentsView::`vftable'
+0x113895e0	MultiContentsView::`vftable'
+0x11389600	MultiContentsView::`vftable'
+0x11389640	MultiContentsView::`vftable'
+0x11389690	MultiContentsView::`vftable'
+0x113896a8	MultiContentsView::`vftable'
+0x113896c0	MultiContentsView::`vftable'
+0x113896d8	MultiContentsView::`vftable'
+0x113896e8	ContentsContainerView::`vftable'
+0x11389700	ContentsContainerView::`vftable'
+0x11389720	ContentsContainerView::`vftable'
+0x113ef230	EdgeContentsContainerView::`vftable'
+0x113ef250	EdgeContentsContainerView::`vftable'
+0x113ef270	EdgeContentsContainerView::`vftable'
+0x113ef290	EdgeContentsContainerView::`vftable'
+0x113ef2d0	EdgeContentsContainerView::`vftable'
+0x113ef320	EdgeContentsContainerView::`vftable'
+0x113ef338	EdgeContentsContainerView::`vftable'
+0x113ef350	EdgeContentsContainerView::`vftable'
+0x113ef370	EdgeContentsContainerView::`vftable'
+0x11528190	ContentsContainerView::`vftable'
+0x11528190	weak.??_7ContentsContainerView
+0x11528230	EdgeContentsContainerViewBase::`vftable'
+0x11528230	weak.??_7EdgeContentsContainerViewBase
+0x115282d0	EdgeContentsContainerView::`vftable'
+0x115282d0	weak.??_7EdgeContentsContainerView
+0x11563350	edge::split_screen::SplitWindowControllerImplV2::`vftable'
+0x11563350	weak.??_7SplitWindowControllerImplV2split_screenedge
+0x11565768	MultiContentsViewDropTargetController::`vftable'
+0x11565768	weak.??_7MultiContentsViewDropTargetController
+0x115ad4a0	MultiContentsViewDropTargetController::`vftable'
+0x115ad4a0	weak.??_7MultiContentsViewDropTargetController
+0x115d15b8	MultiContentsView::`vftable'
+0x115d15b8	weak.??_7MultiContentsView
+0x116a6098	edge::split_screen::EdgeMultiContentsResizeArea::`vftable'
+0x116a6098	weak.??_7EdgeMultiContentsResizeAreasplit_screenedge
+0x116e2718	MultiContentsViewMiniToolbar::`vftable'
+0x116e2718	weak.??_7MultiContentsViewMiniToolbar
+0x117630f8	MultiContentsView::`vftable'
+0x117630f8	weak.??_7MultiContentsView
+0x11763498	ContentsContainerView::`vftable'
+0x11763498	weak.??_7ContentsContainerView
+0x1178a5d8	EdgeContentsContainerView::`vftable'
+0x1178a5d8	weak.??_7EdgeContentsContainerView
+0x1193c180	MultiContentsView::kSplitViewContentRoundedCorners
+0x12d74948	kContentsContainerViewElementIdProvider
+0x12d75160	kMultiContentsViewElementIdProvider
