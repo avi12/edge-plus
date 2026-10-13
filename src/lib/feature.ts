@@ -4,7 +4,11 @@ import type { Browser } from "wxt/browser";
 export enum Command {
   splitRight = "split-right",
   splitDown = "split-down",
-  unsplit = "unsplit"
+  unsplit = "unsplit",
+  focusLeft = "focus-left",
+  focusRight = "focus-right",
+  focusUp = "focus-up",
+  focusDown = "focus-down"
 }
 
 /** What every feature hands the background, which switches it on and off live */

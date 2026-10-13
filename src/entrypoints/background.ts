@@ -1,4 +1,5 @@
 import { FEATURES, FeatureId } from "@/features/catalog";
+import { paneFocus } from "@/features/pane-focus/pane-focus";
 import * as SplitPanes from "@/features/split-panes/split-panes";
 import type { Command, FeatureModule } from "@/lib/feature";
 import type { Settings } from "@/lib/host";
@@ -7,7 +8,8 @@ import { MessageType, onMessage } from "@/lib/messaging";
 import { defineBackground, storage } from "#imports";
 
 const MODULES: Record<FeatureId, FeatureModule> = {
-  [FeatureId.splitPanes]: SplitPanes.splitPanes
+  [FeatureId.splitPanes]: SplitPanes.splitPanes,
+  [FeatureId.paneFocus]: paneFocus
 };
 
 /** The last switches the app sent, so they hold while the app is closed */

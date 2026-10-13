@@ -25,10 +25,16 @@ export default defineConfig({
     action: {
       default_title: "Split into a grid"
     },
+    // Edge allows default keys on at most four commands, so the arrows go to moving between panes;
+    // splitting has the toolbar popup and the page menu, and keys of the user's own choosing
     commands: {
-      [Command.splitRight]: { suggested_key: { default: "Alt+Shift+Right" }, description: "Split the focused pane to the right" },
-      [Command.splitDown]: { suggested_key: { default: "Alt+Shift+Down" }, description: "Split the focused pane downward" },
-      [Command.unsplit]: { suggested_key: { default: "Alt+Shift+Up" }, description: "Merge every pane back into one window" }
+      [Command.focusLeft]: { suggested_key: { default: "Alt+Shift+Left" }, description: "Move to the pane on the left" },
+      [Command.focusRight]: { suggested_key: { default: "Alt+Shift+Right" }, description: "Move to the pane on the right" },
+      [Command.focusUp]: { suggested_key: { default: "Alt+Shift+Up" }, description: "Move to the pane above" },
+      [Command.focusDown]: { suggested_key: { default: "Alt+Shift+Down" }, description: "Move to the pane below" },
+      [Command.splitRight]: { description: "Split the focused pane to the right" },
+      [Command.splitDown]: { description: "Split the focused pane downward" },
+      [Command.unsplit]: { description: "Merge every pane back into one window" }
     },
     homepage_url: "https://avi12.com"
   },

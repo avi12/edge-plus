@@ -102,5 +102,8 @@
       </button>
     {/if}
 
+    <footer class="meta">
+      Alt + Shift + an arrow key moves between panes
+    </footer>
   {/if}
 {/await}

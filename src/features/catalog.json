@@ -7,6 +7,13 @@
       "description": "Split a tab into as many panes as you like, side by side or stacked, each tab with its own layout. Use the grid button in Edge's toolbar or right-click a page",
       "glyph": "\uf0e2",
       "enabledByDefault": true
+    },
+    {
+      "id": "paneFocus",
+      "title": "Move between panes",
+      "description": "Alt + Shift + an arrow key jumps to the pane on that side",
+      "glyph": "\ue8ab",
+      "enabledByDefault": true
     }
   ]
 }
