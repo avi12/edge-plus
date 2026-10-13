@@ -1,0 +1,16 @@
+// Geometry value types — one concern: plain rectangles, matching gfx::Rect's
+// in-memory layout so a Rect* can be handed straight to Edge as a const gfx::Rect&.
+#pragma once
+#include <cstdint>
+
+namespace fixedge {
+
+// gfx::Rect is four little-endian int32s {x, y, w, h} (see docs/re/split-view-abi.md).
+struct Rect {
+  int32_t x = 0;
+  int32_t y = 0;
+  int32_t w = 0;
+  int32_t h = 0;
+};
+
+}  // namespace fixedge
