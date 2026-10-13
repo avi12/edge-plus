@@ -73,6 +73,19 @@ inline void EmplaceChildLayout(void* vector, void* view_slot, void* visible_slot
   reinterpret_cast<Fn>(At(rva::ChildLayouts_emplace_back))(vector, view_slot, visible_slot, rect_slot);
 }
 
+// Attach a WebContents to a ContentsWebView (the real render path).
+inline void ContentsWebViewSetContents(void* contents_web_view, void* web_contents) {
+  using Fn = void*(__fastcall*)(void*, void*);
+  reinterpret_cast<Fn>(At(rva::ContentsWebView_SetWebContents))(contents_web_view, web_contents);
+}
+
+// TabStripModel::GetWebContentsAt — bounds-checked by the callee; caller must
+// still pass 0 <= index < TabCount or it aborts.
+inline void* TabWebContentsAt(void* tab_strip_model, int index) {
+  using Fn = void*(__fastcall*)(void*, int);
+  return reinterpret_cast<Fn>(At(rva::TabStripModel_GetWebContentsAt))(tab_strip_model, index);
+}
+
 // --- MultiContentsView field accessors (named, typed, one place each) ---------
 
 // The container vector OBJECT begins at this address (pass to ContainersEmplaceBack).
@@ -93,6 +106,19 @@ inline void* McvFromLayoutBase(void* layout_base) {
 }
 inline void* BrowserViewMcv(void* browser_view) {
   return Field<void*>(browser_view, off::BV_multi_contents_view);
+}
+
+// A container's ContentsWebView (the pane's web view).
+inline void* ContainerWebView(void* container) {
+  return Field<void*>(container, off::CCV_contents_web_view);
+}
+
+// --- Browser / TabStripModel field accessors ---------------------------------
+inline void* BrowserOf(void* browser_view) { return Field<void*>(browser_view, off::BV_browser); }
+inline void* TabStripModelOf(void* browser) { return Field<void*>(browser, off::BROWSER_tab_strip_model); }
+inline int TabCount(void* tab_strip_model) {
+  void* collection = Field<void*>(tab_strip_model, off::TSM_collection);
+  return collection ? Field<int32_t>(collection, off::TABCOLL_count) : 0;
 }
 
 }  // namespace fixedge::edge

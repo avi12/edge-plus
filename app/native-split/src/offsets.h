@@ -43,6 +43,9 @@ inline constexpr uintptr_t Containers_emplace_back = 0x2ce0508; // (&vec@+0x368,
 inline constexpr uintptr_t RawPtr_AcquireInternal = 0x0f946b0; // (p) BackupRef, gated
 inline constexpr uintptr_t View_InvalidateLayout = 0x0fb5540;   // (this) mark layout dirty
 inline constexpr uintptr_t View_LayoutImmediately = 0x0fd40b0;  // (this) relayout now
+// --- tab wiring (docs/re/tab-wiring.md): give a grown pane real web content ---
+inline constexpr uintptr_t ContentsWebView_SetWebContents = 0x2b57520; // (cwv, WebContents*)
+inline constexpr uintptr_t TabStripModel_GetWebContentsAt = 0x101530e; // (tsm, int index) bounds-checked
 // --- the feed pipeline (controller.md) ---
 inline constexpr uintptr_t BrowserView_ShowSplitView = 0xc93594a; // (BrowserView*) feeds panes
 // --- the split's 3-dot menu (extension point for directional "add pane") ---
@@ -72,7 +75,12 @@ inline constexpr uintptr_t MCV_browser_view     = 0x350; // BrowserView* (arg to
 inline constexpr uintptr_t MCV_child_insert_idx = 0x1a8; // size_t (View's child count; AddChildViewAt index)
 inline constexpr uintptr_t MCV_drop_target_view = 0x0b0; // views::View* (relative to the View base)
 inline constexpr uintptr_t BV_multi_contents_view = 0x6e0; // MultiContentsView* within BrowserView
+inline constexpr uintptr_t BV_browser           = 0x600; // Browser* within BrowserView
 inline constexpr uintptr_t CWV_primary_flag     = 0x450; // bool on ContentsWebView (pane-0 fixup)
+// Browser / TabStripModel (docs/re/tab-wiring.md)
+inline constexpr uintptr_t BROWSER_tab_strip_model = 0x30;  // TabStripModel* within Browser
+inline constexpr uintptr_t TSM_collection       = 0x10;  // TabCollection* within TabStripModel
+inline constexpr uintptr_t TABCOLL_count        = 0x18;  // int tab count within TabCollection
 // ContentsContainerView
 inline constexpr uintptr_t CCV_contents_web_view = 0x3a8; // ContentsWebView*
 inline constexpr uintptr_t CCV_is_active         = 0x38d; // bool

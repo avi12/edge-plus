@@ -6,6 +6,7 @@
 #include "MinHook.h"
 #include "edge.h"
 #include "panes.h"
+#include "tabs.h"
 #include "geometry.h"
 
 namespace fixedge::hooks {
@@ -29,6 +30,20 @@ inline void* __fastcall h_show(void* browser_view) {
   const size_t after = panes::GrowToPanes(mcv, g_target_panes);
   Log("[grow] ShowSplitView mcv=%p %llu -> %llu", mcv,
       static_cast<unsigned long long>(before), static_cast<unsigned long long>(after));
+
+  // Give each grown pane real content from a background tab (from the strip's
+  // tail, so we never steal the active or split-partner tabs). Panes with no
+  // spare tab stay blank - no crash. The product's directional-add will instead
+  // hand each new pane a freshly opened tab.
+  void* tsm = edge::TabStripModelOf(edge::BrowserOf(browser_view));
+  const int tab_count = tsm ? edge::TabCount(tsm) : 0;
+  for (size_t i = before; i < after; ++i) {
+    const int tab_index = tab_count - 1 - static_cast<int>(i - before);
+    if (tab_index < static_cast<int>(before)) break;  // ran out of background tabs
+    if (tabs::FillPane(browser_view, edge::McvContainerAt(mcv, static_cast<int>(i)), tab_index)) {
+      Log("[feed] pane %llu <- tab %d", static_cast<unsigned long long>(i), tab_index);
+    }
+  }
   edge::InvalidateLayout(mcv);
   return result;
 }
