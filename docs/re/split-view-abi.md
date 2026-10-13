@@ -145,12 +145,28 @@ the layout is an arbitrary grid. The native pieces this maps onto:
   left/right). This generalizes the 4×3 / 3×4 examples to any grid. Maps onto the
   native `SplitTabSwapMenuModel` (rva `0xa265ebe`) / `SplitViewLayoutMenuModel`.
 - **A third handle** under the 3-dot button to **drag a pane to another slot**,
-  pushing the other panes out of the way (tiling-WM reflow). Rearranges the tree;
-  reference "avi\pade" to be clarified.
+  pushing the others out of the way. Match the *feel* of `C:\repositories\avi\pade`
+  (`src/lib/drag-reorder.ts` + `reorder.ts`), adapted from its flat left/right row
+  to our 2D tree:
+  - **Lift**: drag begins past a ~4px threshold; the lifted pane follows the
+    pointer, raised (shadow), the rest get a `translate` transition.
+  - **Reflow (push)**: snapshot every sibling's pre-drag rect once, then set each
+    one's `translate` to the delta between its old slot and the slot it now
+    occupies — an **insert-with-reflow, never a swap** (pade `reflow()`
+    drag-reorder.ts:298; `reorderedIds` reorder.ts:20).
+  - **Drop target**: pointer-vs-midpoint. Pade has 2 zones (`paneDropSide`
+    reorder.ts:78); we need **4** — top/bottom/left/right halves of the hovered
+    pane — so a drop can split along either axis, matching the tree.
+  - **Settle**: on release, spring the lifted pane from the release point into the
+    open slot, then commit the model after it settles (`settleIntoSlot`
+    drag-reorder.ts:617). Spring ease `cubic-bezier(0.34,1.4,0.5,1)`, ~300ms;
+    siblings `~240ms`. Animate **translate only** (never width/height) — natively,
+    interpolate each container's `gfx::Rect` per frame toward its target.
 - **Animated transitions** for every pane switch/move — but only when Windows
   animations are enabled: gate on `SystemParametersInfo(SPI_GETCLIENTAREAANIMATION)`
-  (and honor `prefers-reduced-motion` where WebUI is involved). Animate by
-  interpolating each container's `gfx::Rect` across frames in the layout detour.
+  (pade's equivalent gate is `prefers-reduced-motion`, drag-reorder.ts:161).
+  Animate by interpolating each container's `gfx::Rect` across frames in the
+  layout detour, translate-only, M3 spring easing — pade's FLIP, done natively.
 
 Remaining build: a per-MCV split **tree** in the DLL (leaves ↔ containers),
 tree→rect layout in the detour, extend `SplitTabMenuModel` with 4 directional
