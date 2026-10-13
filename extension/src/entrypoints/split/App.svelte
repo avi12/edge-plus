@@ -194,9 +194,9 @@
         onpointerdown={() => activate(pane.id)}
       >
         <header class="bar">
-          <button aria-label="Back" onclick={() => sendCommand({ pane, command: PaneCommand.back })}>&#xE72B;</button>
-          <button aria-label="Forward" onclick={() => sendCommand({ pane, command: PaneCommand.forward })}>&#xE72A;</button>
-          <button aria-label="Reload" onclick={() => sendCommand({ pane, command: PaneCommand.reload })}>&#xE72C;</button>
+          <button aria-label="Back" data-optional="history" onclick={() => sendCommand({ pane, command: PaneCommand.back })}>&#xE72B;</button>
+          <button aria-label="Forward" data-optional="history" onclick={() => sendCommand({ pane, command: PaneCommand.forward })}>&#xE72A;</button>
+          <button aria-label="Reload" data-optional="history" onclick={() => sendCommand({ pane, command: PaneCommand.reload })}>&#xE72C;</button>
           <form onsubmit={e => {
             e.preventDefault();
             const elInput = (e.currentTarget as HTMLFormElement).elements.namedItem("address") as HTMLInputElement;
@@ -207,8 +207,8 @@
             {/if}
             <input name="address" aria-label="Address" placeholder="Search or enter an address" spellcheck="false" value={pane.url} />
           </form>
-          <button aria-label="Split right" class="icon" onclick={() => splitPane({ pane, axis: Axis.row })}>{@html splitRightIcon}</button>
-          <button aria-label="Split down" class="icon" onclick={() => splitPane({ pane, axis: Axis.column })}>{@html splitDownIcon}</button>
+          <button aria-label="Split right" class="icon" data-optional="split" onclick={() => splitPane({ pane, axis: Axis.row })}>{@html splitRightIcon}</button>
+          <button aria-label="Split down" class="icon" data-optional="split" onclick={() => splitPane({ pane, axis: Axis.column })}>{@html splitDownIcon}</button>
           <button aria-label="Close pane" onclick={() => closePane(pane)}>&#xE711;</button>
         </header>
         {#if isFrameRuleReady}

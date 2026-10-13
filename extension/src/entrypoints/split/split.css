@@ -67,6 +67,7 @@ body {
   inline-size: calc(var(--width) - 2 * var(--pane-gap));
   block-size: calc(var(--height) - 2 * var(--pane-gap));
   overflow: hidden;
+  container-type: inline-size;
   border: 1px solid var(--stroke);
   border-radius: var(--radius);
   background: var(--bar);
@@ -153,6 +154,19 @@ body {
     background: none;
     color: var(--fg);
     font: inherit;
+  }
+}
+
+/* A pane squeezed by many neighbours keeps its address and close button; the rest give way first */
+@container (width < 320px) {
+  .bar [data-optional="history"] {
+    display: none;
+  }
+}
+
+@container (width < 200px) {
+  .bar [data-optional="split"] {
+    display: none;
   }
 }
 
