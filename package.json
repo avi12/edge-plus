@@ -1,0 +1,32 @@
+{
+  "name": "fix-edge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Live feature switches for Microsoft Edge, driven by the Fix Edge app",
+  "author": "Avi <avi6106@gmail.com> (https://avi12.com)",
+  "imports": {
+    "#imports": "./.wxt/types/imports-module.d.ts"
+  },
+  "scripts": {
+    "ext:dev": "wxt -b edge",
+    "ext:build": "wxt build",
+    "svelte:check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "node --experimental-transform-types --test src/**/*.test.ts",
+    "postinstall": "wxt prepare"
+  },
+  "packageManager": "pnpm@11.13.1",
+  "dependencies": {
+    "@webext-core/messaging": "^4.0.0",
+    "zod": "^4.6.6"
+  },
+  "devDependencies": {
+    "@tsconfig/svelte": "^5.0.8",
+    "@types/node": "^26.6.5",
+    "@wxt-dev/module-svelte": "^2.0.5",
+    "svelte": "^5.57.2",
+    "svelte-check": "^4.7.6",
+    "typescript": "^6.0.3",
+    "wxt": "^0.21.4"
+  }
+}

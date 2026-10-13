@@ -1,0 +1,11 @@
+app/bin/
+app/obj/
+node_modules/
+.vs/
+*.tmp
+.output/
+.wxt/
+.svelte-check/
+build/
+host/bin/
+host/obj/
