@@ -10,16 +10,10 @@ export enum MessageType {
   merge = "merge"
 }
 
-/**
- * `isEnabled` false means the feature is switched off in the Fix Edge app. The `can`s and the
- * presets are what Edge has room for, since it will not make a window narrower than about 500px
- */
+/** `isEnabled` false means the feature is switched off in the Fix Edge app */
 type SplitDescription = {
   isEnabled: boolean;
   panes: number;
-  canSplitRight: boolean;
-  canSplitDown: boolean;
-  fittingPresetIds: PresetId[];
 };
 
 type ProtocolMap = {

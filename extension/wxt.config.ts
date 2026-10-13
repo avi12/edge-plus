@@ -21,7 +21,10 @@ export default defineConfig({
     description: "Live feature switches for Microsoft Edge, driven by the Fix Edge app",
     key: publicKey,
     minimum_chrome_version: MINIMUM_CHROMIUM_VERSION,
-    permissions: ["nativeMessaging", "tabs", "storage", "contextMenus"],
+    permissions: ["nativeMessaging", "tabs", "storage", "contextMenus", "declarativeNetRequest", "favicon"],
+    // Every site may be opened in a pane: the pane bridge runs in it, and the frame rule may lift its
+    // refusal to be framed - inside split tabs only
+    host_permissions: ["<all_urls>"],
     action: {
       default_title: "Split into a grid"
     },

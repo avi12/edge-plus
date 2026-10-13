@@ -81,7 +81,7 @@ export default defineBackground(() => {
 
   onMessage(MessageType.describeSplit, async ({ data: windowId }) => {
     if (!await isSplitEnabled()) {
-      return { isEnabled: false, panes: 1, canSplitRight: false, canSplitDown: false, fittingPresetIds: [] };
+      return { isEnabled: false, panes: 1 };
     }
     return { isEnabled: true, ...await SplitPanes.describe(windowId) };
   });

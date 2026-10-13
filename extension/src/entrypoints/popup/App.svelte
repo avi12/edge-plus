@@ -24,9 +24,16 @@
     return { windowId: windowId!, ...description, shortcutByCommand };
   })();
 
+  /** Each tile gives up half the gap on every side, so neighbours sit a full gap apart */
   function iconTiles(template: Template) {
-    const slots = Array.from({ length: slotCount(template) }, (_, slot) => slot);
-    return [...layout({ root: fromTemplate({ template, windowIds: slots }), region: ICON_REGION, gap: ICON_GAP }).values()];
+    const slotPanes = Array.from({ length: slotCount(template) }, (_, slot) => ({ id: String(slot), url: "" }));
+    const rects = layout({ root: fromTemplate({ template, panes: slotPanes }), region: ICON_REGION }).values();
+    return [...rects].map(rect => ({
+      left: rect.left + ICON_GAP / 2,
+      top: rect.top + ICON_GAP / 2,
+      width: rect.width - ICON_GAP,
+      height: rect.height - ICON_GAP
+    }));
   }
 
   /** Closed first: the new panes take focus, and an open popup would sit on top of them */
@@ -56,12 +63,12 @@
     <section>
       <h2>Add a pane</h2>
       <div class="actions">
-        <button disabled={!state.canSplitRight} onclick={() => state.canSplitRight && run(() => sendMessage(MessageType.splitRight, state.windowId))}>
+        <button onclick={() => run(() => sendMessage(MessageType.splitRight, state.windowId))}>
           {@html splitRightIcon}
           Split right
           {@render shortcut(Command.splitRight)}
         </button>
-        <button disabled={!state.canSplitDown} onclick={() => state.canSplitDown && run(() => sendMessage(MessageType.splitDown, state.windowId))}>
+        <button onclick={() => run(() => sendMessage(MessageType.splitDown, state.windowId))}>
           {@html splitDownIcon}
           Split down
           {@render shortcut(Command.splitDown)}
@@ -74,11 +81,9 @@
       <p class="meta">The tabs to its right fill the other panes</p>
       <div class="presets">
         {#each PRESETS as preset (preset.id)}
-          {@const isFitting = state.fittingPresetIds.includes(preset.id)}
           <button
             aria-label={preset.title}
-            disabled={!isFitting}
-            onclick={() => isFitting && run(() => sendMessage(MessageType.applyPreset, { windowId: state.windowId, presetId: preset.id }))}
+            onclick={() => run(() => sendMessage(MessageType.applyPreset, { windowId: state.windowId, presetId: preset.id }))}
           >
             <svg aria-hidden="true" viewBox="0 0 {ICON_REGION.width} {ICON_REGION.height}">
               {#each iconTiles(preset.template) as tile, i (i)}
@@ -90,10 +95,6 @@
         {/each}
       </div>
     </section>
-
-    {#if !state.canSplitRight || state.fittingPresetIds.length < PRESETS.length}
-      <p class="meta note">Greyed out ones need a wider window - Edge won't make a pane narrower than about 500px</p>
-    {/if}
 
     {#if state.panes > 1}
       <button class="merge" onclick={() => run(() => sendMessage(MessageType.merge, state.windowId))}>

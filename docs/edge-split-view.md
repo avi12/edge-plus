@@ -40,18 +40,26 @@ layouts change every four weeks.
   N-pane UI is not, for the reason above.
 - **Panes inside the app** (WebView2). Looks like one window, but a separate
   profile: no Edge sign-in, extensions or open tabs.
+- **Panes as tiled Edge windows.** Worked, but each pane was its own window,
+  not a pane of the tab. Two measurements from it: Edge's bounds include a 7px
+  invisible resize border on the left, right and bottom, and Edge will not make
+  a tabbed window narrower than 516 or shorter than 150.
 
 ## What Fix Edge does instead
 
-Each pane is a real Edge window tiled over the area the tab's window had. The
-extension moves tabs between windows (Edge's supported way to do it), and the
-layout is a tree of row and column splits (`extension/src/features/split-panes/layout.ts`).
-Two Windows facts shape the geometry, both measured:
+A split tab shows the extension's split page, and each pane is a frame inside
+it, on the user's own profile. The layout is a tree of row and column splits
+(`extension/src/features/split-panes/layout.ts`), and the whole state - the
+tree, every pane's address and the focused pane - lives in the tab's own
+address after the `#`, so it survives reloads and restarts and the background
+edits it with a same-document navigation that reloads no pane.
 
-- **Invisible resize borders.** Edge's bounds include a 7px invisible border on
-  the left, right and bottom; panes that abut by bounds show a 14px seam.
-  `toWindowBounds` grows each pane by the border on every side it shares.
-- **Minimum window size.** Edge will not make a tabbed window narrower than 516
-  or shorter than 150 (popup windows: 179 wide). Too-small bounds passed to
-  `windows.create` are ignored outright, and `windows.update` clamps them. The
-  popup only offers splits that fit.
+- **Frame refusals.** Most sites send X-Frame-Options or a CSP frame-ancestors
+  directive. A declarativeNetRequest session rule removes both, for sub-frames
+  of split tabs only; every other tab keeps its headers.
+- **Cross-origin panes.** The split page cannot read a pane's address or drive
+  its history, so a content script inside each pane reports its address and
+  title and runs back, forward and reload on request (`lib/pane-bridge.ts`).
+- **No reloads.** Moving an iframe in the DOM reloads it, so panes render in a
+  stable order positioned by CSS from the layout, and a frame's address is set
+  once rather than bound.

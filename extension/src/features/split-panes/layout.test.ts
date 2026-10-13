@@ -1,111 +1,66 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Rect } from "./layout.ts";
-import {
-  Axis,
-  fits,
-  fromTemplate,
-  fromWindowBounds,
-  layout,
-  pane,
-  panes,
-  remove,
-  resize,
-  slotCount,
-  split,
-  toWindowBounds
-} from "./layout.ts";
+import type { Pane } from "./layout.ts";
+import { Axis, dividers, fromTemplate, layout, moveDivider, panes, remove, setUrl, slotCount, split } from "./layout.ts";
 
-const REGION: Rect = { left: 0, top: 0, width: 1200, height: 800 };
-const MINIMUM = { width: 160, height: 160 };
+const pane = (id: string): Pane => ({ id, url: `https://example.com/${id}` });
 
-const sideBySide = () => split({ root: pane(1), targetWindowId: 1, newWindowId: 2, axis: Axis.row });
+const sideBySide = () => split({ root: pane("a"), targetId: "a", newPane: pane("b"), axis: Axis.row });
 
 test("splitting the same way adds a sibling that halves the pane", () => {
-  const root = split({ root: sideBySide(), targetWindowId: 2, newWindowId: 3, axis: Axis.row });
-  assert.deepEqual(panes(root), [1, 2, 3]);
-  const rects = layout({ root, region: REGION, gap: 0 });
-  assert.equal(rects.get(1)!.width, 600);
-  assert.equal(rects.get(2)!.width, 300);
-  assert.equal(rects.get(3)!.left, 900);
+  const root = split({ root: sideBySide(), targetId: "b", newPane: pane("c"), axis: Axis.row });
+  assert.deepEqual(panes(root).map(({ id }) => id), ["a", "b", "c"]);
+  const rects = layout({ root });
+  assert.equal(rects.get("a")!.width, 50);
+  assert.equal(rects.get("b")!.width, 25);
+  assert.equal(rects.get("c")!.left, 75);
 });
 
 test("splitting across nests a split in the pane's place", () => {
-  const root = split({ root: sideBySide(), targetWindowId: 2, newWindowId: 3, axis: Axis.column });
-  const rects = layout({ root, region: REGION, gap: 0 });
-  assert.deepEqual(rects.get(2), { left: 600, top: 0, width: 600, height: 400 });
-  assert.deepEqual(rects.get(3), { left: 600, top: 400, width: 600, height: 400 });
-});
-
-test("panes always cover the region exactly, gaps included", () => {
-  const root = split({ root: sideBySide(), targetWindowId: 1, newWindowId: 3, axis: Axis.row });
-  const rects = layout({ root, region: { left: 7, top: 0, width: 1001, height: 500 }, gap: 6 });
-  const last = rects.get(2)!;
-  assert.equal(last.left + last.width, 7 + 1001);
-  assert.equal(rects.get(3)!.left, rects.get(1)!.left + rects.get(1)!.width + 6);
+  const root = split({ root: sideBySide(), targetId: "b", newPane: pane("c"), axis: Axis.column });
+  const rects = layout({ root });
+  assert.deepEqual(rects.get("b"), { left: 50, top: 0, width: 50, height: 50 });
+  assert.deepEqual(rects.get("c"), { left: 50, top: 50, width: 50, height: 50 });
 });
 
 test("removing a pane collapses its split and folds same-axis levels", () => {
-  const stacked = split({ root: pane(1), targetWindowId: 1, newWindowId: 2, axis: Axis.column });
-  const nested = split({ root: stacked, targetWindowId: 2, newWindowId: 3, axis: Axis.row });
-  const root = remove({ root: nested, windowId: 3 })!;
-  assert.deepEqual(panes(root), [1, 2]);
-  assert.equal(remove({ root: pane(1), windowId: 1 }), null);
+  const stacked = split({ root: pane("a"), targetId: "a", newPane: pane("b"), axis: Axis.column });
+  const nested = split({ root: stacked, targetId: "b", newPane: pane("c"), axis: Axis.row });
+  const root = remove({ root: nested, paneId: "c" })!;
+  assert.deepEqual(panes(root).map(({ id }) => id), ["a", "b"]);
+  assert.equal(remove({ root: pane("a"), paneId: "a" }), null);
 });
 
-test("dragging an inner edge moves only the boundary it sits on", () => {
-  const next = resize({
-    root: sideBySide(), region: REGION, gap: 0, windowId: 1, wanted: { left: 0, top: 0, width: 400, height: 800 }, minimum: MINIMUM
-  });
-  const rects = layout({ root: next.root, region: next.region, gap: 0 });
-  assert.equal(rects.get(1)!.width, 400);
-  assert.deepEqual(rects.get(2), { left: 400, top: 0, width: 800, height: 800 });
-  assert.deepEqual(next.region, REGION);
+test("a pane's address changes without touching its place", () => {
+  const root = setUrl({ root: sideBySide(), paneId: "b", url: "https://example.org/" });
+  assert.equal(panes(root)[1]!.url, "https://example.org/");
+  assert.deepEqual(layout({ root }).get("b"), layout({ root: sideBySide() }).get("b"));
 });
 
-test("dragging an outer edge resizes the whole group", () => {
-  const next = resize({
-    root: sideBySide(), region: REGION, gap: 0, windowId: 2, wanted: { left: 600, top: 0, width: 500, height: 700 }, minimum: MINIMUM
-  });
-  assert.deepEqual(next.region, { left: 0, top: 0, width: 1100, height: 700 });
+test("every neighbouring pair gets a divider at their shared edge", () => {
+  const root = split({ root: sideBySide(), targetId: "b", newPane: pane("c"), axis: Axis.column });
+  const found = dividers({ root });
+  assert.equal(found.length, 2);
+  assert.equal(found[0]!.axis, Axis.row);
+  assert.equal(found[0]!.at.left, 50);
+  assert.equal(found[1]!.axis, Axis.column);
+  assert.equal(found[1]!.at.top, 50);
 });
 
-test("moving a pane without resizing carries the group along", () => {
-  const stacked = split({ root: pane(1), targetWindowId: 1, newWindowId: 2, axis: Axis.column });
-  const next = resize({
-    root: stacked, region: REGION, gap: 0, windowId: 2, wanted: { left: 50, top: 430, width: 1200, height: 400 }, minimum: MINIMUM
-  });
-  assert.deepEqual(next.region, { left: 50, top: 30, width: 1200, height: 800 });
-});
-
-test("no pane is squeezed below the minimum", () => {
-  const next = resize({
-    root: sideBySide(), region: REGION, gap: 0, windowId: 1, wanted: { left: 0, top: 0, width: 1190, height: 800 }, minimum: MINIMUM
-  });
-  assert.ok(layout({ root: next.root, region: next.region, gap: 0 }).get(2)!.width >= 160);
+test("dragging a divider moves only its pair, and stops short of either edge", () => {
+  const root = split({ root: sideBySide(), targetId: "b", newPane: pane("c"), axis: Axis.row });
+  const [first] = dividers({ root });
+  const moved = moveDivider({ root, divider: first!, fraction: 0.3 });
+  const rects = layout({ root: moved });
+  assert.equal(Math.round(rects.get("a")!.width), 30);
+  assert.equal(Math.round(rects.get("c")!.width), 25);
+  const squeezed = layout({ root: moveDivider({ root, divider: first!, fraction: 0 }) });
+  assert.ok(squeezed.get("a")!.width > 0);
 });
 
 test("templates build equal-weight trees in slot order", () => {
-  const template = {
-    axis: Axis.row,
-    children: [{ axis: Axis.column, children: [0, 2] }, { axis: Axis.column, children: [1, 3] }]
-  };
+  const template = { axis: Axis.row, children: [{ axis: Axis.column, children: [0, 2] }, { axis: Axis.column, children: [1, 3] }] };
   assert.equal(slotCount(template), 4);
-  const rects = layout({ root: fromTemplate({ template, windowIds: [10, 11, 12, 13] }), region: REGION, gap: 0 });
-  assert.deepEqual(rects.get(13), { left: 600, top: 400, width: 600, height: 400 });
-});
-
-test("panes grow by the invisible border only where they meet a neighbour", () => {
-  const rects = layout({ root: sideBySide(), region: REGION, gap: 0 });
-  assert.deepEqual(toWindowBounds({ rect: rects.get(1)!, region: REGION, border: 7 }), { left: 0, top: 0, width: 607, height: 800 });
-  const bounds = toWindowBounds({ rect: rects.get(2)!, region: REGION, border: 7 });
-  assert.deepEqual(bounds, { left: 593, top: 0, width: 607, height: 800 });
-  assert.deepEqual(fromWindowBounds({ bounds, rect: rects.get(2)!, region: REGION, border: 7 }), rects.get(2));
-});
-
-test("a layout fits only when every pane reaches the minimum", () => {
-  const columns = { axis: Axis.row, children: [0, 1, 2] };
-  const root = fromTemplate({ template: columns, windowIds: [1, 2, 3] });
-  assert.equal(fits({ root, region: REGION, gap: 0, minimum: { width: 400, height: 150 } }), true);
-  assert.equal(fits({ root, region: REGION, gap: 0, minimum: { width: 516, height: 150 } }), false);
+  const rects = layout({ root: fromTemplate({ template, panes: ["a", "b", "c", "d"].map(pane) }) });
+  assert.deepEqual(rects.get("d"), { left: 50, top: 50, width: 50, height: 50 });
 });

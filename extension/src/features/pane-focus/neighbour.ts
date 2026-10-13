@@ -7,8 +7,8 @@ export enum Direction {
   down = "down"
 }
 
-/** Panes touch within this many pixels once their invisible borders overlap */
-const EDGE_TOLERANCE = 2;
+/** Panes that share an edge sit exactly on it; this absorbs rounding, in percent of the tab */
+const EDGE_TOLERANCE = 0.5;
 
 const right = (rect: Rect) => rect.left + rect.width;
 const bottom = (rect: Rect) => rect.top + rect.height;
@@ -37,31 +37,31 @@ function overlap({ from, candidate, direction }: { from: Rect; candidate: Rect; 
 }
 
 /**
- * The pane on that side of `fromWindowId`, the way a tiling window manager picks it: the nearest
+ * The pane on that side of `fromPaneId`, the way a tiling window manager picks it: the nearest
  * one past that edge that faces it, the one facing it most when several are as near
  */
-export function neighbour({ rects, fromWindowId, direction }: {
-  rects: Map<number, Rect>;
-  fromWindowId: number;
+export function neighbour({ rects, fromPaneId, direction }: {
+  rects: Map<string, Rect>;
+  fromPaneId: string;
   direction: Direction;
 }) {
-  const from = rects.get(fromWindowId);
+  const from = rects.get(fromPaneId);
   if (!from) {
     return null;
   }
-  let best: { windowId: number; distance: number; facing: number } | null = null;
-  for (const [windowId, candidate] of rects) {
+  let best: { paneId: string; distance: number; facing: number } | null = null;
+  for (const [paneId, candidate] of rects) {
     const distance = gap({ from, candidate, direction });
     const facing = overlap({ from, candidate, direction });
-    const isOnThatSide = windowId !== fromWindowId && distance >= -EDGE_TOLERANCE && facing > 0;
+    const isOnThatSide = paneId !== fromPaneId && distance >= -EDGE_TOLERANCE && facing > 0;
     if (!isOnThatSide) {
       continue;
     }
     const isBetter = !best || distance < best.distance - EDGE_TOLERANCE ||
       (Math.abs(distance - best.distance) <= EDGE_TOLERANCE && facing > best.facing);
     if (isBetter) {
-      best = { windowId, distance, facing };
+      best = { paneId, distance, facing };
     }
   }
-  return best?.windowId ?? null;
+  return best?.paneId ?? null;
 }
