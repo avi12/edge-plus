@@ -119,8 +119,13 @@ product is a **binary split tree**: each pane carries a 3-dot menu with **add
 pane above / below / left / right**; each action splits that pane's tree node, so
 the layout is an arbitrary grid. The native pieces this maps onto:
 
-- Native already: the split button → two panes + "pick a tab" surface; the ✕ →
-  unsplit to full width; choosing a tab → fills the new pane.
+- Native already: the split button (unsplit state) → two panes + "pick a tab"
+  surface; the ✕ → unsplit to full width; choosing a tab → fills the new pane.
+- **Split button while already split = collapse:** keep only the **active** pane,
+  resize it to fill the **whole tab window (full width and full height)**, and
+  **eject every other pane as its own
+  standalone tab** (remove them from the `SplitTabCollection` so they return as
+  normal tabs — not closed). This is the toggle's "off" direction.
 - **`SplitTabMenuModel`** (ctor `0xa264f8e`, `ExecuteCommand` `0xa265830`,
   `GetLabelForCommandId` `0xa265430`) is the existing 3-dot menu — the extension
   point for the four directional "add pane" commands. `SplitTabSwapMenuModel`
