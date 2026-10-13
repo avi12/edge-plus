@@ -1,5 +1,33 @@
 # Growing a split by one member — native insert primitives (`AddToSplitImpl` & friends)
 
+## PINNED (2026-10-14): the index argument layout + the create recipe
+
+The "vector<int>" passed to `AddToNewSplit`/`AddToSplitImpl` is **not** a libc++
+`{begin,end,cap}`. From `AddSplitTabAtActiveTab` (`0xa020550`): it `new`s a
+4-byte buffer, writes the tab index at `+0`, then stores the 16-byte rodata
+constant `{1,1}` at `+8` — i.e. the struct is:
+
+```cpp
+struct SplitIndexVec { int* data; size_t size; size_t cap; };   // {ptr, count, count}
+```
+
+`AddToNewSplit` reads `size` at `+8` and requires `size ∈ {1,2}` (`cmp [vec+8]-1,2`).
+The native "add a split pane" recipe (also why native panes have content, unlike a
+borrowed background tab, which is proven not to render):
+
+1. `InsertDetachedTabAt` (`0xa267bb6`) — create a **new tab**.
+2. `SplitTabVisualData::SplitTabVisualData` (`0x2ce031e`) on a 16-byte stack slot
+   (`{int layout @0, double ratio=0.5 @8}`).
+3. Build `SplitIndexVec{ data = new int[1]{newTabIndex}, size=1, cap=1 }` (buffer
+   via `operator new` `0x36b3c20` so Edge can realloc it).
+4. `AddToNewSplit(tsm /*rcx*/, &outToken /*rdx*/, &vec /*r8*/, &visualData /*r9*/)`
+   — its `size==1` branch inserts the active tab, giving a 2-pane split.
+
+For the **3rd+ pane**, `AddToSplitImpl` (`0xa273e30`, no cap) with the split's
+`Token` id + a `SplitIndexVec` of the new tab index. Edge then feeds every pane
+via `ShowSplitView`, so the view-side container growth + N-tiling render it.
+
+
 Reverse-engineered from the **public PDB** for `msedge.dll` 155.0.4283.45
 (image base `0x180000000`), via `tools/re/{symbols,disasm}.py` + scratch
 `drange.py`/`xref.py`. Every `0x…` is an **RVA** unless written `0x18…` (linear,
