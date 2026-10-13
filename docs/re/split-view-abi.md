@@ -104,6 +104,19 @@ count ≤ 2 defer to the original (zero regression); when count > 2, build the
 `host_size`, then `emplace_back` one entry per container with the N-way rect and
 one per separator, computing rects by splitting the content length by ratio.
 
+## Layout-agnostic by construction
+
+`CalculateProposedLayout` is handed the `MultiContentsView`'s **own** available
+size (`SizeBounds` arg), which `BrowserViewLayout` has already reduced for
+whatever surrounds the split — vertical tab strip (takes width), toolbar /
+omnibox row / bookmarks bar (takes height), side panels, etc. The detour must
+therefore use **only** that size and position panes in **MCV-local coordinates**
+(`{0,0,width,height}`), never window/screen coordinates. It does: `geometry::
+TilePanes` tiles the tree within the handed rectangle, so vertical tabs, an
+omnibox moved into the toolbar, a different tab layout, or a window resize all
+just change that rectangle and the panes reflow into it — one mechanism, no
+special cases. Keep it this way: no absolute coordinates in the geometry path.
+
 ## MILESTONE (2026-10-13): N-pane render proven live
 
 A throwaway Edge, DLL injected with `FIXEDGE_PANES=3`: a normal 2-tab split was

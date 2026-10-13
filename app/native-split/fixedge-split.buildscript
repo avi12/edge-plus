@@ -1,0 +1,37 @@
+# sighmake build for the native split: a static MinHook lib, the injected DLL,
+# and the injector. Generate with `sighmake fixedge-split.buildscript -g vcxproj`
+# then `sighmake --build build --config Release` (see build.cmd).
+
+[solution]
+name = fixedge-split
+configurations = Release
+platforms = x64
+
+# MinHook, compiled as C into a static lib the DLL links.
+[project:minhook]
+type = lib
+sources = external/minhook/src/**/*.c
+includes = external/minhook/include
+runtime_library = MultiThreaded
+
+# The injected payload. C++20, no RTTI/EH frills, static CRT so it needs nothing
+# installed in Edge. Links MinHook + version.lib (the build-guard reads the Edge
+# version resource).
+[project:fixedge-split]
+type = dll
+sources = src/dllmain.cpp
+includes = src, external/minhook/include
+std = 20
+defines = UNICODE, _UNICODE, WIN32_LEAN_AND_MEAN, NOMINMAX
+runtime_library = MultiThreaded
+cflags = /EHsc /GS-
+libs = version.lib
+project_references = minhook
+
+# The LoadLibrary injector.
+[project:inject]
+type = exe
+sources = src/inject.cpp
+std = 20
+runtime_library = MultiThreaded
+subsystem = Console

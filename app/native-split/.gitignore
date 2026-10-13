@@ -4,3 +4,11 @@ build/
 *.lib
 *.ilk
 *.pdb
+
+# sighmake-generated CMake project + build tree (source of truth is the .buildscript)
+.sighmake_cache
+/CMakeLists.txt
+/minhook/
+/fixedge-split/
+/inject/
+/smninja/
