@@ -8,6 +8,7 @@
 #include "panes.h"
 #include "tabs.h"
 #include "geometry.h"
+#include "collapse.h"
 
 namespace fixedge::hooks {
 
@@ -90,6 +91,8 @@ inline bool InstallAll() {
           "SetWebContentsAtIndex");
   Install(rva::MultiContentsView_CalculateProposedLayout, reinterpret_cast<void*>(h_calc), &o_calc,
           "CalculateProposedLayout");
+  Install(rva::SplitWindowController_DoAction, reinterpret_cast<void*>(collapse::h_do_action),
+          &collapse::o_do_action, "DoActionToSplitWindow");
   return true;
 }
 

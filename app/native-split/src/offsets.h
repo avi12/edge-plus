@@ -52,6 +52,13 @@ inline constexpr uintptr_t BrowserView_ShowSplitView = 0xc93594a; // (BrowserVie
 inline constexpr uintptr_t SplitTabMenuModel_ctor          = 0xa264f8e;
 inline constexpr uintptr_t SplitTabMenuModel_ExecuteCommand = 0xa265830;
 inline constexpr uintptr_t SplitTabMenuModel_GetLabelForCommandId = 0xa265430;
+inline constexpr uintptr_t SimpleMenuModel_AddItem         = 0x101bf04;  // (model, cmd_id, &u16string)
+inline constexpr uintptr_t UTF8ToUTF16                     = 0x101cae0;  // (&out_u16, &string_view)
+// --- collapse (docs/re/collapse.md): split button while split = keep active ---
+// SplitWindowControllerImplV2::DoActionToSplitWindow(controller, WebContents*, int action).
+// action 2 = dissolve keeping tabs + activate the active tab (fills window);
+// action 3 = same but keeps the LAST tab. Clamp 3->2 to always keep the active.
+inline constexpr uintptr_t SplitWindowController_DoAction  = 0xa021020;
 }  // namespace rva
 
 // Linear addresses (not RVAs): partition-alloc BRP-pool gate for raw_ptr acquire.
