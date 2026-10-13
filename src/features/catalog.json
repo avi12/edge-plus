@@ -1,0 +1,12 @@
+{
+  "hostName": "com.avi.fix_edge",
+  "features": [
+    {
+      "id": "splitPanes",
+      "title": "Split into any grid",
+      "description": "Split a tab into as many panes as you like, side by side or stacked, each tab with its own layout. Use the grid button in Edge's toolbar or right-click a page",
+      "glyph": "\uf0e2",
+      "enabledByDefault": true
+    }
+  ]
+}

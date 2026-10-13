@@ -1,0 +1,168 @@
+/* Edge's own flyouts: Fluent surfaces, 4px corners, Segoe UI Variable */
+:root {
+  --surface: #f9f9f9;
+  --card: #fff;
+  --card-hover: #f3f3f3;
+  --stroke: #e5e5e5;
+  --fg: #1a1a1a;
+  --fg-muted: #616161;
+  --accent: #0f6cbd;
+  --tile: #c7dcf0;
+  --radius: 4px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  color-scheme: light dark;
+
+  @media (prefers-color-scheme: dark) {
+    --surface: #2b2b2b;
+    --card: #323232;
+    --card-hover: #3b3b3b;
+    --stroke: #404040;
+    --fg: #fff;
+    --fg-muted: #c5c5c5;
+    --accent: #479ef5;
+    --tile: #2f4a63;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 300px;
+  margin: 0;
+  padding: 14px;
+  background: var(--surface);
+  color: var(--fg);
+  font: 13px/1.4 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+}
+
+header {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-block-end: 10px;
+
+  .meta {
+    margin: 0;
+  }
+}
+
+h1 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+h2 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+.meta {
+  margin: -4px 0 8px;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+section + section {
+  margin-block-start: 14px;
+}
+
+button {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background 100ms var(--ease);
+
+  &:hover:enabled {
+    background: var(--card-hover);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  > svg {
+    inline-size: 18px;
+    block-size: 18px;
+    flex: none;
+  }
+}
+
+kbd {
+  margin-inline-start: auto;
+  font: 11px "Segoe UI", system-ui, sans-serif;
+  color: var(--fg-muted);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+
+  button {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 4px 6px;
+    font-size: 11px;
+    color: var(--fg-muted);
+    text-align: center;
+  }
+
+  svg {
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  rect {
+    fill: var(--tile);
+
+    &:first-child {
+      fill: var(--accent);
+    }
+  }
+}
+
+.merge {
+  inline-size: 100%;
+  justify-content: center;
+  margin-block-start: 14px;
+}
+
+.note {
+  margin: 10px 0 0;
+}
+
+footer.meta {
+  margin: 12px 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button {
+    transition: none;
+  }
+}
