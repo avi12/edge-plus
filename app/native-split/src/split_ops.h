@@ -31,9 +31,14 @@ inline void FeedNewPane(void* mcv, int leaf) {
   void* browser_view = edge::McvBrowserView(mcv);
   void* tsm = edge::TabStripModelOf(edge::BrowserOf(browser_view));
   const int tab_count = tsm ? edge::TabCount(tsm) : 0;
+  Log("[feed] FeedNewPane leaf=%d bv=%p tsm=%p tabs=%d", leaf, browser_view, tsm, tab_count);
   for (int t = tab_count - 1; t >= 0; --t) {
-    if (tabs::FillPane(browser_view, edge::McvContainerAt(mcv, leaf), t)) return;
+    if (tabs::FillPane(browser_view, edge::McvContainerAt(mcv, leaf), t)) {
+      Log("[feed] fed leaf %d from tab %d", leaf, t);
+      return;
+    }
   }
+  Log("[feed] no background tab fed into leaf %d", leaf);
 }
 
 // Add one pane adjacent to the active pane, in `dir`. Mutates the split tree,

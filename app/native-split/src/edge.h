@@ -92,6 +92,12 @@ inline void ContentsWebViewSetContents(void* contents_web_view, void* web_conten
   reinterpret_cast<Fn>(At(rva::ContentsWebView_SetWebContents))(contents_web_view, web_contents);
 }
 
+// Force a (background) WebContents to the visible state so the pane paints.
+inline void WebContentsWasShown(void* web_contents) {
+  using Fn = void*(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(rva::WebContents_WasShown))(web_contents);
+}
+
 // TabStripModel::GetWebContentsAt — bounds-checked by the callee; caller must
 // still pass 0 <= index < TabCount or it aborts.
 inline void* TabWebContentsAt(void* tab_strip_model, int index) {

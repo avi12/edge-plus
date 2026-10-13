@@ -46,6 +46,7 @@ inline constexpr uintptr_t View_InvalidateLayout = 0x0fb5540;   // (this) mark l
 inline constexpr uintptr_t View_LayoutImmediately = 0x0fd40b0;  // (this) relayout now
 // --- tab wiring (docs/re/tab-wiring.md): give a grown pane real web content ---
 inline constexpr uintptr_t ContentsWebView_SetWebContents = 0x2b57520; // (cwv, WebContents*)
+inline constexpr uintptr_t WebContents_WasShown           = 0x29f2b30; // (WebContents*) force-paint a bg tab
 inline constexpr uintptr_t TabStripModel_GetWebContentsAt = 0x101530e; // (tsm, int index) bounds-checked
 // --- the feed pipeline (controller.md) ---
 inline constexpr uintptr_t BrowserView_ShowSplitView = 0xc93594a; // (BrowserView*) feeds panes

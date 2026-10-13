@@ -13,11 +13,21 @@ namespace fixedge::tabs {
 // already shown in another pane, or its content would be stolen from there.
 inline bool FillPane(void* browser_view, void* container, int tab_index) {
   void* tsm = edge::TabStripModelOf(edge::BrowserOf(browser_view));
-  if (!tsm) return false;
-  if (tab_index < 0 || tab_index >= edge::TabCount(tsm)) return false;
+  if (!tsm) {
+    Log("[feed] no TabStripModel");
+    return false;
+  }
+  const int count = edge::TabCount(tsm);
+  if (tab_index < 0 || tab_index >= count) {
+    Log("[feed] tab %d out of range (count %d)", tab_index, count);
+    return false;
+  }
   void* web_contents = edge::TabWebContentsAt(tsm, tab_index);
-  if (!web_contents) return false;
-  edge::ContentsWebViewSetContents(edge::ContainerWebView(container), web_contents);
+  void* cwv = edge::ContainerWebView(container);
+  Log("[feed] tab %d/%d wc=%p container=%p cwv=%p", tab_index, count, web_contents, container, cwv);
+  if (!web_contents || !cwv) return false;
+  edge::ContentsWebViewSetContents(cwv, web_contents);
+  edge::WebContentsWasShown(web_contents);  // a background tab is hidden; show it so the pane paints
   return true;
 }
 
