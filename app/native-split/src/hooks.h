@@ -49,11 +49,24 @@ inline void* __fastcall h_show(void* browser_view) {
   return result;
 }
 
-// MultiContentsView::SetWebContentsAtIndex — observational for now.
+// MultiContentsView::SetWebContentsAtIndex — the feeder's one call. For a grown
+// split (index >= the current container count) build the missing container(s)
+// first, then let the original run. The original's own `index < 2` guard is
+// lifted at install (SetWebContentsAtIndex_guard_imm 2 -> 0xff) and restored on
+// unload, so feeding pane 2+ no longer traps. A normal 2-pane split only ever
+// sees index 0/1, so nothing changes for it.
 using SetWc_t = void*(__fastcall*)(void*, void*, uint32_t);
 inline SetWc_t o_setwc = nullptr;
-inline void* __fastcall h_setwc(void* self, void* web_contents, uint32_t index) {
-  return o_setwc(self, web_contents, index);
+inline uint8_t g_guard_saved = 0;
+inline void* __fastcall h_setwc(void* mcv, void* web_contents, uint32_t index) {
+  if (index >= edge::McvCount(mcv)) {
+    Log("[grow] feeder wants index %u; count %llu - building container(s)", index,
+        static_cast<unsigned long long>(edge::McvCount(mcv)));
+    while (edge::McvCount(mcv) <= index) {
+      if (!panes::AddContainer(mcv)) break;
+    }
+  }
+  return o_setwc(mcv, web_contents, index);
 }
 
 // LayoutManagerBase::CalculateProposedLayout — `self` is the subobject at
@@ -93,10 +106,14 @@ inline bool InstallAll() {
           "CalculateProposedLayout");
   Install(rva::SplitWindowController_DoAction, reinterpret_cast<void*>(collapse::h_do_action),
           &collapse::o_do_action, "DoActionToSplitWindow");
+  // Lift the index<2 guard so the feeder can fill pane 2+ (restored on unload).
+  g_guard_saved = edge::PatchByte(rva::SetWebContentsAtIndex_guard_imm, 0xff);
+  Log("[patch] SetWebContentsAtIndex guard %u -> 0xff", g_guard_saved);
   return true;
 }
 
 inline void RemoveAll() {
+  if (g_guard_saved) edge::PatchByte(rva::SetWebContentsAtIndex_guard_imm, g_guard_saved);
   MH_DisableHook(MH_ALL_HOOKS);
   MH_Uninitialize();
 }

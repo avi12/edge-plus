@@ -16,6 +16,7 @@ inline constexpr uint32_t kTimeDateStamp = 0;  // TODO: fill from PE header as a
 namespace rva {
 inline constexpr uintptr_t MultiContentsView_ctor              = 0x2cdf896;
 inline constexpr uintptr_t MultiContentsView_SetWebContentsAtIndex = 0xc930f18; // cap: index < 2
+inline constexpr uintptr_t SetWebContentsAtIndex_guard_imm = 0xc930f22;         // the `2` in cmp index,2
 inline constexpr uintptr_t MultiContentsView_ShowSplitView      = 0xc930ffc;    // loops the vector
 inline constexpr uintptr_t MultiContentsView_CalculateProposedLayout = 0x2b22540; // 2 entries + 1 sep
 inline constexpr uintptr_t MultiContentsView_GetViewSizes       = 0x2b229e0;     // 2-element size array

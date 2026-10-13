@@ -25,6 +25,19 @@ inline bool Bind(HMODULE module) {
 
 inline void* At(uintptr_t rva) { return reinterpret_cast<void*>(g_base + rva); }
 
+// Overwrite one code byte (reversibly) — used to lift the index<2 guard.
+inline uint8_t PatchByte(uintptr_t rva, uint8_t value) {
+  void* addr = At(rva);
+  DWORD old = 0;
+  uint8_t prev = *reinterpret_cast<uint8_t*>(addr);
+  if (VirtualProtect(addr, 1, PAGE_EXECUTE_READWRITE, &old)) {
+    *reinterpret_cast<uint8_t*>(addr) = value;
+    VirtualProtect(addr, 1, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), addr, 1);
+  }
+  return prev;  // caller keeps this to restore on unload
+}
+
 // Typed lvalue at obj+off. The one place raw pointer arithmetic on Edge objects
 // lives; callers read/write fields by name via the Mcv*/Container* helpers below.
 template <class T>
