@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The native-messaging host Edge starts when the extension connects. Its own
+    small exe, not a mode of the app: Edge keeps it running for as long as the
+    extension is open, and a running exe cannot be overwritten - so the app
+    unpacks this one beside its data and swaps a newer copy in by renaming the
+    old one aside, which Windows allows while it runs.
+
+    NativeAOT: one file, no runtime to find, and it starts in milliseconds,
+    which is every time Edge starts.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>FixEdge</RootNamespace>
+    <AssemblyName>fixedge-host</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- No console window: Edge talks to it over pipes, and a console host
+         would flash a window every time Edge starts it. -->
+    <OutputType>WinExe</OutputType>
+  </PropertyGroup>
+
+  <!-- The file contract is the app's; linked, not copied, so both sides read
+       the one definition. -->
+  <ItemGroup>
+    <Compile Include="..\app\Platform\Paths.cs" Link="Paths.cs" />
+  </ItemGroup>
+</Project>
