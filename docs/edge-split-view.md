@@ -60,6 +60,12 @@ edits it with a same-document navigation that reloads no pane.
 - **Cross-origin panes.** The split page cannot read a pane's address or drive
   its history, so a content script inside each pane reports its address and
   title and runs back, forward and reload on request (`lib/pane-bridge.ts`).
+- **Any number of panes.** Nothing caps the tree. Adding several tabs at once
+  halves the biggest pane on screen across its longer side for each one
+  (`grow`), measured against the tab's real width and height, so twelve tabs
+  land as a grid; `tile` rebuilds any count as even rows in reading order. The
+  selection comes from the tab strip's own multi-select (`highlighted` tabs),
+  since an extension cannot add items to Edge's tab context menu.
 - **No reloads.** Moving an iframe in the DOM reloads it, so panes render in a
   stable order positioned by CSS from the layout, and a frame's address is set
   once rather than bound.

@@ -11,6 +11,11 @@ including when the app itself is updated.
   way Arc does it. Every pane has its own address bar, and dividers drag. From
   the grid button in Edge's toolbar (presets, split right/down, merge), the
   pane bars, or a right-click on a page or link.
+- **Tabs into panes, as many as you like** - Ctrl + click tabs in the tab strip,
+  then "Put the selected tabs in panes" in the toolbar popup, the way Arc makes
+  a split from a selection. Include a split tab and the rest join it. New panes
+  fill out a grid rather than one ever-thinner row, and "Even out into a grid"
+  re-tiles any number of panes.
 - **Move between panes** - Alt + Shift + an arrow key jumps to the pane on that
   side.
 - **Hide the developer-mode prompt** - stops Edge asking to turn off
