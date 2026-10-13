@@ -10,6 +10,7 @@
 #include <windows.h>
 #include <cstdlib>
 #include "edge.h"
+#include "verify.h"
 #include "hooks.h"
 
 using namespace fixedge;
@@ -42,6 +43,14 @@ DWORD WINAPI Init(LPVOID) {
   }
   edge::Bind(edge_module);
   Log("[init] fixedge-split loaded. %ls base=%p", edge::kModule, reinterpret_cast<void*>(edge::g_base));
+
+  // Fail safe: the offsets are specific to one Edge build. Refuse to hook anything
+  // if this isn't that exact build or the hook sites don't look like code, so a
+  // stale or mismatched DLL can never corrupt a browser it wasn't reversed against.
+  if (!verify::Ok()) {
+    Log("[verify] FAILED - refusing to hook (wrong Edge build or unexpected code)");
+    return 0;
+  }
 
   hooks::g_target_panes = ReadTargetPanes();
   Log("[init] target panes = %d", hooks::g_target_panes);

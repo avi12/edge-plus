@@ -21,7 +21,7 @@ cl %CFLAGS% /c "%MH%\src\buffer.c" "%MH%\src\hde\hde64.c" "%MH%\src\hook.c" "%MH
 
 echo [2/3] fixedge-split.dll
 cl %CFLAGS% /EHsc /std:c++20 /I"%ROOT%src" /LD "%ROOT%src\dllmain.cpp" ^
-   buffer.obj hde64.obj hook.obj trampoline.obj ^
+   buffer.obj hde64.obj hook.obj trampoline.obj version.lib ^
    /Fe:fixedge-split.dll /link /OUT:fixedge-split.dll || goto :err
 
 echo [3/3] inject.exe
