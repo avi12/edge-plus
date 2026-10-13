@@ -23,14 +23,6 @@ HMODULE g_self = nullptr;
 // the hooks and drop out of Edge without a restart.
 constexpr wchar_t kUnloadEvent[] = L"Local\\fixedge-split-unload";
 
-int ReadTargetPanes() {
-  wchar_t buf[16];
-  if (GetEnvironmentVariableW(L"FIXEDGE_PANES", buf, 16)) {
-    return static_cast<int>(wcstol(buf, nullptr, 10));
-  }
-  return 1;  // stock
-}
-
 DWORD WINAPI Init(LPVOID) {
   HMODULE edge_module = nullptr;
   for (int i = 0; i < 100 && !edge_module; ++i) {  // msedge.dll may still be loading
@@ -52,11 +44,8 @@ DWORD WINAPI Init(LPVOID) {
     return 0;
   }
 
-  hooks::g_target_panes = ReadTargetPanes();
-  Log("[init] target panes = %d", hooks::g_target_panes);
-
   if (!hooks::InstallAll()) return 0;
-  Log("[init] hooks installed; split into %d panes armed", hooks::g_target_panes);
+  Log("[init] hooks installed; directional-add menu armed");
 
   // Toggle-off from the app: wait for the unload signal, then cleanly detach.
   // Manual-reset; reset first so a quick off->on re-toggle does not self-unload.

@@ -14,7 +14,7 @@ if not exist "%OUT%" mkdir "%OUT%"
 pushd "%OUT%"
 
 set "MH=%ROOT%external\minhook"
-set "CFLAGS=/nologo /O2 /MT /GS- /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /I"%MH%\include""
+set "CFLAGS=/nologo /O2 /MT /GS- /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /I"%MH%\include""
 
 echo [1/3] minhook
 cl %CFLAGS% /c "%MH%\src\buffer.c" "%MH%\src\hde\hde64.c" "%MH%\src\hook.c" "%MH%\src\trampoline.c" || goto :err

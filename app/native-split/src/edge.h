@@ -99,6 +99,25 @@ inline void* TabWebContentsAt(void* tab_strip_model, int index) {
   return reinterpret_cast<Fn>(At(rva::TabStripModel_GetWebContentsAt))(tab_strip_model, index);
 }
 
+// --- menu label plumbing (build a real libc++ std::u16string) ----------------
+struct U8View {
+  const char* data;
+  size_t len;
+};
+struct U16String {  // opaque 24-byte libc++ std::u16string storage
+  uint64_t _[3];
+};
+// base::UTF8ToUTF16(out /*rcx*/, string_view{ptr,len} /*rdx*/) -> fills `out`.
+inline void Utf8ToUtf16(U16String* out, const U8View* view) {
+  using Fn = void*(__fastcall*)(void*, const void*);
+  reinterpret_cast<Fn>(At(rva::UTF8ToUTF16))(out, view);
+}
+// ui::SimpleMenuModel::AddItem(model /*rcx*/, int command_id /*edx*/, &u16string /*r8*/).
+inline void MenuAddItem(void* model, int command_id, const U16String* label) {
+  using Fn = void*(__fastcall*)(void*, int, const void*);
+  reinterpret_cast<Fn>(At(rva::SimpleMenuModel_AddItem))(model, command_id, label);
+}
+
 // --- MultiContentsView field accessors (named, typed, one place each) ---------
 
 // The container vector OBJECT begins at this address (pass to ContainersEmplaceBack).

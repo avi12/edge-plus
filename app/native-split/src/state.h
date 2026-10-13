@@ -13,6 +13,11 @@ inline std::map<void*, Node>& Trees() {
   return trees;
 }
 
+// The MultiContentsView of the split most recently laid out — the target for a
+// directional-add command (the menu doesn't carry the MCV; the active split
+// does). Set by the layout detour, read by the menu action.
+inline void* g_active_mcv = nullptr;
+
 // The tree for `mcv`, or nullptr if none has been set yet.
 inline const Node* TreeFor(void* mcv) {
   auto it = Trees().find(mcv);

@@ -58,10 +58,11 @@ inline bool LooksLikeCode(uintptr_t rva) {
 // Every address the DLL will hook. If any fails, we do not install.
 inline bool HookSitesLookSane() {
   const uintptr_t sites[] = {
-      edge155::rva::BrowserView_ShowSplitView,
       edge155::rva::MultiContentsView_SetWebContentsAtIndex,
       edge155::rva::MultiContentsView_CalculateProposedLayout,
       edge155::rva::SplitWindowController_DoAction,
+      edge155::rva::SplitTabMenuModel_ctor,
+      edge155::rva::SplitTabMenuModel_ExecuteCommand,
   };
   for (uintptr_t rva : sites) {
     if (!LooksLikeCode(rva)) {
