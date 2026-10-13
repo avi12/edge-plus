@@ -5,7 +5,7 @@ import { HOST_NAME } from "@/features/catalog";
 import { z } from "@/lib/zod";
 import type { Browser } from "wxt/browser";
 
-/** The strings are the wire contract with the app - `app/Edge/NativeHost.cs` names them too */
+/** The strings are the wire contract with the app - `app/host/NativeHost.cs` names them too */
 enum HostMessageType {
   settings = "settings",
   reload = "reload"

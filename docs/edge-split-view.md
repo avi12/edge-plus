@@ -45,7 +45,7 @@ layouts change every four weeks.
 
 Each pane is a real Edge window tiled over the area the tab's window had. The
 extension moves tabs between windows (Edge's supported way to do it), and the
-layout is a tree of row and column splits (`src/features/split-panes/layout.ts`).
+layout is a tree of row and column splits (`extension/src/features/split-panes/layout.ts`).
 Two Windows facts shape the geometry, both measured:
 
 - **Invisible resize borders.** Edge's bounds include a 7px invisible border on

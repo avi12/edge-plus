@@ -37,10 +37,12 @@
        feature catalog rides along on its own: WXT bundles it into the
        background script, and the app's switches are built from it. -->
   <PropertyGroup>
-    <ExtensionOutput>$(MSBuildThisFileDirectory)..\.output\chrome-mv3\</ExtensionOutput>
+    <RepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))</RepositoryRoot>
+    <ExtensionRoot>$(RepositoryRoot)extension\</ExtensionRoot>
+    <ExtensionOutput>$(ExtensionRoot).output\chrome-mv3\</ExtensionOutput>
   </PropertyGroup>
   <Target Name="BuildExtension" BeforeTargets="BeforeBuild" Condition="'$(SkipExtension)' != 'true'">
-    <Exec Command="pnpm wxt build" WorkingDirectory="$(MSBuildThisFileDirectory).." />
+    <Exec Command="pnpm wxt build" WorkingDirectory="$(ExtensionRoot)" />
     <!-- Metadata is qualified by item type: a bare %(Filename) inside a target
          batches over every EmbeddedResource, renaming the catalog too. -->
     <ItemGroup>
@@ -50,15 +52,15 @@
     </ItemGroup>
   </Target>
   <ItemGroup>
-    <EmbeddedResource Include="..\src\features\catalog.json" LogicalName="catalog.json" />
+    <EmbeddedResource Include="$(ExtensionRoot)src\features\catalog.json" LogicalName="catalog.json" />
   </ItemGroup>
 
   <!-- The native-messaging host, published as its own NativeAOT exe (see
-       host\FixEdge.Host.csproj) and carried here for HostPayload to unpack.
+       app\host\FixEdge.Host.csproj) and carried here for HostPayload to unpack.
        The linker step finds Visual Studio through vswhere, which a Build Tools
        install does not put on PATH. -->
   <PropertyGroup>
-    <HostOutput>$(MSBuildThisFileDirectory)..\build\host\</HostOutput>
+    <HostOutput>$(RepositoryRoot)build\host\</HostOutput>
     <VsInstallerDirectory>$([System.Environment]::GetFolderPath(SpecialFolder.ProgramFilesX86))\Microsoft Visual Studio\Installer</VsInstallerDirectory>
   </PropertyGroup>
   <Target Name="PublishHost" BeforeTargets="BeforeBuild" Condition="'$(SkipHost)' != 'true'">

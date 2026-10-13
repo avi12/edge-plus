@@ -1,11 +1,12 @@
-app/bin/
-app/obj/
-node_modules/
+# Build output
+build/
+app/*/bin/
+app/*/obj/
 .vs/
 *.tmp
-.output/
-.wxt/
-.svelte-check/
-build/
-host/bin/
-host/obj/
+
+# Extension (WXT)
+extension/node_modules/
+extension/.output/
+extension/.wxt/
+extension/.svelte-check/

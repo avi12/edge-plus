@@ -26,6 +26,6 @@
   <!-- The file contract is the app's; linked, not copied, so both sides read
        the one definition. -->
   <ItemGroup>
-    <Compile Include="..\app\Platform\Paths.cs" Link="Paths.cs" />
+    <Compile Include="..\panel\Platform\Paths.cs" Link="Paths.cs" />
   </ItemGroup>
 </Project>
