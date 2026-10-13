@@ -27,6 +27,13 @@ inline constexpr uintptr_t ContentsContainerView_ctor           = 0x2ce1b32;
 inline constexpr uintptr_t EdgeContentsContainerView_ctor       = 0x2ce12b0;
 inline constexpr uintptr_t SplitWindowControllerImplV2_ctor     = 0x2ccfac2;
 inline constexpr uintptr_t IsEdgeSplitWindowEnabled             = 0x0fb9f2d;
+// The layout applier + the one append primitive the geometry uses. emplace_back
+// grows the real std::vector<ChildLayout> with the real allocator, so calling it
+// is the only safe way to add pane/separator entries from the injected DLL.
+inline constexpr uintptr_t LayoutManagerBase_ApplyLayout        = 0x0fd3ed8;
+// std::vector<ChildLayout>::emplace_back<View*, bool, const gfx::Rect&>
+//   (rcx = &vector, rdx = View**, r8 = bool*, r9 = gfx::Rect*)
+inline constexpr uintptr_t ChildLayouts_emplace_back            = 0x278099a;
 }  // namespace rva
 
 // --- struct field offsets ---
@@ -45,6 +52,20 @@ inline constexpr uintptr_t MCV_drop_target_view = 0x0b0; // views::View* (relati
 // ContentsContainerView
 inline constexpr uintptr_t CCV_contents_web_view = 0x3a8; // ContentsWebView*
 inline constexpr uintptr_t CCV_is_active         = 0x38d; // bool
+
+// views::ProposedLayout (the out-param CalculateProposedLayout fills; ctor zeroes 0x20)
+inline constexpr uintptr_t PL_host_size     = 0x00;  // gfx::Size {int w, int h}
+inline constexpr uintptr_t PL_child_layouts = 0x08;  // std::vector<ChildLayout> {begin, end, cap}
+
+// views::ChildLayout (element of PL_child_layouts; stride 0x30, from ApplyLayout)
+inline constexpr uintptr_t CL_stride   = 0x30;
+inline constexpr uintptr_t CL_child    = 0x00;  // views::View*
+inline constexpr uintptr_t CL_visible  = 0x08;  // bool
+inline constexpr uintptr_t CL_bounds   = 0x0c;  // gfx::Rect {int x, y, w, h}
+inline constexpr uintptr_t CL_avail    = 0x1c;  // views::SizeBounds {SizeBound w{val,has}, h{val,has}}
+
+// gfx::Rect field offsets within CL_bounds
+inline constexpr uintptr_t RECT_x = 0x0, RECT_y = 0x4, RECT_w = 0x8, RECT_h = 0xc;
 }  // namespace off
 
 }  // namespace fixedge::edge155

@@ -78,6 +78,32 @@ host_size` at `+0`, `std::vector<ChildLayout> child_layouts` at `+8`), `r8` = a
 `new` at rva `0x101bd60` (size `0x558`), ctor rva `0x2ce12b0` (builds the whole
 child chain incl. the `ContentsWebView`). See `ctor.md`.
 
+## `ProposedLayout` / `ChildLayout` ABI (verified 2026-10-13)
+
+From `views::LayoutManagerBase::ApplyLayout` (rva `0xfd3ed8`) and the emit path of
+`CalculateProposedLayout`:
+
+- **`views::ProposedLayout`** (ctor `0xfbee34` zeroes `0x20` bytes):
+  `+0x00 gfx::Size host_size`, `+0x08 std::__Cr::vector<ChildLayout> child_layouts`
+  ({begin,end,cap} libc++ pointers).
+- **`views::ChildLayout`** — **stride `0x30`**: `+0x00 View* child`, `+0x08 bool
+  visible`, `+0x0c gfx::Rect bounds {x,y,w,h ints}`, `+0x1c SizeBounds
+  available_size` ({SizeBound width_{int,bool}, SizeBound height_{int,bool}}).
+  `ApplyLayout` loops `begin..begin+count*0x30`, calling `View::GetVisible`,
+  `SetVisible`, and `SetBoundsRect(&bounds)` per entry.
+- **Append primitive:** `std::vector<ChildLayout>::emplace_back<View*, bool, const
+  gfx::Rect&>` at rva `0x278099a` — `rcx=&vector, rdx=&View*, r8=&bool,
+  r9=&gfx::Rect`. The 2-pane emit calls it once per child (ink-drop container at
+  `MCV+0x3b0`, container[0] at `MCV+0x368`, resize area at `MCV+0x3f0`,
+  container[1], …). **Calling this is the only allocator-safe way to add entries
+  from the injected DLL** — never hand-roll the vector, or the ProposedLayout dtor
+  frees a pointer we allocated with the wrong allocator.
+
+**N-pane geometry plan (revised):** in a `CalculateProposedLayout` detour, when
+count ≤ 2 defer to the original (zero regression); when count > 2, build the
+`host_size`, then `emplace_back` one entry per container with the N-way rect and
+one per separator, computing rects by splitting the content length by ratio.
+
 ## The cap, precisely
 
 - **`SetWebContentsAtIndex(index, wc)`** starts `cmp r8d, 2 / jae ud2` — a
