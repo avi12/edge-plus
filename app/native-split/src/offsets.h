@@ -34,7 +34,23 @@ inline constexpr uintptr_t LayoutManagerBase_ApplyLayout        = 0x0fd3ed8;
 // std::vector<ChildLayout>::emplace_back<View*, bool, const gfx::Rect&>
 //   (rcx = &vector, rdx = View**, r8 = bool*, r9 = gfx::Rect*)
 inline constexpr uintptr_t ChildLayouts_emplace_back            = 0x278099a;
+
+// --- pane construction (ctor.md) — all must run on the UI thread ---
+inline constexpr uintptr_t CheckedOperatorNew3   = 0x101bd60;  // (size)->void*  View allocator
+inline constexpr uintptr_t AddChildViewAtImpl    = 0x1017902;  // (parent, child, index)
+inline constexpr uintptr_t View_SetVisible       = 0x100b6b0;  // (this, bool)  vtable+0x98
+inline constexpr uintptr_t Containers_emplace_back = 0x2ce0508; // (&vec@+0x368, raw_ptr*)
+inline constexpr uintptr_t RawPtr_AcquireInternal = 0x0f946b0; // (p) BackupRef, gated
+inline constexpr uintptr_t View_InvalidateLayout = 0x0fb5540;   // (this) mark layout dirty
+inline constexpr uintptr_t View_LayoutImmediately = 0x0fd40b0;  // (this) relayout now
+// --- the feed pipeline (controller.md) ---
+inline constexpr uintptr_t BrowserView_ShowSplitView = 0xc93594a; // (BrowserView*) feeds panes
 }  // namespace rva
+
+// Linear addresses (not RVAs): partition-alloc BRP-pool gate for raw_ptr acquire.
+namespace addr {
+inline constexpr uintptr_t PA_setup_plus8 = 0x180000000 + 0x140f5b48; // [here] = BRP pool base mask cmp
+}
 
 // --- struct field offsets ---
 namespace off {
@@ -48,7 +64,11 @@ inline constexpr uintptr_t MCV_containers_count = 0x370; // size_t
 inline constexpr uintptr_t MCV_resize_area      = 0x3f0; // EdgeMultiContentsResizeArea* (single)
 inline constexpr uintptr_t MCV_orientation      = 0x428; // SplitTabLayout enum (0 = one axis, != 0 the other)
 inline constexpr uintptr_t MCV_split_ratio      = 0x430; // double (default 0.5)
+inline constexpr uintptr_t MCV_browser_view     = 0x350; // BrowserView* (arg to each container ctor)
+inline constexpr uintptr_t MCV_child_insert_idx = 0x1a8; // size_t (View's child count; AddChildViewAt index)
 inline constexpr uintptr_t MCV_drop_target_view = 0x0b0; // views::View* (relative to the View base)
+inline constexpr uintptr_t BV_multi_contents_view = 0x6e0; // MultiContentsView* within BrowserView
+inline constexpr uintptr_t CWV_primary_flag     = 0x450; // bool on ContentsWebView (pane-0 fixup)
 // ContentsContainerView
 inline constexpr uintptr_t CCV_contents_web_view = 0x3a8; // ContentsWebView*
 inline constexpr uintptr_t CCV_is_active         = 0x38d; // bool
