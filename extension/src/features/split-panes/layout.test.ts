@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Pane } from "./layout.ts";
-import { Axis, dividers, fromTemplate, layout, moveDivider, panes, remove, setUrl, slotCount, split } from "./layout.ts";
+import { Axis, dividers, fromTemplate, grow, layout, moveDivider, panes, remove, setUrl, slotCount, split, tile } from "./layout.ts";
 
 const pane = (id: string): Pane => ({ id, url: `https://example.com/${id}` });
 
@@ -63,4 +63,42 @@ test("templates build equal-weight trees in slot order", () => {
   assert.equal(slotCount(template), 4);
   const rects = layout({ root: fromTemplate({ template, panes: ["a", "b", "c", "d"].map(pane) }) });
   assert.deepEqual(rects.get("d"), { left: 50, top: 50, width: 50, height: 50 });
+});
+
+const ids = (count: number) => Array.from({ length: count }, (_, i) => pane(String.fromCharCode(97 + i)));
+
+test("growing by many panes fills out a grid instead of thinning one row", () => {
+  const [first, ...rest] = ids(4);
+  const rects = layout({ root: grow({ root: first!, newPanes: rest, aspect: 16 / 9 }) });
+  for (const rect of rects.values()) {
+    assert.equal(rect.width, 50);
+    assert.equal(rect.height, 50);
+  }
+});
+
+test("growing keeps every pane already there and adds each new one once", () => {
+  const [first, ...rest] = ids(12);
+  const root = grow({ root: first!, newPanes: rest });
+  assert.deepEqual(panes(root).map(({ id }) => id).toSorted(), ids(12).map(({ id }) => id));
+  const smallest = Math.min(...[...layout({ root }).values()].map(rect => rect.width * rect.height));
+  assert.ok(smallest >= 100 * 100 / 16, "no pane is shrunk below a sixteenth of the tab by 12 panes");
+});
+
+test("tiling any count gives rows that differ by at most one pane, in reading order", () => {
+  for (let count = 1; count <= 20; count++) {
+    const root = tile({ panes: ids(count) });
+    const rects = [...layout({ root }).entries()];
+    assert.equal(rects.length, count);
+    const perRow = Map.groupBy(rects, ([, rect]) => rect.top);
+    const sizes = [...perRow.values()].map(row => row.length);
+    assert.ok(Math.max(...sizes) - Math.min(...sizes) <= 1, `${count} panes: rows ${sizes}`);
+    assert.deepEqual(panes(root).map(({ id }) => id), ids(count).map(({ id }) => id));
+  }
+});
+
+test("tiling a wide tab puts few panes in one row and more in a grid", () => {
+  const rowsOf = (count: number) => new Set([...layout({ root: tile({ panes: ids(count) }) }).values()].map(rect => rect.top)).size;
+  assert.equal(rowsOf(3), 1);
+  assert.equal(rowsOf(6), 2);
+  assert.equal(rowsOf(12), 3);
 });

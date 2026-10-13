@@ -73,6 +73,46 @@ export function split({ root, targetId, newPane, axis }: {
   };
 }
 
+/** A tab's width over its height, for when the real one is not known */
+export const DEFAULT_ASPECT = 16 / 9;
+
+/**
+ * Adds any number of panes, each by halving the biggest pane on screen across its longer side, so
+ * the split fills out as a grid instead of thinning one row; `aspect` is the tab's width over height
+ */
+export function grow({ root, newPanes, aspect = DEFAULT_ASPECT }: { root: Node; newPanes: Pane[]; aspect?: number }) {
+  let grown = root;
+  for (const pane of newPanes) {
+    let biggest: { id: string; area: number; axis: Axis } | null = null;
+    for (const [id, rect] of layout({ root: grown })) {
+      const width = rect.width * aspect;
+      const area = width * rect.height;
+      if (!biggest || area > biggest.area) {
+        biggest = { id, area, axis: width >= rect.height ? Axis.row : Axis.column };
+      }
+    }
+    grown = split({ root: grown, targetId: biggest!.id, newPane: pane, axis: biggest!.axis });
+  }
+  return grown;
+}
+
+/**
+ * Lays any number of panes out as an even grid in reading order: as many rows as keep each pane
+ * closest to the tab's own shape, the earlier rows taking one more pane when they do not divide
+ */
+export function tile({ panes: tiled, aspect = DEFAULT_ASPECT }: { panes: Pane[]; aspect?: number }): Node {
+  const rowCount = Math.max(1, Math.min(tiled.length, Math.round(Math.sqrt(tiled.length / aspect))));
+  const rows: Node[] = [];
+  let next = 0;
+  for (let iRow = 0; iRow < rowCount; iRow++) {
+    const size = Math.ceil((tiled.length - next) / (rowCount - iRow));
+    const cells = tiled.slice(next, next + size);
+    next += size;
+    rows.push(cells.length === 1 ? cells[0]! : { axis: Axis.row, children: cells, weights: cells.map(() => 1) });
+  }
+  return rows.length === 1 ? rows[0]! : { axis: Axis.column, children: rows, weights: rows.map(() => 1) };
+}
+
 export function setUrl({ root, paneId, url }: { root: Node; paneId: string; url: string }): Node {
   if (isPane(root)) {
     return root.id === paneId ? { ...root, url } : root;
