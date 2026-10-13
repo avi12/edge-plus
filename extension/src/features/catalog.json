@@ -14,6 +14,13 @@
       "description": "Alt + Shift + an arrow key jumps to the pane on that side",
       "glyph": "\ue8ab",
       "enabledByDefault": true
+    },
+    {
+      "id": "quietDevMode",
+      "title": "Hide the developer-mode prompt",
+      "description": "Stops Edge asking to turn off developer-mode extensions when it starts. Takes effect from Edge's next start",
+      "glyph": "\ue7ba",
+      "enabledByDefault": false
     }
   ]
 }

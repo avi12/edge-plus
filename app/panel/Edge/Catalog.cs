@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Nodes;
@@ -10,11 +11,17 @@ internal sealed record Feature(
 
 // The features the extension implements, read from its own catalog.json, so a
 // feature's name, wording and defaults are written once for both sides.
+//
+// Linked into the host as well; each exe embeds catalog.json under this name.
 internal static class Catalog {
   public const string SplitPanes = "splitPanes";
+  public const string QuietDevMode = "quietDevMode";
 
-  private static readonly JsonNode s_catalog =
-      JsonNode.Parse(ExtensionPayload.ReadCatalog())!;
+  private const string Resource = "catalog.json";
+
+  private static readonly JsonNode s_catalog = JsonNode.Parse(
+      typeof(Catalog).Assembly.GetManifestResourceStream(Resource)
+      ?? throw new InvalidOperationException($"This exe carries no {Resource}"))!;
 
   // The name Edge looks the native host up by.
   public static string HostName { get; } = s_catalog["hostName"]!.GetValue<string>();

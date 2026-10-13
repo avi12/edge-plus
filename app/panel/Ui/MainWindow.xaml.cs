@@ -48,7 +48,14 @@ public sealed partial class MainWindow : Window {
         MinWidth = 0,
         IsOn = FeatureSettings.IsEnabled(feature.Id),
       };
-      toggle.Toggled += (_, _) => FeatureSettings.SetEnabled(feature.Id, toggle.IsOn);
+      toggle.Toggled += (_, _) => {
+        FeatureSettings.SetEnabled(feature.Id, toggle.IsOn);
+        // The one feature that lives outside Edge: it waits for Edge to close.
+        bool isDevModePromptTurnedOn = feature.Id == Catalog.QuietDevMode && toggle.IsOn;
+        if (isDevModePromptTurnedOn) {
+          DevModePrompt.Arm();
+        }
+      };
       var card = new SettingsCard {
         Header = feature.Title,
         Description = feature.Description,

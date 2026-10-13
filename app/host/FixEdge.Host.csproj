@@ -27,5 +27,8 @@
        the one definition. -->
   <ItemGroup>
     <Compile Include="..\panel\Platform\Paths.cs" Link="Paths.cs" />
+    <Compile Include="..\panel\Edge\Catalog.cs" Link="Catalog.cs" />
+    <Compile Include="..\panel\Edge\FeatureSettings.cs" Link="FeatureSettings.cs" />
+    <EmbeddedResource Include="..\..\extension\src\features\catalog.json" LogicalName="catalog.json" />
   </ItemGroup>
 </Project>

@@ -53,6 +53,9 @@
   </Target>
   <ItemGroup>
     <EmbeddedResource Include="$(ExtensionRoot)src\features\catalog.json" LogicalName="catalog.json" />
+    <!-- The panel arms the developer-mode waiter itself when its switch is
+         turned on; the code is the host's, linked. -->
+    <Compile Include="..\host\DevModePrompt.cs" Link="Edge\DevModePrompt.cs" />
   </ItemGroup>
 
   <!-- The native-messaging host, published as its own NativeAOT exe (see

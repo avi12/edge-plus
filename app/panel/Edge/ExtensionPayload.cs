@@ -13,7 +13,6 @@ namespace FixEdge;
 internal static class ExtensionPayload {
   private const string ResourcePrefix = "extension/";
   private const string ManifestFile = "manifest.json";
-  private const string CatalogResource = "catalog.json";
   private const int ExtensionIdBytes = 16;
 
   private static readonly Assembly s_assembly = typeof(ExtensionPayload).Assembly;
@@ -29,8 +28,6 @@ internal static class ExtensionPayload {
   // the first 16 bytes of its SHA-256, each nibble written as a letter a-p.
   // Computing it here means the key in manifest.json is its only source.
   public static string Id { get; } = ComputeId();
-
-  public static string ReadCatalog() => System.Text.Encoding.UTF8.GetString(ReadBytes(CatalogResource));
 
   private static string Read(string relativePath) {
     if (!s_resources.TryGetValue(relativePath, out string? resource)) {

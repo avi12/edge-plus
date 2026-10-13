@@ -7,35 +7,41 @@ import { connectHost, reportToHost, settingsSchema } from "@/lib/host";
 import { MessageType, onMessage } from "@/lib/messaging";
 import { defineBackground, storage } from "#imports";
 
-const MODULES: Record<FeatureId, FeatureModule> = {
+/** A feature with no module here runs entirely in the app, like hiding the developer-mode prompt */
+const MODULES: Partial<Record<FeatureId, FeatureModule>> = {
   [FeatureId.splitPanes]: SplitPanes.splitPanes,
   [FeatureId.paneFocus]: paneFocus
 };
+
+const EXTENSION_FEATURES = FEATURES.flatMap(feature => {
+  const module = MODULES[feature.id];
+  return module ? [{ ...feature, module }] : [];
+});
 
 /** The last switches the app sent, so they hold while the app is closed */
 const settingsItem = storage.defineItem<unknown>("local:settings");
 
 export default defineBackground(() => {
-  const activeFeatures = new Set<FeatureId>();
+  const activeModules = new Map<FeatureId, FeatureModule>();
 
   function report() {
     const statusByFeature: Record<string, Record<string, number>> = {};
-    for (const id of activeFeatures) {
-      statusByFeature[id] = MODULES[id].status?.() ?? {};
+    for (const [id, module] of activeModules) {
+      statusByFeature[id] = module.status?.() ?? {};
     }
     reportToHost(statusByFeature);
   }
 
   async function applySettings(settings: Settings) {
-    for (const feature of FEATURES) {
+    for (const feature of EXTENSION_FEATURES) {
       const isWanted = settings.features?.[feature.id]?.enabled ?? feature.enabledByDefault;
-      const isActive = activeFeatures.has(feature.id);
+      const isActive = activeModules.has(feature.id);
       if (isWanted && !isActive) {
-        activeFeatures.add(feature.id);
-        await MODULES[feature.id].enable({ report });
+        activeModules.set(feature.id, feature.module);
+        await feature.module.enable({ report });
       } else if (!isWanted && isActive) {
-        activeFeatures.delete(feature.id);
-        await MODULES[feature.id].disable();
+        activeModules.delete(feature.id);
+        await feature.module.disable();
       }
     }
     report();
@@ -57,22 +63,20 @@ export default defineBackground(() => {
 
   browser.commands.onCommand.addListener(async (command, tab) => {
     await ready;
-    for (const id of activeFeatures) {
-      await MODULES[id].commands?.[command as Command]?.(tab?.windowId);
+    for (const module of activeModules.values()) {
+      await module.commands?.[command as Command]?.(tab?.windowId);
     }
   });
 
   browser.contextMenus.onClicked.addListener(async (info, tab) => {
     await ready;
     const featureId = String(info.menuItemId).split(".")[0] as FeatureId;
-    if (activeFeatures.has(featureId)) {
-      await MODULES[featureId].onMenu?.(info, tab);
-    }
+    await activeModules.get(featureId)?.onMenu?.(info, tab);
   });
 
   async function isSplitEnabled() {
     await ready;
-    return activeFeatures.has(FeatureId.splitPanes);
+    return activeModules.has(FeatureId.splitPanes);
   }
 
   onMessage(MessageType.describeSplit, async ({ data: windowId }) => {
