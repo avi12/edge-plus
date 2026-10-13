@@ -73,6 +73,18 @@
     </ItemGroup>
   </Target>
 
+  <!-- The native split DLL (app\native-split), built with MSVC and carried here
+       for NativeSplitPayload to unpack and the panel to inject into Edge. -->
+  <PropertyGroup>
+    <NativeSplitDir>$(RepositoryRoot)app\native-split\</NativeSplitDir>
+  </PropertyGroup>
+  <Target Name="BuildNativeSplit" BeforeTargets="BeforeBuild" Condition="'$(SkipNativeSplit)' != 'true'">
+    <Exec Command="&quot;$(NativeSplitDir)build.cmd&quot;" WorkingDirectory="$(NativeSplitDir)" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(NativeSplitDir)build\fixedge-split.dll" LogicalName="fixedge-split.dll" />
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.*" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.*" />

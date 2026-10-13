@@ -15,6 +15,11 @@ internal static class FeatureSettings {
   public static bool IsEnabled(string featureId) =>
       Stored(featureId, EnabledKey)?.GetValue<bool>() ?? Catalog.Get(featureId).IsEnabledByDefault;
 
+  // For app-managed settings that are not catalog features (e.g. the native
+  // split), where the default is explicit rather than read from the catalog.
+  public static bool IsEnabled(string featureId, bool fallback) =>
+      Stored(featureId, EnabledKey)?.GetValue<bool>() ?? fallback;
+
   public static void SetEnabled(string featureId, bool isEnabled) =>
       Set(featureId, EnabledKey, JsonValue.Create(isEnabled));
 

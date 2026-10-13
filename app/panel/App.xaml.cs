@@ -37,6 +37,7 @@ public partial class App : Application {
     bool isHostNew = HostPayload.Unpack();
     HostRegistration.Register();
     ExtensionPayload.Unpack(isReloadForced: isHostNew);
+    NativeSplitPayload.Unpack();
 
     _window = new MainWindow();
     _window.Activate();

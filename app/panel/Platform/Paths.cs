@@ -25,6 +25,9 @@ internal static class Paths {
 
   public static string Status { get; } = Path.Combine(Root, "status.json");
 
+  // The native split DLL, unpacked here for the panel to inject into Edge.
+  public static string SplitDll { get; } = Path.Combine(Root, "fixedge-split.dll");
+
   public static string HostManifest { get; } = Path.Combine(Root, "native-host.json");
 
   public static string ReadSettings() => File.Exists(Settings) ? File.ReadAllText(Settings) : "{}";

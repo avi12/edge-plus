@@ -31,6 +31,7 @@ public sealed partial class MainWindow : Window {
     WindowChrome.CenterOnScreen(AppWindow);
 
     BuildFeatureList();
+    BuildNativeSplitCard();
     ExtensionFolder.Text = Paths.Extension;
     RefreshConnection();
     _statusPoll.Tick += (_, _) => RefreshConnection();
@@ -68,6 +69,46 @@ public sealed partial class MainWindow : Window {
       card.Click += (_, _) => toggle.IsOn = !toggle.IsOn;
       FeatureList.Children.Add(card);
     }
+  }
+
+  // The native split is not an extension feature: it is a DLL the panel loads
+  // into Edge itself, so it gets its own switch that injects or ejects live.
+  private const string NativeSplitId = "nativeSplit";
+
+  private void BuildNativeSplitCard() {
+    if (!NativeSplitPayload.Exists) {
+      return;  // this build does not carry the native DLL
+    }
+    bool wanted = FeatureSettings.IsEnabled(NativeSplitId, false);
+    // Re-assert the wanted state against the Edge running now.
+    if (wanted && NativeSplit.IsEdgeRunning && !NativeSplit.IsActive()) {
+      NativeSplit.Enable(Paths.SplitDll);
+    }
+    var toggle = new ToggleSwitch {
+      OnContent = "",
+      OffContent = "",
+      MinWidth = 0,
+      IsOn = NativeSplit.IsActive() || wanted,
+    };
+    toggle.Toggled += (_, _) => {
+      FeatureSettings.SetEnabled(NativeSplitId, toggle.IsOn);
+      if (toggle.IsOn) {
+        NativeSplit.Enable(Paths.SplitDll);
+      } else {
+        NativeSplit.Disable();
+      }
+    };
+    var card = new SettingsCard {
+      Header = "Native split into any grid (experimental)",
+      Description = "Grows Edge's own split past two panes, loaded straight into Edge - no extension. "
+                  + "Turning it on injects the module; off removes it, no restart. Open Edge first.",
+      HeaderIcon = new FontIcon { Glyph = "" },
+      IsClickEnabled = true,
+      IsActionIconVisible = false,
+      Content = toggle,
+    };
+    card.Click += (_, _) => toggle.IsOn = !toggle.IsOn;
+    FeatureList.Children.Add(card);
   }
 
   private void RefreshConnection() {
