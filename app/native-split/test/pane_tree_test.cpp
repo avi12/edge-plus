@@ -102,6 +102,41 @@ int main() {
     Check(Order(t) == std::vector<int>({1, 0, 2}), "0 swapped with next sibling");
   }
 
+  // Resize reflows proportionally: a 1:1 row stays 1:1 as the window widens, and
+  // a weighted split keeps its ratio across sizes.
+  {
+    Node t = FlatTree(2, Axis::kHorizontal);
+    std::vector<LeafRect> a, b;
+    LayoutTree(t, Rect{0, 0, 400, 200}, 0, a);
+    LayoutTree(t, Rect{0, 0, 800, 200}, 0, b);
+    Check(a[0].rect.w == 200 && a[1].rect.w == 200, "400 wide splits 200/200");
+    Check(b[0].rect.w == 400 && b[1].rect.w == 400, "800 wide splits 400/400 (reflow)");
+    Check(b[1].rect.x == 400 && b[1].rect.x + b[1].rect.w == 800, "reflow keeps panes seamless");
+  }
+  {
+    Node t = FlatTree(2, Axis::kHorizontal);
+    t.weights = {3.f, 1.f};  // 3:1
+    std::vector<LeafRect> a, b;
+    LayoutTree(t, Rect{0, 0, 400, 100}, 0, a);
+    LayoutTree(t, Rect{0, 0, 1200, 100}, 0, b);
+    Check(a[0].rect.w == 300 && a[1].rect.w == 100, "3:1 ratio at 400");
+    Check(b[0].rect.w == 900 && b[1].rect.w == 300, "3:1 ratio preserved at 1200");
+  }
+  // Minimum pane size: a tiny window never collapses a pane below span/n, and
+  // panes still tile exactly (no negative widths, no overflow).
+  {
+    Node t = FlatTree(3, Axis::kHorizontal);
+    std::vector<LeafRect> v;
+    LayoutTree(t, Rect{0, 0, 30, 50}, 0, v);
+    int sum = 0;
+    for (const LeafRect& lr : v) {
+      Check(lr.rect.w >= 10, "no pane below span/n on a tiny window");
+      Check(lr.rect.w > 0, "no zero/negative pane");
+      sum += lr.rect.w;
+    }
+    Check(sum == 30, "panes still tile the tiny window exactly");
+  }
+
   std::printf("OK: %d checks passed\n", g_checks);
   return 0;
 }

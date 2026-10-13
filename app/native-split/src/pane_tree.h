@@ -3,6 +3,7 @@
 // is the single source of truth for where each pane sits; the geometry detour
 // only translates its output into Edge ChildLayouts.
 #pragma once
+#include <algorithm>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -28,30 +29,78 @@ struct LeafRect {
   Rect rect;
 };
 
+// The per-pane minimum length along the split axis (Edge floors panes similarly,
+// so a resize can't crush one to nothing). Capped below by span/n so a small
+// window shrinks panes evenly instead of overflowing.
+inline constexpr int kDesiredMinPane = 64;
+
 // Recursively place every leaf inside `bounds`, leaving `gap` px between siblings.
-// Pure; early-returns on degenerate input. The last child absorbs rounding so the
-// panes exactly tile the bounds with no seam drift.
+// Pure; early-returns on degenerate input. Each pane keeps at least a minimum
+// length, and the extra is shared by weight with the last child absorbing
+// rounding, so the panes exactly tile the bounds with no seam drift. Because the
+// lengths come from `bounds`, the same tree re-laid in a resized window reflows
+// proportionally — resize handling is intrinsic, not a special case.
 inline void LayoutTree(const Node& node, const Rect& bounds, int gap,
                        std::vector<LeafRect>& out) {
   if (node.is_leaf) {
     out.push_back({node.leaf, bounds});
     return;
   }
-  const size_t n = node.children.size();
+  const int n = static_cast<int>(node.children.size());
   if (n == 0) return;
 
   float total = 0.f;
-  for (size_t i = 0; i < n; ++i) total += (i < node.weights.size() ? node.weights[i] : 1.f);
+  for (int i = 0; i < n; ++i) total += (static_cast<size_t>(i) < node.weights.size() ? node.weights[i] : 1.f);
   if (total <= 0.f) total = static_cast<float>(n);
 
   const bool horiz = node.axis == Axis::kHorizontal;
-  const int span = (horiz ? bounds.w : bounds.h) - gap * static_cast<int>(n - 1);
+  const int span = std::max(0, (horiz ? bounds.w : bounds.h) - gap * (n - 1));
+  // Feasible floor: never larger than an equal share, so the pins always fit.
+  const int min_len = std::min(kDesiredMinPane, span / n);
+
+  std::vector<float> w(n);
+  for (int i = 0; i < n; ++i) w[i] = (static_cast<size_t>(i) < node.weights.size() ? node.weights[i] : 1.f);
+
+  // Water-fill: pin to min_len only the panes whose proportional length would
+  // fall below it; the rest keep their exact ratio of the remaining span.
+  std::vector<bool> pinned(n, false);
+  for (;;) {
+    float free_w = 0.f;
+    int pinned_count = 0;
+    for (int i = 0; i < n; ++i) {
+      if (pinned[i]) ++pinned_count; else free_w += w[i];
+    }
+    const int free_span = span - min_len * pinned_count;
+    bool changed = false;
+    if (free_w > 0.f) {
+      for (int i = 0; i < n; ++i) {
+        if (!pinned[i] && static_cast<float>(free_span) * (w[i] / free_w) < static_cast<float>(min_len)) {
+          pinned[i] = true;
+          changed = true;
+        }
+      }
+    }
+    if (!changed) break;
+  }
+
+  float free_w = 0.f;
+  int pinned_count = 0;
+  for (int i = 0; i < n; ++i) {
+    if (pinned[i]) ++pinned_count; else free_w += w[i];
+  }
+  const int free_span = span - min_len * pinned_count;
+
   int cursor = horiz ? bounds.x : bounds.y;
   int used = 0;
-  for (size_t i = 0; i < n; ++i) {
-    const float w = (i < node.weights.size() ? node.weights[i] : 1.f);
-    const int len = (i == n - 1) ? (span - used)
-                                 : static_cast<int>(static_cast<float>(span) * (w / total));
+  for (int i = 0; i < n; ++i) {
+    int len;
+    if (i == n - 1) {
+      len = span - used;  // last absorbs rounding so panes tile exactly
+    } else if (pinned[i]) {
+      len = min_len;
+    } else {
+      len = free_w > 0.f ? static_cast<int>(static_cast<float>(free_span) * (w[i] / free_w)) : min_len;
+    }
     used += len;
     const Rect child = horiz ? Rect{cursor, bounds.y, len, bounds.h}
                              : Rect{bounds.x, cursor, bounds.w, len};
