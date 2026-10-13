@@ -34,6 +34,7 @@ using Ctor_t = void*(__fastcall*)(void*, void*, void*, void*, void*);
 inline Ctor_t o_ctor = nullptr;
 inline void* __fastcall h_ctor(void* self, void* a, void* b, void* c, void* d) {
   void* result = o_ctor(self, a, b, c, d);
+  Log("[menu] SplitTabMenuModel ctor fired self=%p", self);  // did we even get here?
   if (!g_labels_ready) BuildLabels();
   edge::MenuAddItem(self, kAddUp, &g_label[0]);
   edge::MenuAddItem(self, kAddDown, &g_label[1]);
@@ -41,6 +42,14 @@ inline void* __fastcall h_ctor(void* self, void* a, void* b, void* c, void* d) {
   edge::MenuAddItem(self, kAddRight, &g_label[3]);
   Log("[menu] appended 4 directional items to model %p", self);
   return result;
+}
+
+// Diagnostic: did the ⋯ split menu even route through WebUISplitTabsControl?
+using HandleCtx_t = void*(__fastcall*)(void*, void*, void*, void*);
+inline HandleCtx_t o_handle_ctx = nullptr;
+inline void* __fastcall h_handle_ctx(void* self, void* a, void* b, void* c) {
+  Log("[diag] WebUISplitTabsControl::HandleContextMenu fired");
+  return o_handle_ctx(self, a, b, c);
 }
 
 // SplitTabMenuModel::ExecuteCommand(self=delegate, int command_id, int flags).

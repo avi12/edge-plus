@@ -10,6 +10,7 @@
 #include "geometry.h"
 #include "collapse.h"
 #include "menu.h"
+#include "control.h"
 #include "state.h"
 
 namespace fixedge::hooks {
@@ -78,13 +79,17 @@ inline bool InstallAll() {
           "SplitTabMenuModel::ctor");
   Install(rva::SplitTabMenuModel_ExecuteCommand, reinterpret_cast<void*>(menu::h_exec), &menu::o_exec,
           "SplitTabMenuModel::ExecuteCommand");
+  Install(rva::WebUISplitTabsControl_HandleContextMenu, reinterpret_cast<void*>(menu::h_handle_ctx),
+          &menu::o_handle_ctx, "WebUISplitTabsControl::HandleContextMenu");
   // Lift the index<2 guard so the feeder can fill pane 2+ (restored on unload).
   g_guard_saved = edge::PatchByte(rva::SetWebContentsAtIndex_guard_imm, 0xff);
   Log("[patch] SetWebContentsAtIndex guard %u -> 0xff", g_guard_saved);
+  control::Install();  // the add-pane control channel (UI-thread trigger)
   return true;
 }
 
 inline void RemoveAll() {
+  control::Remove();
   if (g_guard_saved) edge::PatchByte(rva::SetWebContentsAtIndex_guard_imm, g_guard_saved);
   MH_DisableHook(MH_ALL_HOOKS);
   MH_Uninitialize();

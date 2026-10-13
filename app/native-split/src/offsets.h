@@ -54,6 +54,7 @@ inline constexpr uintptr_t SplitTabMenuModel_ctor          = 0xa264f8e;
 inline constexpr uintptr_t SplitTabMenuModel_ExecuteCommand = 0xa265830;
 inline constexpr uintptr_t SplitTabMenuModel_GetLabelForCommandId = 0xa265430;
 inline constexpr uintptr_t SimpleMenuModel_AddItem         = 0x101bf04;  // (model, cmd_id, &u16string)
+inline constexpr uintptr_t WebUISplitTabsControl_HandleContextMenu = 0xa2d2fe0; // diag: the ⋯ split menu
 inline constexpr uintptr_t UTF8ToUTF16                     = 0x101cae0;  // (&out_u16, &string_view)
 // --- collapse (docs/re/collapse.md): split button while split = keep active ---
 // SplitWindowControllerImplV2::DoActionToSplitWindow(controller, WebContents*, int action).
