@@ -37,6 +37,10 @@ static void Log(const char* fmt, ...) {
 }
 
 static uintptr_t g_base = 0;
+static HMODULE g_self = nullptr;
+// The companion app toggles the feature off by signalling this; the DLL then
+// removes its hooks and unloads itself, so Edge is back to stock without a restart.
+static constexpr wchar_t kUnloadEvent[] = L"Local\\fixedge-split-unload";
 static inline void* At(uintptr_t rva) { return reinterpret_cast<void*>(g_base + rva); }
 static inline uint32_t U32(void* obj, uintptr_t off) { return *reinterpret_cast<uint32_t*>((uint8_t*)obj + off); }
 static inline uint64_t U64(void* obj, uintptr_t off) { return *reinterpret_cast<uint64_t*>((uint8_t*)obj + off); }
@@ -88,11 +92,22 @@ static DWORD WINAPI Init(LPVOID) {
   Hook(rva::MultiContentsView_SetWebContentsAtIndex, (void*)h_SetWC, &o_SetWC, "SetWebContentsAtIndex");
   Hook(rva::MultiContentsView_CalculateProposedLayout, (void*)h_CalcLayout, &o_CalcLayout, "CalculateProposedLayout");
   Log("[init] hooks installed; waiting for a split to be created");
+
+  // Toggle-off from the app: wait for the unload signal, then cleanly detach.
+  HANDLE ev = CreateEventW(nullptr, TRUE, FALSE, kUnloadEvent);
+  WaitForSingleObject(ev, INFINITE);
+  Log("[unload] signalled; removing hooks");
+  MH_DisableHook(MH_ALL_HOOKS);
+  MH_Uninitialize();
+  if (ev) CloseHandle(ev);
+  Log("[unload] fixedge-split detached");
+  FreeLibraryAndExitThread(g_self, 0);  // drop out of Edge without a restart
   return 0;
 }
 
 BOOL APIENTRY DllMain(HMODULE mod, DWORD reason, LPVOID) {
   if (reason == DLL_PROCESS_ATTACH) {
+    g_self = mod;
     DisableThreadLibraryCalls(mod);
     CreateThread(nullptr, 0, Init, nullptr, 0, nullptr);  // off the loader lock
   }
