@@ -134,6 +134,24 @@ the layout is an arbitrary grid. The native pieces this maps onto:
   container at an arbitrary `gfx::Rect`, so a recursive tree→rects walk drops
   straight into it (each leaf = one container).
 
+### Pane operations (Avi's spec, continued)
+
+- **Swap button with a direction algorithm.** Each pane gets a swap toggle whose
+  **axis is decided by the pane's place in the grid**: a top pane swaps only with
+  its bottom counterpart (and vice-versa); a 3×4-style layout swaps horizontally.
+  Interpretation to confirm: in the split **tree**, a leaf's swap counterpart is
+  its **sibling subtree**, and the offered direction is the **parent node's split
+  orientation** (vertical parent → top/bottom toggle, horizontal parent →
+  left/right). This generalizes the 4×3 / 3×4 examples to any grid. Maps onto the
+  native `SplitTabSwapMenuModel` (rva `0xa265ebe`) / `SplitViewLayoutMenuModel`.
+- **A third handle** under the 3-dot button to **drag a pane to another slot**,
+  pushing the other panes out of the way (tiling-WM reflow). Rearranges the tree;
+  reference "avi\pade" to be clarified.
+- **Animated transitions** for every pane switch/move — but only when Windows
+  animations are enabled: gate on `SystemParametersInfo(SPI_GETCLIENTAREAANIMATION)`
+  (and honor `prefers-reduced-motion` where WebUI is involved). Animate by
+  interpolating each container's `gfx::Rect` across frames in the layout detour.
+
 Remaining build: a per-MCV split **tree** in the DLL (leaves ↔ containers),
 tree→rect layout in the detour, extend `SplitTabMenuModel` with 4 directional
 commands that insert a leaf + open the tab picker, and N−1 resize handles along
