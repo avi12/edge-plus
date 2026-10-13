@@ -1,0 +1,32 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json.Nodes;
+
+namespace FixEdge;
+
+// Glyph is the feature's Segoe Fluent Icons code point, for its row in the app.
+internal sealed record Feature(
+    string Id, string Title, string Description, string Glyph, bool IsEnabledByDefault);
+
+// The features the extension implements, read from its own catalog.json, so a
+// feature's name, wording and defaults are written once for both sides.
+internal static class Catalog {
+  public const string SplitPanes = "splitPanes";
+
+  private static readonly JsonNode s_catalog =
+      JsonNode.Parse(ExtensionPayload.ReadCatalog())!;
+
+  // The name Edge looks the native host up by.
+  public static string HostName { get; } = s_catalog["hostName"]!.GetValue<string>();
+
+  public static IReadOnlyList<Feature> Features { get; } = s_catalog["features"]!.AsArray()
+      .Select(node => new Feature(
+          node!["id"]!.GetValue<string>(),
+          node["title"]!.GetValue<string>(),
+          node["description"]!.GetValue<string>(),
+          node["glyph"]!.GetValue<string>(),
+          node["enabledByDefault"]!.GetValue<bool>()))
+      .ToList();
+
+  public static Feature Get(string id) => Features.Single(feature => feature.Id == id);
+}

@@ -1,0 +1,76 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>FixEdge</RootNamespace>
+    <AssemblyName>fixedge</AssemblyName>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <!-- Program.Main decides, before WinUI is touched, whether Edge started
+         this exe as its native-messaging host or the user opened the panel. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <!-- Unpackaged and self-contained, as any-stt is: a plain exe Edge can
+         launch as its host with nothing to pre-install. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <!-- The product's identity, written once and read back by Product.cs. -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Product>Fix Edge</Product>
+    <Description>Live feature switches for Microsoft Edge</Description>
+    <Company>Avi</Company>
+    <Authors>Avi</Authors>
+    <Copyright>© 2026 Avi</Copyright>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <!-- The extension travels inside the exe, as WXT built it, and is unpacked by
+       ExtensionPayload, so the files Edge loads always match this build. The
+       feature catalog rides along on its own: WXT bundles it into the
+       background script, and the app's switches are built from it. -->
+  <PropertyGroup>
+    <ExtensionOutput>$(MSBuildThisFileDirectory)..\.output\chrome-mv3\</ExtensionOutput>
+  </PropertyGroup>
+  <Target Name="BuildExtension" BeforeTargets="BeforeBuild" Condition="'$(SkipExtension)' != 'true'">
+    <Exec Command="pnpm wxt build" WorkingDirectory="$(MSBuildThisFileDirectory).." />
+    <!-- Metadata is qualified by item type: a bare %(Filename) inside a target
+         batches over every EmbeddedResource, renaming the catalog too. -->
+    <ItemGroup>
+      <ExtensionFile Include="$(ExtensionOutput)**\*" />
+      <EmbeddedResource Include="@(ExtensionFile)"
+                        LogicalName="extension/%(ExtensionFile.RecursiveDir)%(ExtensionFile.Filename)%(ExtensionFile.Extension)" />
+    </ItemGroup>
+  </Target>
+  <ItemGroup>
+    <EmbeddedResource Include="..\src\features\catalog.json" LogicalName="catalog.json" />
+  </ItemGroup>
+
+  <!-- The native-messaging host, published as its own NativeAOT exe (see
+       host\FixEdge.Host.csproj) and carried here for HostPayload to unpack.
+       The linker step finds Visual Studio through vswhere, which a Build Tools
+       install does not put on PATH. -->
+  <PropertyGroup>
+    <HostOutput>$(MSBuildThisFileDirectory)..\build\host\</HostOutput>
+    <VsInstallerDirectory>$([System.Environment]::GetFolderPath(SpecialFolder.ProgramFilesX86))\Microsoft Visual Studio\Installer</VsInstallerDirectory>
+  </PropertyGroup>
+  <Target Name="PublishHost" BeforeTargets="BeforeBuild" Condition="'$(SkipHost)' != 'true'">
+    <Exec Command="set &quot;PATH=$(VsInstallerDirectory);%PATH%&quot; &amp;&amp; dotnet publish &quot;$(MSBuildThisFileDirectory)..\host&quot; -c Release -o &quot;$(HostOutput.TrimEnd('\'))&quot; -nologo" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(HostOutput)fixedge-host.exe" LogicalName="fixedge-host.exe" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.*" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.*" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.*" />
+  </ItemGroup>
+</Project>
