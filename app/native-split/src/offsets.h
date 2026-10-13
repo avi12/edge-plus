@@ -45,6 +45,10 @@ inline constexpr uintptr_t View_InvalidateLayout = 0x0fb5540;   // (this) mark l
 inline constexpr uintptr_t View_LayoutImmediately = 0x0fd40b0;  // (this) relayout now
 // --- the feed pipeline (controller.md) ---
 inline constexpr uintptr_t BrowserView_ShowSplitView = 0xc93594a; // (BrowserView*) feeds panes
+// --- the split's 3-dot menu (extension point for directional "add pane") ---
+inline constexpr uintptr_t SplitTabMenuModel_ctor          = 0xa264f8e;
+inline constexpr uintptr_t SplitTabMenuModel_ExecuteCommand = 0xa265830;
+inline constexpr uintptr_t SplitTabMenuModel_GetLabelForCommandId = 0xa265430;
 }  // namespace rva
 
 // Linear addresses (not RVAs): partition-alloc BRP-pool gate for raw_ptr acquire.

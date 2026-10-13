@@ -104,6 +104,36 @@ count ≤ 2 defer to the original (zero regression); when count > 2, build the
 `host_size`, then `emplace_back` one entry per container with the N-way rect and
 one per separator, computing rects by splitting the content length by ratio.
 
+## MILESTONE (2026-10-13): N-pane render proven live
+
+A throwaway Edge, DLL injected with `FIXEDGE_PANES=3`: a normal 2-tab split was
+grown to **3 containers** and the `CalculateProposedLayout` detour tiled **3 panes
+(1889×2004, cols)** across repeated relayouts and user interaction with **no
+crash**. The view-side cap is broken. The 3rd pane is blank (no WebContents wired
+to index 2 yet). Evidence: `%LOCALAPPDATA%\FixEdge\split-native.log`.
+
+## Target UX (Arc-style) and the revised model
+
+The flat equal-columns model (`FIXEDGE_PANES`) is a proof, not the product. The
+product is a **binary split tree**: each pane carries a 3-dot menu with **add
+pane above / below / left / right**; each action splits that pane's tree node, so
+the layout is an arbitrary grid. The native pieces this maps onto:
+
+- Native already: the split button → two panes + "pick a tab" surface; the ✕ →
+  unsplit to full width; choosing a tab → fills the new pane.
+- **`SplitTabMenuModel`** (ctor `0xa264f8e`, `ExecuteCommand` `0xa265830`,
+  `GetLabelForCommandId` `0xa265430`) is the existing 3-dot menu — the extension
+  point for the four directional "add pane" commands. `SplitTabSwapMenuModel`
+  and `SplitViewLayoutMenuModel` are its sibling submodels.
+- Geometry: the proven `emplace_back`-per-container detour already positions a
+  container at an arbitrary `gfx::Rect`, so a recursive tree→rects walk drops
+  straight into it (each leaf = one container).
+
+Remaining build: a per-MCV split **tree** in the DLL (leaves ↔ containers),
+tree→rect layout in the detour, extend `SplitTabMenuModel` with 4 directional
+commands that insert a leaf + open the tab picker, and N−1 resize handles along
+tree edges.
+
 ## The cap, precisely
 
 - **`SetWebContentsAtIndex(index, wc)`** starts `cmp r8d, 2 / jae ud2` — a
