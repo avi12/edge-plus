@@ -4,6 +4,8 @@
 // only translates its output into Edge ChildLayouts.
 #pragma once
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -144,57 +146,252 @@ inline Node MakeLeaf(int leaf) {
   return n;
 }
 
-// Insert `new_leaf` adjacent to `target_leaf` in `dir`. If the target already
-// lives in a split along the needed axis, the new pane joins that split as an
-// equal sibling (growing a row/column); otherwise the target leaf becomes a
-// 2-way split of the two. Returns true if the target was found. Pure.
-inline bool SplitLeaf(Node& node, int target_leaf, Direction dir, int new_leaf) {
-  const Axis want = AxisOf(dir);
-  const bool before = IsBefore(dir);
-  for (size_t i = 0; i < node.children.size(); ++i) {
-    Node& child = node.children[i];
-    if (child.is_leaf && child.leaf == target_leaf) {
-      if (node.axis == want) {  // join the existing split
-        const size_t at = before ? i : i + 1;
-        node.children.insert(node.children.begin() + at, MakeLeaf(new_leaf));
-        node.weights.insert(node.weights.begin() + at, 1.f);
-      } else {  // turn this leaf into a 2-way split along `want`
-        Node split;
-        split.is_leaf = false;
-        split.axis = want;
-        Node keep = MakeLeaf(target_leaf);
-        Node add = MakeLeaf(new_leaf);
-        if (before) {
-          split.children = {std::move(add), std::move(keep)};
-        } else {
-          split.children = {std::move(keep), std::move(add)};
-        }
-        split.weights = {1.f, 1.f};
-        child = std::move(split);
+// --- canonical form + weights -------------------------------------------------
+// After every edit the tree is canonical: every split has >= 2 children, no split
+// shares its parent's axis, and each split's weights are > 0 and sum to its child
+// count (so 1.0 means "an average share"). The approach is the one shared by
+// VS Code's grid, dockview and react-mosaic (see docs/re/drag-dock.md).
+
+inline void FixWeights(Node& n) {
+  n.weights.resize(n.children.size(), 1.f);
+  float sum = 0.f;
+  for (float& w : n.weights) {
+    if (!(w > 0.f) || !std::isfinite(w)) w = 1.f;
+    sum += w;
+  }
+  const float k = static_cast<float>(n.children.size()) / sum;
+  for (float& w : n.weights) w *= k;
+}
+inline bool AllEqual(const std::vector<float>& w) {
+  float lo = w[0], hi = w[0];
+  for (float x : w) {
+    lo = std::min(lo, x);
+    hi = std::max(hi, x);
+  }
+  return hi - lo <= 1e-3f * hi;
+}
+inline float Mean(const std::vector<float>& w) {
+  float sum = 0.f;
+  for (float x : w) sum += x;
+  return sum / static_cast<float>(w.size());
+}
+
+// Bottom-up and idempotent: drop empty splits, replace a 1-child split by its
+// child (which inherits the slot), and splice a same-axis child split into its
+// parent with weights scaled by the child's slot, so on-screen sizes are kept.
+inline void Normalize(Node& n) {
+  if (n.is_leaf) return;
+  FixWeights(n);
+  std::vector<Node> kids;
+  std::vector<float> ws;
+  for (size_t i = 0; i < n.children.size(); ++i) {
+    Node& c = n.children[i];
+    const float w = n.weights[i];
+    Normalize(c);
+    if (!c.is_leaf && c.children.empty()) continue;
+    if (!c.is_leaf && c.axis == n.axis) {
+      float cs = 0.f;
+      for (float x : c.weights) cs += x;
+      for (size_t j = 0; j < c.children.size(); ++j) {
+        kids.push_back(std::move(c.children[j]));
+        ws.push_back(w * c.weights[j] / cs);
       }
-      return true;
+    } else {
+      kids.push_back(std::move(c));
+      ws.push_back(w);
     }
-    if (!child.is_leaf && SplitLeaf(child, target_leaf, dir, new_leaf)) return true;
+  }
+  n.children = std::move(kids);
+  n.weights = std::move(ws);
+  if (n.children.size() == 1) {
+    Node only = std::move(n.children[0]);
+    n = std::move(only);
+    return;
+  }
+  if (!n.children.empty()) FixWeights(n);
+}
+
+// --- lookup -------------------------------------------------------------------
+
+// The split directly holding `leaf`, and its index there. Leaves are found by
+// id, never by a stored path, so a lookup after an edit is always fresh.
+struct Slot {
+  Node* parent = nullptr;
+  size_t index = 0;
+  bool found = false;
+};
+inline Slot FindSlot(Node& node, int leaf) {
+  for (size_t i = 0; i < node.children.size(); ++i) {
+    Node& c = node.children[i];
+    if (c.is_leaf && c.leaf == leaf) return {&node, i, true};
+    if (!c.is_leaf) {
+      Slot s = FindSlot(c, leaf);
+      if (s.found) return s;
+    }
+  }
+  return {};
+}
+inline bool Contains(const Node& n, int leaf) {
+  if (n.is_leaf) return n.leaf == leaf;
+  for (const Node& c : n.children) {
+    if (Contains(c, leaf)) return true;
   }
   return false;
 }
+inline Node MakeSplit(Axis axis, Node first, Node second) {
+  Node s;
+  s.is_leaf = false;
+  s.axis = axis;
+  s.children.push_back(std::move(first));
+  s.children.push_back(std::move(second));
+  s.weights = {1.f, 1.f};
+  return s;
+}
 
-// Top-level split that also handles a single-leaf root.
-inline bool SplitPane(Node& root, int target_leaf, Direction dir, int new_leaf) {
+// --- edits ----------------------------------------------------------------------
+
+// Place `leaf` next to `target` on side `dir`. If the target's split already runs
+// along that axis the leaf joins it: an equal row stays equal, a resized row only
+// gives up half of the target. Otherwise the target is wrapped in a new 50/50
+// split that keeps the target's slot. Returns false if the target is missing.
+inline bool InsertBeside(Node& root, int target, Direction dir, int leaf) {
+  const Axis want = AxisOf(dir);
+  const bool before = IsBefore(dir);
   if (root.is_leaf) {
-    if (root.leaf != target_leaf) return false;
-    const bool before = IsBefore(dir);
-    Node keep = MakeLeaf(target_leaf);
-    Node add = MakeLeaf(new_leaf);
-    root.is_leaf = false;
-    root.leaf = -1;
-    root.axis = AxisOf(dir);
-    root.children = before ? std::vector<Node>{std::move(add), std::move(keep)}
-                           : std::vector<Node>{std::move(keep), std::move(add)};
-    root.weights = {1.f, 1.f};
+    if (root.leaf != target) return false;
+    Node old = std::move(root);
+    root = before ? MakeSplit(want, MakeLeaf(leaf), std::move(old))
+                  : MakeSplit(want, std::move(old), MakeLeaf(leaf));
     return true;
   }
-  return SplitLeaf(root, target_leaf, dir, new_leaf);
+  Slot s = FindSlot(root, target);
+  if (!s.found) return false;
+  Node& p = *s.parent;
+  if (p.axis == want) {
+    const size_t at = before ? s.index : s.index + 1;
+    float w;
+    if (AllEqual(p.weights)) {
+      w = Mean(p.weights);
+    } else {
+      w = p.weights[s.index] / 2.f;
+      p.weights[s.index] -= w;
+    }
+    p.children.insert(p.children.begin() + static_cast<std::ptrdiff_t>(at), MakeLeaf(leaf));
+    p.weights.insert(p.weights.begin() + static_cast<std::ptrdiff_t>(at), w);
+    FixWeights(p);
+  } else {
+    Node& t = p.children[s.index];
+    Node old = std::move(t);
+    t = before ? MakeSplit(want, MakeLeaf(leaf), std::move(old))
+               : MakeSplit(want, std::move(old), MakeLeaf(leaf));
+  }
+  return true;
+}
+
+// Add a NEW pane `new_leaf` next to `target_leaf` in `dir` (directional add).
+inline bool SplitPane(Node& root, int target_leaf, Direction dir, int new_leaf) {
+  if (!InsertBeside(root, target_leaf, dir, new_leaf)) return false;
+  Normalize(root);
+  return true;
+}
+
+// Remove `leaf` from the tree; its weight is dropped so the siblings grow in
+// proportion. Refuses to remove the last pane. Returns false if not found.
+inline bool Detach(Node& root, int leaf) {
+  if (root.is_leaf) return false;
+  Slot s = FindSlot(root, leaf);
+  if (!s.found) return false;
+  s.parent->children.erase(s.parent->children.begin() + static_cast<std::ptrdiff_t>(s.index));
+  s.parent->weights.erase(s.parent->weights.begin() + static_cast<std::ptrdiff_t>(s.index));
+  Normalize(root);
+  return true;
+}
+
+// Move child `from` of `p` to insert-before position `to` (a pre-removal index),
+// carrying its weight.
+inline void MoveChild(Node& p, size_t from, size_t to) {
+  if (from < to) --to;
+  Node c = std::move(p.children[from]);
+  const float w = p.weights[from];
+  p.children.erase(p.children.begin() + static_cast<std::ptrdiff_t>(from));
+  p.weights.erase(p.weights.begin() + static_cast<std::ptrdiff_t>(from));
+  p.children.insert(p.children.begin() + static_cast<std::ptrdiff_t>(to), std::move(c));
+  p.weights.insert(p.weights.begin() + static_cast<std::ptrdiff_t>(to), w);
+}
+
+// Drop onto a pane's edge: move `moving` next to `target` on side `dir`. Within
+// the same split along that axis it is a pure reorder (the pane keeps its size);
+// otherwise remove it, then insert beside the target found afresh by id.
+// Returns false for a no-op (itself, missing ids, or already there).
+inline bool MovePane(Node& root, int moving, int target, Direction dir) {
+  if (moving == target || root.is_leaf) return false;
+  Slot sm = FindSlot(root, moving), st = FindSlot(root, target);
+  if (!sm.found || !st.found) return false;
+  if (sm.parent == st.parent && sm.parent->axis == AxisOf(dir)) {
+    const size_t to = IsBefore(dir) ? st.index : st.index + 1;
+    if (to == sm.index || to == sm.index + 1) return false;
+    MoveChild(*sm.parent, sm.index, to);
+    return true;
+  }
+  Detach(root, moving);
+  InsertBeside(root, target, dir, moving);
+  Normalize(root);
+  return true;
+}
+
+// Drop onto an outer edge of the whole layout: `moving` spans that edge. A root
+// along the other axis is wrapped 50/50 (the pane takes the full half); a root
+// along the same axis gains it as an end child with an average share.
+// Returns false for a no-op (single pane, missing, or already spanning that edge).
+inline bool MovePaneToRootEdge(Node& root, int moving, Direction dir) {
+  if (root.is_leaf || !Contains(root, moving)) return false;
+  const Axis want = AxisOf(dir);
+  const bool first = IsBefore(dir);
+  if (root.axis == want) {
+    const size_t edge = first ? 0 : root.children.size() - 1;
+    for (size_t i = 0; i < root.children.size(); ++i) {
+      if (root.children[i].is_leaf && root.children[i].leaf == moving) {
+        if (i == edge) return false;
+        MoveChild(root, i, first ? 0 : root.children.size());
+        return true;
+      }
+    }
+  }
+  Detach(root, moving);
+  if (!root.is_leaf && root.axis == want) {
+    const float w = Mean(root.weights);
+    root.children.insert(first ? root.children.begin() : root.children.end(), MakeLeaf(moving));
+    root.weights.insert(first ? root.weights.begin() : root.weights.end(), w);
+    FixWeights(root);
+  } else {
+    Node old = std::move(root);
+    root = first ? MakeSplit(want, MakeLeaf(moving), std::move(old))
+                 : MakeSplit(want, std::move(old), MakeLeaf(moving));
+  }
+  Normalize(root);
+  return true;
+}
+
+// Drop onto a pane's centre: the two panes trade places; the sizes stay with the
+// positions. Returns false if either is missing or they are the same pane.
+inline bool SwapLeaves(Node& node, int a, int b) {
+  if (a == b) return false;
+  Node* na = nullptr;
+  Node* nb = nullptr;
+  std::vector<Node*> stack{&node};
+  while (!stack.empty()) {
+    Node* n = stack.back();
+    stack.pop_back();
+    if (n->is_leaf) {
+      if (n->leaf == a) na = n;
+      if (n->leaf == b) nb = n;
+    } else {
+      for (Node& c : n->children) stack.push_back(&c);
+    }
+  }
+  if (!na || !nb) return false;
+  std::swap(na->leaf, nb->leaf);
+  return true;
 }
 
 // The axis of the split a leaf belongs to — i.e. which way its swap toggle faces
