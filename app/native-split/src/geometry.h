@@ -13,6 +13,19 @@ namespace fixedge::geometry {
 
 using namespace fixedge::edge155;  // off::, rva::
 
+// The tree `mcv`'s `panes` are tiled by: the live one, else a flat equal split
+// along the split's orientation. The one rule both the layout and a drag use.
+inline Node LiveTree(void* mcv, int panes) {
+  if (const Node* live = TreeFor(mcv)) return *live;
+  return FlatTree(panes, edge::McvOrientation(mcv) != 0 ? Axis::kVertical : Axis::kHorizontal);
+}
+
+// The split's content box in its own coordinates (what TilePanes tiles).
+inline Rect SplitArea(void* mcv) {
+  const Rect b = edge::ViewBounds(mcv);
+  return Rect{0, 0, b.w, b.h};
+}
+
 // Build the out ProposedLayout for `mcv` across a `width`x`height` content box,
 // showing exactly `panes` of the MCV's containers (the live split's member
 // count; 1 when collapsed). The container vector only grows, so any container
@@ -28,10 +41,7 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes, b
   if (panes < 1) panes = 1;
   if (panes > count) panes = count;
   const Axis axis = edge::McvOrientation(mcv) != 0 ? Axis::kVertical : Axis::kHorizontal;
-
-  // Prefer the live tree; fall back to a flat equal split across `panes` leaves.
-  const Node* live = TreeFor(mcv);
-  const Node root = live ? *live : FlatTree(panes, axis);
+  const Node root = LiveTree(mcv, panes);
 
   std::vector<LeafRect> leaves;
   LayoutTree(root, Rect{0, 0, width, height}, /*gap=*/0, leaves);

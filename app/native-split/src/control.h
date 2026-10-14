@@ -12,7 +12,9 @@
 #include "split_data.h"
 #include "state.h"
 #include "anim.h"
+#include "drag.h"
 #include "grip.h"
+#include "overlay.h"
 
 namespace fixedge::control {
 
@@ -31,9 +33,11 @@ enum : WPARAM {
   kCmdTeardown = 701,     // undo everything UI-side before this DLL unloads
 };
 
-// Everything that must be undone on the UI thread before unload: the grips, the
-// animation timer and the hot-keys.
+// Everything that must be undone on the UI thread before unload: the drag
+// session, the preview window, the grips, the animation timer and the hot-keys.
 inline void Teardown(HWND hwnd) {
+  drag::Cancel();
+  overlay::Remove();
   grip::RemoveAll();
   anim::Remove();
   if (g_hotkeys_done) {
@@ -56,6 +60,35 @@ inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
     RegisterHotKey(hwnd, HK_DOWN, kHkMods, VK_DOWN);
     RegisterHotKey(hwnd, HK_SWAP, kHkMods, 'S');
     Log("[control] hotkeys: Ctrl+Shift+Alt + arrows=add, A=add right, S=swap, X=collapse");
+  }
+  // A pane drag owns the mouse from a grip press to its release (drag.h).
+  switch (msg) {
+    case WM_LBUTTONDOWN:
+      if (drag::OnButtonDown(hwnd, lparam)) return 0;
+      break;
+    case WM_MOUSEMOVE:
+      if (drag::OnMouseMove(hwnd, lparam)) return 0;
+      break;
+    case WM_LBUTTONUP:
+      if (drag::OnButtonUp(hwnd, lparam)) return 0;
+      break;
+    case WM_KEYDOWN:
+      if (wparam == VK_ESCAPE && drag::Active()) {
+        drag::Cancel();
+        return 0;
+      }
+      break;
+    case WM_CAPTURECHANGED:
+      if (drag::Active() && reinterpret_cast<HWND>(lparam) != hwnd) drag::Cancel();
+      break;
+    case WM_SETCURSOR:
+      if (drag::Dragging()) {
+        SetCursor(LoadCursorW(nullptr, reinterpret_cast<LPCWSTR>(IDC_SIZEALL)));
+        return TRUE;
+      }
+      break;
+    default:
+      break;
   }
   if (msg == WM_TIMER && wparam == anim::kTimerId) {
     anim::Tick();
