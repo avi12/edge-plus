@@ -8,90 +8,11 @@
 #include <cstdint>
 #include <map>
 #include "edge.h"
+#include "icons.h"
 
 namespace fixedge::grip {
 
 using namespace fixedge::edge155;
-
-// Edge's gfx::VectorIcon ABI — Chromium's VectorIcon {reps, reps_size, name},
-// each VectorIconRep {path, path_size}, each path element a 4-byte command id or
-// float argument.
-struct IconRepresentation {
-  const void* path;
-  size_t pathSize;
-};
-struct VectorIcon {
-  const IconRepresentation* representations;
-  size_t representationCount;
-  const char* name;
-};
-
-// The 6-dot grip (two columns, three rows of r=1 dots on a 16 canvas), drawn
-// like Edge's ⋯ icon. Built once in Edge's heap and never freed, so a grip that
-// outlives this DLL (hot-unload) never points into unloaded memory.
-inline const VectorIcon* Icon() {
-  static const VectorIcon* icon = [] {
-    constexpr int kRows = 3;
-    constexpr int kColumns = 2;
-    constexpr int kDotCount = kRows * kColumns;
-    // CANVAS_DIMENSIONS + its size, then per dot: MOVE_TO + x y, two R_ARC_TO
-    // + 7 arguments each, CLOSE.
-    constexpr size_t kPathSize = 2 + kDotCount * (3 + 7 + 1 + 7 + 1 + 1);
-    constexpr char kName[] = "kFixEdgePaneGripIcon";
-    constexpr float kCanvasSize = 16.f;
-    constexpr float kFirstCenterX = 6.f;
-    constexpr float kFirstCenterY = 4.f;
-    constexpr float kDotSpacing = 4.f;
-    constexpr float kDotRadius = 1.f;
-    const size_t byteCount = sizeof(VectorIcon) + sizeof(IconRepresentation) +
-                             sizeof(kName) + kPathSize * sizeof(uint32_t);
-    auto* block = static_cast<uint8_t*>(edge::EdgeNew(byteCount));
-    auto* vectorIcon = reinterpret_cast<VectorIcon*>(block);
-    auto* representation =
-        reinterpret_cast<IconRepresentation*>(block + sizeof(VectorIcon));
-    auto* name = reinterpret_cast<char*>(block + sizeof(VectorIcon) +
-                                         sizeof(IconRepresentation));
-    auto* path = reinterpret_cast<uint32_t*>(name + sizeof(kName));
-    memcpy(name, kName, sizeof(kName));
-    size_t elementCount = 0;
-    auto appendCommand = [&](int command) {
-      path[elementCount] = static_cast<uint32_t>(command);
-      elementCount++;
-    };
-    auto appendArgument = [&](float argument) {
-      memcpy(&path[elementCount], &argument, sizeof(argument));
-      elementCount++;
-    };
-    appendCommand(off::ICON_CANVAS_DIMENSIONS);
-    appendArgument(kCanvasSize);
-    for (int row = 0; row < kRows; row++) {
-      for (int column = 0; column < kColumns; column++) {
-        const float centerX =
-            kFirstCenterX + kDotSpacing * static_cast<float>(column);
-        const float centerY =
-            kFirstCenterY + kDotSpacing * static_cast<float>(row);
-        // The dot's right-most point, then two half arcs (rx ry rotation
-        // large-arc sweep dx dy) around it.
-        appendCommand(off::ICON_MOVE_TO);
-        appendArgument(centerX + kDotRadius);
-        appendArgument(centerY);
-        appendCommand(off::ICON_R_ARC_TO);
-        for (const float argument : {1.f, 1.f, 0.f, 1.f, 1.f, -2.f, 0.f}) {
-          appendArgument(argument);
-        }
-        appendCommand(off::ICON_R_ARC_TO);
-        for (const float argument : {1.f, 1.f, 0.f, 1.f, 1.f, 2.f, 0.f}) {
-          appendArgument(argument);
-        }
-        appendCommand(off::ICON_CLOSE);
-      }
-    }
-    *representation = IconRepresentation{path, elementCount};
-    *vectorIcon = VectorIcon{representation, 1, name};
-    return vectorIcon;
-  }();
-  return icon;
-}
 
 // A grip button, and the split it belongs to.
 struct Grip {
@@ -121,7 +42,7 @@ inline void EnsureGrips(void* mcv) {
       continue;
     }
     void* button = edge::ControlButtonsAddButton(
-        bar, off::ControlButtons_more_string_id, Icon(),
+        bar, off::ControlButtons_more_string_id, icons::Grip(),
         /*clickable=*/false);
     edge::ViewReorderChild(bar, button, 0);  // first: grip, ⋯, X
     edge::ViewSetTooltip(button, kTooltip);

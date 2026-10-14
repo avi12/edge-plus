@@ -136,6 +136,9 @@ inline constexpr uintptr_t SplitWindowController_DoAction = 0xa021020;
 // only, so a middle pane has a bar but no hover and pane 3+ has hover but no bar.
 // (this, BrowserView*, bool not_first)
 inline constexpr uintptr_t ControlButtons_ctor = 0xa010a6a;
+// ControlButtons::Button(this, const gfx::VectorIcon&): one round icon button
+// of the bar (AddButton allocates it with ControlButtons_button_size bytes).
+inline constexpr uintptr_t ControlButtons_Button_ctor = 0xa01109a;
 // Static: (WebContents* a, WebContents* b) -> CreateOrGet + StartObserving each
 // (idempotent; a no-op under the new toolbar).
 inline constexpr uintptr_t SplitWindow_ListenWebContentsInputEvent = 0xa01fe4e;
@@ -174,6 +177,8 @@ inline constexpr uintptr_t Button_OnMouseCaptureLost = 0xb287f00;
 // int ui::MouseEvent::GetClickCount(this): 2 on the second click of a double
 // click (EdgeTwoDimensionalResizeArea resets its panes on that release).
 inline constexpr uintptr_t MouseEvent_GetClickCount = 0xb631a18;
+// bool views::View::IsMouseHovered(this): the cursor is over the view now.
+inline constexpr uintptr_t View_IsMouseHovered = 0x2893f54;
 
 // --- closing one pane of a grown split (docs/re/close-pane.md) ---
 // Edge's X: ControlButtons::HandleButtonClick(bar, Button*). For pane 2+ it
@@ -186,12 +191,59 @@ inline constexpr uintptr_t ControlButtons_HandleButtonClick = 0xa011ae0;
 inline constexpr uintptr_t ControlButtons_ToggleContextMenu = 0xa011d00;
 // The bar's ⋯ menu: SplitWindowControlMenu. BuildMenuModel(this) builds a
 // ui::SimpleMenuModel (kept at this+0x10, delegate this+8) and RETURNS it, and
-// Run passes the return value to PopulateMenu; ExecuteCommand(this,
-// int id, int flags) switches on Edge's ids 0..6, and IsCommandIdEnabled
-// returns true above 5, so ids past 6 are free.
+// Run passes the return value to PopulateMenu(this, MenuItemView* root, model),
+// which creates the item views. ExecuteCommand(this, int id, int flags)
+// switches on Edge's ids 0..6; IsCommandIdEnabled returns true above 5.
 inline constexpr uintptr_t SplitWindowControlMenu_BuildMenuModel = 0xa017fbc;
+inline constexpr uintptr_t SplitWindowControlMenu_PopulateMenu = 0xa017f24;
 inline constexpr uintptr_t SplitWindowControlMenu_ExecuteCommand = 0xa0186c0;
-// (model, ui::MenuSeparatorType)
+// ShouldExecuteCommandWithoutClosingMenu(this, int id, const ui::Event&) ->
+// bool, `return id == 6`. Identical-code-folded: the SAME function serves
+// other menus (e.g. EdgeDownloadsBtrItemContextMenu::IsItemForCommandIdDynamic),
+// so a detour must pass every id but its own straight through.
+inline constexpr uintptr_t SplitWindowControlMenu_ShouldExecuteWithoutClosing =
+    0xa018ab0;
+// gfx::VectorIcon data the ⋯ row's arrows reuse (Edge's own arrow icons).
+inline constexpr uintptr_t Icon_ArrowUp = 0x120bb7b0;    // kArrowUpIcon
+inline constexpr uintptr_t Icon_ArrowDown = 0x120bb778;  // kArrowDownIcon
+// ← and → are kArrowUpIcon turned (icons.h); these are the fallback.
+inline constexpr uintptr_t Icon_ArrowBack = 0x12a5cd58;     // kArrowBackIcon
+inline constexpr uintptr_t Icon_ArrowForward = 0x12a5ce20;  // kArrowForwardIcon
+// The ⋯ row's own leading icon (Chromium's split-view icon).
+inline constexpr uintptr_t Icon_SplitScene = 0x120ba068;  // kSplitSceneIcon
+// static ui::ImageModel FromVectorIcon(out, const VectorIcon&, ColorVariant
+// (by value, 8 bytes), int size (0 = default), const VectorIcon* badge)
+inline constexpr uintptr_t ImageModel_FromVectorIcon = 0x0fc8dfc;
+inline constexpr uintptr_t ImageModel_dtor = 0x0fc8ca2;
+// ui::ColorVariant::ColorVariant(this, ui::ColorId)
+inline constexpr uintptr_t ColorVariant_ctor = 0x10693d0;
+// (model, int id, const std::u16string& label, const ui::ImageModel& icon)
+inline constexpr uintptr_t SimpleMenuModel_AddItemWithIcon = 0x2b5ea80;
+// views::View::View(this): a plain view (no layout manager).
+inline constexpr uintptr_t View_ctor = 0x101de7a;
+// (view, const std::optional<gfx::Size>*): {int width, int height, bool}.
+inline constexpr uintptr_t View_SetPreferredSize = 0x2b89b16;
+// (view, const gfx::Rect&)
+inline constexpr uintptr_t View_SetBoundsRect = 0x0fd8234;
+// gfx::Size View::GetPreferredSize(this, const SizeBounds&) (returned through
+// the hidden out pointer); zeroed SizeBounds = unbounded.
+inline constexpr uintptr_t View_GetPreferredSize = 0x0faf994;
+// ProposedLayout* MenuItemView::CalculateProposedLayout(LayoutDelegate* this,
+// ProposedLayout* out, const SizeBounds&): every child's bounds in the row.
+// `this` is the item's LayoutDelegate base (MENUITEM_layout_delegate). Edge
+// centres the icon on a STANDARD row's height and pins other children to the
+// row's top.
+inline constexpr uintptr_t MenuItemView_CalculateProposedLayout = 0xb25f350;
+// MenuController* MenuController::GetActiveInstance(): the open menu's, or null.
+inline constexpr uintptr_t MenuController_GetActiveInstance = 0xb263d7e;
+// MenuController::Cancel(this, ExitType, int): as MenuRunnerImpl::Cancel calls
+// it, with (MENU_exit_all, 0).
+inline constexpr uintptr_t MenuController_Cancel = 0xb263dd0;
+// MenuItemView::ChildPreferredSizeChanged(this, View* child): drops the
+// item's cached dimensions so it is measured again.
+inline constexpr uintptr_t MenuItemView_ChildPreferredSizeChanged = 0xb25c8d0;
+// MenuItemView* MenuItemView::GetMenuItemByID(this, int id)
+inline constexpr uintptr_t MenuItemView_GetMenuItemByID = 0xb25e012;
 inline constexpr uintptr_t SimpleMenuModel_AddSeparator = 0x317665a;
 // (tsm, int index, uint32 closeTypes); HideSplitView passes 1
 inline constexpr uintptr_t TabStripModel_CloseWebContentsAt = 0xa26f916;
@@ -290,6 +342,34 @@ inline constexpr uintptr_t ECCV_buttons_iface = 0x348;
 inline constexpr uintptr_t ECCV_control_buttons = 0x540;
 inline constexpr uintptr_t ECCV_vtbl_SetControlButtons = 0x10;
 inline constexpr size_t ControlButtons_size = 0x380;
+inline constexpr size_t ControlButtons_button_size = 0x640;
+// sizeof(views::View): its subclasses' own fields start here (ControlButtons
+// @+0x338 its BrowserView, EdgeMultiContentsResizeArea @+0x338 its press point).
+inline constexpr size_t View_size = 0x338;
+// The ui::ColorId Edge's split ⋯ items draw their icons in.
+inline constexpr int MENU_icon_color_id = 0x172;
+// views::MenuController::ExitType::kAll: close the whole menu.
+inline constexpr int MENU_exit_all = 1;
+// Stack room for value types built only to be handed to Edge: ui::ColorVariant
+// (passed on by value as its first 8 bytes), views::SizeBounds (zeroed =
+// unbounded), and ui::ImageModel (an upper bound, with room to spare).
+inline constexpr size_t ColorVariant_size = 16;
+inline constexpr size_t SizeBounds_size = 16;
+inline constexpr size_t ImageModel_size_bound = 256;
+// MenuItemView's icon view. GetChildPreferredSize takes a row's height from
+// this view ALONE (extra children only add width), so a taller row comes from
+// a taller icon view.
+inline constexpr uintptr_t MENUITEM_icon_view = 0x418;
+// MenuItemView's views::LayoutDelegate base, right after its views::View base.
+inline constexpr size_t MENUITEM_layout_delegate = View_size;
+// views::ProposedLayout {gfx::Size host_size; std::vector<ChildLayout>}, the
+// vector in libc++'s size-based layout {data, size, capacity};
+// views::ChildLayout {View* child; bool visible; gfx::Rect bounds; SizeBounds}.
+inline constexpr size_t PROPOSED_host_height = 0x4;
+inline constexpr size_t PROPOSED_children = 0x8;
+inline constexpr size_t PROPOSED_child_count = 0x10;
+inline constexpr size_t CHILDLAYOUT_size = 0x30;
+inline constexpr size_t CHILDLAYOUT_bounds = 0xc;
 inline constexpr size_t EdgeResizeArea_size = 0x358;
 // a valid id (⋯'s); grip overrides the tooltip
 inline constexpr int ControlButtons_more_string_id = 0x4676;
@@ -307,7 +387,11 @@ inline constexpr size_t TSM_gesture_details_size = 16;
 // --- gfx::VectorIcon path command ids in this build ---
 // Decoded from kEdgeSplitWindowMoreIcon: CANVAS_DIMENSIONS 16, MOVE_TO x y,
 // R_ARC_TO rx ry angle large sweep dx dy, CLOSE.
+inline constexpr int ICON_NEW_PATH = 0;
 inline constexpr int ICON_MOVE_TO = 7;
+inline constexpr int ICON_LINE_TO = 11;    // from kArrowUpIcon
+inline constexpr int ICON_R_LINE_TO = 12;  // from kArrowUpIcon
+inline constexpr int ICON_V_LINE_TO = 15;  // from kArrowUpIcon
 inline constexpr int ICON_R_ARC_TO = 10;
 inline constexpr int ICON_CLOSE = 27;
 inline constexpr int ICON_CANVAS_DIMENSIONS = 28;

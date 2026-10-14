@@ -332,6 +332,46 @@ inline int MouseClickCount(const void* mouseEvent) {
       mouseEvent);
 }
 
+inline bool ViewIsMouseHovered(void* view) {
+  using HoveredFn = bool(__fastcall*)(void*);
+  return reinterpret_cast<HoveredFn>(At(rva::View_IsMouseHovered))(view);
+}
+
+// Make a menu item measure itself again after `child` was added to it.
+inline void MenuItemRemeasure(void* menuItem, void* child) {
+  using ChangedFn = void(__fastcall*)(void*, void*);
+  reinterpret_cast<ChangedFn>(At(rva::MenuItemView_ChildPreferredSizeChanged))(
+      menuItem, child);
+}
+
+inline void* MenuItemById(void* rootMenuItem, int commandId) {
+  using ByIdFn = void*(__fastcall*)(void*, int);
+  return reinterpret_cast<ByIdFn>(At(rva::MenuItemView_GetMenuItemByID))(
+      rootMenuItem, commandId);
+}
+
+// ui::SimpleMenuModel::AddItemWithIcon with `icon` (a gfx::VectorIcon) drawn
+// the way Edge draws its split ⋯ items' icons.
+inline void MenuAddItemWithIcon(void* model, int commandId,
+                                const U16String* label, const void* icon) {
+  alignas(16) uint8_t colorVariant[off::ColorVariant_size] = {};
+  using ColorFn = void*(__fastcall*)(void*, int);
+  reinterpret_cast<ColorFn>(At(rva::ColorVariant_ctor))(
+      colorVariant, off::MENU_icon_color_id);
+  uint64_t colorValue = 0;
+  memcpy(&colorValue, colorVariant, sizeof(colorValue));
+  alignas(16) uint8_t image[off::ImageModel_size_bound] = {};
+  using FromIconFn =
+      void*(__fastcall*)(void*, const void*, uint64_t, int, const void*);
+  reinterpret_cast<FromIconFn>(At(rva::ImageModel_FromVectorIcon))(
+      image, icon, colorValue, 0, nullptr);
+  using AddFn = void(__fastcall*)(void*, int, const void*, const void*);
+  reinterpret_cast<AddFn>(At(rva::SimpleMenuModel_AddItemWithIcon))(
+      model, commandId, label, image);
+  using DtorFn = void(__fastcall*)(void*);
+  reinterpret_cast<DtorFn>(At(rva::ImageModel_dtor))(image);
+}
+
 // ui::SimpleMenuModel::AddSeparator(model, NORMAL_SEPARATOR).
 inline void MenuAddSeparator(void* model) {
   using SeparatorFn = void(__fastcall*)(void*, int);
@@ -466,6 +506,88 @@ inline void* McvResizeArea(void* mcv) {
 // The X button of a pane's hover bar.
 inline void* ControlButtonsCloseButton(void* bar) {
   return Field<void*>(bar, off::ControlButtons_close_button);
+}
+
+// A plain views::View (no layout manager: its children stay where they are
+// put), not yet parented.
+inline void* NewPlainView() {
+  void* view = NewView(off::View_size);
+  using CtorFn = void*(__fastcall*)(void*);
+  reinterpret_cast<CtorFn>(At(rva::View_ctor))(view);
+  return view;
+}
+
+inline void SetViewBounds(void* view, const Rect& bounds) {
+  using SetBoundsFn = void(__fastcall*)(void*, const Rect*);
+  reinterpret_cast<SetBoundsFn>(At(rva::View_SetBoundsRect))(view, &bounds);
+}
+
+inline Size ViewPreferredSize(void* view) {
+  Size size{};
+  const uint8_t unboundedSizeBounds[off::SizeBounds_size] = {};
+  using PreferredFn = void*(__fastcall*)(void*, Size*, const void*);
+  reinterpret_cast<PreferredFn>(At(rva::View_GetPreferredSize))(
+      view, &size, unboundedSizeBounds);
+  return size;
+}
+
+inline void* MenuItemIconView(void* menuItem) {
+  return Field<void*>(menuItem, off::MENUITEM_icon_view);
+}
+
+// Close the open menu, if any, as MenuRunner::Cancel does.
+inline void CancelActiveMenu() {
+  using ActiveFn = const void*(__fastcall*)();
+  const void* controller =
+      reinterpret_cast<ActiveFn>(At(rva::MenuController_GetActiveInstance))();
+  if (!controller) {
+    return;
+  }
+  using CancelFn = void(__fastcall*)(const void*, int, int);
+  reinterpret_cast<CancelFn>(At(rva::MenuController_Cancel))(
+      controller, off::MENU_exit_all, 0);
+}
+
+// The MenuItemView whose views::LayoutDelegate base `layoutDelegate` is.
+inline void* MenuItemOfLayoutDelegate(void* layoutDelegate) {
+  return static_cast<uint8_t*>(layoutDelegate) - off::MENUITEM_layout_delegate;
+}
+
+inline int ProposedHostHeight(void* proposedLayout) {
+  return Field<int32_t>(proposedLayout, off::PROPOSED_host_height);
+}
+
+// The bounds a views::ProposedLayout gives `child`, or null if it has none.
+inline Rect* ProposedChildBounds(void* proposedLayout, const void* child) {
+  auto* entries = Field<uint8_t*>(proposedLayout, off::PROPOSED_children);
+  const auto count = Field<size_t>(proposedLayout, off::PROPOSED_child_count);
+  for (size_t i = 0; i < count; i++) {
+    uint8_t* entry = entries + i * off::CHILDLAYOUT_size;
+    const bool isChildEntry = *reinterpret_cast<void**>(entry) == child;
+    if (isChildEntry) {
+      return reinterpret_cast<Rect*>(entry + off::CHILDLAYOUT_bounds);
+    }
+  }
+  return nullptr;
+}
+
+inline void SetViewPreferredSize(void* view, const Size& size) {
+  struct OptionalSize {  // std::optional<gfx::Size>
+    Size size;
+    bool hasValue;
+  };
+  const OptionalSize preferred{size, true};
+  using PreferredFn = void(__fastcall*)(void*, const OptionalSize*);
+  reinterpret_cast<PreferredFn>(At(rva::View_SetPreferredSize))(view,
+                                                                &preferred);
+}
+
+// One round icon button in the hover bar's style, not yet parented.
+inline void* NewControlButton(const void* icon) {
+  void* button = NewView(off::ControlButtons_button_size);
+  using CtorFn = void*(__fastcall*)(void*, const void*);
+  reinterpret_cast<CtorFn>(At(rva::ControlButtons_Button_ctor))(button, icon);
+  return button;
 }
 
 // Add a button to a pane's hover bar, exactly as Edge adds ⋯ and X. `icon` is a

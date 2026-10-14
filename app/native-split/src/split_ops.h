@@ -109,25 +109,6 @@ inline void AddPane(void* mcv, Direction direction) {
   AddPane(mcv, direction, mcv ? ActiveLeaf(mcv) : 0);
 }
 
-// "Use equal widths / heights" from pane `leaf`'s ⋯ menu: every pane of the
-// nearest split along `axis` around it gets an equal share (eased into place).
-inline void EqualizeAround(void* mcv, int leaf, Axis axis) {
-  const int panes = mcv ? edge::McvActiveSplitPanes(mcv) : 0;
-  if (panes < 2) {
-    return;
-  }
-  Node tree = geometry::LiveTree(mcv, panes);
-  if (!EqualizeAlong(tree, leaf, axis)) {
-    Log("[equal] pane %d: nothing to even out", leaf);
-    return;
-  }
-  Trees()[mcv] = tree;
-  edge::InvalidateLayout(mcv);
-  edge::LayoutImmediately(mcv);  // a pure tree edit: force the re-tile
-  Log("[equal] pane %d: equal %s", leaf,
-      axis == Axis::kHorizontal ? "widths" : "heights");
-}
-
 // Swap the active pane with its sibling along its parent split's axis (the
 // position-aware "counterpart"). Pure tree edit: the leaves' container indices
 // swap position, so the two panes' content trades places on relayout. No Edge

@@ -213,7 +213,15 @@ inline void __fastcall h_released(void* button, const void* event) {
   if (grip::IsGrip(button)) {
     drag::Release();
   }
+  // A ⋯ d-pad arrow released over itself: a click. Run it once this event is
+  // done (closing the menu destroys the arrow).
+  const int arrow = menu::ArrowIndexOf(button);
+  const bool isArrowClick =
+      arrow != menu::kNoArrow && edge::ViewIsMouseHovered(button);
   o_released(button, event);
+  if (isArrowClick) {
+    control::PostMenuArrow(menu::kMenuItems[arrow].direction);
+  }
 }
 
 inline void __fastcall h_capture_lost(void* button) {
@@ -286,6 +294,16 @@ inline bool InstallAll() {
   Install(rva::SplitWindowControlMenu_BuildMenuModel,
           reinterpret_cast<void*>(menu::h_build), &menu::o_build,
           "SplitWindowControlMenu::BuildMenuModel");
+  Install(rva::MenuItemView_CalculateProposedLayout,
+          reinterpret_cast<void*>(menu::h_row_layout), &menu::o_row_layout,
+          "MenuItemView::CalculateProposedLayout");
+  Install(rva::SplitWindowControlMenu_PopulateMenu,
+          reinterpret_cast<void*>(menu::h_populate), &menu::o_populate,
+          "SplitWindowControlMenu::PopulateMenu");
+  Install(rva::SplitWindowControlMenu_ShouldExecuteWithoutClosing,
+          reinterpret_cast<void*>(menu::h_should_execute),
+          &menu::o_should_execute,
+          "SplitWindowControlMenu::ShouldExecuteCommandWithoutClosingMenu");
   Install(rva::SplitWindowControlMenu_ExecuteCommand,
           reinterpret_cast<void*>(menu::h_control_exec), &menu::o_control_exec,
           "SplitWindowControlMenu::ExecuteCommand");

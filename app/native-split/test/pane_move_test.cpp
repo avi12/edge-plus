@@ -253,22 +253,6 @@ void RunChecks() {
               "0:[0,0,600,400] 1:[600,0,600,400] 2:[0,400,1200,400] ",
           "close top-right geometry", Layout(tree, 1200, 800));
   }
-  // "Use equal widths / heights" evens out only the nearest split along that
-  // axis around the pane.
-  {
-    Node tree = Weighted(3, Axis::kHorizontal, {3.f, 1.f, 1.f});
-    SplitPane(tree, 2, Direction::kDown, 3);  // H[0 1 V[2 3]]
-    NearestSplitAlong(tree, 2, Axis::kVertical)->weights = {1.5f, 0.5f};
-    Check(EqualizeAlong(tree, 3, Axis::kHorizontal), "equal widths");
-    Check(Dump(tree) == "H[0(1) 1(1) V[2(1.5) 3(0.5)](1)]",
-          "widths even, the column's heights untouched", Dump(tree));
-    Check(EqualizeAlong(tree, 3, Axis::kVertical), "equal heights");
-    Check(Dump(tree) == "H[0(1) 1(1) V[2(1) 3(1)](1)]", "heights even",
-          Dump(tree));
-    Check(!EqualizeAlong(tree, 0, Axis::kVertical),
-          "no vertical split around pane 0");
-    Check(!EqualizeAlong(tree, 0, Axis::kHorizontal), "already even");
-  }
   // Seams: a tree of N panes has N - 1, each between two neighbours.
   {
     Node tree = FlatTree(3, Axis::kHorizontal);

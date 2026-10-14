@@ -425,36 +425,6 @@ inline bool Detach(Node& root, int leaf) {
   return true;
 }
 
-// The nearest split along `axis` that holds `leaf` (directly or deeper), or
-// null: the split whose widths (horizontal) or heights (vertical) the pane's
-// "use equal ..." command evens out.
-inline Node* NearestSplitAlong(Node& node, int leaf, Axis axis) {
-  if (node.isLeaf) {
-    return nullptr;
-  }
-  for (Node& child : node.children) {
-    if (!Contains(child, leaf)) {
-      continue;
-    }
-    if (Node* deeper = NearestSplitAlong(child, leaf, axis)) {
-      return deeper;
-    }
-    return node.axis == axis ? &node : nullptr;
-  }
-  return nullptr;
-}
-
-// Give every pane of the nearest split along `axis` around `leaf` an equal
-// share. Returns false if there is no such split or it is already even.
-inline bool EqualizeAlong(Node& root, int leaf, Axis axis) {
-  Node* split = NearestSplitAlong(root, leaf, axis);
-  if (!split || AllEqual(split->weights)) {
-    return false;
-  }
-  std::fill(split->weights.begin(), split->weights.end(), 1.f);
-  return true;
-}
-
 // Every leaf id above `removed` moves down by one: the containers after a closed
 // pane's are re-fed one slot earlier, and the tree follows its tabs.
 inline void RenumberAfterRemoval(Node& node, int removed) {

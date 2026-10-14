@@ -15,6 +15,7 @@
 #include "drag.h"
 #include "dividers.h"
 #include "grip.h"
+#include "menu.h"
 #include "overlay.h"
 
 namespace fixedge::control {
@@ -73,6 +74,7 @@ enum class Command : WPARAM {
   kShowBarBase = 500,      // + i: show pane i's hover bar
   kEnsureGrips = 700,      // give every pane of a grown split its drag grip
   kTeardown = 701,         // undo everything UI-side before this DLL unloads
+  kMenuArrowBase = 710,    // + Direction: a ⋯ d-pad arrow was clicked
 };
 
 // The width of each range: one code per Direction (kUp..kRight), and the
@@ -232,7 +234,24 @@ inline void CreateOrGrowByCommand(HWND hwnd, WPARAM wparam) {
   split_data::GrowSplit(tsm);
 }
 
+// Run a clicked ⋯ d-pad arrow after its click (hooks.h posts this).
+inline void PostMenuArrow(Direction direction) {
+  const bool hasChannel = g_hwnd && g_commandMessage != 0;
+  if (hasChannel) {
+    PostMessageW(
+        g_hwnd, g_commandMessage,
+        CodeOf(Command::kMenuArrowBase) + static_cast<WPARAM>(direction), 0);
+  }
+}
+
 inline void RunCommand(HWND hwnd, WPARAM wparam) {
+  const bool isMenuArrow =
+      IsInRange(wparam, Command::kMenuArrowBase, kDirectionCount);
+  if (isMenuArrow) {
+    menu::RunArrow(
+        static_cast<Direction>(OperandOf(wparam, Command::kMenuArrowBase)));
+    return;
+  }
   const bool isDirectionalAdd =
       IsInRange(wparam, Command::kAddPaneBase, kDirectionCount);
   if (isDirectionalAdd) {
