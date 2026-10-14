@@ -61,7 +61,7 @@ handle still runs the originals. `ResizeSeam` trades the dragged distance
 between the two children of that seam only, so every other proportion holds,
 and the weights persist through window resizes, moves and closes.
 
-The ⋯ menu's "Use equal widths" / "Use equal heights" even out the nearest
-split along that axis around the pane whose ⋯ was clicked; that pane is
-remembered from `ControlButtons::ToggleContextMenu` (rva `0xa011d00`), because
-the `SplitTabMenuModel` it builds only knows "first pane or not".
+Double-clicking a divider gives every pane of the split it divides an equal
+share again, eased into place, as Edge's own handle does for its two panes. The
+release of the second click reports `ui::MouseEvent::GetClickCount` (rva
+`0xb631a18`) as 2. Only that split changes; resizes elsewhere in the tree hold.

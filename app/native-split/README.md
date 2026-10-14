@@ -23,8 +23,10 @@ exists). Authorized personal customization of the user's own Edge.
 - [x] Drag-to-rearrange panes — a grip in each pane's hover bar; drop beside a
       pane, on the split's outer edge, or on a pane's centre to swap
 - [x] Close a pane — its X closes just that pane; the rest reflow, animated
-- [x] Dividers — drag between any two panes; proportions persist; the ⋯ menu
-      evens them out again ("Use equal widths / heights")
+- [x] Dividers — drag between any two panes; proportions persist; double-click
+      one to even out the split it divides
+- [x] ⋯ "Add pane" — a d-pad on the pane bar's ⋯ adds a pane beside that pane
+      (`docs/re/pane-menu.md`)
 - [ ] Companion-app toggle: inject / unload / hot-swap from the panel
 
 ## Build
