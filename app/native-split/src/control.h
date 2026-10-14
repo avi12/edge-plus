@@ -17,8 +17,28 @@ namespace fixedge::control {
 inline UINT g_msg = 0;
 inline HWND g_hwnd = nullptr;
 inline WNDPROC g_orig_proc = nullptr;
+inline bool g_hotkeys_done = false;
+
+// Hot-key ids delivered as WM_HOTKEY to this window's (UI-thread) WndProc.
+enum { HK_ADD_PANE = 1 };
 
 inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+  // RegisterHotKey must run on the thread that owns the window; this WndProc is
+  // exactly that thread, so register lazily on the first message we see.
+  if (!g_hotkeys_done) {
+    g_hotkeys_done = true;
+    // Ctrl+Shift+Alt+A = add a pane to the current split (create one if none).
+    if (RegisterHotKey(hwnd, HK_ADD_PANE, MOD_CONTROL | MOD_SHIFT | MOD_ALT, 'A'))
+      Log("[control] hotkey Ctrl+Shift+Alt+A -> add pane registered");
+    else
+      Log("[control] RegisterHotKey failed (%lu)", GetLastError());
+  }
+  if (msg == WM_HOTKEY && wparam == HK_ADD_PANE) {
+    void* tsm = edge::TsmForWindow(hwnd);
+    Log("[control] hotkey add-pane tsm=%p", tsm);
+    if (tsm) split_data::GrowSplit(tsm);
+    return 0;
+  }
   if (msg == g_msg && g_msg != 0) {
     // tsm via HWND -> aura -> BrowserView, so no split need pre-exist.
     // wparam >= 100 = create a fresh split; otherwise grow the active split.
@@ -62,9 +82,11 @@ inline void Install() {
 }
 
 inline void Remove() {
+  if (g_hwnd && g_hotkeys_done) UnregisterHotKey(g_hwnd, HK_ADD_PANE);
   if (g_hwnd && g_orig_proc) {
     SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(g_orig_proc));
   }
+  g_hotkeys_done = false;
   g_hwnd = nullptr;
   g_orig_proc = nullptr;
 }
