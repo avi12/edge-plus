@@ -52,13 +52,6 @@ inline bool IsAltKey(int keyCode) {
   return keyCode == VK_MENU || keyCode == VK_LMENU || keyCode == VK_RMENU;
 }
 
-// The tab model at strip `index`, or null.
-inline void* TabAt(void* tsm, int index) {
-  void* root = edge::RootCollection(tsm);
-  return root && index >= 0 ? edge::GetTabAtIndexRecursive(root, index)
-                            : nullptr;
-}
-
 // Alt mode applies to a drag of exactly one tab that is not in a split.
 inline bool CanDock(void* controller, void* tsm) {
   const bool isSingleTabDrag = edge::IsDraggingTabs(controller) &&
@@ -67,7 +60,7 @@ inline bool CanDock(void* controller, void* tsm) {
     return false;
   }
   void* contents = edge::DraggedContents(controller, 0);
-  void* tab = TabAt(tsm, edge::IndexOfWebContents(tsm, contents));
+  void* tab = edge::TabModelAt(tsm, edge::IndexOfWebContents(tsm, contents));
   return tab && !edge::TabIsSplit(tab);
 }
 
@@ -92,7 +85,7 @@ inline int TabUnder(void* context, void* tsm, Point screenPoint) {
 // Hovering a split's tab shows that split (activates it).
 inline void ShowSplitUnder(void* context, Point screenPoint) {
   const int index = TabUnder(context, g_session.tsm, screenPoint);
-  void* tab = TabAt(g_session.tsm, index);
+  void* tab = edge::TabModelAt(g_session.tsm, index);
   const bool isHiddenSplitTab =
       tab && edge::TabIsSplit(tab) && tab != edge::ActiveTab(g_session.tsm);
   if (!isHiddenSplitTab) {
@@ -228,14 +221,15 @@ inline void ApplyDrop() {
   Drop drop = std::move(*g_drop);
   g_drop.reset();
   const int splitIndex = edge::IndexOfWebContents(drop.tsm, drop.splitContents);
-  void* draggedTab =
-      TabAt(drop.tsm, edge::IndexOfWebContents(drop.tsm, drop.draggedContents));
+  void* draggedTab = edge::TabModelAt(
+      drop.tsm, edge::IndexOfWebContents(drop.tsm, drop.draggedContents));
   const bool hasBothTabs = splitIndex >= 0 && draggedTab;
   if (!hasBothTabs) {
     Log("[tabdrag] drop: a tab went away");
     return;
   }
-  edge::ActivateTabAt(drop.tsm, splitIndex);  // the split shows again
+  edge::ActivateTabAt(drop.tsm,
+                      splitIndex);  // the split shows again
   const bool hasGrown = split_ops::GrowWithTree(
       drop.mcv, drop.tsm, std::move(drop.tree), draggedTab);
   Log("[tabdrag] drop: %s", hasGrown ? "the tab is a new pane" : "failed");

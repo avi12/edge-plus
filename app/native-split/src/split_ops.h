@@ -32,6 +32,19 @@ inline int ActiveLeaf(void* mcv) {
   return 0;
 }
 
+// The pane (container index) showing `webContents`, or kNoLeaf.
+inline int LeafShowing(void* mcv, const void* webContents) {
+  const int count = static_cast<int>(edge::McvCount(mcv));
+  for (int i = 0; i < count; i++) {
+    const bool isShowing =
+        edge::ContainerWebContents(edge::McvContainerAt(mcv, i)) == webContents;
+    if (isShowing) {
+      return i;
+    }
+  }
+  return kNoLeaf;
+}
+
 // Give a newly built pane content from a background tab (from the strip tail, so
 // never the active/split tabs). Blank if none spare.
 inline void FeedNewPane(void* mcv, int leaf) {

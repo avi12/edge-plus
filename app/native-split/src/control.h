@@ -15,6 +15,7 @@
 #include "drag.h"
 #include "dividers.h"
 #include "grip.h"
+#include "links.h"
 #include "menu.h"
 #include "overlay.h"
 #include "tabdrag.h"
@@ -227,6 +228,9 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
       return;
     case Command::kTabDrop:
       tabdrag::ApplyDrop();
+      return;
+    case Command::kLinkPane:
+      links::OpenLinkPane();
       return;
     default:
       break;

@@ -13,6 +13,8 @@
 
 namespace fixedge::split_data {
 
+using namespace fixedge::edge155;
+
 // Edge's CreateSplit rejects a member vector of size 1, so a split is at least
 // two tabs.
 inline constexpr int kMinSplitMembers = 2;
@@ -108,6 +110,47 @@ struct OptionalSplitId {
 // with an even ratio it is what Edge's default ctor builds.
 inline void SetEvenRatio(uint8_t* visual) {
   *reinterpret_cast<double*>(visual + 8) = kEvenSplitRatio;
+}
+
+// What a split keeps when it is re-created under a new id: its visual
+// (orientation and ratio, handed to AddToSplitImpl) and Edge's per-split
+// "open left links to the right" toggle, which a NEW split would take from a
+// pref instead.
+struct SplitSettings {
+  uint8_t visual[16] = {};
+  bool isLinkMode = false;
+};
+
+inline SplitSettings ReadSettings(void* tsm, void* splitToken) {
+  SplitSettings settings;
+  void* splitData = edge::GetSplitData(tsm, splitToken);
+  if (!splitData) {
+    SetEvenRatio(settings.visual);
+    return settings;
+  }
+  // SplitTabData+8 is the live visual: keep its orientation and ratio.
+  std::memcpy(settings.visual, reinterpret_cast<uint8_t*>(splitData) + 8,
+              sizeof(settings.visual));
+  settings.isLinkMode = edge::Field<bool>(splitData, off::SPLITDATA_link_mode);
+  return settings;
+}
+
+// After the re-create: give the new split its old toggle back.
+inline void RestoreLinkMode(void* tsm, void* newSplitToken,
+                            const SplitSettings& settings) {
+  if (void* splitData = edge::GetSplitData(tsm, newSplitToken)) {
+    edge::Field<bool>(splitData, off::SPLITDATA_link_mode) =
+        settings.isLinkMode;
+  }
+}
+
+// The toggle of the split `splitTab` belongs to (false if none).
+inline bool IsLinkModeOn(void* tsm, void* splitTab) {
+  OptionalSplitId split = {};
+  edge::TabGetSplit(splitTab, &split);
+  void* splitData =
+      split.hasValue ? edge::GetSplitData(tsm, split.token) : nullptr;
+  return splitData && edge::Field<bool>(splitData, off::SPLITDATA_link_mode);
 }
 
 // A background tab: neither the active tab nor already in any split.
@@ -285,14 +328,7 @@ inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
   for (int i = 0; i < memberCount; i++) {
     memberTabs[i] = members.TabAt(i);
   }
-  uint8_t visual[16] = {};
-  if (void* splitData = edge::GetSplitData(tsm, split.token)) {
-    // SplitTabData+8 is the live visual: keep its orientation and ratio.
-    std::memcpy(visual, reinterpret_cast<uint8_t*>(splitData) + 8,
-                sizeof(visual));
-  } else {
-    SetEvenRatio(visual);
-  }
+  const SplitSettings settings = ReadSettings(tsm, split.token);
 
   // The tab to become the new pane: the one given, else a free background tab.
   if (!newTab) {
@@ -342,9 +378,14 @@ inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
       edge::MakeIndexVec(memberIndices, static_cast<size_t>(indexCount));
   Log("[grow] AddToSplitImpl n=%d anchor=%d (was %d members)", indexCount,
       anchor, memberCount);
+  uint8_t visual[16] = {};
+  std::memcpy(visual, settings.visual, sizeof(visual));
   const bool isAdded =
       SafeAddToSplit(tsm, outId, splitId, &splitIndices, anchor, visual,
                      AddToSplitFlag::kNewSplit);
+  if (isAdded) {
+    RestoreLinkMode(tsm, outId, settings);
+  }
   Log("[grow] AddToSplitImpl %s (now %d panes)", isAdded ? "done" : "FAILED",
       indexCount);
   return isAdded;
@@ -406,13 +447,7 @@ inline int CloseMember(void* tsm, const void* closingContents,
         activating);
     return 0;
   }
-  uint8_t visual[16] = {};
-  if (void* splitData = edge::GetSplitData(tsm, split.token)) {
-    std::memcpy(visual, reinterpret_cast<uint8_t*>(splitData) + 8,
-                sizeof(visual));
-  } else {
-    SetEvenRatio(visual);
-  }
+  const SplitSettings settings = ReadSettings(tsm, split.token);
 
   edge::RemoveSplitImpl(tsm, split.token, kTransactionalRemove);
   edge::CloseTabAt(tsm,
@@ -440,6 +475,8 @@ inline int CloseMember(void* tsm, const void* closingContents,
     uint8_t outId[16] = {};
     edge::SplitIndexVec splitIndices =
         edge::MakeIndexVec(memberIndices, static_cast<size_t>(indexCount));
+    uint8_t visual[16] = {};
+    std::memcpy(visual, settings.visual, sizeof(visual));
     const bool isResplit =
         SafeAddToSplit(tsm, outId, splitId, &splitIndices, memberIndices[0],
                        visual, AddToSplitFlag::kNewSplit);
@@ -447,6 +484,7 @@ inline int CloseMember(void* tsm, const void* closingContents,
       Log("[close] re-split of %d members FAILED", indexCount);
       return 0;
     }
+    RestoreLinkMode(tsm, outId, settings);
   }
   edge::ActivateTabAt(
       tsm, edge::GetIndexOfTabRecursive(root, memberTabs[activating]));

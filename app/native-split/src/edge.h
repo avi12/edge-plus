@@ -258,6 +258,12 @@ inline void ActivateTabAt(void* tsm, int index) {
       tsm, index, gestureDetails);
 }
 
+// The tab model at strip `index`, or null.
+inline void* TabModelAt(void* tsm, int index) {
+  void* root = RootCollection(tsm);
+  return root && index >= 0 ? GetTabAtIndexRecursive(root, index) : nullptr;
+}
+
 // The strip index of the tab showing `webContents`, or -1.
 inline int IndexOfWebContents(void* tsm, void* webContents) {
   using IndexFn = int(__fastcall*)(void*, void*);
@@ -476,6 +482,32 @@ inline void ConvertPointFromScreen(void* view, Point* point) {
   using ConvertFn = void(__fastcall*)(void*, Point*);
   reinterpret_cast<ConvertFn>(At(rva::View_ConvertPointFromScreen))(view,
                                                                     point);
+}
+
+// --- a page's navigation --------------------------------------------------------
+
+// Whether `webContents` was opened by another page that can still script it.
+inline bool HasOpener(void* webContents) {
+  using OpenerFn = bool(__fastcall*)(void*);
+  return reinterpret_cast<OpenerFn>(At(rva::WebContentsImpl_HasOpener))(
+      webContents);
+}
+
+// Load `url` (a GURL*) in `webContents`, as a link would.
+inline void NavigateTo(void* webContents, const void* url) {
+  alignas(16) uint8_t params[off::LoadURLParams_size] = {};
+  using ParamsFn = void*(__fastcall*)(void*, const void*);
+  reinterpret_cast<ParamsFn>(At(rva::LoadURLParams_ctor))(params, url);
+  using ControllerFn = const void*(__fastcall*)(void*);
+  const void* controller = reinterpret_cast<ControllerFn>(
+      At(rva::WebContentsImpl_GetController))(webContents);
+  alignas(8) uint8_t navigationHandle[off::WeakPtr_size] = {};
+  using LoadFn = void(__fastcall*)(const void*, void*, const void*);
+  reinterpret_cast<LoadFn>(At(rva::NavigationControllerImpl_LoadURLWithParams))(
+      controller, navigationHandle, params);
+  using DtorFn = void(__fastcall*)(void*);
+  reinterpret_cast<DtorFn>(At(rva::WeakReference_dtor))(navigationHandle);
+  reinterpret_cast<DtorFn>(At(rva::LoadURLParams_dtor))(params);
 }
 
 // --- events -------------------------------------------------------------------

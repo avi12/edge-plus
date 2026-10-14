@@ -275,6 +275,44 @@ inline constexpr uintptr_t TabStripModel_GetIndexOfWebContents = 0x10a7d34;
 // int TabStripModel::MoveWebContentsAt(this, int index, int to_position,
 // bool select_after_move): `to_position` is the tab's index after the move.
 inline constexpr uintptr_t TabStripModel_MoveWebContentsAt = 0xa26c78c;
+// A split pane's links (docs/re/split-links.md):
+// bool BrowserWebContentsDelegate::ShouldOverrideNewWindowCreation(this,
+// WebContents* source, RenderFrameHost* opener, WindowOpenDisposition, bool,
+// mojom::CreateNewWindowParams*): asked (via
+// WebContentsImpl::EdgeShouldCreateNewWindowAsync) once a page's new window is
+// allowed and before it is made; true = handled, make no window.
+inline constexpr uintptr_t
+    BrowserWebContentsDelegate_ShouldOverrideNewWindowCreation = 0x9fb7960;
+// WebContents* BrowserWebContentsDelegate::AddNewContents(this, WebContents*
+// source, unique_ptr<WebContents>* new_contents, const GURL& target_url,
+// WindowOpenDisposition, const WindowFeatures&, bool user_gesture, bool*
+// was_blocked): puts a page's new tab or window into the browser.
+inline constexpr uintptr_t BrowserWebContentsDelegate_AddNewContents =
+    0x9fb5040;
+// unique_ptr<NavigationThrottle> SplitWindowLinkModeNavigationThrottle::
+// MaybeCreateThrottleFor(out, ...): Edge's own use of the "open left links to
+// the right" toggle (the first pane's same-tab links load in the last pane).
+inline constexpr uintptr_t SplitWindowLinkModeThrottle_MaybeCreate = 0x29d2d54;
+// void SplitWindowControllerImplV2::UpdateLinkedModeState(this, bool on): after
+// the toggle's bool is stored (SetLinkedModeStateForTab, 0xa020880), tells the
+// split's observers, which wire Edge's two-pane link mode (readying a target
+// pane: it navigated pane 1 of three to a new tab page).
+inline constexpr uintptr_t SplitWindowControllerV2_UpdateLinkedModeState =
+    0xa01ffc0;
+// NavigationController::LoadURLParams(this, const GURL&) and its dtor.
+inline constexpr uintptr_t LoadURLParams_ctor = 0x2e54bc0;
+inline constexpr uintptr_t LoadURLParams_dtor = 0x2e548fe;
+// NavigationControllerImpl::LoadURLWithParams(this, WeakPtr<NavigationHandle>*
+// out, const LoadURLParams&).
+inline constexpr uintptr_t NavigationControllerImpl_LoadURLWithParams =
+    0x2e547f0;
+// NavigationControllerImpl* WebContentsImpl::GetController(this).
+inline constexpr uintptr_t WebContentsImpl_GetController = 0x1107b90;
+// bool WebContentsImpl::HasOpener(this).
+inline constexpr uintptr_t WebContentsImpl_HasOpener = 0x341d580;
+// base::internal::WeakReference::~WeakReference(this): a WeakPtr's first field.
+inline constexpr uintptr_t WeakReference_dtor = 0x0f99f60;
+
 // A tab drag (docs/re/tab-drag.md):
 // int TabDragController::ContinueDragging(this, const gfx::Point* screen DIPs):
 // every pointer move of a started drag; it reorders the SELECTED tabs, or tears
@@ -427,6 +465,21 @@ inline constexpr int ICON_R_ARC_TO = 10;
 inline constexpr int ICON_CLOSE = 27;
 inline constexpr int ICON_CANVAS_DIMENSIONS = 28;
 
+// --- a split pane's links (docs/re/split-links.md) ---
+// mojom::CreateNewWindowParams: opener_suppressed (bool) and target_url (GURL).
+inline constexpr uintptr_t NEWWINDOW_opener_suppressed = 0x50;
+inline constexpr uintptr_t NEWWINDOW_target_url = 0x80;
+// WindowOpenDisposition, with Edge's own split foreground tab (12).
+inline constexpr int DISPOSITION_new_foreground_tab = 3;
+inline constexpr int DISPOSITION_new_background_tab = 4;
+inline constexpr int DISPOSITION_split_foreground_tab = 12;
+// sizeof(NavigationController::LoadURLParams) (CreateNewWindow allocates it
+// with this), and of a base::WeakPtr {WeakReference, T*}.
+inline constexpr size_t LoadURLParams_size = 0x478;
+inline constexpr size_t WeakPtr_size = 0x10;
+// SplitTabData's "open left links to the right" toggle (bool, one per split;
+// a new split takes it from the edge_split_window.default_link_mode pref).
+inline constexpr uintptr_t SPLITDATA_link_mode = 0x28;
 // GetTabsAndIndicesInSplit's entries: {TabModel*, int strip index}.
 inline constexpr size_t SPLITMEMBER_size = 0x10;
 

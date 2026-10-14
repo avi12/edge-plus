@@ -340,6 +340,22 @@ inline bool InstallAll() {
   Install(rva::SplitWindowControlMenu_BuildMenuModel,
           reinterpret_cast<void*>(menu::h_build), &menu::o_build,
           "SplitWindowControlMenu::BuildMenuModel");
+  Install(rva::BrowserWebContentsDelegate_ShouldOverrideNewWindowCreation,
+          reinterpret_cast<void*>(links::h_should_override),
+          &links::o_should_override,
+          "BrowserWebContentsDelegate::ShouldOverrideNewWindowCreation");
+  Install(rva::BrowserWebContentsDelegate_AddNewContents,
+          reinterpret_cast<void*>(links::h_add_new_contents),
+          &links::o_add_new_contents,
+          "BrowserWebContentsDelegate::AddNewContents");
+  Install(rva::SplitWindowControllerV2_UpdateLinkedModeState,
+          reinterpret_cast<void*>(links::h_update_linked_mode),
+          &links::o_update_linked_mode,
+          "SplitWindowControllerImplV2::UpdateLinkedModeState");
+  Install(rva::SplitWindowLinkModeThrottle_MaybeCreate,
+          reinterpret_cast<void*>(links::h_link_throttle),
+          &links::o_link_throttle,
+          "SplitWindowLinkModeNavigationThrottle::MaybeCreateThrottleFor");
   Install(rva::TabDragController_ContinueDragging,
           reinterpret_cast<void*>(tabdrag::h_continue_dragging),
           &tabdrag::o_continue_dragging, "TabDragController::ContinueDragging");

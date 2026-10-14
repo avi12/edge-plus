@@ -29,6 +29,7 @@ enum class Command : WPARAM {
   kTeardown = 701,         // undo everything UI-side before this DLL unloads
   kMenuArrowBase = 710,    // + Direction: a ⋯ d-pad arrow was clicked
   kTabDrop = 720,          // a tab Alt-dragged onto the split: add it
+  kLinkPane = 721,         // a pane's link opened a tab: make it a pane
 };
 
 // The width of each range: one code per Direction (kUp..kRight), and the
