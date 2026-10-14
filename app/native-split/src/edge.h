@@ -316,9 +316,24 @@ inline void ListenSplitInput(void* web_contents) {
   reinterpret_cast<Fn>(At(rva::SplitWindow_ListenWebContentsInputEvent))(web_contents, nullptr);
 }
 
+// Run the hover's effect for pane `wc` directly (the test channel's stand-in for
+// a real mouse-enter, which needs the real cursor).
+inline bool ShowControlButtonFor(void* browser, void* web_contents) {
+  using FromFn = void*(__fastcall*)(void*);
+  void* controller = reinterpret_cast<FromFn>(At(rva::SplitWindowController_FromBrowser))(browser);
+  if (!controller) return false;
+  using ShowFn = bool(__fastcall*)(void*, void*);
+  return reinterpret_cast<ShowFn>(At(rva::SplitWindowController_ShowControlButton))(controller,
+                                                                                    web_contents);
+}
+
 // A container's ContentsWebView (the pane's web view).
 inline void* ContainerWebView(void* container) {
   return Field<void*>(container, off::CCV_contents_web_view);
+}
+// The WebContents a container's web view is showing (null if none).
+inline void* ContainerWebContents(void* container) {
+  return Field<void*>(ContainerWebView(container), off::CWV_web_contents);
 }
 
 // --- Browser / TabStripModel field accessors ---------------------------------

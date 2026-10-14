@@ -90,6 +90,10 @@ inline constexpr uintptr_t ControlButtons_ctor = 0xa010a6a; // (this, BrowserVie
 // Static: (WebContents* a, WebContents* b) -> CreateOrGet + StartObserving each
 // (idempotent; a no-op under the new toolbar).
 inline constexpr uintptr_t SplitWindow_ListenWebContentsInputEvent = 0xa01fe4e;
+// What a pane's hover runs: show the bar of the container showing `wc`, hide the
+// rest. (controller, WebContents*) -> bool. Controller from the Browser.
+inline constexpr uintptr_t SplitWindowController_ShowControlButton = 0xa020e40;
+inline constexpr uintptr_t SplitWindowController_FromBrowser = 0x2e70b32; // (Browser*)
 // --- 2-pane-only CHECK sites that int3 when a split grows past 2 members ---
 // Accessible-label builder: maps a split tab's pane index to a string id
 // (0x3e7f pane0 / 0x3e80 pane1) and `cmp eax,1; jne <int3>` crashes at index>=2.
@@ -122,6 +126,7 @@ inline constexpr uintptr_t MCV_drop_target_view = 0x0b0; // views::View* (relati
 inline constexpr uintptr_t BV_multi_contents_view = 0x6e0; // MultiContentsView* within BrowserView
 inline constexpr uintptr_t BV_browser           = 0x600; // Browser* within BrowserView
 inline constexpr uintptr_t CWV_primary_flag     = 0x450; // bool on ContentsWebView (pane-0 fixup)
+inline constexpr uintptr_t CWV_web_contents     = 0x390; // WebContents* (WebView::web_contents())
 // Browser / TabStripModel (docs/re/tab-wiring.md)
 inline constexpr uintptr_t BROWSER_tab_strip_model = 0x30;  // TabStripModel* within Browser
 inline constexpr uintptr_t TSM_collection       = 0x10;  // root TabCollection* within TabStripModel

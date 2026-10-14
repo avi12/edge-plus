@@ -86,6 +86,16 @@ inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
       split_ops::SwapActive(edge::McvForWindow(hwnd));
       return 0;
     }
+    if (wparam >= 500 && wparam < 516) {  // show pane (wparam-500)'s hover bar
+      void* mcv = edge::McvForWindow(hwnd);
+      const int pane = static_cast<int>(wparam) - 500;
+      if (mcv && pane < static_cast<int>(edge::McvCount(mcv))) {
+        void* wc = edge::ContainerWebContents(edge::McvContainerAt(mcv, pane));
+        const bool shown = edge::ShowControlButtonFor(edge::BrowserOf(edge::McvBrowserView(mcv)), wc);
+        Log("[control] show bar pane=%d wc=%p -> %d", pane, wc, shown);
+      }
+      return 0;
+    }
     void* tsm = edge::TsmForWindow(hwnd);
     Log("[control] message wparam=%llu tsm=%p", static_cast<unsigned long long>(wparam), tsm);
     if (!tsm) return 0;
