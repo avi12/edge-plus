@@ -1,0 +1,4 @@
+#!/bin/sh
+# Gate commits on the staged C++ only — the lint-staged equivalent.
+# Enable with:  pwsh tools/lint.ps1 -InstallHook
+exec pwsh -NoProfile -File "$(git rev-parse --show-toplevel)/tools/lint.ps1" -Staged

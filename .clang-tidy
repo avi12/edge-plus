@@ -1,0 +1,133 @@
+# Static analysis for the native split's C++ (app/native-split/src and test).
+#
+# Ported from avi/any-stt's .clang-tidy, which mirrors avi/youtube-time-manager:
+# .clang-format owns layout (their @stylistic/eslint half) and this file owns
+# logic and correctness (their oxlint half). oxlint runs
+# `categories.correctness: error`; the C++ equivalent is bugprone-* +
+# clang-analyzer-* + cert-* + concurrency-*, as errors.
+#
+# Run:  pwsh tools/lint.ps1  (check)   /   pwsh tools/lint.ps1 -Fix   (apply fixes)
+#
+# ---- their .oxlintrc.json rule by rule, and what answers it here -----------
+#   categories.correctness  -> bugprone-*, cert-*, clang-analyzer-*, concurrency-*
+#   prefer-const            -> misc-const-correctness (values only, as below)
+#   id-length min 3 + list  -> readability-identifier-length + IgnoredNames
+#   no-nested-ternary       -> readability-avoid-nested-conditional-operator
+#   curly: all              -> .clang-format InsertBraces
+#   no-unused-vars          -> misc-unused-*, clang-analyzer-deadcode.DeadStores
+#   no-restricted-globals   -> bugprone-unsafe-functions.CustomFunctions
+#   import/first, dupes     -> readability-duplicate-include
+#   @stylistic/*, max-len   -> .clang-format (Google, ColumnLimit 80)
+#   spaced-comment: always  -> .clang-format SpacesInLineCommentPrefix
+#
+# Deliberately OFF, and why (the same list as any-stt, for the same reasons):
+#   performance-no-int-to-ptr, bugprone-multi-level-implicit-pointer-conversion
+#     — this DLL binds msedge.dll by RVA: every Edge function is an
+#       integer-to-pointer cast and every field read goes through raw offsets.
+#       The rule is right in general and wrong for every binding here.
+#   readability-implicit-bool-conversion, readability-braces-around-statements,
+#   readability-magic-numbers
+#     — braces are clang-format's InsertBraces; the other two would drown the
+#       real findings (offsets.h is nothing but reversed magic numbers).
+#   misc-include-cleaner — Win32 headers have hard ordering dependencies, the
+#       same reason SortIncludes is off in .clang-format.
+#   readability-identifier-naming — offsets.h names each RVA and offset after
+#       the reversed symbol (`Class_Method`, `CLASS_field`) so it greps against
+#       the PDB and docs/re, and the hook pairs are `h_` (detour) / `o_`
+#       (original) on purpose. CLAUDE.md's table stays a review concern.
+#   cert-dcl50-cpp — Log() is a printf-style variadic on purpose.
+#   bugprone-unchecked-string-to-number-conversion, misc-no-recursion
+#       (the layout tree is recursive by nature), the rest as in any-stt.
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  concurrency-*,
+  misc-*,
+  performance-*,
+  readability-avoid-nested-conditional-operator,
+  readability-identifier-length,
+  readability-const-return-type,
+  readability-delete-null-pointer,
+  readability-duplicate-include,
+  readability-inconsistent-declaration-parameter-name,
+  readability-misleading-indentation,
+  readability-misplaced-array-index,
+  readability-redundant-control-flow,
+  readability-redundant-declaration,
+  readability-redundant-preprocessor,
+  readability-redundant-string-cstr,
+  readability-simplify-boolean-expr,
+  readability-string-compare,
+  readability-function-cognitive-complexity,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-multi-level-implicit-pointer-conversion,
+  -bugprone-narrowing-conversions,
+  -bugprone-reserved-identifier,
+  -bugprone-unchecked-string-to-number-conversion,
+  -cert-dcl37-c,
+  -cert-dcl50-cpp,
+  -cert-dcl51-cpp,
+  -cert-err33-c,
+  -cert-err34-c,
+  -misc-include-cleaner,
+  -misc-no-recursion,
+  -misc-non-private-member-variables-in-classes,
+  -misc-use-anonymous-namespace,
+  -misc-use-internal-linkage,
+  -performance-enum-size,
+  -performance-no-int-to-ptr
+
+# Only our own headers; never report inside the Windows SDK or external/
+# (MinHook, vendored).
+HeaderFilterRegex: 'native-split[/\\](src|test)[/\\].*\.h$'
+# Everything is an error EXCEPT cognitive-complexity: that mirrors fallow's
+# maxCognitive:30, and it is report-only — it names the next decomposition
+# targets without failing the gate.
+WarningsAsErrors: '*,-readability-function-cognitive-complexity'
+FormatStyle: file
+CheckOptions:
+  readability-function-cognitive-complexity.Threshold: '30'  # == fallow maxCognitive
+
+  # oxlint's `no-restricted-globals` — name a thing, say why, name what to use
+  # instead. Here it is the writes with no destination size: every one of them
+  # is a buffer overrun waiting for a protocol field to grow, and the tree
+  # already writes the bounded form everywhere else. `<n>,<replacement>,<why>`.
+  bugprone-unsafe-functions.CustomFunctions: >-
+    ^::sprintf$,snprintf,it cannot see the size of what it writes into;
+    ^::strcpy$,strcpy_s,it cannot see the size of what it writes into;
+    ^::strcat$,strcat_s,it cannot see the size of what it writes into;
+    ^::wcscpy$,wcscpy_s,it cannot see the size of what it writes into;
+    ^::wcscat$,wcscat_s,it cannot see the size of what it writes into;
+    ^::gets$,fgets,it cannot see the size of what it writes into
+
+  # oxlint's `id-length: [error, {min: 3, exceptions: [...]}]`, in C++. The
+  # minimum is theirs; the exception list is CLAUDE.md's — "established platform
+  # idioms that would read worse spelled out":
+  #   hr hwnd pid tid rc   Win32/COM, and unreadable expanded
+  #   i j                  a bare loop counter (a MEANINGFUL index is named)
+  #   ok to                a success flag, and the `from`/`to` pair
+  #   x y                  a coordinate pair (gfx::Point's own names)
+  # Anything else at one or two characters is a name that was not chosen.
+  readability-identifier-length.MinimumVariableNameLength: '3'
+  readability-identifier-length.MinimumParameterNameLength: '3'
+  readability-identifier-length.IgnoredVariableNames: '^(hr|hwnd|pid|tid|rc|ok|to|i|j|x|y)$'
+  readability-identifier-length.IgnoredParameterNames: '^(hr|hwnd|pid|tid|rc|ok|to|i|j|x|y)$'
+
+  # oxlint's `prefer-const`. Values only: a `const` reference or pointer is a
+  # different type, not a stricter binding, so the reference/pointer arms would
+  # be changing signatures rather than locking locals down.
+  #
+  # REPORT ONLY — the Transform options are off on purpose. Its fixer writes
+  # EAST const (`DWORD const x`) and this tree is west const throughout, so an
+  # auto-fix would have the linter quietly introduce the second style it exists
+  # to prevent. The finding names the variable; write `const` in front of the
+  # type yourself. clang-format cannot put it back either: a Win32 typedef is
+  # not a token it knows to be a type (see QualifierAlignment there).
+  misc-const-correctness.AnalyzeValues: 'true'
+  misc-const-correctness.AnalyzeReferences: 'false'
+  misc-const-correctness.WarnPointersAsValues: 'false'
+  misc-const-correctness.TransformValues: 'false'
+  misc-const-correctness.TransformReferences: 'false'
+  misc-const-correctness.TransformPointersAsValues: 'false'

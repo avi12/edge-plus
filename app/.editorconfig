@@ -1,0 +1,117 @@
+# Google C# Style Guide — https://google.github.io/styleguide/csharp-style.html
+#
+# The C# half's .clang-format. The C++ half is shaped by `BasedOnStyle: Google`
+# at 80 columns; this is the same choice for app\, at the 100 the C# guide
+# names. Every rule below is a line of that guide, quoted where it is short
+# enough to quote — nothing here is a preference of this project's.
+#
+# Apply:  dotnet format app\panel\FixEdge.csproj  (and app\host\FixEdge.Host.csproj)
+# Check:  tools\lint.ps1  (the C# pass runs --verify-no-changes)
+#
+# Scoped to app on purpose, with root = true: the tree above is C++,
+# TypeScript and PowerShell, and none of them wants a C# guide's answers
+# about indentation.
+root = true
+
+[*.cs]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# ---- Whitespace rules ------------------------------------------------------
+# "Indentation of 2 spaces, no tabs."
+indent_style = space
+indent_size = 2
+tab_width = 2
+# "Column limit: 100."
+max_line_length = 100
+
+# "No line break before opening brace."
+csharp_new_line_before_open_brace = none
+# "No line break between closing brace and else."
+csharp_new_line_before_else = false
+csharp_new_line_before_catch = false
+csharp_new_line_before_finally = false
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_between_query_expression_clauses = true
+
+# "A maximum of one statement per line." — and the brace form of that: a block
+# is never collapsed onto the line that opened it.
+csharp_preserve_single_line_statements = false
+csharp_preserve_single_line_blocks = false
+
+# "Space after if/for/while etc., and after commas."
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_after_comma = true
+csharp_space_before_comma = false
+csharp_space_after_dot = false
+csharp_space_before_dot = false
+csharp_space_after_semicolon_in_for_statement = true
+csharp_space_before_semicolon_in_for_statement = false
+csharp_space_after_colon_in_inheritance_clause = true
+csharp_space_before_colon_in_inheritance_clause = true
+# "No space after an opening parenthesis or before a closing parenthesis."
+csharp_space_between_parentheses = false
+csharp_space_between_method_call_parameter_list_parentheses = false
+csharp_space_between_method_call_empty_parameter_list_parentheses = false
+csharp_space_between_method_call_name_and_opening_parenthesis = false
+csharp_space_between_method_declaration_parameter_list_parentheses = false
+csharp_space_between_method_declaration_empty_parameter_list_parentheses = false
+csharp_space_between_method_declaration_name_and_open_parenthesis = false
+csharp_space_after_cast = false
+# "One space between the operator and each operand" of a binary operator.
+csharp_space_around_binary_operators = before_and_after
+csharp_space_between_square_brackets = false
+csharp_space_before_open_square_brackets = false
+
+csharp_indent_block_contents = true
+csharp_indent_braces = false
+csharp_indent_case_contents = true
+csharp_indent_case_contents_when_block = false
+csharp_indent_switch_labels = true
+csharp_indent_labels = one_less_than_current
+
+# ---- Organization ----------------------------------------------------------
+# "using declarations go at the top, before any namespaces. using import order
+#  is alphabetical, apart from System imports which always go first."
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+csharp_using_directive_placement = outside_namespace:warning
+
+# "Modifiers occur in the following order:" — the guide's list, unedited.
+csharp_preferred_modifier_order = public,protected,internal,private,new,abstract,virtual,override,sealed,static,readonly,extern,unsafe,volatile,async:warning
+
+# ---- Braces ----------------------------------------------------------------
+# "Braces used even when optional." The C++ half gets this from clang-format's
+# InsertBraces; IDE0011 is the same rule with the same teeth.
+csharp_prefer_braces = true:warning
+
+# ---- Naming rules ----------------------------------------------------------
+# "Names of interfaces start with I, e.g. IInterface."
+dotnet_naming_rule.interfaces_are_i_prefixed.severity = warning
+dotnet_naming_rule.interfaces_are_i_prefixed.symbols = interface_symbols
+dotnet_naming_rule.interfaces_are_i_prefixed.style = i_pascal_case
+dotnet_naming_symbols.interface_symbols.applicable_kinds = interface
+dotnet_naming_style.i_pascal_case.capitalization = pascal_case
+dotnet_naming_style.i_pascal_case.required_prefix = I
+
+# "Names of classes, methods, enumerations, public fields, public properties,
+#  namespaces: PascalCase."
+dotnet_naming_rule.types_and_members_are_pascal_case.severity = warning
+dotnet_naming_rule.types_and_members_are_pascal_case.symbols = type_and_member_symbols
+dotnet_naming_rule.types_and_members_are_pascal_case.style = pascal_case
+dotnet_naming_symbols.type_and_member_symbols.applicable_kinds = namespace,class,struct,enum,delegate,event,method,property,field
+dotnet_naming_symbols.type_and_member_symbols.applicable_accessibilities = public
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+# "Names of local variables, parameters: camelCase."
+dotnet_naming_rule.locals_are_camel_case.severity = warning
+dotnet_naming_rule.locals_are_camel_case.symbols = local_symbols
+dotnet_naming_rule.locals_are_camel_case.style = camel_case
+dotnet_naming_symbols.local_symbols.applicable_kinds = local,parameter
+dotnet_naming_style.camel_case.capitalization = camel_case
+
+[*.{csproj,appxmanifest,xaml,xml,props,targets}]
+indent_style = space
+indent_size = 2

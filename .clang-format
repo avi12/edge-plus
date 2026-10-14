@@ -1,0 +1,51 @@
+# Google C++ Style Guide, as avi/any-stt applies it.
+# Apply:  pwsh tools/lint.ps1 -Fix   (or clang-format -i on the files)
+# (clang-format ships with LLVM:  winget install LLVM.LLVM)
+BasedOnStyle: Google
+ColumnLimit: 80
+DerivePointerAlignment: false
+PointerAlignment: Left
+# ---- youtube-time-manager's custom eslint "expand-block" rule, ported ----
+# Every control-flow body is a real braced block on its own line(s) — never
+# one-lined. InsertBraces also ENFORCES the CLAUDE.md if-brace rule, so it can
+# never regress. This is the faithful half of ytm's custom layout rules.
+#
+# NOT ported: expand-nested-object-expression and multiline-arg-paren-newline.
+# Those are surgical JS-AST rules ("explode a call ONLY when it has a multiline
+# non-literal argument", "expand an object with >= 2 properties") with no faithful
+# clang-format equivalent — the blunt approximation (BinPackArguments: false)
+# explodes even simple-arg calls that ytm keeps inline, churning ~2000 lines and
+# diverging from ytm's own behavior. So we keep Google's arg packing.
+InsertBraces: true
+# ---- ytm's eslint `spaced-comment: [error, always]`, ported ----
+# `//text` is a typo for `// text`; the one-space prefix is the only form here.
+SpacesInLineCommentPrefix:
+  Minimum: 1
+  Maximum: -1
+# WEST CONST — `const DWORD x`, never `DWORD const x`. Google style, and what
+# the whole tree is written in. Left moves const/volatile across the type and
+# leaves static/constexpr alone; spelling those out in a Custom order makes
+# clang-format collide with itself on `static const wchar_t* x[]`.
+#
+# It only rearranges around a token it KNOWS is a type, so `std::string const`
+# is fixed and `DWORD const` is not — a Win32 typedef is just an identifier to
+# clang-format, and listing them all in TypeNames would be a second, drifting
+# copy of the project's vocabulary. So this catches some of it, and the reason
+# the rest cannot arrive is upstream: misc-const-correctness writes east const,
+# so its fixer is off (see .clang-tidy) and that const is written by hand.
+QualifierAlignment: Left
+AllowShortBlocksOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortLambdasOnASingleLine: None
+# Win32 headers have hard ordering deps (<windows.h> must precede <psapi.h>,
+# <winhttp.h>, <shobjidl_core.h>, ...). Alphabetical sorting breaks the build,
+# so we preserve the authored include order.
+SortIncludes: false
+# Comments carry the reverse engineering — disassembly listings, byte tables,
+# before/after columns. Re-wrapping them to fit 80 columns destroys the exact
+# thing they exist to record, so they stay as authored.
+ReflowComments: Never
