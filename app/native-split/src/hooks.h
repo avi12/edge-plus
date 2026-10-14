@@ -133,6 +133,27 @@ inline void* __fastcall h_focus_map(void* mcv, void* container) {
   return emptyMap;
 }
 
+// split_tabs::LogSplitView{Created,Updated}UKM: Edge's split metrics CHECK that
+// a split has exactly two tabs, so a grown split crashed Edge on them (seen: a
+// pane of three navigating). A metric is not worth a crash: any other split
+// skips them.
+using SplitUkm_t = void(__fastcall*)(void*, void*);
+inline SplitUkm_t o_split_created_ukm = nullptr;
+inline SplitUkm_t o_split_updated_ukm = nullptr;
+inline bool IsTwoTabSplit(void* tsm, void* splitId) {
+  return edge::SplitMembers(tsm, splitId).Count() == 2;
+}
+inline void __fastcall h_split_created_ukm(void* tsm, void* splitId) {
+  if (IsTwoTabSplit(tsm, splitId)) {
+    o_split_created_ukm(tsm, splitId);
+  }
+}
+inline void __fastcall h_split_updated_ukm(void* tsm, void* splitId) {
+  if (IsTwoTabSplit(tsm, splitId)) {
+    o_split_updated_ukm(tsm, splitId);
+  }
+}
+
 // views::Button's mouse handlers, shared by every button in Edge. A grip has no
 // handler of its own (grip.h): its press starts a pane drag and is claimed, so
 // views keeps sending that button the drags and the release with its capture.
@@ -291,6 +312,12 @@ inline bool InstallAll() {
           reinterpret_cast<void*>(h_setwc), &o_setwc, "SetWebContentsAtIndex");
   Install(rva::MultiContentsView_CalculateProposedLayout,
           reinterpret_cast<void*>(h_calc), &o_calc, "CalculateProposedLayout");
+  Install(rva::SplitTabs_LogSplitViewCreatedUKM,
+          reinterpret_cast<void*>(h_split_created_ukm), &o_split_created_ukm,
+          "split_tabs::LogSplitViewCreatedUKM");
+  Install(rva::SplitTabs_LogSplitViewUpdatedUKM,
+          reinterpret_cast<void*>(h_split_updated_ukm), &o_split_updated_ukm,
+          "split_tabs::LogSplitViewUpdatedUKM");
   Install(rva::MultiContentsView_GetFocusableViewsMapFor,
           reinterpret_cast<void*>(h_focus_map), &o_focus_map,
           "MultiContentsView::GetFocusableViewsMapFor");

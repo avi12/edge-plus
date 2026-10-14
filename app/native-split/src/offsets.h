@@ -97,6 +97,12 @@ inline constexpr uintptr_t BrowserView_ShowSplitView = 0xc93594a;
 inline constexpr uintptr_t EdgeOperatorNew = 0x36b3c20;
 // operator delete(void*): jumps to Edge's free (the allocator shim).
 inline constexpr uintptr_t EdgeOperatorDelete = 0x36b2e50;
+// split_tabs::LogSplitView{Created,Updated}UKM(TabStripModel*, const
+// SplitTabId&): split metrics, each CHECK(ListTabs().size() == 2). Created runs
+// from AddToSplitImpl, Updated from UpdateTabInSplitImpl and when a split
+// member's page becomes primary (it navigates).
+inline constexpr uintptr_t SplitTabs_LogSplitViewCreatedUKM = 0xa23d3c4;
+inline constexpr uintptr_t SplitTabs_LogSplitViewUpdatedUKM = 0xa23d512;
 // (out base::Token*) random 16B id
 inline constexpr uintptr_t TokenCreateRandom = 0x1e98440;
 // ({layout,ratio=0.5})
