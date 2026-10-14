@@ -15,8 +15,12 @@ exists). Authorized personal customization of the user's own Edge.
       process (no Code Integrity Guard there), locates `msedge.dll`, and MinHook
       installs on the verified RVAs; offsets resolve correctly live. The DLL reads
       the split's live pane count through the hooks.
-- [ ] N-pane geometry (`CalculateProposedLayout`/`GetViewSizes`/separators)
-- [ ] N-pane insert (drop the `index < 2` guard; grow containers + resize areas)
+- [x] N-pane geometry — `CalculateProposedLayout` tiles a directional split tree
+- [x] N-pane insert — the `index < 2` guard lifted; containers grow with the split
+- [x] Hot-keys (`Ctrl+Shift+Alt` + arrows / A / S / X): directional add, swap, collapse
+- [x] Animated transitions — add / swap / collapse ease each pane into place
+      (~220 ms); window resizes snap; off when Windows "Animation effects" is off
+- [ ] Drag-to-rearrange panes
 - [ ] Companion-app toggle: inject / unload / hot-swap from the panel
 
 ## Build
