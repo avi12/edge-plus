@@ -101,6 +101,12 @@ inline void InvalidateLayout(void* view) {
   using Fn = void(__fastcall*)(void*);
   reinterpret_cast<Fn>(At(rva::View_InvalidateLayout))(view);
 }
+// Force a synchronous relayout now (InvalidateLayout only marks dirty; a pure
+// tree edit with no data-model change needs this to re-run the layout detour).
+inline void LayoutImmediately(void* view) {
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(rva::View_LayoutImmediately))(view);
+}
 
 // std::vector<ChildLayout>::emplace_back<View*, bool, const gfx::Rect&>.
 // `view_slot` -> View*, `visible_slot` -> bool, `rect_slot` -> gfx::Rect (our Rect).

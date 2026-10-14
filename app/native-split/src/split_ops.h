@@ -82,4 +82,27 @@ inline void AddPane(void* mcv, Direction dir) {
       new_leaf, old_panes + 1);
 }
 
+// Swap the active pane with its sibling along its parent split's axis (the
+// position-aware "counterpart"). Pure tree edit: the leaves' container indices
+// swap position, so the two panes' content trades places on relayout. No Edge
+// object moves. No-op without a live tree. UI thread.
+inline void SwapActive(void* mcv) {
+  if (!mcv) return;
+  const Node* existing = TreeFor(mcv);
+  if (!existing) {
+    Log("[swap] no live tree");
+    return;
+  }
+  const int active = ActiveLeaf(mcv);
+  Node tree = *existing;
+  if (SwapWithCounterpart(tree, active)) {
+    Trees()[mcv] = tree;
+    edge::InvalidateLayout(mcv);
+    edge::LayoutImmediately(mcv);  // no data-model change, so force the re-tile
+    Log("[swap] swapped pane %d with its counterpart", active);
+  } else {
+    Log("[swap] pane %d has no counterpart", active);
+  }
+}
+
 }  // namespace fixedge::split_ops
