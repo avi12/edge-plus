@@ -102,9 +102,15 @@ inline constexpr uintptr_t ControlButtons_AddButton  = 0xa0117b6;
 inline constexpr uintptr_t ControlButtons_InitLayout = 0xa010c8c;
 inline constexpr uintptr_t View_ReorderChildView     = 0x269fa62; // (parent, child, size_t index)
 inline constexpr uintptr_t View_RemoveChildView      = 0x26a2c28; // (parent, child) non-deleting
-inline constexpr uintptr_t View_IsDrawn              = 0x10d5150; // bool (this): visible up to the widget
 inline constexpr uintptr_t View_ConvertPointToTarget = 0x0fd8b86; // static (src, dst, gfx::Point*) in place
 inline constexpr uintptr_t View_SetTooltipText       = 0x0fd48f0; // (view, const std::u16string&)
+// views::Button's mouse handlers (vtable +0x118..+0x130 of every button,
+// ControlButtons::Button included). A real press on a pane bar never reaches
+// the window procedure as WM_LBUTTONDOWN, so the grip is driven from here.
+inline constexpr uintptr_t Button_OnMousePressed     = 0xb287ce0; // bool (button, const ui::MouseEvent&)
+inline constexpr uintptr_t Button_OnMouseDragged     = 0xb287d70; // bool (button, const ui::MouseEvent&)
+inline constexpr uintptr_t Button_OnMouseReleased    = 0xb287ee0; // void (button, const ui::MouseEvent&)
+inline constexpr uintptr_t Button_OnMouseCaptureLost = 0xb287f00; // void (button)
 // --- 2-pane-only CHECK sites that int3 when a split grows past 2 members ---
 // Accessible-label builder: maps a split tab's pane index to a string id
 // (0x3e7f pane0 / 0x3e80 pane1) and `cmp eax,1; jne <int3>` crashes at index>=2.
@@ -166,6 +172,9 @@ inline constexpr int       ControlButtons_more_string_id = 0x4676; // a valid id
 inline constexpr int ICON_MOVE_TO = 7, ICON_R_ARC_TO = 10, ICON_CLOSE = 27, ICON_CANVAS_DIMENSIONS = 28;
 // views::View
 inline constexpr uintptr_t VIEW_parent = 0x198; // View* parent_ (null at the widget's root view)
+// ui::LocatedEvent (LocatedEvent ctor): location_ @+0xb0, root_location_ @+0xb8,
+// each a gfx::PointF; the root location is in the window's DIPs.
+inline constexpr uintptr_t EVENT_root_location = 0xb8;
 inline constexpr uintptr_t VIEW_bounds = 0x1c8; // gfx::Rect bounds_ in parent coords (GetLocalBounds reads size @+0x1d0)
 
 // views::ProposedLayout (the out-param CalculateProposedLayout fills; ctor zeroes 0x20)

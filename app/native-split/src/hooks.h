@@ -11,6 +11,8 @@
 #include "collapse.h"
 #include "menu.h"
 #include "control.h"
+#include "drag.h"
+#include "grip.h"
 #include "state.h"
 
 namespace fixedge::hooks {
@@ -90,6 +92,49 @@ inline void __fastcall h_set_active(void* mcv, int index) {
   Log("[active] pane %d of %d", index, count);
 }
 
+// views::Button's mouse handlers, shared by every button in Edge. A grip has no
+// handler of its own (grip.h): its press starts a pane drag and is claimed, so
+// views keeps sending that button the drags and the release with its capture.
+// Any other button runs the original untouched.
+using ButtonPressed_t = bool(__fastcall*)(void*, const void*);
+using ButtonReleased_t = void(__fastcall*)(void*, const void*);
+using ButtonCaptureLost_t = void(__fastcall*)(void*);
+inline ButtonPressed_t o_pressed = nullptr;
+inline ButtonPressed_t o_dragged = nullptr;
+inline ButtonReleased_t o_released = nullptr;
+inline ButtonCaptureLost_t o_capture_lost = nullptr;
+
+inline bool __fastcall h_pressed(void* button, const void* event) {
+  void* mcv = nullptr;
+  int pane = -1;
+  if (!grip::Locate(button, &mcv, &pane)) {
+    return o_pressed(button, event);
+  }
+  drag::Begin(mcv, pane, edge::EventRootLocation(event));
+  return true;
+}
+
+inline bool __fastcall h_dragged(void* button, const void* event) {
+  if (grip::IsGrip(button)) {
+    drag::Move(edge::EventRootLocation(event));
+  }
+  return o_dragged(button, event);
+}
+
+inline void __fastcall h_released(void* button, const void* event) {
+  if (grip::IsGrip(button)) {
+    drag::Release();
+  }
+  o_released(button, event);
+}
+
+inline void __fastcall h_capture_lost(void* button) {
+  if (grip::IsGrip(button)) {
+    drag::Cancel();
+  }
+  o_capture_lost(button);
+}
+
 template <class T>
 inline bool Install(uintptr_t rva, void* detour, T** original, const char* name) {
   if (MH_CreateHook(edge::At(rva), detour, reinterpret_cast<void**>(original)) != MH_OK ||
@@ -112,6 +157,14 @@ inline bool InstallAll() {
           "CalculateProposedLayout");
   Install(rva::MultiContentsView_SetActiveIndex, reinterpret_cast<void*>(h_set_active),
           &o_set_active, "SetActiveIndex");
+  Install(rva::Button_OnMousePressed, reinterpret_cast<void*>(h_pressed), &o_pressed,
+          "Button::OnMousePressed");
+  Install(rva::Button_OnMouseDragged, reinterpret_cast<void*>(h_dragged), &o_dragged,
+          "Button::OnMouseDragged");
+  Install(rva::Button_OnMouseReleased, reinterpret_cast<void*>(h_released), &o_released,
+          "Button::OnMouseReleased");
+  Install(rva::Button_OnMouseCaptureLost, reinterpret_cast<void*>(h_capture_lost),
+          &o_capture_lost, "Button::OnMouseCaptureLost");
   Install(rva::SplitWindowController_DoAction, reinterpret_cast<void*>(collapse::h_do_action),
           &collapse::o_do_action, "DoActionToSplitWindow");
   Install(rva::SplitTabMenuModel_ctor, reinterpret_cast<void*>(menu::h_ctor), &menu::o_ctor,

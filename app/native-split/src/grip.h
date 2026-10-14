@@ -1,8 +1,9 @@
 // grip.h — the drag grip in each pane's hover bar. One concern: give every pane
 // of a grown split a 6-dot grip button left of its ⋯ / X, built with Edge's own
-// AddButton so it looks and hovers like them, and tell which pane's grip lies
-// under a point. The grip has no click handler; the press is caught by the window
-// procedure (control.h), which starts the drag (drag.h). UI thread only.
+// AddButton so it looks and hovers like them, and tell which pane a grip belongs
+// to. The grip has no click handler: views delivers its press, drags and release
+// to views::Button's handlers, which hooks.h detours into the drag (drag.h).
+// UI thread only.
 #pragma once
 #include <cstdint>
 #include <map>
@@ -64,9 +65,15 @@ inline const VectorIcon* Icon() {
   return icon;
 }
 
-// Each hover bar (ControlButtons view) -> its grip button.
-inline std::map<void*, void*>& Grips() {
-  static std::map<void*, void*> grips;
+// A grip button, and the split it belongs to.
+struct Grip {
+  void* button = nullptr;
+  void* mcv = nullptr;
+};
+
+// Each hover bar (ControlButtons view) -> its grip.
+inline std::map<void*, Grip>& Grips() {
+  static std::map<void*, Grip> grips;
   return grips;
 }
 
@@ -75,41 +82,55 @@ inline constexpr char kTooltip[] = "Drag to move this pane";
 // Give every pane bar of a grown split (> 2 containers) its grip, once.
 inline void EnsureGrips(void* mcv) {
   const int count = static_cast<int>(edge::McvCount(mcv));
-  if (count <= 2) return;
-  for (int i = 0; i < count; ++i) {
+  if (count <= 2) {
+    return;
+  }
+  for (int i = 0; i < count; i++) {
     void* bar = edge::ContainerControlButtons(edge::McvContainerAt(mcv, i));
-    if (!bar || Grips().count(bar)) continue;
-    void* grip = edge::ControlButtonsAddButton(bar, off::ControlButtons_more_string_id, Icon(),
-                                               /*clickable=*/false);
-    edge::ViewReorderChild(bar, grip, 0);  // first: grip, ⋯, X
-    edge::ViewSetTooltip(grip, kTooltip);
+    const bool needsGrip = bar && !Grips().count(bar);
+    if (!needsGrip) {
+      continue;
+    }
+    void* button = edge::ControlButtonsAddButton(bar, off::ControlButtons_more_string_id, Icon(),
+                                                 /*clickable=*/false);
+    edge::ViewReorderChild(bar, button, 0);  // first: grip, ⋯, X
+    edge::ViewSetTooltip(button, kTooltip);
     edge::ControlButtonsRelayout(bar);  // widen the bar by one button
-    Grips()[bar] = grip;
+    Grips()[bar] = Grip{button, mcv};
     Log("[grip] pane %d got a grip", i);
   }
 }
 
-// The pane whose grip is drawn under `root_point` (the window's client area in
-// DIPs), else -1. Only drawn grips count, i.e. a hovered pane's bar.
-inline int PaneAt(void* mcv, Point root_point) {
-  const int count = static_cast<int>(edge::McvCount(mcv));
-  for (int i = 0; i < count; ++i) {
-    void* bar = edge::ContainerControlButtons(edge::McvContainerAt(mcv, i));
-    auto it = bar ? Grips().find(bar) : Grips().end();
-    if (it == Grips().end() || !edge::ViewIsDrawn(it->second)) continue;
-    Point p = root_point;
-    edge::ConvertPoint(edge::ViewRoot(it->second), it->second, &p);
-    const Rect b = edge::ViewBounds(it->second);
-    if (p.x >= 0 && p.y >= 0 && p.x < b.w && p.y < b.h) return i;
+// If `view` is a grip, the split it belongs to and the index of its pane's
+// container (the pane being dragged); else false.
+inline bool Locate(const void* view, void** mcv, int* pane) {
+  for (const auto& [bar, grip] : Grips()) {
+    if (grip.button != view) {
+      continue;
+    }
+    const int count = static_cast<int>(edge::McvCount(grip.mcv));
+    for (int i = 0; i < count; i++) {
+      if (edge::ContainerControlButtons(edge::McvContainerAt(grip.mcv, i)) == bar) {
+        *mcv = grip.mcv;
+        *pane = i;
+        return true;
+      }
+    }
   }
-  return -1;
+  return false;
+}
+
+inline bool IsGrip(const void* view) {
+  void* mcv = nullptr;
+  int pane = -1;
+  return Locate(view, &mcv, &pane);
 }
 
 // Take every grip back out (before this DLL unloads). The buttons are left
 // unparented rather than deleted; their icon lives in Edge's heap.
 inline void RemoveAll() {
   for (auto& [bar, grip] : Grips()) {
-    edge::ViewRemoveChild(bar, grip);
+    edge::ViewRemoveChild(bar, grip.button);
     edge::ControlButtonsRelayout(bar);
   }
   Grips().clear();

@@ -305,9 +305,11 @@ inline void ConvertPoint(void* source, void* target, Point* point) {
   using Fn = void(__fastcall*)(void*, void*, Point*);
   reinterpret_cast<Fn>(At(rva::View_ConvertPointToTarget))(source, target, point);
 }
-inline bool ViewIsDrawn(void* view) {
-  using Fn = bool(__fastcall*)(void*);
-  return reinterpret_cast<Fn>(At(rva::View_IsDrawn))(view);
+// Where a mouse event happened, in the window's DIPs (its root location).
+inline Point EventRootLocation(const void* event) {
+  const auto* location = reinterpret_cast<const float*>(
+      reinterpret_cast<const uint8_t*>(event) + off::EVENT_root_location);
+  return Point{static_cast<int32_t>(location[0]), static_cast<int32_t>(location[1])};
 }
 inline void ViewReorderChild(void* parent, void* child, size_t index) {
   using Fn = void(__fastcall*)(void*, void*, size_t);

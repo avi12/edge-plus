@@ -61,34 +61,10 @@ inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
     RegisterHotKey(hwnd, HK_SWAP, kHkMods, 'S');
     Log("[control] hotkeys: Ctrl+Shift+Alt + arrows=add, A=add right, S=swap, X=collapse");
   }
-  // A pane drag owns the mouse from a grip press to its release (drag.h).
-  switch (msg) {
-    case WM_LBUTTONDOWN:
-      if (drag::OnButtonDown(hwnd, lparam)) return 0;
-      break;
-    case WM_MOUSEMOVE:
-      if (drag::OnMouseMove(hwnd, lparam)) return 0;
-      break;
-    case WM_LBUTTONUP:
-      if (drag::OnButtonUp(hwnd, lparam)) return 0;
-      break;
-    case WM_KEYDOWN:
-      if (wparam == VK_ESCAPE && drag::Active()) {
-        drag::Cancel();
-        return 0;
-      }
-      break;
-    case WM_CAPTURECHANGED:
-      if (drag::Active() && reinterpret_cast<HWND>(lparam) != hwnd) drag::Cancel();
-      break;
-    case WM_SETCURSOR:
-      if (drag::Dragging()) {
-        SetCursor(LoadCursorW(nullptr, reinterpret_cast<LPCWSTR>(IDC_SIZEALL)));
-        return TRUE;
-      }
-      break;
-    default:
-      break;
+  // Escape cancels a pane drag (the drag itself arrives through views; hooks.h).
+  if (msg == WM_KEYDOWN && wparam == VK_ESCAPE && drag::IsActive()) {
+    drag::Cancel();
+    return 0;
   }
   if (msg == WM_TIMER && wparam == anim::kTimerId) {
     anim::Tick();
@@ -193,6 +169,7 @@ inline void Install() {
       SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(Proc)));
   Log("[control] subclassed hwnd=%p msg=%u", g_hwnd, g_msg);
   anim::Install(g_hwnd);
+  drag::g_window = g_hwnd;
   // A (re)load into a split that is already grown: add the grips on the UI thread.
   PostMessageW(g_hwnd, g_msg, kCmdEnsureGrips, 0);
 }

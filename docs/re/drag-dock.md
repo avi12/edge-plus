@@ -98,11 +98,17 @@ gfx::Point*)` (rva `0xfd8b86`) converts in place. Client pixels ↔ DIPs use
 `GetDpiForWindow / 96`. `View::IsDrawn` (rva `0x10d5150`) is true only for a
 visible bar, i.e. a hovered pane.
 
-**Input.** Edge does not call `EnableMouseInPointer`, so mouse input arrives as
-legacy `WM_*BUTTON*` / `WM_MOUSEMOVE` on the top-level window (its only child is
-a click-through `Intermediate D3D Window`). The subclassed window procedure
-takes a press on a drawn grip, captures the mouse, and swallows mouse messages
-until release; Escape or a lost capture cancels.
+**Input.** A real press on a pane bar never reaches the top-level window
+procedure as `WM_LBUTTONDOWN` (only the later moves and the release do — Edge
+consumes the press before window dispatch), so the grip cannot be driven from
+the subclassed window. It is driven from views instead: `views::Button`'s
+`OnMousePressed` / `OnMouseDragged` / `OnMouseReleased` / `OnMouseCaptureLost`
+(rva `0xb287ce0` / `0xb287d70` / `0xb287ee0` / `0xb287f00`, shared by every
+button, `ControlButtons::Button` included) are detoured; for a grip the press
+starts the session and is claimed, so views keeps sending that button the drags
+and the release under its own capture. Every other button runs the original. An
+event's `root_location_` (`ui::LocatedEvent` `+0xb8`, a `gfx::PointF`) is
+already in the window's DIPs. Escape is still caught in the window procedure.
 
 **Safety patches stay for the process lifetime.** The feed guard (`index < 2`),
 the accessible-label builder's `int3` at pane index ≥ 2, and `SetActiveIndex`'s
@@ -113,11 +119,10 @@ on unload crashed a still-grown split as soon as Edge built a label for pane
 ## Testing without a mouse
 
 `fixedge.addpane` wParam `500 + i` shows pane *i*'s bar via Edge's own
-`SplitWindowController::ShowControlButton`, so a script can post a press on its
-grip, moves, and a release (session scratchpad `dragtest.ps1`). Two caveats:
+`SplitWindowController::ShowControlButton`, and a posted `WM_LBUTTONDOWN` on
+its grip reaches the press handler. Posted moves, however, do not turn into
+views drag events, so the drag itself is covered by the pure tests
+(`dock_test`, `pane_move_test`) and verified with a real mouse.
 
-- While the window holds mouse capture, Windows also delivers moves synthesized
-  at the **real** cursor (e.g. when the preview window appears). A test must
-  re-post the final position before releasing.
-- A test window covered by another window is treated as occluded and its pages
-  stop painting; launch it with `--disable-features=CalculateNativeWinOcclusion`.
+A test window covered by another window is treated as occluded and its pages
+stop painting; launch it with `--disable-features=CalculateNativeWinOcclusion`.
