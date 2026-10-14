@@ -118,6 +118,21 @@ inline void __fastcall h_set_active(void* mcv, int index) {
   Log("[active] pane %d of %d", index, count);
 }
 
+// MultiContentsView::GetFocusableViewsMapFor: Edge keeps a focus map only for
+// the two containers it built, so for pane 3+ the lookup is null, and
+// switching to a tab whose pane is ours crashed in the caller. Our panes get
+// an empty map instead: no stored focus to restore there.
+using FocusMap_t = void*(__fastcall*)(void*, void*);
+inline FocusMap_t o_focus_map = nullptr;
+inline void* __fastcall h_focus_map(void* mcv, void* container) {
+  void* focusMap = o_focus_map(mcv, container);
+  if (focusMap) {
+    return focusMap;
+  }
+  alignas(8) static uint8_t emptyMap[off::FocusableViewsMap_size] = {};
+  return emptyMap;
+}
+
 // views::Button's mouse handlers, shared by every button in Edge. A grip has no
 // handler of its own (grip.h): its press starts a pane drag and is claimed, so
 // views keeps sending that button the drags and the release with its capture.
@@ -276,6 +291,9 @@ inline bool InstallAll() {
           reinterpret_cast<void*>(h_setwc), &o_setwc, "SetWebContentsAtIndex");
   Install(rva::MultiContentsView_CalculateProposedLayout,
           reinterpret_cast<void*>(h_calc), &o_calc, "CalculateProposedLayout");
+  Install(rva::MultiContentsView_GetFocusableViewsMapFor,
+          reinterpret_cast<void*>(h_focus_map), &o_focus_map,
+          "MultiContentsView::GetFocusableViewsMapFor");
   Install(rva::MultiContentsView_SetActiveIndex,
           reinterpret_cast<void*>(h_set_active), &o_set_active,
           "SetActiveIndex");

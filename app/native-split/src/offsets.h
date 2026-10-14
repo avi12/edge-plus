@@ -43,6 +43,13 @@ inline constexpr uintptr_t MultiContentsView_CalculateSeparatorLayouts =
 inline constexpr uintptr_t MultiContentsView_ClampToMinSize = 0x2b22aa2;
 // already N-ready
 inline constexpr uintptr_t MultiContentsView_ExecuteOnEachVisible = 0x2b56844;
+// FocusableViewsMap* GetFocusableViewsMapFor(this, ContentsContainerView*):
+// a lookup in MCV+0x4c8, a flat_map with an entry per container Edge itself
+// built (two), so null for ours. Its one caller,
+// BrowserView::MaybeUpdateStoredFocusForWebContents (every tab switch),
+// dereferences it.
+inline constexpr uintptr_t MultiContentsView_GetFocusableViewsMapFor =
+    0x2b58cc8;
 inline constexpr uintptr_t EdgeMultiContentsResizeArea_ctor = 0x2ce11b0;
 inline constexpr uintptr_t ContentsContainerView_ctor = 0x2ce1b32;
 inline constexpr uintptr_t EdgeContentsContainerView_ctor = 0x2ce12b0;
@@ -349,6 +356,9 @@ inline constexpr size_t ControlButtons_button_size = 0x640;
 // sizeof(views::View): its subclasses' own fields start here (ControlButtons
 // @+0x338 its BrowserView, EdgeMultiContentsResizeArea @+0x338 its press point).
 inline constexpr size_t View_size = 0x338;
+// sizeof(a FocusableViewsMap): a base::flat_map, i.e. a vector {data, size,
+// capacity}; all zero is empty.
+inline constexpr size_t FocusableViewsMap_size = 0x18;
 // The ui::ColorId Edge's split ⋯ items draw their icons in.
 inline constexpr int MENU_icon_color_id = 0x172;
 // views::MenuController::ExitType::kAll: close the whole menu.
