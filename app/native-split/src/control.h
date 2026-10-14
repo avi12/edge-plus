@@ -17,6 +17,7 @@
 #include "grip.h"
 #include "menu.h"
 #include "overlay.h"
+#include "tabdrag.h"
 
 namespace fixedge::control {
 
@@ -92,6 +93,7 @@ inline void UnregisterHotKeys(HWND hwnd) {
 // session, the preview window, the grips, the animation timer and the hot-keys.
 inline void Teardown(HWND hwnd) {
   drag::Cancel();
+  tabdrag::Cancel();
   overlay::Remove();
   grip::RemoveAll();
   dividers::RemoveAll();
@@ -222,6 +224,9 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
       return;
     case Command::kTeardown:
       Teardown(hwnd);
+      return;
+    case Command::kTabDrop:
+      tabdrag::ApplyDrop();
       return;
     default:
       break;

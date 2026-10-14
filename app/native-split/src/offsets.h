@@ -232,6 +232,12 @@ inline constexpr uintptr_t View_ctor = 0x101de7a;
 inline constexpr uintptr_t View_SetPreferredSize = 0x2b89b16;
 // (view, const gfx::Rect&)
 inline constexpr uintptr_t View_SetBoundsRect = 0x0fd8234;
+// gfx::Rect View::GetBoundsInScreen(this) (through the hidden out pointer),
+// in screen DIPs.
+inline constexpr uintptr_t View_GetBoundsInScreen = 0x28ae474;
+// static View::ConvertPointFromScreen(const View* to, gfx::Point* in out):
+// screen DIPs -> `to`'s coordinates.
+inline constexpr uintptr_t View_ConvertPointFromScreen = 0x28940c2;
 // gfx::Size View::GetPreferredSize(this, const SizeBounds&) (returned through
 // the hidden out pointer); zeroed SizeBounds = unbounded.
 inline constexpr uintptr_t View_GetPreferredSize = 0x0faf994;
@@ -256,9 +262,21 @@ inline constexpr uintptr_t SimpleMenuModel_AddSeparator = 0x317665a;
 inline constexpr uintptr_t TabStripModel_CloseWebContentsAt = 0xa26f916;
 // (tsm, int index, const TabStripUserGestureDetails*)
 inline constexpr uintptr_t TabStripModel_ActivateTabAt = 0xa26c482;
+// int TabStripModel::GetIndexOfWebContents(this, WebContents*): -1 if absent.
+inline constexpr uintptr_t TabStripModel_GetIndexOfWebContents = 0x10a7d34;
 // int TabStripModel::MoveWebContentsAt(this, int index, int to_position,
 // bool select_after_move): `to_position` is the tab's index after the move.
 inline constexpr uintptr_t TabStripModel_MoveWebContentsAt = 0xa26c78c;
+// A tab drag (docs/re/tab-drag.md):
+// int TabDragController::ContinueDragging(this, const gfx::Point* screen DIPs):
+// every pointer move of a started drag; it reorders the SELECTED tabs, or tears
+// them off into a new window ~15 DIP below the strip. 0 = the drag lives on.
+inline constexpr uintptr_t TabDragController_ContinueDragging = 0xa617de2;
+// void TabDragController::EndDrag(this, EndDragReason); frees the controller.
+inline constexpr uintptr_t TabDragController_EndDrag = 0xa616010;
+// void EventTracker::OnEvent(this, const ui::Event&): the drag's key watcher.
+// Escape cancels the drag; ANY other key press or release ends it in place.
+inline constexpr uintptr_t EventTracker_OnEvent = 0xa61ed50;
 
 // --- the dividers between panes (docs/re/close-pane.md) ---
 // EdgeMultiContentsResizeArea(this, MultiContentsView*): the 2-pane split's
@@ -401,6 +419,24 @@ inline constexpr int ICON_R_ARC_TO = 10;
 inline constexpr int ICON_CLOSE = 27;
 inline constexpr int ICON_CANVAS_DIMENSIONS = 28;
 
+// --- a tab drag (docs/re/tab-drag.md) ---
+// TabDragController fields: its state (TABDRAG_state_dragging_tabs once
+// moving tabs), the strip it is attached to (a TabDragContext, itself a
+// views::View), and vector<TabDragData> {data, size} of the dragged tabs.
+inline constexpr uintptr_t TABDRAG_state = 0x38;
+inline constexpr int TABDRAG_state_dragging_tabs = 1;
+inline constexpr uintptr_t TABDRAG_attached_context = 0x58;
+inline constexpr uintptr_t TABDRAG_drag_data = 0xe0;
+inline constexpr uintptr_t TABDRAG_drag_data_count = 0xe8;
+inline constexpr size_t TABDRAGDATA_size = 0x70;
+inline constexpr uintptr_t TABDRAGDATA_contents = 0x10;  // WebContents*
+// EndDragReason::kComplete (the pointer was released).
+inline constexpr int TABDRAG_end_complete = 0;
+// TabDragContext virtuals: Tab* GetTabForContents(this, WebContents*) and
+// TabStripModel* GetTabStripModel(this).
+inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetTabForContents = 0x3a0;
+inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetTabStripModel = 0x3c0;
+
 // --- views::View ---
 // View* parent_ (null at the widget's root view)
 inline constexpr uintptr_t VIEW_parent = 0x198;
@@ -408,6 +444,14 @@ inline constexpr uintptr_t VIEW_parent = 0x198;
 inline constexpr uintptr_t VIEW_child_count = 0x1a8;
 // gfx::Rect bounds_ in parent coords (GetLocalBounds reads size @+0x1d0)
 inline constexpr uintptr_t VIEW_bounds = 0x1c8;
+
+// --- ui::Event / ui::KeyEvent ---
+// ui::EventType @+0xc (key pressed / released); a KeyEvent's key_code
+// (ui::KeyboardCode, the Windows VK) @+0xb0.
+inline constexpr uintptr_t EVENT_type = 0xc;
+inline constexpr int EVENT_type_key_pressed = 7;
+inline constexpr int EVENT_type_key_released = 8;
+inline constexpr uintptr_t KEYEVENT_key_code = 0xb0;
 
 // --- ui::LocatedEvent ---
 // (LocatedEvent ctor): location_ @+0xb0, root_location_ @+0xb8, each a

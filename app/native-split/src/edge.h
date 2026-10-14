@@ -253,6 +253,13 @@ inline void ActivateTabAt(void* tsm, int index) {
       tsm, index, gestureDetails);
 }
 
+// The strip index of the tab showing `webContents`, or -1.
+inline int IndexOfWebContents(void* tsm, void* webContents) {
+  using IndexFn = int(__fastcall*)(void*, void*);
+  return reinterpret_cast<IndexFn>(
+      At(rva::TabStripModel_GetIndexOfWebContents))(tsm, webContents);
+}
+
 // Move the tab at strip `index` so it ends up at `toIndex`, leaving the
 // selection alone.
 inline void MoveTabTo(void* tsm, int index, int toIndex) {
@@ -452,6 +459,61 @@ inline void ConvertPoint(void* source, void* target, Point* point) {
   reinterpret_cast<Fn>(At(rva::View_ConvertPointToTarget))(source, target,
                                                            point);
 }
+// A view's bounds in screen DIPs.
+inline Rect ViewBoundsInScreen(void* view) {
+  Rect bounds{};
+  using BoundsFn = void*(__fastcall*)(void*, Rect*);
+  reinterpret_cast<BoundsFn>(At(rva::View_GetBoundsInScreen))(view, &bounds);
+  return bounds;
+}
+// Convert `point` in place from screen DIPs to `view`'s coordinates.
+inline void ConvertPointFromScreen(void* view, Point* point) {
+  using ConvertFn = void(__fastcall*)(void*, Point*);
+  reinterpret_cast<ConvertFn>(At(rva::View_ConvertPointFromScreen))(view,
+                                                                    point);
+}
+
+// --- events -------------------------------------------------------------------
+
+inline int EventType(void* event) {
+  return Field<int32_t>(event, off::EVENT_type);
+}
+// A key event's ui::KeyboardCode (the Windows virtual-key code).
+inline int KeyEventCode(void* keyEvent) {
+  return Field<uint8_t>(keyEvent, off::KEYEVENT_key_code);
+}
+
+// --- a tab drag (TabDragController) ---------------------------------------------
+
+inline bool IsDraggingTabs(void* controller) {
+  return Field<int32_t>(controller, off::TABDRAG_state) ==
+         off::TABDRAG_state_dragging_tabs;
+}
+inline size_t DraggedTabCount(void* controller) {
+  return Field<size_t>(controller, off::TABDRAG_drag_data_count);
+}
+// The WebContents of dragged tab `i` (< DraggedTabCount).
+inline void* DraggedContents(void* controller, size_t i) {
+  auto* entries = Field<uint8_t*>(controller, off::TABDRAG_drag_data);
+  return Field<void*>(entries + i * off::TABDRAGDATA_size,
+                      off::TABDRAGDATA_contents);
+}
+// The tab strip the drag is attached to (a TabDragContext view).
+inline void* DragContext(void* controller) {
+  return Field<void*>(controller, off::TABDRAG_attached_context);
+}
+inline void* DragContextTabStripModel(void* context) {
+  using ModelFn = void*(__fastcall*)(void*);
+  return reinterpret_cast<ModelFn>(VirtualFunction(
+      context, off::DRAGCONTEXT_vtbl_GetTabStripModel))(context);
+}
+// The tab view showing `webContents` in the drag's strip, or null.
+inline void* DragContextTabFor(void* context, void* webContents) {
+  using TabFn = void*(__fastcall*)(void*, void*);
+  return reinterpret_cast<TabFn>(VirtualFunction(
+      context, off::DRAGCONTEXT_vtbl_GetTabForContents))(context, webContents);
+}
+
 // Where a mouse event happened, in the window's DIPs (its root location).
 inline Point EventRootLocation(const void* event) {
   const auto* location = reinterpret_cast<const float*>(

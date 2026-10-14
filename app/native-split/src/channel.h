@@ -28,10 +28,12 @@ enum class Command : WPARAM {
   kEnsureGrips = 700,      // give every pane of a grown split its drag grip
   kTeardown = 701,         // undo everything UI-side before this DLL unloads
   kMenuArrowBase = 710,    // + Direction: a ⋯ d-pad arrow was clicked
+  kTabDrop = 720,          // a tab Alt-dragged onto the split: add it
 };
 
 // The width of each range: one code per Direction (kUp..kRight), and the
-// panes whose hover bar can be shown.
+// panes whose hover bar can be shown. A code must stay clear of every range
+// below it (a range of directions spans kDirectionCount codes).
 inline constexpr WPARAM kDirectionCount =
     static_cast<WPARAM>(Direction::kRight) + 1;
 inline constexpr WPARAM kShowBarPaneLimit = 16;
@@ -39,6 +41,17 @@ inline constexpr WPARAM kShowBarPaneLimit = 16;
 inline constexpr WPARAM CodeOf(Command command) {
   return static_cast<WPARAM>(command);
 }
+
+// Every range ends before the next code starts.
+static_assert(CodeOf(Command::kAddPaneBase) + kDirectionCount <=
+                  CodeOf(Command::kSwap),
+              "the add-pane range overlaps the next code");
+static_assert(CodeOf(Command::kShowBarBase) + kShowBarPaneLimit <=
+                  CodeOf(Command::kEnsureGrips),
+              "the show-bar range overlaps the next code");
+static_assert(CodeOf(Command::kMenuArrowBase) + kDirectionCount <=
+                  CodeOf(Command::kTabDrop),
+              "the menu-arrow range overlaps the next code");
 
 // The code for `direction` in a range of one code per direction.
 inline constexpr WPARAM CodeOf(Command base, Direction direction) {

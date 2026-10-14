@@ -313,6 +313,15 @@ inline bool InstallAll() {
   Install(rva::SplitWindowControlMenu_BuildMenuModel,
           reinterpret_cast<void*>(menu::h_build), &menu::o_build,
           "SplitWindowControlMenu::BuildMenuModel");
+  Install(rva::TabDragController_ContinueDragging,
+          reinterpret_cast<void*>(tabdrag::h_continue_dragging),
+          &tabdrag::o_continue_dragging, "TabDragController::ContinueDragging");
+  Install(rva::TabDragController_EndDrag,
+          reinterpret_cast<void*>(tabdrag::h_end_drag), &tabdrag::o_end_drag,
+          "TabDragController::EndDrag");
+  Install(rva::EventTracker_OnEvent,
+          reinterpret_cast<void*>(tabdrag::h_tracker_event),
+          &tabdrag::o_tracker_event, "EventTracker::OnEvent");
   Install(rva::MenuItemView_CalculateProposedLayout,
           reinterpret_cast<void*>(menu::h_row_layout), &menu::o_row_layout,
           "MenuItemView::CalculateProposedLayout");
