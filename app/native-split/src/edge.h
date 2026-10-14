@@ -277,6 +277,9 @@ inline void* BrowserViewMcv(void* browser_view) {
   return Field<void*>(browser_view, off::BV_multi_contents_view);
 }
 
+// A view's current bounds in its parent's coordinates (views::View::bounds_).
+inline Rect ViewBounds(void* view) { return Field<Rect>(view, off::VIEW_bounds); }
+
 // A container's ContentsWebView (the pane's web view).
 inline void* ContainerWebView(void* container) {
   return Field<void*>(container, off::CCV_contents_web_view);

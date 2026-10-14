@@ -121,6 +121,8 @@ inline constexpr uintptr_t TABMODEL_vtbl_IsSplit  = 0x108;  // bool IsSplit(this
 // ContentsContainerView
 inline constexpr uintptr_t CCV_contents_web_view = 0x3a8; // ContentsWebView*
 inline constexpr uintptr_t CCV_is_active         = 0x38d; // bool
+// views::View
+inline constexpr uintptr_t VIEW_bounds = 0x1c8; // gfx::Rect bounds_ in parent coords (GetLocalBounds reads size @+0x1d0)
 
 // views::ProposedLayout (the out-param CalculateProposedLayout fills; ctor zeroes 0x20)
 inline constexpr uintptr_t PL_host_size     = 0x00;  // gfx::Size {int w, int h}

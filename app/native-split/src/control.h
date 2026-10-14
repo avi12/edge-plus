@@ -11,6 +11,7 @@
 #include "split_ops.h"
 #include "split_data.h"
 #include "state.h"
+#include "anim.h"
 
 namespace fixedge::control {
 
@@ -37,6 +38,10 @@ inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
     RegisterHotKey(hwnd, HK_DOWN, kHkMods, VK_DOWN);
     RegisterHotKey(hwnd, HK_SWAP, kHkMods, 'S');
     Log("[control] hotkeys: Ctrl+Shift+Alt + arrows=add, A=add right, S=swap, X=collapse");
+  }
+  if (msg == WM_TIMER && wparam == anim::kTimerId) {
+    anim::Tick();
+    return 0;
   }
   if (msg == WM_HOTKEY) {
     if (wparam == HK_COLLAPSE) {
@@ -118,9 +123,11 @@ inline void Install() {
   g_orig_proc = reinterpret_cast<WNDPROC>(
       SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(Proc)));
   Log("[control] subclassed hwnd=%p msg=%u", g_hwnd, g_msg);
+  anim::Install(g_hwnd);
 }
 
 inline void Remove() {
+  anim::Remove();
   if (g_hwnd && g_hotkeys_done) {
     for (int id = HK_ADD_PANE; id <= HK_SWAP; ++id) UnregisterHotKey(g_hwnd, id);
   }

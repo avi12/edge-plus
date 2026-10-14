@@ -7,6 +7,7 @@
 #include "edge.h"
 #include "pane_tree.h"
 #include "state.h"
+#include "anim.h"
 
 namespace fixedge::geometry {
 
@@ -16,8 +17,9 @@ using namespace fixedge::edge155;  // off::, rva::
 // showing exactly `panes` of the MCV's containers (the live split's member
 // count; 1 when collapsed). The container vector only grows, so any container
 // beyond `panes` is hidden and given a zero rect rather than destroyed. Caller
-// guarantees a bounded available size. Returns `out`.
-inline void* TilePanes(void* mcv, void* out, int width, int height, int panes) {
+// guarantees a bounded available size. Pane moves are eased by anim::Apply
+// unless `snap` (a window resize). Returns `out`.
+inline void* TilePanes(void* mcv, void* out, int width, int height, int panes, bool snap) {
   std::memset(out, 0, 0x20);  // ProposedLayout ctor only zeroes these 0x20 bytes
   edge::Field<int32_t>(out, off::PL_host_size + 0) = width;
   edge::Field<int32_t>(out, off::PL_host_size + 4) = height;
@@ -34,17 +36,20 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes) {
   std::vector<LeafRect> leaves;
   LayoutTree(root, Rect{0, 0, width, height}, /*gap=*/0, leaves);
 
+  std::vector<LeafRect> placed;
+  for (const LeafRect& lr : leaves) {
+    if (lr.leaf >= 0 && lr.leaf < panes) placed.push_back(lr);  // guard tree/truth drift
+  }
+  anim::Apply(mcv, placed, snap);  // targets -> this frame's rects
+
   void* vec = reinterpret_cast<uint8_t*>(out) + off::PL_child_layouts;
   void** containers = edge::McvContainers(mcv);
   bool show = true, hide = false;
-  int placed = 0;
-  for (const LeafRect& lr : leaves) {
-    if (lr.leaf < 0 || lr.leaf >= panes) continue;  // guard tree/truth drift
+  for (const LeafRect& lr : placed) {
     void* container = containers[lr.leaf];
     edge::SetViewVisible(container, true);
     Rect rect = lr.rect;
     edge::EmplaceChildLayout(vec, &container, &show, &rect);
-    ++placed;
   }
   // Surplus containers from a previously larger split: hide + zero them so they
   // leave no stale pixels (they are reused if the split grows again).
@@ -53,7 +58,7 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes) {
     Rect zero{0, 0, 0, 0};
     edge::EmplaceChildLayout(vec, &containers[i], &hide, &zero);
   }
-  Log("[layout] tiled %d/%d panes in %dx%d (%s)", placed, count, width, height,
+  Log("[layout] tiled %zu/%d panes in %dx%d (%s)", placed.size(), count, width, height,
       axis == Axis::kVertical ? "rows" : "cols");
   return out;
 }
