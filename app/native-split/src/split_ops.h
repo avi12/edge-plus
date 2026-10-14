@@ -56,7 +56,7 @@ inline void FeedNewPane(void* mcv, int leaf) {
 // last container), and the tree records where that container sits relative to
 // the active pane. The layout detour then tiles containers per the tree.
 // UI thread.
-inline void AddPane(void* mcv, Direction direction) {
+inline void AddPane(void* mcv, Direction direction, int besideLeaf) {
   if (!mcv) {
     return;
   }
@@ -69,7 +69,7 @@ inline void AddPane(void* mcv, Direction direction) {
   void* active = edge::ActiveTab(tsm);
   const bool isAlreadySplit = active && edge::TabIsSplit(active);
   const int oldPanes = isAlreadySplit ? edge::McvActiveSplitPanes(mcv) : 1;
-  const int activeLeaf = isAlreadySplit ? ActiveLeaf(mcv) : 0;
+  const int activeLeaf = isAlreadySplit ? besideLeaf : 0;
   // GrowSplit appends the new tab as the last container.
   const int newLeaf = oldPanes;
 
@@ -102,6 +102,30 @@ inline void AddPane(void* mcv, Direction direction) {
   edge::InvalidateLayout(mcv);
   Log("[dir-add] dir=%d active_leaf=%d new_leaf=%d -> %d panes",
       static_cast<int>(direction), activeLeaf, newLeaf, oldPanes + 1);
+}
+
+// Add one pane beside the active pane.
+inline void AddPane(void* mcv, Direction direction) {
+  AddPane(mcv, direction, mcv ? ActiveLeaf(mcv) : 0);
+}
+
+// "Use equal widths / heights" from pane `leaf`'s ⋯ menu: every pane of the
+// nearest split along `axis` around it gets an equal share (eased into place).
+inline void EqualizeAround(void* mcv, int leaf, Axis axis) {
+  const int panes = mcv ? edge::McvActiveSplitPanes(mcv) : 0;
+  if (panes < 2) {
+    return;
+  }
+  Node tree = geometry::LiveTree(mcv, panes);
+  if (!EqualizeAlong(tree, leaf, axis)) {
+    Log("[equal] pane %d: nothing to even out", leaf);
+    return;
+  }
+  Trees()[mcv] = tree;
+  edge::InvalidateLayout(mcv);
+  edge::LayoutImmediately(mcv);  // a pure tree edit: force the re-tile
+  Log("[equal] pane %d: equal %s", leaf,
+      axis == Axis::kHorizontal ? "widths" : "heights");
 }
 
 // Swap the active pane with its sibling along its parent split's axis (the

@@ -1,12 +1,14 @@
-// menu.h — the directional-add items on the split's native 3-dot menu. One
-// concern: extend SplitTabMenuModel (a ui::SimpleMenuModel) with four commands
-// and route them to split_ops::AddPane. The command ids 0x6ac..0x6af sit just
-// past Edge's own dense range 0x6a5..0x6ab (docs/re/split-menu.md).
+// menu.h — our items on the split's native ⋯ menu. One concern: extend
+// SplitTabMenuModel (a ui::SimpleMenuModel) with the directional adds and the
+// "use equal widths / heights" commands, and route each to the pane whose ⋯
+// opened the menu. The command ids 0x6ac..0x6b1 sit just past Edge's own dense
+// range 0x6a5..0x6ab (docs/re/split-menu.md).
 #pragma once
 #include <cstddef>
 #include <cstring>
 #include <iterator>
 #include "edge.h"
+#include "grip.h"
 #include "split_ops.h"
 #include "state.h"
 
@@ -18,23 +20,46 @@ enum class MenuCommand : int {
   kAddUp = 0x6ac,
   kAddDown = 0x6ad,
   kAddLeft = 0x6ae,
-  kAddRight = 0x6af
+  kAddRight = 0x6af,
+  kEqualWidths = 0x6b0,
+  kEqualHeights = 0x6b1,
 };
 
-// Each directional item, in menu order: its command, the direction it adds a
-// pane in, and its label.
+// What an item does to the pane whose ⋯ opened the menu.
+enum class MenuAction : uint8_t {
+  kAddPane,
+  kEqualize
+};
+
+// Each item, in menu order: its command, what it does, the direction it adds a
+// pane in or the axis it evens out, and its label.
 struct MenuItem {
   MenuCommand command;
+  MenuAction action;
   Direction direction;
+  Axis axis;
   const char* label;
 };
 inline constexpr MenuItem kMenuItems[] = {
-    {MenuCommand::kAddUp, Direction::kUp, "Add pane above"},
-    {MenuCommand::kAddDown, Direction::kDown, "Add pane below"},
-    {MenuCommand::kAddLeft, Direction::kLeft, "Add pane to the left"},
-    {MenuCommand::kAddRight, Direction::kRight, "Add pane to the right"},
+    {MenuCommand::kAddUp, MenuAction::kAddPane, Direction::kUp, Axis::kVertical,
+     "Add pane above"},
+    {MenuCommand::kAddDown, MenuAction::kAddPane, Direction::kDown,
+     Axis::kVertical, "Add pane below"},
+    {MenuCommand::kAddLeft, MenuAction::kAddPane, Direction::kLeft,
+     Axis::kHorizontal, "Add pane to the left"},
+    {MenuCommand::kAddRight, MenuAction::kAddPane, Direction::kRight,
+     Axis::kHorizontal, "Add pane to the right"},
+    {MenuCommand::kEqualWidths, MenuAction::kEqualize, Direction::kLeft,
+     Axis::kHorizontal, "Use equal widths"},
+    {MenuCommand::kEqualHeights, MenuAction::kEqualize, Direction::kUp,
+     Axis::kVertical, "Use equal heights"},
 };
 inline constexpr size_t kMenuItemCount = std::size(kMenuItems);
+
+// The pane whose ⋯ opened the menu (ToggleContextMenu), consumed by the next
+// command; without one (a menu opened elsewhere) the active pane is used.
+inline void* g_menuMcv = nullptr;
+inline int g_menuPane = kNoLeaf;
 
 // Labels built once into static u16strings (short permanent allocations), so the
 // ctor hook can reference them on every menu open without re-allocating.
@@ -79,17 +104,41 @@ inline void* __fastcall h_handle_ctx(void* self, void* argument2,
   return o_handle_ctx(self, argument2, argument3, argument4);
 }
 
+// ControlButtons::ToggleContextMenu: remember whose ⋯ this is, then open it.
+using Toggle_t = void(__fastcall*)(void*, void*);
+inline Toggle_t o_toggle = nullptr;
+inline void __fastcall h_toggle(void* bar, void* argument2) {
+  void* mcv = nullptr;
+  int pane = kNoLeaf;
+  if (grip::LocateBar(bar, &mcv, &pane)) {
+    g_menuMcv = mcv;
+    g_menuPane = pane;
+  }
+  o_toggle(bar, argument2);
+}
+
 // SplitTabMenuModel::ExecuteCommand(self=delegate, int command_id, int
-// event_flags). Our commands add a pane; every other id is Edge's own.
+// event_flags). Our commands act on the pane whose ⋯ opened the menu; every
+// other id is Edge's own.
 using Exec_t = void*(__fastcall*)(void*, int, int);
 inline Exec_t o_exec = nullptr;
 inline void* __fastcall h_exec(void* self, int commandId, int eventFlags) {
   for (const MenuItem& item : kMenuItems) {
     const bool isItemCommand = commandId == static_cast<int>(item.command);
-    if (isItemCommand) {
-      split_ops::AddPane(g_activeMcv, item.direction);
-      return nullptr;
+    if (!isItemCommand) {
+      continue;
     }
+    const bool hasMenuPane = g_menuMcv && g_menuPane != kNoLeaf;
+    void* mcv = hasMenuPane ? g_menuMcv : g_activeMcv;
+    const int pane = hasMenuPane ? g_menuPane : split_ops::ActiveLeaf(mcv);
+    g_menuMcv = nullptr;
+    g_menuPane = kNoLeaf;
+    if (item.action == MenuAction::kAddPane) {
+      split_ops::AddPane(mcv, item.direction, pane);
+    } else {
+      split_ops::EqualizeAround(mcv, pane, item.axis);
+    }
+    return nullptr;
   }
   return o_exec(self, commandId, eventFlags);
 }

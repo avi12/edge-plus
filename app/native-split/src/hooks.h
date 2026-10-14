@@ -206,6 +206,9 @@ inline bool InstallAll() {
   Install(rva::MultiContentsView_SetActiveIndex,
           reinterpret_cast<void*>(h_set_active), &o_set_active,
           "SetActiveIndex");
+  Install(rva::ControlButtons_ToggleContextMenu,
+          reinterpret_cast<void*>(menu::h_toggle), &menu::o_toggle,
+          "ControlButtons::ToggleContextMenu");
   Install(rva::ControlButtons_HandleButtonClick,
           reinterpret_cast<void*>(h_button_click), &o_button_click,
           "ControlButtons::HandleButtonClick");

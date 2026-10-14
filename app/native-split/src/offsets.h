@@ -177,6 +177,10 @@ inline constexpr uintptr_t Button_OnMouseCaptureLost = 0xb287f00;
 // calls SplitWindowController::HideSplitView(true), which closes the split's
 // LAST tab (not the clicked one), and closing any member dissolves the split.
 inline constexpr uintptr_t ControlButtons_HandleButtonClick = 0xa011ae0;
+// ControlButtons::ToggleContextMenu(bar, ...): the ⋯ of a pane's hover bar. It
+// builds a SplitTabMenuModel that only knows "first pane or not", so the pane
+// whose ⋯ was clicked is remembered here.
+inline constexpr uintptr_t ControlButtons_ToggleContextMenu = 0xa011d00;
 // (tsm, int index, uint32 closeTypes); HideSplitView passes 1
 inline constexpr uintptr_t TabStripModel_CloseWebContentsAt = 0xa26f916;
 // (tsm, int index, const TabStripUserGestureDetails*)
