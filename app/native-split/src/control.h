@@ -1,12 +1,12 @@
-// control.h — a control channel into the DLL that runs pane actions on Edge's UI
-// thread. One concern: subclass the browser window so its hot-keys and a
-// registered window message ("fixedge.addpane", wParam = a Command) run pane
-// actions on the very thread that owns the views (the WndProc runs on the UI
-// thread). This drives directional-add independent of Edge's own menu, and lets
-// a script post the message. The original WndProc is restored on unload.
+// control.h — runs pane actions on Edge's UI thread. One concern: subclass the
+// browser window so its hot-keys and the channel's message (channel.h, wParam =
+// a Command) run pane actions on the very thread that owns the views (the
+// WndProc runs on the UI thread). Hooks queue work there, and scripts post the
+// same codes. The original WndProc is restored on unload.
 #pragma once
 #include <windows.h>
 #include <cstring>
+#include "channel.h"
 #include "edge.h"
 #include "split_ops.h"
 #include "split_data.h"
@@ -20,12 +20,14 @@
 
 namespace fixedge::control {
 
-inline UINT g_commandMessage = 0;  // the registered "fixedge.addpane"
-inline HWND g_hwnd = nullptr;      // the subclassed browser window
+using channel::CodeOf;
+using channel::Command;
+using channel::IsInRange;
+using channel::OperandOf;
+
 inline WNDPROC g_originalProc = nullptr;
 inline bool g_hasHotKeys = false;
 
-inline constexpr wchar_t kCommandMessageName[] = L"fixedge.addpane";
 inline constexpr wchar_t kBrowserWindowClass[] = L"Chrome_WidgetWin_1";
 inline constexpr int kClassNameLength = 64;
 inline constexpr UINT kTeardownTimeoutMs = 5000;
@@ -59,43 +61,6 @@ inline constexpr HotKeyBinding kHotKeyBindings[] = {
     {HotKey::kDown, VK_DOWN},    // add a pane below
     {HotKey::kSwap, 'S'},        // swap the active pane with its counterpart
 };
-
-// Commands posted to the channel: the wParam of a "fixedge.addpane" message.
-// A test channel (scripts post these exact numbers); the real gestures are the
-// hot-keys. A `...Base` starts a range and the code's offset from it is the
-// operand. A code no command claims falls through: from kCreatePanesBase up it
-// creates a split of (code - kCreatePanesBase) panes, from kCreateSplit up a
-// 2-pane split, and below kCreateSplit it grows the split by one pane.
-enum class Command : WPARAM {
-  kCreateSplit = 100,      // Edge's proven 2-pane AddToNewSplit
-  kCreatePanesBase = 200,  // + N: N panes, directly through AddToSplitImpl
-  kAddPaneBase = 300,      // + Direction: add a pane beside the active one
-  kSwap = 400,             // swap the active pane with its counterpart
-  kShowBarBase = 500,      // + i: show pane i's hover bar
-  kEnsureGrips = 700,      // give every pane of a grown split its drag grip
-  kTeardown = 701,         // undo everything UI-side before this DLL unloads
-  kMenuArrowBase = 710,    // + Direction: a ⋯ d-pad arrow was clicked
-};
-
-// The width of each range: one code per Direction (kUp..kRight), and the
-// panes whose hover bar can be shown.
-inline constexpr WPARAM kDirectionCount =
-    static_cast<WPARAM>(Direction::kRight) + 1;
-inline constexpr WPARAM kShowBarPaneLimit = 16;
-
-inline constexpr WPARAM CodeOf(Command command) {
-  return static_cast<WPARAM>(command);
-}
-
-// Whether `wparam` is one of the `count` codes that start at `base`.
-inline bool IsInRange(WPARAM wparam, Command base, WPARAM count) {
-  return wparam >= CodeOf(base) && wparam < CodeOf(base) + count;
-}
-
-// The operand of a ranged code (its offset from `base`).
-inline int OperandOf(WPARAM wparam, Command base) {
-  return static_cast<int>(wparam) - static_cast<int>(CodeOf(base));
-}
 
 inline bool HasBinding(WPARAM wparam) {
   for (const HotKeyBinding& binding : kHotKeyBindings) {
@@ -234,26 +199,16 @@ inline void CreateOrGrowByCommand(HWND hwnd, WPARAM wparam) {
   split_data::GrowSplit(tsm);
 }
 
-// Run a clicked ⋯ d-pad arrow after its click (hooks.h posts this).
-inline void PostMenuArrow(Direction direction) {
-  const bool hasChannel = g_hwnd && g_commandMessage != 0;
-  if (hasChannel) {
-    PostMessageW(
-        g_hwnd, g_commandMessage,
-        CodeOf(Command::kMenuArrowBase) + static_cast<WPARAM>(direction), 0);
-  }
-}
-
 inline void RunCommand(HWND hwnd, WPARAM wparam) {
   const bool isMenuArrow =
-      IsInRange(wparam, Command::kMenuArrowBase, kDirectionCount);
+      IsInRange(wparam, Command::kMenuArrowBase, channel::kDirectionCount);
   if (isMenuArrow) {
     menu::RunArrow(
         static_cast<Direction>(OperandOf(wparam, Command::kMenuArrowBase)));
     return;
   }
   const bool isDirectionalAdd =
-      IsInRange(wparam, Command::kAddPaneBase, kDirectionCount);
+      IsInRange(wparam, Command::kAddPaneBase, channel::kDirectionCount);
   if (isDirectionalAdd) {
     AddPaneByCommand(hwnd, wparam);
     return;
@@ -272,7 +227,7 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
       break;
   }
   const bool isShowBar =
-      IsInRange(wparam, Command::kShowBarBase, kShowBarPaneLimit);
+      IsInRange(wparam, Command::kShowBarBase, channel::kShowBarPaneLimit);
   if (isShowBar) {
     ShowBarByCommand(hwnd, OperandOf(wparam, Command::kShowBarBase));
     return;
@@ -306,7 +261,8 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
     RunHotKey(hwnd, static_cast<HotKey>(wparam));
     return 0;
   }
-  const bool isCommand = message == g_commandMessage && g_commandMessage != 0;
+  const bool isCommand =
+      message == channel::g_message && channel::g_message != 0;
   if (isCommand) {
     RunCommand(hwnd, wparam);
     return 0;
@@ -334,38 +290,39 @@ inline BOOL CALLBACK FindBrowserWindow(HWND hwnd, LPARAM /*unused*/) {
   if (!isBrowserWindow) {
     return TRUE;
   }
-  g_hwnd = hwnd;
+  channel::g_window = hwnd;
   return FALSE;
 }
 
 inline void Install() {
-  g_commandMessage = RegisterWindowMessageW(kCommandMessageName);
+  channel::g_message = RegisterWindowMessageW(channel::kMessageName);
   EnumWindows(FindBrowserWindow, 0);
-  if (!g_hwnd) {
+  HWND hwnd = channel::g_window;
+  if (!hwnd) {
     Log("[control] no browser window to subclass");
     return;
   }
   g_originalProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(
-      g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc)));
-  Log("[control] subclassed hwnd=%p msg=%u", g_hwnd, g_commandMessage);
-  anim::Install(g_hwnd);
-  drag::g_window = g_hwnd;
+      hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc)));
+  Log("[control] subclassed hwnd=%p msg=%u", hwnd, channel::g_message);
+  anim::Install(hwnd);
   // A (re)load into a split that is already grown: add the grips on the UI thread.
-  PostMessageW(g_hwnd, g_commandMessage, CodeOf(Command::kEnsureGrips), 0);
+  channel::Post(CodeOf(Command::kEnsureGrips));
 }
 
 // Runs on the unload thread: hand the UI-side teardown to the UI thread and wait
 // for it, then restore the original window procedure.
 inline void Remove() {
-  const bool isSubclassed = g_hwnd && g_originalProc;
+  HWND hwnd = channel::g_window;
+  const bool isSubclassed = hwnd && g_originalProc;
   if (isSubclassed) {
-    SendMessageTimeoutW(g_hwnd, g_commandMessage, CodeOf(Command::kTeardown), 0,
+    SendMessageTimeoutW(hwnd, channel::g_message, CodeOf(Command::kTeardown), 0,
                         SMTO_BLOCK, kTeardownTimeoutMs, nullptr);
-    SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC,
+    SetWindowLongPtrW(hwnd, GWLP_WNDPROC,
                       reinterpret_cast<LONG_PTR>(g_originalProc));
   }
   g_hasHotKeys = false;
-  g_hwnd = nullptr;
+  channel::g_window = nullptr;
   g_originalProc = nullptr;
 }
 

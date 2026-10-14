@@ -9,6 +9,7 @@
 #include <windows.h>
 #include <cmath>
 #include <cstdlib>
+#include "channel.h"
 #include "dock.h"
 #include "edge.h"
 #include "geometry.h"
@@ -16,10 +17,6 @@
 #include "state.h"
 
 namespace fixedge::drag {
-
-// The browser window: owner of the preview, and the source of the DPI scale.
-// Set once by control::Install.
-inline HWND g_window = nullptr;
 
 struct Session {
   bool isPressed = false;   // a grip is held, not yet past the drag threshold
@@ -38,7 +35,7 @@ inline bool IsActive() {
 // --- coordinates: the window's DIPs <-> the split's DIPs <-> screen pixels ---
 
 inline float Scale() {
-  return static_cast<float>(GetDpiForWindow(g_window)) /
+  return static_cast<float>(GetDpiForWindow(channel::g_window)) /
          USER_DEFAULT_SCREEN_DPI;
 }
 
@@ -60,8 +57,8 @@ inline Rect SplitToScreen(void* mcv, const Rect& rect) {
   POINT screenBottomRight{
       static_cast<LONG>(std::lround(bottomRight.x * scale)),
       static_cast<LONG>(std::lround(bottomRight.y * scale))};
-  ClientToScreen(g_window, &screenTopLeft);
-  ClientToScreen(g_window, &screenBottomRight);
+  ClientToScreen(channel::g_window, &screenTopLeft);
+  ClientToScreen(channel::g_window, &screenBottomRight);
   return Rect{screenTopLeft.x, screenTopLeft.y,
               screenBottomRight.x - screenTopLeft.x,
               screenBottomRight.y - screenTopLeft.y};
@@ -126,7 +123,7 @@ inline void Move(Point rootLocation) {
                                  g_session.pane, g_session.plan);
   const bool hasDropTarget = g_session.plan.zone != dock::Zone::kNone;
   if (hasDropTarget) {
-    overlay::Show(g_window,
+    overlay::Show(channel::g_window,
                   SplitToScreen(g_session.mcv, g_session.plan.preview),
                   StyleOf(g_session.plan.zone));
   } else {

@@ -220,7 +220,8 @@ inline void __fastcall h_released(void* button, const void* event) {
       arrow != menu::kNoArrow && edge::ViewIsMouseHovered(button);
   o_released(button, event);
   if (isArrowClick) {
-    control::PostMenuArrow(menu::kMenuItems[arrow].direction);
+    channel::Post(channel::CodeOf(channel::Command::kMenuArrowBase,
+                                  menu::kMenuItems[arrow].direction));
   }
 }
 
