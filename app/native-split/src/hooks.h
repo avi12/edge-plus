@@ -19,13 +19,11 @@ using namespace fixedge::edge155;
 
 // MultiContentsView::SetWebContentsAtIndex — the feeder's one call. For a grown
 // split (index >= the current container count) build the missing container(s)
-// first, then run the original. The index<2 guard is lifted at install and
-// restored on unload. A normal 2-pane split only sees index 0/1, so it is
+// first, then run the original. The index<2 guard is lifted at install (see the
+// safety patches below). A normal 2-pane split only sees index 0/1, so it is
 // unaffected.
 using SetWc_t = void*(__fastcall*)(void*, void*, uint32_t);
 inline SetWc_t o_setwc = nullptr;
-inline uint8_t g_guard_saved = 0;
-inline uint8_t g_a11y_saved[6] = {};
 inline void* __fastcall h_setwc(void* mcv, void* web_contents, uint32_t index) {
   if (index >= edge::McvCount(mcv)) {
     Log("[grow] feeder wants index %u; count %llu - building container(s)", index,
@@ -121,21 +119,24 @@ inline bool InstallAll() {
           "SplitTabMenuModel::ExecuteCommand");
   Install(rva::WebUISplitTabsControl_HandleContextMenu, reinterpret_cast<void*>(menu::h_handle_ctx),
           &menu::o_handle_ctx, "WebUISplitTabsControl::HandleContextMenu");
-  // Lift the index<2 guard so the feeder can fill pane 2+ (restored on unload).
-  g_guard_saved = edge::PatchByte(rva::SetWebContentsAtIndex_guard_imm, 0xff);
-  Log("[patch] SetWebContentsAtIndex guard %u -> 0xff", g_guard_saved);
-  // Neutralize the accessible-label builder's pane-index int3 (crashes at >=2).
-  edge::PatchNop(rva::SplitA11yLabel_paneidx_jne, 6, g_a11y_saved);
-  Log("[patch] a11y pane-index check NOPed (was 0x%02x 0x%02x)", g_a11y_saved[0], g_a11y_saved[1]);
+  // Safety patches: turn Edge's 2-pane CHECKs into fallbacks. They stay for the
+  // life of the process (never restored on unload): they point at nothing of
+  // ours, and a split still grown past two when this DLL unloads (hot-reload or
+  // toggle-off) would otherwise hit a CHECK as soon as Edge touches pane 3+.
+  const uint8_t guard_was = edge::PatchByte(rva::SetWebContentsAtIndex_guard_imm, 0xff);
+  Log("[patch] SetWebContentsAtIndex guard %u -> 0xff", guard_was);
+  uint8_t was[6] = {};
+  edge::PatchNop(rva::SplitA11yLabel_paneidx_jne, 6, was);  // a11y label int3 at index >= 2
+  Log("[patch] a11y pane-index check NOPed (was 0x%02x 0x%02x)", was[0], was[1]);
+  edge::PatchNop(rva::SetActiveIndex_index_jae, 6, was);  // SetActiveIndex int3 at index >= 2
+  Log("[patch] SetActiveIndex index check NOPed (was 0x%02x 0x%02x)", was[0], was[1]);
   control::Install();  // the add-pane control channel (UI-thread trigger)
   return true;
 }
 
 inline void RemoveAll() {
   control::Remove();
-  if (g_guard_saved) edge::PatchByte(rva::SetWebContentsAtIndex_guard_imm, g_guard_saved);
-  if (g_a11y_saved[0]) edge::Unpatch(rva::SplitA11yLabel_paneidx_jne, 6, g_a11y_saved);
-  MH_DisableHook(MH_ALL_HOOKS);
+  MH_DisableHook(MH_ALL_HOOKS);  // the safety patches stay (see InstallAll)
   MH_Uninitialize();
 }
 

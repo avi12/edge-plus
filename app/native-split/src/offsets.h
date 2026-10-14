@@ -100,6 +100,10 @@ inline constexpr uintptr_t SplitWindowController_FromBrowser = 0x2e70b32; // (Br
 // `jne 0x42e72eb` (0F 85 rel32, 6 bytes); NOP it so index>=2 falls through to
 // the pane-1 label instead of crashing. a11y text for pane 3+ is cosmetic.
 inline constexpr uintptr_t SplitA11yLabel_paneidx_jne      = 0x42e6faf;
+// MultiContentsView::SetActiveIndex's `cmp edx,2; jae <int3>` (0F 83 rel32, 6
+// bytes). The detour replaces the function while loaded; NOPing the CHECK too
+// means a click on pane 3+ after unload only mis-flags the primary pane.
+inline constexpr uintptr_t SetActiveIndex_index_jae        = 0xc931388;
 }  // namespace rva
 
 // Linear addresses (not RVAs): partition-alloc BRP-pool gate for raw_ptr acquire.

@@ -25,7 +25,8 @@ inline bool Bind(HMODULE module) {
 
 inline void* At(uintptr_t rva) { return reinterpret_cast<void*>(g_base + rva); }
 
-// Overwrite one code byte (reversibly) — used to lift the index<2 guard.
+// Overwrite one code byte — used to lift the index<2 guard. Returns the byte
+// that was there (for the log).
 inline uint8_t PatchByte(uintptr_t rva, uint8_t value) {
   void* addr = At(rva);
   DWORD old = 0;
@@ -35,27 +36,17 @@ inline uint8_t PatchByte(uintptr_t rva, uint8_t value) {
     VirtualProtect(addr, 1, old, &old);
     FlushInstructionCache(GetCurrentProcess(), addr, 1);
   }
-  return prev;  // caller keeps this to restore on unload
+  return prev;
 }
 
-// Overwrite `n` code bytes with 0x90 (NOP), saving the originals into `saved`
-// (reversibly) — used to neutralize a 2-pane-only CHECK so a grown split survives.
+// Overwrite `n` code bytes with 0x90 (NOP), copying what was there into `saved`
+// (for the log) — used to neutralize a 2-pane-only CHECK so a grown split survives.
 inline void PatchNop(uintptr_t rva, size_t n, uint8_t* saved) {
   void* addr = At(rva);
   DWORD old = 0;
   auto* p = reinterpret_cast<uint8_t*>(addr);
   if (VirtualProtect(addr, n, PAGE_EXECUTE_READWRITE, &old)) {
     for (size_t i = 0; i < n; ++i) { saved[i] = p[i]; p[i] = 0x90; }
-    VirtualProtect(addr, n, old, &old);
-    FlushInstructionCache(GetCurrentProcess(), addr, n);
-  }
-}
-inline void Unpatch(uintptr_t rva, size_t n, const uint8_t* saved) {
-  void* addr = At(rva);
-  DWORD old = 0;
-  auto* p = reinterpret_cast<uint8_t*>(addr);
-  if (VirtualProtect(addr, n, PAGE_EXECUTE_READWRITE, &old)) {
-    for (size_t i = 0; i < n; ++i) p[i] = saved[i];
     VirtualProtect(addr, n, old, &old);
     FlushInstructionCache(GetCurrentProcess(), addr, n);
   }
