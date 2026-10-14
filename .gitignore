@@ -10,3 +10,6 @@ extension/node_modules/
 extension/.output/
 extension/.wxt/
 extension/.svelte-check/
+
+# Claude Code agent worktrees
+.claude/worktrees/
