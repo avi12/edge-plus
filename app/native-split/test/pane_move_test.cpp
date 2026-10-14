@@ -301,6 +301,22 @@ void RunChecks() {
           "a pane is never dragged below the minimum",
           Layout(clamped, 900, 600));
   }
+  // Double-clicking a divider evens out exactly the split it divides.
+  {
+    Node tree = FlatTree(3, Axis::kHorizontal);
+    SplitPane(tree, 2, Direction::kDown, 3);  // H[0 1 V[2 3]]
+    const Rect area{0, 0, 900, 600};
+    std::vector<Seam> seams = Seams(tree, area);
+    ResizeSeam(tree, seams[0], 120);   // widen pane 0
+    ResizeSeam(tree, seams[2], -100);  // shorten pane 2
+    Check(EqualizeSplit(tree, seams[2].path), "reset the column's heights");
+    Check(Layout(tree, 900, 600).find("2:[600,0,300,300]") != std::string::npos,
+          "the column is even again", Layout(tree, 900, 600));
+    Check(Layout(tree, 900, 600).rfind("0:[0,0,420,600]", 0) == 0,
+          "the row's resize is untouched", Layout(tree, 900, 600));
+    Check(EqualizeSplit(tree, seams[0].path), "reset the row's widths");
+    Check(!EqualizeSplit(tree, seams[0].path), "already even: nothing to do");
+  }
   // Closing a pane keeps the proportions the others were resized to.
   {
     Node tree = Weighted(3, Axis::kHorizontal, {2.f, 1.f, 1.f});

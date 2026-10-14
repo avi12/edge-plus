@@ -171,6 +171,9 @@ inline constexpr uintptr_t Button_OnMouseDragged = 0xb287d70;
 inline constexpr uintptr_t Button_OnMouseReleased = 0xb287ee0;
 // void (button)
 inline constexpr uintptr_t Button_OnMouseCaptureLost = 0xb287f00;
+// int ui::MouseEvent::GetClickCount(this): 2 on the second click of a double
+// click (EdgeTwoDimensionalResizeArea resets its panes on that release).
+inline constexpr uintptr_t MouseEvent_GetClickCount = 0xb631a18;
 
 // --- closing one pane of a grown split (docs/re/close-pane.md) ---
 // Edge's X: ControlButtons::HandleButtonClick(bar, Button*). For pane 2+ it

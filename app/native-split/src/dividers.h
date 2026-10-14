@@ -155,6 +155,18 @@ inline void End() {
   Log("[divider] drag ended");
 }
 
+// Double-click: every pane of the split `seam` divides gets an equal share
+// again (eased into place), like Edge's own handle resets its two panes.
+inline void ResetToEqual(void* mcv, const Seam& seam, Node tree) {
+  if (!EqualizeSplit(tree, seam.path)) {
+    return;
+  }
+  Trees()[mcv] = std::move(tree);
+  edge::InvalidateLayout(mcv);
+  edge::LayoutImmediately(mcv);
+  Log("[divider] reset a split to equal sizes");
+}
+
 // Take every divider back out (before this DLL unloads). The views are left
 // unparented rather than deleted, like the grips.
 inline void RemoveAll() {

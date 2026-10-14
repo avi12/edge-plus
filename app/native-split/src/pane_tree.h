@@ -776,4 +776,18 @@ inline bool ResizeSeam(Node& root, const Seam& seam, int delta) {
   return true;
 }
 
+// Double-click on a divider: every child of the split at `path` gets an equal
+// share again. Returns false if there is no split there or it is already even.
+inline bool EqualizeSplit(Node& root, const std::vector<int>& path) {
+  Node* split = NodeAt(root, path);
+  const bool isUnevenSplit = split && !split->isLeaf &&
+                             !split->weights.empty() &&
+                             !AllEqual(split->weights);
+  if (!isUnevenSplit) {
+    return false;
+  }
+  std::fill(split->weights.begin(), split->weights.end(), 1.f);
+  return true;
+}
+
 }  // namespace fixedge

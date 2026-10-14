@@ -326,6 +326,12 @@ inline void ViewSetTooltip(void* view, const char* utf8) {
   reinterpret_cast<Fn>(At(rva::View_SetTooltipText))(view, &text);
 }
 
+inline int MouseClickCount(const void* mouseEvent) {
+  using CountFn = int(__fastcall*)(const void*);
+  return reinterpret_cast<CountFn>(At(rva::MouseEvent_GetClickCount))(
+      mouseEvent);
+}
+
 // ui::SimpleMenuModel::AddSeparator(model, NORMAL_SEPARATOR).
 inline void MenuAddSeparator(void* model) {
   using SeparatorFn = void(__fastcall*)(void*, int);

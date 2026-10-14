@@ -172,6 +172,13 @@ inline void __fastcall h_divider_released(void* view, const void* event) {
     return;
   }
   dividers::End();
+  // The second click of a double click resets that split to equal sizes, as
+  // Edge's own handle does for its two panes.
+  const bool isDoubleClick = edge::MouseClickCount(event) == 2;
+  if (isDoubleClick) {
+    dividers::ResetToEqual(
+        mcv, seam, geometry::LiveTree(mcv, edge::McvActiveSplitPanes(mcv)));
+  }
 }
 
 inline void __fastcall h_divider_capture_lost(void* view) {
