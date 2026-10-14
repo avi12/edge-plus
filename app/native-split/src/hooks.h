@@ -63,7 +63,7 @@ inline void* __fastcall h_calc(void* self, void* out, void* avail) {
   return geometry::TilePanes(mcv, out, width, height, panes, resized);
 }
 
-// MultiContentsView::SetActiveIndex — Edge CHECKs index < 2 (int3 when a pane
+// MultiContentsView::SetActiveIndex â€” Edge CHECKs index < 2 (int3 when a pane
 // 3+ takes focus) and only clears the primary flag on "the other" of panes 0/1.
 // For a grown split, do the same work for N panes: record the index, flag that
 // pane primary and every other pane not, then refresh the borders. A stock split
