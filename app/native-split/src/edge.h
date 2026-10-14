@@ -97,6 +97,17 @@ inline void SetViewVisible(void* view, bool visible) {
   reinterpret_cast<Fn>(At(rva::View_SetVisible))(view, visible);
 }
 
+inline bool ViewGetVisible(void* view) {
+  using Fn = bool(__fastcall*)(void*);
+  return reinterpret_cast<Fn>(At(rva::View_GetVisible))(view);
+}
+
+// Re-draw each pane's border/overlay from MCV_active_index (loops every container).
+inline void McvUpdateBorders(void* mcv) {
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(rva::MultiContentsView_UpdateContentsBorderAndOverlay))(mcv);
+}
+
 inline void InvalidateLayout(void* view) {
   using Fn = void(__fastcall*)(void*);
   reinterpret_cast<Fn>(At(rva::View_InvalidateLayout))(view);

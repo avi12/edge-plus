@@ -63,6 +63,29 @@ inline void* __fastcall h_calc(void* self, void* out, void* avail) {
   return geometry::TilePanes(mcv, out, width, height, panes, resized);
 }
 
+// MultiContentsView::SetActiveIndex — Edge CHECKs index < 2 (int3 when a pane
+// 3+ takes focus) and only clears the primary flag on "the other" of panes 0/1.
+// For a grown split, do the same work for N panes: record the index, flag that
+// pane primary and every other pane not, then refresh the borders. A stock split
+// runs the original.
+using SetActive_t = void(__fastcall*)(void*, int);
+inline SetActive_t o_set_active = nullptr;
+inline void __fastcall h_set_active(void* mcv, int index) {
+  const int count = static_cast<int>(edge::McvCount(mcv));
+  if (count <= 2) return o_set_active(mcv, index);
+  if (index < 0 || index >= count || !edge::ViewGetVisible(edge::McvContainerAt(mcv, index))) {
+    Log("[active] ignored SetActiveIndex(%d) of %d", index, count);  // Edge would CHECK-crash
+    return;
+  }
+  edge::Field<int32_t>(mcv, off::MCV_active_index) = index;
+  for (int i = 0; i < count; ++i) {
+    edge::Field<uint8_t>(edge::ContainerWebView(edge::McvContainerAt(mcv, i)), off::CWV_primary_flag) =
+        i == index ? 1 : 0;
+  }
+  edge::McvUpdateBorders(mcv);
+  Log("[active] pane %d of %d", index, count);
+}
+
 template <class T>
 inline bool Install(uintptr_t rva, void* detour, T** original, const char* name) {
   if (MH_CreateHook(edge::At(rva), detour, reinterpret_cast<void**>(original)) != MH_OK ||
@@ -83,6 +106,8 @@ inline bool InstallAll() {
           "SetWebContentsAtIndex");
   Install(rva::MultiContentsView_CalculateProposedLayout, reinterpret_cast<void*>(h_calc), &o_calc,
           "CalculateProposedLayout");
+  Install(rva::MultiContentsView_SetActiveIndex, reinterpret_cast<void*>(h_set_active),
+          &o_set_active, "SetActiveIndex");
   Install(rva::SplitWindowController_DoAction, reinterpret_cast<void*>(collapse::h_do_action),
           &collapse::o_do_action, "DoActionToSplitWindow");
   Install(rva::SplitTabMenuModel_ctor, reinterpret_cast<void*>(menu::h_ctor), &menu::o_ctor,
