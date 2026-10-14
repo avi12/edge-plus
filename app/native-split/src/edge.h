@@ -164,6 +164,11 @@ inline void* EdgeNew(size_t size) {
   using Fn = void*(__fastcall*)(size_t);
   return reinterpret_cast<Fn>(At(rva::EdgeOperatorNew))(size);
 }
+// Edge's operator delete, for memory Edge allocated and handed to us.
+inline void EdgeDelete(void* memory) {
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(rva::EdgeOperatorDelete))(memory);
+}
 // base::Token::CreateRandom(out base::Token*) — a valid split id.
 inline void CreateRandomToken(void* outToken) {
   using Fn = void*(__fastcall*)(void*);
@@ -727,6 +732,37 @@ inline int TabCount(void* tabStripModel) {
   return collection ? Field<int32_t>(collection, off::TABCOLL_count) : 0;
 }
 
+// A split's members as Edge lists them (GetTabsAndIndicesInSplit): a vector
+// {data, size, capacity} of {TabModel*, int} entries that Edge allocates for
+// the caller, freed with Edge's allocator when this goes out of scope.
+struct SplitMembers {
+  SplitMembers(void* tsm, void* splitId) {
+    GetTabsAndIndicesInSplit(tsm, &list, splitId);
+  }
+  ~SplitMembers() {
+    if (list.data) {
+      EdgeDelete(list.data);
+    }
+  }
+  SplitMembers(const SplitMembers&) = delete;
+  SplitMembers& operator=(const SplitMembers&) = delete;
+
+  int Count() const {
+    return list.data ? static_cast<int>(list.size) : 0;
+  }
+  // Member `i`'s tab model (0 <= i < Count()).
+  void* TabAt(int i) const {
+    return Field<void*>(
+        list.data + static_cast<size_t>(i) * off::SPLITMEMBER_size, 0);
+  }
+
+  struct {
+    uint8_t* data = nullptr;
+    uint64_t size = 0;
+    uint64_t capacity = 0;
+  } list;
+};
+
 // How many panes this MCV should show: the active tab's split member count
 // (>=2), or 1 when the active tab isn't in a split (collapsed / normal). The
 // data model is the single source of truth; the container vector is a cache that
@@ -751,13 +787,7 @@ inline int McvActiveSplitPanes(void* mcv) {
   if (!optionalSplitId.hasValue) {
     return 1;
   }
-  struct {
-    uint64_t data;
-    uint64_t size;  // the split's member count
-    uint64_t capacity;
-  } members = {};
-  GetTabsAndIndicesInSplit(tsm, &members, optionalSplitId.token);
-  const int memberCount = members.data ? static_cast<int>(members.size) : 1;
+  const int memberCount = SplitMembers(tsm, optionalSplitId.token).Count();
   return memberCount < 1 ? 1 : memberCount;
 }
 

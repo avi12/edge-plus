@@ -215,10 +215,8 @@ inline bool CreateSplitN(void* tsm, int requestedPanes) {
     edge::TabGetSplit(activeAfter, &splitAfter);
   }
   if (splitAfter.hasValue) {
-    uint64_t memberVector[3] = {};  // {data, size, capacity}
-    edge::GetTabsAndIndicesInSplit(tsm, memberVector, splitAfter.token);
     Log("[createN] post: data model split has %d members",
-        static_cast<int>(memberVector[1]));
+        edge::SplitMembers(tsm, splitAfter.token).Count());
   } else {
     Log("[createN] post: active tab not in a split");
   }
@@ -274,12 +272,9 @@ inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
     return CreateSplitN(tsm, kMinSplitMembers);
   }
 
-  // Capture the live members (TabModel*) and the visual before dissolving. The
-  // vector is {data@0, size@8, cap@0x10}; each entry is {TabModel*, int}, 16B.
-  uint64_t memberVector[3] = {};
-  edge::GetTabsAndIndicesInSplit(tsm, memberVector, split.token);
-  auto* memberEntries = reinterpret_cast<uint8_t*>(memberVector[0]);
-  const int memberCount = memberEntries ? static_cast<int>(memberVector[1]) : 0;
+  // Capture the live members (TabModel*) and the visual before dissolving.
+  const edge::SplitMembers members(tsm, split.token);
+  const int memberCount = members.Count();
   const bool isGrowableCount =
       memberCount >= kMinSplitMembers && memberCount <= kMaxGrowMembers;
   if (!isGrowableCount) {
@@ -288,8 +283,7 @@ inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
   }
   void* memberTabs[kMemberBufferSize];
   for (int i = 0; i < memberCount; i++) {
-    memberTabs[i] = *reinterpret_cast<void**>(
-        memberEntries + static_cast<std::ptrdiff_t>(i) * 16);
+    memberTabs[i] = members.TabAt(i);
   }
   uint8_t visual[16] = {};
   if (void* splitData = edge::GetSplitData(tsm, split.token)) {
@@ -389,10 +383,8 @@ inline int CloseMember(void* tsm, const void* closingContents,
   if (!split.hasValue) {
     return 0;
   }
-  uint64_t memberVector[3] = {};
-  edge::GetTabsAndIndicesInSplit(tsm, memberVector, split.token);
-  auto* memberEntries = reinterpret_cast<uint8_t*>(memberVector[0]);
-  const int memberCount = memberEntries ? static_cast<int>(memberVector[1]) : 0;
+  const edge::SplitMembers members(tsm, split.token);
+  const int memberCount = members.Count();
   const bool isKnownSize =
       memberCount >= kMinSplitMembers && memberCount <= kMemberBufferSize;
   if (!isKnownSize) {
@@ -401,8 +393,7 @@ inline int CloseMember(void* tsm, const void* closingContents,
   }
   void* memberTabs[kMemberBufferSize];
   for (int i = 0; i < memberCount; i++) {
-    memberTabs[i] = *reinterpret_cast<void**>(
-        memberEntries + static_cast<std::ptrdiff_t>(i) * 16);
+    memberTabs[i] = members.TabAt(i);
   }
   const int closing =
       MemberShowing(tsm, root, memberTabs, memberCount, closingContents);

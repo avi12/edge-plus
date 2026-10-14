@@ -95,6 +95,8 @@ inline constexpr uintptr_t BrowserView_ShowSplitView = 0xc93594a;
 // --- native split data-model grow (docs/re/split-insert.md, split-grow-impl.md) ---
 // (size)->void*  (non-View new)
 inline constexpr uintptr_t EdgeOperatorNew = 0x36b3c20;
+// operator delete(void*): jumps to Edge's free (the allocator shim).
+inline constexpr uintptr_t EdgeOperatorDelete = 0x36b2e50;
 // (out base::Token*) random 16B id
 inline constexpr uintptr_t TokenCreateRandom = 0x1e98440;
 // ({layout,ratio=0.5})
@@ -418,6 +420,9 @@ inline constexpr int ICON_V_LINE_TO = 15;  // from kArrowUpIcon
 inline constexpr int ICON_R_ARC_TO = 10;
 inline constexpr int ICON_CLOSE = 27;
 inline constexpr int ICON_CANVAS_DIMENSIONS = 28;
+
+// GetTabsAndIndicesInSplit's entries: {TabModel*, int strip index}.
+inline constexpr size_t SPLITMEMBER_size = 0x10;
 
 // --- a tab drag (docs/re/tab-drag.md) ---
 // TabDragController fields: its state (TABDRAG_state_dragging_tabs once
