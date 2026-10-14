@@ -1,0 +1,46 @@
+# Closing one pane of a grown split (native split)
+
+What Edge does when a pane's X is clicked, why that is wrong past two panes,
+and what the DLL does instead. Code: `split_ops::ClosePane`,
+`split_data::CloseMember`, `pane_tree.h`'s `RemovePane`, the
+`ControlButtons::HandleButtonClick` detour in `hooks.h`.
+
+## What Edge does (msedge.dll 155.0.4283.45)
+
+The X of a pane's hover bar runs `ControlButtons::HandleButtonClick(bar,
+button)` (rva `0xa011ae0`). For the close button (`bar+0x350`):
+
+- pane 0 (no earlier container sibling, flag `+0x360` clear):
+  `DoActionToSplitWindow(activeWebContents, 4)`;
+- every later pane: `SplitWindowController::HideSplitView(true)` (vtable `+0x20`,
+  rva `0xa0201f0`), which takes the split's **last** member
+  (`SplitTabData::ListTabs().back()`) and calls
+  `TabStripModel::CloseWebContentsAt(index, CLOSE_USER_GESTURE = 1)`.
+
+Two problems once a split has three or more panes: the X of pane 2 of 4 closes
+pane 4's tab, and closing **any** member dissolves the whole split (observed: a
+4-pane split became the single remaining active tab).
+
+## What the DLL does instead
+
+For a split of three or more (its bar has a grip), the X closes exactly its own
+pane:
+
+1. Snapshot every container's on-screen rect and pick who stays active (the
+   active pane, or the closing pane's neighbour in reading order).
+2. `CloseMember`: read the members (`GetTabsAndIndicesInSplit`), find the
+   closing and the next-active member **by the WebContents their tabs show**
+   (not by assumed order), keep the split's visual data,
+   `RemoveSplitImpl` (transactional, every tab kept), `CloseWebContentsAt` on
+   the one tab, then re-split the remaining members in strip order under a
+   fresh id (`AddToSplitImpl`, as `GrowSplit` does) and `ActivateTabAt` the
+   next-active member.
+3. `RemovePane` on the tree: the closed leaf's siblings share its space in
+   proportion (a resized ratio is kept; a sibling in another split is
+   untouched), and leaf ids above it drop by one, because Edge re-feeds the
+   containers after it one slot earlier.
+4. Each re-fed container is first put back (`View::SetBoundsRect`, rva
+   `0xfd8234`) where its tab was on screen, the animation flight is restarted,
+   and a relayout eases every pane to its new place.
+
+A two-pane split is left to Edge (its X there means the split's own close).

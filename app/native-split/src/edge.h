@@ -119,6 +119,12 @@ inline void McvUpdateBorders(void* mcv) {
       At(rva::MultiContentsView_UpdateContentsBorderAndOverlay))(mcv);
 }
 
+// Move a view now (its children re-lay out against the new size).
+inline void SetViewBounds(void* view, const Rect& bounds) {
+  using SetBoundsFn = void(__fastcall*)(void*, const Rect*);
+  reinterpret_cast<SetBoundsFn>(At(rva::View_SetBoundsRect))(view, &bounds);
+}
+
 inline void InvalidateLayout(void* view) {
   using Fn = void(__fastcall*)(void*);
   reinterpret_cast<Fn>(At(rva::View_InvalidateLayout))(view);
@@ -238,6 +244,21 @@ inline int GetIndexOfTabRecursive(void* rootCollection, void* tabModel) {
                                                         tabModel);
   return result.isFound ? static_cast<int>(result.index) : -1;
 }
+// Close the tab at strip `index` as a user gesture (Edge's own X does this).
+inline void CloseTabAt(void* tsm, int index) {
+  using CloseFn = void(__fastcall*)(void*, int, uint32_t);
+  reinterpret_cast<CloseFn>(At(rva::TabStripModel_CloseWebContentsAt))(
+      tsm, index, off::TSM_close_user_gesture);
+}
+
+// Activate the tab at strip `index` (no gesture metrics: details zeroed).
+inline void ActivateTabAt(void* tsm, int index) {
+  uint8_t gestureDetails[off::TSM_gesture_details_size] = {};
+  using ActivateFn = void(__fastcall*)(void*, int, const void*);
+  reinterpret_cast<ActivateFn>(At(rva::TabStripModel_ActivateTabAt))(
+      tsm, index, gestureDetails);
+}
+
 inline void RemoveSplitImpl(void* tsm, void* splitId, int flag) {
   using Fn = void*(__fastcall*)(void*, void*, int);
   reinterpret_cast<Fn>(At(rva::TabStripModel_RemoveSplitImpl))(tsm, splitId,
@@ -420,6 +441,11 @@ inline void GiveControlButtons(void* container, void* browserView,
                                                        not_first);
   void* ownedBar = bar;  // stands in for the unique_ptr the callee empties
   ContainerSetControlButtons(container, &ownedBar);
+}
+
+// The X button of a pane's hover bar.
+inline void* ControlButtonsCloseButton(void* bar) {
+  return Field<void*>(bar, off::ControlButtons_close_button);
 }
 
 // Add a button to a pane's hover bar, exactly as Edge adds ⋯ and X. `icon` is a

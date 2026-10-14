@@ -9,6 +9,7 @@
 #include "pane_tree.h"
 #include "geometry.h"
 #include "split_data.h"
+#include "anim.h"
 
 namespace fixedge::split_ops {
 
@@ -123,6 +124,68 @@ inline void SwapActive(void* mcv) {
   } else {
     Log("[swap] pane %d has no counterpart", activeLeaf);
   }
+}
+
+// The pane that takes over activity when `closing` closes: the one before it in
+// reading order, else the one after.
+inline int NeighbourLeaf(const Node& tree, int closing) {
+  std::vector<int> order;
+  CollectLeaves(tree, order);
+  for (size_t i = 0; i < order.size(); i++) {
+    if (order[i] != closing) {
+      continue;
+    }
+    if (i > 0) {
+      return order[i - 1];
+    }
+    return i + 1 < order.size() ? order[i + 1] : closing;
+  }
+  return closing;
+}
+
+// Close pane `pane` of a split of three or more: only that pane's tab closes,
+// its siblings share its space in proportion, and the rest of the layout stays.
+// Containers after the closed one are re-fed one slot earlier, so each is first
+// put back where its tab was on screen; the transition then carries every pane
+// to its new place. Returns false to leave a two-pane split to Edge. UI thread.
+inline bool ClosePane(void* mcv, int pane) {
+  void* browserView = mcv ? edge::McvBrowserView(mcv) : nullptr;
+  void* tsm = browserView ? edge::TabStripModelOf(edge::BrowserOf(browserView))
+                          : nullptr;
+  const int memberCount = mcv ? edge::McvActiveSplitPanes(mcv) : 0;
+  const bool isGrownSplit = tsm && memberCount > 2 && pane < memberCount;
+  if (!isGrownSplit) {
+    return false;
+  }
+  Node tree = geometry::LiveTree(mcv, memberCount);
+  const int activeLeaf = ActiveLeaf(mcv);
+  const int nextActiveLeaf =
+      activeLeaf != pane ? activeLeaf : NeighbourLeaf(tree, pane);
+  const void* closingContents =
+      edge::ContainerWebContents(edge::McvContainerAt(mcv, pane));
+  const void* activeContents =
+      edge::ContainerWebContents(edge::McvContainerAt(mcv, nextActiveLeaf));
+  std::vector<Rect> onScreen;
+  onScreen.reserve(static_cast<size_t>(memberCount));
+  for (int i = 0; i < memberCount; i++) {
+    onScreen.push_back(edge::ViewBounds(edge::McvContainerAt(mcv, i)));
+  }
+
+  const int remaining =
+      split_data::CloseMember(tsm, closingContents, activeContents);
+  if (remaining == 0) {
+    return false;
+  }
+  RemovePane(tree, pane);
+  Trees()[mcv] = tree;
+  for (int i = pane; i < remaining; i++) {
+    edge::SetViewBounds(edge::McvContainerAt(mcv, i), onScreen[i + 1]);
+  }
+  anim::Restart(mcv);
+  edge::InvalidateLayout(mcv);
+  edge::LayoutImmediately(mcv);
+  Log("[close] pane %d closed; %d panes remain", pane, remaining);
+  return true;
 }
 
 }  // namespace fixedge::split_ops

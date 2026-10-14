@@ -131,23 +131,34 @@ inline void EnsureGrips(void* mcv) {
   }
 }
 
+// If `bar` is the hover bar of a pane in a grown split (every such bar has a
+// grip), that split and the pane's container index; else false.
+inline bool LocateBar(const void* bar, void** mcv, int* pane) {
+  const auto entry = Grips().find(const_cast<void*>(bar));
+  if (entry == Grips().end()) {
+    return false;
+  }
+  void* split = entry->second.mcv;
+  const int count = static_cast<int>(edge::McvCount(split));
+  for (int i = 0; i < count; i++) {
+    const bool isBarOfPane =
+        edge::ContainerControlButtons(edge::McvContainerAt(split, i)) == bar;
+    if (isBarOfPane) {
+      *mcv = split;
+      *pane = i;
+      return true;
+    }
+  }
+  return false;
+}
+
 // If `view` is a grip, the split it belongs to and the index of its pane's
 // container (the pane being dragged); else false.
 inline bool Locate(const void* view, void** mcv, int* pane) {
   for (const auto& [bar, grip] : Grips()) {
     const bool isThisGrip = grip.button == view;
-    if (!isThisGrip) {
-      continue;
-    }
-    const int count = static_cast<int>(edge::McvCount(grip.mcv));
-    for (int i = 0; i < count; i++) {
-      const bool isBarOfPane = edge::ContainerControlButtons(
-                                   edge::McvContainerAt(grip.mcv, i)) == bar;
-      if (isBarOfPane) {
-        *mcv = grip.mcv;
-        *pane = i;
-        return true;
-      }
+    if (isThisGrip) {
+      return LocateBar(bar, mcv, pane);
     }
   }
   return false;

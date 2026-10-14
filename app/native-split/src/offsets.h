@@ -172,6 +172,18 @@ inline constexpr uintptr_t Button_OnMouseReleased = 0xb287ee0;
 // void (button)
 inline constexpr uintptr_t Button_OnMouseCaptureLost = 0xb287f00;
 
+// --- closing one pane of a grown split (docs/re/close-pane.md) ---
+// Edge's X: ControlButtons::HandleButtonClick(bar, Button*). For pane 2+ it
+// calls SplitWindowController::HideSplitView(true), which closes the split's
+// LAST tab (not the clicked one), and closing any member dissolves the split.
+inline constexpr uintptr_t ControlButtons_HandleButtonClick = 0xa011ae0;
+// (tsm, int index, uint32 closeTypes); HideSplitView passes 1
+inline constexpr uintptr_t TabStripModel_CloseWebContentsAt = 0xa26f916;
+// (tsm, int index, const TabStripUserGestureDetails*)
+inline constexpr uintptr_t TabStripModel_ActivateTabAt = 0xa26c482;
+// (view, const gfx::Rect&)
+inline constexpr uintptr_t View_SetBoundsRect = 0x0fd8234;
+
 // --- 2-pane-only CHECK sites that int3 when a split grows past 2 members ---
 // Accessible-label builder: maps a split tab's pane index to a string id
 // (0x3e7f pane0 / 0x3e80 pane1) and `cmp eax,1; jne <int3>` crashes at index>=2.
@@ -256,6 +268,14 @@ inline constexpr uintptr_t ECCV_vtbl_SetControlButtons = 0x10;
 inline constexpr size_t ControlButtons_size = 0x380;
 // a valid id (⋯'s); grip overrides the tooltip
 inline constexpr int ControlButtons_more_string_id = 0x4676;
+// The bar's buttons (InitButtons): ⋯ @+0x340, X @+0x350.
+inline constexpr uintptr_t ControlButtons_close_button = 0x350;
+
+// --- TabStripModel close / activate arguments ---
+// TabStripModel::CloseTypes: CLOSE_USER_GESTURE, what Edge's own X passes.
+inline constexpr uint32_t TSM_close_user_gesture = 1;
+// sizeof(TabStripUserGestureDetails) {GestureType, base::TimeTicks}
+inline constexpr size_t TSM_gesture_details_size = 16;
 
 // --- gfx::VectorIcon path command ids in this build ---
 // Decoded from kEdgeSplitWindowMoreIcon: CANVAS_DIMENSIONS 16, MOVE_TO x y,

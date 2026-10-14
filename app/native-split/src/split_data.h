@@ -323,6 +323,114 @@ inline bool GrowSplit(void* tsm) {
   return isAdded;
 }
 
+// The member of the active split whose tab shows `contents`, or -1.
+inline int MemberShowing(void* tsm, void* root, void* const* memberTabs,
+                         int memberCount, const void* contents) {
+  for (int i = 0; i < memberCount; i++) {
+    const int tabIndex = edge::GetIndexOfTabRecursive(root, memberTabs[i]);
+    const bool isShowingContents =
+        tabIndex >= 0 && edge::TabWebContentsAt(tsm, tabIndex) == contents;
+    if (isShowingContents) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+// Close the tab showing `closingContents`, a member of the active split, and
+// keep the other members split. Edge closes a member by dissolving the whole
+// split, so: dissolve keeping every tab, close the one tab, re-split the rest in
+// their order under a fresh id with the same visual, then activate the member
+// showing `activeContents`. Returns how many members remain (1 means the split
+// is gone and that tab fills the window), or 0 if nothing was done.
+inline int CloseMember(void* tsm, const void* closingContents,
+                       const void* activeContents) {
+  void* root = tsm ? edge::RootCollection(tsm) : nullptr;
+  void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
+  const bool hasActiveTab = tsm && root && active;
+  if (!hasActiveTab) {
+    return 0;
+  }
+  OptionalSplitId split = {};
+  edge::TabGetSplit(active, &split);
+  if (!split.hasValue) {
+    return 0;
+  }
+  uint64_t memberVector[3] = {};
+  edge::GetTabsAndIndicesInSplit(tsm, memberVector, split.token);
+  auto* memberEntries = reinterpret_cast<uint8_t*>(memberVector[0]);
+  const int memberCount = memberEntries ? static_cast<int>(memberVector[1]) : 0;
+  const bool isKnownSize =
+      memberCount >= kMinSplitMembers && memberCount <= kMemberBufferSize;
+  if (!isKnownSize) {
+    Log("[close] unexpected member count %d", memberCount);
+    return 0;
+  }
+  void* memberTabs[kMemberBufferSize];
+  for (int i = 0; i < memberCount; i++) {
+    memberTabs[i] = *reinterpret_cast<void**>(
+        memberEntries + static_cast<std::ptrdiff_t>(i) * 16);
+  }
+  const int closing =
+      MemberShowing(tsm, root, memberTabs, memberCount, closingContents);
+  const int activating =
+      MemberShowing(tsm, root, memberTabs, memberCount, activeContents);
+  const bool hasBothMembers =
+      closing >= 0 && activating >= 0 && closing != activating;
+  if (!hasBothMembers) {
+    Log("[close] member not found (closing=%d activating=%d)", closing,
+        activating);
+    return 0;
+  }
+  uint8_t visual[16] = {};
+  if (void* splitData = edge::GetSplitData(tsm, split.token)) {
+    std::memcpy(visual, reinterpret_cast<uint8_t*>(splitData) + 8,
+                sizeof(visual));
+  } else {
+    SetEvenRatio(visual);
+  }
+
+  edge::RemoveSplitImpl(tsm, split.token, kTransactionalRemove);
+  edge::CloseTabAt(tsm,
+                   edge::GetIndexOfTabRecursive(root, memberTabs[closing]));
+
+  const int remaining = memberCount - 1;
+  if (remaining >= kMinSplitMembers) {
+    int memberIndices[kMemberBufferSize];
+    int indexCount = 0;
+    for (int i = 0; i < memberCount; i++) {
+      if (i == closing) {
+        continue;
+      }
+      const int memberIndex = edge::GetIndexOfTabRecursive(root, memberTabs[i]);
+      if (memberIndex < 0) {
+        Log("[close] lost member %d after the close", i);
+        return 0;
+      }
+      memberIndices[indexCount] = memberIndex;
+      indexCount++;
+    }
+    std::sort(memberIndices, memberIndices + indexCount);
+    uint8_t splitId[16] = {};
+    edge::CreateRandomToken(splitId);
+    uint8_t outId[16] = {};
+    edge::SplitIndexVec splitIndices =
+        edge::MakeIndexVec(memberIndices, static_cast<size_t>(indexCount));
+    const bool isResplit =
+        SafeAddToSplit(tsm, outId, splitId, &splitIndices, memberIndices[0],
+                       visual, AddToSplitFlag::kNewSplit);
+    if (!isResplit) {
+      Log("[close] re-split of %d members FAILED", indexCount);
+      return 0;
+    }
+  }
+  edge::ActivateTabAt(
+      tsm, edge::GetIndexOfTabRecursive(root, memberTabs[activating]));
+  Log("[close] closed member %d of %d; %d remain", closing, memberCount,
+      remaining);
+  return remaining;
+}
+
 // Collapse the active split: dissolve it so every member becomes a standalone
 // tab again and the active tab fills the whole window. Nothing is closed. Works
 // for any member count (the view shrinks back to one pane on the notify).

@@ -159,6 +159,25 @@ inline void __fastcall h_capture_lost(void* button) {
   o_capture_lost(button);
 }
 
+// ControlButtons::HandleButtonClick(bar, button): Edge's X on pane 2+ closes the
+// split's last tab and dissolves the split. In a split of three or more the X
+// closes exactly its own pane instead (split_ops::ClosePane). Every other click,
+// and a two-pane split, runs the original.
+using ButtonClick_t = void(__fastcall*)(void*, void*);
+inline ButtonClick_t o_button_click = nullptr;
+inline void __fastcall h_button_click(void* bar, void* button) {
+  const bool isCloseButton = button == edge::ControlButtonsCloseButton(bar);
+  void* mcv = nullptr;
+  int pane = -1;
+  const bool isClosingOwnPane = isCloseButton &&
+                                grip::LocateBar(bar, &mcv, &pane) &&
+                                split_ops::ClosePane(mcv, pane);
+  if (isClosingOwnPane) {
+    return;
+  }
+  o_button_click(bar, button);
+}
+
 template <class T>
 inline bool Install(uintptr_t rva, void* detour, T** original,
                     const char* name) {
@@ -187,6 +206,9 @@ inline bool InstallAll() {
   Install(rva::MultiContentsView_SetActiveIndex,
           reinterpret_cast<void*>(h_set_active), &o_set_active,
           "SetActiveIndex");
+  Install(rva::ControlButtons_HandleButtonClick,
+          reinterpret_cast<void*>(h_button_click), &o_button_click,
+          "ControlButtons::HandleButtonClick");
   Install(rva::Button_OnMousePressed, reinterpret_cast<void*>(h_pressed),
           &o_pressed, "Button::OnMousePressed");
   Install(rva::Button_OnMouseDragged, reinterpret_cast<void*>(h_dragged),
