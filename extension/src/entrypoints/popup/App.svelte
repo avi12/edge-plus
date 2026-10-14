@@ -47,16 +47,22 @@
   <header>
     <h1>{splitFeature.title}</h1>
     {#if state.isEnabled}
-      <span class="meta">{state.panes === 1 ? "1 pane" : `${state.panes} panes`}</span>
+      {@const isSinglePane = state.panes === 1}
+      <span class="meta">{isSinglePane ? "1 pane" : `${state.panes} panes`}</span>
     {/if}
   </header>
 
   {#if !state.isEnabled}
     <p class="meta">Turned off in the Fix Edge app</p>
   {:else}
+    {@const hasSeveralSelectedTabs = state.selectedTabs > 1}
+    {@const canTile = state.panes > 2}
+    {@const isSplit = state.panes > 1}
+
     {#snippet shortcut(command: Command)}
-      {#if state.shortcutByCommand.get(command)}
-        <kbd>{state.shortcutByCommand.get(command)}</kbd>
+      {@const assignedShortcut = state.shortcutByCommand.get(command)}
+      {#if assignedShortcut}
+        <kbd>{assignedShortcut}</kbd>
       {/if}
     {/snippet}
 
@@ -78,7 +84,7 @@
 
     <section>
       <h2>Add tabs</h2>
-      {#if state.selectedTabs > 1}
+      {#if hasSeveralSelectedTabs}
         <button class="wide" onclick={() => run(() => sendMessage(MessageType.addSelectedTabs, state.windowId))}>
           Put the {state.selectedTabs} selected tabs in panes
           {@render shortcut(Command.addSelectedTabs)}
@@ -108,14 +114,14 @@
       </div>
     </section>
 
-    {#if state.panes > 2}
+    {#if canTile}
       <button class="wide tile" onclick={() => run(() => sendMessage(MessageType.tile, state.windowId))}>
         Even out into a grid
         {@render shortcut(Command.tile)}
       </button>
     {/if}
 
-    {#if state.panes > 1}
+    {#if isSplit}
       <button class="wide merge" onclick={() => run(() => sendMessage(MessageType.merge, state.windowId))}>
         Merge back into one window
         {@render shortcut(Command.unsplit)}

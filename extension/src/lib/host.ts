@@ -38,11 +38,13 @@ export function connectHost({ onSettings }: { onSettings: (settings: Settings) =
     if (!parsed.success) {
       return;
     }
-    if (parsed.data.type === HostMessageType.reload) {
-      browser.runtime.reload();
-      return;
+    switch (parsed.data.type) {
+      case HostMessageType.reload:
+        browser.runtime.reload();
+        return;
+      case HostMessageType.settings:
+        await onSettings(parsed.data.settings);
     }
-    await onSettings(parsed.data.settings);
   });
   port.onDisconnect.addListener(() => {
     // Read so Edge does not log it as unchecked: the app is not installed or not registered yet,

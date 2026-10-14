@@ -2,11 +2,11 @@
   import splitDownIcon from "@/assets/split-down.svg?raw";
   import splitRightIcon from "@/assets/split-right.svg?raw";
   import { allowFramesInSplitTabs } from "@/features/split-panes/frame-rule";
-  import type { Divider, Pane } from "@/features/split-panes/layout";
+  import type { Divider, Pane, Rect } from "@/features/split-panes/layout";
   import { Axis, dividers, layout, moveDivider, panes, remove, setUrl, split } from "@/features/split-panes/layout";
   import type { SplitState } from "@/features/split-panes/split-state";
   import { decodeState, encodeState, newPane, PANE_START_PAGE } from "@/features/split-panes/split-state";
-  import { addressFrom, faviconOf } from "@/lib/address";
+  import { addressFrom, faviconOf, NEW_TAB_URL } from "@/lib/address";
   import { untrack } from "svelte";
   import type { PaneCommandMessage } from "@/lib/pane-bridge";
   import { PaneCommand, PaneMessageType, paneReportSchema } from "@/lib/pane-bridge";
@@ -14,7 +14,7 @@
   /** What a pane's page may do: everything but take over the whole tab, which would end the split */
   const SANDBOX = "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-presentation allow-storage-access-by-user-activation";
   const ALLOW = "fullscreen; clipboard-read; clipboard-write; autoplay; encrypted-media; picture-in-picture; microphone; camera; geolocation; display-capture";
-  const NEW_TAB_URL = "edge://newtab/";
+  const NEW_PANE_TITLE = "New pane";
 
   let splitState = $state<SplitState | null>(decodeState(location.hash));
   let isFrameRuleReady = $state(false);
@@ -23,13 +23,28 @@
   const frameByPane = new Map<string, HTMLIFrameElement>();
   let elSplit = $state<HTMLElement>();
 
-  const rects = $derived(splitState ? layout({ root: splitState.root }) : new Map());
+  const rects = $derived.by(() => {
+    if (!splitState) {
+      return new Map<string, Rect>();
+    }
+    return layout({ root: splitState.root });
+  });
   // Sorted by id, a stable order no restructuring changes, because moving an iframe in the DOM reloads it
-  const orderedPanes = $derived(splitState ? panes(splitState.root).toSorted((a, b) => a.id.localeCompare(b.id)) : []);
+  const orderedPanes = $derived.by(() => {
+    if (!splitState) {
+      return [];
+    }
+    return panes(splitState.root).toSorted((a, b) => a.id.localeCompare(b.id));
+  });
   const paneById = $derived(new Map(orderedPanes.map(pane => [pane.id, pane])));
   // Plain strings, so a pane whose address changes is the same item and its frame is left alone
   const paneIds = $derived(orderedPanes.map(pane => pane.id));
-  const dividerList = $derived(splitState ? dividers({ root: splitState.root }) : []);
+  const dividerList = $derived.by(() => {
+    if (!splitState) {
+      return [];
+    }
+    return dividers({ root: splitState.root });
+  });
   const activePane = $derived(orderedPanes.find(pane => pane.id === splitState?.activePaneId));
 
   // A pane's frame loads only once the header rule is in place, or a site that refuses frames
@@ -48,7 +63,8 @@
   /** One pane left is no split: the tab simply becomes that page again */
   function commitOrUnsplit(next: SplitState) {
     const remaining = panes(next.root);
-    if (remaining.length > 1) {
+    const isStillSplit = remaining.length > 1;
+    if (isStillSplit) {
       commit(next);
       return;
     }
@@ -62,9 +78,18 @@
   }
 
   function activate(paneId: string) {
-    if (splitState && splitState.activePaneId !== paneId) {
-      commit({ ...splitState, activePaneId: paneId });
+    if (!splitState) {
+      return;
     }
+    const isAlreadyActive = splitState.activePaneId === paneId;
+    if (isAlreadyActive) {
+      return;
+    }
+    commit({ ...splitState, activePaneId: paneId });
+  }
+
+  function paneTitle(pane: Pane) {
+    return titleByPane[pane.id] || pane.url || NEW_PANE_TITLE;
   }
 
   function navigate({ pane, text }: { pane: Pane; text: string }) {
@@ -140,13 +165,18 @@
   });
 
   addEventListener("message", e => {
+    if (!splitState) {
+      return;
+    }
     const parsed = paneReportSchema.safeParse(e.data);
     const pane = orderedPanes.find(candidate => frameByPane.get(candidate.id)?.contentWindow === e.source);
-    if (!parsed.success || !pane || !splitState) {
+    const isReportFromPane = parsed.success && !!pane;
+    if (!isReportFromPane) {
       return;
     }
     titleByPane[pane.id] = parsed.data.title;
-    if (pane.url !== parsed.data.url) {
+    const hasNavigated = pane.url !== parsed.data.url;
+    if (hasNavigated) {
       commit({ ...splitState, root: setUrl({ root: splitState.root, paneId: pane.id, url: parsed.data.url }) });
     }
   });
@@ -162,10 +192,11 @@
   });
 
   $effect(() => {
-    const title = activePane ? titleByPane[activePane.id] || activePane.url || "New pane" : "Split";
+    const title = activePane ? paneTitle(activePane) : "Split";
     document.title = `${title} · ${orderedPanes.length} panes`;
     const elIcon = document.querySelector<HTMLLinkElement>("link[rel=icon]");
-    if (elIcon && activePane?.url) {
+    const hasPaneIcon = !!elIcon && !!activePane?.url;
+    if (hasPaneIcon) {
       elIcon.href = faviconOf(activePane.url);
     }
   });
@@ -181,14 +212,14 @@
   >
     {#each paneIds as paneId (paneId)}
       {@const pane = paneById.get(paneId)!}
-      {@const rect = rects.get(paneId)}
+      {@const rect = rects.get(paneId)!}
       <section
         style:--left="{rect.left}%"
         style:--top="{rect.top}%"
         style:--width="{rect.width}%"
         style:--height="{rect.height}%"
         class="pane"
-        aria-label={titleByPane[paneId] || pane.url || "New pane"}
+        aria-label={paneTitle(pane)}
         data-active={pane.id === splitState.activePaneId}
         role="group"
         onpointerdown={() => activate(pane.id)}
@@ -218,13 +249,14 @@
     {/each}
 
     {#each dividerList as divider, i (i)}
+      {@const isVertical = divider.axis === Axis.row}
       <div
         style:--left="{divider.at.left}%"
         style:--top="{divider.at.top}%"
         style:--width="{divider.at.width}%"
         style:--height="{divider.at.height}%"
         class="divider"
-        aria-orientation={divider.axis === Axis.row ? "vertical" : "horizontal"}
+        aria-orientation={isVertical ? "vertical" : "horizontal"}
         aria-label="Resize panes"
         role="separator"
         onpointerdown={e => startDrag(e, divider)}

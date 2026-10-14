@@ -52,7 +52,8 @@ export function split({ root, targetId, newPane, axis }: {
   axis: Axis;
 }): Node {
   if (isPane(root)) {
-    if (root.id !== targetId) {
+    const isTarget = root.id === targetId;
+    if (!isTarget) {
       return root;
     }
     return { axis, children: [root, newPane], weights: [1, 1] };
@@ -87,8 +88,10 @@ export function grow({ root, newPanes, aspect = DEFAULT_ASPECT }: { root: Node; 
     for (const [id, rect] of layout({ root: grown })) {
       const width = rect.width * aspect;
       const area = width * rect.height;
-      if (!biggest || area > biggest.area) {
-        biggest = { id, area, axis: width >= rect.height ? Axis.row : Axis.column };
+      const isBiggestSoFar = !biggest || area > biggest.area;
+      if (isBiggestSoFar) {
+        const isWide = width >= rect.height;
+        biggest = { id, area, axis: isWide ? Axis.row : Axis.column };
       }
     }
     grown = split({ root: grown, targetId: biggest!.id, newPane: pane, axis: biggest!.axis });
@@ -103,19 +106,22 @@ export function grow({ root, newPanes, aspect = DEFAULT_ASPECT }: { root: Node; 
 export function tile({ panes: tiled, aspect = DEFAULT_ASPECT }: { panes: Pane[]; aspect?: number }): Node {
   const rowCount = Math.max(1, Math.min(tiled.length, Math.round(Math.sqrt(tiled.length / aspect))));
   const rows: Node[] = [];
-  let next = 0;
+  let iNextPane = 0;
   for (let iRow = 0; iRow < rowCount; iRow++) {
-    const size = Math.ceil((tiled.length - next) / (rowCount - iRow));
-    const cells = tiled.slice(next, next + size);
-    next += size;
-    rows.push(cells.length === 1 ? cells[0]! : { axis: Axis.row, children: cells, weights: cells.map(() => 1) });
+    const size = Math.ceil((tiled.length - iNextPane) / (rowCount - iRow));
+    const cells = tiled.slice(iNextPane, iNextPane + size);
+    iNextPane += size;
+    const isSingleCell = cells.length === 1;
+    rows.push(isSingleCell ? cells[0]! : { axis: Axis.row, children: cells, weights: cells.map(() => 1) });
   }
-  return rows.length === 1 ? rows[0]! : { axis: Axis.column, children: rows, weights: rows.map(() => 1) };
+  const isSingleRow = rows.length === 1;
+  return isSingleRow ? rows[0]! : { axis: Axis.column, children: rows, weights: rows.map(() => 1) };
 }
 
 export function setUrl({ root, paneId, url }: { root: Node; paneId: string; url: string }): Node {
   if (isPane(root)) {
-    return root.id === paneId ? { ...root, url } : root;
+    const isTarget = root.id === paneId;
+    return isTarget ? { ...root, url } : root;
   }
   return { ...root, children: root.children.map(child => setUrl({ root: child, paneId, url })) };
 }
@@ -126,7 +132,8 @@ export function setUrl({ root, paneId, url }: { root: Node; paneId: string; url:
  */
 export function remove({ root, paneId }: { root: Node; paneId: string }): Node | null {
   if (isPane(root)) {
-    return root.id === paneId ? null : root;
+    const isTarget = root.id === paneId;
+    return isTarget ? null : root;
   }
   const children: Node[] = [];
   const weights: number[] = [];
@@ -145,10 +152,12 @@ export function remove({ root, paneId }: { root: Node; paneId: string }): Node |
     children.push(...kept.children);
     weights.push(...kept.weights.map(weight => weight / total * root.weights[i]!));
   }
-  if (children.length === 0) {
+  const isEveryPaneRemoved = children.length === 0;
+  if (isEveryPaneRemoved) {
     return null;
   }
-  if (children.length === 1) {
+  const isSingleChild = children.length === 1;
+  if (isSingleChild) {
     return children[0]!;
   }
   return { ...root, children, weights };
@@ -216,7 +225,8 @@ export function dividers({ root, region = WHOLE_TAB }: { root: Node; region?: Re
     const within = rects.get(node)!;
     for (const [i, child] of node.children.entries()) {
       walk({ node: child, path: [...path, i] });
-      if (i === node.children.length - 1) {
+      const isLastChild = i === node.children.length - 1;
+      if (isLastChild) {
         continue;
       }
       const childRect = rects.get(child)!;
@@ -264,7 +274,8 @@ export function moveDivider({ root, divider, fraction }: { root: Node; divider: 
 }
 
 export function fromTemplate({ template, panes: slotPanes }: { template: Template; panes: Pane[] }): Node {
-  if (typeof template === "number") {
+  const isSlot = typeof template === "number";
+  if (isSlot) {
     return slotPanes[template]!;
   }
   return {
@@ -275,7 +286,8 @@ export function fromTemplate({ template, panes: slotPanes }: { template: Templat
 }
 
 export function slotCount(template: Template): number {
-  if (typeof template === "number") {
+  const isSlot = typeof template === "number";
+  if (isSlot) {
     return 1;
   }
   let count = 0;

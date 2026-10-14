@@ -65,7 +65,9 @@ test("templates build equal-weight trees in slot order", () => {
   assert.deepEqual(rects.get("d"), { left: 50, top: 50, width: 50, height: 50 });
 });
 
-const ids = (count: number) => Array.from({ length: count }, (_, i) => pane(String.fromCharCode(97 + i)));
+const FIRST_ID_CHAR_CODE = "a".charCodeAt(0);
+
+const ids = (count: number) => Array.from({ length: count }, (_, i) => pane(String.fromCharCode(FIRST_ID_CHAR_CODE + i)));
 
 test("growing by many panes fills out a grid instead of thinning one row", () => {
   const [first, ...rest] = ids(4);

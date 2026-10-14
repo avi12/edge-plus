@@ -14,6 +14,7 @@ import type { SplitState } from "./split-state";
 import { isSplitPageUrl, newPane, splitPageUrl, stateOfTab } from "./split-state";
 import type { Direction } from "@/features/pane-focus/neighbour";
 import { neighbour } from "@/features/pane-focus/neighbour";
+import { isFrameable, NEW_TAB_URL } from "@/lib/address";
 import type { FeatureModule } from "@/lib/feature";
 import { Command } from "@/lib/feature";
 import type { Browser } from "wxt/browser";
@@ -25,16 +26,10 @@ enum MenuId {
   linkDown = "splitPanes.linkDown"
 }
 
-/** What a merged pane with no address yet opens as */
-const NEW_TAB_URL = "edge://newtab/";
-
-/** Edge's own pages and other extensions' pages cannot be shown in a frame */
-const FRAMEABLE_SCHEMES = ["http:", "https:", "file:"];
-
 let isEnabled = false;
 let report = () => {};
 
-const frameable = (url = "") => FRAMEABLE_SCHEMES.some(scheme => url.startsWith(scheme)) ? url : "";
+const frameable = (url = "") => isFrameable(url) ? url : "";
 
 async function activeTab(windowId?: number) {
   const [tab] = await browser.tabs.query({ active: true, ...(windowId ? { windowId } : { lastFocusedWindow: true }) });
@@ -42,8 +37,26 @@ async function activeTab(windowId?: number) {
   return isSplittable ? tab : null;
 }
 
+/** The tab you are on with its split state, or null when it is not a split */
+async function activeSplit(windowId?: number) {
+  const tab = await activeTab(windowId);
+  const state = stateOfTab(tab?.url);
+  const isSplitTab = !!tab && !!state;
+  if (!isSplitTab) {
+    return null;
+  }
+  return { tab, state };
+}
+
 /** The tab's own shape, so new panes split across their longer side on screen */
-const aspectOf = (tab: Browser.tabs.Tab) => tab.width && tab.height ? tab.width / tab.height : Layout.DEFAULT_ASPECT;
+function aspectOf(tab: Browser.tabs.Tab) {
+  const { width, height } = tab;
+  const isSizeKnown = !!width && !!height;
+  if (!isSizeKnown) {
+    return Layout.DEFAULT_ASPECT;
+  }
+  return width / height;
+}
 
 async function writeState({ tab, state }: { tab: Browser.tabs.Tab; state: SplitState }) {
   await allowFramesInSplitTabs(tab.id);
@@ -81,7 +94,8 @@ export async function addSelectedTabs(windowId?: number) {
   const selected = await selectedTabs(tab.windowId);
   const host = selected.find(other => isSplitPageUrl(other.url)) ?? tab;
   const guests = selected.filter(other => other.id !== host.id);
-  if (guests.length === 0) {
+  const hasGuests = guests.length > 0;
+  if (!hasGuests) {
     return;
   }
   const current = stateOfTab(host.url);
@@ -98,11 +112,11 @@ export async function addSelectedTabs(windowId?: number) {
 
 /** Rebuilds the split as an even grid of its panes in reading order; focus stays where it was */
 export async function tile(windowId?: number) {
-  const tab = await activeTab(windowId);
-  const state = stateOfTab(tab?.url);
-  if (!tab || !state) {
+  const split = await activeSplit(windowId);
+  if (!split) {
     return;
   }
+  const { tab, state } = split;
   const root = Layout.tile({ panes: Layout.panes(state.root), aspect: aspectOf(tab) });
   await writeState({ tab, state: { ...state, root } });
 }
@@ -110,7 +124,7 @@ export async function tile(windowId?: number) {
 /** The selected tabs a pane can show: split tabs and framable pages, never another window's */
 async function selectedTabs(windowId: number) {
   const highlighted = await browser.tabs.query({ windowId, highlighted: true });
-  return highlighted.filter(other => !other.incognito && (isSplitPageUrl(other.url) || frameable(other.url)));
+  return highlighted.filter(other => !other.incognito && (isSplitPageUrl(other.url) || isFrameable(other.url)));
 }
 
 /**
@@ -120,7 +134,8 @@ async function selectedTabs(windowId: number) {
 export async function applyPreset({ windowId, presetId }: { windowId: number; presetId: PresetId }) {
   const preset = PRESETS.find(candidate => candidate.id === presetId);
   const tab = await activeTab(windowId);
-  if (!preset || !tab) {
+  const canApply = !!preset && !!tab;
+  if (!canApply) {
     return;
   }
   const slots = Layout.slotCount(preset.template);
@@ -128,7 +143,7 @@ export async function applyPreset({ windowId, presetId }: { windowId: number; pr
   const followingTabs = current
     ? []
     : (await browser.tabs.query({ windowId: tab.windowId }))
-      .filter(other => other.index > tab.index && !other.pinned && frameable(other.url))
+      .filter(other => other.index > tab.index && !other.pinned && isFrameable(other.url))
       .slice(0, slots - 1);
   const candidates: Pane[] = current
     ? activeFirst(current)
@@ -147,11 +162,11 @@ export async function applyPreset({ windowId, presetId }: { windowId: number; pr
 
 /** The focused pane stays in the tab; every other pane goes back to being a tab right after it */
 export async function merge(windowId?: number) {
-  const tab = await activeTab(windowId);
-  const state = stateOfTab(tab?.url);
-  if (!tab || !state) {
+  const split = await activeSplit(windowId);
+  if (!split) {
     return;
   }
+  const { tab, state } = split;
   const [kept, ...others] = activeFirst(state);
   await browser.tabs.update(tab.id!, { url: kept!.url || NEW_TAB_URL });
   await reopenAsTabs({ tab, urls: others.map(pane => pane.url) });
@@ -168,11 +183,11 @@ export async function describe(windowId: number) {
 
 /** Moves the focused pane to its neighbour on that side, the way a tiling window manager does */
 export async function focusNeighbour(direction: Direction) {
-  const tab = await activeTab();
-  const state = stateOfTab(tab?.url);
-  if (!tab || !state) {
+  const split = await activeSplit();
+  if (!split) {
     return;
   }
+  const { tab, state } = split;
   const target = neighbour({ rects: Layout.layout({ root: state.root }), fromPaneId: state.activePaneId, direction });
   if (target) {
     await writeState({ tab, state: { ...state, activePaneId: target } });

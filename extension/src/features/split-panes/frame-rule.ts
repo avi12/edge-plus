@@ -15,11 +15,11 @@ export async function allowFramesInSplitTabs(tabId?: number) {
   if (isAboutToSplit) {
     tabIds.push(tabId);
   }
+  const hasSplitTabs = tabIds.length > 0;
   await browser.declarativeNetRequest.updateSessionRules({
     removeRuleIds: [FRAME_RULE_ID],
-    addRules: tabIds.length === 0
-      ? []
-      : [{
+    addRules: hasSplitTabs
+      ? [{
         id: FRAME_RULE_ID,
         priority: 1,
         action: {
@@ -31,6 +31,7 @@ export async function allowFramesInSplitTabs(tabId?: number) {
         },
         condition: { tabIds, resourceTypes: ["sub_frame"] }
       }]
+      : []
   });
 }
 

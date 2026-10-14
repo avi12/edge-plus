@@ -10,6 +10,9 @@ import { z } from "@/lib/zod";
 export const SPLIT_PAGE = "/split.html";
 export const PANE_START_PAGE = "/pane-start.html";
 
+/** Unique within one tab is enough, and every character lengthens the tab's address */
+const PANE_ID_LENGTH = 8;
+
 const paneSchema = z.object({ id: z.string(), url: z.string() });
 const nodeSchema: z.ZodType<Node> = z.lazy(() => z.union([
   paneSchema,
@@ -19,7 +22,7 @@ const stateSchema = z.object({ root: nodeSchema, activePaneId: z.string() });
 
 export type SplitState = z.infer<typeof stateSchema>;
 
-export const newPane = (url = ""): Pane => ({ id: crypto.randomUUID().slice(0, 8), url });
+export const newPane = (url = ""): Pane => ({ id: crypto.randomUUID().slice(0, PANE_ID_LENGTH), url });
 
 const toBase64Url = (text: string) =>
   btoa(String.fromCharCode(...new TextEncoder().encode(text))).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");

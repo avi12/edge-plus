@@ -1,15 +1,12 @@
 <script lang="ts">
   import { isSplitPageUrl } from "@/features/split-panes/split-state";
-  import { addressFrom, faviconOf } from "@/lib/address";
+  import { addressFrom, faviconOf, isFrameable } from "@/lib/address";
   import type { Browser } from "wxt/browser";
-
-  /** Edge's own pages and other extensions cannot be shown in a pane, so they are not offered */
-  const FRAMEABLE = /^(https?|file):/;
 
   const loading = (async () => {
     const tab = await browser.tabs.getCurrent();
     const tabs = await browser.tabs.query({ windowId: tab?.windowId });
-    return tabs.filter(other => FRAMEABLE.test(other.url ?? "") && !isSplitPageUrl(other.url));
+    return tabs.filter(other => isFrameable(other.url) && !isSplitPageUrl(other.url));
   })();
 
   /** Like Edge's own split: the picked tab moves into this pane rather than being copied */
@@ -30,7 +27,8 @@
   </form>
 
   {#await loading then tabs}
-    {#if tabs.length > 0}
+    {@const hasMovableTabs = tabs.length > 0}
+    {#if hasMovableTabs}
       <section>
         <h2>Or move a tab here</h2>
         <ul>

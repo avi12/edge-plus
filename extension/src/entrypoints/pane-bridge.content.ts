@@ -23,7 +23,8 @@ export default defineContentScript({
     function report() {
       const message: PaneReport = { type: PaneMessageType.report, url: location.href, title: document.title };
       const serialized = JSON.stringify(message);
-      if (serialized === lastReport) {
+      const isAlreadyReported = serialized === lastReport;
+      if (isAlreadyReported) {
         return;
       }
       lastReport = serialized;
@@ -37,8 +38,11 @@ export default defineContentScript({
 
     addEventListener("message", e => {
       const isFromSplitPage = e.source === window.parent && e.origin === extensionOrigin;
+      if (!isFromSplitPage) {
+        return;
+      }
       const parsed = paneCommandSchema.safeParse(e.data);
-      if (!isFromSplitPage || !parsed.success) {
+      if (!parsed.success) {
         return;
       }
       switch (parsed.data.command) {

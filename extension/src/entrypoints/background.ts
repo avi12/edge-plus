@@ -36,10 +36,14 @@ export default defineBackground(() => {
     for (const feature of EXTENSION_FEATURES) {
       const isWanted = settings.features?.[feature.id]?.enabled ?? feature.enabledByDefault;
       const isActive = activeModules.has(feature.id);
-      if (isWanted && !isActive) {
+      const isSwitchingOn = isWanted && !isActive;
+      if (isSwitchingOn) {
         activeModules.set(feature.id, feature.module);
         await feature.module.enable({ report });
-      } else if (!isWanted && isActive) {
+        continue;
+      }
+      const isSwitchingOff = !isWanted && isActive;
+      if (isSwitchingOff) {
         activeModules.delete(feature.id);
         await feature.module.disable();
       }
