@@ -1,9 +1,9 @@
 // control.h — a control channel into the DLL that runs pane actions on Edge's UI
-// thread. One concern: subclass the browser window so a registered window message
-// ("fixedge.addpane", wParam = Direction) triggers split_ops::AddPane on the very
-// thread that owns the views (the WndProc runs on the UI thread). This drives
-// directional-add independent of Edge's own menu, and lets a script (or a future
-// hotkey) post the message. The original WndProc is restored on unload.
+// thread. One concern: subclass the browser window so its hot-keys and a
+// registered window message ("fixedge.addpane", wParam = a Command) run pane
+// actions on the very thread that owns the views (the WndProc runs on the UI
+// thread). This drives directional-add independent of Edge's own menu, and lets
+// a script post the message. The original WndProc is restored on unload.
 #pragma once
 #include <windows.h>
 #include <cstring>
@@ -18,28 +18,107 @@
 
 namespace fixedge::control {
 
-inline UINT g_msg = 0;
-inline HWND g_hwnd = nullptr;
-inline WNDPROC g_orig_proc = nullptr;
-inline bool g_hotkeys_done = false;
+inline UINT g_commandMessage = 0;  // the registered "fixedge.addpane"
+inline HWND g_hwnd = nullptr;      // the subclassed browser window
+inline WNDPROC g_originalProc = nullptr;
+inline bool g_hasHotKeys = false;
 
-// Hot-key ids delivered as WM_HOTKEY to this window's (UI-thread) WndProc.
-enum {
-  HK_ADD_PANE = 1,
-  HK_COLLAPSE = 2,
-  HK_LEFT = 3,
-  HK_UP = 4,
-  HK_RIGHT = 5,
-  HK_DOWN = 6,
-  HK_SWAP = 7
-};
-inline constexpr UINT kHkMods = MOD_CONTROL | MOD_SHIFT | MOD_ALT;
+inline constexpr wchar_t kCommandMessageName[] = L"fixedge.addpane";
+inline constexpr wchar_t kBrowserWindowClass[] = L"Chrome_WidgetWin_1";
+inline constexpr int kClassNameLength = 64;
+inline constexpr UINT kTeardownTimeoutMs = 5000;
 
-// Channel commands (wParam of "fixedge.addpane") beyond the add-pane test codes.
-enum : WPARAM {
-  kCmdEnsureGrips = 700,  // give every pane of a grown split its drag grip
-  kCmdTeardown = 701,     // undo everything UI-side before this DLL unloads
+// Hot-key ids, delivered as WM_HOTKEY's wParam to this window's (UI-thread)
+// WndProc.
+enum class HotKey : WPARAM {
+  kAddPane = 1,
+  kCollapse = 2,
+  kLeft = 3,
+  kUp = 4,
+  kRight = 5,
+  kDown = 6,
+  kSwap = 7,
 };
+
+struct HotKeyBinding {
+  HotKey hotKey;
+  UINT key;
+};
+
+// Every hot-key is Ctrl+Shift+Alt + its key; registered (and unregistered) in
+// this order.
+inline constexpr UINT kHotKeyModifiers = MOD_CONTROL | MOD_SHIFT | MOD_ALT;
+inline constexpr HotKeyBinding kHotKeyBindings[] = {
+    {HotKey::kAddPane, 'A'},     // add a pane to the right
+    {HotKey::kCollapse, 'X'},    // collapse the split to the active pane
+    {HotKey::kLeft, VK_LEFT},    // add a pane to the left
+    {HotKey::kUp, VK_UP},        // add a pane above
+    {HotKey::kRight, VK_RIGHT},  // add a pane to the right
+    {HotKey::kDown, VK_DOWN},    // add a pane below
+    {HotKey::kSwap, 'S'},        // swap the active pane with its counterpart
+};
+
+// Commands posted to the channel: the wParam of a "fixedge.addpane" message.
+// A test channel (scripts post these exact numbers); the real gestures are the
+// hot-keys. A `...Base` starts a range and the code's offset from it is the
+// operand. A code no command claims falls through: from kCreatePanesBase up it
+// creates a split of (code - kCreatePanesBase) panes, from kCreateSplit up a
+// 2-pane split, and below kCreateSplit it grows the split by one pane.
+enum class Command : WPARAM {
+  kCreateSplit = 100,      // Edge's proven 2-pane AddToNewSplit
+  kCreatePanesBase = 200,  // + N: N panes, directly through AddToSplitImpl
+  kAddPaneBase = 300,      // + Direction: add a pane beside the active one
+  kSwap = 400,             // swap the active pane with its counterpart
+  kShowBarBase = 500,      // + i: show pane i's hover bar
+  kEnsureGrips = 700,      // give every pane of a grown split its drag grip
+  kTeardown = 701,         // undo everything UI-side before this DLL unloads
+};
+
+// The width of each range: one code per Direction (kUp..kRight), and the
+// panes whose hover bar can be shown.
+inline constexpr WPARAM kDirectionCount =
+    static_cast<WPARAM>(Direction::kRight) + 1;
+inline constexpr WPARAM kShowBarPaneLimit = 16;
+
+inline constexpr WPARAM CodeOf(Command command) {
+  return static_cast<WPARAM>(command);
+}
+
+// Whether `wparam` is one of the `count` codes that start at `base`.
+inline bool IsInRange(WPARAM wparam, Command base, WPARAM count) {
+  return wparam >= CodeOf(base) && wparam < CodeOf(base) + count;
+}
+
+// The operand of a ranged code (its offset from `base`).
+inline int OperandOf(WPARAM wparam, Command base) {
+  return static_cast<int>(wparam) - static_cast<int>(CodeOf(base));
+}
+
+inline bool HasBinding(WPARAM wparam) {
+  for (const HotKeyBinding& binding : kHotKeyBindings) {
+    const bool isBoundHotKey = static_cast<WPARAM>(binding.hotKey) == wparam;
+    if (isBoundHotKey) {
+      return true;
+    }
+  }
+  return false;
+}
+
+inline void RegisterHotKeys(HWND hwnd) {
+  g_hasHotKeys = true;
+  for (const HotKeyBinding& binding : kHotKeyBindings) {
+    RegisterHotKey(hwnd, static_cast<int>(binding.hotKey), kHotKeyModifiers,
+                   binding.key);
+  }
+  Log("[control] hotkeys: Ctrl+Shift+Alt + arrows=add, A=add right, S=swap, "
+      "X=collapse");
+}
+
+inline void UnregisterHotKeys(HWND hwnd) {
+  for (const HotKeyBinding& binding : kHotKeyBindings) {
+    UnregisterHotKey(hwnd, static_cast<int>(binding.hotKey));
+  }
+}
 
 // Everything that must be undone on the UI thread before unload: the drag
 // session, the preview window, the grips, the animation timer and the hot-keys.
@@ -48,189 +127,224 @@ inline void Teardown(HWND hwnd) {
   overlay::Remove();
   grip::RemoveAll();
   anim::Remove();
-  if (g_hotkeys_done) {
-    for (int id = HK_ADD_PANE; id <= HK_SWAP; ++id) {
-      UnregisterHotKey(hwnd, id);
-    }
+  if (g_hasHotKeys) {
+    UnregisterHotKeys(hwnd);
   }
-  g_hotkeys_done = false;
+  g_hasHotKeys = false;
 }
 
-inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam,
-                             LPARAM lparam) {
+// --- the hot-keys ----------------------------------------------------------
+
+inline void CollapseByHotKey(HWND hwnd) {
+  void* tsm = edge::TsmForWindow(hwnd);
+  if (tsm) {
+    split_data::CollapseSplit(tsm);
+  }
+  // A collapsed split starts a fresh tree.
+  ForgetTree(edge::McvForWindow(hwnd));
+}
+
+inline void AddPaneByHotKey(HWND hwnd, Direction direction) {
+  void* mcv = edge::McvForWindow(hwnd);
+  Log("[control] directional add dir=%d mcv=%p", static_cast<int>(direction),
+      mcv);
+  if (mcv) {
+    split_ops::AddPane(mcv, direction);
+  }
+}
+
+inline void RunHotKey(HWND hwnd, HotKey hotKey) {
+  switch (hotKey) {
+    case HotKey::kCollapse:
+      CollapseByHotKey(hwnd);
+      break;
+    case HotKey::kSwap:
+      split_ops::SwapActive(edge::McvForWindow(hwnd));
+      break;
+    case HotKey::kAddPane:
+    case HotKey::kRight:
+      AddPaneByHotKey(hwnd, Direction::kRight);
+      break;
+    case HotKey::kLeft:
+      AddPaneByHotKey(hwnd, Direction::kLeft);
+      break;
+    case HotKey::kUp:
+      AddPaneByHotKey(hwnd, Direction::kUp);
+      break;
+    case HotKey::kDown:
+      AddPaneByHotKey(hwnd, Direction::kDown);
+      break;
+  }
+}
+
+// --- the channel's commands ------------------------------------------------
+
+inline void AddPaneByCommand(HWND hwnd, WPARAM wparam) {
+  void* mcv = edge::McvForWindow(hwnd);
+  Log("[control] msg directional dir=%llu mcv=%p",
+      static_cast<unsigned long long>(wparam) - CodeOf(Command::kAddPaneBase),
+      mcv);
+  if (mcv) {
+    split_ops::AddPane(
+        mcv, static_cast<Direction>(wparam - CodeOf(Command::kAddPaneBase)));
+  }
+}
+
+inline void EnsureGripsByCommand(HWND hwnd) {
+  if (void* mcv = edge::McvForWindow(hwnd)) {
+    grip::EnsureGrips(mcv);
+  }
+}
+
+inline void ShowBarByCommand(HWND hwnd, int pane) {
+  void* mcv = edge::McvForWindow(hwnd);
+  const bool hasPane = mcv && pane < static_cast<int>(edge::McvCount(mcv));
+  if (hasPane) {
+    void* webContents =
+        edge::ContainerWebContents(edge::McvContainerAt(mcv, pane));
+    const bool isShown = edge::ShowControlButtonFor(
+        edge::BrowserOf(edge::McvBrowserView(mcv)), webContents);
+    Log("[control] show bar pane=%d wc=%p -> %d", pane, webContents, isShown);
+  }
+}
+
+// A code no command claims: create a split of N panes or of two, or grow one.
+inline void CreateOrGrowByCommand(HWND hwnd, WPARAM wparam) {
+  void* tsm = edge::TsmForWindow(hwnd);
+  Log("[control] message wparam=%llu tsm=%p",
+      static_cast<unsigned long long>(wparam), tsm);
+  if (!tsm) {
+    return;
+  }
+  const bool isCreatePanes = wparam >= CodeOf(Command::kCreatePanesBase);
+  if (isCreatePanes) {
+    split_data::CreateSplitN(tsm, OperandOf(wparam, Command::kCreatePanesBase));
+    return;
+  }
+  const bool isCreateSplit = wparam >= CodeOf(Command::kCreateSplit);
+  if (isCreateSplit) {
+    split_data::CreateSplit(tsm);
+    return;
+  }
+  split_data::GrowSplit(tsm);
+}
+
+inline void RunCommand(HWND hwnd, WPARAM wparam) {
+  const bool isDirectionalAdd =
+      IsInRange(wparam, Command::kAddPaneBase, kDirectionCount);
+  if (isDirectionalAdd) {
+    AddPaneByCommand(hwnd, wparam);
+    return;
+  }
+  switch (static_cast<Command>(wparam)) {
+    case Command::kSwap:
+      split_ops::SwapActive(edge::McvForWindow(hwnd));
+      return;
+    case Command::kEnsureGrips:
+      EnsureGripsByCommand(hwnd);
+      return;
+    case Command::kTeardown:
+      Teardown(hwnd);
+      return;
+    default:
+      break;
+  }
+  const bool isShowBar =
+      IsInRange(wparam, Command::kShowBarBase, kShowBarPaneLimit);
+  if (isShowBar) {
+    ShowBarByCommand(hwnd, OperandOf(wparam, Command::kShowBarBase));
+    return;
+  }
+  CreateOrGrowByCommand(hwnd, wparam);
+}
+
+// --- the window procedure --------------------------------------------------
+
+inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
+                                   LPARAM lparam) {
   // RegisterHotKey must run on the thread that owns the window; this WndProc is
   // exactly that thread, so register lazily on the first message we see.
-  if (!g_hotkeys_done) {
-    g_hotkeys_done = true;
-    // Ctrl+Shift+Alt+A = add a pane to the current split (create one if none).
-    RegisterHotKey(hwnd, HK_ADD_PANE, kHkMods, 'A');
-    RegisterHotKey(hwnd, HK_COLLAPSE, kHkMods, 'X');
-    RegisterHotKey(hwnd, HK_LEFT, kHkMods, VK_LEFT);
-    RegisterHotKey(hwnd, HK_UP, kHkMods, VK_UP);
-    RegisterHotKey(hwnd, HK_RIGHT, kHkMods, VK_RIGHT);
-    RegisterHotKey(hwnd, HK_DOWN, kHkMods, VK_DOWN);
-    RegisterHotKey(hwnd, HK_SWAP, kHkMods, 'S');
-    Log("[control] hotkeys: Ctrl+Shift+Alt + arrows=add, A=add right, S=swap, "
-        "X=collapse");
+  if (!g_hasHotKeys) {
+    RegisterHotKeys(hwnd);
   }
   // Escape cancels a pane drag (the drag itself arrives through views; hooks.h).
-  if (msg == WM_KEYDOWN && wparam == VK_ESCAPE && drag::IsActive()) {
+  const bool isEscapeDuringDrag =
+      message == WM_KEYDOWN && wparam == VK_ESCAPE && drag::IsActive();
+  if (isEscapeDuringDrag) {
     drag::Cancel();
     return 0;
   }
-  if (msg == WM_TIMER && wparam == anim::kTimerId) {
+  const bool isAnimationFrame = message == WM_TIMER && wparam == anim::kTimerId;
+  if (isAnimationFrame) {
     anim::Tick();
     return 0;
   }
-  if (msg == WM_HOTKEY) {
-    if (wparam == HK_COLLAPSE) {
-      void* tsm = edge::TsmForWindow(hwnd);
-      if (tsm) {
-        split_data::CollapseSplit(tsm);
-      }
-      ForgetTree(
-          edge::McvForWindow(hwnd));  // a collapsed split starts a fresh tree
-      return 0;
-    }
-    if (wparam == HK_SWAP) {
-      split_ops::SwapActive(edge::McvForWindow(hwnd));
-      return 0;
-    }
-    bool is_add = true;
-    fixedge::Direction dir = fixedge::Direction::kRight;
-    switch (wparam) {
-      case HK_ADD_PANE:
-      case HK_RIGHT:
-        dir = fixedge::Direction::kRight;
-        break;
-      case HK_LEFT:
-        dir = fixedge::Direction::kLeft;
-        break;
-      case HK_UP:
-        dir = fixedge::Direction::kUp;
-        break;
-      case HK_DOWN:
-        dir = fixedge::Direction::kDown;
-        break;
-      default:
-        is_add = false;
-        break;
-    }
-    if (is_add) {
-      void* mcv = edge::McvForWindow(hwnd);
-      Log("[control] directional add dir=%d mcv=%p", static_cast<int>(dir),
-          mcv);
-      if (mcv) {
-        split_ops::AddPane(mcv, dir);
-      }
-      return 0;
-    }
-  }
-  if (msg == g_msg && g_msg != 0) {
-    // wparam >= 300 = directional add (300+Direction); >= 200 create N panes;
-    // >= 100 create a 2-pane split; otherwise grow. (A test channel; the real
-    // gestures are the hot-keys.)
-    if (wparam >= 300 && wparam <= 303) {
-      void* mcv = edge::McvForWindow(hwnd);
-      Log("[control] msg directional dir=%llu mcv=%p",
-          static_cast<unsigned long long>(wparam) - 300, mcv);
-      if (mcv) {
-        split_ops::AddPane(mcv, static_cast<fixedge::Direction>(wparam - 300));
-      }
-      return 0;
-    }
-    if (wparam == 400) {  // swap active pane with its counterpart
-      split_ops::SwapActive(edge::McvForWindow(hwnd));
-      return 0;
-    }
-    if (wparam == kCmdEnsureGrips) {
-      if (void* mcv = edge::McvForWindow(hwnd)) {
-        grip::EnsureGrips(mcv);
-      }
-      return 0;
-    }
-    if (wparam == kCmdTeardown) {
-      Teardown(hwnd);
-      return 0;
-    }
-    if (wparam >= 500 && wparam < 516) {  // show pane (wparam-500)'s hover bar
-      void* mcv = edge::McvForWindow(hwnd);
-      const int pane = static_cast<int>(wparam) - 500;
-      if (mcv && pane < static_cast<int>(edge::McvCount(mcv))) {
-        void* wc = edge::ContainerWebContents(edge::McvContainerAt(mcv, pane));
-        const bool shown = edge::ShowControlButtonFor(
-            edge::BrowserOf(edge::McvBrowserView(mcv)), wc);
-        Log("[control] show bar pane=%d wc=%p -> %d", pane, wc, shown);
-      }
-      return 0;
-    }
-    void* tsm = edge::TsmForWindow(hwnd);
-    Log("[control] message wparam=%llu tsm=%p",
-        static_cast<unsigned long long>(wparam), tsm);
-    if (!tsm) {
-      return 0;
-    }
-    if (wparam >= 200) {
-      split_data::CreateSplitN(tsm, static_cast<int>(wparam) -
-                                        200);  // direct AddToSplitImpl, N panes
-    } else if (wparam >= 100) {
-      split_data::CreateSplit(tsm);  // proven 2-pane AddToNewSplit
-    } else {
-      split_data::GrowSplit(tsm);
-    }
+  const bool isOurHotKey = message == WM_HOTKEY && HasBinding(wparam);
+  if (isOurHotKey) {
+    RunHotKey(hwnd, static_cast<HotKey>(wparam));
     return 0;
   }
-  return CallWindowProcW(g_orig_proc, hwnd, msg, wparam, lparam);
+  const bool isCommand = message == g_commandMessage && g_commandMessage != 0;
+  if (isCommand) {
+    RunCommand(hwnd, wparam);
+    return 0;
+  }
+  return CallWindowProcW(g_originalProc, hwnd, message, wparam, lparam);
 }
 
-inline BOOL CALLBACK EnumCb(HWND hwnd, LPARAM) {
-  DWORD pid = 0;
-  GetWindowThreadProcessId(hwnd, &pid);
-  if (pid != GetCurrentProcessId()) {
+// EnumWindows callback: claim the first visible, titled browser window of this
+// process.
+inline BOOL CALLBACK FindBrowserWindow(HWND hwnd, LPARAM /*unused*/) {
+  DWORD processId = 0;
+  GetWindowThreadProcessId(hwnd, &processId);
+  const bool isOurProcess = processId == GetCurrentProcessId();
+  if (!isOurProcess) {
     return TRUE;
   }
-  if (!IsWindowVisible(hwnd) || GetWindowTextLengthW(hwnd) == 0) {
+  const bool isVisibleWithTitle =
+      IsWindowVisible(hwnd) && GetWindowTextLengthW(hwnd) != 0;
+  if (!isVisibleWithTitle) {
     return TRUE;
   }
-  wchar_t cls[64] = {};
-  GetClassNameW(hwnd, cls, 64);
-  if (wcscmp(cls, L"Chrome_WidgetWin_1") != 0) {
+  wchar_t className[kClassNameLength] = {};
+  GetClassNameW(hwnd, className, kClassNameLength);
+  const bool isBrowserWindow = wcscmp(className, kBrowserWindowClass) == 0;
+  if (!isBrowserWindow) {
     return TRUE;
   }
-  g_hwnd = hwnd;  // first visible, titled browser window
+  g_hwnd = hwnd;
   return FALSE;
 }
 
 inline void Install() {
-  g_msg = RegisterWindowMessageW(L"fixedge.addpane");
-  EnumWindows(EnumCb, 0);
+  g_commandMessage = RegisterWindowMessageW(kCommandMessageName);
+  EnumWindows(FindBrowserWindow, 0);
   if (!g_hwnd) {
     Log("[control] no browser window to subclass");
     return;
   }
-  g_orig_proc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(
-      g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(Proc)));
-  Log("[control] subclassed hwnd=%p msg=%u", g_hwnd, g_msg);
+  g_originalProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(
+      g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc)));
+  Log("[control] subclassed hwnd=%p msg=%u", g_hwnd, g_commandMessage);
   anim::Install(g_hwnd);
   drag::g_window = g_hwnd;
   // A (re)load into a split that is already grown: add the grips on the UI thread.
-  PostMessageW(g_hwnd, g_msg, kCmdEnsureGrips, 0);
+  PostMessageW(g_hwnd, g_commandMessage, CodeOf(Command::kEnsureGrips), 0);
 }
 
 // Runs on the unload thread: hand the UI-side teardown to the UI thread and wait
 // for it, then restore the original window procedure.
 inline void Remove() {
-  if (g_hwnd && g_orig_proc) {
-    SendMessageTimeoutW(g_hwnd, g_msg, kCmdTeardown, 0, SMTO_BLOCK, 5000,
-                        nullptr);
-  }
-  if (g_hwnd && g_orig_proc) {
+  const bool isSubclassed = g_hwnd && g_originalProc;
+  if (isSubclassed) {
+    SendMessageTimeoutW(g_hwnd, g_commandMessage, CodeOf(Command::kTeardown), 0,
+                        SMTO_BLOCK, kTeardownTimeoutMs, nullptr);
     SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC,
-                      reinterpret_cast<LONG_PTR>(g_orig_proc));
+                      reinterpret_cast<LONG_PTR>(g_originalProc));
   }
-  g_hotkeys_done = false;
+  g_hasHotKeys = false;
   g_hwnd = nullptr;
-  g_orig_proc = nullptr;
+  g_originalProc = nullptr;
 }
 
 }  // namespace fixedge::control
