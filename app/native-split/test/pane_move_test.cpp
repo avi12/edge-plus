@@ -253,6 +253,54 @@ void RunChecks() {
               "0:[0,0,600,400] 1:[600,0,600,400] 2:[0,400,1200,400] ",
           "close top-right geometry", Layout(tree, 1200, 800));
   }
+  // "Use equal widths / heights" evens out only the nearest split along that
+  // axis around the pane.
+  {
+    Node tree = Weighted(3, Axis::kHorizontal, {3.f, 1.f, 1.f});
+    SplitPane(tree, 2, Direction::kDown, 3);  // H[0 1 V[2 3]]
+    NearestSplitAlong(tree, 2, Axis::kVertical)->weights = {1.5f, 0.5f};
+    Check(EqualizeAlong(tree, 3, Axis::kHorizontal), "equal widths");
+    Check(Dump(tree) == "H[0(1) 1(1) V[2(1.5) 3(0.5)](1)]",
+          "widths even, the column's heights untouched", Dump(tree));
+    Check(EqualizeAlong(tree, 3, Axis::kVertical), "equal heights");
+    Check(Dump(tree) == "H[0(1) 1(1) V[2(1) 3(1)](1)]", "heights even",
+          Dump(tree));
+    Check(!EqualizeAlong(tree, 0, Axis::kVertical),
+          "no vertical split around pane 0");
+    Check(!EqualizeAlong(tree, 0, Axis::kHorizontal), "already even");
+  }
+  // Seams: a tree of N panes has N - 1, each between two neighbours.
+  {
+    Node tree = FlatTree(3, Axis::kHorizontal);
+    SplitPane(tree, 2, Direction::kDown, 3);  // H[0 1 V[2 3]]
+    const std::vector<Seam> seams = Seams(tree, Rect{0, 0, 900, 600});
+    Check(seams.size() == 3, "four panes, three seams");
+    Check(seams[0].axis == Axis::kHorizontal && seams[0].position == 300 &&
+              seams[0].crossLength == 600,
+          "seam between 0 and 1: x=300, full height");
+    Check(seams[2].axis == Axis::kVertical && seams[2].position == 300 &&
+              seams[2].crossStart == 600 && seams[2].crossLength == 300,
+          "seam between 2 and 3: y=300, the third column's width");
+  }
+  // Dragging a seam trades length between its two panes only.
+  {
+    Node tree = FlatTree(3, Axis::kHorizontal);
+    const Seam seam = Seams(tree, Rect{0, 0, 900, 600})[0];
+    Check(ResizeSeam(tree, seam, 60), "drag seam 0 by +60");
+    Check(Layout(tree, 900, 600) ==
+              "0:[0,0,360,600] 1:[360,0,240,600] 2:[600,0,300,600] ",
+          "pane 0 grows, pane 1 shrinks, pane 2 untouched",
+          Layout(tree, 900, 600));
+    Check(Layout(tree, 1800, 600) ==
+              "0:[0,0,720,600] 1:[720,0,480,600] 2:[1200,0,600,600] ",
+          "the resized proportions hold in a wider window",
+          Layout(tree, 1800, 600));
+    Node clamped = FlatTree(3, Axis::kHorizontal);
+    ResizeSeam(clamped, seam, -1000);
+    Check(Layout(clamped, 900, 600).rfind("0:[0,0,64,600]", 0) == 0,
+          "a pane is never dragged below the minimum",
+          Layout(clamped, 900, 600));
+  }
   // Closing a pane keeps the proportions the others were resized to.
   {
     Node tree = Weighted(3, Axis::kHorizontal, {2.f, 1.f, 1.f});

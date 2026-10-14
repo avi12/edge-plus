@@ -98,16 +98,15 @@ inline SpanShare WaterFill(const std::vector<float>& weights, int span,
 // rounding, so the panes exactly tile the bounds with no seam drift. Because the
 // lengths come from `bounds`, the same tree re-laid in a resized window reflows
 // proportionally — resize handling is intrinsic, not a special case.
-inline void LayoutTree(const Node& node, const Rect& bounds, int gap,
-                       std::vector<LeafRect>& out) {
-  if (node.isLeaf) {
-    out.push_back({node.leaf, bounds});
-    return;
-  }
-  if (node.children.empty()) {
-    return;
-  }
+// The rect of each child of split `node` inside `bounds`, `gap` px apart.
+inline std::vector<Rect> ChildRects(const Node& node, const Rect& bounds,
+                                    int gap) {
+  std::vector<Rect> rects;
   const int childCount = static_cast<int>(node.children.size());
+  if (node.isLeaf || childCount == 0) {
+    return rects;
+  }
+  rects.reserve(node.children.size());
 
   // A child with no stored weight gets an average share.
   std::vector<float> weights(childCount);
@@ -134,15 +133,29 @@ inline void LayoutTree(const Node& node, const Rect& bounds, int gap,
     } else if (share.isPinned[i]) {
       length = minLength;
     } else {
-      length = hasFreeWeight ? static_cast<int>(FreeLength(share, weights[i]))
-                             : minLength;
+      length =
+          hasFreeWeight
+              ? static_cast<int>(std::lround(FreeLength(share, weights[i])))
+              : minLength;
     }
     used += length;
-    const Rect childBounds = isHorizontal
-                                 ? Rect{cursor, bounds.y, length, bounds.height}
-                                 : Rect{bounds.x, cursor, bounds.width, length};
-    LayoutTree(node.children[i], childBounds, gap, out);
+    rects.push_back(isHorizontal
+                        ? Rect{cursor, bounds.y, length, bounds.height}
+                        : Rect{bounds.x, cursor, bounds.width, length});
     cursor += length + gap;
+  }
+  return rects;
+}
+
+inline void LayoutTree(const Node& node, const Rect& bounds, int gap,
+                       std::vector<LeafRect>& out) {
+  if (node.isLeaf) {
+    out.push_back({node.leaf, bounds});
+    return;
+  }
+  const std::vector<Rect> rects = ChildRects(node, bounds, gap);
+  for (size_t i = 0; i < rects.size(); i++) {
+    LayoutTree(node.children[i], rects[i], gap, out);
   }
 }
 
@@ -412,6 +425,36 @@ inline bool Detach(Node& root, int leaf) {
   return true;
 }
 
+// The nearest split along `axis` that holds `leaf` (directly or deeper), or
+// null: the split whose widths (horizontal) or heights (vertical) the pane's
+// "use equal ..." command evens out.
+inline Node* NearestSplitAlong(Node& node, int leaf, Axis axis) {
+  if (node.isLeaf) {
+    return nullptr;
+  }
+  for (Node& child : node.children) {
+    if (!Contains(child, leaf)) {
+      continue;
+    }
+    if (Node* deeper = NearestSplitAlong(child, leaf, axis)) {
+      return deeper;
+    }
+    return node.axis == axis ? &node : nullptr;
+  }
+  return nullptr;
+}
+
+// Give every pane of the nearest split along `axis` around `leaf` an equal
+// share. Returns false if there is no such split or it is already even.
+inline bool EqualizeAlong(Node& root, int leaf, Axis axis) {
+  Node* split = NearestSplitAlong(root, leaf, axis);
+  if (!split || AllEqual(split->weights)) {
+    return false;
+  }
+  std::fill(split->weights.begin(), split->weights.end(), 1.f);
+  return true;
+}
+
 // Every leaf id above `removed` moves down by one: the containers after a closed
 // pane's are re-fed one slot earlier, and the tree follows its tabs.
 inline void RenumberAfterRemoval(Node& node, int removed) {
@@ -635,6 +678,102 @@ inline void CollectLeaves(const Node& node, std::vector<int>& out) {
   for (const Node& child : node.children) {
     CollectLeaves(child, out);
   }
+}
+
+// --- seams: where neighbouring panes meet, and dragging them -------------------
+
+// The boundary between child `index` and `index + 1` of the split at `path`
+// (child indices from the root). For a horizontal split it is a vertical line
+// at x = `position`, `crossStart`..`crossStart + crossLength` tall; for a
+// vertical split, a horizontal line at y = `position`. `lengthBefore` /
+// `lengthAfter` are the two children's lengths along the split when measured.
+struct Seam {
+  std::vector<int> path;
+  int index = 0;
+  Axis axis = Axis::kHorizontal;
+  int position = 0;
+  int crossStart = 0;
+  int crossLength = 0;
+  int lengthBefore = 0;
+  int lengthAfter = 0;
+};
+
+inline void CollectSeams(const Node& node, const Rect& bounds,
+                         std::vector<int>& path, std::vector<Seam>& out) {
+  if (node.isLeaf) {
+    return;
+  }
+  const std::vector<Rect> rects = ChildRects(node, bounds, /*gap=*/0);
+  const bool isHorizontal = node.axis == Axis::kHorizontal;
+  for (size_t i = 0; i + 1 < rects.size(); i++) {
+    Seam seam;
+    seam.path = path;
+    seam.index = static_cast<int>(i);
+    seam.axis = node.axis;
+    seam.position = isHorizontal ? rects[i + 1].x : rects[i + 1].y;
+    seam.crossStart = isHorizontal ? bounds.y : bounds.x;
+    seam.crossLength = isHorizontal ? bounds.height : bounds.width;
+    seam.lengthBefore = isHorizontal ? rects[i].width : rects[i].height;
+    seam.lengthAfter = isHorizontal ? rects[i + 1].width : rects[i + 1].height;
+    out.push_back(std::move(seam));
+  }
+  for (size_t i = 0; i < rects.size(); i++) {
+    path.push_back(static_cast<int>(i));
+    CollectSeams(node.children[i], rects[i], path, out);
+    path.pop_back();
+  }
+}
+
+// Every seam of `root` laid out in `bounds`: a tree of N panes has N - 1.
+inline std::vector<Seam> Seams(const Node& root, const Rect& bounds) {
+  std::vector<Seam> seams;
+  std::vector<int> path;
+  CollectSeams(root, bounds, path, seams);
+  return seams;
+}
+
+inline Node* NodeAt(Node& root, const std::vector<int>& path) {
+  Node* node = &root;
+  for (const int childIndex : path) {
+    const bool hasChild =
+        !node->isLeaf && childIndex >= 0 &&
+        static_cast<size_t>(childIndex) < node->children.size();
+    if (!hasChild) {
+      return nullptr;
+    }
+    node = &node->children[static_cast<size_t>(childIndex)];
+  }
+  return node;
+}
+
+// Drag `seam` by `delta` px along its split: the two children it divides trade
+// that much length (each kept at least kDesiredMinPane), and nothing else
+// moves. Their combined weight is unchanged, so every other proportion holds.
+// `seam` is the measurement taken when the drag began, so the result depends
+// only on the total delta. Returns false if the seam no longer exists.
+inline bool ResizeSeam(Node& root, const Seam& seam, int delta) {
+  Node* split = NodeAt(root, seam.path);
+  const bool isSeamOfSplit =
+      split && !split->isLeaf &&
+      static_cast<size_t>(seam.index) + 1 < split->children.size();
+  if (!isSeamOfSplit) {
+    return false;
+  }
+  FixWeights(*split);
+  const int combinedLength = seam.lengthBefore + seam.lengthAfter;
+  if (combinedLength <= 0) {
+    return false;
+  }
+  const int minLength = std::min(kDesiredMinPane, combinedLength / 2);
+  const int lengthBefore = std::clamp(seam.lengthBefore + delta, minLength,
+                                      combinedLength - minLength);
+  float& weightBefore = split->weights[static_cast<size_t>(seam.index)];
+  float& weightAfter = split->weights[static_cast<size_t>(seam.index) + 1];
+  const float combinedWeight = weightBefore + weightAfter;
+  weightBefore = combinedWeight * static_cast<float>(lengthBefore) /
+                 static_cast<float>(combinedLength);
+  weightAfter = combinedWeight - weightBefore;
+  return true;
 }
 
 }  // namespace fixedge
