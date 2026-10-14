@@ -18,174 +18,226 @@ enum class Style : uint8_t {
   kSwap
 };
 
-inline constexpr wchar_t kClass[] = L"FixEdgeDropPreview";
+inline constexpr wchar_t kWindowClass[] = L"FixEdgeDropPreview";
 inline constexpr UINT_PTR kTimerId = 1;
-inline constexpr unsigned kMoveMs =
-    90;  // ease between targets (not on first show)
+// How long a move eases from one target to the next.
+inline constexpr unsigned kMoveMs = 90;
+inline constexpr UINT kFrameMs = 15;
 
-inline HWND g_wnd = nullptr;
-inline bool g_shown = false;
+// The look, in DIPs and alphas (0..1): the whole-split edge is bolder, a swap
+// is fainter with a dashed edge.
+inline constexpr float kPaneFillAlpha = 0.22f;
+inline constexpr float kRootFillAlpha = 0.30f;
+inline constexpr float kSwapFillAlpha = 0.12f;
+inline constexpr float kEdgeAlpha = 0.9f;
+inline constexpr float kBorderDip = 2.f;
+inline constexpr float kRootBorderDip = 3.f;
+inline constexpr float kCornerRadiusDip = 8.f;
+inline constexpr float kDashDip = 8.f;
+
+inline constexpr uint32_t kOpaque = 255;   // a colour channel at full strength
+inline constexpr WORD kBitsPerPixel = 32;  // BGRA
+
+inline HWND g_window = nullptr;
+inline bool g_isShown = false;
 inline Style g_style = Style::kPane;
 inline float g_scale = 1.f;
-inline Rect g_from, g_to, g_now;
-inline ULONGLONG g_start = 0;
+inline Rect g_from;
+inline Rect g_to;
+inline Rect g_current;  // the rect painted now
+inline ULONGLONG g_moveStart = 0;
 
-// Premultiplied BGRA pixel of the system accent at `alpha` (0..1).
-inline uint32_t Pixel(COLORREF c, float alpha) {
-  const auto a = static_cast<uint32_t>(alpha * 255.f + 0.5f);
-  const auto r = GetRValue(c) * a / 255, g = GetGValue(c) * a / 255,
-             b = GetBValue(c) * a / 255;
-  return (a << 24) | (r << 16) | (g << 8) | b;
+// Premultiplied BGRA pixel of `color` at `alpha` (0..1).
+inline uint32_t Pixel(COLORREF color, float alpha) {
+  const auto alphaByte = static_cast<uint32_t>(std::lround(alpha * kOpaque));
+  const auto red = GetRValue(color) * alphaByte / kOpaque;
+  const auto green = GetGValue(color) * alphaByte / kOpaque;
+  const auto blue = GetBValue(color) * alphaByte / kOpaque;
+  return (alphaByte << 24) | (red << 16) | (green << 8) | blue;
 }
 
-// Render `r` (screen px) into the layered window: a rounded, tinted fill with an
-// outline; the whole-split edge is bolder, a swap is fainter with a dashed edge.
-inline void Paint(const Rect& r) {
-  if (!g_wnd || r.width <= 0 || r.height <= 0) {
-    return;
+inline float FillAlpha(Style style) {
+  switch (style) {
+    case Style::kRoot:
+      return kRootFillAlpha;
+    case Style::kSwap:
+      return kSwapFillAlpha;
+    case Style::kPane:
+      break;
   }
-  const float fill_a = g_style == Style::kRoot   ? 0.30f
-                       : g_style == Style::kSwap ? 0.12f
-                                                 : 0.22f;
-  const int border = static_cast<int>(
-      std::lround((g_style == Style::kRoot ? 3.f : 2.f) * g_scale));
-  const int radius = static_cast<int>(std::lround(8.f * g_scale));
-  const int dash = static_cast<int>(std::lround(8.f * g_scale));
-  const COLORREF accent = GetSysColor(COLOR_HIGHLIGHT);
-  const uint32_t fill = Pixel(accent, fill_a), edge = Pixel(accent, 0.9f);
+  return kPaneFillAlpha;
+}
 
-  BITMAPINFO bi{};
-  bi.bmiHeader.biSize = sizeof(bi.bmiHeader);
-  bi.bmiHeader.biWidth = r.width;
-  bi.bmiHeader.biHeight = -r.height;  // top-down
-  bi.bmiHeader.biPlanes = 1;
-  bi.bmiHeader.biBitCount = 32;
-  void* bits = nullptr;
-  HDC screen = GetDC(nullptr);
-  HDC mem = CreateCompatibleDC(screen);
-  HBITMAP dib =
-      CreateDIBSection(screen, &bi, DIB_RGB_COLORS, &bits, nullptr, 0);
-  if (!dib) {
-    DeleteDC(mem);
-    ReleaseDC(nullptr, screen);
+// How far the pixel at (`column`, `row`) lies inside the edge of a `width` x
+// `height` rect whose corners are rounded to `radius` (negative = outside a
+// rounded corner).
+inline int DistanceInside(int column, int row, int width, int height,
+                          int radius) {
+  // How far the pixel lies past the nearest corner arc's centre, toward the
+  // side (positive on both axes = within a corner's square).
+  const int cornerX = std::max(radius - column, column - (width - 1 - radius));
+  const int cornerY = std::max(radius - row, row - (height - 1 - radius));
+  const bool isInCorner = cornerX > 0 && cornerY > 0;
+  if (isInCorner) {
+    const float fromArcCentre =
+        std::sqrt(static_cast<float>(cornerX * cornerX + cornerY * cornerY));
+    return radius - static_cast<int>(std::lround(fromArcCentre));
+  }
+  return std::min(std::min(column, width - 1 - column),
+                  std::min(row, height - 1 - row));
+}
+
+// Render `rect` (screen px) into the layered window: a rounded, tinted fill
+// with an outline in the system accent colour, styled by g_style.
+inline void Paint(const Rect& rect) {
+  const bool canPaint = g_window && rect.width > 0 && rect.height > 0;
+  if (!canPaint) {
     return;
   }
-  HGDIOBJ old = SelectObject(mem, dib);
-  auto* px = static_cast<uint32_t*>(bits);
-  for (int y = 0; y < r.height; ++y) {
-    for (int x = 0; x < r.width; ++x) {
-      // Distance inside the rounded rect's edge (negative = outside the corner).
-      const int dx = std::max(radius - x, x - (r.width - 1 - radius));
-      const int dy = std::max(radius - y, y - (r.height - 1 - radius));
-      int inside;
-      if (dx > 0 && dy > 0) {
-        inside = radius - static_cast<int>(
-                              std::lround(std::sqrt(float(dx * dx + dy * dy))));
-      } else {
-        inside = std::min(std::min(x, r.width - 1 - x),
-                          std::min(y, r.height - 1 - y));
+  const float borderDip = g_style == Style::kRoot ? kRootBorderDip : kBorderDip;
+  const int border = static_cast<int>(std::lround(borderDip * g_scale));
+  const int radius = static_cast<int>(std::lround(kCornerRadiusDip * g_scale));
+  const int dash = static_cast<int>(std::lround(kDashDip * g_scale));
+  const COLORREF accent = GetSysColor(COLOR_HIGHLIGHT);
+  const uint32_t fillPixel = Pixel(accent, FillAlpha(g_style));
+  const uint32_t edgePixel = Pixel(accent, kEdgeAlpha);
+
+  BITMAPINFO bitmapInfo{};
+  bitmapInfo.bmiHeader.biSize = sizeof(bitmapInfo.bmiHeader);
+  bitmapInfo.bmiHeader.biWidth = rect.width;
+  bitmapInfo.bmiHeader.biHeight = -rect.height;  // top-down
+  bitmapInfo.bmiHeader.biPlanes = 1;
+  bitmapInfo.bmiHeader.biBitCount = kBitsPerPixel;
+  void* bits = nullptr;
+  HDC screenContext = GetDC(nullptr);
+  HDC memoryContext = CreateCompatibleDC(screenContext);
+  HBITMAP bitmap = CreateDIBSection(screenContext, &bitmapInfo, DIB_RGB_COLORS,
+                                    &bits, nullptr, 0);
+  if (!bitmap) {
+    DeleteDC(memoryContext);
+    ReleaseDC(nullptr, screenContext);
+    return;
+  }
+  HGDIOBJ previousObject = SelectObject(memoryContext, bitmap);
+  auto* pixels = static_cast<uint32_t*>(bits);
+  for (int row = 0; row < rect.height; row++) {
+    for (int column = 0; column < rect.width; column++) {
+      const int distanceInside =
+          DistanceInside(column, row, rect.width, rect.height, radius);
+      uint32_t pixel = 0;
+      const bool isInside = distanceInside >= 0;
+      if (isInside) {
+        const bool isOnEdge = distanceInside < border;
+        const bool isDashGap = g_style == Style::kSwap && isOnEdge &&
+                               dash > 0 && ((column + row) / dash) % 2;
+        const bool isOutline = isOnEdge && !isDashGap;
+        pixel = isOutline ? edgePixel : fillPixel;
       }
-      uint32_t v = 0;
-      if (inside >= 0) {
-        const bool on_edge = inside < border;
-        const bool gap = g_style == Style::kSwap && on_edge && dash > 0 &&
-                         ((x + y) / dash) % 2;
-        v = on_edge && !gap ? edge : fill;
-      }
-      px[y * r.width + x] = v;
+      pixels[row * rect.width + column] = pixel;
     }
   }
-  POINT dst{r.x, r.y}, src{0, 0};
-  SIZE size{r.width, r.height};
-  BLENDFUNCTION blend{AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
-  UpdateLayeredWindow(g_wnd, screen, &dst, &size, mem, &src, 0, &blend,
-                      ULW_ALPHA);
-  SelectObject(mem, old);
-  DeleteObject(dib);
-  DeleteDC(mem);
-  ReleaseDC(nullptr, screen);
+  POINT destination{rect.x, rect.y};
+  POINT source{0, 0};
+  SIZE size{rect.width, rect.height};
+  BLENDFUNCTION blend{AC_SRC_OVER, 0, kOpaque, AC_SRC_ALPHA};
+  UpdateLayeredWindow(g_window, screenContext, &destination, &size,
+                      memoryContext, &source, 0, &blend, ULW_ALPHA);
+  SelectObject(memoryContext, previousObject);
+  DeleteObject(bitmap);
+  DeleteDC(memoryContext);
+  ReleaseDC(nullptr, screenContext);
 }
 
-inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam,
-                             LPARAM lparam) {
-  if (msg == WM_NCHITTEST) {
+inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
+                                   LPARAM lparam) {
+  const bool isHitTest = message == WM_NCHITTEST;
+  if (isHitTest) {
     return HTTRANSPARENT;
   }
-  if (msg == WM_TIMER && wparam == kTimerId) {
-    const double p = static_cast<double>(GetTickCount64() - g_start) / kMoveMs;
-    g_now = p >= 1.0 ? g_to : motion::Lerp(g_from, g_to, motion::Ease(p));
-    Paint(g_now);
-    if (p >= 1.0) {
+  const bool isMoveFrame = message == WM_TIMER && wparam == kTimerId;
+  if (isMoveFrame) {
+    const double progress =
+        static_cast<double>(GetTickCount64() - g_moveStart) / kMoveMs;
+    const bool hasArrived = progress >= 1.0;
+    g_current =
+        hasArrived ? g_to : motion::Lerp(g_from, g_to, motion::Ease(progress));
+    Paint(g_current);
+    if (hasArrived) {
       KillTimer(hwnd, kTimerId);
     }
     return 0;
   }
-  return DefWindowProcW(hwnd, msg, wparam, lparam);
+  return DefWindowProcW(hwnd, message, wparam, lparam);
 }
 
-inline HINSTANCE Module() {
-  HMODULE m = nullptr;
+inline HINSTANCE ThisModule() {
+  HMODULE thisModule = nullptr;
   GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
                          GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                     reinterpret_cast<LPCWSTR>(&Proc), &m);
-  return m;
+                     reinterpret_cast<LPCWSTR>(&WindowProc), &thisModule);
+  return thisModule;
 }
 
-// Show the preview at `r` (screen px) over `owner`; moves ease from the current rect.
-inline void Show(HWND owner, const Rect& r, Style style) {
-  if (!g_wnd) {
-    WNDCLASSEXW wc{sizeof(wc)};
-    wc.lpfnWndProc = Proc;
-    wc.hInstance = Module();
-    wc.lpszClassName = kClass;
-    RegisterClassExW(&wc);  // fails harmlessly if already registered
-    g_wnd = CreateWindowExW(
+// Show the preview at `rect` (screen px) over `owner`; moves ease from the
+// current rect.
+inline void Show(HWND owner, const Rect& rect, Style style) {
+  if (!g_window) {
+    WNDCLASSEXW windowClass{sizeof(windowClass)};
+    windowClass.lpfnWndProc = WindowProc;
+    windowClass.hInstance = ThisModule();
+    windowClass.lpszClassName = kWindowClass;
+    RegisterClassExW(&windowClass);  // fails harmlessly if already registered
+    g_window = CreateWindowExW(
         WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
-        kClass, L"", WS_POPUP, r.x, r.y, r.width, r.height, owner, nullptr,
-        Module(), nullptr);
-    if (!g_wnd) {
+        kWindowClass, L"", WS_POPUP, rect.x, rect.y, rect.width, rect.height,
+        owner, nullptr, ThisModule(), nullptr);
+    if (!g_window) {
       return;
     }
   }
-  g_scale = static_cast<float>(GetDpiForWindow(owner)) / 96.f;
-  const bool restyle = style != g_style;
+  g_scale =
+      static_cast<float>(GetDpiForWindow(owner)) / USER_DEFAULT_SCREEN_DPI;
+  const bool isRestyled = style != g_style;
   g_style = style;
-  if (!g_shown) {  // first appearance: no slide-in
-    g_now = g_to = r;
-    Paint(g_now);
-    ShowWindow(g_wnd, SW_SHOWNOACTIVATE);
-    g_shown = true;
+  if (!g_isShown) {  // first appearance: no slide-in
+    g_to = rect;
+    g_current = rect;
+    Paint(g_current);
+    ShowWindow(g_window, SW_SHOWNOACTIVATE);
+    g_isShown = true;
     return;
   }
-  if (motion::Same(r, g_to)) {
-    if (restyle) {
-      Paint(g_now);
+  const bool isSameTarget = motion::Same(rect, g_to);
+  if (isSameTarget) {
+    if (isRestyled) {
+      Paint(g_current);
     }
     return;
   }
-  g_from = g_now;
-  g_to = r;
-  g_start = GetTickCount64();
-  SetTimer(g_wnd, kTimerId, 15, nullptr);
+  g_from = g_current;
+  g_to = rect;
+  g_moveStart = GetTickCount64();
+  SetTimer(g_window, kTimerId, kFrameMs, nullptr);
 }
 
 inline void Hide() {
-  if (!g_wnd || !g_shown) {
+  const bool isPreviewShown = g_window && g_isShown;
+  if (!isPreviewShown) {
     return;
   }
-  KillTimer(g_wnd, kTimerId);
-  ShowWindow(g_wnd, SW_HIDE);
-  g_shown = false;
+  KillTimer(g_window, kTimerId);
+  ShowWindow(g_window, SW_HIDE);
+  g_isShown = false;
 }
 
 // Destroy the window and its class (before this DLL unloads).
 inline void Remove() {
-  if (g_wnd) {
-    DestroyWindow(g_wnd);
+  if (g_window) {
+    DestroyWindow(g_window);
   }
-  g_wnd = nullptr;
-  g_shown = false;
-  UnregisterClassW(kClass, Module());
+  g_window = nullptr;
+  g_isShown = false;
+  UnregisterClassW(kWindowClass, ThisModule());
 }
 
 }  // namespace fixedge::overlay
