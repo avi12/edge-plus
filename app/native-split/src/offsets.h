@@ -94,6 +94,17 @@ inline constexpr uintptr_t SplitWindow_ListenWebContentsInputEvent = 0xa01fe4e;
 // rest. (controller, WebContents*) -> bool. Controller from the Browser.
 inline constexpr uintptr_t SplitWindowController_ShowControlButton = 0xa020e40;
 inline constexpr uintptr_t SplitWindowController_FromBrowser = 0x2e70b32; // (Browser*)
+// --- the drag grip in the hover bar (docs/re/drag-dock.md) ---
+// AddButton(bar, int tooltip_string_id, const gfx::VectorIcon*, bool clickable)
+// -> ControlButtons::Button*; clickable=false wires no click handler.
+inline constexpr uintptr_t ControlButtons_AddButton  = 0xa0117b6;
+// InitLayout(bar): BoxLayout + preferred size {32 * visible children, 32}.
+inline constexpr uintptr_t ControlButtons_InitLayout = 0xa010c8c;
+inline constexpr uintptr_t View_ReorderChildView     = 0x269fa62; // (parent, child, size_t index)
+inline constexpr uintptr_t View_RemoveChildView      = 0x26a2c28; // (parent, child) non-deleting
+inline constexpr uintptr_t View_IsDrawn              = 0x10d5150; // bool (this): visible up to the widget
+inline constexpr uintptr_t View_ConvertPointToTarget = 0x0fd8b86; // static (src, dst, gfx::Point*) in place
+inline constexpr uintptr_t View_SetTooltipText       = 0x0fd48f0; // (view, const std::u16string&)
 // --- 2-pane-only CHECK sites that int3 when a split grows past 2 members ---
 // Accessible-label builder: maps a split tab's pane index to a string id
 // (0x3e7f pane0 / 0x3e80 pane1) and `cmp eax,1; jne <int3>` crashes at index>=2.
@@ -149,7 +160,12 @@ inline constexpr uintptr_t ECCV_buttons_iface    = 0x348;
 inline constexpr uintptr_t ECCV_control_buttons  = 0x540; // ControlButtons* (iface + 0x1f8)
 inline constexpr uintptr_t ECCV_vtbl_SetControlButtons = 0x10;
 inline constexpr size_t    ControlButtons_size   = 0x380;
+inline constexpr int       ControlButtons_more_string_id = 0x4676; // a valid id (⋯'s); grip overrides the tooltip
+// gfx::VectorIcon path command ids in this build (decoded from kEdgeSplitWindowMoreIcon:
+// CANVAS_DIMENSIONS 16, MOVE_TO x y, R_ARC_TO rx ry angle large sweep dx dy, CLOSE).
+inline constexpr int ICON_MOVE_TO = 7, ICON_R_ARC_TO = 10, ICON_CLOSE = 27, ICON_CANVAS_DIMENSIONS = 28;
 // views::View
+inline constexpr uintptr_t VIEW_parent = 0x198; // View* parent_ (null at the widget's root view)
 inline constexpr uintptr_t VIEW_bounds = 0x1c8; // gfx::Rect bounds_ in parent coords (GetLocalBounds reads size @+0x1d0)
 
 // views::ProposedLayout (the out-param CalculateProposedLayout fills; ctor zeroes 0x20)

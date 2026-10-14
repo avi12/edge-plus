@@ -42,6 +42,7 @@ inline void* __fastcall h_setwc(void* mcv, void* web_contents, uint32_t index) {
     edge::ListenSplitInput(web_contents);
   }
   panes::EnsureControlButtons(mcv, static_cast<int>(index));  // pane 3+ needs a bar
+  grip::EnsureGrips(mcv);  // and every pane of a grown split a drag grip
   return r;
 }
 

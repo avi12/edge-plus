@@ -8,6 +8,7 @@
 #pragma once
 #include <windows.h>
 #include <cstdint>
+#include <cstring>
 #include "offsets.h"
 #include "geom.h"
 #include "log.h"
@@ -251,6 +252,15 @@ inline void Utf8ToUtf16(U16String* out, const U8View* view) {
   using Fn = void*(__fastcall*)(void*, const void*);
   reinterpret_cast<Fn>(At(rva::UTF8ToUTF16))(out, view);
 }
+// views::View::SetTooltipText(view, const std::u16string&), from UTF-8.
+inline void ViewSetTooltip(void* view, const char* utf8) {
+  U16String text{};
+  U8View in{utf8, strlen(utf8)};
+  Utf8ToUtf16(&text, &in);
+  using Fn = void(__fastcall*)(void*, const void*);
+  reinterpret_cast<Fn>(At(rva::View_SetTooltipText))(view, &text);
+}
+
 // ui::SimpleMenuModel::AddItem(model /*rcx*/, int command_id /*edx*/, &u16string /*r8*/).
 inline void MenuAddItem(void* model, int command_id, const U16String* label) {
   using Fn = void*(__fastcall*)(void*, int, const void*);
@@ -282,6 +292,32 @@ inline void* BrowserViewMcv(void* browser_view) {
 // A view's current bounds in its parent's coordinates (views::View::bounds_).
 inline Rect ViewBounds(void* view) { return Field<Rect>(view, off::VIEW_bounds); }
 
+// --- views helpers -------------------------------------------------------------
+
+inline void* ViewParent(void* view) { return Field<void*>(view, off::VIEW_parent); }
+// The widget's root view: its coordinates are the window's client area in DIPs.
+inline void* ViewRoot(void* view) {
+  while (void* parent = ViewParent(view)) view = parent;
+  return view;
+}
+// Convert `point` in place from `source`'s coordinates to `target`'s.
+inline void ConvertPoint(void* source, void* target, Point* point) {
+  using Fn = void(__fastcall*)(void*, void*, Point*);
+  reinterpret_cast<Fn>(At(rva::View_ConvertPointToTarget))(source, target, point);
+}
+inline bool ViewIsDrawn(void* view) {
+  using Fn = bool(__fastcall*)(void*);
+  return reinterpret_cast<Fn>(At(rva::View_IsDrawn))(view);
+}
+inline void ViewReorderChild(void* parent, void* child, size_t index) {
+  using Fn = void(__fastcall*)(void*, void*, size_t);
+  reinterpret_cast<Fn>(At(rva::View_ReorderChildView))(parent, child, index);
+}
+inline void ViewRemoveChild(void* parent, void* child) {
+  using Fn = void(__fastcall*)(void*, void*);
+  reinterpret_cast<Fn>(At(rva::View_RemoveChildView))(parent, child);
+}
+
 // --- per-pane hover controls -------------------------------------------------
 
 inline void* ContainerControlButtons(void* container) {
@@ -299,6 +335,18 @@ inline void GiveControlButtons(void* container, void* browser_view, bool not_fir
   void* owned = bar;  // unique_ptr<ControlButtons>; the callee takes and nulls it
   using SetFn = void(__fastcall*)(void*, void**);
   reinterpret_cast<SetFn>(vtbl[off::ECCV_vtbl_SetControlButtons / 8])(iface, &owned);
+}
+
+// Add a button to a pane's hover bar, exactly as Edge adds ⋯ and X. `icon` is a
+// gfx::VectorIcon*; `clickable` = false wires no click handler.
+inline void* ControlButtonsAddButton(void* bar, int string_id, const void* icon, bool clickable) {
+  using Fn = void*(__fastcall*)(void*, int, const void*, bool);
+  return reinterpret_cast<Fn>(At(rva::ControlButtons_AddButton))(bar, string_id, icon, clickable);
+}
+// Re-run the bar's own layout so its width follows its visible buttons.
+inline void ControlButtonsRelayout(void* bar) {
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(rva::ControlButtons_InitLayout))(bar);
 }
 
 // Watch a pane's WebContents for mouse input so hovering it shows its bar.

@@ -12,6 +12,7 @@
 #include "split_data.h"
 #include "state.h"
 #include "anim.h"
+#include "grip.h"
 
 namespace fixedge::control {
 
@@ -23,6 +24,23 @@ inline bool g_hotkeys_done = false;
 // Hot-key ids delivered as WM_HOTKEY to this window's (UI-thread) WndProc.
 enum { HK_ADD_PANE = 1, HK_COLLAPSE = 2, HK_LEFT = 3, HK_UP = 4, HK_RIGHT = 5, HK_DOWN = 6, HK_SWAP = 7 };
 inline constexpr UINT kHkMods = MOD_CONTROL | MOD_SHIFT | MOD_ALT;
+
+// Channel commands (wParam of "fixedge.addpane") beyond the add-pane test codes.
+enum : WPARAM {
+  kCmdEnsureGrips = 700,  // give every pane of a grown split its drag grip
+  kCmdTeardown = 701,     // undo everything UI-side before this DLL unloads
+};
+
+// Everything that must be undone on the UI thread before unload: the grips, the
+// animation timer and the hot-keys.
+inline void Teardown(HWND hwnd) {
+  grip::RemoveAll();
+  anim::Remove();
+  if (g_hotkeys_done) {
+    for (int id = HK_ADD_PANE; id <= HK_SWAP; ++id) UnregisterHotKey(hwnd, id);
+  }
+  g_hotkeys_done = false;
+}
 
 inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
   // RegisterHotKey must run on the thread that owns the window; this WndProc is
@@ -86,6 +104,14 @@ inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
       split_ops::SwapActive(edge::McvForWindow(hwnd));
       return 0;
     }
+    if (wparam == kCmdEnsureGrips) {
+      if (void* mcv = edge::McvForWindow(hwnd)) grip::EnsureGrips(mcv);
+      return 0;
+    }
+    if (wparam == kCmdTeardown) {
+      Teardown(hwnd);
+      return 0;
+    }
     if (wparam >= 500 && wparam < 516) {  // show pane (wparam-500)'s hover bar
       void* mcv = edge::McvForWindow(hwnd);
       const int pane = static_cast<int>(wparam) - 500;
@@ -134,12 +160,15 @@ inline void Install() {
       SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(Proc)));
   Log("[control] subclassed hwnd=%p msg=%u", g_hwnd, g_msg);
   anim::Install(g_hwnd);
+  // A (re)load into a split that is already grown: add the grips on the UI thread.
+  PostMessageW(g_hwnd, g_msg, kCmdEnsureGrips, 0);
 }
 
+// Runs on the unload thread: hand the UI-side teardown to the UI thread and wait
+// for it, then restore the original window procedure.
 inline void Remove() {
-  anim::Remove();
-  if (g_hwnd && g_hotkeys_done) {
-    for (int id = HK_ADD_PANE; id <= HK_SWAP; ++id) UnregisterHotKey(g_hwnd, id);
+  if (g_hwnd && g_orig_proc) {
+    SendMessageTimeoutW(g_hwnd, g_msg, kCmdTeardown, 0, SMTO_BLOCK, 5000, nullptr);
   }
   if (g_hwnd && g_orig_proc) {
     SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(g_orig_proc));
