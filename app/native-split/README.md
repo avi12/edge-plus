@@ -27,6 +27,11 @@ exists). Authorized personal customization of the user's own Edge.
       one to even out the split it divides
 - [x] ⋯ "Add pane" — a d-pad on the pane bar's ⋯ adds a pane beside that pane
       (`docs/re/pane-menu.md`)
+- [x] Alt + drag a tab — hovering a split's tab shows that split; dropping on
+      it docks the tab as a new pane (`docs/re/tab-drag.md`)
+- [x] New-tab links in a split — the ⋯ toggle "Open left links to the right"
+      off: a pane's `target=_blank` link opens in that pane; on: in a new pane
+      right of it (`docs/re/split-links.md`)
 - [ ] Companion-app toggle: inject / unload / hot-swap from the panel
 
 ## Build
