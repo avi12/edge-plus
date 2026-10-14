@@ -12,10 +12,7 @@
 
 namespace fixedge::verify {
 
-// The build offsets.h targets, as four integers (kept in step with kBuild).
-inline constexpr int kMajor = 155, kMinor = 0, kBuild = 4283, kRevision = 45;
-
-// True only if the running msedge.dll is exactly kMajor.kMinor.kBuild.kRevision.
+// True only if the running msedge.dll is exactly the build offsets.h names.
 inline bool BuildMatches() {
   wchar_t path[MAX_PATH];
   HMODULE module = GetModuleHandleW(edge::kModule);
@@ -45,9 +42,10 @@ inline bool BuildMatches() {
   const int build = HIWORD(info->dwFileVersionLS);
   const int revision = LOWORD(info->dwFileVersionLS);
   Log("[verify] msedge.dll %d.%d.%d.%d (expected %d.%d.%d.%d)", major, minor,
-      build, revision, kMajor, kMinor, kBuild, kRevision);
-  return major == kMajor && minor == kMinor && build == kBuild &&
-         revision == kRevision;
+      build, revision, edge::kVersionMajor, edge::kVersionMinor,
+      edge::kVersionBuild, edge::kVersionRevision);
+  return major == edge::kVersionMajor && minor == edge::kVersionMinor &&
+         build == edge::kVersionBuild && revision == edge::kVersionRevision;
 }
 
 // A hooked function should begin with a plausible x64 prologue byte and sit inside

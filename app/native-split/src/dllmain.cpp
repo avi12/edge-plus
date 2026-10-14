@@ -1,6 +1,6 @@
 // fixedge-split.dll — injected into Edge's browser process to grow the native
 // split beyond two panes. Authorized personal customization of the user's own
-// Edge (the fix-edge repo). Pinned to msedge.dll 155.0.4283.45 via offsets.h.
+// Edge (the fix-edge repo). Pinned to one msedge.dll build via offsets.h.
 //
 // This translation unit is deliberately thin: DLL lifecycle only. Each concern
 // lives in its own header — edge.h (the binding SSOT), pane_tree.h (the pure
