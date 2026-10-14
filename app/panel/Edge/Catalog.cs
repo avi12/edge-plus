@@ -26,7 +26,9 @@ internal static class Catalog {
   // The name Edge looks the native host up by.
   public static string HostName { get; } = s_catalog["hostName"]!.GetValue<string>();
 
-  public static IReadOnlyList<Feature> Features { get; } = s_catalog["features"]!.AsArray()
+  public static IReadOnlyList<Feature> Features {
+    get;
+  } = s_catalog["features"]!.AsArray()
       .Select(node => new Feature(
           node!["id"]!.GetValue<string>(),
           node["title"]!.GetValue<string>(),

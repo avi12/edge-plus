@@ -14,7 +14,9 @@ internal static class Product {
 
   public static string Author { get; } = Read<AssemblyCompanyAttribute>(a => a.Company);
 
-  public static string Version { get; } =
+  public static string Version {
+    get;
+  } =
       Read<AssemblyInformationalVersionAttribute>(a => a.InformationalVersion);
 
   public static Uri AuthorUri { get; } = new("https://avi12.com");

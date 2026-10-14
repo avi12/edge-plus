@@ -7,7 +7,9 @@ namespace FixEdge;
 // panel writes settings, the host relays them to Edge and writes status back;
 // neither process talks to the other directly.
 internal static class Paths {
-  public static string Root { get; } = Path.Combine(
+  public static string Root {
+    get;
+  } = Path.Combine(
       Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FixEdge");
 
   // The folder Edge's "Load unpacked" points at.
