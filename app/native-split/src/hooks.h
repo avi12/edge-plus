@@ -25,6 +25,7 @@ using namespace fixedge::edge155;
 using SetWc_t = void*(__fastcall*)(void*, void*, uint32_t);
 inline SetWc_t o_setwc = nullptr;
 inline uint8_t g_guard_saved = 0;
+inline uint8_t g_a11y_saved[6] = {};
 inline void* __fastcall h_setwc(void* mcv, void* web_contents, uint32_t index) {
   if (index >= edge::McvCount(mcv)) {
     Log("[grow] feeder wants index %u; count %llu - building container(s)", index,
@@ -33,7 +34,12 @@ inline void* __fastcall h_setwc(void* mcv, void* web_contents, uint32_t index) {
       if (!panes::AddContainer(mcv)) break;
     }
   }
-  return o_setwc(mcv, web_contents, index);
+  void* r = o_setwc(mcv, web_contents, index);
+  // Every pane in a split is on-screen, but Edge only force-paints the ones it
+  // natively tracks; a fed background member stays blank until shown. Show it so
+  // panes 2+ (and re-fed members) actually paint. Harmless for the active tab.
+  if (web_contents) edge::WebContentsWasShown(web_contents);
+  return r;
 }
 
 // LayoutManagerBase::CalculateProposedLayout — `self` is the subobject at
@@ -84,6 +90,9 @@ inline bool InstallAll() {
   // Lift the index<2 guard so the feeder can fill pane 2+ (restored on unload).
   g_guard_saved = edge::PatchByte(rva::SetWebContentsAtIndex_guard_imm, 0xff);
   Log("[patch] SetWebContentsAtIndex guard %u -> 0xff", g_guard_saved);
+  // Neutralize the accessible-label builder's pane-index int3 (crashes at >=2).
+  edge::PatchNop(rva::SplitA11yLabel_paneidx_jne, 6, g_a11y_saved);
+  Log("[patch] a11y pane-index check NOPed (was 0x%02x 0x%02x)", g_a11y_saved[0], g_a11y_saved[1]);
   control::Install();  // the add-pane control channel (UI-thread trigger)
   return true;
 }
@@ -91,6 +100,7 @@ inline bool InstallAll() {
 inline void RemoveAll() {
   control::Remove();
   if (g_guard_saved) edge::PatchByte(rva::SetWebContentsAtIndex_guard_imm, g_guard_saved);
+  if (g_a11y_saved[0]) edge::Unpatch(rva::SplitA11yLabel_paneidx_jne, 6, g_a11y_saved);
   MH_DisableHook(MH_ALL_HOOKS);
   MH_Uninitialize();
 }
