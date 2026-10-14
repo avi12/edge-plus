@@ -22,11 +22,12 @@ struct Flight {
   ULONGLONG start = 0;
 };
 struct HostSize {
-  int width = 0, height = 0;
+  int width = 0;
+  int height = 0;
 };
 
-inline bool g_enabled = false;  // SPI_GETCLIENTAREAANIMATION, read at Install
-inline HWND g_hwnd = nullptr;   // the window whose timer drives the frames
+inline bool g_isEnabled = false;  // SPI_GETCLIENTAREAANIMATION, read at Install
+inline HWND g_hwnd = nullptr;     // the window whose timer drives the frames
 inline constexpr UINT_PTR kTimerId = 0xF1ED;
 inline constexpr UINT kFrameMs = 15;
 
@@ -42,25 +43,31 @@ inline std::map<void*, HostSize>& Hosts() {
 // Record the MCV's content size for this layout pass; true when it changed (a
 // window resize), which snaps instead of animating. Called for every bounded
 // pass, native ones included, so the first tiled pass knows the prior size.
-inline bool NoteHost(void* mcv, int w, int h) {
+inline bool NoteHost(void* mcv, int width, int height) {
   // A 0x0 pass (Edge probes/hides the view mid-resize) is not a size to compare
   // against later; snap it and keep the last real size.
-  if (w <= 0 || h <= 0) {
+  const bool hasSize = width > 0 && height > 0;
+  if (!hasSize) {
     return true;
   }
   HostSize& host = Hosts()[mcv];
-  const bool resized = host.width != 0 && (host.width != w || host.height != h);
-  host = {w, h};
-  return resized;
+  const bool isResized =
+      host.width != 0 && (host.width != width || host.height != height);
+  host = {width, height};
+  return isResized;
 }
 
-inline bool SameTargets(const std::vector<LeafRect>& a,
-                        const std::vector<LeafRect>& b) {
-  if (a.size() != b.size()) {
+inline bool SameTargets(const std::vector<LeafRect>& targets,
+                        const std::vector<LeafRect>& otherTargets) {
+  const bool isSameCount = targets.size() == otherTargets.size();
+  if (!isSameCount) {
     return false;
   }
-  for (size_t i = 0; i < a.size(); ++i) {
-    if (a[i].leaf != b[i].leaf || !motion::Same(a[i].rect, b[i].rect)) {
+  for (size_t i = 0; i < targets.size(); i++) {
+    const bool isSameTarget =
+        targets[i].leaf == otherTargets[i].leaf &&
+        motion::Same(targets[i].rect, otherTargets[i].rect);
+    if (!isSameTarget) {
       return false;
     }
   }
@@ -69,58 +76,69 @@ inline bool SameTargets(const std::vector<LeafRect>& a,
 
 // Rewrite `placed` (each visible leaf's target rect) to this frame's rects.
 // Starts a flight when the targets change, advances it otherwise, and ends it
-// (targets pass through untouched) once the duration has elapsed or on `snap`.
-inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool snap) {
-  auto it = Flights().find(mcv);
-  if (!g_enabled || snap) {
-    if (it != Flights().end()) {
-      Flights().erase(it);
+// (targets pass through untouched) once the duration has elapsed or on
+// `shouldSnap`.
+inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
+  auto flight = Flights().find(mcv);
+  const bool hasFlight = flight != Flights().end();
+  const bool shouldAnimate = g_isEnabled && !shouldSnap;
+  if (!shouldAnimate) {
+    if (hasFlight) {
+      Flights().erase(flight);
     }
     return;
   }
-  if (it == Flights().end() || !SameTargets(it->second.to, placed)) {
+  const bool isFlyingToTargets =
+      hasFlight && SameTargets(flight->second.to, placed);
+  if (!isFlyingToTargets) {
     const int count = static_cast<int>(edge::McvCount(mcv));
-    std::vector<Rect>
-        before;  // every pane on screen now (hidden ones are empty)
-    for (int i = 0; i < count; ++i) {
+    // Every pane on screen now (hidden ones are empty).
+    std::vector<Rect> before;
+    before.reserve(count);
+    for (int i = 0; i < count; i++) {
       before.push_back(edge::ViewBounds(edge::McvContainerAt(mcv, i)));
     }
-    Flight f;
-    f.to = placed;
-    f.start = GetTickCount64();
-    bool moving = false;
-    for (const LeafRect& lr : placed) {
-      const Rect now = before[lr.leaf];
-      const Rect from =
-          motion::Empty(now) ? motion::EntryRect(lr.rect, before) : now;
-      f.from.push_back({lr.leaf, from});
-      moving = moving || !motion::Same(from, lr.rect);
+    Flight newFlight;
+    newFlight.to = placed;
+    newFlight.start = GetTickCount64();
+    bool isMoving = false;
+    for (const LeafRect& target : placed) {
+      const Rect onScreen = before[target.leaf];
+      const Rect from = motion::Empty(onScreen)
+                            ? motion::EntryRect(target.rect, before)
+                            : onScreen;
+      newFlight.from.push_back({target.leaf, from});
+      isMoving = isMoving || !motion::Same(from, target.rect);
     }
-    if (!moving) {
-      if (it != Flights().end()) {
-        Flights().erase(it);
+    if (!isMoving) {
+      if (hasFlight) {
+        Flights().erase(flight);
       }
       return;
     }
-    it = Flights().insert_or_assign(mcv, std::move(f)).first;
+    flight = Flights().insert_or_assign(mcv, std::move(newFlight)).first;
     SetTimer(g_hwnd, kTimerId, kFrameMs, nullptr);
     Log("[anim] flight start: %zu panes", placed.size());
   }
-  const double p = static_cast<double>(GetTickCount64() - it->second.start) /
-                   motion::kDurationMs;
-  if (p >= 1.0) {
-    Flights().erase(it);
+  const double progress =
+      static_cast<double>(GetTickCount64() - flight->second.start) /
+      motion::kDurationMs;
+  const bool hasLanded = progress >= 1.0;
+  if (hasLanded) {
+    Flights().erase(flight);
     return;
   }
-  const double t = motion::Ease(p);
-  for (size_t i = 0; i < placed.size(); ++i) {
-    placed[i].rect = motion::Lerp(it->second.from[i].rect, placed[i].rect, t);
+  const double eased = motion::Ease(progress);
+  for (size_t i = 0; i < placed.size(); i++) {
+    placed[i].rect =
+        motion::Lerp(flight->second.from[i].rect, placed[i].rect, eased);
   }
 }
 
 // WM_TIMER: re-run the layout of every MCV in flight; the detour calls Apply.
 // The final pass lands exactly on the targets and ends the flight, after which
-// the timer stops.
+// the timer stops. The MCVs are copied out first because Apply erases a landed
+// flight mid-loop.
 inline void Tick() {
   std::vector<void*> mcvs;
   for (const auto& [mcv, flight] : Flights()) {
@@ -137,11 +155,11 @@ inline void Tick() {
 
 inline void Install(HWND hwnd) {
   g_hwnd = hwnd;
-  BOOL on = TRUE;
-  SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &on, 0);
-  g_enabled = on != FALSE;
+  BOOL isAnimationEnabled = TRUE;
+  SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &isAnimationEnabled, 0);
+  g_isEnabled = isAnimationEnabled != FALSE;
   Log("[anim] transitions %s",
-      g_enabled ? "on" : "off (system animation effects disabled)");
+      g_isEnabled ? "on" : "off (system animation effects disabled)");
 }
 
 inline void Remove() {
