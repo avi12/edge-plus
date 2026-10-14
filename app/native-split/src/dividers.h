@@ -70,9 +70,12 @@ inline void Place(void* mcv, const Node& tree, const Rect& area,
   bool isShown = true;
   bool isHidden = false;
   Rect zeroRect{};
+  // Edge's own two-pane handle stays VISIBLE but zero-sized (it cannot be hit):
+  // UpdateContentsBorderAndOverlay reads its visibility as "this is a split",
+  // and a hidden handle turns every pane's hover bar and border off.
   if (void* edgeHandle = edge::McvResizeArea(mcv)) {
-    edge::SetViewVisible(edgeHandle, false);
-    edge::EmplaceChildLayout(childLayouts, &edgeHandle, &isHidden, &zeroRect);
+    edge::SetViewVisible(edgeHandle, true);
+    edge::EmplaceChildLayout(childLayouts, &edgeHandle, &isShown, &zeroRect);
   }
   if (entry == Pools().end()) {
     return;
