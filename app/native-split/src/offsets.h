@@ -362,14 +362,6 @@ inline constexpr size_t ImageModel_size_bound = 256;
 inline constexpr uintptr_t MENUITEM_icon_view = 0x418;
 // MenuItemView's views::LayoutDelegate base, right after its views::View base.
 inline constexpr size_t MENUITEM_layout_delegate = View_size;
-// views::ProposedLayout {gfx::Size host_size; std::vector<ChildLayout>}, the
-// vector in libc++'s size-based layout {data, size, capacity};
-// views::ChildLayout {View* child; bool visible; gfx::Rect bounds; SizeBounds}.
-inline constexpr size_t PROPOSED_host_height = 0x4;
-inline constexpr size_t PROPOSED_children = 0x8;
-inline constexpr size_t PROPOSED_child_count = 0x10;
-inline constexpr size_t CHILDLAYOUT_size = 0x30;
-inline constexpr size_t CHILDLAYOUT_bounds = 0xc;
 inline constexpr size_t EdgeResizeArea_size = 0x358;
 // a valid id (⋯'s); grip overrides the tooltip
 inline constexpr int ControlButtons_more_string_id = 0x4676;
@@ -412,8 +404,10 @@ inline constexpr uintptr_t EVENT_root_location = 0xb8;
 // --- views::ProposedLayout ---
 // The out-param CalculateProposedLayout fills; its ctor zeroes 0x20 bytes.
 inline constexpr uintptr_t PL_host_size = 0x00;  // gfx::Size {int w, int h}
-// std::vector<ChildLayout> {begin, end, cap}
+// std::vector<ChildLayout> in libc++'s size-based layout {data, size,
+// capacity}: emplace_back (0x8ad999a) writes at data + size * CL_stride.
 inline constexpr uintptr_t PL_child_layouts = 0x08;
+inline constexpr uintptr_t PL_child_count = 0x10;
 
 // --- views::ChildLayout ---
 // The element of PL_child_layouts; stride 0x30, from ApplyLayout.

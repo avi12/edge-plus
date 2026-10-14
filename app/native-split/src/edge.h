@@ -554,18 +554,18 @@ inline void* MenuItemOfLayoutDelegate(void* layoutDelegate) {
 }
 
 inline int ProposedHostHeight(void* proposedLayout) {
-  return Field<int32_t>(proposedLayout, off::PROPOSED_host_height);
+  return Field<Size>(proposedLayout, off::PL_host_size).height;
 }
 
 // The bounds a views::ProposedLayout gives `child`, or null if it has none.
 inline Rect* ProposedChildBounds(void* proposedLayout, const void* child) {
-  auto* entries = Field<uint8_t*>(proposedLayout, off::PROPOSED_children);
-  const auto count = Field<size_t>(proposedLayout, off::PROPOSED_child_count);
+  auto* entries = Field<uint8_t*>(proposedLayout, off::PL_child_layouts);
+  const auto count = Field<size_t>(proposedLayout, off::PL_child_count);
   for (size_t i = 0; i < count; i++) {
-    uint8_t* entry = entries + i * off::CHILDLAYOUT_size;
-    const bool isChildEntry = *reinterpret_cast<void**>(entry) == child;
+    uint8_t* entry = entries + i * off::CL_stride;
+    const bool isChildEntry = Field<void*>(entry, off::CL_child) == child;
     if (isChildEntry) {
-      return reinterpret_cast<Rect*>(entry + off::CHILDLAYOUT_bounds);
+      return reinterpret_cast<Rect*>(entry + off::CL_bounds);
     }
   }
   return nullptr;
