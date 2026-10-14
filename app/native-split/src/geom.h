@@ -19,9 +19,14 @@ struct Point {
   int32_t y = 0;
 };
 
-inline bool Contains(const Rect& r, const Point& p) {
-  return p.x >= r.x && p.x < r.x + r.width && p.y >= r.y &&
-         p.y < r.y + r.height;
+inline bool Contains(const Rect& rect, const Point& point) {
+  return point.x >= rect.x && point.x < rect.x + rect.width &&
+         point.y >= rect.y && point.y < rect.y + rect.height;
+}
+
+// A rect with no area, which nothing can be inside.
+inline bool Empty(const Rect& rect) {
+  return rect.width <= 0 || rect.height <= 0;
 }
 
 }  // namespace fixedge

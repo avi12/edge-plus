@@ -14,9 +14,9 @@ namespace fixedge::dock {
 
 enum class Zone : uint8_t {
   kNone,      // nowhere to drop (outside, over the dragged pane, or a no-op)
-  kPaneEdge,  // beside a pane: `target` + `dir`
+  kPaneEdge,  // beside a pane: `target` + `direction`
   kSwap,      // a pane's centre: trade places with `target`
-  kRootEdge,  // an outer edge of the whole split: span it (`dir`)
+  kRootEdge,  // an outer edge of the whole split: span it (`direction`)
 };
 
 // How far in from an outer edge the pointer targets the whole split: a share
@@ -27,31 +27,35 @@ inline constexpr int kRootBandMin = 24;
 inline constexpr int kRootBandMax = 72;
 // An active outer band holds this much farther in (hysteresis).
 inline constexpr int kRootReleaseExtra = 32;
-inline constexpr int kOvershoot =
-    48;  // a pointer this far outside still counts (clamped in)
-inline constexpr float kCentre =
-    0.25f;  // a pane's centre box spans [0.25, 0.75) on both axes
-inline constexpr float kEdgeHold =
-    0.4f;  // an active pane edge holds until 40% into the pane
+// A pointer this far outside the split still counts (it is clamped in).
+inline constexpr int kOvershoot = 48;
+// A pane's centre box spans [0.25, 0.75) on both axes.
+inline constexpr float kCentre = 0.25f;
+// An active pane edge holds until 40% into the pane.
+inline constexpr float kEdgeHold = 0.4f;
+// A pointer pixel is sampled at its centre, so a pane's first and last pixels
+// sit symmetrically inside 0..1.
+inline constexpr float kPixelCentre = 0.5f;
 
 struct Plan {
   Zone zone = Zone::kNone;
-  int target = -1;  // the pane dropped on (kPaneEdge / kSwap)
+  int target = kNoLeaf;  // the pane dropped on (kPaneEdge / kSwap)
   Direction direction = Direction::kUp;
   Node result;   // the tree after the drop
   Rect preview;  // the dragged pane's rect in `result`
 };
 
-inline int DistanceToEdge(const Rect& r, const Point& p, Direction d) {
-  switch (d) {
+inline int DistanceToEdge(const Rect& rect, const Point& point,
+                          Direction edge) {
+  switch (edge) {
     case Direction::kLeft:
-      return p.x - r.x;
+      return point.x - rect.x;
     case Direction::kRight:
-      return r.x + r.width - 1 - p.x;
+      return rect.x + rect.width - 1 - point.x;
     case Direction::kUp:
-      return p.y - r.y;
+      return point.y - rect.y;
     default:
-      return r.y + r.height - 1 - p.y;
+      return rect.y + rect.height - 1 - point.y;
   }
 }
 
@@ -65,113 +69,118 @@ inline int RootBand(const Rect& layout, Direction edge) {
   return std::clamp(share, kRootBandMin, kRootBandMax);
 }
 
-// Whether a pane-relative position (u, v in 0..1) is still within the hold band
-// of edge `d`, so a zone already showing does not flip at the diagonal.
-inline bool HoldsEdge(Direction d, float u, float v) {
-  switch (d) {
+// Whether a pane-relative position (`paneX`, `paneY` in 0..1) is still within
+// the hold band of edge `edge`, so a zone already showing does not flip at the
+// diagonal.
+inline bool HoldsEdge(Direction edge, float paneX, float paneY) {
+  switch (edge) {
     case Direction::kLeft:
-      return u < kEdgeHold;
+      return paneX < kEdgeHold;
     case Direction::kRight:
-      return u >= 1.f - kEdgeHold;
+      return paneX >= 1.f - kEdgeHold;
     case Direction::kUp:
-      return v < kEdgeHold;
+      return paneY < kEdgeHold;
     default:
-      return v >= 1.f - kEdgeHold;
+      return paneY >= 1.f - kEdgeHold;
   }
 }
 
 // The nearest edge by the pane's diagonals (FlexLayout): no dead corners.
-inline Direction DiagonalEdge(float u, float v) {
-  const bool below_main = v >= u;        // bottom-left of the "\" diagonal
-  const bool below_anti = v >= 1.f - u;  // bottom-right of the "/" diagonal
-  if (below_main) {
-    return below_anti ? Direction::kDown : Direction::kLeft;
+inline Direction DiagonalEdge(float paneX, float paneY) {
+  const bool isBelowMainDiagonal = paneY >= paneX;        // the "\" diagonal
+  const bool isBelowAntiDiagonal = paneY >= 1.f - paneX;  // the "/" diagonal
+  if (isBelowMainDiagonal) {
+    return isBelowAntiDiagonal ? Direction::kDown : Direction::kLeft;
   }
-  return below_anti ? Direction::kRight : Direction::kUp;
+  return isBelowAntiDiagonal ? Direction::kRight : Direction::kUp;
 }
 
 // Finish a plan: apply the edit to a copy; a no-op yields kNone.
 inline Plan Finish(const Node& tree, const Rect& layout, int moving, Zone zone,
-                   int target, Direction dir) {
+                   int target, Direction direction) {
   Plan plan;
   plan.result = tree;
-  bool changed = false;
+  bool isChanged = false;
   switch (zone) {
     case Zone::kPaneEdge:
-      changed = MovePane(plan.result, moving, target, dir);
+      isChanged = MovePane(plan.result, moving, target, direction);
       break;
     case Zone::kSwap:
-      changed = SwapLeaves(plan.result, moving, target);
+      isChanged = SwapLeaves(plan.result, moving, target);
       break;
     case Zone::kRootEdge:
-      changed = MovePaneToRootEdge(plan.result, moving, dir);
+      isChanged = MovePaneToRootEdge(plan.result, moving, direction);
       break;
     default:
       break;
   }
-  if (!changed) {
+  if (!isChanged) {
     return {};
   }
   std::vector<LeafRect> leaves;
   LayoutTree(plan.result, layout, /*gap=*/0, leaves);
-  for (const LeafRect& lr : leaves) {
-    if (lr.leaf == moving) {
-      plan.preview = lr.rect;
+  for (const LeafRect& leafRect : leaves) {
+    const bool isMovingPane = leafRect.leaf == moving;
+    if (isMovingPane) {
+      plan.preview = leafRect.rect;
     }
   }
   plan.zone = zone;
   plan.target = target;
-  plan.direction = dir;
+  plan.direction = direction;
   return plan;
 }
 
-// Resolve pointer `p` (split coordinates) while dragging pane `moving`. `prev` is
+// Resolve `point` (split coordinates) while dragging pane `moving`. `shown` is
 // the plan currently shown, for hysteresis. Precedence: the whole split's outer
 // band first (checked before any pane, as dockview's root target is), then the
 // pane under the pointer — its centre swaps, its edges dock beside it. So near
 // a pane's bottom edge docks below that pane, and dragging on, deep toward the
 // split's bottom, spans the whole bottom.
-inline Plan Resolve(const Node& tree, const Rect& layout, Point p, int moving,
-                    const Plan& prev) {
-  if (layout.width <= 0 || layout.height <= 0) {
+inline Plan Resolve(const Node& tree, const Rect& layout, Point point,
+                    int moving, const Plan& shown) {
+  if (Empty(layout)) {
     return {};
   }
-  if (p.x < layout.x - kOvershoot ||
-      p.x >= layout.x + layout.width + kOvershoot ||
-      p.y < layout.y - kOvershoot ||
-      p.y >= layout.y + layout.height + kOvershoot) {
+  const Rect reach{layout.x - kOvershoot, layout.y - kOvershoot,
+                   layout.width + 2 * kOvershoot,
+                   layout.height + 2 * kOvershoot};
+  if (!Contains(reach, point)) {
     return {};
   }
-  p.x = std::clamp(p.x, layout.x, layout.x + layout.width - 1);
-  p.y = std::clamp(p.y, layout.y, layout.y + layout.height - 1);
+  point.x = std::clamp(point.x, layout.x, layout.x + layout.width - 1);
+  point.y = std::clamp(point.y, layout.y, layout.y + layout.height - 1);
 
   // 1. The whole split's outer band.
-  bool root = false;
-  Direction root_dir = Direction::kUp;
+  bool hasRootEdge = false;
+  Direction rootEdge = Direction::kUp;
   const bool isHoldingRootEdge =
-      prev.zone == Zone::kRootEdge &&
-      DistanceToEdge(layout, p, prev.direction) <=
-          RootBand(layout, prev.direction) + kRootReleaseExtra;
+      shown.zone == Zone::kRootEdge &&
+      DistanceToEdge(layout, point, shown.direction) <=
+          RootBand(layout, shown.direction) + kRootReleaseExtra;
   if (isHoldingRootEdge) {
-    root = true;
-    root_dir = prev.direction;
+    hasRootEdge = true;
+    rootEdge = shown.direction;
   } else {
-    int nearest = 0;
-    for (Direction d : {Direction::kLeft, Direction::kRight, Direction::kUp,
-                        Direction::kDown}) {
-      const int dist = DistanceToEdge(layout, p, d);
+    int nearestDistance = 0;
+    for (const Direction edge : {Direction::kLeft, Direction::kRight,
+                                 Direction::kUp, Direction::kDown}) {
+      const int distance = DistanceToEdge(layout, point, edge);
       const bool isNearerEdgeInBand =
-          dist < RootBand(layout, d) && (!root || dist < nearest);
+          distance < RootBand(layout, edge) &&
+          (!hasRootEdge || distance < nearestDistance);
       if (isNearerEdgeInBand) {
-        nearest = dist;
-        root_dir = d;
-        root = true;
+        nearestDistance = distance;
+        rootEdge = edge;
+        hasRootEdge = true;
       }
     }
   }
-  if (root) {
-    Plan plan = Finish(tree, layout, moving, Zone::kRootEdge, -1, root_dir);
-    if (plan.zone != Zone::kNone) {
+  if (hasRootEdge) {
+    Plan plan =
+        Finish(tree, layout, moving, Zone::kRootEdge, kNoLeaf, rootEdge);
+    const bool isRootEdgeMove = plan.zone != Zone::kNone;
+    if (isRootEdgeMove) {
       return plan;  // a no-op falls through to the pane
     }
   }
@@ -179,28 +188,36 @@ inline Plan Resolve(const Node& tree, const Rect& layout, Point p, int moving,
   // 2. The pane under the pointer (the dragged pane itself offers nothing).
   std::vector<LeafRect> leaves;
   LayoutTree(tree, layout, /*gap=*/0, leaves);
-  for (const LeafRect& lr : leaves) {
-    if (!Contains(lr.rect, p)) {
+  for (const LeafRect& leafRect : leaves) {
+    const Rect& paneRect = leafRect.rect;
+    if (!Contains(paneRect, point)) {
       continue;
     }
-    if (lr.leaf == moving || lr.rect.width <= 0 || lr.rect.height <= 0) {
+    const bool canDropOnPane = leafRect.leaf != moving && !Empty(paneRect);
+    if (!canDropOnPane) {
       return {};
     }
-    const float u = (static_cast<float>(p.x - lr.rect.x) + 0.5f) /
-                    static_cast<float>(lr.rect.width);
-    const float v = (static_cast<float>(p.y - lr.rect.y) + 0.5f) /
-                    static_cast<float>(lr.rect.height);
-    if (prev.zone == Zone::kPaneEdge && prev.target == lr.leaf &&
-        HoldsEdge(prev.direction, u, v)) {
-      return Finish(tree, layout, moving, Zone::kPaneEdge, lr.leaf,
-                    prev.direction);
+    const float paneX =
+        (static_cast<float>(point.x - paneRect.x) + kPixelCentre) /
+        static_cast<float>(paneRect.width);
+    const float paneY =
+        (static_cast<float>(point.y - paneRect.y) + kPixelCentre) /
+        static_cast<float>(paneRect.height);
+    const bool isHoldingPaneEdge = shown.zone == Zone::kPaneEdge &&
+                                   shown.target == leafRect.leaf &&
+                                   HoldsEdge(shown.direction, paneX, paneY);
+    if (isHoldingPaneEdge) {
+      return Finish(tree, layout, moving, Zone::kPaneEdge, leafRect.leaf,
+                    shown.direction);
     }
-    if (u >= kCentre && u < 1.f - kCentre && v >= kCentre &&
-        v < 1.f - kCentre) {
-      return Finish(tree, layout, moving, Zone::kSwap, lr.leaf, Direction::kUp);
+    const bool isInCentre = paneX >= kCentre && paneX < 1.f - kCentre &&
+                            paneY >= kCentre && paneY < 1.f - kCentre;
+    if (isInCentre) {
+      return Finish(tree, layout, moving, Zone::kSwap, leafRect.leaf,
+                    Direction::kUp);
     }
-    return Finish(tree, layout, moving, Zone::kPaneEdge, lr.leaf,
-                  DiagonalEdge(u, v));
+    return Finish(tree, layout, moving, Zone::kPaneEdge, leafRect.leaf,
+                  DiagonalEdge(paneX, paneY));
   }
   return {};
 }

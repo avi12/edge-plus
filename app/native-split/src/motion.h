@@ -8,54 +8,70 @@
 
 namespace fixedge::motion {
 
-// Transition length and curve: the snappy cubic-bezier(0.16, 1, 0.3, 1).
+// Transition length and curve: the snappy cubic-bezier(0.16, 1, 0.3, 1), its
+// control points named as CSS names them.
 inline constexpr unsigned kDurationMs = 220;
-inline constexpr double kX1 = 0.16, kY1 = 1.0, kX2 = 0.3, kY2 = 1.0;
+inline constexpr double kX1 = 0.16;
+inline constexpr double kY1 = 1.0;
+inline constexpr double kX2 = 0.3;
+inline constexpr double kY2 = 1.0;
+// Each bisection step halves the search interval; 40 of them leave an error of
+// about 1e-12, far below a pixel.
+inline constexpr int kBisectionSteps = 40;
 
-// One axis of a CSS-style cubic bezier through (0,0), (a,b), (c,d), (1,1).
-inline double Bezier(double t, double a, double c) {
-  const double u = 1.0 - t;
-  return 3 * u * u * t * a + 3 * u * t * t * c + t * t * t;
+// One axis of a CSS-style cubic bezier running from 0 to 1, with its two
+// control points at `firstControl` and `secondControl` on that axis, evaluated
+// at curve parameter `curveTime`.
+inline double Bezier(double curveTime, double firstControl,
+                     double secondControl) {
+  const double remaining = 1.0 - curveTime;
+  return 3 * remaining * remaining * curveTime * firstControl +
+         3 * remaining * curveTime * curveTime * secondControl +
+         curveTime * curveTime * curveTime;
 }
 
-// Progress (0..1 linear time) -> eased progress. Solves x(t) = p by bisection
-// (monotonic for x control points in [0,1]), then returns y(t).
-inline double Ease(double p) {
-  if (p <= 0.0) {
+// Progress (0..1 linear time) -> eased progress. Solves x(t) = progress by
+// bisection (monotonic for x control points in [0,1]), then returns y(t).
+inline double Ease(double progress) {
+  if (progress <= 0.0) {
     return 0.0;
   }
-  if (p >= 1.0) {
+  if (progress >= 1.0) {
     return 1.0;
   }
-  double lo = 0.0, hi = 1.0, t = p;
-  for (int i = 0; i < 40; ++i) {
-    t = (lo + hi) / 2;
-    if (Bezier(t, kX1, kX2) < p) {
-      lo = t;
+  double low = 0.0;
+  double high = 1.0;
+  double curveTime = progress;
+  for (int i = 0; i < kBisectionSteps; i++) {
+    curveTime = (low + high) / 2;
+    const bool isShortOfProgress = Bezier(curveTime, kX1, kX2) < progress;
+    if (isShortOfProgress) {
+      low = curveTime;
     } else {
-      hi = t;
+      high = curveTime;
     }
   }
-  return Bezier(t, kY1, kY2);
+  return Bezier(curveTime, kY1, kY2);
 }
 
-inline bool Same(const Rect& a, const Rect& b) {
-  return a.x == b.x && a.y == b.y && a.width == b.width && a.height == b.height;
+inline bool Same(const Rect& first, const Rect& second) {
+  return first.x == second.x && first.y == second.y &&
+         first.width == second.width && first.height == second.height;
 }
-inline bool Empty(const Rect& r) {
-  return r.width <= 0 || r.height <= 0;
-}
+// Empty lives in geom.h beside Rect; anim.h calls it as motion::Empty.
+using fixedge::Empty;
 
-inline int Mix(int a, int b, double t) {
-  return a + static_cast<int>(std::lround((b - a) * t));
+inline int Mix(int from, int to, double progress) {
+  return from + static_cast<int>(std::lround((to - from) * progress));
 }
-// Interpolate by eased progress `t`. Edges (not sizes) are mixed, so panes that
-// tile at both ends stay seamless mid-flight.
-inline Rect Lerp(const Rect& a, const Rect& b, double t) {
-  const int l = Mix(a.x, b.x, t), top = Mix(a.y, b.y, t);
-  const int r = Mix(a.x + a.width, b.x + b.width, t),
-            bot = Mix(a.y + a.height, b.y + b.height, t);
-  return Rect{l, top, r - l, bot - top};
+// Interpolate by eased progress `progress`. Edges (not sizes) are mixed, so
+// panes that tile at both ends stay seamless mid-flight.
+inline Rect Lerp(const Rect& from, const Rect& to, double progress) {
+  const int left = Mix(from.x, to.x, progress);
+  const int top = Mix(from.y, to.y, progress);
+  const int right = Mix(from.x + from.width, to.x + to.width, progress);
+  const int bottom = Mix(from.y + from.height, to.y + to.height, progress);
+  return Rect{left, top, right - left, bottom - top};
 }
 
 // Where a pane that was not on screen grows in from. A new pane is carved out of
@@ -64,29 +80,36 @@ inline Rect Lerp(const Rect& a, const Rect& b, double t) {
 // rect on the side it was carved from: an add-right grows out of the old pane's
 // right edge. With no such parent, it grows out of its own centre.
 inline Rect EntryRect(const Rect& target, const std::vector<Rect>& before) {
-  const int cx = target.x + target.width / 2, cy = target.y + target.height / 2;
-  for (const Rect& p : before) {
-    if (Empty(p) || cx < p.x || cx >= p.x + p.width || cy < p.y ||
-        cy >= p.y + p.height) {
+  const Point centre{target.x + target.width / 2, target.y + target.height / 2};
+  for (const Rect& parent : before) {
+    const bool isParent = !Empty(parent) && Contains(parent, centre);
+    if (!isParent) {
       continue;
     }
-    const int right = target.x + target.width,
-              bottom = target.y + target.height;
-    if (right == p.x + p.width && target.x > p.x) {
+    const int right = target.x + target.width;
+    const int bottom = target.y + target.height;
+    const int parentRight = parent.x + parent.width;
+    const int parentBottom = parent.y + parent.height;
+    const bool isCarvedFromRight = right == parentRight && target.x > parent.x;
+    if (isCarvedFromRight) {
       return Rect{right, target.y, 0, target.height};
     }
-    if (target.x == p.x && right < p.x + p.width) {
+    const bool isCarvedFromLeft = target.x == parent.x && right < parentRight;
+    if (isCarvedFromLeft) {
       return Rect{target.x, target.y, 0, target.height};
     }
-    if (bottom == p.y + p.height && target.y > p.y) {
+    const bool isCarvedFromBottom =
+        bottom == parentBottom && target.y > parent.y;
+    if (isCarvedFromBottom) {
       return Rect{target.x, bottom, target.width, 0};
     }
-    if (target.y == p.y && bottom < p.y + p.height) {
+    const bool isCarvedFromTop = target.y == parent.y && bottom < parentBottom;
+    if (isCarvedFromTop) {
       return Rect{target.x, target.y, target.width, 0};
     }
     break;
   }
-  return Rect{cx, cy, 0, 0};
+  return Rect{centre.x, centre.y, 0, 0};
 }
 
 }  // namespace fixedge::motion
