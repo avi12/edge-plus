@@ -9,6 +9,7 @@
 #include "pane_tree.h"
 #include "state.h"
 #include "anim.h"
+#include "dividers.h"
 
 namespace fixedge::geometry {
 
@@ -86,6 +87,8 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
     edge::EmplaceChildLayout(childLayouts, &containers[i], &isVisible,
                              &zeroRect);
   }
+  // The dividers sit over the seams of the target layout.
+  dividers::Place(mcv, root, Rect{0, 0, width, height}, childLayouts);
   Log("[layout] tiled %zu/%d panes in %dx%d (%s)", placed.size(), count, width,
       height, axis == Axis::kVertical ? "rows" : "cols");
   return out;

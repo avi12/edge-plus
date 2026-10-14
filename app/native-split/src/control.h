@@ -13,6 +13,7 @@
 #include "state.h"
 #include "anim.h"
 #include "drag.h"
+#include "dividers.h"
 #include "grip.h"
 #include "overlay.h"
 
@@ -126,6 +127,7 @@ inline void Teardown(HWND hwnd) {
   drag::Cancel();
   overlay::Remove();
   grip::RemoveAll();
+  dividers::RemoveAll();
   anim::Remove();
   if (g_hasHotKeys) {
     UnregisterHotKeys(hwnd);
@@ -193,6 +195,7 @@ inline void AddPaneByCommand(HWND hwnd, WPARAM wparam) {
 inline void EnsureGripsByCommand(HWND hwnd) {
   if (void* mcv = edge::McvForWindow(hwnd)) {
     grip::EnsureGrips(mcv);
+    dividers::Ensure(mcv);
   }
 }
 

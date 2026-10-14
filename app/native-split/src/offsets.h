@@ -188,6 +188,18 @@ inline constexpr uintptr_t TabStripModel_ActivateTabAt = 0xa26c482;
 // (view, const gfx::Rect&)
 inline constexpr uintptr_t View_SetBoundsRect = 0x0fd8234;
 
+// --- the dividers between panes (docs/re/close-pane.md) ---
+// EdgeMultiContentsResizeArea(this, MultiContentsView*): the 2-pane split's
+// resize handle (8x8 preferred, hover pill; vertical when taller than wide).
+// MultiContentsView's ctor allocates it with 0x358 bytes.
+// views::EdgeTwoDimensionalResizeArea's own mouse handlers (overriding
+// views::ResizeArea's): bool (view, const ui::MouseEvent&) for press / drag,
+// void (view, const ui::MouseEvent&) for release, void (view) for capture lost.
+inline constexpr uintptr_t ResizeArea2D_OnMousePressed = 0xb1fac20;
+inline constexpr uintptr_t ResizeArea2D_OnMouseDragged = 0xb1facb0;
+inline constexpr uintptr_t ResizeArea2D_OnMouseReleased = 0xb1facf0;
+inline constexpr uintptr_t ResizeArea2D_OnMouseCaptureLost = 0xb1fad50;
+
 // --- 2-pane-only CHECK sites that int3 when a split grows past 2 members ---
 // Accessible-label builder: maps a split tab's pane index to a string id
 // (0x3e7f pane0 / 0x3e80 pane1) and `cmp eax,1; jne <int3>` crashes at index>=2.
@@ -270,6 +282,7 @@ inline constexpr uintptr_t ECCV_buttons_iface = 0x348;
 inline constexpr uintptr_t ECCV_control_buttons = 0x540;
 inline constexpr uintptr_t ECCV_vtbl_SetControlButtons = 0x10;
 inline constexpr size_t ControlButtons_size = 0x380;
+inline constexpr size_t EdgeResizeArea_size = 0x358;
 // a valid id (⋯'s); grip overrides the tooltip
 inline constexpr int ControlButtons_more_string_id = 0x4676;
 // The bar's buttons (InitButtons): ⋯ @+0x340, X @+0x350.

@@ -443,6 +443,19 @@ inline void GiveControlButtons(void* container, void* browserView,
   ContainerSetControlButtons(container, &ownedBar);
 }
 
+// Build an EdgeMultiContentsResizeArea for `mcv` in `view` (EdgeResizeArea_size
+// bytes from NewView); it starts hidden.
+inline void ConstructResizeArea(void* view, void* mcv) {
+  using CtorFn = void*(__fastcall*)(void*, void*);
+  reinterpret_cast<CtorFn>(At(rva::EdgeMultiContentsResizeArea_ctor))(view,
+                                                                      mcv);
+}
+
+// Edge's own (single, two-pane) resize handle of a split.
+inline void* McvResizeArea(void* mcv) {
+  return Field<void*>(mcv, off::MCV_resize_area);
+}
+
 // The X button of a pane's hover bar.
 inline void* ControlButtonsCloseButton(void* bar) {
   return Field<void*>(bar, off::ControlButtons_close_button);

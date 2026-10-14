@@ -9,6 +9,7 @@
 #pragma once
 #include <windows.h>
 #include <map>
+#include <set>
 #include <vector>
 #include "edge.h"
 #include "motion.h"
@@ -74,6 +75,20 @@ inline bool SameTargets(const std::vector<LeafRect>& targets,
   return true;
 }
 
+// Splits being resized live (a divider drag): their layout follows the
+// pointer exactly, with no easing.
+inline std::set<void*>& LiveSplits() {
+  static std::set<void*> splits;
+  return splits;
+}
+inline void SetLive(void* mcv, bool isLive) {
+  if (isLive) {
+    LiveSplits().insert(mcv);
+  } else {
+    LiveSplits().erase(mcv);
+  }
+}
+
 // Rewrite `placed` (each visible leaf's target rect) to this frame's rects.
 // Starts a flight when the targets change, advances it otherwise, and ends it
 // (targets pass through untouched) once the duration has elapsed or on
@@ -81,7 +96,8 @@ inline bool SameTargets(const std::vector<LeafRect>& targets,
 inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
   auto flight = Flights().find(mcv);
   const bool hasFlight = flight != Flights().end();
-  const bool shouldAnimate = g_isEnabled && !shouldSnap;
+  const bool shouldAnimate =
+      g_isEnabled && !shouldSnap && !LiveSplits().count(mcv);
   if (!shouldAnimate) {
     if (hasFlight) {
       Flights().erase(flight);

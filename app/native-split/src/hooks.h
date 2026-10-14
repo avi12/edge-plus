@@ -12,6 +12,7 @@
 #include "collapse.h"
 #include "menu.h"
 #include "control.h"
+#include "dividers.h"
 #include "drag.h"
 #include "grip.h"
 #include "state.h"
@@ -54,9 +55,11 @@ inline void* __fastcall h_setwc(void* mcv, void* webContents, uint32_t index) {
     // Edge only watches the first and last member for hover; watch every pane.
     edge::ListenSplitInput(webContents);
   }
-  // Pane 3+ needs a hover bar, and every pane of a grown split a drag grip.
+  // Pane 3+ needs a hover bar, every pane of a grown split a drag grip, and
+  // every seam a divider.
   panes::EnsureControlButtons(mcv, static_cast<int>(index));
   grip::EnsureGrips(mcv);
+  dividers::Ensure(mcv);
   return result;
 }
 
@@ -126,6 +129,60 @@ inline ButtonPressed_t o_pressed = nullptr;
 inline ButtonPressed_t o_dragged = nullptr;
 inline ButtonReleased_t o_released = nullptr;
 inline ButtonCaptureLost_t o_capture_lost = nullptr;
+
+// views::EdgeTwoDimensionalResizeArea's mouse handlers: Edge's own divider
+// class, shared by its two-pane handle and our per-seam dividers (dividers.h).
+// A press on one of ours starts a seam drag and is claimed, so views keeps
+// sending it the drags and the release; Edge's own handle runs the original.
+using DividerEvent_t = bool(__fastcall*)(void*, const void*);
+using DividerReleased_t = void(__fastcall*)(void*, const void*);
+using DividerCaptureLost_t = void(__fastcall*)(void*);
+inline DividerEvent_t o_divider_pressed = nullptr;
+inline DividerEvent_t o_divider_dragged = nullptr;
+inline DividerReleased_t o_divider_released = nullptr;
+inline DividerCaptureLost_t o_divider_capture_lost = nullptr;
+
+inline bool __fastcall h_divider_pressed(void* view, const void* event) {
+  void* mcv = nullptr;
+  Seam seam;
+  if (!dividers::Locate(view, &mcv, &seam)) {
+    return o_divider_pressed(view, event);
+  }
+  const int panes = edge::McvActiveSplitPanes(mcv);
+  dividers::Begin(mcv, seam, geometry::LiveTree(mcv, panes),
+                  edge::EventRootLocation(event));
+  return true;
+}
+
+inline bool __fastcall h_divider_dragged(void* view, const void* event) {
+  void* mcv = nullptr;
+  Seam seam;
+  if (!dividers::Locate(view, &mcv, &seam)) {
+    return o_divider_dragged(view, event);
+  }
+  dividers::Move(edge::EventRootLocation(event));
+  return true;
+}
+
+inline void __fastcall h_divider_released(void* view, const void* event) {
+  void* mcv = nullptr;
+  Seam seam;
+  if (!dividers::Locate(view, &mcv, &seam)) {
+    o_divider_released(view, event);
+    return;
+  }
+  dividers::End();
+}
+
+inline void __fastcall h_divider_capture_lost(void* view) {
+  void* mcv = nullptr;
+  Seam seam;
+  if (!dividers::Locate(view, &mcv, &seam)) {
+    o_divider_capture_lost(view);
+    return;
+  }
+  dividers::End();
+}
 
 inline bool __fastcall h_pressed(void* button, const void* event) {
   void* mcv = nullptr;
@@ -206,6 +263,19 @@ inline bool InstallAll() {
   Install(rva::MultiContentsView_SetActiveIndex,
           reinterpret_cast<void*>(h_set_active), &o_set_active,
           "SetActiveIndex");
+  Install(rva::ResizeArea2D_OnMousePressed,
+          reinterpret_cast<void*>(h_divider_pressed), &o_divider_pressed,
+          "EdgeTwoDimensionalResizeArea::OnMousePressed");
+  Install(rva::ResizeArea2D_OnMouseDragged,
+          reinterpret_cast<void*>(h_divider_dragged), &o_divider_dragged,
+          "EdgeTwoDimensionalResizeArea::OnMouseDragged");
+  Install(rva::ResizeArea2D_OnMouseReleased,
+          reinterpret_cast<void*>(h_divider_released), &o_divider_released,
+          "EdgeTwoDimensionalResizeArea::OnMouseReleased");
+  Install(rva::ResizeArea2D_OnMouseCaptureLost,
+          reinterpret_cast<void*>(h_divider_capture_lost),
+          &o_divider_capture_lost,
+          "EdgeTwoDimensionalResizeArea::OnMouseCaptureLost");
   Install(rva::ControlButtons_ToggleContextMenu,
           reinterpret_cast<void*>(menu::h_toggle), &menu::o_toggle,
           "ControlButtons::ToggleContextMenu");
