@@ -50,6 +50,23 @@ inline constexpr uintptr_t WebContents_WasShown           = 0x29f2b30; // (WebCo
 inline constexpr uintptr_t TabStripModel_GetWebContentsAt = 0x101530e; // (tsm, int index) bounds-checked
 // --- the feed pipeline (controller.md) ---
 inline constexpr uintptr_t BrowserView_ShowSplitView = 0xc93594a; // (BrowserView*) feeds panes
+// --- native split data-model grow (docs/re/split-insert.md, split-grow-impl.md) ---
+inline constexpr uintptr_t EdgeOperatorNew         = 0x36b3c20;  // (size)->void*  (non-View new)
+inline constexpr uintptr_t TokenCreateRandom       = 0x1e98440;  // (out base::Token*) random 16B id
+inline constexpr uintptr_t SplitTabVisualData_ctor = 0x2ce031e;  // ({layout,ratio=0.5})
+inline constexpr uintptr_t TabStripModel_AddToNewSplit = 0xa273926; // create 2-pane (caps at 2)
+inline constexpr uintptr_t TabStripModel_AddToSplitImpl = 0xa273e30; // N-generic add worker
+inline constexpr uintptr_t TabStripModel_UpdateTabInSplit = 0xa272ccc; // (tsm, anchorMember, newIdx, 0) add-to-split
+inline constexpr uintptr_t TabStripModel_RemoveSplitImpl = 0xa26df6a;
+inline constexpr uintptr_t GetTabsAndIndicesInSplit = 0xa269a50;
+inline constexpr uintptr_t GetSplitForTab          = 0x2b2a682;
+inline constexpr uintptr_t GetSplitData            = 0xa2677a4;  // (tsm, &id)->SplitTabData*
+inline constexpr uintptr_t GetTabAtIndexRecursive  = 0x0fb86b2;  // (rootColl, int)->TabModel*
+inline constexpr uintptr_t GetIndexOfTabRecursive  = 0x0fb8408;  // (rootColl, TabModel*)->int
+inline constexpr uintptr_t TabStripModel_GetActiveTab = 0x0fd2e60;
+inline constexpr uintptr_t TabStripModel_InsertDetachedTabAt = 0xa267bb6;
+inline constexpr uintptr_t BrowserView_ForNativeWindow = 0x107d3e0; // (aura::Window*)->BrowserView*
+inline constexpr uintptr_t GetContentWindowForHWND = 0x26af8e6;     // (HWND)->aura::Window*
 // --- the split's 3-dot menu (extension point for directional "add pane") ---
 inline constexpr uintptr_t SplitTabMenuModel_ctor          = 0xa264f8e;
 inline constexpr uintptr_t SplitTabMenuModel_ExecuteCommand = 0xa265830;
@@ -62,6 +79,12 @@ inline constexpr uintptr_t UTF8ToUTF16                     = 0x101cae0;  // (&ou
 // action 2 = dissolve keeping tabs + activate the active tab (fills window);
 // action 3 = same but keeps the LAST tab. Clamp 3->2 to always keep the active.
 inline constexpr uintptr_t SplitWindowController_DoAction  = 0xa021020;
+// --- 2-pane-only CHECK sites that int3 when a split grows past 2 members ---
+// Accessible-label builder: maps a split tab's pane index to a string id
+// (0x3e7f pane0 / 0x3e80 pane1) and `cmp eax,1; jne <int3>` crashes at index>=2.
+// `jne 0x42e72eb` (0F 85 rel32, 6 bytes); NOP it so index>=2 falls through to
+// the pane-1 label instead of crashing. a11y text for pane 3+ is cosmetic.
+inline constexpr uintptr_t SplitA11yLabel_paneidx_jne      = 0x42e6faf;
 }  // namespace rva
 
 // Linear addresses (not RVAs): partition-alloc BRP-pool gate for raw_ptr acquire.
@@ -89,8 +112,12 @@ inline constexpr uintptr_t BV_browser           = 0x600; // Browser* within Brow
 inline constexpr uintptr_t CWV_primary_flag     = 0x450; // bool on ContentsWebView (pane-0 fixup)
 // Browser / TabStripModel (docs/re/tab-wiring.md)
 inline constexpr uintptr_t BROWSER_tab_strip_model = 0x30;  // TabStripModel* within Browser
-inline constexpr uintptr_t TSM_collection       = 0x10;  // TabCollection* within TabStripModel
+inline constexpr uintptr_t TSM_collection       = 0x10;  // root TabCollection* within TabStripModel
+inline constexpr uintptr_t TSM_active_tab       = 0x98;  // active TabModel* within TabStripModel
 inline constexpr uintptr_t TABCOLL_count        = 0x18;  // int tab count within TabCollection
+// TabModel virtual-table slots (docs/re/split-grow-impl.md)
+inline constexpr uintptr_t TABMODEL_vtbl_GetSplit = 0x118;  // GetSplit(this, out optional<SplitTabId>)
+inline constexpr uintptr_t TABMODEL_vtbl_IsSplit  = 0x108;  // bool IsSplit(this)
 // ContentsContainerView
 inline constexpr uintptr_t CCV_contents_web_view = 0x3a8; // ContentsWebView*
 inline constexpr uintptr_t CCV_is_active         = 0x38d; // bool

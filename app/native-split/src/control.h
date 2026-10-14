@@ -9,6 +9,7 @@
 #include <cstring>
 #include "edge.h"
 #include "split_ops.h"
+#include "split_data.h"
 #include "state.h"
 
 namespace fixedge::control {
@@ -19,9 +20,18 @@ inline WNDPROC g_orig_proc = nullptr;
 
 inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
   if (msg == g_msg && g_msg != 0) {
-    const Direction dir = static_cast<Direction>(wparam & 0x3);  // 0 up,1 down,2 left,3 right
-    Log("[control] add-pane message dir=%d", static_cast<int>(dir));
-    split_ops::AddPane(g_active_mcv, dir);  // on the UI thread (this WndProc)
+    // tsm via HWND -> aura -> BrowserView, so no split need pre-exist.
+    // wparam >= 100 = create a fresh split; otherwise grow the active split.
+    void* tsm = edge::TsmForWindow(hwnd);
+    Log("[control] message wparam=%llu tsm=%p", static_cast<unsigned long long>(wparam), tsm);
+    if (!tsm) return 0;
+    if (wparam >= 200) {
+      split_data::CreateSplitN(tsm, static_cast<int>(wparam) - 200);  // direct AddToSplitImpl, N panes
+    } else if (wparam >= 100) {
+      split_data::CreateSplit(tsm);  // proven 2-pane AddToNewSplit
+    } else {
+      split_data::GrowSplit(tsm);
+    }
     return 0;
   }
   return CallWindowProcW(g_orig_proc, hwnd, msg, wparam, lparam);

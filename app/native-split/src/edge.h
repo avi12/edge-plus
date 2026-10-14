@@ -38,6 +38,29 @@ inline uint8_t PatchByte(uintptr_t rva, uint8_t value) {
   return prev;  // caller keeps this to restore on unload
 }
 
+// Overwrite `n` code bytes with 0x90 (NOP), saving the originals into `saved`
+// (reversibly) — used to neutralize a 2-pane-only CHECK so a grown split survives.
+inline void PatchNop(uintptr_t rva, size_t n, uint8_t* saved) {
+  void* addr = At(rva);
+  DWORD old = 0;
+  auto* p = reinterpret_cast<uint8_t*>(addr);
+  if (VirtualProtect(addr, n, PAGE_EXECUTE_READWRITE, &old)) {
+    for (size_t i = 0; i < n; ++i) { saved[i] = p[i]; p[i] = 0x90; }
+    VirtualProtect(addr, n, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), addr, n);
+  }
+}
+inline void Unpatch(uintptr_t rva, size_t n, const uint8_t* saved) {
+  void* addr = At(rva);
+  DWORD old = 0;
+  auto* p = reinterpret_cast<uint8_t*>(addr);
+  if (VirtualProtect(addr, n, PAGE_EXECUTE_READWRITE, &old)) {
+    for (size_t i = 0; i < n; ++i) p[i] = saved[i];
+    VirtualProtect(addr, n, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), addr, n);
+  }
+}
+
 // Typed lvalue at obj+off. The one place raw pointer arithmetic on Edge objects
 // lives; callers read/write fields by name via the Mcv*/Container* helpers below.
 template <class T>
@@ -96,6 +119,108 @@ inline void ContentsWebViewSetContents(void* contents_web_view, void* web_conten
 inline void WebContentsWasShown(void* web_contents) {
   using Fn = void*(__fastcall*)(void*);
   reinterpret_cast<Fn>(At(rva::WebContents_WasShown))(web_contents);
+}
+
+// --- native split data-model helpers ---------------------------------------
+
+// Edge's non-View operator new (so a buffer we hand to a split primitive can be
+// reallocated/freed by Edge's own allocator).
+inline void* EdgeNew(size_t size) {
+  using Fn = void*(__fastcall*)(size_t);
+  return reinterpret_cast<Fn>(At(rva::EdgeOperatorNew))(size);
+}
+// base::Token::CreateRandom(out 16-byte Token*) — a valid split id.
+inline void CreateRandomToken(void* out16) {
+  using Fn = void*(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(rva::TokenCreateRandom))(out16);
+}
+
+// The split primitives' index argument: {int* data; size_t size; size_t cap}
+// (NOT libc++ vector) — confirmed from the caller storing rodata {1,1} at +8.
+struct SplitIndexVec {
+  int* data;
+  size_t size;
+  size_t cap;
+};
+
+// Build a SplitIndexVec of `count` tab indices in an Edge-allocated buffer.
+inline SplitIndexVec MakeIndexVec(const int* indices, size_t count) {
+  int* buf = static_cast<int*>(EdgeNew(count * sizeof(int)));
+  for (size_t i = 0; i < count; ++i) buf[i] = indices[i];
+  return SplitIndexVec{buf, count, count};
+}
+
+// TabStripModel members + the split primitives (docs/re/split-grow-impl.md).
+inline void* RootCollection(void* tsm) { return Field<void*>(tsm, off::TSM_collection); }
+inline void* ActiveTab(void* tsm) { return Field<void*>(tsm, off::TSM_active_tab); }
+
+// A TabModel virtual: resolve a vtable slot (byte offset) and call it.
+inline bool TabIsSplit(void* tab) {
+  void** vtbl = *reinterpret_cast<void***>(tab);
+  using Fn = bool(__fastcall*)(void*);
+  return reinterpret_cast<Fn>(vtbl[off::TABMODEL_vtbl_IsSplit / 8])(tab);
+}
+inline void TabGetSplit(void* tab, void* out_opt /*24B: Token@0, bool@0x10*/) {
+  void** vtbl = *reinterpret_cast<void***>(tab);
+  using Fn = void(__fastcall*)(void*, void*);
+  reinterpret_cast<Fn>(vtbl[off::TABMODEL_vtbl_GetSplit / 8])(tab, out_opt);
+}
+
+inline void* GetSplitData(void* tsm, void* id16) {
+  using Fn = void*(__fastcall*)(void*, void*);
+  return reinterpret_cast<Fn>(At(rva::GetSplitData))(tsm, id16);
+}
+inline void GetTabsAndIndicesInSplit(void* tsm, void* out_vec24, void* id16) {
+  using Fn = void*(__fastcall*)(void*, void*, void*);
+  reinterpret_cast<Fn>(At(rva::GetTabsAndIndicesInSplit))(tsm, out_vec24, id16);
+}
+inline void* GetTabAtIndexRecursive(void* root_collection, int index) {
+  using Fn = void*(__fastcall*)(void*, int);
+  return reinterpret_cast<Fn>(At(rva::GetTabAtIndexRecursive))(root_collection, index);
+}
+// GetIndexOfTabRecursive(rcx=collection, rdx=out{size_t index; bool found}, r8=tab).
+inline int GetIndexOfTabRecursive(void* root_collection, void* tab_model) {
+  struct { uint64_t index; uint8_t found; uint8_t pad[7]; } out = {};
+  using Fn = void(__fastcall*)(void*, void*, void*);
+  reinterpret_cast<Fn>(At(rva::GetIndexOfTabRecursive))(root_collection, &out, tab_model);
+  return out.found ? static_cast<int>(out.index) : -1;
+}
+inline void RemoveSplitImpl(void* tsm, void* id16, int flag) {
+  using Fn = void*(__fastcall*)(void*, void*, int);
+  reinterpret_cast<Fn>(At(rva::TabStripModel_RemoveSplitImpl))(tsm, id16, flag);
+}
+// 7 args: 4 register + 3 stack ([rsp+0x20/0x28/0x30]).
+inline void AddToSplitImpl(void* tsm, void* out_id16, void* id16, SplitIndexVec* indices,
+                           int anchor, void* visual16, int flag) {
+  using Fn = void*(__fastcall*)(void*, void*, void*, void*, int, void*, int);
+  reinterpret_cast<Fn>(At(rva::TabStripModel_AddToSplitImpl))(tsm, out_id16, id16, indices, anchor,
+                                                              visual16, flag);
+}
+// AddToNewSplit(tsm, out base::Token*, SplitIndexVec*, SplitTabVisualData*) — creates
+// a 2-pane split (its size==1 branch adds the active tab).
+inline void AddToNewSplit(void* tsm, void* out_id16, SplitIndexVec* indices, void* visual16) {
+  using Fn = void*(__fastcall*)(void*, void*, void*, void*);
+  reinterpret_cast<Fn>(At(rva::TabStripModel_AddToNewSplit))(tsm, out_id16, indices, visual16);
+}
+// UpdateTabInSplit(tsm, anchor=last split member TabModel*, int newTabIndex, int flag)
+// — Edge's own "add a tab to the current split": runs the whole remove+move+add
+// transaction internally (how OpenTabInCurrentSplitWindow adds a pane).
+inline void UpdateTabInSplit(void* tsm, void* anchor_member, int new_tab_index, int flag) {
+  using Fn = void*(__fastcall*)(void*, void*, int, int);
+  reinterpret_cast<Fn>(At(rva::TabStripModel_UpdateTabInSplit))(tsm, anchor_member, new_tab_index,
+                                                                flag);
+}
+
+// HWND -> aura::Window* -> BrowserView*, the bridge to reach a browser from a
+// Win32 window handle (Chromium is Aura; GetBrowserViewForNativeWindow wants the
+// aura window, not the HWND).
+inline void* AuraWindowForHWND(void* hwnd) {
+  using Fn = void*(__fastcall*)(void*);
+  return reinterpret_cast<Fn>(At(rva::GetContentWindowForHWND))(hwnd);
+}
+inline void* BrowserViewForAura(void* aura_window) {
+  using Fn = void*(__fastcall*)(void*);
+  return reinterpret_cast<Fn>(At(rva::BrowserView_ForNativeWindow))(aura_window);
 }
 
 // TabStripModel::GetWebContentsAt — bounds-checked by the callee; caller must
@@ -157,6 +282,14 @@ inline void* TabStripModelOf(void* browser) { return Field<void*>(browser, off::
 inline int TabCount(void* tab_strip_model) {
   void* collection = Field<void*>(tab_strip_model, off::TSM_collection);
   return collection ? Field<int32_t>(collection, off::TABCOLL_count) : 0;
+}
+
+// TabStripModel from a top-level Win32 browser window handle (no split needed).
+inline void* TsmForWindow(void* hwnd) {
+  void* aura = AuraWindowForHWND(hwnd);
+  if (!aura) return nullptr;
+  void* bv = BrowserViewForAura(aura);
+  return bv ? TabStripModelOf(BrowserOf(bv)) : nullptr;
 }
 
 }  // namespace fixedge::edge
