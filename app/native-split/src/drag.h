@@ -48,7 +48,8 @@ inline Point RootToSplit(void* mcv, Point point) {
 
 // A rect in the split's DIPs -> screen pixels (for the preview window).
 inline Rect SplitToScreen(void* mcv, const Rect& rect) {
-  Point topLeft{rect.x, rect.y}, bottomRight{rect.x + rect.w, rect.y + rect.h};
+  Point topLeft{rect.x, rect.y},
+      bottomRight{rect.x + rect.width, rect.y + rect.height};
   void* root = edge::ViewRoot(mcv);
   edge::ConvertPoint(mcv, root, &topLeft);
   edge::ConvertPoint(mcv, root, &bottomRight);
@@ -144,7 +145,8 @@ inline void Release() {
   edge::LayoutImmediately(
       mcv);  // a pure tree edit: force the re-tile (and its animation)
   Log("[drag] dropped pane %d: zone=%d target=%d dir=%d", pane,
-      static_cast<int>(plan.zone), plan.target, static_cast<int>(plan.dir));
+      static_cast<int>(plan.zone), plan.target,
+      static_cast<int>(plan.direction));
 }
 
 }  // namespace fixedge::drag

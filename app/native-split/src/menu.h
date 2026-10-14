@@ -69,7 +69,7 @@ inline void* __fastcall h_exec(void* self, int command_id, int flags) {
                           : command_id == kAddDown ? Direction::kDown
                           : command_id == kAddLeft ? Direction::kLeft
                                                    : Direction::kRight;
-    split_ops::AddPane(g_active_mcv, dir);
+    split_ops::AddPane(g_activeMcv, dir);
     return nullptr;
   }
   return o_exec(self, command_id, flags);

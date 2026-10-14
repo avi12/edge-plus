@@ -47,8 +47,8 @@ int main() {
         nb{400, 0, 400, 600};  // new pane from the right edge
     for (int i = 0; i <= 10; ++i) {
       const Rect l = Lerp(a, b, i / 10.0), r = Lerp(na, nb, i / 10.0);
-      Check(l.x + l.w == r.x, "neighbours stay seamless mid-flight");
-      Check(r.x + r.w == 800, "new pane stays pinned to the right edge");
+      Check(l.x + l.width == r.x, "neighbours stay seamless mid-flight");
+      Check(r.x + r.width == 800, "new pane stays pinned to the right edge");
     }
   }
 

@@ -59,7 +59,7 @@ using Calc_t = void*(__fastcall*)(void*, void*, void*);
 inline Calc_t o_calc = nullptr;
 inline void* __fastcall h_calc(void* self, void* out, void* avail) {
   void* mcv = edge::McvFromLayoutBase(self);
-  g_active_mcv = mcv;
+  g_activeMcv = mcv;
   const bool bounded = edge::Field<uint8_t>(avail, 0x4) == 1 &&
                        edge::Field<uint8_t>(avail, 0xc) == 1;
   const int width = edge::Field<int32_t>(avail, 0x0),

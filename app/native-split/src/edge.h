@@ -160,7 +160,7 @@ inline void CreateRandomToken(void* out16) {
 struct SplitIndexVec {
   int* data;
   size_t size;
-  size_t cap;
+  size_t capacity;
 };
 
 // Build a SplitIndexVec of `count` tab indices in an Edge-allocated buffer.

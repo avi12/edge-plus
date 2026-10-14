@@ -41,7 +41,7 @@ inline uint32_t Pixel(COLORREF c, float alpha) {
 // Render `r` (screen px) into the layered window: a rounded, tinted fill with an
 // outline; the whole-split edge is bolder, a swap is fainter with a dashed edge.
 inline void Paint(const Rect& r) {
-  if (!g_wnd || r.w <= 0 || r.h <= 0) {
+  if (!g_wnd || r.width <= 0 || r.height <= 0) {
     return;
   }
   const float fill_a = g_style == Style::kRoot   ? 0.30f
@@ -56,8 +56,8 @@ inline void Paint(const Rect& r) {
 
   BITMAPINFO bi{};
   bi.bmiHeader.biSize = sizeof(bi.bmiHeader);
-  bi.bmiHeader.biWidth = r.w;
-  bi.bmiHeader.biHeight = -r.h;  // top-down
+  bi.bmiHeader.biWidth = r.width;
+  bi.bmiHeader.biHeight = -r.height;  // top-down
   bi.bmiHeader.biPlanes = 1;
   bi.bmiHeader.biBitCount = 32;
   void* bits = nullptr;
@@ -72,17 +72,18 @@ inline void Paint(const Rect& r) {
   }
   HGDIOBJ old = SelectObject(mem, dib);
   auto* px = static_cast<uint32_t*>(bits);
-  for (int y = 0; y < r.h; ++y) {
-    for (int x = 0; x < r.w; ++x) {
+  for (int y = 0; y < r.height; ++y) {
+    for (int x = 0; x < r.width; ++x) {
       // Distance inside the rounded rect's edge (negative = outside the corner).
-      const int dx = std::max(radius - x, x - (r.w - 1 - radius));
-      const int dy = std::max(radius - y, y - (r.h - 1 - radius));
+      const int dx = std::max(radius - x, x - (r.width - 1 - radius));
+      const int dy = std::max(radius - y, y - (r.height - 1 - radius));
       int inside;
       if (dx > 0 && dy > 0) {
         inside = radius - static_cast<int>(
                               std::lround(std::sqrt(float(dx * dx + dy * dy))));
       } else {
-        inside = std::min(std::min(x, r.w - 1 - x), std::min(y, r.h - 1 - y));
+        inside = std::min(std::min(x, r.width - 1 - x),
+                          std::min(y, r.height - 1 - y));
       }
       uint32_t v = 0;
       if (inside >= 0) {
@@ -91,11 +92,11 @@ inline void Paint(const Rect& r) {
                          ((x + y) / dash) % 2;
         v = on_edge && !gap ? edge : fill;
       }
-      px[y * r.w + x] = v;
+      px[y * r.width + x] = v;
     }
   }
   POINT dst{r.x, r.y}, src{0, 0};
-  SIZE size{r.w, r.h};
+  SIZE size{r.width, r.height};
   BLENDFUNCTION blend{AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
   UpdateLayeredWindow(g_wnd, screen, &dst, &size, mem, &src, 0, &blend,
                       ULW_ALPHA);
@@ -140,8 +141,8 @@ inline void Show(HWND owner, const Rect& r, Style style) {
     RegisterClassExW(&wc);  // fails harmlessly if already registered
     g_wnd = CreateWindowExW(
         WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
-        kClass, L"", WS_POPUP, r.x, r.y, r.w, r.h, owner, nullptr, Module(),
-        nullptr);
+        kClass, L"", WS_POPUP, r.x, r.y, r.width, r.height, owner, nullptr,
+        Module(), nullptr);
     if (!g_wnd) {
       return;
     }

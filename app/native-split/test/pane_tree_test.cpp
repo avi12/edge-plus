@@ -27,7 +27,7 @@ std::string Layout(const Node& root, int w, int h) {
   for (const LeafRect& lr : leaves) {
     char buf[64];
     std::snprintf(buf, sizeof(buf), "%d:[%d,%d,%d,%d] ", lr.leaf, lr.rect.x,
-                  lr.rect.y, lr.rect.w, lr.rect.h);
+                  lr.rect.y, lr.rect.width, lr.rect.height);
     s += buf;
   }
   return s;
@@ -54,9 +54,10 @@ int main() {
     Node t = FlatTree(3, Axis::kHorizontal);
     std::vector<LeafRect> leaves;
     LayoutTree(t, Rect{0, 0, 10, 2}, 0, leaves);
-    Check(leaves[0].rect.w + leaves[1].rect.w + leaves[2].rect.w == 10,
+    Check(leaves[0].rect.width + leaves[1].rect.width + leaves[2].rect.width ==
+              10,
           "columns tile exactly");
-    Check(leaves[2].rect.x + leaves[2].rect.w == 10,
+    Check(leaves[2].rect.x + leaves[2].rect.width == 10,
           "last column reaches the edge");
   }
   // Vertical flat tree stacks top->bottom, full width.
@@ -117,10 +118,11 @@ int main() {
     std::vector<LeafRect> a, b;
     LayoutTree(t, Rect{0, 0, 400, 200}, 0, a);
     LayoutTree(t, Rect{0, 0, 800, 200}, 0, b);
-    Check(a[0].rect.w == 200 && a[1].rect.w == 200, "400 wide splits 200/200");
-    Check(b[0].rect.w == 400 && b[1].rect.w == 400,
+    Check(a[0].rect.width == 200 && a[1].rect.width == 200,
+          "400 wide splits 200/200");
+    Check(b[0].rect.width == 400 && b[1].rect.width == 400,
           "800 wide splits 400/400 (reflow)");
-    Check(b[1].rect.x == 400 && b[1].rect.x + b[1].rect.w == 800,
+    Check(b[1].rect.x == 400 && b[1].rect.x + b[1].rect.width == 800,
           "reflow keeps panes seamless");
   }
   {
@@ -129,8 +131,8 @@ int main() {
     std::vector<LeafRect> a, b;
     LayoutTree(t, Rect{0, 0, 400, 100}, 0, a);
     LayoutTree(t, Rect{0, 0, 1200, 100}, 0, b);
-    Check(a[0].rect.w == 300 && a[1].rect.w == 100, "3:1 ratio at 400");
-    Check(b[0].rect.w == 900 && b[1].rect.w == 300,
+    Check(a[0].rect.width == 300 && a[1].rect.width == 100, "3:1 ratio at 400");
+    Check(b[0].rect.width == 900 && b[1].rect.width == 300,
           "3:1 ratio preserved at 1200");
   }
   // Minimum pane size: a tiny window never collapses a pane below span/n, and
@@ -141,9 +143,9 @@ int main() {
     LayoutTree(t, Rect{0, 0, 30, 50}, 0, v);
     int sum = 0;
     for (const LeafRect& lr : v) {
-      Check(lr.rect.w >= 10, "no pane below span/n on a tiny window");
-      Check(lr.rect.w > 0, "no zero/negative pane");
-      sum += lr.rect.w;
+      Check(lr.rect.width >= 10, "no pane below span/n on a tiny window");
+      Check(lr.rect.width > 0, "no zero/negative pane");
+      sum += lr.rect.width;
     }
     Check(sum == 30, "panes still tile the tiny window exactly");
   }

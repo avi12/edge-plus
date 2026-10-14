@@ -37,7 +37,7 @@ inline constexpr float kEdgeHold =
 struct Plan {
   Zone zone = Zone::kNone;
   int target = -1;  // the pane dropped on (kPaneEdge / kSwap)
-  Direction dir = Direction::kUp;
+  Direction direction = Direction::kUp;
   Node result;   // the tree after the drop
   Rect preview;  // the dragged pane's rect in `result`
 };
@@ -47,11 +47,11 @@ inline int DistanceToEdge(const Rect& r, const Point& p, Direction d) {
     case Direction::kLeft:
       return p.x - r.x;
     case Direction::kRight:
-      return r.x + r.w - 1 - p.x;
+      return r.x + r.width - 1 - p.x;
     case Direction::kUp:
       return p.y - r.y;
     default:
-      return r.y + r.h - 1 - p.y;
+      return r.y + r.height - 1 - p.y;
   }
 }
 
@@ -59,8 +59,9 @@ inline int DistanceToEdge(const Rect& r, const Point& p, Direction d) {
 inline int RootBand(const Rect& layout, Direction edge) {
   const bool isVerticalEdge =
       edge == Direction::kLeft || edge == Direction::kRight;
-  const int extent = isVerticalEdge ? layout.w : layout.h;
-  const int share = static_cast<int>(static_cast<float>(extent) * kRootBandShare);
+  const int extent = isVerticalEdge ? layout.width : layout.height;
+  const int share =
+      static_cast<int>(static_cast<float>(extent) * kRootBandShare);
   return std::clamp(share, kRootBandMin, kRootBandMax);
 }
 
@@ -120,7 +121,7 @@ inline Plan Finish(const Node& tree, const Rect& layout, int moving, Zone zone,
   }
   plan.zone = zone;
   plan.target = target;
-  plan.dir = dir;
+  plan.direction = dir;
   return plan;
 }
 
@@ -132,26 +133,28 @@ inline Plan Finish(const Node& tree, const Rect& layout, int moving, Zone zone,
 // split's bottom, spans the whole bottom.
 inline Plan Resolve(const Node& tree, const Rect& layout, Point p, int moving,
                     const Plan& prev) {
-  if (layout.w <= 0 || layout.h <= 0) {
+  if (layout.width <= 0 || layout.height <= 0) {
     return {};
   }
-  if (p.x < layout.x - kOvershoot || p.x >= layout.x + layout.w + kOvershoot ||
-      p.y < layout.y - kOvershoot || p.y >= layout.y + layout.h + kOvershoot) {
+  if (p.x < layout.x - kOvershoot ||
+      p.x >= layout.x + layout.width + kOvershoot ||
+      p.y < layout.y - kOvershoot ||
+      p.y >= layout.y + layout.height + kOvershoot) {
     return {};
   }
-  p.x = std::clamp(p.x, layout.x, layout.x + layout.w - 1);
-  p.y = std::clamp(p.y, layout.y, layout.y + layout.h - 1);
+  p.x = std::clamp(p.x, layout.x, layout.x + layout.width - 1);
+  p.y = std::clamp(p.y, layout.y, layout.y + layout.height - 1);
 
   // 1. The whole split's outer band.
   bool root = false;
   Direction root_dir = Direction::kUp;
   const bool isHoldingRootEdge =
       prev.zone == Zone::kRootEdge &&
-      DistanceToEdge(layout, p, prev.dir) <=
-          RootBand(layout, prev.dir) + kRootReleaseExtra;
+      DistanceToEdge(layout, p, prev.direction) <=
+          RootBand(layout, prev.direction) + kRootReleaseExtra;
   if (isHoldingRootEdge) {
     root = true;
-    root_dir = prev.dir;
+    root_dir = prev.direction;
   } else {
     int nearest = 0;
     for (Direction d : {Direction::kLeft, Direction::kRight, Direction::kUp,
@@ -180,16 +183,17 @@ inline Plan Resolve(const Node& tree, const Rect& layout, Point p, int moving,
     if (!Contains(lr.rect, p)) {
       continue;
     }
-    if (lr.leaf == moving || lr.rect.w <= 0 || lr.rect.h <= 0) {
+    if (lr.leaf == moving || lr.rect.width <= 0 || lr.rect.height <= 0) {
       return {};
     }
     const float u = (static_cast<float>(p.x - lr.rect.x) + 0.5f) /
-                    static_cast<float>(lr.rect.w);
+                    static_cast<float>(lr.rect.width);
     const float v = (static_cast<float>(p.y - lr.rect.y) + 0.5f) /
-                    static_cast<float>(lr.rect.h);
+                    static_cast<float>(lr.rect.height);
     if (prev.zone == Zone::kPaneEdge && prev.target == lr.leaf &&
-        HoldsEdge(prev.dir, u, v)) {
-      return Finish(tree, layout, moving, Zone::kPaneEdge, lr.leaf, prev.dir);
+        HoldsEdge(prev.direction, u, v)) {
+      return Finish(tree, layout, moving, Zone::kPaneEdge, lr.leaf,
+                    prev.direction);
     }
     if (u >= kCentre && u < 1.f - kCentre && v >= kCentre &&
         v < 1.f - kCentre) {

@@ -25,7 +25,7 @@ void Check(bool ok, const char* what, const std::string& got = "") {
 
 // H[0(1) 1(1) V[2(1) 3(1)](1)] — axis, leaves and slot weights.
 std::string Dump(const Node& n) {
-  if (n.is_leaf) {
+  if (n.isLeaf) {
     return std::to_string(n.leaf);
   }
   std::string s = n.axis == Axis::kHorizontal ? "H[" : "V[";
@@ -47,7 +47,7 @@ std::string Layout(const Node& root, int w, int h) {
   for (const LeafRect& lr : leaves) {
     char buf[64];
     std::snprintf(buf, sizeof(buf), "%d:[%d,%d,%d,%d] ", lr.leaf, lr.rect.x,
-                  lr.rect.y, lr.rect.w, lr.rect.h);
+                  lr.rect.y, lr.rect.width, lr.rect.height);
     s += buf;
   }
   return s;
@@ -55,7 +55,7 @@ std::string Layout(const Node& root, int w, int h) {
 
 // The canonical form every edit must leave behind.
 bool Canonical(const Node& n) {
-  if (n.is_leaf) {
+  if (n.isLeaf) {
     return true;
   }
   if (n.children.size() < 2 || n.weights.size() != n.children.size()) {
@@ -72,7 +72,7 @@ bool Canonical(const Node& n) {
     return false;
   }
   for (const Node& c : n.children) {
-    if (!c.is_leaf && c.axis == n.axis) {
+    if (!c.isLeaf && c.axis == n.axis) {
       return false;
     }
     if (!Canonical(c)) {

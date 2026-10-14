@@ -21,7 +21,7 @@ void Check(bool ok, const char* what) {
 }
 
 bool Is(const Rect& r, int x, int y, int w, int h) {
-  return r.x == x && r.y == y && r.w == w && r.h == h;
+  return r.x == x && r.y == y && r.width == w && r.height == h;
 }
 
 }  // namespace
@@ -36,16 +36,16 @@ int main() {
   // the preview is pane 3's final rect: the bottom half of a third column.
   {
     const Plan p = Resolve(row, layout, Point{750, 700}, 3, none);
-    Check(
-        p.zone == Zone::kPaneEdge && p.target == 2 && p.dir == Direction::kDown,
-        "bottom of pane 2 -> below 2");
+    Check(p.zone == Zone::kPaneEdge && p.target == 2 &&
+              p.direction == Direction::kDown,
+          "bottom of pane 2 -> below 2");
     Check(Is(p.preview, 800, 400, 400, 400),
           "preview = bottom half of the third column");
   }
   // Scenario (b): within the outer band at the bottom -> the full bottom half.
   {
     const Plan p = Resolve(row, layout, Point{750, 795}, 3, none);
-    Check(p.zone == Zone::kRootEdge && p.dir == Direction::kDown,
+    Check(p.zone == Zone::kRootEdge && p.direction == Direction::kDown,
           "outer bottom band -> root edge");
     Check(Is(p.preview, 0, 400, 1200, 400), "preview = the whole bottom half");
   }
@@ -53,7 +53,7 @@ int main() {
   // 800), so 49 DIP above the bottom already spans the whole bottom.
   {
     const Plan p = Resolve(row, layout, Point{750, 750}, 3, none);
-    Check(p.zone == Zone::kRootEdge && p.dir == Direction::kDown,
+    Check(p.zone == Zone::kRootEdge && p.direction == Direction::kDown,
           "deep toward the bottom -> root edge");
   }
   // A pane's centre swaps: the preview is that pane's own rect.
@@ -65,9 +65,9 @@ int main() {
   // Diagonals pick the nearest edge: near pane 2's left side -> left of 2.
   {
     const Plan p = Resolve(row, layout, Point{610, 420}, 3, none);
-    Check(
-        p.zone == Zone::kPaneEdge && p.target == 2 && p.dir == Direction::kLeft,
-        "left strip of pane 2 -> left of 2");
+    Check(p.zone == Zone::kPaneEdge && p.target == 2 &&
+              p.direction == Direction::kLeft,
+          "left strip of pane 2 -> left of 2");
   }
   // Nothing over the dragged pane itself, nor far outside the split.
   {
@@ -79,14 +79,14 @@ int main() {
   // A slight overshoot is clamped in and still hits the outer band.
   {
     const Plan p = Resolve(row, layout, Point{600, 820}, 3, none);
-    Check(p.zone == Zone::kRootEdge && p.dir == Direction::kDown,
+    Check(p.zone == Zone::kRootEdge && p.direction == Direction::kDown,
           "20 DIP overshoot -> root bottom");
   }
   // A no-op outer edge (pane 3 already spans the right edge) falls through to
   // the pane under the pointer.
   {
     const Plan p = Resolve(row, layout, Point{1195, 400}, 0, none);
-    Check(p.zone == Zone::kRootEdge && p.dir == Direction::kRight,
+    Check(p.zone == Zone::kRootEdge && p.direction == Direction::kRight,
           "dragging pane 0 to the right band -> root right (a reorder)");
     const Plan q = Resolve(row, layout, Point{895, 300}, 3, none);
     Check(q.zone == Zone::kNone, "right of 2 is where 3 already is -> nothing");
@@ -104,7 +104,7 @@ int main() {
     const Plan shown = Resolve(row, layout, Point{750, 700}, 3, none);
     const Plan held =
         Resolve(row, layout, Point{750, 520}, 3, shown);  // v = 0.65
-    Check(held.zone == Zone::kPaneEdge && held.dir == Direction::kDown,
+    Check(held.zone == Zone::kPaneEdge && held.direction == Direction::kDown,
           "pane edge holds at 65%");
     const Plan fresh = Resolve(row, layout, Point{750, 520}, 3, none);
     Check(fresh.zone == Zone::kSwap, "same spot without a held edge -> swap");
@@ -115,7 +115,7 @@ int main() {
     std::vector<int> order;
     CollectLeaves(p.result, order);
     Check(order == std::vector<int>({0, 1, 2, 3}), "result keeps every pane");
-    Check(!p.result.is_leaf && p.result.children.size() == 3,
+    Check(!p.result.isLeaf && p.result.children.size() == 3,
           "result is a row of three");
   }
 

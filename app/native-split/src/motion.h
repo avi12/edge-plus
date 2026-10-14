@@ -40,10 +40,10 @@ inline double Ease(double p) {
 }
 
 inline bool Same(const Rect& a, const Rect& b) {
-  return a.x == b.x && a.y == b.y && a.w == b.w && a.h == b.h;
+  return a.x == b.x && a.y == b.y && a.width == b.width && a.height == b.height;
 }
 inline bool Empty(const Rect& r) {
-  return r.w <= 0 || r.h <= 0;
+  return r.width <= 0 || r.height <= 0;
 }
 
 inline int Mix(int a, int b, double t) {
@@ -53,8 +53,8 @@ inline int Mix(int a, int b, double t) {
 // tile at both ends stay seamless mid-flight.
 inline Rect Lerp(const Rect& a, const Rect& b, double t) {
   const int l = Mix(a.x, b.x, t), top = Mix(a.y, b.y, t);
-  const int r = Mix(a.x + a.w, b.x + b.w, t),
-            bot = Mix(a.y + a.h, b.y + b.h, t);
+  const int r = Mix(a.x + a.width, b.x + b.width, t),
+            bot = Mix(a.y + a.height, b.y + b.height, t);
   return Rect{l, top, r - l, bot - top};
 }
 
@@ -64,24 +64,25 @@ inline Rect Lerp(const Rect& a, const Rect& b, double t) {
 // rect on the side it was carved from: an add-right grows out of the old pane's
 // right edge. With no such parent, it grows out of its own centre.
 inline Rect EntryRect(const Rect& target, const std::vector<Rect>& before) {
-  const int cx = target.x + target.w / 2, cy = target.y + target.h / 2;
+  const int cx = target.x + target.width / 2, cy = target.y + target.height / 2;
   for (const Rect& p : before) {
-    if (Empty(p) || cx < p.x || cx >= p.x + p.w || cy < p.y ||
-        cy >= p.y + p.h) {
+    if (Empty(p) || cx < p.x || cx >= p.x + p.width || cy < p.y ||
+        cy >= p.y + p.height) {
       continue;
     }
-    const int right = target.x + target.w, bottom = target.y + target.h;
-    if (right == p.x + p.w && target.x > p.x) {
-      return Rect{right, target.y, 0, target.h};
+    const int right = target.x + target.width,
+              bottom = target.y + target.height;
+    if (right == p.x + p.width && target.x > p.x) {
+      return Rect{right, target.y, 0, target.height};
     }
-    if (target.x == p.x && right < p.x + p.w) {
-      return Rect{target.x, target.y, 0, target.h};
+    if (target.x == p.x && right < p.x + p.width) {
+      return Rect{target.x, target.y, 0, target.height};
     }
-    if (bottom == p.y + p.h && target.y > p.y) {
-      return Rect{target.x, bottom, target.w, 0};
+    if (bottom == p.y + p.height && target.y > p.y) {
+      return Rect{target.x, bottom, target.width, 0};
     }
-    if (target.y == p.y && bottom < p.y + p.h) {
-      return Rect{target.x, target.y, target.w, 0};
+    if (target.y == p.y && bottom < p.y + p.height) {
+      return Rect{target.x, target.y, target.width, 0};
     }
     break;
   }

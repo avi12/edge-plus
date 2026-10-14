@@ -26,7 +26,7 @@ inline Node LiveTree(void* mcv, int panes) {
 // The split's content box in its own coordinates (what TilePanes tiles).
 inline Rect SplitArea(void* mcv) {
   const Rect b = edge::ViewBounds(mcv);
-  return Rect{0, 0, b.w, b.h};
+  return Rect{0, 0, b.width, b.height};
 }
 
 // Build the out ProposedLayout for `mcv` across a `width`x`height` content box,

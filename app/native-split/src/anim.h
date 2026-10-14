@@ -22,7 +22,7 @@ struct Flight {
   ULONGLONG start = 0;
 };
 struct HostSize {
-  int w = 0, h = 0;
+  int width = 0, height = 0;
 };
 
 inline bool g_enabled = false;  // SPI_GETCLIENTAREAANIMATION, read at Install
@@ -49,7 +49,7 @@ inline bool NoteHost(void* mcv, int w, int h) {
     return true;
   }
   HostSize& host = Hosts()[mcv];
-  const bool resized = host.w != 0 && (host.w != w || host.h != h);
+  const bool resized = host.width != 0 && (host.width != w || host.height != h);
   host = {w, h};
   return resized;
 }
