@@ -38,7 +38,12 @@ inline void* __fastcall h_setwc(void* mcv, void* web_contents, uint32_t index) {
   // Every pane in a split is on-screen, but Edge only force-paints the ones it
   // natively tracks; a fed background member stays blank until shown. Show it so
   // panes 2+ (and re-fed members) actually paint. Harmless for the active tab.
-  if (web_contents) edge::WebContentsWasShown(web_contents);
+  if (web_contents) {
+    edge::WebContentsWasShown(web_contents);
+    // Edge only watches the first and last member for hover; watch every pane.
+    edge::ListenSplitInput(web_contents);
+  }
+  panes::EnsureControlButtons(mcv, static_cast<int>(index));  // pane 3+ needs a bar
   return r;
 }
 

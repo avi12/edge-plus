@@ -27,6 +27,18 @@ inline bool AddContainer(void* mcv) {
   return true;
 }
 
+// Give pane `index` (>= 2) its hover bar (X / ⋯) if it has none, mirroring pane
+// 1. Skipped when pane 0 has no bar either (the new toolbar draws no per-pane
+// bars). Containers are reused across collapse/regrow, so this runs once each.
+inline void EnsureControlButtons(void* mcv, int index) {
+  if (index < 2 || index >= static_cast<int>(edge::McvCount(mcv))) return;
+  void* container = edge::McvContainerAt(mcv, index);
+  if (edge::ContainerControlButtons(container)) return;
+  if (!edge::ContainerControlButtons(edge::McvContainerAt(mcv, 0))) return;
+  edge::GiveControlButtons(container, edge::McvBrowserView(mcv), /*not_first=*/true);
+  Log("[grow] pane %d got its control buttons", index);
+}
+
 // Grow to exactly `target` containers (no-op if already at/above). Returns the
 // resulting count.
 inline size_t GrowToPanes(void* mcv, int target) {

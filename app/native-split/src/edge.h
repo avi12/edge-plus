@@ -291,6 +291,31 @@ inline void* BrowserViewMcv(void* browser_view) {
 // A view's current bounds in its parent's coordinates (views::View::bounds_).
 inline Rect ViewBounds(void* view) { return Field<Rect>(view, off::VIEW_bounds); }
 
+// --- per-pane hover controls -------------------------------------------------
+
+inline void* ContainerControlButtons(void* container) {
+  return Field<void*>(container, off::ECCV_control_buttons);
+}
+
+// Build a ControlButtons bar and hand it to `container`, exactly as
+// EnsureControlButtons does for pane 1 (`not_first` = true there).
+inline void GiveControlButtons(void* container, void* browser_view, bool not_first) {
+  void* bar = NewView(off::ControlButtons_size);
+  using Ctor = void*(__fastcall*)(void*, void*, bool);
+  reinterpret_cast<Ctor>(At(rva::ControlButtons_ctor))(bar, browser_view, not_first);
+  void* iface = reinterpret_cast<uint8_t*>(container) + off::ECCV_buttons_iface;
+  void** vtbl = *reinterpret_cast<void***>(iface);
+  void* owned = bar;  // unique_ptr<ControlButtons>; the callee takes and nulls it
+  using SetFn = void(__fastcall*)(void*, void**);
+  reinterpret_cast<SetFn>(vtbl[off::ECCV_vtbl_SetControlButtons / 8])(iface, &owned);
+}
+
+// Watch a pane's WebContents for mouse input so hovering it shows its bar.
+inline void ListenSplitInput(void* web_contents) {
+  using Fn = void(__fastcall*)(void*, void*);
+  reinterpret_cast<Fn>(At(rva::SplitWindow_ListenWebContentsInputEvent))(web_contents, nullptr);
+}
+
 // A container's ContentsWebView (the pane's web view).
 inline void* ContainerWebView(void* container) {
   return Field<void*>(container, off::CCV_contents_web_view);

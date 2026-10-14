@@ -82,6 +82,14 @@ inline constexpr uintptr_t UTF8ToUTF16                     = 0x101cae0;  // (&ou
 // action 2 = dissolve keeping tabs + activate the active tab (fills window);
 // action 3 = same but keeps the LAST tab. Clamp 3->2 to always keep the active.
 inline constexpr uintptr_t SplitWindowController_DoAction  = 0xa021020;
+// --- per-pane hover controls (the X / ⋯ bar, old-toolbar mode) ---
+// EnsureControlButtons builds a ControlButtons bar for containers 0 and 1 only,
+// and ShowSplitView registers hover on the FIRST and LAST member's WebContents
+// only, so a middle pane has a bar but no hover and pane 3+ has hover but no bar.
+inline constexpr uintptr_t ControlButtons_ctor = 0xa010a6a; // (this, BrowserView*, bool not_first)
+// Static: (WebContents* a, WebContents* b) -> CreateOrGet + StartObserving each
+// (idempotent; a no-op under the new toolbar).
+inline constexpr uintptr_t SplitWindow_ListenWebContentsInputEvent = 0xa01fe4e;
 // --- 2-pane-only CHECK sites that int3 when a split grows past 2 members ---
 // Accessible-label builder: maps a split tab's pane index to a string id
 // (0x3e7f pane0 / 0x3e80 pane1) and `cmp eax,1; jne <int3>` crashes at index>=2.
@@ -125,6 +133,13 @@ inline constexpr uintptr_t TABMODEL_vtbl_IsSplit  = 0x108;  // bool IsSplit(this
 // ContentsContainerView
 inline constexpr uintptr_t CCV_contents_web_view = 0x3a8; // ContentsWebView*
 inline constexpr uintptr_t CCV_is_active         = 0x38d; // bool
+// EdgeContentsContainerView's control-buttons interface subobject: its vtable
+// holds SetControlButtons(unique_ptr<ControlButtons>*) @+0x10 and
+// SetControlButtonsVisible(bool) @+0x18; the bar pointer lives at iface+0x1f8.
+inline constexpr uintptr_t ECCV_buttons_iface    = 0x348;
+inline constexpr uintptr_t ECCV_control_buttons  = 0x540; // ControlButtons* (iface + 0x1f8)
+inline constexpr uintptr_t ECCV_vtbl_SetControlButtons = 0x10;
+inline constexpr size_t    ControlButtons_size   = 0x380;
 // views::View
 inline constexpr uintptr_t VIEW_bounds = 0x1c8; // gfx::Rect bounds_ in parent coords (GetLocalBounds reads size @+0x1d0)
 
