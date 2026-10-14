@@ -326,6 +326,13 @@ inline void ViewSetTooltip(void* view, const char* utf8) {
   reinterpret_cast<Fn>(At(rva::View_SetTooltipText))(view, &text);
 }
 
+// ui::SimpleMenuModel::AddSeparator(model, NORMAL_SEPARATOR).
+inline void MenuAddSeparator(void* model) {
+  using SeparatorFn = void(__fastcall*)(void*, int);
+  reinterpret_cast<SeparatorFn>(At(rva::SimpleMenuModel_AddSeparator))(
+      model, off::MENU_normal_separator);
+}
+
 // ui::SimpleMenuModel::AddItem(model /*rcx*/, int command_id /*edx*/, &u16string /*r8*/).
 inline void MenuAddItem(void* model, int commandId, const U16String* label) {
   using Fn = void*(__fastcall*)(void*, int, const void*);

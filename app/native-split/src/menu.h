@@ -108,6 +108,8 @@ inline void* __fastcall h_handle_ctx(void* self, void* argument2,
 using Toggle_t = void(__fastcall*)(void*, void*);
 inline Toggle_t o_toggle = nullptr;
 inline void __fastcall h_toggle(void* bar, void* argument2) {
+  g_menuMcv = nullptr;
+  g_menuPane = kNoLeaf;
   void* mcv = nullptr;
   int pane = kNoLeaf;
   if (grip::LocateBar(bar, &mcv, &pane)) {
@@ -117,12 +119,9 @@ inline void __fastcall h_toggle(void* bar, void* argument2) {
   o_toggle(bar, argument2);
 }
 
-// SplitTabMenuModel::ExecuteCommand(self=delegate, int command_id, int
-// event_flags). Our commands act on the pane whose ⋯ opened the menu; every
-// other id is Edge's own.
-using Exec_t = void*(__fastcall*)(void*, int, int);
-inline Exec_t o_exec = nullptr;
-inline void* __fastcall h_exec(void* self, int commandId, int eventFlags) {
+// Run one of our commands on the pane whose ⋯ opened the menu (else the
+// active pane). False for any other id, which is Edge's own.
+inline bool RunCommand(int commandId) {
   for (const MenuItem& item : kMenuItems) {
     const bool isItemCommand = commandId == static_cast<int>(item.command);
     if (!isItemCommand) {
@@ -138,9 +137,51 @@ inline void* __fastcall h_exec(void* self, int commandId, int eventFlags) {
     } else {
       split_ops::EqualizeAround(mcv, pane, item.axis);
     }
+    return true;
+  }
+  return false;
+}
+
+// SplitTabMenuModel::ExecuteCommand(self=delegate, int command_id, int
+// event_flags): the toolbar's split menu.
+using Exec_t = void*(__fastcall*)(void*, int, int);
+inline Exec_t o_exec = nullptr;
+inline void* __fastcall h_exec(void* self, int commandId, int eventFlags) {
+  if (RunCommand(commandId)) {
     return nullptr;
   }
   return o_exec(self, commandId, eventFlags);
+}
+
+// SplitWindowControlMenu::BuildMenuModel: the pane bar's ⋯. After Edge's own
+// items, a separator and ours.
+using Build_t = void(__fastcall*)(void*);
+inline Build_t o_build = nullptr;
+inline void __fastcall h_build(void* menu) {
+  o_build(menu);
+  void* model = edge::Field<void*>(menu, off::SplitWindowControlMenu_model);
+  if (!model) {
+    return;
+  }
+  if (!g_hasLabels) {
+    BuildLabels();
+  }
+  edge::MenuAddSeparator(model);
+  for (size_t i = 0; i < kMenuItemCount; i++) {
+    edge::MenuAddItem(model, static_cast<int>(kMenuItems[i].command),
+                      &g_labels[i]);
+  }
+}
+
+// SplitWindowControlMenu::ExecuteCommand(menu, int id, int flags).
+using ControlExec_t = void(__fastcall*)(void*, int, int);
+inline ControlExec_t o_control_exec = nullptr;
+inline void __fastcall h_control_exec(void* menu, int commandId,
+                                      int eventFlags) {
+  if (RunCommand(commandId)) {
+    return;
+  }
+  o_control_exec(menu, commandId, eventFlags);
 }
 
 }  // namespace fixedge::menu

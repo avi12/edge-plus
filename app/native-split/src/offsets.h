@@ -181,6 +181,14 @@ inline constexpr uintptr_t ControlButtons_HandleButtonClick = 0xa011ae0;
 // builds a SplitTabMenuModel that only knows "first pane or not", so the pane
 // whose ⋯ was clicked is remembered here.
 inline constexpr uintptr_t ControlButtons_ToggleContextMenu = 0xa011d00;
+// The bar's ⋯ menu: SplitWindowControlMenu. BuildMenuModel(this) fills a
+// ui::SimpleMenuModel kept at this+0x10 (delegate this+8); ExecuteCommand(this,
+// int id, int flags) switches on Edge's ids 0..6, and IsCommandIdEnabled
+// returns true above 5, so ids past 6 are free.
+inline constexpr uintptr_t SplitWindowControlMenu_BuildMenuModel = 0xa017fbc;
+inline constexpr uintptr_t SplitWindowControlMenu_ExecuteCommand = 0xa0186c0;
+// (model, ui::MenuSeparatorType)
+inline constexpr uintptr_t SimpleMenuModel_AddSeparator = 0x317665a;
 // (tsm, int index, uint32 closeTypes); HideSplitView passes 1
 inline constexpr uintptr_t TabStripModel_CloseWebContentsAt = 0xa26f916;
 // (tsm, int index, const TabStripUserGestureDetails*)
@@ -283,6 +291,10 @@ inline constexpr size_t ControlButtons_size = 0x380;
 inline constexpr size_t EdgeResizeArea_size = 0x358;
 // a valid id (⋯'s); grip overrides the tooltip
 inline constexpr int ControlButtons_more_string_id = 0x4676;
+// SplitWindowControlMenu's SimpleMenuModel (BuildMenuModel stores it here).
+inline constexpr uintptr_t SplitWindowControlMenu_model = 0x10;
+// ui::MenuSeparatorType NORMAL_SEPARATOR.
+inline constexpr int MENU_normal_separator = 0;
 // The bar's buttons (InitButtons): ⋯ @+0x340, X @+0x350.
 inline constexpr uintptr_t ControlButtons_close_button = 0x350;
 

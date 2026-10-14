@@ -276,6 +276,12 @@ inline bool InstallAll() {
           reinterpret_cast<void*>(h_divider_capture_lost),
           &o_divider_capture_lost,
           "EdgeTwoDimensionalResizeArea::OnMouseCaptureLost");
+  Install(rva::SplitWindowControlMenu_BuildMenuModel,
+          reinterpret_cast<void*>(menu::h_build), &menu::o_build,
+          "SplitWindowControlMenu::BuildMenuModel");
+  Install(rva::SplitWindowControlMenu_ExecuteCommand,
+          reinterpret_cast<void*>(menu::h_control_exec), &menu::o_control_exec,
+          "SplitWindowControlMenu::ExecuteCommand");
   Install(rva::ControlButtons_ToggleContextMenu,
           reinterpret_cast<void*>(menu::h_toggle), &menu::o_toggle,
           "ControlButtons::ToggleContextMenu");
