@@ -20,8 +20,8 @@ inline void* g_activeMcv = nullptr;
 
 // The tree for `mcv`, or nullptr if none has been set yet.
 inline const Node* TreeFor(void* mcv) {
-  auto it = Trees().find(mcv);
-  return it == Trees().end() ? nullptr : &it->second;
+  const auto entry = Trees().find(mcv);
+  return entry == Trees().end() ? nullptr : &entry->second;
 }
 
 inline void ForgetTree(void* mcv) {

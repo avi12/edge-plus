@@ -6,6 +6,9 @@
 
 namespace fixedge::panes {
 
+// Edge's own ctor builds panes 0 and 1; every pane from this index on is ours.
+inline constexpr int kFirstGrownPane = 2;
+
 // Allocate + construct one EdgeContentsContainerView, parent it under the MCV and
 // append it to the container vector — exactly as the ctor builds panes 0 and 1.
 // Returns false on a poisoned allocation.
@@ -16,7 +19,9 @@ inline bool AddContainer(void* mcv) {
     return false;
   }
   edge::ConstructContainer(container, edge::McvBrowserView(mcv));
-  if (edge::Field<uint8_t>(container, 0x179) == 1) {  // allocator poison flag
+  const bool isPoisoned =
+      edge::Field<uint8_t>(container, 0x179) == 1;  // allocator poison flag
+  if (isPoisoned) {
     Log("[grow] poisoned alloc");
     return false;
   }
@@ -27,31 +32,40 @@ inline bool AddContainer(void* mcv) {
   return true;
 }
 
-// Give pane `index` (>= 2) its hover bar (X / ⋯) if it has none, mirroring pane
-// 1. Skipped when pane 0 has no bar either (the new toolbar draws no per-pane
-// bars). Containers are reused across collapse/regrow, so this runs once each.
+// Give pane `index` (a grown one) its hover bar (X / ⋯) if it has none,
+// mirroring pane 1. Skipped when pane 0 has no bar either (the new toolbar draws
+// no per-pane bars). Containers are reused across collapse/regrow, so this runs
+// once each.
 inline void EnsureControlButtons(void* mcv, int index) {
-  if (index < 2 || index >= static_cast<int>(edge::McvCount(mcv))) {
+  const bool isGrownPane =
+      index >= kFirstGrownPane && index < static_cast<int>(edge::McvCount(mcv));
+  if (!isGrownPane) {
     return;
   }
   void* container = edge::McvContainerAt(mcv, index);
-  if (edge::ContainerControlButtons(container)) {
+  const bool hasControlButtons =
+      edge::ContainerControlButtons(container) != nullptr;
+  if (hasControlButtons) {
     return;
   }
-  if (!edge::ContainerControlButtons(edge::McvContainerAt(mcv, 0))) {
+  const bool hasFirstPaneButtons =
+      edge::ContainerControlButtons(edge::McvContainerAt(mcv, 0)) != nullptr;
+  if (!hasFirstPaneButtons) {
     return;
   }
-  edge::GiveControlButtons(container, edge::McvBrowserView(mcv),
-                           /*not_first=*/true);
+  // Pane 1's bar is built as a non-first pane's; a grown pane follows it.
+  const bool isLaterPane = true;
+  edge::GiveControlButtons(container, edge::McvBrowserView(mcv), isLaterPane);
   Log("[grow] pane %d got its control buttons", index);
 }
 
-// Grow to exactly `target` containers (no-op if already at/above). Returns the
-// resulting count.
-inline size_t GrowToPanes(void* mcv, int target) {
+// Grow to exactly `targetPanes` containers (no-op if already at/above). Returns
+// the resulting count.
+inline size_t GrowToPanes(void* mcv, int targetPanes) {
   size_t count = edge::McvCount(mcv);
-  while (static_cast<int>(count) < target) {
-    if (!AddContainer(mcv)) {
+  while (static_cast<int>(count) < targetPanes) {
+    const bool isAdded = AddContainer(mcv);
+    if (!isAdded) {
       break;
     }
     count = edge::McvCount(mcv);

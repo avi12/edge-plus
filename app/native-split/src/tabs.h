@@ -7,31 +7,33 @@
 
 namespace fixedge::tabs {
 
-// Attach the WebContents of strip tab `tab_index` to `container`'s pane. Returns
+// Attach the WebContents of strip tab `tabIndex` to `container`'s pane. Returns
 // false (no-op) if the index is out of range or there is no such tab. The caller
 // must pass a genuine *background* tab index — never the active one or a tab
 // already shown in another pane, or its content would be stolen from there.
-inline bool FillPane(void* browser_view, void* container, int tab_index) {
-  void* tsm = edge::TabStripModelOf(edge::BrowserOf(browser_view));
+inline bool FillPane(void* browserView, void* container, int tabIndex) {
+  void* tsm = edge::TabStripModelOf(edge::BrowserOf(browserView));
   if (!tsm) {
     Log("[feed] no TabStripModel");
     return false;
   }
-  const int count = edge::TabCount(tsm);
-  if (tab_index < 0 || tab_index >= count) {
-    Log("[feed] tab %d out of range (count %d)", tab_index, count);
+  const int tabCount = edge::TabCount(tsm);
+  const bool isInStrip = tabIndex >= 0 && tabIndex < tabCount;
+  if (!isInStrip) {
+    Log("[feed] tab %d out of range (count %d)", tabIndex, tabCount);
     return false;
   }
-  void* web_contents = edge::TabWebContentsAt(tsm, tab_index);
-  void* cwv = edge::ContainerWebView(container);
-  Log("[feed] tab %d/%d wc=%p container=%p cwv=%p", tab_index, count,
-      web_contents, container, cwv);
-  if (!web_contents || !cwv) {
+  void* webContents = edge::TabWebContentsAt(tsm, tabIndex);
+  void* contentsWebView = edge::ContainerWebView(container);
+  Log("[feed] tab %d/%d wc=%p container=%p cwv=%p", tabIndex, tabCount,
+      webContents, container, contentsWebView);
+  const bool canAttach = webContents && contentsWebView;
+  if (!canAttach) {
     return false;
   }
-  edge::ContentsWebViewSetContents(cwv, web_contents);
-  edge::WebContentsWasShown(
-      web_contents);  // a background tab is hidden; show it so the pane paints
+  edge::ContentsWebViewSetContents(contentsWebView, webContents);
+  // A background tab is hidden; show it so the pane paints.
+  edge::WebContentsWasShown(webContents);
   return true;
 }
 

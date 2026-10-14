@@ -2,6 +2,7 @@
 // rectangles into the ChildLayouts that Edge's layout applier consumes. The tree
 // decides positions; this file only speaks Edge's ProposedLayout ABI.
 #pragma once
+#include <algorithm>
 #include <cstring>
 #include <vector>
 #include "edge.h"
@@ -13,20 +14,26 @@ namespace fixedge::geometry {
 
 using namespace fixedge::edge155;  // off::, rva::
 
+// The split's orientation as a tree axis (SplitTabLayout: 0 is one axis, any
+// other value the other).
+inline Axis SplitAxis(void* mcv) {
+  return edge::McvOrientation(mcv) != 0 ? Axis::kVertical : Axis::kHorizontal;
+}
+
 // The tree `mcv`'s `panes` are tiled by: the live one, else a flat equal split
-// along the split's orientation. The one rule both the layout and a drag use.
+// along the split's orientation. The one rule the layout, a drag and a
+// directional add all use.
 inline Node LiveTree(void* mcv, int panes) {
   if (const Node* live = TreeFor(mcv)) {
     return *live;
   }
-  return FlatTree(panes, edge::McvOrientation(mcv) != 0 ? Axis::kVertical
-                                                        : Axis::kHorizontal);
+  return FlatTree(panes, SplitAxis(mcv));
 }
 
 // The split's content box in its own coordinates (what TilePanes tiles).
 inline Rect SplitArea(void* mcv) {
-  const Rect b = edge::ViewBounds(mcv);
-  return Rect{0, 0, b.width, b.height};
+  const Rect bounds = edge::ViewBounds(mcv);
+  return Rect{0, 0, bounds.width, bounds.height};
 }
 
 // Build the out ProposedLayout for `mcv` across a `width`x`height` content box,
@@ -37,48 +44,47 @@ inline Rect SplitArea(void* mcv) {
 // unless `snap` (a window resize). Returns `out`.
 inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
                        bool snap) {
-  std::memset(out, 0,
-              0x20);  // ProposedLayout ctor only zeroes these 0x20 bytes
+  // The ProposedLayout ctor only zeroes these 0x20 bytes.
+  std::memset(out, 0, 0x20);
   edge::Field<int32_t>(out, off::PL_host_size + 0) = width;
   edge::Field<int32_t>(out, off::PL_host_size + 4) = height;
 
   const int count = static_cast<int>(edge::McvCount(mcv));
-  if (panes < 1) {
-    panes = 1;
-  }
-  if (panes > count) {
-    panes = count;
-  }
-  const Axis axis =
-      edge::McvOrientation(mcv) != 0 ? Axis::kVertical : Axis::kHorizontal;
-  const Node root = LiveTree(mcv, panes);
+  // At least one pane, and never more than there are containers.
+  const int shownPanes = std::min(std::max(panes, 1), count);
+  const Axis axis = SplitAxis(mcv);
+  const Node root = LiveTree(mcv, shownPanes);
 
   std::vector<LeafRect> leaves;
   LayoutTree(root, Rect{0, 0, width, height}, /*gap=*/0, leaves);
 
+  // Guard tree/truth drift: only a leaf naming a shown container is placed.
   std::vector<LeafRect> placed;
-  for (const LeafRect& lr : leaves) {
-    if (lr.leaf >= 0 && lr.leaf < panes) {
-      placed.push_back(lr);  // guard tree/truth drift
+  for (const LeafRect& leafRect : leaves) {
+    const bool isShownLeaf = leafRect.leaf >= 0 && leafRect.leaf < shownPanes;
+    if (isShownLeaf) {
+      placed.push_back(leafRect);
     }
   }
   anim::Apply(mcv, placed, snap);  // targets -> this frame's rects
 
-  void* vec = reinterpret_cast<uint8_t*>(out) + off::PL_child_layouts;
+  void* childLayouts = reinterpret_cast<uint8_t*>(out) + off::PL_child_layouts;
   void** containers = edge::McvContainers(mcv);
-  bool show = true, hide = false;
-  for (const LeafRect& lr : placed) {
-    void* container = containers[lr.leaf];
+  for (const LeafRect& leafRect : placed) {
+    void* container = containers[leafRect.leaf];
     edge::SetViewVisible(container, true);
-    Rect rect = lr.rect;
-    edge::EmplaceChildLayout(vec, &container, &show, &rect);
+    bool isVisible = true;
+    Rect rect = leafRect.rect;
+    edge::EmplaceChildLayout(childLayouts, &container, &isVisible, &rect);
   }
   // Surplus containers from a previously larger split: hide + zero them so they
   // leave no stale pixels (they are reused if the split grows again).
-  for (int i = panes; i < count; ++i) {
+  for (int i = shownPanes; i < count; i++) {
     edge::SetViewVisible(containers[i], false);
-    Rect zero{0, 0, 0, 0};
-    edge::EmplaceChildLayout(vec, &containers[i], &hide, &zero);
+    bool isVisible = false;
+    Rect zeroRect{0, 0, 0, 0};
+    edge::EmplaceChildLayout(childLayouts, &containers[i], &isVisible,
+                             &zeroRect);
   }
   Log("[layout] tiled %zu/%d panes in %dx%d (%s)", placed.size(), count, width,
       height, axis == Axis::kVertical ? "rows" : "cols");
