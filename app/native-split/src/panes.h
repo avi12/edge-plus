@@ -25,7 +25,7 @@ inline bool AddContainer(void* mcv) {
     Log("[grow] poisoned alloc");
     return false;
   }
-  edge::AddChildViewAt(mcv, container, edge::McvChildInsertIndex(mcv));
+  edge::AddChildViewAt(mcv, container, edge::ViewChildCount(mcv));
   void* slot = container;  // raw_ptr temp for emplace_back
   edge::ContainersEmplaceBack(edge::McvContainerVector(mcv), &slot);
   edge::SetViewVisible(container, true);

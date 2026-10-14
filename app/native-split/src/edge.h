@@ -362,8 +362,8 @@ inline void* McvBrowserView(void* mcv) {
 inline uint32_t McvOrientation(void* mcv) {
   return Field<uint32_t>(mcv, off::MCV_orientation);
 }
-inline size_t McvChildInsertIndex(void* mcv) {
-  return Field<size_t>(mcv, off::MCV_child_insert_idx);
+inline size_t ViewChildCount(void* view) {
+  return Field<size_t>(view, off::VIEW_child_count);
 }
 
 // CalculateProposedLayout runs on the LayoutManagerBase subobject embedded at

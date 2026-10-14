@@ -44,12 +44,12 @@ inline void Ensure(void* mcv) {
   while (pool.views.size() < needed) {
     void* view = edge::NewView(off::EdgeResizeArea_size);
     edge::ConstructResizeArea(view, mcv);  // starts hidden
-    edge::AddChildViewAt(mcv, view, edge::McvChildInsertIndex(mcv));
+    edge::AddChildViewAt(mcv, view, edge::ViewChildCount(mcv));
     pool.views.push_back(view);
     Log("[divider] %zu views for %p", pool.views.size(), mcv);
   }
   for (void* view : pool.views) {
-    edge::ViewReorderChild(mcv, view, edge::McvChildInsertIndex(mcv) - 1);
+    edge::ViewReorderChild(mcv, view, edge::ViewChildCount(mcv) - 1);
   }
 }
 

@@ -245,8 +245,6 @@ inline constexpr uintptr_t MCV_split_ratio = 0x430;  // double (default 0.5)
 inline constexpr uintptr_t MCV_active_index = 0x420;
 // BrowserView* (arg to each container ctor)
 inline constexpr uintptr_t MCV_browser_view = 0x350;
-// size_t (View's child count; AddChildViewAt index)
-inline constexpr uintptr_t MCV_child_insert_idx = 0x1a8;
 // views::View* (relative to the View base)
 inline constexpr uintptr_t MCV_drop_target_view = 0x0b0;
 
@@ -314,6 +312,8 @@ inline constexpr int ICON_CANVAS_DIMENSIONS = 28;
 // --- views::View ---
 // View* parent_ (null at the widget's root view)
 inline constexpr uintptr_t VIEW_parent = 0x198;
+// size_t: the number of children (AddChildViewAt's "at the end" index)
+inline constexpr uintptr_t VIEW_child_count = 0x1a8;
 // gfx::Rect bounds_ in parent coords (GetLocalBounds reads size @+0x1d0)
 inline constexpr uintptr_t VIEW_bounds = 0x1c8;
 
