@@ -510,6 +510,28 @@ inline bool MovePane(Node& root, int moving, int target, Direction direction) {
 // along the other axis is wrapped 50/50 (the pane takes the full half); a root
 // along the same axis gains it as an end child with an average share.
 // Returns false for a no-op (single pane, missing, or already spanning that edge).
+// Add `leaf` (not yet in the tree) along the whole `direction` edge of the
+// split: one more child of a root split along that axis, at the average share,
+// else a new root of the old root and `leaf`.
+inline void InsertAtRootEdge(Node& root, int leaf, Direction direction) {
+  const Axis axis = AxisOf(direction);
+  const bool isLeadingEdge = IsBefore(direction);
+  const bool isRootSplitAlongAxis = !root.isLeaf && root.axis == axis;
+  if (isRootSplitAlongAxis) {
+    const float averageWeight = Mean(root.weights);
+    root.children.insert(
+        isLeadingEdge ? root.children.begin() : root.children.end(),
+        MakeLeaf(leaf));
+    root.weights.insert(
+        isLeadingEdge ? root.weights.begin() : root.weights.end(),
+        averageWeight);
+    FixWeights(root);
+  } else {
+    WrapWithLeaf(root, axis, isLeadingEdge, leaf);
+  }
+  Normalize(root);
+}
+
 inline bool MovePaneToRootEdge(Node& root, int moving, Direction direction) {
   const bool canMove = !root.isLeaf && Contains(root, moving);
   if (!canMove) {
@@ -531,23 +553,10 @@ inline bool MovePaneToRootEdge(Node& root, int moving, Direction direction) {
       }
     }
   }
-  Detach(root, moving);
   // Detaching can collapse the root into a leaf, or into a split along the
-  // other axis.
-  const bool isRootSplitAlongAxis = !root.isLeaf && root.axis == axis;
-  if (isRootSplitAlongAxis) {
-    const float averageWeight = Mean(root.weights);
-    root.children.insert(
-        isLeadingEdge ? root.children.begin() : root.children.end(),
-        MakeLeaf(moving));
-    root.weights.insert(
-        isLeadingEdge ? root.weights.begin() : root.weights.end(),
-        averageWeight);
-    FixWeights(root);
-  } else {
-    WrapWithLeaf(root, axis, isLeadingEdge, moving);
-  }
-  Normalize(root);
+  // other axis; InsertAtRootEdge handles both.
+  Detach(root, moving);
+  InsertAtRootEdge(root, moving, direction);
   return true;
 }
 

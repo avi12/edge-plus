@@ -115,6 +115,31 @@ void RunChecks() {
     const Plan fresh = Resolve(row, layout, Point{750, 520}, 3, none);
     Check(fresh.zone == Zone::kSwap, "same spot without a held edge -> swap");
   }
+  // An incoming pane (a tab dragged in) joins the tree: three panes, the new
+  // one is leaf 3.
+  {
+    const Node three = FlatTree(3, Axis::kHorizontal);
+    const Plan below = ResolveIncoming(three, layout, Point{600, 700}, 3, none);
+    Check(below.zone == Zone::kPaneEdge && below.target == 1 &&
+              below.direction == Direction::kDown,
+          "incoming: bottom of pane 1 -> below 1");
+    Check(HasBounds(below.preview, 400, 400, 400, 400),
+          "incoming preview = bottom half of the middle column");
+    std::vector<int> order;
+    CollectLeaves(below.result, order);
+    Check(order == std::vector<int>({0, 1, 3, 2}), "incoming joins the tree");
+    const Plan span = ResolveIncoming(three, layout, Point{600, 795}, 3, none);
+    Check(span.zone == Zone::kRootEdge && span.direction == Direction::kDown &&
+              HasBounds(span.preview, 0, 400, 1200, 400),
+          "incoming: outer bottom band spans the bottom");
+    const Plan centre =
+        ResolveIncoming(three, layout, Point{600, 380}, 3, none);
+    Check(centre.zone == Zone::kPaneEdge && centre.target == 1,
+          "incoming never swaps: a pane's centre docks beside it");
+    Check(ResolveIncoming(three, layout, Point{600, -10}, 3, none).zone ==
+              Zone::kNone,
+          "incoming: just above the split (the strip) -> nothing");
+  }
   // The returned tree is exactly what the drop commits.
   {
     const Plan plan = Resolve(row, layout, Point{750, 700}, 3, none);
