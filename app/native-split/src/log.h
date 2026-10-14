@@ -8,6 +8,10 @@
 namespace fixedge {
 
 inline constexpr size_t kLogLineCapacity = 512;
+// The formatted message's share of the line: the '\n' and terminator Log
+// appends need the last two bytes.
+inline constexpr int kLogMessageCapacity =
+    static_cast<int>(kLogLineCapacity) - 2;
 inline constexpr wchar_t kLogFileUnderLocalAppData[] =
     L"\\FixEdge\\split-native.log";
 
@@ -15,12 +19,17 @@ inline void Log(const char* format, ...) {
   char line[kLogLineCapacity];
   va_list arguments;
   va_start(arguments, format);
-  // Two bytes short of the buffer: room for the '\n' and terminator added below.
-  int length = vsnprintf(line, sizeof(line) - 2, format, arguments);
+  int length = vsnprintf(line, kLogMessageCapacity, format, arguments);
   va_end(arguments);
   const bool isFormatError = length < 0;
   if (isFormatError) {
     return;
+  }
+  // vsnprintf returns the length the whole message WOULD have; a longer one was
+  // cut to fit, so the '\n' goes after what was actually written.
+  const bool isTruncated = length >= kLogMessageCapacity;
+  if (isTruncated) {
+    length = kLogMessageCapacity - 1;
   }
   line[length] = '\n';
   length++;
