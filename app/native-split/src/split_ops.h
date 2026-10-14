@@ -2,6 +2,7 @@
 // orchestrate the tree edit + container build + content feed + relayout that a
 // directional-add menu command performs. UI thread only.
 #pragma once
+#include <optional>
 #include "edge.h"
 #include "panes.h"
 #include "tabs.h"
@@ -74,7 +75,10 @@ inline void AddPane(void* mcv, Direction direction) {
 
   // Reshape the tree first so the relayout the grow triggers already uses it.
   // Unsplit, the one pane (the active tab) occupies container 0.
+  // A copy, not a pointer: the speculative edit below overwrites this entry.
   const Node* existing = isAlreadySplit ? TreeFor(mcv) : nullptr;
+  const std::optional<Node> previousTree =
+      existing ? std::optional<Node>(*existing) : std::nullopt;
   Node tree = isAlreadySplit ? geometry::LiveTree(mcv, oldPanes) : MakeLeaf(0);
   const bool hasSplitActiveLeaf =
       SplitPane(tree, activeLeaf, direction, newLeaf);
@@ -87,8 +91,8 @@ inline void AddPane(void* mcv, Direction direction) {
   // content and shows it; our layout detour positions it by the tree above.
   const bool hasGrown = split_data::GrowSplit(tsm);
   if (!hasGrown) {
-    if (existing) {
-      Trees()[mcv] = *existing;
+    if (previousTree) {
+      Trees()[mcv] = *previousTree;
     } else {
       ForgetTree(mcv);  // undo the speculative edit
     }
