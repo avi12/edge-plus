@@ -29,7 +29,8 @@ internal static class HostPayload {
       return false;
     }
     if (File.Exists(Paths.HostExecutable)) {
-      File.Move(Paths.HostExecutable, $"{Paths.HostExecutable}.{DateTime.UtcNow.Ticks}{RetiredSuffix}");
+      File.Move(
+          Paths.HostExecutable, $"{Paths.HostExecutable}.{DateTime.UtcNow.Ticks}{RetiredSuffix}");
     }
     Directory.CreateDirectory(Paths.Root);
     File.WriteAllBytes(Paths.HostExecutable, contents);

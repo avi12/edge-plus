@@ -25,6 +25,8 @@ internal static class DevModePrompt {
   private const string UserDataSwitch = "--user-data-dir=";
   private const string MutexName = @"Local\fix-edge.dev-mode-prompt";
   private const string LockfileName = "lockfile";
+  private const string PreferencesFileName = "Preferences";
+  private const string LocalStateFileName = "Local State";
 
   private static readonly string[] s_snoozeKeyPath =
       ["extensions", "ui", "dev_mode_warning_snooze_end_time"];
@@ -38,10 +40,13 @@ internal static class DevModePrompt {
 
   // Starts the waiting copy of the host outside Edge's job, so Edge closing
   // does not take it down. The panel calls this too, when the switch turns on.
+  //
+  // A job that forbids breakaway refuses the first attempt; the second runs
+  // inside it, which still outlives the host if the job is not kill-on-close.
   public static void Arm() {
     string commandLine = $"\"{Paths.HostExecutable}\" {AfterExitSwitch}";
-    bool isStarted = StartDetached(commandLine, CreateBreakawayFromJob) ||
-                     StartDetached(commandLine, 0);
+    bool isStarted = StartDetached(commandLine, ProcessCreationFlags.CreateBreakawayFromJob) ||
+                     StartDetached(commandLine, ProcessCreationFlags.None);
     if (!isStarted) {
       Process.Start(new ProcessStartInfo(Paths.HostExecutable, AfterExitSwitch) {
         UseShellExecute = false,
@@ -57,12 +62,13 @@ internal static class DevModePrompt {
     if (!isOnlyWaiter) {
       return;
     }
-    string userData = args.FirstOrDefault(arg => arg.StartsWith(UserDataSwitch, StringComparison.Ordinal))
-        ?[UserDataSwitch.Length..] ?? s_defaultUserData;
+    string? userDataArgument = args.FirstOrDefault(
+        argument => argument.StartsWith(UserDataSwitch, StringComparison.Ordinal));
+    string userData = userDataArgument?[UserDataSwitch.Length..] ?? s_defaultUserData;
     while (IsInUse(userData)) {
       Thread.Sleep(s_pollInterval);
     }
-    if (!FeatureSettings.IsEnabled(Catalog.QuietDevMode)) {
+    if (!FeatureSettings.IsEnabled(FeatureId.QuietDevMode)) {
       return;
     }
     SnoozeEveryProfile(userData);
@@ -77,7 +83,8 @@ internal static class DevModePrompt {
       return false;
     }
     try {
-      using var probe = new FileStream(lockfile, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+      using var probe =
+          new FileStream(lockfile, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
       return false;
     } catch (IOException) {
       return true;
@@ -85,9 +92,11 @@ internal static class DevModePrompt {
   }
 
   private static void SnoozeEveryProfile(string userData) {
-    string snoozeEnd = ((DateTime.UtcNow + s_snoozeLength - s_windowsEpoch).Ticks / 10).ToString();
+    long snoozeEndMicroseconds =
+        (DateTime.UtcNow + s_snoozeLength - s_windowsEpoch).Ticks / TimeSpan.TicksPerMicrosecond;
+    string snoozeEnd = snoozeEndMicroseconds.ToString();
     foreach (string profile in ProfileDirectories(userData)) {
-      string preferences = Path.Combine(userData, profile, "Preferences");
+      string preferences = Path.Combine(userData, profile, PreferencesFileName);
       if (!File.Exists(preferences)) {
         continue;
       }
@@ -107,17 +116,22 @@ internal static class DevModePrompt {
 
   // Local State lists every profile Edge knows, by folder name.
   private static string[] ProfileDirectories(string userData) {
-    string localState = Path.Combine(userData, "Local State");
+    string localState = Path.Combine(userData, LocalStateFileName);
     if (!File.Exists(localState)) {
       return [];
     }
-    var profiles = JsonNode.Parse(File.ReadAllText(localState))?["profile"]?["info_cache"] as JsonObject;
+    var profiles =
+        JsonNode.Parse(File.ReadAllText(localState))?["profile"]?["info_cache"] as JsonObject;
     return profiles?.Select(profile => profile.Key).ToArray() ?? [];
   }
 
-  private const uint CreateBreakawayFromJob = 0x01000000;
-  private const uint DetachedProcess = 0x00000008;
-  private const uint CreateNoWindow = 0x08000000;
+  [Flags]
+  private enum ProcessCreationFlags : uint {
+    None = 0,
+    DetachedProcess = 0x00000008,
+    CreateBreakawayFromJob = 0x01000000,
+    CreateNoWindow = 0x08000000,
+  }
 
   [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
   private struct StartupInfo {
@@ -136,20 +150,20 @@ internal static class DevModePrompt {
 
   [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
   private static extern bool CreateProcessW(
-      string? applicationName, string commandLine, IntPtr processAttributes, IntPtr threadAttributes,
-      bool inheritHandles, uint creationFlags, IntPtr environment, string? currentDirectory,
-      ref StartupInfo startupInfo, out ProcessInformation processInformation);
+      string? applicationName, string commandLine, IntPtr processAttributes,
+      IntPtr threadAttributes, bool inheritHandles, ProcessCreationFlags creationFlags,
+      IntPtr environment, string? currentDirectory, ref StartupInfo startupInfo,
+      out ProcessInformation processInformation);
 
   [DllImport("kernel32.dll")]
   private static extern bool CloseHandle(IntPtr handle);
 
-  // A job that forbids breakaway refuses the first attempt; the second runs
-  // inside it, which still outlives the host if the job is not kill-on-close.
-  private static bool StartDetached(string commandLine, uint extraFlags) {
+  private static bool StartDetached(string commandLine, ProcessCreationFlags extraFlags) {
     var startupInfo = new StartupInfo { Size = Marshal.SizeOf<StartupInfo>() };
+    ProcessCreationFlags creationFlags =
+        ProcessCreationFlags.DetachedProcess | ProcessCreationFlags.CreateNoWindow | extraFlags;
     bool isStarted = CreateProcessW(null, commandLine, IntPtr.Zero, IntPtr.Zero, false,
-        DetachedProcess | CreateNoWindow | extraFlags, IntPtr.Zero, null,
-        ref startupInfo, out ProcessInformation information);
+        creationFlags, IntPtr.Zero, null, ref startupInfo, out ProcessInformation information);
     if (isStarted) {
       CloseHandle(information.Process);
       CloseHandle(information.Thread);

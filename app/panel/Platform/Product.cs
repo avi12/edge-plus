@@ -8,16 +8,21 @@ namespace FixEdge;
 internal static class Product {
   private static readonly Assembly s_assembly = typeof(Product).Assembly;
 
-  public static string Name { get; } = Read<AssemblyProductAttribute>(a => a.Product);
+  public static string Name {
+    get;
+  } = Read<AssemblyProductAttribute>(attribute => attribute.Product);
 
-  public static string Summary { get; } = Read<AssemblyDescriptionAttribute>(a => a.Description);
+  public static string Summary {
+    get;
+  } = Read<AssemblyDescriptionAttribute>(attribute => attribute.Description);
 
-  public static string Author { get; } = Read<AssemblyCompanyAttribute>(a => a.Company);
+  public static string Author {
+    get;
+  } = Read<AssemblyCompanyAttribute>(attribute => attribute.Company);
 
   public static string Version {
     get;
-  } =
-      Read<AssemblyInformationalVersionAttribute>(a => a.InformationalVersion);
+  } = Read<AssemblyInformationalVersionAttribute>(attribute => attribute.InformationalVersion);
 
   public static Uri AuthorUri { get; } = new("https://avi12.com");
 

@@ -12,7 +12,7 @@ internal static class Program {
     }
     // Each Edge session leaves one waiter behind; it decides at Edge's exit
     // whether the switch is still on.
-    if (FeatureSettings.IsEnabled(Catalog.QuietDevMode)) {
+    if (FeatureSettings.IsEnabled(FeatureId.QuietDevMode)) {
       DevModePrompt.Arm();
     }
     NativeHost.Run();

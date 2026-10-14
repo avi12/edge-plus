@@ -15,18 +15,19 @@ namespace FixEdge;
 internal static class NativeSplit {
   // Must match kUnloadEvent in app/native-split/src/dllmain.cpp.
   private const string UnloadEventName = @"Local\fixedge-split-unload";
+  private const uint LoadLibraryTimeoutMilliseconds = 10000;
 
   // Edge keeps one browser process per profile; only it owns top-level windows,
   // so a main window handle tells the browser process from its renderers/GPU.
   private static Process[] EdgeBrowserProcesses() =>
-      Process.GetProcessesByName("msedge")
+      Process.GetProcessesByName(EdgeBrowser.ExecutableName)
           .Where(process => process.MainWindowHandle != IntPtr.Zero)
           .ToArray();
 
   public static bool IsEdgeRunning => EdgeBrowserProcesses().Length > 0;
 
-  /// The DLL holds its unload event open for as long as it is loaded, so the
-  /// event existing is exactly "the native split is active right now".
+  // The DLL holds its unload event open for as long as it is loaded, so the
+  // event existing is exactly "the native split is active right now".
   public static bool IsActive() {
     try {
       using EventWaitHandle _ = EventWaitHandle.OpenExisting(UnloadEventName);
@@ -36,15 +37,17 @@ internal static class NativeSplit {
     }
   }
 
-  /// Loads the DLL into every Edge browser process that does not have it yet.
-  /// Returns true if Edge was there to inject into.
+  // Loads the DLL into Edge's browser processes unless it is loaded already.
+  // Returns true if Edge was there to inject into.
   public static bool Enable(string dllPath) {
     Process[] browsers = EdgeBrowserProcesses();
-    if (browsers.Length == 0) {
+    bool isEdgeRunning = browsers.Length > 0;
+    if (!isEdgeRunning) {
       return false;
     }
+    // Loading it a second time would only leak a reference.
     if (IsActive()) {
-      return true;  // already loaded; LoadLibrary a second time would only leak a ref
+      return true;
     }
     foreach (Process browser in browsers) {
       InjectLoadLibrary(browser.Id, dllPath);
@@ -52,7 +55,7 @@ internal static class NativeSplit {
     return true;
   }
 
-  /// Signals the DLL to remove its hooks and unload itself.
+  // Signals the DLL to remove its hooks and unload itself.
   public static void Disable() {
     try {
       using EventWaitHandle unload = EventWaitHandle.OpenExisting(UnloadEventName);
@@ -62,56 +65,79 @@ internal static class NativeSplit {
     }
   }
 
-  private static void InjectLoadLibrary(int pid, string dllPath) {
+  private static void InjectLoadLibrary(int processId, string dllPath) {
     IntPtr process = OpenProcess(
-        PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION |
-        PROCESS_VM_WRITE | PROCESS_VM_READ, false, pid);
+        ProcessAccess.CreateThread | ProcessAccess.QueryInformation | ProcessAccess.VmOperation |
+        ProcessAccess.VmWrite | ProcessAccess.VmRead,
+        false, processId);
     if (process == IntPtr.Zero) {
       return;
     }
     try {
       byte[] pathBytes = Encoding.Unicode.GetBytes(dllPath + "\0");
-      IntPtr remote = VirtualAllocEx(process, IntPtr.Zero, (uint)pathBytes.Length,
-                                     MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-      if (remote == IntPtr.Zero) {
+      IntPtr remotePath = VirtualAllocEx(process, IntPtr.Zero, (uint)pathBytes.Length,
+                                         AllocationType.Commit | AllocationType.Reserve,
+                                         MemoryProtection.ReadWrite);
+      if (remotePath == IntPtr.Zero) {
         return;
       }
       try {
-        if (!WriteProcessMemory(process, remote, pathBytes, (uint)pathBytes.Length, out _)) {
+        bool isPathWritten =
+            WriteProcessMemory(process, remotePath, pathBytes, (uint)pathBytes.Length, out _);
+        if (!isPathWritten) {
           return;
         }
         IntPtr loadLibrary = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryW");
-        IntPtr thread = CreateRemoteThread(process, IntPtr.Zero, 0, loadLibrary, remote, 0, out _);
+        IntPtr thread =
+            CreateRemoteThread(process, IntPtr.Zero, 0, loadLibrary, remotePath, 0, out _);
         if (thread != IntPtr.Zero) {
-          WaitForSingleObject(thread, 10000);
+          WaitForSingleObject(thread, LoadLibraryTimeoutMilliseconds);
           CloseHandle(thread);
         }
       } finally {
-        VirtualFreeEx(process, remote, 0, MEM_RELEASE);
+        VirtualFreeEx(process, remotePath, 0, FreeType.Release);
       }
     } finally {
       CloseHandle(process);
     }
   }
 
-  private const uint PROCESS_CREATE_THREAD = 0x0002;
-  private const uint PROCESS_QUERY_INFORMATION = 0x0400;
-  private const uint PROCESS_VM_OPERATION = 0x0008;
-  private const uint PROCESS_VM_WRITE = 0x0020;
-  private const uint PROCESS_VM_READ = 0x0010;
-  private const uint MEM_COMMIT = 0x1000;
-  private const uint MEM_RESERVE = 0x2000;
-  private const uint MEM_RELEASE = 0x8000;
-  private const uint PAGE_READWRITE = 0x04;
+  [Flags]
+  private enum ProcessAccess : uint {
+    CreateThread = 0x0002,
+    VmOperation = 0x0008,
+    VmRead = 0x0010,
+    VmWrite = 0x0020,
+    QueryInformation = 0x0400,
+  }
+
+  [Flags]
+  private enum AllocationType : uint {
+    Commit = 0x1000,
+    Reserve = 0x2000,
+  }
+
+  private enum FreeType : uint {
+    Release = 0x8000,
+  }
+
+  private enum MemoryProtection : uint {
+    ReadWrite = 0x04,
+  }
 
   [DllImport("kernel32.dll", SetLastError = true)]
-  private static extern IntPtr OpenProcess(uint access, bool inheritHandle, int processId);
+  private static extern IntPtr OpenProcess(ProcessAccess access, bool inheritHandle, int processId);
   [DllImport("kernel32.dll", SetLastError = true)]
-  private static extern IntPtr VirtualAllocEx(IntPtr process, IntPtr address, uint size, uint allocationType, uint protect);
+  private static extern IntPtr VirtualAllocEx(
+      IntPtr process, IntPtr address, uint size, AllocationType allocationType,
+      MemoryProtection protection);
   [DllImport("kernel32.dll", SetLastError = true)]
-  private static extern bool WriteProcessMemory(IntPtr process, IntPtr address, byte[] buffer, uint size, out IntPtr written);
+  private static extern bool WriteProcessMemory(
+      IntPtr process, IntPtr address, byte[] buffer, uint size, out IntPtr written);
   [DllImport("kernel32.dll", SetLastError = true)]
-  private static extern IntPtr CreateRemoteThread(IntPtr process, IntPtr attributes, uint stackSize, IntPtr start, IntPtr parameter, uint flags, out uint threadId);
+  private static extern IntPtr CreateRemoteThread(
+      IntPtr process, IntPtr attributes, uint stackSize, IntPtr start, IntPtr parameter,
+      uint flags, out uint threadId);
   [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi)]
   private static extern IntPtr GetModuleHandle(string name);
   [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi)]
@@ -119,7 +145,8 @@ internal static class NativeSplit {
   [DllImport("kernel32.dll")]
   private static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
   [DllImport("kernel32.dll")]
-  private static extern bool VirtualFreeEx(IntPtr process, IntPtr address, uint size, uint freeType);
+  private static extern bool VirtualFreeEx(
+      IntPtr process, IntPtr address, uint size, FreeType freeType);
   [DllImport("kernel32.dll")]
   private static extern bool CloseHandle(IntPtr handle);
 }

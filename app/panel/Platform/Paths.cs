@@ -27,6 +27,10 @@ internal static class Paths {
 
   public static string Status { get; } = Path.Combine(Root, "status.json");
 
+  // The host stamps its own process id into the status under this key, so the
+  // panel can tell a live status from one a closed Edge left behind.
+  public const string StatusHostProcessIdKey = "pid";
+
   // The native split DLL, unpacked here for the panel to inject into Edge.
   public static string SplitDll { get; } = Path.Combine(Root, "fixedge-split.dll");
 

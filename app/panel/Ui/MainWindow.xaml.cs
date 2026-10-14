@@ -13,10 +13,10 @@ public sealed partial class MainWindow : Window {
   private const int WindowHeight = 560;
 
   private const string ExtensionsPage = "edge://extensions";
-  private const string EdgeExecutable = "msedge";
 
-  private const string ConnectedGlyph = "";
-  private const string DisconnectedGlyph = "";
+  private const string ConnectedGlyph = "\uE73E";
+  private const string DisconnectedGlyph = "\uE946";
+  private const string NativeSplitGlyph = "\uF0E2";
 
   // The host rewrites the status the moment a pane opens or closes; a second
   // is quick enough to read as live and costs one file read.
@@ -43,66 +43,64 @@ public sealed partial class MainWindow : Window {
   // feature in the extension shows up here with no change to the app.
   private void BuildFeatureList() {
     foreach (Feature feature in Catalog.Features) {
-      var toggle = new ToggleSwitch {
-        OnContent = "",
-        OffContent = "",
-        MinWidth = 0,
-        IsOn = FeatureSettings.IsEnabled(feature.Id),
-      };
-      toggle.Toggled += (_, _) => {
-        FeatureSettings.SetEnabled(feature.Id, toggle.IsOn);
-        // The one feature that lives outside Edge: it waits for Edge to close.
-        bool isDevModePromptTurnedOn = feature.Id == Catalog.QuietDevMode && toggle.IsOn;
-        if (isDevModePromptTurnedOn) {
-          DevModePrompt.Arm();
-        }
-      };
-      var card = new SettingsCard {
-        Header = feature.Title,
-        Description = feature.Description,
-        HeaderIcon = new FontIcon { Glyph = feature.Glyph },
-        IsClickEnabled = true,
-        IsActionIconVisible = false,
-        Content = toggle,
-      };
-      // The whole row flips the switch, as in Windows' own settings.
-      card.Click += (_, _) => toggle.IsOn = !toggle.IsOn;
-      FeatureList.Children.Add(card);
+      AddSwitchCard(
+          feature.Title, feature.Description, feature.Glyph,
+          isOn: FeatureSettings.IsEnabled(feature.Id),
+          onToggled: isOn => {
+            FeatureSettings.SetEnabled(feature.Id, isOn);
+            // The one feature that lives outside Edge: it waits for Edge to close.
+            bool isQuietDevModeTurnedOn =
+                feature.Id == FeatureId.QuietDevMode.WireName() && isOn;
+            if (isQuietDevModeTurnedOn) {
+              DevModePrompt.Arm();
+            }
+          });
     }
   }
 
   // The native split is not an extension feature: it is a DLL the panel loads
   // into Edge itself, so it gets its own switch that injects or ejects live.
-  private const string NativeSplitId = "nativeSplit";
-
   private void BuildNativeSplitCard() {
-    if (!NativeSplitPayload.Exists) {
-      return;  // this build does not carry the native DLL
+    if (!NativeSplitPayload.IsCarried) {
+      return;
     }
-    bool wanted = FeatureSettings.IsEnabled(NativeSplitId, false);
+    bool isWanted = FeatureSettings.IsEnabled(FeatureId.NativeSplit, isEnabledByDefault: false);
     // Re-assert the wanted state against the Edge running now.
-    if (wanted && NativeSplit.IsEdgeRunning && !NativeSplit.IsActive()) {
+    bool shouldInjectIntoRunningEdge =
+        isWanted && NativeSplit.IsEdgeRunning && !NativeSplit.IsActive();
+    if (shouldInjectIntoRunningEdge) {
       NativeSplit.Enable(Paths.SplitDll);
     }
+    AddSwitchCard(
+        "Native split into any grid (experimental)",
+        "Grows Edge's own split past two panes, loaded straight into Edge - no extension. "
+            + "Turning it on injects the module; off removes it, no restart. Open Edge first.",
+        NativeSplitGlyph,
+        isOn: NativeSplit.IsActive() || isWanted,
+        onToggled: isOn => {
+          FeatureSettings.SetEnabled(FeatureId.NativeSplit, isOn);
+          if (isOn) {
+            NativeSplit.Enable(Paths.SplitDll);
+          } else {
+            NativeSplit.Disable();
+          }
+        });
+  }
+
+  // The whole row flips the switch, as in Windows' own settings.
+  private void AddSwitchCard(
+      string header, string description, string glyph, bool isOn, Action<bool> onToggled) {
     var toggle = new ToggleSwitch {
       OnContent = "",
       OffContent = "",
       MinWidth = 0,
-      IsOn = NativeSplit.IsActive() || wanted,
+      IsOn = isOn,
     };
-    toggle.Toggled += (_, _) => {
-      FeatureSettings.SetEnabled(NativeSplitId, toggle.IsOn);
-      if (toggle.IsOn) {
-        NativeSplit.Enable(Paths.SplitDll);
-      } else {
-        NativeSplit.Disable();
-      }
-    };
+    toggle.Toggled += (_, _) => onToggled(toggle.IsOn);
     var card = new SettingsCard {
-      Header = "Native split into any grid (experimental)",
-      Description = "Grows Edge's own split past two panes, loaded straight into Edge - no extension. "
-                  + "Turning it on injects the module; off removes it, no restart. Open Edge first.",
-      HeaderIcon = new FontIcon { Glyph = "" },
+      Header = header,
+      Description = description,
+      HeaderIcon = new FontIcon { Glyph = glyph },
       IsClickEnabled = true,
       IsActionIconVisible = false,
       Content = toggle,
@@ -115,7 +113,8 @@ public sealed partial class MainWindow : Window {
     bool isConnected = EdgeConnection.IsConnected;
     SetupNotice.IsOpen = !isConnected;
     ConnectionIcon.Glyph = isConnected ? ConnectedGlyph : DisconnectedGlyph;
-    ConnectionCard.Description = isConnected ? DescribeConnected() : "The extension is not running in Edge";
+    ConnectionCard.Description =
+        isConnected ? DescribeConnected() : "The extension is not running in Edge";
   }
 
   private static string DescribeConnected() {
@@ -129,7 +128,9 @@ public sealed partial class MainWindow : Window {
   }
 
   private void OnOpenExtensions(object sender, RoutedEventArgs e) =>
-      Process.Start(new ProcessStartInfo(EdgeExecutable, ExtensionsPage) { UseShellExecute = true });
+      Process.Start(new ProcessStartInfo(EdgeBrowser.ExecutableName, ExtensionsPage) {
+        UseShellExecute = true,
+      });
 
   private void OnCopyFolder(object sender, RoutedEventArgs e) {
     var package = new DataPackage();

@@ -14,7 +14,7 @@ internal static class EdgeConnection {
   public static bool IsConnected => Read() is not null;
 
   public static SplitStatus? Split() {
-    JsonNode? split = Read()?["features"]?[Catalog.SplitPanes];
+    JsonNode? split = Read()?["features"]?[FeatureId.SplitPanes.WireName()];
     if (split is null) {
       return null;
     }
@@ -24,16 +24,19 @@ internal static class EdgeConnection {
   private static JsonNode? Read() {
     try {
       JsonNode? status = JsonNode.Parse(File.ReadAllText(Paths.Status));
-      int? hostPid = status?["pid"]?.GetValue<int>();
-      return hostPid is int pid && IsOurProcess(pid) ? status : null;
+      int? hostProcessId = status?[Paths.StatusHostProcessIdKey]?.GetValue<int>();
+      bool isHostRunning = hostProcessId is int processId && IsHostProcess(processId);
+      return isHostRunning ? status : null;
     } catch (Exception exception) when (exception is IOException or JsonException) {
       return null;
     }
   }
 
-  private static bool IsOurProcess(int pid) {
+  // By name as well as id: once the host exits, Windows can hand its id to
+  // another process.
+  private static bool IsHostProcess(int processId) {
     try {
-      using var process = Process.GetProcessById(pid);
+      using var process = Process.GetProcessById(processId);
       return process.ProcessName == Path.GetFileNameWithoutExtension(Paths.HostExecutable);
     } catch (ArgumentException) {
       return false;

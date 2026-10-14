@@ -9,14 +9,20 @@ namespace FixEdge;
 internal sealed record Feature(
     string Id, string Title, string Description, string Glyph, bool IsEnabledByDefault);
 
+// The features the app's own code names. Every other feature is known only by
+// its row in catalog.json, which stays the one list of the features there are.
+internal enum FeatureId {
+  SplitPanes,
+  QuietDevMode,
+  // Not a catalog feature: the native split DLL, whose switch the app owns.
+  NativeSplit,
+}
+
 // The features the extension implements, read from its own catalog.json, so a
 // feature's name, wording and defaults are written once for both sides.
 //
 // Linked into the host as well; each exe embeds catalog.json under this name.
 internal static class Catalog {
-  public const string SplitPanes = "splitPanes";
-  public const string QuietDevMode = "quietDevMode";
-
   private const string Resource = "catalog.json";
 
   private static readonly JsonNode s_catalog = JsonNode.Parse(
@@ -38,4 +44,13 @@ internal static class Catalog {
       .ToList();
 
   public static Feature Get(string id) => Features.Single(feature => feature.Id == id);
+
+  // The id as catalog.json and the extension's FeatureId spell it, and as the
+  // settings and status files key it.
+  public static string WireName(this FeatureId feature) => feature switch {
+    FeatureId.SplitPanes => "splitPanes",
+    FeatureId.QuietDevMode => "quietDevMode",
+    FeatureId.NativeSplit => "nativeSplit",
+    _ => throw new ArgumentOutOfRangeException(nameof(feature)),
+  };
 }

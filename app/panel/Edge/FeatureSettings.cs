@@ -12,16 +12,22 @@ internal static class FeatureSettings {
 
   private static readonly JsonSerializerOptions s_indented = new() { WriteIndented = true };
 
+  // By the catalog's own id, for the rows built from it.
   public static bool IsEnabled(string featureId) =>
       Stored(featureId, EnabledKey)?.GetValue<bool>() ?? Catalog.Get(featureId).IsEnabledByDefault;
 
+  public static bool IsEnabled(FeatureId feature) => IsEnabled(feature.WireName());
+
   // For app-managed settings that are not catalog features (e.g. the native
   // split), where the default is explicit rather than read from the catalog.
-  public static bool IsEnabled(string featureId, bool fallback) =>
-      Stored(featureId, EnabledKey)?.GetValue<bool>() ?? fallback;
+  public static bool IsEnabled(FeatureId feature, bool isEnabledByDefault) =>
+      Stored(feature.WireName(), EnabledKey)?.GetValue<bool>() ?? isEnabledByDefault;
 
   public static void SetEnabled(string featureId, bool isEnabled) =>
       Set(featureId, EnabledKey, JsonValue.Create(isEnabled));
+
+  public static void SetEnabled(FeatureId feature, bool isEnabled) =>
+      SetEnabled(feature.WireName(), isEnabled);
 
   private static JsonNode? Stored(string featureId, string key) =>
       Load()[FeaturesKey]?[featureId]?[key];

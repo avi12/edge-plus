@@ -10,10 +10,14 @@ namespace FixEdge;
 internal static class NativeSplitPayload {
   private const string Resource = "fixedge-split.dll";
 
+  // A build without the native DLL simply has no native-split switch.
+  public static bool IsCarried =>
+      typeof(NativeSplitPayload).Assembly.GetManifestResourceStream(Resource) is not null;
+
   public static void Unpack() {
     using Stream? stream = typeof(NativeSplitPayload).Assembly.GetManifestResourceStream(Resource);
     if (stream is null) {
-      return;  // a build without the native DLL simply has no native-split switch
+      return;
     }
     using var buffer = new MemoryStream();
     stream.CopyTo(buffer);
@@ -31,7 +35,4 @@ internal static class NativeSplitPayload {
       // Locked because it is loaded in Edge right now; the current copy stays.
     }
   }
-
-  public static bool Exists =>
-      typeof(NativeSplitPayload).Assembly.GetManifestResourceStream(Resource) is not null;
 }

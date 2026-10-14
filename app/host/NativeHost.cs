@@ -2,6 +2,7 @@ using System;
 using System.Buffers.Binary;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 
@@ -15,11 +16,23 @@ namespace FixEdge;
 // that many bytes of UTF-8 JSON, in both directions.
 internal static class NativeHost {
   private const int LengthPrefixBytes = 4;
+  private const string TypeKey = "type";
   // A save raises several file events in a row; send once they stop.
   private static readonly TimeSpan s_settleDelay = TimeSpan.FromMilliseconds(100);
 
   private static readonly object s_writeLock = new();
   private static Stream s_output = Stream.Null;
+
+  // The message types on the wire, named the same in extension/src/lib/host.ts.
+  private enum HostMessageType {
+    Settings,
+    Reload,
+  }
+
+  private enum ExtensionMessageType {
+    Hello,
+    Status,
+  }
 
   public static void Run() {
     Directory.CreateDirectory(Paths.Root);
@@ -27,14 +40,15 @@ internal static class NativeHost {
     s_output = Console.OpenStandardOutput();
 
     using var settingsSettled = new Timer(_ => SendSettings());
-    using var stampSettled = new Timer(_ => Send(new JsonObject { ["type"] = "reload" }));
+    using var stampSettled = new Timer(
+        _ => Send(new JsonObject { [TypeKey] = WireName(HostMessageType.Reload) }));
     using var watcher = new FileSystemWatcher(Paths.Root) {
       NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
     };
     void OnFileEvent(string path) {
-      if (string.Equals(path, Paths.Settings, StringComparison.OrdinalIgnoreCase)) {
+      if (IsSamePath(path, Paths.Settings)) {
         settingsSettled.Change(s_settleDelay, Timeout.InfiniteTimeSpan);
-      } else if (string.Equals(path, Paths.ExtensionStamp, StringComparison.OrdinalIgnoreCase)) {
+      } else if (IsSamePath(path, Paths.ExtensionStamp)) {
         stampSettled.Change(s_settleDelay, Timeout.InfiniteTimeSpan);
       }
     }
@@ -55,12 +69,12 @@ internal static class NativeHost {
   }
 
   private static void Handle(JsonObject message) {
-    switch (message["type"]?.GetValue<string>()) {
-      case "hello":
+    switch (ParseExtensionMessageType(message[TypeKey]?.GetValue<string>())) {
+      case ExtensionMessageType.Hello:
         SendSettings();
         break;
-      case "status":
-        message["pid"] = Environment.ProcessId;
+      case ExtensionMessageType.Status:
+        message[Paths.StatusHostProcessIdKey] = Environment.ProcessId;
         Paths.WriteAtomically(Paths.Status, message.ToJsonString());
         break;
     }
@@ -70,10 +84,13 @@ internal static class NativeHost {
     JsonNode? settings;
     try {
       settings = JsonNode.Parse(Paths.ReadSettings());
-    } catch (Exception exception) when (exception is IOException or System.Text.Json.JsonException) {
+    } catch (Exception exception) when (exception is IOException or JsonException) {
       return;
     }
-    Send(new JsonObject { ["type"] = "settings", ["settings"] = settings });
+    Send(new JsonObject {
+      [TypeKey] = WireName(HostMessageType.Settings),
+      ["settings"] = settings,
+    });
   }
 
   private static void Send(JsonObject message) {
@@ -115,4 +132,20 @@ internal static class NativeHost {
     } catch (IOException) {
     }
   }
+
+  private static bool IsSamePath(string path, string other) =>
+      string.Equals(path, other, StringComparison.OrdinalIgnoreCase);
+
+  private static string WireName(HostMessageType type) => type switch {
+    HostMessageType.Settings => "settings",
+    HostMessageType.Reload => "reload",
+    _ => throw new ArgumentOutOfRangeException(nameof(type)),
+  };
+
+  // Null for a type this host does not know, which it ignores.
+  private static ExtensionMessageType? ParseExtensionMessageType(string? type) => type switch {
+    "hello" => ExtensionMessageType.Hello,
+    "status" => ExtensionMessageType.Status,
+    _ => null,
+  };
 }

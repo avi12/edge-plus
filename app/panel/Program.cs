@@ -8,11 +8,11 @@ internal static class Program {
   [STAThread]
   private static void Main() {
     WinRT.ComWrappersSupport.InitializeComWrappers();
-    Microsoft.UI.Xaml.Application.Start(p => {
+    Microsoft.UI.Xaml.Application.Start(_ => {
       var context = new Microsoft.UI.Dispatching.DispatcherQueueSynchronizationContext(
           Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
       System.Threading.SynchronizationContext.SetSynchronizationContext(context);
-      _ = new App();
+      new App();
     });
   }
 }

@@ -45,7 +45,8 @@ internal static class ExtensionPayload {
     foreach ((string relativePath, string resource) in files) {
       string target = Path.Combine(Paths.Extension, relativePath);
       byte[] contents = ReadBytes(resource);
-      bool isCurrent = File.Exists(target) && File.ReadAllBytes(target).AsSpan().SequenceEqual(contents);
+      bool isCurrent = File.Exists(target) &&
+                       File.ReadAllBytes(target).AsSpan().SequenceEqual(contents);
       if (isCurrent) {
         continue;
       }
@@ -65,9 +66,12 @@ internal static class ExtensionPayload {
       return false;
     }
     bool isAnyDeleted = false;
-    foreach (string file in Directory.EnumerateFiles(Paths.Extension, "*", SearchOption.AllDirectories).ToList()) {
+    List<string> files =
+        Directory.EnumerateFiles(Paths.Extension, "*", SearchOption.AllDirectories).ToList();
+    foreach (string file in files) {
       string relativePath = Path.GetRelativePath(Paths.Extension, file).Replace('\\', '/');
-      if (s_resources.ContainsKey(relativePath)) {
+      bool isInThisBuild = s_resources.ContainsKey(relativePath);
+      if (isInThisBuild) {
         continue;
       }
       File.Delete(file);
@@ -87,6 +91,6 @@ internal static class ExtensionPayload {
     string key = JsonNode.Parse(Read(ManifestFile))!["key"]!.GetValue<string>();
     byte[] hash = SHA256.HashData(Convert.FromBase64String(key));
     return string.Concat(hash.Take(ExtensionIdBytes).Select(
-        b => $"{(char)('a' + (b >> 4))}{(char)('a' + (b & 0xF))}"));
+        hashByte => $"{(char)('a' + (hashByte >> 4))}{(char)('a' + (hashByte & 0xF))}"));
   }
 }
