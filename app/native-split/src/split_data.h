@@ -228,4 +228,24 @@ inline bool GrowSplit(void* tsm) {
   return ok;
 }
 
+// Collapse the active split: dissolve it so every member becomes a standalone
+// tab again and the active tab fills the whole window. Nothing is closed. Works
+// for any member count (the view shrinks back to one pane on the notify).
+inline bool CollapseSplit(void* tsm) {
+  void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
+  if (!active) {
+    Log("[collapse] no active tab");
+    return false;
+  }
+  OptSplitId opt = {};
+  edge::TabGetSplit(active, &opt);
+  if (!opt.present) {
+    Log("[collapse] active tab is not in a split");
+    return false;
+  }
+  edge::RemoveSplitImpl(tsm, opt.token, 1);
+  Log("[collapse] dissolved split; active tab fills the window");
+  return true;
+}
+
 }  // namespace fixedge::split_data

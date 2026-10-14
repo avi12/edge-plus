@@ -51,12 +51,15 @@ inline Calc_t o_calc = nullptr;
 inline void* __fastcall h_calc(void* self, void* out, void* avail) {
   void* mcv = edge::McvFromLayoutBase(self);
   g_active_mcv = mcv;
-  if (edge::McvCount(mcv) <= 2) return o_calc(self, out, avail);
+  if (edge::McvCount(mcv) <= 2) return o_calc(self, out, avail);  // native 1-2 containers
   const bool bounded =
       edge::Field<uint8_t>(avail, 0x4) == 1 && edge::Field<uint8_t>(avail, 0xc) == 1;
   if (!bounded) return o_calc(self, out, avail);
+  // The MCV was grown past two containers. Tile exactly as many as the live split
+  // has members (1 once it has been collapsed); surplus containers are hidden.
+  const int panes = edge::McvActiveSplitPanes(mcv);
   return geometry::TilePanes(mcv, out, edge::Field<int32_t>(avail, 0x0),
-                             edge::Field<int32_t>(avail, 0x8));
+                             edge::Field<int32_t>(avail, 0x8), panes);
 }
 
 template <class T>

@@ -284,6 +284,25 @@ inline int TabCount(void* tab_strip_model) {
   return collection ? Field<int32_t>(collection, off::TABCOLL_count) : 0;
 }
 
+// How many panes this MCV should show: the active tab's split member count
+// (>=2), or 1 when the active tab isn't in a split (collapsed / normal). The
+// data model is the single source of truth; the container vector is a cache that
+// only grows, so surplus containers are hidden rather than destroyed.
+inline int McvActiveSplitPanes(void* mcv) {
+  void* bv = McvBrowserView(mcv);
+  void* tsm = bv ? TabStripModelOf(BrowserOf(bv)) : nullptr;
+  if (!tsm) return 1;
+  void* active = ActiveTab(tsm);
+  if (!active || !TabIsSplit(active)) return 1;
+  struct { uint8_t token[16]; uint8_t present; uint8_t pad[7]; } opt = {};
+  TabGetSplit(active, &opt);
+  if (!opt.present) return 1;
+  uint64_t vec[3] = {};  // {data, size, cap}; size = member count
+  GetTabsAndIndicesInSplit(tsm, vec, opt.token);
+  const int n = vec[0] ? static_cast<int>(vec[1]) : 1;
+  return n < 1 ? 1 : n;
+}
+
 // TabStripModel from a top-level Win32 browser window handle (no split needed).
 inline void* TsmForWindow(void* hwnd) {
   void* aura = AuraWindowForHWND(hwnd);

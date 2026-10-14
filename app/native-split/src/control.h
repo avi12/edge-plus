@@ -20,7 +20,7 @@ inline WNDPROC g_orig_proc = nullptr;
 inline bool g_hotkeys_done = false;
 
 // Hot-key ids delivered as WM_HOTKEY to this window's (UI-thread) WndProc.
-enum { HK_ADD_PANE = 1 };
+enum { HK_ADD_PANE = 1, HK_COLLAPSE = 2 };
 
 inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
   // RegisterHotKey must run on the thread that owns the window; this WndProc is
@@ -28,15 +28,17 @@ inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
   if (!g_hotkeys_done) {
     g_hotkeys_done = true;
     // Ctrl+Shift+Alt+A = add a pane to the current split (create one if none).
-    if (RegisterHotKey(hwnd, HK_ADD_PANE, MOD_CONTROL | MOD_SHIFT | MOD_ALT, 'A'))
-      Log("[control] hotkey Ctrl+Shift+Alt+A -> add pane registered");
-    else
-      Log("[control] RegisterHotKey failed (%lu)", GetLastError());
+    RegisterHotKey(hwnd, HK_ADD_PANE, MOD_CONTROL | MOD_SHIFT | MOD_ALT, 'A');
+    RegisterHotKey(hwnd, HK_COLLAPSE, MOD_CONTROL | MOD_SHIFT | MOD_ALT, 'X');
+    Log("[control] hotkeys registered (Ctrl+Shift+Alt+A add, +X collapse)");
   }
-  if (msg == WM_HOTKEY && wparam == HK_ADD_PANE) {
+  if (msg == WM_HOTKEY && (wparam == HK_ADD_PANE || wparam == HK_COLLAPSE)) {
     void* tsm = edge::TsmForWindow(hwnd);
-    Log("[control] hotkey add-pane tsm=%p", tsm);
-    if (tsm) split_data::GrowSplit(tsm);
+    Log("[control] hotkey %llu tsm=%p", static_cast<unsigned long long>(wparam), tsm);
+    if (tsm) {
+      if (wparam == HK_ADD_PANE) split_data::GrowSplit(tsm);
+      else split_data::CollapseSplit(tsm);
+    }
     return 0;
   }
   if (msg == g_msg && g_msg != 0) {
@@ -82,7 +84,10 @@ inline void Install() {
 }
 
 inline void Remove() {
-  if (g_hwnd && g_hotkeys_done) UnregisterHotKey(g_hwnd, HK_ADD_PANE);
+  if (g_hwnd && g_hotkeys_done) {
+    UnregisterHotKey(g_hwnd, HK_ADD_PANE);
+    UnregisterHotKey(g_hwnd, HK_COLLAPSE);
+  }
   if (g_hwnd && g_orig_proc) {
     SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(g_orig_proc));
   }
