@@ -311,4 +311,12 @@ inline void* TsmForWindow(void* hwnd) {
   return bv ? TabStripModelOf(BrowserOf(bv)) : nullptr;
 }
 
+// MultiContentsView from a top-level Win32 browser window handle.
+inline void* McvForWindow(void* hwnd) {
+  void* aura = AuraWindowForHWND(hwnd);
+  if (!aura) return nullptr;
+  void* bv = BrowserViewForAura(aura);
+  return bv ? BrowserViewMcv(bv) : nullptr;
+}
+
 }  // namespace fixedge::edge

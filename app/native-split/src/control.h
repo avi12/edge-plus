@@ -20,7 +20,8 @@ inline WNDPROC g_orig_proc = nullptr;
 inline bool g_hotkeys_done = false;
 
 // Hot-key ids delivered as WM_HOTKEY to this window's (UI-thread) WndProc.
-enum { HK_ADD_PANE = 1, HK_COLLAPSE = 2 };
+enum { HK_ADD_PANE = 1, HK_COLLAPSE = 2, HK_LEFT = 3, HK_UP = 4, HK_RIGHT = 5, HK_DOWN = 6 };
+inline constexpr UINT kHkMods = MOD_CONTROL | MOD_SHIFT | MOD_ALT;
 
 inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
   // RegisterHotKey must run on the thread that owns the window; this WndProc is
@@ -28,22 +29,49 @@ inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
   if (!g_hotkeys_done) {
     g_hotkeys_done = true;
     // Ctrl+Shift+Alt+A = add a pane to the current split (create one if none).
-    RegisterHotKey(hwnd, HK_ADD_PANE, MOD_CONTROL | MOD_SHIFT | MOD_ALT, 'A');
-    RegisterHotKey(hwnd, HK_COLLAPSE, MOD_CONTROL | MOD_SHIFT | MOD_ALT, 'X');
-    Log("[control] hotkeys registered (Ctrl+Shift+Alt+A add, +X collapse)");
+    RegisterHotKey(hwnd, HK_ADD_PANE, kHkMods, 'A');
+    RegisterHotKey(hwnd, HK_COLLAPSE, kHkMods, 'X');
+    RegisterHotKey(hwnd, HK_LEFT, kHkMods, VK_LEFT);
+    RegisterHotKey(hwnd, HK_UP, kHkMods, VK_UP);
+    RegisterHotKey(hwnd, HK_RIGHT, kHkMods, VK_RIGHT);
+    RegisterHotKey(hwnd, HK_DOWN, kHkMods, VK_DOWN);
+    Log("[control] hotkeys: Ctrl+Shift+Alt + arrows=add directional, A=add right, X=collapse");
   }
-  if (msg == WM_HOTKEY && (wparam == HK_ADD_PANE || wparam == HK_COLLAPSE)) {
-    void* tsm = edge::TsmForWindow(hwnd);
-    Log("[control] hotkey %llu tsm=%p", static_cast<unsigned long long>(wparam), tsm);
-    if (tsm) {
-      if (wparam == HK_ADD_PANE) split_data::GrowSplit(tsm);
-      else split_data::CollapseSplit(tsm);
+  if (msg == WM_HOTKEY) {
+    if (wparam == HK_COLLAPSE) {
+      void* tsm = edge::TsmForWindow(hwnd);
+      if (tsm) split_data::CollapseSplit(tsm);
+      ForgetTree(edge::McvForWindow(hwnd));  // a collapsed split starts a fresh tree
+      return 0;
     }
-    return 0;
+    bool is_add = true;
+    fixedge::Direction dir = fixedge::Direction::kRight;
+    switch (wparam) {
+      case HK_ADD_PANE:
+      case HK_RIGHT: dir = fixedge::Direction::kRight; break;
+      case HK_LEFT: dir = fixedge::Direction::kLeft; break;
+      case HK_UP: dir = fixedge::Direction::kUp; break;
+      case HK_DOWN: dir = fixedge::Direction::kDown; break;
+      default: is_add = false; break;
+    }
+    if (is_add) {
+      void* mcv = edge::McvForWindow(hwnd);
+      Log("[control] directional add dir=%d mcv=%p", static_cast<int>(dir), mcv);
+      if (mcv) split_ops::AddPane(mcv, dir);
+      return 0;
+    }
   }
   if (msg == g_msg && g_msg != 0) {
-    // tsm via HWND -> aura -> BrowserView, so no split need pre-exist.
-    // wparam >= 100 = create a fresh split; otherwise grow the active split.
+    // wparam >= 300 = directional add (300+Direction); >= 200 create N panes;
+    // >= 100 create a 2-pane split; otherwise grow. (A test channel; the real
+    // gestures are the hot-keys.)
+    if (wparam >= 300 && wparam <= 303) {
+      void* mcv = edge::McvForWindow(hwnd);
+      Log("[control] msg directional dir=%llu mcv=%p",
+          static_cast<unsigned long long>(wparam) - 300, mcv);
+      if (mcv) split_ops::AddPane(mcv, static_cast<fixedge::Direction>(wparam - 300));
+      return 0;
+    }
     void* tsm = edge::TsmForWindow(hwnd);
     Log("[control] message wparam=%llu tsm=%p", static_cast<unsigned long long>(wparam), tsm);
     if (!tsm) return 0;
@@ -85,8 +113,7 @@ inline void Install() {
 
 inline void Remove() {
   if (g_hwnd && g_hotkeys_done) {
-    UnregisterHotKey(g_hwnd, HK_ADD_PANE);
-    UnregisterHotKey(g_hwnd, HK_COLLAPSE);
+    for (int id = HK_ADD_PANE; id <= HK_DOWN; ++id) UnregisterHotKey(g_hwnd, id);
   }
   if (g_hwnd && g_orig_proc) {
     SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(g_orig_proc));

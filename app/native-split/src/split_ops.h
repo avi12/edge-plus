@@ -7,6 +7,7 @@
 #include "tabs.h"
 #include "state.h"
 #include "pane_tree.h"
+#include "split_data.h"
 
 namespace fixedge::split_ops {
 
@@ -41,27 +42,44 @@ inline void FeedNewPane(void* mcv, int leaf) {
   Log("[feed] no background tab fed into leaf %d", leaf);
 }
 
-// Add one pane adjacent to the active pane, in `dir`. Mutates the split tree,
-// builds the container, feeds it, and relays out. No-op without a live split.
+// Add one pane adjacent to the active pane, in `dir`, as a real split-tree edit.
+// The data model grows by one member (GrowSplit, which appends it as the last
+// container), and the tree records where that container sits relative to the
+// active pane. The layout detour then tiles containers per the tree. UI thread.
 inline void AddPane(void* mcv, Direction dir) {
   if (!mcv) return;
-  const int count = static_cast<int>(edge::McvCount(mcv));
-  if (count < 1) return;
+  void* bv = edge::McvBrowserView(mcv);
+  void* tsm = bv ? edge::TabStripModelOf(edge::BrowserOf(bv)) : nullptr;
+  if (!tsm) return;
+  void* active = edge::ActiveTab(tsm);
+  const bool was_split = active && edge::TabIsSplit(active);
+  const int old_panes = was_split ? edge::McvActiveSplitPanes(mcv) : 1;
+  const int active_leaf = was_split ? ActiveLeaf(mcv) : 0;
+  const int new_leaf = old_panes;  // GrowSplit appends the new tab as the last container
 
-  const int active = ActiveLeaf(mcv);
-  const Node* existing = TreeFor(mcv);
-  Node tree = existing ? *existing : FlatTree(count, Axis::kHorizontal);
-  const int new_leaf = count;
-  if (!SplitPane(tree, active, dir, new_leaf)) {
-    SplitPane(tree, 0, dir, new_leaf);  // fall back to the first leaf
+  // Reshape the tree first so the relayout the grow triggers already uses it.
+  const Node* existing = was_split ? TreeFor(mcv) : nullptr;
+  Node tree;
+  if (existing) {
+    tree = *existing;
+  } else if (was_split) {
+    tree = FlatTree(old_panes, edge::McvOrientation(mcv) ? Axis::kVertical : Axis::kHorizontal);
+  } else {
+    tree = MakeLeaf(0);  // one pane (the active tab) occupies container 0
   }
+  if (!SplitPane(tree, active_leaf, dir, new_leaf)) SplitPane(tree, 0, dir, new_leaf);
   Trees()[mcv] = tree;
 
-  if (!panes::AddContainer(mcv)) return;
-  FeedNewPane(mcv, new_leaf);
+  // Grow the data model. The feeder builds container[new_leaf], feeds it real
+  // content and shows it; our layout detour positions it by the tree above.
+  if (!split_data::GrowSplit(tsm)) {
+    if (existing) Trees()[mcv] = *existing; else ForgetTree(mcv);  // undo the speculative edit
+    Log("[dir-add] grow failed; tree reverted");
+    return;
+  }
   edge::InvalidateLayout(mcv);
-  Log("[menu] add pane dir=%d active=%d -> count=%d", static_cast<int>(dir), active,
-      static_cast<int>(edge::McvCount(mcv)));
+  Log("[dir-add] dir=%d active_leaf=%d new_leaf=%d -> %d panes", static_cast<int>(dir), active_leaf,
+      new_leaf, old_panes + 1);
 }
 
 }  // namespace fixedge::split_ops
