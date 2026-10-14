@@ -23,20 +23,24 @@ HMODULE g_self = nullptr;
 // the hooks and drop out of Edge without a restart.
 constexpr wchar_t kUnloadEvent[] = L"Local\\fixedge-split-unload";
 
+// msedge.dll may still be loading when Init runs: poll for it this many times,
+// this far apart, before giving up.
+constexpr int kModuleWaitAttempts = 100;
+constexpr DWORD kModuleWaitStepMilliseconds = 50;
+
 DWORD WINAPI Init(LPVOID) {
-  HMODULE edge_module = nullptr;
-  for (int i = 0; i < 100 && !edge_module;
-       ++i) {  // msedge.dll may still be loading
-    edge_module = GetModuleHandleW(edge::kModule);
-    if (!edge_module) {
-      Sleep(50);
+  HMODULE edgeModule = nullptr;
+  for (int i = 0; i < kModuleWaitAttempts && !edgeModule; i++) {
+    edgeModule = GetModuleHandleW(edge::kModule);
+    if (!edgeModule) {
+      Sleep(kModuleWaitStepMilliseconds);
     }
   }
-  if (!edge_module) {
+  if (!edgeModule) {
     Log("[err] %ls not found", edge::kModule);
     return 0;
   }
-  edge::Bind(edge_module);
+  edge::Bind(edgeModule);
   Log("[init] fixedge-split loaded. %ls base=%p", edge::kModule,
       reinterpret_cast<void*>(edge::g_base));
 
@@ -56,13 +60,14 @@ DWORD WINAPI Init(LPVOID) {
 
   // Toggle-off from the app: wait for the unload signal, then cleanly detach.
   // Manual-reset; reset first so a quick off->on re-toggle does not self-unload.
-  HANDLE unload = CreateEventW(nullptr, TRUE, FALSE, kUnloadEvent);
-  ResetEvent(unload);
-  WaitForSingleObject(unload, INFINITE);
+  HANDLE unloadEvent = CreateEventW(nullptr, /*bManualReset=*/TRUE,
+                                    /*bInitialState=*/FALSE, kUnloadEvent);
+  ResetEvent(unloadEvent);
+  WaitForSingleObject(unloadEvent, INFINITE);
   Log("[unload] signalled; removing hooks");
   hooks::RemoveAll();
-  if (unload) {
-    CloseHandle(unload);
+  if (unloadEvent) {
+    CloseHandle(unloadEvent);
   }
   Log("[unload] fixedge-split detached");
   FreeLibraryAndExitThread(g_self, 0);
@@ -72,10 +77,12 @@ DWORD WINAPI Init(LPVOID) {
 }  // namespace
 
 BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID) {
-  if (reason == DLL_PROCESS_ATTACH) {
+  const bool isProcessAttach = reason == DLL_PROCESS_ATTACH;
+  if (isProcessAttach) {
     g_self = module;
     DisableThreadLibraryCalls(module);
-    CreateThread(nullptr, 0, Init, nullptr, 0, nullptr);  // off the loader lock
+    // Init waits and hooks, which must not run under the loader lock.
+    CreateThread(nullptr, 0, Init, nullptr, 0, nullptr);
   }
   return TRUE;
 }

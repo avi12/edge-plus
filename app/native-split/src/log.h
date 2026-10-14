@@ -7,33 +7,43 @@
 
 namespace fixedge {
 
-inline void Log(const char* fmt, ...) {
-  char line[512];
-  va_list ap;
-  va_start(ap, fmt);
-  int n = vsnprintf(line, sizeof(line) - 2, fmt, ap);
-  va_end(ap);
-  if (n < 0) {
+inline constexpr size_t kLogLineCapacity = 512;
+inline constexpr wchar_t kLogFileUnderLocalAppData[] =
+    L"\\FixEdge\\split-native.log";
+
+inline void Log(const char* format, ...) {
+  char line[kLogLineCapacity];
+  va_list arguments;
+  va_start(arguments, format);
+  // Two bytes short of the buffer: room for the '\n' and terminator added below.
+  int length = vsnprintf(line, sizeof(line) - 2, format, arguments);
+  va_end(arguments);
+  const bool isFormatError = length < 0;
+  if (isFormatError) {
     return;
   }
-  line[n++] = '\n';
-  line[n] = 0;
+  line[length] = '\n';
+  length++;
+  line[length] = '\0';
   OutputDebugStringA(line);
 
   wchar_t path[MAX_PATH];
-  if (!GetEnvironmentVariableW(L"LOCALAPPDATA", path, MAX_PATH)) {
+  const bool hasLocalAppData =
+      GetEnvironmentVariableW(L"LOCALAPPDATA", path, MAX_PATH) != 0;
+  if (!hasLocalAppData) {
     return;
   }
-  wcscat_s(path, L"\\FixEdge\\split-native.log");
-  HANDLE h =
+  wcscat_s(path, kLogFileUnderLocalAppData);
+  HANDLE file =
       CreateFileW(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE,
                   nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-  if (h == INVALID_HANDLE_VALUE) {
+  const bool isFileOpen = file != INVALID_HANDLE_VALUE;
+  if (!isFileOpen) {
     return;
   }
-  DWORD wrote;
-  WriteFile(h, line, static_cast<DWORD>(n), &wrote, nullptr);
-  CloseHandle(h);
+  DWORD written = 0;
+  WriteFile(file, line, static_cast<DWORD>(length), &written, nullptr);
+  CloseHandle(file);
 }
 
 }  // namespace fixedge
