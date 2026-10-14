@@ -13,15 +13,16 @@ namespace fixedge::grip {
 
 using namespace fixedge::edge155;
 
-// Edge's gfx::VectorIcon ABI: {reps, reps_size, name}, each rep {path, size},
-// each path element a 4-byte command id or float argument.
-struct IconRep {
+// Edge's gfx::VectorIcon ABI — Chromium's VectorIcon {reps, reps_size, name},
+// each VectorIconRep {path, path_size}, each path element a 4-byte command id or
+// float argument.
+struct IconRepresentation {
   const void* path;
-  size_t path_size;
+  size_t pathSize;
 };
 struct VectorIcon {
-  const IconRep* reps;
-  size_t reps_size;
+  const IconRepresentation* representations;
+  size_t representationCount;
   const char* name;
 };
 
@@ -30,50 +31,64 @@ struct VectorIcon {
 // outlives this DLL (hot-unload) never points into unloaded memory.
 inline const VectorIcon* Icon() {
   static const VectorIcon* icon = [] {
-    constexpr int kDots = 6;
-    constexpr size_t kPathSize =
-        2 + kDots * (3 + 7 + 1 + 7 + 1 + 1);  // canvas + per dot
+    constexpr int kRows = 3;
+    constexpr int kColumns = 2;
+    constexpr int kDotCount = kRows * kColumns;
+    // CANVAS_DIMENSIONS + its size, then per dot: MOVE_TO + x y, two R_ARC_TO
+    // + 7 arguments each, CLOSE.
+    constexpr size_t kPathSize = 2 + kDotCount * (3 + 7 + 1 + 7 + 1 + 1);
     constexpr char kName[] = "kFixEdgePaneGripIcon";
-    const size_t bytes =
-        sizeof(VectorIcon) + sizeof(IconRep) + sizeof(kName) + kPathSize * 4;
-    auto* block = static_cast<uint8_t*>(edge::EdgeNew(bytes));
-    auto* out = reinterpret_cast<VectorIcon*>(block);
-    auto* rep = reinterpret_cast<IconRep*>(block + sizeof(VectorIcon));
-    auto* name =
-        reinterpret_cast<char*>(block + sizeof(VectorIcon) + sizeof(IconRep));
+    constexpr float kCanvasSize = 16.f;
+    constexpr float kFirstCenterX = 6.f;
+    constexpr float kFirstCenterY = 4.f;
+    constexpr float kDotSpacing = 4.f;
+    constexpr float kDotRadius = 1.f;
+    const size_t byteCount = sizeof(VectorIcon) + sizeof(IconRepresentation) +
+                             sizeof(kName) + kPathSize * sizeof(uint32_t);
+    auto* block = static_cast<uint8_t*>(edge::EdgeNew(byteCount));
+    auto* vectorIcon = reinterpret_cast<VectorIcon*>(block);
+    auto* representation =
+        reinterpret_cast<IconRepresentation*>(block + sizeof(VectorIcon));
+    auto* name = reinterpret_cast<char*>(block + sizeof(VectorIcon) +
+                                         sizeof(IconRepresentation));
     auto* path = reinterpret_cast<uint32_t*>(name + sizeof(kName));
     memcpy(name, kName, sizeof(kName));
-    size_t n = 0;
-    auto cmd = [&](int c) {
-      path[n++] = static_cast<uint32_t>(c);
+    size_t elementCount = 0;
+    auto appendCommand = [&](int command) {
+      path[elementCount] = static_cast<uint32_t>(command);
+      elementCount++;
     };
-    auto arg = [&](float f) {
-      memcpy(&path[n++], &f, 4);
+    auto appendArgument = [&](float argument) {
+      memcpy(&path[elementCount], &argument, sizeof(argument));
+      elementCount++;
     };
-    cmd(off::ICON_CANVAS_DIMENSIONS);
-    arg(16.f);
-    for (int row = 0; row < 3; ++row) {
-      for (int col = 0; col < 2; ++col) {
-        const float cx = 6.f + 4.f * static_cast<float>(col),
-                    cy = 4.f + 4.f * static_cast<float>(row);
-        cmd(off::
-                ICON_MOVE_TO);  // the dot's right-most point, then two half arcs
-        arg(cx + 1.f);
-        arg(cy);
-        cmd(off::ICON_R_ARC_TO);
-        for (float f : {1.f, 1.f, 0.f, 1.f, 1.f, -2.f, 0.f}) {
-          arg(f);
+    appendCommand(off::ICON_CANVAS_DIMENSIONS);
+    appendArgument(kCanvasSize);
+    for (int row = 0; row < kRows; row++) {
+      for (int column = 0; column < kColumns; column++) {
+        const float centerX =
+            kFirstCenterX + kDotSpacing * static_cast<float>(column);
+        const float centerY =
+            kFirstCenterY + kDotSpacing * static_cast<float>(row);
+        // The dot's right-most point, then two half arcs (rx ry rotation
+        // large-arc sweep dx dy) around it.
+        appendCommand(off::ICON_MOVE_TO);
+        appendArgument(centerX + kDotRadius);
+        appendArgument(centerY);
+        appendCommand(off::ICON_R_ARC_TO);
+        for (const float argument : {1.f, 1.f, 0.f, 1.f, 1.f, -2.f, 0.f}) {
+          appendArgument(argument);
         }
-        cmd(off::ICON_R_ARC_TO);
-        for (float f : {1.f, 1.f, 0.f, 1.f, 1.f, 2.f, 0.f}) {
-          arg(f);
+        appendCommand(off::ICON_R_ARC_TO);
+        for (const float argument : {1.f, 1.f, 0.f, 1.f, 1.f, 2.f, 0.f}) {
+          appendArgument(argument);
         }
-        cmd(off::ICON_CLOSE);
+        appendCommand(off::ICON_CLOSE);
       }
     }
-    *rep = IconRep{path, n};
-    *out = VectorIcon{rep, 1, name};
-    return out;
+    *representation = IconRepresentation{path, elementCount};
+    *vectorIcon = VectorIcon{representation, 1, name};
+    return vectorIcon;
   }();
   return icon;
 }
@@ -95,13 +110,14 @@ inline constexpr char kTooltip[] = "Drag to move this pane";
 // Give every pane bar of a grown split (> 2 containers) its grip, once.
 inline void EnsureGrips(void* mcv) {
   const int count = static_cast<int>(edge::McvCount(mcv));
-  if (count <= 2) {
+  const bool isStockSplit = count <= 2;
+  if (isStockSplit) {
     return;
   }
   for (int i = 0; i < count; i++) {
     void* bar = edge::ContainerControlButtons(edge::McvContainerAt(mcv, i));
-    const bool needsGrip = bar && !Grips().count(bar);
-    if (!needsGrip) {
+    const bool shouldAddGrip = bar && !Grips().count(bar);
+    if (!shouldAddGrip) {
       continue;
     }
     void* button = edge::ControlButtonsAddButton(
@@ -119,13 +135,15 @@ inline void EnsureGrips(void* mcv) {
 // container (the pane being dragged); else false.
 inline bool Locate(const void* view, void** mcv, int* pane) {
   for (const auto& [bar, grip] : Grips()) {
-    if (grip.button != view) {
+    const bool isThisGrip = grip.button == view;
+    if (!isThisGrip) {
       continue;
     }
     const int count = static_cast<int>(edge::McvCount(grip.mcv));
     for (int i = 0; i < count; i++) {
-      if (edge::ContainerControlButtons(edge::McvContainerAt(grip.mcv, i)) ==
-          bar) {
+      const bool isBarOfPane = edge::ContainerControlButtons(
+                                   edge::McvContainerAt(grip.mcv, i)) == bar;
+      if (isBarOfPane) {
         *mcv = grip.mcv;
         *pane = i;
         return true;
@@ -144,7 +162,7 @@ inline bool IsGrip(const void* view) {
 // Take every grip back out (before this DLL unloads). The buttons are left
 // unparented rather than deleted; their icon lives in Edge's heap.
 inline void RemoveAll() {
-  for (auto& [bar, grip] : Grips()) {
+  for (const auto& [bar, grip] : Grips()) {
     edge::ViewRemoveChild(bar, grip.button);
     edge::ControlButtonsRelayout(bar);
   }
