@@ -249,6 +249,9 @@ inline constexpr uintptr_t SimpleMenuModel_AddSeparator = 0x317665a;
 inline constexpr uintptr_t TabStripModel_CloseWebContentsAt = 0xa26f916;
 // (tsm, int index, const TabStripUserGestureDetails*)
 inline constexpr uintptr_t TabStripModel_ActivateTabAt = 0xa26c482;
+// int TabStripModel::MoveWebContentsAt(this, int index, int to_position,
+// bool select_after_move): `to_position` is the tab's index after the move.
+inline constexpr uintptr_t TabStripModel_MoveWebContentsAt = 0xa26c78c;
 
 // --- the dividers between panes (docs/re/close-pane.md) ---
 // EdgeMultiContentsResizeArea(this, MultiContentsView*): the 2-pane split's

@@ -51,12 +51,44 @@ inline void FeedNewPane(void* mcv, int leaf) {
   Log("[feed] no background tab fed into leaf %d", leaf);
 }
 
-// Add one pane adjacent to the active pane, in `direction`, as a real split-tree
-// edit. The data model grows by one member (GrowSplit, which appends it as the
-// last container), and the tree records where that container sits relative to
-// the active pane. The layout detour then tiles containers per the tree.
-// UI thread.
-inline void AddPane(void* mcv, Direction direction, int besideLeaf) {
+// Whether the active tab of `tsm` is in a split.
+inline bool IsActiveTabSplit(void* tsm) {
+  void* active = edge::ActiveTab(tsm);
+  return active && edge::TabIsSplit(active);
+}
+
+// Grow the active split by one member, `newTab` (a TabModel*; null: a free
+// background tab), and lay the panes out as `tree`, in which the new pane is
+// the newest leaf (GrowSplit appends it as the last container). The tree goes
+// in first, so the relayout the grow triggers already uses it; a failed grow
+// puts back the tree that was there. UI thread.
+inline bool GrowWithTree(void* mcv, void* tsm, Node tree, void* newTab) {
+  // A copy, not a pointer: the speculative edit below overwrites this entry.
+  const Node* existing = IsActiveTabSplit(tsm) ? TreeFor(mcv) : nullptr;
+  const std::optional<Node> previousTree =
+      existing ? std::optional<Node>(*existing) : std::nullopt;
+  Trees()[mcv] = std::move(tree);
+  // The feeder builds the new container, feeds it real content and shows it;
+  // our layout detour positions it by the tree above.
+  const bool hasGrown = split_data::GrowSplit(tsm, newTab);
+  if (!hasGrown) {
+    if (previousTree) {
+      Trees()[mcv] = *previousTree;
+    } else {
+      ForgetTree(mcv);  // undo the speculative edit
+    }
+    Log("[grow] failed; tree reverted");
+    return false;
+  }
+  edge::InvalidateLayout(mcv);
+  return true;
+}
+
+// Add one pane beside pane `besideLeaf`, in `direction`, as a real split-tree
+// edit: `newTab` (null: a free background tab) becomes the new pane. Unsplit,
+// the one pane (the active tab) is container 0. UI thread.
+inline void AddPane(void* mcv, Direction direction, int besideLeaf,
+                    void* newTab = nullptr) {
   if (!mcv) {
     return;
   }
@@ -66,42 +98,21 @@ inline void AddPane(void* mcv, Direction direction, int besideLeaf) {
   if (!tsm) {
     return;
   }
-  void* active = edge::ActiveTab(tsm);
-  const bool isAlreadySplit = active && edge::TabIsSplit(active);
+  const bool isAlreadySplit = IsActiveTabSplit(tsm);
   const int oldPanes = isAlreadySplit ? edge::McvActiveSplitPanes(mcv) : 1;
   const int activeLeaf = isAlreadySplit ? besideLeaf : 0;
-  // GrowSplit appends the new tab as the last container.
   const int newLeaf = oldPanes;
-
-  // Reshape the tree first so the relayout the grow triggers already uses it.
-  // Unsplit, the one pane (the active tab) occupies container 0.
-  // A copy, not a pointer: the speculative edit below overwrites this entry.
-  const Node* existing = isAlreadySplit ? TreeFor(mcv) : nullptr;
-  const std::optional<Node> previousTree =
-      existing ? std::optional<Node>(*existing) : std::nullopt;
   Node tree = isAlreadySplit ? geometry::LiveTree(mcv, oldPanes) : MakeLeaf(0);
   const bool hasSplitActiveLeaf =
       SplitPane(tree, activeLeaf, direction, newLeaf);
   if (!hasSplitActiveLeaf) {
     SplitPane(tree, 0, direction, newLeaf);
   }
-  Trees()[mcv] = tree;
-
-  // Grow the data model. The feeder builds container[newLeaf], feeds it real
-  // content and shows it; our layout detour positions it by the tree above.
-  const bool hasGrown = split_data::GrowSplit(tsm);
-  if (!hasGrown) {
-    if (previousTree) {
-      Trees()[mcv] = *previousTree;
-    } else {
-      ForgetTree(mcv);  // undo the speculative edit
-    }
-    Log("[dir-add] grow failed; tree reverted");
-    return;
+  const bool hasGrown = GrowWithTree(mcv, tsm, std::move(tree), newTab);
+  if (hasGrown) {
+    Log("[dir-add] dir=%d active_leaf=%d new_leaf=%d -> %d panes",
+        static_cast<int>(direction), activeLeaf, newLeaf, oldPanes + 1);
   }
-  edge::InvalidateLayout(mcv);
-  Log("[dir-add] dir=%d active_leaf=%d new_leaf=%d -> %d panes",
-      static_cast<int>(direction), activeLeaf, newLeaf, oldPanes + 1);
 }
 
 // Add one pane beside the active pane.

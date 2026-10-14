@@ -225,12 +225,41 @@ inline bool CreateSplitN(void* tsm, int requestedPanes) {
   return isAdded;
 }
 
-// Add one pane to the active split (Arc-style incremental grow). If the active
-// tab isn't split yet, create a 2-pane split instead. Edge's split is identified
-// by one base::Token; to add a member we dissolve it and re-create it under a
-// fresh id with every old member plus one free background tab, preserving the
-// orientation/ratio. (UpdateTabInSplit only *replaces* a member, never appends.)
-inline bool GrowSplit(void* tsm) {
+// Put `newTab` right after the split's members in the strip. Edge orders a
+// split's members, and so the panes it feeds, by strip index, and a grown
+// split's new pane is its last: so the new member must come last in the strip.
+inline void PlaceAfterMembers(void* tsm, void* root, void* const* memberTabs,
+                              int memberCount, void* newTab) {
+  int lastMemberIndex = -1;
+  for (int i = 0; i < memberCount; i++) {
+    lastMemberIndex = std::max(
+        lastMemberIndex, edge::GetIndexOfTabRecursive(root, memberTabs[i]));
+  }
+  const int newTabIndex = edge::GetIndexOfTabRecursive(root, newTab);
+  const bool isFound = lastMemberIndex >= 0 && newTabIndex >= 0;
+  if (!isFound) {
+    return;
+  }
+  // Moving a tab from before the split shifts the members down by one.
+  const int afterMembers =
+      newTabIndex < lastMemberIndex ? lastMemberIndex : lastMemberIndex + 1;
+  const bool isPlaced = newTabIndex == afterMembers;
+  if (isPlaced) {
+    return;
+  }
+  Log("[grow] moving the new tab %d -> %d (after the split)", newTabIndex,
+      afterMembers);
+  edge::MoveTabTo(tsm, newTabIndex, afterMembers);
+}
+
+// Add one pane to the active split (Arc-style incremental grow): `newTab` (a
+// TabModel*), or, if null, a free background tab from the strip's tail. If the
+// active tab isn't split yet, create a 2-pane split instead (any free tab).
+// Edge's split is identified by one base::Token; to add a member we dissolve it
+// and re-create it under a fresh id with every old member plus the new tab,
+// preserving the orientation/ratio. (UpdateTabInSplit only *replaces* a member,
+// never appends.)
+inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
   void* root = tsm ? edge::RootCollection(tsm) : nullptr;
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
   const bool hasActiveTab = tsm && root && active;
@@ -271,18 +300,22 @@ inline bool GrowSplit(void* tsm) {
     SetEvenRatio(visual);
   }
 
-  // A free background tab to become the new pane.
-  const int freeTabIndex = FindFreeTab(tsm, root, active);
-  const bool hasFreeTab = freeTabIndex >= 0;
-  if (!hasFreeTab) {
-    Log("[grow] no free background tab to add");
-    return false;
-  }
-  void* newTab = edge::GetTabAtIndexRecursive(root, freeTabIndex);
+  // The tab to become the new pane: the one given, else a free background tab.
   if (!newTab) {
-    Log("[grow] new tab resolve failed at %d", freeTabIndex);
+    const int freeTabIndex = FindFreeTab(tsm, root, active);
+    const bool hasFreeTab = freeTabIndex >= 0;
+    if (!hasFreeTab) {
+      Log("[grow] no free background tab to add");
+      return false;
+    }
+    newTab = edge::GetTabAtIndexRecursive(root, freeTabIndex);
+  }
+  const bool isNewTabFree = IsFreeTab(newTab, active);
+  if (!isNewTabFree) {
+    Log("[grow] the new tab %p is not a free background tab", newTab);
     return false;
   }
+  PlaceAfterMembers(tsm, root, memberTabs, memberCount, newTab);
 
   // Dissolve, then re-resolve every tab's (now standalone) index and re-create.
   edge::RemoveSplitImpl(tsm, split.token, kTransactionalRemove);

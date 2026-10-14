@@ -253,6 +253,14 @@ inline void ActivateTabAt(void* tsm, int index) {
       tsm, index, gestureDetails);
 }
 
+// Move the tab at strip `index` so it ends up at `toIndex`, leaving the
+// selection alone.
+inline void MoveTabTo(void* tsm, int index, int toIndex) {
+  using MoveFn = int(__fastcall*)(void*, int, int, bool);
+  reinterpret_cast<MoveFn>(At(rva::TabStripModel_MoveWebContentsAt))(
+      tsm, index, toIndex, false);
+}
+
 inline void RemoveSplitImpl(void* tsm, void* splitId, int flag) {
   using Fn = void*(__fastcall*)(void*, void*, int);
   reinterpret_cast<Fn>(At(rva::TabStripModel_RemoveSplitImpl))(tsm, splitId,
