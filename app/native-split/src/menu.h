@@ -153,15 +153,15 @@ inline void* __fastcall h_exec(void* self, int commandId, int eventFlags) {
   return o_exec(self, commandId, eventFlags);
 }
 
-// SplitWindowControlMenu::BuildMenuModel: the pane bar's ⋯. After Edge's own
-// items, a separator and ours.
-using Build_t = void(__fastcall*)(void*);
+// SplitWindowControlMenu::BuildMenuModel: the pane bar's ⋯. It RETURNS the
+// model it built (Run hands that to PopulateMenu), so the detour must too.
+// After Edge's own items: a separator and ours.
+using Build_t = void*(__fastcall*)(void*);
 inline Build_t o_build = nullptr;
-inline void __fastcall h_build(void* menu) {
-  o_build(menu);
-  void* model = edge::Field<void*>(menu, off::SplitWindowControlMenu_model);
+inline void* __fastcall h_build(void* menu) {
+  void* model = o_build(menu);
   if (!model) {
-    return;
+    return model;
   }
   if (!g_hasLabels) {
     BuildLabels();
@@ -171,6 +171,7 @@ inline void __fastcall h_build(void* menu) {
     edge::MenuAddItem(model, static_cast<int>(kMenuItems[i].command),
                       &g_labels[i]);
   }
+  return model;
 }
 
 // SplitWindowControlMenu::ExecuteCommand(menu, int id, int flags).
