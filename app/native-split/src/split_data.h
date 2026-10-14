@@ -153,7 +153,11 @@ inline bool CreateSplitN(void* tsm, int want) {
   return ok;
 }
 
-// Add one background tab (not active, not already split) to the active split.
+// Add one pane to the active split (Arc-style incremental grow). If the active
+// tab isn't split yet, create a 2-pane split instead. Edge's split is identified
+// by one base::Token; to add a member we dissolve it and re-create it under a
+// fresh id with every old member plus one free background tab, preserving the
+// orientation/ratio. (UpdateTabInSplit only *replaces* a member, never appends.)
 inline bool GrowSplit(void* tsm) {
   void* root = tsm ? edge::RootCollection(tsm) : nullptr;
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
@@ -161,51 +165,66 @@ inline bool GrowSplit(void* tsm) {
     Log("[grow] tsm=%p root=%p active=%p", tsm, root, active);
     return false;
   }
-
-  // 0) the active split's id.
   OptSplitId opt = {};
   edge::TabGetSplit(active, &opt);
   if (!opt.present) {
-    Log("[grow] active tab is not in a split");
-    return false;
+    Log("[grow] active tab not split yet - creating a 2-pane split");
+    return CreateSplitN(tsm, 2);
   }
 
-  // 1) the split's members; UpdateTabInSplit anchors on the LAST member (exactly
-  //    what OpenTabInCurrentSplitWindow passes).
-  uint64_t members_vec[3] = {};  // {data@0, size@8, cap@0x10}; entry = {TabModel*,int} 16B
+  // Capture the live members (TabModel*) and the visual before dissolving.
+  uint64_t members_vec[3] = {};  // {data@0, size@8, cap@0x10}; entry {TabModel*,int} 16B
   edge::GetTabsAndIndicesInSplit(tsm, members_vec, opt.token);
   auto* begin = reinterpret_cast<uint8_t*>(members_vec[0]);
-  const int member_count = begin ? static_cast<int>(members_vec[1]) : 0;
-  Log("[grow] split present; members=%d", member_count);
-  if (member_count < 2 || member_count > 7) {
-    Log("[grow] unexpected member count %d", member_count);
+  const int mc = begin ? static_cast<int>(members_vec[1]) : 0;
+  if (mc < 2 || mc > 7) {
+    Log("[grow] unexpected member count %d", mc);
     return false;
   }
-  void* last_member = *reinterpret_cast<void**>(begin + (member_count - 1) * 16);
+  void* member_tabs[8];
+  for (int i = 0; i < mc; ++i) member_tabs[i] = *reinterpret_cast<void**>(begin + i * 16);
+  uint8_t visual[16] = {};
+  if (void* sd = edge::GetSplitData(tsm, opt.token)) {
+    std::memcpy(visual, reinterpret_cast<uint8_t*>(sd) + 8, sizeof(visual));  // keep orientation+ratio
+  } else {
+    *reinterpret_cast<double*>(visual + 8) = 0.5;
+  }
 
-  // 2) a free background tab to add as the new pane.
+  // A free background tab to become the new pane.
   const int bg = FindFreeTab(tsm, root, active);
   if (bg < 0) {
     Log("[grow] no free background tab to add");
     return false;
   }
-  Log("[grow] UpdateTabInSplit anchor=%p newIndex=%d", last_member, bg);
-
-  // 3) let Edge run its own add-to-split transaction (remove+move+add internally).
-  const bool ok = SafeUpdateTabInSplit(tsm, last_member, bg, 0);
-  Log("[grow] UpdateTabInSplit %s", ok ? "done" : "FAILED");
-
-  // Did the data model actually grow? Re-query the active tab's split.
-  void* active2 = edge::ActiveTab(tsm);
-  OptSplitId opt2 = {};
-  if (active2) edge::TabGetSplit(active2, &opt2);
-  if (opt2.present) {
-    uint64_t v2[3] = {};
-    edge::GetTabsAndIndicesInSplit(tsm, v2, opt2.token);
-    Log("[grow] post: split now has %d members", static_cast<int>(v2[1]));
-  } else {
-    Log("[grow] post: active tab no longer in a split");
+  void* new_tab = edge::GetTabAtIndexRecursive(root, bg);
+  if (!new_tab) {
+    Log("[grow] new tab resolve failed at %d", bg);
+    return false;
   }
+
+  // Dissolve, then re-resolve every tab's (now standalone) index and re-create.
+  edge::RemoveSplitImpl(tsm, opt.token, 1);
+  int idx[9];
+  int n = 0;
+  for (int i = 0; i < mc; ++i) {
+    const int ix = edge::GetIndexOfTabRecursive(root, member_tabs[i]);
+    if (ix < 0) { Log("[grow] lost member %d after remove", i); return false; }
+    idx[n++] = ix;
+  }
+  const int nix = edge::GetIndexOfTabRecursive(root, new_tab);
+  if (nix < 0) { Log("[grow] lost new tab after remove"); return false; }
+  idx[n++] = nix;
+  for (int a = 0; a < n; ++a)
+    for (int b = a + 1; b < n; ++b)
+      if (idx[b] < idx[a]) { int t = idx[a]; idx[a] = idx[b]; idx[b] = t; }
+  const int anchor = idx[0];
+  uint8_t id[16] = {};
+  edge::CreateRandomToken(id);
+  uint8_t out_id[16] = {};
+  edge::SplitIndexVec indices = edge::MakeIndexVec(idx, static_cast<size_t>(n));
+  Log("[grow] AddToSplitImpl n=%d anchor=%d (was %d members)", n, anchor, mc);
+  const bool ok = SafeAddToSplit(tsm, out_id, id, &indices, anchor, visual, 0);
+  Log("[grow] AddToSplitImpl %s (now %d panes)", ok ? "done" : "FAILED", n);
   return ok;
 }
 
