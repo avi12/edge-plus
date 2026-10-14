@@ -24,10 +24,14 @@ inline bool FillPane(void* browser_view, void* container, int tab_index) {
   }
   void* web_contents = edge::TabWebContentsAt(tsm, tab_index);
   void* cwv = edge::ContainerWebView(container);
-  Log("[feed] tab %d/%d wc=%p container=%p cwv=%p", tab_index, count, web_contents, container, cwv);
-  if (!web_contents || !cwv) return false;
+  Log("[feed] tab %d/%d wc=%p container=%p cwv=%p", tab_index, count,
+      web_contents, container, cwv);
+  if (!web_contents || !cwv) {
+    return false;
+  }
   edge::ContentsWebViewSetContents(cwv, web_contents);
-  edge::WebContentsWasShown(web_contents);  // a background tab is hidden; show it so the pane paints
+  edge::WebContentsWasShown(
+      web_contents);  // a background tab is hidden; show it so the pane paints
   return true;
 }
 

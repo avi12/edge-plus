@@ -12,15 +12,20 @@ namespace fixedge::menu {
 
 using namespace fixedge::edge155;
 
-enum : int { kAddUp = 0x6ac, kAddDown = 0x6ad, kAddLeft = 0x6ae, kAddRight = 0x6af };
+enum : int {
+  kAddUp = 0x6ac,
+  kAddDown = 0x6ad,
+  kAddLeft = 0x6ae,
+  kAddRight = 0x6af
+};
 
 // Labels built once into static u16strings (short permanent allocations), so the
 // ctor hook can reference them on every menu open without re-allocating.
 inline edge::U16String g_label[4];
 inline bool g_labels_ready = false;
 inline void BuildLabels() {
-  const char* text[4] = {"Add pane above", "Add pane below", "Add pane to the left",
-                         "Add pane to the right"};
+  const char* text[4] = {"Add pane above", "Add pane below",
+                         "Add pane to the left", "Add pane to the right"};
   for (int i = 0; i < 4; ++i) {
     edge::U8View view{text[i], std::strlen(text[i])};
     edge::Utf8ToUtf16(&g_label[i], &view);
@@ -34,8 +39,11 @@ using Ctor_t = void*(__fastcall*)(void*, void*, void*, void*, void*);
 inline Ctor_t o_ctor = nullptr;
 inline void* __fastcall h_ctor(void* self, void* a, void* b, void* c, void* d) {
   void* result = o_ctor(self, a, b, c, d);
-  Log("[menu] SplitTabMenuModel ctor fired self=%p", self);  // did we even get here?
-  if (!g_labels_ready) BuildLabels();
+  Log("[menu] SplitTabMenuModel ctor fired self=%p",
+      self);  // did we even get here?
+  if (!g_labels_ready) {
+    BuildLabels();
+  }
   edge::MenuAddItem(self, kAddUp, &g_label[0]);
   edge::MenuAddItem(self, kAddDown, &g_label[1]);
   edge::MenuAddItem(self, kAddLeft, &g_label[2]);

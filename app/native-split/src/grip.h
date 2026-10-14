@@ -31,30 +31,43 @@ struct VectorIcon {
 inline const VectorIcon* Icon() {
   static const VectorIcon* icon = [] {
     constexpr int kDots = 6;
-    constexpr size_t kPathSize = 2 + kDots * (3 + 7 + 1 + 7 + 1 + 1);  // canvas + per dot
+    constexpr size_t kPathSize =
+        2 + kDots * (3 + 7 + 1 + 7 + 1 + 1);  // canvas + per dot
     constexpr char kName[] = "kFixEdgePaneGripIcon";
-    const size_t bytes = sizeof(VectorIcon) + sizeof(IconRep) + sizeof(kName) + kPathSize * 4;
+    const size_t bytes =
+        sizeof(VectorIcon) + sizeof(IconRep) + sizeof(kName) + kPathSize * 4;
     auto* block = static_cast<uint8_t*>(edge::EdgeNew(bytes));
     auto* out = reinterpret_cast<VectorIcon*>(block);
     auto* rep = reinterpret_cast<IconRep*>(block + sizeof(VectorIcon));
-    auto* name = reinterpret_cast<char*>(block + sizeof(VectorIcon) + sizeof(IconRep));
+    auto* name =
+        reinterpret_cast<char*>(block + sizeof(VectorIcon) + sizeof(IconRep));
     auto* path = reinterpret_cast<uint32_t*>(name + sizeof(kName));
     memcpy(name, kName, sizeof(kName));
     size_t n = 0;
-    auto cmd = [&](int c) { path[n++] = static_cast<uint32_t>(c); };
-    auto arg = [&](float f) { memcpy(&path[n++], &f, 4); };
+    auto cmd = [&](int c) {
+      path[n++] = static_cast<uint32_t>(c);
+    };
+    auto arg = [&](float f) {
+      memcpy(&path[n++], &f, 4);
+    };
     cmd(off::ICON_CANVAS_DIMENSIONS);
     arg(16.f);
     for (int row = 0; row < 3; ++row) {
       for (int col = 0; col < 2; ++col) {
-        const float cx = 6.f + 4.f * static_cast<float>(col), cy = 4.f + 4.f * static_cast<float>(row);
-        cmd(off::ICON_MOVE_TO);  // the dot's right-most point, then two half arcs
+        const float cx = 6.f + 4.f * static_cast<float>(col),
+                    cy = 4.f + 4.f * static_cast<float>(row);
+        cmd(off::
+                ICON_MOVE_TO);  // the dot's right-most point, then two half arcs
         arg(cx + 1.f);
         arg(cy);
         cmd(off::ICON_R_ARC_TO);
-        for (float f : {1.f, 1.f, 0.f, 1.f, 1.f, -2.f, 0.f}) arg(f);
+        for (float f : {1.f, 1.f, 0.f, 1.f, 1.f, -2.f, 0.f}) {
+          arg(f);
+        }
         cmd(off::ICON_R_ARC_TO);
-        for (float f : {1.f, 1.f, 0.f, 1.f, 1.f, 2.f, 0.f}) arg(f);
+        for (float f : {1.f, 1.f, 0.f, 1.f, 1.f, 2.f, 0.f}) {
+          arg(f);
+        }
         cmd(off::ICON_CLOSE);
       }
     }
@@ -91,8 +104,9 @@ inline void EnsureGrips(void* mcv) {
     if (!needsGrip) {
       continue;
     }
-    void* button = edge::ControlButtonsAddButton(bar, off::ControlButtons_more_string_id, Icon(),
-                                                 /*clickable=*/false);
+    void* button = edge::ControlButtonsAddButton(
+        bar, off::ControlButtons_more_string_id, Icon(),
+        /*clickable=*/false);
     edge::ViewReorderChild(bar, button, 0);  // first: grip, ⋯, X
     edge::ViewSetTooltip(button, kTooltip);
     edge::ControlButtonsRelayout(bar);  // widen the bar by one button
@@ -110,7 +124,8 @@ inline bool Locate(const void* view, void** mcv, int* pane) {
     }
     const int count = static_cast<int>(edge::McvCount(grip.mcv));
     for (int i = 0; i < count; i++) {
-      if (edge::ContainerControlButtons(edge::McvContainerAt(grip.mcv, i)) == bar) {
+      if (edge::ContainerControlButtons(edge::McvContainerAt(grip.mcv, i)) ==
+          bar) {
         *mcv = grip.mcv;
         *pane = i;
         return true;

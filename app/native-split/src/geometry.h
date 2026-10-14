@@ -16,8 +16,11 @@ using namespace fixedge::edge155;  // off::, rva::
 // The tree `mcv`'s `panes` are tiled by: the live one, else a flat equal split
 // along the split's orientation. The one rule both the layout and a drag use.
 inline Node LiveTree(void* mcv, int panes) {
-  if (const Node* live = TreeFor(mcv)) return *live;
-  return FlatTree(panes, edge::McvOrientation(mcv) != 0 ? Axis::kVertical : Axis::kHorizontal);
+  if (const Node* live = TreeFor(mcv)) {
+    return *live;
+  }
+  return FlatTree(panes, edge::McvOrientation(mcv) != 0 ? Axis::kVertical
+                                                        : Axis::kHorizontal);
 }
 
 // The split's content box in its own coordinates (what TilePanes tiles).
@@ -32,15 +35,22 @@ inline Rect SplitArea(void* mcv) {
 // beyond `panes` is hidden and given a zero rect rather than destroyed. Caller
 // guarantees a bounded available size. Pane moves are eased by anim::Apply
 // unless `snap` (a window resize). Returns `out`.
-inline void* TilePanes(void* mcv, void* out, int width, int height, int panes, bool snap) {
-  std::memset(out, 0, 0x20);  // ProposedLayout ctor only zeroes these 0x20 bytes
+inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
+                       bool snap) {
+  std::memset(out, 0,
+              0x20);  // ProposedLayout ctor only zeroes these 0x20 bytes
   edge::Field<int32_t>(out, off::PL_host_size + 0) = width;
   edge::Field<int32_t>(out, off::PL_host_size + 4) = height;
 
   const int count = static_cast<int>(edge::McvCount(mcv));
-  if (panes < 1) panes = 1;
-  if (panes > count) panes = count;
-  const Axis axis = edge::McvOrientation(mcv) != 0 ? Axis::kVertical : Axis::kHorizontal;
+  if (panes < 1) {
+    panes = 1;
+  }
+  if (panes > count) {
+    panes = count;
+  }
+  const Axis axis =
+      edge::McvOrientation(mcv) != 0 ? Axis::kVertical : Axis::kHorizontal;
   const Node root = LiveTree(mcv, panes);
 
   std::vector<LeafRect> leaves;
@@ -48,7 +58,9 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes, b
 
   std::vector<LeafRect> placed;
   for (const LeafRect& lr : leaves) {
-    if (lr.leaf >= 0 && lr.leaf < panes) placed.push_back(lr);  // guard tree/truth drift
+    if (lr.leaf >= 0 && lr.leaf < panes) {
+      placed.push_back(lr);  // guard tree/truth drift
+    }
   }
   anim::Apply(mcv, placed, snap);  // targets -> this frame's rects
 
@@ -68,8 +80,8 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes, b
     Rect zero{0, 0, 0, 0};
     edge::EmplaceChildLayout(vec, &containers[i], &hide, &zero);
   }
-  Log("[layout] tiled %zu/%d panes in %dx%d (%s)", placed.size(), count, width, height,
-      axis == Axis::kVertical ? "rows" : "cols");
+  Log("[layout] tiled %zu/%d panes in %dx%d (%s)", placed.size(), count, width,
+      height, axis == Axis::kVertical ? "rows" : "cols");
   return out;
 }
 

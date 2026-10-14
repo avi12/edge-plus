@@ -24,7 +24,15 @@ inline WNDPROC g_orig_proc = nullptr;
 inline bool g_hotkeys_done = false;
 
 // Hot-key ids delivered as WM_HOTKEY to this window's (UI-thread) WndProc.
-enum { HK_ADD_PANE = 1, HK_COLLAPSE = 2, HK_LEFT = 3, HK_UP = 4, HK_RIGHT = 5, HK_DOWN = 6, HK_SWAP = 7 };
+enum {
+  HK_ADD_PANE = 1,
+  HK_COLLAPSE = 2,
+  HK_LEFT = 3,
+  HK_UP = 4,
+  HK_RIGHT = 5,
+  HK_DOWN = 6,
+  HK_SWAP = 7
+};
 inline constexpr UINT kHkMods = MOD_CONTROL | MOD_SHIFT | MOD_ALT;
 
 // Channel commands (wParam of "fixedge.addpane") beyond the add-pane test codes.
@@ -41,12 +49,15 @@ inline void Teardown(HWND hwnd) {
   grip::RemoveAll();
   anim::Remove();
   if (g_hotkeys_done) {
-    for (int id = HK_ADD_PANE; id <= HK_SWAP; ++id) UnregisterHotKey(hwnd, id);
+    for (int id = HK_ADD_PANE; id <= HK_SWAP; ++id) {
+      UnregisterHotKey(hwnd, id);
+    }
   }
   g_hotkeys_done = false;
 }
 
-inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam,
+                             LPARAM lparam) {
   // RegisterHotKey must run on the thread that owns the window; this WndProc is
   // exactly that thread, so register lazily on the first message we see.
   if (!g_hotkeys_done) {
@@ -59,7 +70,8 @@ inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
     RegisterHotKey(hwnd, HK_RIGHT, kHkMods, VK_RIGHT);
     RegisterHotKey(hwnd, HK_DOWN, kHkMods, VK_DOWN);
     RegisterHotKey(hwnd, HK_SWAP, kHkMods, 'S');
-    Log("[control] hotkeys: Ctrl+Shift+Alt + arrows=add, A=add right, S=swap, X=collapse");
+    Log("[control] hotkeys: Ctrl+Shift+Alt + arrows=add, A=add right, S=swap, "
+        "X=collapse");
   }
   // Escape cancels a pane drag (the drag itself arrives through views; hooks.h).
   if (msg == WM_KEYDOWN && wparam == VK_ESCAPE && drag::IsActive()) {
@@ -73,8 +85,11 @@ inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
   if (msg == WM_HOTKEY) {
     if (wparam == HK_COLLAPSE) {
       void* tsm = edge::TsmForWindow(hwnd);
-      if (tsm) split_data::CollapseSplit(tsm);
-      ForgetTree(edge::McvForWindow(hwnd));  // a collapsed split starts a fresh tree
+      if (tsm) {
+        split_data::CollapseSplit(tsm);
+      }
+      ForgetTree(
+          edge::McvForWindow(hwnd));  // a collapsed split starts a fresh tree
       return 0;
     }
     if (wparam == HK_SWAP) {
@@ -85,16 +100,29 @@ inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
     fixedge::Direction dir = fixedge::Direction::kRight;
     switch (wparam) {
       case HK_ADD_PANE:
-      case HK_RIGHT: dir = fixedge::Direction::kRight; break;
-      case HK_LEFT: dir = fixedge::Direction::kLeft; break;
-      case HK_UP: dir = fixedge::Direction::kUp; break;
-      case HK_DOWN: dir = fixedge::Direction::kDown; break;
-      default: is_add = false; break;
+      case HK_RIGHT:
+        dir = fixedge::Direction::kRight;
+        break;
+      case HK_LEFT:
+        dir = fixedge::Direction::kLeft;
+        break;
+      case HK_UP:
+        dir = fixedge::Direction::kUp;
+        break;
+      case HK_DOWN:
+        dir = fixedge::Direction::kDown;
+        break;
+      default:
+        is_add = false;
+        break;
     }
     if (is_add) {
       void* mcv = edge::McvForWindow(hwnd);
-      Log("[control] directional add dir=%d mcv=%p", static_cast<int>(dir), mcv);
-      if (mcv) split_ops::AddPane(mcv, dir);
+      Log("[control] directional add dir=%d mcv=%p", static_cast<int>(dir),
+          mcv);
+      if (mcv) {
+        split_ops::AddPane(mcv, dir);
+      }
       return 0;
     }
   }
@@ -106,7 +134,9 @@ inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
       void* mcv = edge::McvForWindow(hwnd);
       Log("[control] msg directional dir=%llu mcv=%p",
           static_cast<unsigned long long>(wparam) - 300, mcv);
-      if (mcv) split_ops::AddPane(mcv, static_cast<fixedge::Direction>(wparam - 300));
+      if (mcv) {
+        split_ops::AddPane(mcv, static_cast<fixedge::Direction>(wparam - 300));
+      }
       return 0;
     }
     if (wparam == 400) {  // swap active pane with its counterpart
@@ -114,7 +144,9 @@ inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
       return 0;
     }
     if (wparam == kCmdEnsureGrips) {
-      if (void* mcv = edge::McvForWindow(hwnd)) grip::EnsureGrips(mcv);
+      if (void* mcv = edge::McvForWindow(hwnd)) {
+        grip::EnsureGrips(mcv);
+      }
       return 0;
     }
     if (wparam == kCmdTeardown) {
@@ -126,16 +158,21 @@ inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
       const int pane = static_cast<int>(wparam) - 500;
       if (mcv && pane < static_cast<int>(edge::McvCount(mcv))) {
         void* wc = edge::ContainerWebContents(edge::McvContainerAt(mcv, pane));
-        const bool shown = edge::ShowControlButtonFor(edge::BrowserOf(edge::McvBrowserView(mcv)), wc);
+        const bool shown = edge::ShowControlButtonFor(
+            edge::BrowserOf(edge::McvBrowserView(mcv)), wc);
         Log("[control] show bar pane=%d wc=%p -> %d", pane, wc, shown);
       }
       return 0;
     }
     void* tsm = edge::TsmForWindow(hwnd);
-    Log("[control] message wparam=%llu tsm=%p", static_cast<unsigned long long>(wparam), tsm);
-    if (!tsm) return 0;
+    Log("[control] message wparam=%llu tsm=%p",
+        static_cast<unsigned long long>(wparam), tsm);
+    if (!tsm) {
+      return 0;
+    }
     if (wparam >= 200) {
-      split_data::CreateSplitN(tsm, static_cast<int>(wparam) - 200);  // direct AddToSplitImpl, N panes
+      split_data::CreateSplitN(tsm, static_cast<int>(wparam) -
+                                        200);  // direct AddToSplitImpl, N panes
     } else if (wparam >= 100) {
       split_data::CreateSplit(tsm);  // proven 2-pane AddToNewSplit
     } else {
@@ -149,11 +186,17 @@ inline LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
 inline BOOL CALLBACK EnumCb(HWND hwnd, LPARAM) {
   DWORD pid = 0;
   GetWindowThreadProcessId(hwnd, &pid);
-  if (pid != GetCurrentProcessId()) return TRUE;
-  if (!IsWindowVisible(hwnd) || GetWindowTextLengthW(hwnd) == 0) return TRUE;
+  if (pid != GetCurrentProcessId()) {
+    return TRUE;
+  }
+  if (!IsWindowVisible(hwnd) || GetWindowTextLengthW(hwnd) == 0) {
+    return TRUE;
+  }
   wchar_t cls[64] = {};
   GetClassNameW(hwnd, cls, 64);
-  if (wcscmp(cls, L"Chrome_WidgetWin_1") != 0) return TRUE;
+  if (wcscmp(cls, L"Chrome_WidgetWin_1") != 0) {
+    return TRUE;
+  }
   g_hwnd = hwnd;  // first visible, titled browser window
   return FALSE;
 }
@@ -165,8 +208,8 @@ inline void Install() {
     Log("[control] no browser window to subclass");
     return;
   }
-  g_orig_proc = reinterpret_cast<WNDPROC>(
-      SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(Proc)));
+  g_orig_proc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(
+      g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(Proc)));
   Log("[control] subclassed hwnd=%p msg=%u", g_hwnd, g_msg);
   anim::Install(g_hwnd);
   drag::g_window = g_hwnd;
@@ -178,10 +221,12 @@ inline void Install() {
 // for it, then restore the original window procedure.
 inline void Remove() {
   if (g_hwnd && g_orig_proc) {
-    SendMessageTimeoutW(g_hwnd, g_msg, kCmdTeardown, 0, SMTO_BLOCK, 5000, nullptr);
+    SendMessageTimeoutW(g_hwnd, g_msg, kCmdTeardown, 0, SMTO_BLOCK, 5000,
+                        nullptr);
   }
   if (g_hwnd && g_orig_proc) {
-    SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(g_orig_proc));
+    SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC,
+                      reinterpret_cast<LONG_PTR>(g_orig_proc));
   }
   g_hotkeys_done = false;
   g_hwnd = nullptr;

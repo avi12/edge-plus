@@ -19,7 +19,8 @@ inline int ActiveLeaf(void* mcv) {
   const int count = static_cast<int>(edge::McvCount(mcv));
   for (int i = 0; i < count; ++i) {
     void* container = edge::McvContainerAt(mcv, i);
-    if (container && edge::Field<uint8_t>(edge::ContainerWebView(container), off::CWV_primary_flag) == 1) {
+    if (container && edge::Field<uint8_t>(edge::ContainerWebView(container),
+                                          off::CWV_primary_flag) == 1) {
       return i;
     }
   }
@@ -32,7 +33,8 @@ inline void FeedNewPane(void* mcv, int leaf) {
   void* browser_view = edge::McvBrowserView(mcv);
   void* tsm = edge::TabStripModelOf(edge::BrowserOf(browser_view));
   const int tab_count = tsm ? edge::TabCount(tsm) : 0;
-  Log("[feed] FeedNewPane leaf=%d bv=%p tsm=%p tabs=%d", leaf, browser_view, tsm, tab_count);
+  Log("[feed] FeedNewPane leaf=%d bv=%p tsm=%p tabs=%d", leaf, browser_view,
+      tsm, tab_count);
   for (int t = tab_count - 1; t >= 0; --t) {
     if (tabs::FillPane(browser_view, edge::McvContainerAt(mcv, leaf), t)) {
       Log("[feed] fed leaf %d from tab %d", leaf, t);
@@ -47,15 +49,20 @@ inline void FeedNewPane(void* mcv, int leaf) {
 // container), and the tree records where that container sits relative to the
 // active pane. The layout detour then tiles containers per the tree. UI thread.
 inline void AddPane(void* mcv, Direction dir) {
-  if (!mcv) return;
+  if (!mcv) {
+    return;
+  }
   void* bv = edge::McvBrowserView(mcv);
   void* tsm = bv ? edge::TabStripModelOf(edge::BrowserOf(bv)) : nullptr;
-  if (!tsm) return;
+  if (!tsm) {
+    return;
+  }
   void* active = edge::ActiveTab(tsm);
   const bool was_split = active && edge::TabIsSplit(active);
   const int old_panes = was_split ? edge::McvActiveSplitPanes(mcv) : 1;
   const int active_leaf = was_split ? ActiveLeaf(mcv) : 0;
-  const int new_leaf = old_panes;  // GrowSplit appends the new tab as the last container
+  const int new_leaf =
+      old_panes;  // GrowSplit appends the new tab as the last container
 
   // Reshape the tree first so the relayout the grow triggers already uses it.
   const Node* existing = was_split ? TreeFor(mcv) : nullptr;
@@ -63,23 +70,30 @@ inline void AddPane(void* mcv, Direction dir) {
   if (existing) {
     tree = *existing;
   } else if (was_split) {
-    tree = FlatTree(old_panes, edge::McvOrientation(mcv) ? Axis::kVertical : Axis::kHorizontal);
+    tree = FlatTree(old_panes, edge::McvOrientation(mcv) ? Axis::kVertical
+                                                         : Axis::kHorizontal);
   } else {
     tree = MakeLeaf(0);  // one pane (the active tab) occupies container 0
   }
-  if (!SplitPane(tree, active_leaf, dir, new_leaf)) SplitPane(tree, 0, dir, new_leaf);
+  if (!SplitPane(tree, active_leaf, dir, new_leaf)) {
+    SplitPane(tree, 0, dir, new_leaf);
+  }
   Trees()[mcv] = tree;
 
   // Grow the data model. The feeder builds container[new_leaf], feeds it real
   // content and shows it; our layout detour positions it by the tree above.
   if (!split_data::GrowSplit(tsm)) {
-    if (existing) Trees()[mcv] = *existing; else ForgetTree(mcv);  // undo the speculative edit
+    if (existing) {
+      Trees()[mcv] = *existing;
+    } else {
+      ForgetTree(mcv);  // undo the speculative edit
+    }
     Log("[dir-add] grow failed; tree reverted");
     return;
   }
   edge::InvalidateLayout(mcv);
-  Log("[dir-add] dir=%d active_leaf=%d new_leaf=%d -> %d panes", static_cast<int>(dir), active_leaf,
-      new_leaf, old_panes + 1);
+  Log("[dir-add] dir=%d active_leaf=%d new_leaf=%d -> %d panes",
+      static_cast<int>(dir), active_leaf, new_leaf, old_panes + 1);
 }
 
 // Swap the active pane with its sibling along its parent split's axis (the
@@ -87,7 +101,9 @@ inline void AddPane(void* mcv, Direction dir) {
 // swap position, so the two panes' content trades places on relayout. No Edge
 // object moves. No-op without a live tree. UI thread.
 inline void SwapActive(void* mcv) {
-  if (!mcv) return;
+  if (!mcv) {
+    return;
+  }
   const Node* existing = TreeFor(mcv);
   if (!existing) {
     Log("[swap] no live tree");

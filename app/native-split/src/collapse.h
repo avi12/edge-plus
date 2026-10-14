@@ -14,9 +14,11 @@ using namespace fixedge::edge155;
 using DoAction_t = void*(__fastcall*)(void*, void*, int);
 inline DoAction_t o_do_action = nullptr;
 
-inline void* __fastcall h_do_action(void* controller, void* web_contents, int action) {
+inline void* __fastcall h_do_action(void* controller, void* web_contents,
+                                    int action) {
   if (action == 3) {
-    Log("[collapse] action 3 -> 2 (keep the active pane, eject the rest as tabs)");
+    Log("[collapse] action 3 -> 2 (keep the active pane, eject the rest as "
+        "tabs)");
     action = 2;
   }
   return o_do_action(controller, web_contents, action);

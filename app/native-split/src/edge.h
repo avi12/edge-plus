@@ -24,7 +24,9 @@ inline bool Bind(HMODULE module) {
   return g_base != 0;
 }
 
-inline void* At(uintptr_t rva) { return reinterpret_cast<void*>(g_base + rva); }
+inline void* At(uintptr_t rva) {
+  return reinterpret_cast<void*>(g_base + rva);
+}
 
 // Overwrite one code byte — used to lift the index<2 guard. Returns the byte
 // that was there (for the log).
@@ -47,7 +49,10 @@ inline void PatchNop(uintptr_t rva, size_t n, uint8_t* saved) {
   DWORD old = 0;
   auto* p = reinterpret_cast<uint8_t*>(addr);
   if (VirtualProtect(addr, n, PAGE_EXECUTE_READWRITE, &old)) {
-    for (size_t i = 0; i < n; ++i) { saved[i] = p[i]; p[i] = 0x90; }
+    for (size_t i = 0; i < n; ++i) {
+      saved[i] = p[i];
+      p[i] = 0x90;
+    }
     VirtualProtect(addr, n, old, &old);
     FlushInstructionCache(GetCurrentProcess(), addr, n);
   }
@@ -69,7 +74,8 @@ inline void* NewView(size_t size) {
 
 inline void ConstructContainer(void* container, void* browser_view) {
   using Fn = void*(__fastcall*)(void*, void*);
-  reinterpret_cast<Fn>(At(rva::EdgeContentsContainerView_ctor))(container, browser_view);
+  reinterpret_cast<Fn>(At(rva::EdgeContentsContainerView_ctor))(container,
+                                                                browser_view);
 }
 
 inline void AddChildViewAt(void* parent, void* child, size_t index) {
@@ -97,7 +103,8 @@ inline bool ViewGetVisible(void* view) {
 // Re-draw each pane's border/overlay from MCV_active_index (loops every container).
 inline void McvUpdateBorders(void* mcv) {
   using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::MultiContentsView_UpdateContentsBorderAndOverlay))(mcv);
+  reinterpret_cast<Fn>(
+      At(rva::MultiContentsView_UpdateContentsBorderAndOverlay))(mcv);
 }
 
 inline void InvalidateLayout(void* view) {
@@ -113,15 +120,19 @@ inline void LayoutImmediately(void* view) {
 
 // std::vector<ChildLayout>::emplace_back<View*, bool, const gfx::Rect&>.
 // `view_slot` -> View*, `visible_slot` -> bool, `rect_slot` -> gfx::Rect (our Rect).
-inline void EmplaceChildLayout(void* vector, void* view_slot, void* visible_slot, void* rect_slot) {
+inline void EmplaceChildLayout(void* vector, void* view_slot,
+                               void* visible_slot, void* rect_slot) {
   using Fn = void*(__fastcall*)(void*, void*, void*, void*);
-  reinterpret_cast<Fn>(At(rva::ChildLayouts_emplace_back))(vector, view_slot, visible_slot, rect_slot);
+  reinterpret_cast<Fn>(At(rva::ChildLayouts_emplace_back))(
+      vector, view_slot, visible_slot, rect_slot);
 }
 
 // Attach a WebContents to a ContentsWebView (the real render path).
-inline void ContentsWebViewSetContents(void* contents_web_view, void* web_contents) {
+inline void ContentsWebViewSetContents(void* contents_web_view,
+                                       void* web_contents) {
   using Fn = void*(__fastcall*)(void*, void*);
-  reinterpret_cast<Fn>(At(rva::ContentsWebView_SetWebContents))(contents_web_view, web_contents);
+  reinterpret_cast<Fn>(At(rva::ContentsWebView_SetWebContents))(
+      contents_web_view, web_contents);
 }
 
 // Force a (background) WebContents to the visible state so the pane paints.
@@ -155,13 +166,19 @@ struct SplitIndexVec {
 // Build a SplitIndexVec of `count` tab indices in an Edge-allocated buffer.
 inline SplitIndexVec MakeIndexVec(const int* indices, size_t count) {
   int* buf = static_cast<int*>(EdgeNew(count * sizeof(int)));
-  for (size_t i = 0; i < count; ++i) buf[i] = indices[i];
+  for (size_t i = 0; i < count; ++i) {
+    buf[i] = indices[i];
+  }
   return SplitIndexVec{buf, count, count};
 }
 
 // TabStripModel members + the split primitives (docs/re/split-grow-impl.md).
-inline void* RootCollection(void* tsm) { return Field<void*>(tsm, off::TSM_collection); }
-inline void* ActiveTab(void* tsm) { return Field<void*>(tsm, off::TSM_active_tab); }
+inline void* RootCollection(void* tsm) {
+  return Field<void*>(tsm, off::TSM_collection);
+}
+inline void* ActiveTab(void* tsm) {
+  return Field<void*>(tsm, off::TSM_active_tab);
+}
 
 // A TabModel virtual: resolve a vtable slot (byte offset) and call it.
 inline bool TabIsSplit(void* tab) {
@@ -185,13 +202,19 @@ inline void GetTabsAndIndicesInSplit(void* tsm, void* out_vec24, void* id16) {
 }
 inline void* GetTabAtIndexRecursive(void* root_collection, int index) {
   using Fn = void*(__fastcall*)(void*, int);
-  return reinterpret_cast<Fn>(At(rva::GetTabAtIndexRecursive))(root_collection, index);
+  return reinterpret_cast<Fn>(At(rva::GetTabAtIndexRecursive))(root_collection,
+                                                               index);
 }
 // GetIndexOfTabRecursive(rcx=collection, rdx=out{size_t index; bool found}, r8=tab).
 inline int GetIndexOfTabRecursive(void* root_collection, void* tab_model) {
-  struct { uint64_t index; uint8_t found; uint8_t pad[7]; } out = {};
+  struct {
+    uint64_t index;
+    uint8_t found;
+    uint8_t pad[7];
+  } out = {};
   using Fn = void(__fastcall*)(void*, void*, void*);
-  reinterpret_cast<Fn>(At(rva::GetIndexOfTabRecursive))(root_collection, &out, tab_model);
+  reinterpret_cast<Fn>(At(rva::GetIndexOfTabRecursive))(root_collection, &out,
+                                                        tab_model);
   return out.found ? static_cast<int>(out.index) : -1;
 }
 inline void RemoveSplitImpl(void* tsm, void* id16, int flag) {
@@ -199,25 +222,29 @@ inline void RemoveSplitImpl(void* tsm, void* id16, int flag) {
   reinterpret_cast<Fn>(At(rva::TabStripModel_RemoveSplitImpl))(tsm, id16, flag);
 }
 // 7 args: 4 register + 3 stack ([rsp+0x20/0x28/0x30]).
-inline void AddToSplitImpl(void* tsm, void* out_id16, void* id16, SplitIndexVec* indices,
-                           int anchor, void* visual16, int flag) {
+inline void AddToSplitImpl(void* tsm, void* out_id16, void* id16,
+                           SplitIndexVec* indices, int anchor, void* visual16,
+                           int flag) {
   using Fn = void*(__fastcall*)(void*, void*, void*, void*, int, void*, int);
-  reinterpret_cast<Fn>(At(rva::TabStripModel_AddToSplitImpl))(tsm, out_id16, id16, indices, anchor,
-                                                              visual16, flag);
+  reinterpret_cast<Fn>(At(rva::TabStripModel_AddToSplitImpl))(
+      tsm, out_id16, id16, indices, anchor, visual16, flag);
 }
 // AddToNewSplit(tsm, out base::Token*, SplitIndexVec*, SplitTabVisualData*) — creates
 // a 2-pane split (its size==1 branch adds the active tab).
-inline void AddToNewSplit(void* tsm, void* out_id16, SplitIndexVec* indices, void* visual16) {
+inline void AddToNewSplit(void* tsm, void* out_id16, SplitIndexVec* indices,
+                          void* visual16) {
   using Fn = void*(__fastcall*)(void*, void*, void*, void*);
-  reinterpret_cast<Fn>(At(rva::TabStripModel_AddToNewSplit))(tsm, out_id16, indices, visual16);
+  reinterpret_cast<Fn>(At(rva::TabStripModel_AddToNewSplit))(tsm, out_id16,
+                                                             indices, visual16);
 }
 // UpdateTabInSplit(tsm, anchor=last split member TabModel*, int newTabIndex, int flag)
 // — Edge's own "add a tab to the current split": runs the whole remove+move+add
 // transaction internally (how OpenTabInCurrentSplitWindow adds a pane).
-inline void UpdateTabInSplit(void* tsm, void* anchor_member, int new_tab_index, int flag) {
+inline void UpdateTabInSplit(void* tsm, void* anchor_member, int new_tab_index,
+                             int flag) {
   using Fn = void*(__fastcall*)(void*, void*, int, int);
-  reinterpret_cast<Fn>(At(rva::TabStripModel_UpdateTabInSplit))(tsm, anchor_member, new_tab_index,
-                                                                flag);
+  reinterpret_cast<Fn>(At(rva::TabStripModel_UpdateTabInSplit))(
+      tsm, anchor_member, new_tab_index, flag);
 }
 
 // HWND -> aura::Window* -> BrowserView*, the bridge to reach a browser from a
@@ -229,14 +256,16 @@ inline void* AuraWindowForHWND(void* hwnd) {
 }
 inline void* BrowserViewForAura(void* aura_window) {
   using Fn = void*(__fastcall*)(void*);
-  return reinterpret_cast<Fn>(At(rva::BrowserView_ForNativeWindow))(aura_window);
+  return reinterpret_cast<Fn>(At(rva::BrowserView_ForNativeWindow))(
+      aura_window);
 }
 
 // TabStripModel::GetWebContentsAt — bounds-checked by the callee; caller must
 // still pass 0 <= index < TabCount or it aborts.
 inline void* TabWebContentsAt(void* tab_strip_model, int index) {
   using Fn = void*(__fastcall*)(void*, int);
-  return reinterpret_cast<Fn>(At(rva::TabStripModel_GetWebContentsAt))(tab_strip_model, index);
+  return reinterpret_cast<Fn>(At(rva::TabStripModel_GetWebContentsAt))(
+      tab_strip_model, index);
 }
 
 // --- menu label plumbing (build a real libc++ std::u16string) ----------------
@@ -264,7 +293,8 @@ inline void ViewSetTooltip(void* view, const char* utf8) {
 // ui::SimpleMenuModel::AddItem(model /*rcx*/, int command_id /*edx*/, &u16string /*r8*/).
 inline void MenuAddItem(void* model, int command_id, const U16String* label) {
   using Fn = void*(__fastcall*)(void*, int, const void*);
-  reinterpret_cast<Fn>(At(rva::SimpleMenuModel_AddItem))(model, command_id, label);
+  reinterpret_cast<Fn>(At(rva::SimpleMenuModel_AddItem))(model, command_id,
+                                                         label);
 }
 
 // --- MultiContentsView field accessors (named, typed, one place each) ---------
@@ -274,12 +304,24 @@ inline void* McvContainerVector(void* mcv) {
   return reinterpret_cast<uint8_t*>(mcv) + off::MCV_containers_data;
 }
 // The vector's begin pointer: an array of ContentsContainerView*.
-inline void** McvContainers(void* mcv) { return Field<void**>(mcv, off::MCV_containers_data); }
-inline void* McvContainerAt(void* mcv, int i) { return McvContainers(mcv)[i]; }
-inline size_t McvCount(void* mcv) { return Field<size_t>(mcv, off::MCV_containers_count); }
-inline void* McvBrowserView(void* mcv) { return Field<void*>(mcv, off::MCV_browser_view); }
-inline uint32_t McvOrientation(void* mcv) { return Field<uint32_t>(mcv, off::MCV_orientation); }
-inline size_t McvChildInsertIndex(void* mcv) { return Field<size_t>(mcv, off::MCV_child_insert_idx); }
+inline void** McvContainers(void* mcv) {
+  return Field<void**>(mcv, off::MCV_containers_data);
+}
+inline void* McvContainerAt(void* mcv, int i) {
+  return McvContainers(mcv)[i];
+}
+inline size_t McvCount(void* mcv) {
+  return Field<size_t>(mcv, off::MCV_containers_count);
+}
+inline void* McvBrowserView(void* mcv) {
+  return Field<void*>(mcv, off::MCV_browser_view);
+}
+inline uint32_t McvOrientation(void* mcv) {
+  return Field<uint32_t>(mcv, off::MCV_orientation);
+}
+inline size_t McvChildInsertIndex(void* mcv) {
+  return Field<size_t>(mcv, off::MCV_child_insert_idx);
+}
 
 // CalculateProposedLayout runs on the LayoutManagerBase subobject at MCV+0x340.
 inline void* McvFromLayoutBase(void* layout_base) {
@@ -290,26 +332,34 @@ inline void* BrowserViewMcv(void* browser_view) {
 }
 
 // A view's current bounds in its parent's coordinates (views::View::bounds_).
-inline Rect ViewBounds(void* view) { return Field<Rect>(view, off::VIEW_bounds); }
+inline Rect ViewBounds(void* view) {
+  return Field<Rect>(view, off::VIEW_bounds);
+}
 
 // --- views helpers -------------------------------------------------------------
 
-inline void* ViewParent(void* view) { return Field<void*>(view, off::VIEW_parent); }
+inline void* ViewParent(void* view) {
+  return Field<void*>(view, off::VIEW_parent);
+}
 // The widget's root view: its coordinates are the window's client area in DIPs.
 inline void* ViewRoot(void* view) {
-  while (void* parent = ViewParent(view)) view = parent;
+  while (void* parent = ViewParent(view)) {
+    view = parent;
+  }
   return view;
 }
 // Convert `point` in place from `source`'s coordinates to `target`'s.
 inline void ConvertPoint(void* source, void* target, Point* point) {
   using Fn = void(__fastcall*)(void*, void*, Point*);
-  reinterpret_cast<Fn>(At(rva::View_ConvertPointToTarget))(source, target, point);
+  reinterpret_cast<Fn>(At(rva::View_ConvertPointToTarget))(source, target,
+                                                           point);
 }
 // Where a mouse event happened, in the window's DIPs (its root location).
 inline Point EventRootLocation(const void* event) {
   const auto* location = reinterpret_cast<const float*>(
       reinterpret_cast<const uint8_t*>(event) + off::EVENT_root_location);
-  return Point{static_cast<int32_t>(location[0]), static_cast<int32_t>(location[1])};
+  return Point{static_cast<int32_t>(location[0]),
+               static_cast<int32_t>(location[1])};
 }
 inline void ViewReorderChild(void* parent, void* child, size_t index) {
   using Fn = void(__fastcall*)(void*, void*, size_t);
@@ -328,22 +378,28 @@ inline void* ContainerControlButtons(void* container) {
 
 // Build a ControlButtons bar and hand it to `container`, exactly as
 // EnsureControlButtons does for pane 1 (`not_first` = true there).
-inline void GiveControlButtons(void* container, void* browser_view, bool not_first) {
+inline void GiveControlButtons(void* container, void* browser_view,
+                               bool not_first) {
   void* bar = NewView(off::ControlButtons_size);
   using Ctor = void*(__fastcall*)(void*, void*, bool);
-  reinterpret_cast<Ctor>(At(rva::ControlButtons_ctor))(bar, browser_view, not_first);
+  reinterpret_cast<Ctor>(At(rva::ControlButtons_ctor))(bar, browser_view,
+                                                       not_first);
   void* iface = reinterpret_cast<uint8_t*>(container) + off::ECCV_buttons_iface;
   void** vtbl = *reinterpret_cast<void***>(iface);
-  void* owned = bar;  // unique_ptr<ControlButtons>; the callee takes and nulls it
+  void* owned =
+      bar;  // unique_ptr<ControlButtons>; the callee takes and nulls it
   using SetFn = void(__fastcall*)(void*, void**);
-  reinterpret_cast<SetFn>(vtbl[off::ECCV_vtbl_SetControlButtons / 8])(iface, &owned);
+  reinterpret_cast<SetFn>(vtbl[off::ECCV_vtbl_SetControlButtons / 8])(iface,
+                                                                      &owned);
 }
 
 // Add a button to a pane's hover bar, exactly as Edge adds ⋯ and X. `icon` is a
 // gfx::VectorIcon*; `clickable` = false wires no click handler.
-inline void* ControlButtonsAddButton(void* bar, int string_id, const void* icon, bool clickable) {
+inline void* ControlButtonsAddButton(void* bar, int string_id, const void* icon,
+                                     bool clickable) {
   using Fn = void*(__fastcall*)(void*, int, const void*, bool);
-  return reinterpret_cast<Fn>(At(rva::ControlButtons_AddButton))(bar, string_id, icon, clickable);
+  return reinterpret_cast<Fn>(At(rva::ControlButtons_AddButton))(
+      bar, string_id, icon, clickable);
 }
 // Re-run the bar's own layout so its width follows its visible buttons.
 inline void ControlButtonsRelayout(void* bar) {
@@ -354,18 +410,22 @@ inline void ControlButtonsRelayout(void* bar) {
 // Watch a pane's WebContents for mouse input so hovering it shows its bar.
 inline void ListenSplitInput(void* web_contents) {
   using Fn = void(__fastcall*)(void*, void*);
-  reinterpret_cast<Fn>(At(rva::SplitWindow_ListenWebContentsInputEvent))(web_contents, nullptr);
+  reinterpret_cast<Fn>(At(rva::SplitWindow_ListenWebContentsInputEvent))(
+      web_contents, nullptr);
 }
 
 // Run the hover's effect for pane `wc` directly (the test channel's stand-in for
 // a real mouse-enter, which needs the real cursor).
 inline bool ShowControlButtonFor(void* browser, void* web_contents) {
   using FromFn = void*(__fastcall*)(void*);
-  void* controller = reinterpret_cast<FromFn>(At(rva::SplitWindowController_FromBrowser))(browser);
-  if (!controller) return false;
+  void* controller = reinterpret_cast<FromFn>(
+      At(rva::SplitWindowController_FromBrowser))(browser);
+  if (!controller) {
+    return false;
+  }
   using ShowFn = bool(__fastcall*)(void*, void*);
-  return reinterpret_cast<ShowFn>(At(rva::SplitWindowController_ShowControlButton))(controller,
-                                                                                    web_contents);
+  return reinterpret_cast<ShowFn>(At(
+      rva::SplitWindowController_ShowControlButton))(controller, web_contents);
 }
 
 // A container's ContentsWebView (the pane's web view).
@@ -378,8 +438,12 @@ inline void* ContainerWebContents(void* container) {
 }
 
 // --- Browser / TabStripModel field accessors ---------------------------------
-inline void* BrowserOf(void* browser_view) { return Field<void*>(browser_view, off::BV_browser); }
-inline void* TabStripModelOf(void* browser) { return Field<void*>(browser, off::BROWSER_tab_strip_model); }
+inline void* BrowserOf(void* browser_view) {
+  return Field<void*>(browser_view, off::BV_browser);
+}
+inline void* TabStripModelOf(void* browser) {
+  return Field<void*>(browser, off::BROWSER_tab_strip_model);
+}
 inline int TabCount(void* tab_strip_model) {
   void* collection = Field<void*>(tab_strip_model, off::TSM_collection);
   return collection ? Field<int32_t>(collection, off::TABCOLL_count) : 0;
@@ -392,12 +456,22 @@ inline int TabCount(void* tab_strip_model) {
 inline int McvActiveSplitPanes(void* mcv) {
   void* bv = McvBrowserView(mcv);
   void* tsm = bv ? TabStripModelOf(BrowserOf(bv)) : nullptr;
-  if (!tsm) return 1;
+  if (!tsm) {
+    return 1;
+  }
   void* active = ActiveTab(tsm);
-  if (!active || !TabIsSplit(active)) return 1;
-  struct { uint8_t token[16]; uint8_t present; uint8_t pad[7]; } opt = {};
+  if (!active || !TabIsSplit(active)) {
+    return 1;
+  }
+  struct {
+    uint8_t token[16];
+    uint8_t present;
+    uint8_t pad[7];
+  } opt = {};
   TabGetSplit(active, &opt);
-  if (!opt.present) return 1;
+  if (!opt.present) {
+    return 1;
+  }
   uint64_t vec[3] = {};  // {data, size, cap}; size = member count
   GetTabsAndIndicesInSplit(tsm, vec, opt.token);
   const int n = vec[0] ? static_cast<int>(vec[1]) : 1;
@@ -407,7 +481,9 @@ inline int McvActiveSplitPanes(void* mcv) {
 // TabStripModel from a top-level Win32 browser window handle (no split needed).
 inline void* TsmForWindow(void* hwnd) {
   void* aura = AuraWindowForHWND(hwnd);
-  if (!aura) return nullptr;
+  if (!aura) {
+    return nullptr;
+  }
   void* bv = BrowserViewForAura(aura);
   return bv ? TabStripModelOf(BrowserOf(bv)) : nullptr;
 }
@@ -415,7 +491,9 @@ inline void* TsmForWindow(void* hwnd) {
 // MultiContentsView from a top-level Win32 browser window handle.
 inline void* McvForWindow(void* hwnd) {
   void* aura = AuraWindowForHWND(hwnd);
-  if (!aura) return nullptr;
+  if (!aura) {
+    return nullptr;
+  }
   void* bv = BrowserViewForAura(aura);
   return bv ? BrowserViewMcv(bv) : nullptr;
 }

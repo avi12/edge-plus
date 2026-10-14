@@ -13,13 +13,15 @@ namespace fixedge::split_data {
 
 // SEH-guarded UpdateTabInSplit: a bad arg can int3/ud2 and kill the browser. Catch
 // it so Edge survives and we can iterate. No C++ objects here, so __try is legal.
-inline bool SafeUpdateTabInSplit(void* tsm, void* anchor, int new_index, int flag) {
+inline bool SafeUpdateTabInSplit(void* tsm, void* anchor, int new_index,
+                                 int flag) {
   EXCEPTION_POINTERS* ep = nullptr;
   __try {
     edge::UpdateTabInSplit(tsm, anchor, new_index, flag);
     return true;
   } __except (ep = GetExceptionInformation(), EXCEPTION_EXECUTE_HANDLER) {
-    const auto addr = reinterpret_cast<uintptr_t>(ep->ExceptionRecord->ExceptionAddress);
+    const auto addr =
+        reinterpret_cast<uintptr_t>(ep->ExceptionRecord->ExceptionAddress);
     Log("[split] UpdateTabInSplit faulted code=0x%lx at rva 0x%llx",
         ep->ExceptionRecord->ExceptionCode,
         static_cast<unsigned long long>(addr - edge::g_base));
@@ -27,14 +29,16 @@ inline bool SafeUpdateTabInSplit(void* tsm, void* anchor, int new_index, int fla
   }
 }
 
-inline bool SafeAddToSplit(void* tsm, void* out_id, void* id, edge::SplitIndexVec* vec, int anchor,
-                           void* visual, int flag) {
+inline bool SafeAddToSplit(void* tsm, void* out_id, void* id,
+                           edge::SplitIndexVec* vec, int anchor, void* visual,
+                           int flag) {
   EXCEPTION_POINTERS* ep = nullptr;
   __try {
     edge::AddToSplitImpl(tsm, out_id, id, vec, anchor, visual, flag);
     return true;
   } __except (ep = GetExceptionInformation(), EXCEPTION_EXECUTE_HANDLER) {
-    const auto addr = reinterpret_cast<uintptr_t>(ep->ExceptionRecord->ExceptionAddress);
+    const auto addr =
+        reinterpret_cast<uintptr_t>(ep->ExceptionRecord->ExceptionAddress);
     Log("[split] AddToSplitImpl faulted code=0x%lx at rva 0x%llx",
         ep->ExceptionRecord->ExceptionCode,
         static_cast<unsigned long long>(addr - edge::g_base));
@@ -68,7 +72,9 @@ inline int FindFreeTab(void* tsm, void* root, void* active) {
   const int tab_count = edge::TabCount(tsm);
   for (int i = tab_count - 1; i >= 0; --i) {
     void* t = edge::GetTabAtIndexRecursive(root, i);
-    if (t && t != active && !edge::TabIsSplit(t)) return i;
+    if (t && t != active && !edge::TabIsSplit(t)) {
+      return i;
+    }
   }
   return -1;
 }
@@ -109,24 +115,38 @@ inline bool CreateSplitN(void* tsm, int want) {
     Log("[createN] bad state tsm=%p root=%p active=%p", tsm, root, active);
     return false;
   }
-  if (want < 2) want = 2;
-  if (want > 6) want = 6;
+  if (want < 2) {
+    want = 2;
+  }
+  if (want > 6) {
+    want = 6;
+  }
   const int tc = edge::TabCount(tsm);
   int idx[8];
   int n = 0;
   const int active_idx = edge::GetIndexOfTabRecursive(root, active);
-  if (active_idx >= 0) idx[n++] = active_idx;
+  if (active_idx >= 0) {
+    idx[n++] = active_idx;
+  }
   for (int i = 0; i < tc && n < want; ++i) {
     void* t = edge::GetTabAtIndexRecursive(root, i);
-    if (t && t != active && !edge::TabIsSplit(t)) idx[n++] = i;
+    if (t && t != active && !edge::TabIsSplit(t)) {
+      idx[n++] = i;
+    }
   }
   if (n < 2) {
     Log("[createN] not enough free tabs (%d)", n);
     return false;
   }
-  for (int a = 0; a < n; ++a)
-    for (int b = a + 1; b < n; ++b)
-      if (idx[b] < idx[a]) { int t = idx[a]; idx[a] = idx[b]; idx[b] = t; }
+  for (int a = 0; a < n; ++a) {
+    for (int b = a + 1; b < n; ++b) {
+      if (idx[b] < idx[a]) {
+        int t = idx[a];
+        idx[a] = idx[b];
+        idx[b] = t;
+      }
+    }
+  }
   const int anchor = idx[0];
   uint8_t id[16] = {};
   edge::CreateRandomToken(id);
@@ -134,19 +154,22 @@ inline bool CreateSplitN(void* tsm, int want) {
   *reinterpret_cast<double*>(visual + 8) = 0.5;
   uint8_t out_id[16] = {};
   edge::SplitIndexVec indices = edge::MakeIndexVec(idx, static_cast<size_t>(n));
-  Log("[createN] AddToSplitImpl n=%d anchor=%d idx=[%d,%d,%d]", n, anchor, idx[0],
-      n > 1 ? idx[1] : -1, n > 2 ? idx[2] : -1);
+  Log("[createN] AddToSplitImpl n=%d anchor=%d idx=[%d,%d,%d]", n, anchor,
+      idx[0], n > 1 ? idx[1] : -1, n > 2 ? idx[2] : -1);
   const bool ok = SafeAddToSplit(tsm, out_id, id, &indices, anchor, visual, 0);
   Log("[createN] AddToSplitImpl %s (%d panes)", ok ? "done" : "FAILED", n);
   // Even if the call faulted, did the DATA model get the split? (isolates a
   // data-model fault from a synchronous view-refresh fault.)
   void* a2 = edge::ActiveTab(tsm);
   OptSplitId o2 = {};
-  if (a2) edge::TabGetSplit(a2, &o2);
+  if (a2) {
+    edge::TabGetSplit(a2, &o2);
+  }
   if (o2.present) {
     uint64_t v2[3] = {};
     edge::GetTabsAndIndicesInSplit(tsm, v2, o2.token);
-    Log("[createN] post: data model split has %d members", static_cast<int>(v2[1]));
+    Log("[createN] post: data model split has %d members",
+        static_cast<int>(v2[1]));
   } else {
     Log("[createN] post: active tab not in a split");
   }
@@ -173,7 +196,8 @@ inline bool GrowSplit(void* tsm) {
   }
 
   // Capture the live members (TabModel*) and the visual before dissolving.
-  uint64_t members_vec[3] = {};  // {data@0, size@8, cap@0x10}; entry {TabModel*,int} 16B
+  uint64_t members_vec[3] =
+      {};  // {data@0, size@8, cap@0x10}; entry {TabModel*,int} 16B
   edge::GetTabsAndIndicesInSplit(tsm, members_vec, opt.token);
   auto* begin = reinterpret_cast<uint8_t*>(members_vec[0]);
   const int mc = begin ? static_cast<int>(members_vec[1]) : 0;
@@ -182,10 +206,13 @@ inline bool GrowSplit(void* tsm) {
     return false;
   }
   void* member_tabs[8];
-  for (int i = 0; i < mc; ++i) member_tabs[i] = *reinterpret_cast<void**>(begin + i * 16);
+  for (int i = 0; i < mc; ++i) {
+    member_tabs[i] = *reinterpret_cast<void**>(begin + i * 16);
+  }
   uint8_t visual[16] = {};
   if (void* sd = edge::GetSplitData(tsm, opt.token)) {
-    std::memcpy(visual, reinterpret_cast<uint8_t*>(sd) + 8, sizeof(visual));  // keep orientation+ratio
+    std::memcpy(visual, reinterpret_cast<uint8_t*>(sd) + 8,
+                sizeof(visual));  // keep orientation+ratio
   } else {
     *reinterpret_cast<double*>(visual + 8) = 0.5;
   }
@@ -208,15 +235,27 @@ inline bool GrowSplit(void* tsm) {
   int n = 0;
   for (int i = 0; i < mc; ++i) {
     const int ix = edge::GetIndexOfTabRecursive(root, member_tabs[i]);
-    if (ix < 0) { Log("[grow] lost member %d after remove", i); return false; }
+    if (ix < 0) {
+      Log("[grow] lost member %d after remove", i);
+      return false;
+    }
     idx[n++] = ix;
   }
   const int nix = edge::GetIndexOfTabRecursive(root, new_tab);
-  if (nix < 0) { Log("[grow] lost new tab after remove"); return false; }
+  if (nix < 0) {
+    Log("[grow] lost new tab after remove");
+    return false;
+  }
   idx[n++] = nix;
-  for (int a = 0; a < n; ++a)
-    for (int b = a + 1; b < n; ++b)
-      if (idx[b] < idx[a]) { int t = idx[a]; idx[a] = idx[b]; idx[b] = t; }
+  for (int a = 0; a < n; ++a) {
+    for (int b = a + 1; b < n; ++b) {
+      if (idx[b] < idx[a]) {
+        int t = idx[a];
+        idx[a] = idx[b];
+        idx[b] = t;
+      }
+    }
+  }
   const int anchor = idx[0];
   uint8_t id[16] = {};
   edge::CreateRandomToken(id);

@@ -25,17 +25,21 @@ struct Session {
   bool isPressed = false;   // a grip is held, not yet past the drag threshold
   bool isDragging = false;  // past it: the preview follows the pointer
   void* mcv = nullptr;
-  int pane = -1;            // the container index being dragged
-  Point pressedAt{};        // window DIPs
-  dock::Plan plan;          // what releasing now would do
+  int pane = -1;      // the container index being dragged
+  Point pressedAt{};  // window DIPs
+  dock::Plan plan;    // what releasing now would do
 };
 inline Session g;
 
-inline bool IsActive() { return g.isPressed || g.isDragging; }
+inline bool IsActive() {
+  return g.isPressed || g.isDragging;
+}
 
 // --- coordinates: the window's DIPs <-> the split's DIPs <-> screen pixels ---
 
-inline float Scale() { return static_cast<float>(GetDpiForWindow(g_window)) / 96.f; }
+inline float Scale() {
+  return static_cast<float>(GetDpiForWindow(g_window)) / 96.f;
+}
 
 inline Point RootToSplit(void* mcv, Point point) {
   edge::ConvertPoint(edge::ViewRoot(mcv), mcv, &point);
@@ -51,11 +55,13 @@ inline Rect SplitToScreen(void* mcv, const Rect& rect) {
   const float scale = Scale();
   POINT screenTopLeft{static_cast<LONG>(std::lround(topLeft.x * scale)),
                       static_cast<LONG>(std::lround(topLeft.y * scale))};
-  POINT screenBottomRight{static_cast<LONG>(std::lround(bottomRight.x * scale)),
-                          static_cast<LONG>(std::lround(bottomRight.y * scale))};
+  POINT screenBottomRight{
+      static_cast<LONG>(std::lround(bottomRight.x * scale)),
+      static_cast<LONG>(std::lround(bottomRight.y * scale))};
   ClientToScreen(g_window, &screenTopLeft);
   ClientToScreen(g_window, &screenBottomRight);
-  return Rect{screenTopLeft.x, screenTopLeft.y, screenBottomRight.x - screenTopLeft.x,
+  return Rect{screenTopLeft.x, screenTopLeft.y,
+              screenBottomRight.x - screenTopLeft.x,
               screenBottomRight.y - screenTopLeft.y};
 }
 
@@ -94,10 +100,12 @@ inline void Move(Point root) {
   }
   if (!g.isDragging) {
     const float scale = Scale();
-    const int movedX = static_cast<int>(std::abs(root.x - g.pressedAt.x) * scale);
-    const int movedY = static_cast<int>(std::abs(root.y - g.pressedAt.y) * scale);
-    const bool isWithinDragThreshold =
-        movedX < GetSystemMetrics(SM_CXDRAG) && movedY < GetSystemMetrics(SM_CYDRAG);
+    const int movedX =
+        static_cast<int>(std::abs(root.x - g.pressedAt.x) * scale);
+    const int movedY =
+        static_cast<int>(std::abs(root.y - g.pressedAt.y) * scale);
+    const bool isWithinDragThreshold = movedX < GetSystemMetrics(SM_CXDRAG) &&
+                                       movedY < GetSystemMetrics(SM_CYDRAG);
     if (isWithinDragThreshold) {
       return;
     }
@@ -105,12 +113,13 @@ inline void Move(Point root) {
     Log("[drag] dragging pane %d", g.pane);
   }
   const Node tree = geometry::LiveTree(g.mcv, edge::McvActiveSplitPanes(g.mcv));
-  g.plan = dock::Resolve(tree, geometry::SplitArea(g.mcv), RootToSplit(g.mcv, root), g.pane,
-                         g.plan);
+  g.plan = dock::Resolve(tree, geometry::SplitArea(g.mcv),
+                         RootToSplit(g.mcv, root), g.pane, g.plan);
   if (g.plan.zone == dock::Zone::kNone) {
     overlay::Hide();
   } else {
-    overlay::Show(g_window, SplitToScreen(g.mcv, g.plan.preview), StyleOf(g.plan.zone));
+    overlay::Show(g_window, SplitToScreen(g.mcv, g.plan.preview),
+                  StyleOf(g.plan.zone));
   }
   SetCursor(LoadCursorW(nullptr, reinterpret_cast<LPCWSTR>(IDC_SIZEALL)));
 }
@@ -132,9 +141,10 @@ inline void Release() {
   }
   Trees()[mcv] = std::move(plan.result);
   edge::InvalidateLayout(mcv);
-  edge::LayoutImmediately(mcv);  // a pure tree edit: force the re-tile (and its animation)
-  Log("[drag] dropped pane %d: zone=%d target=%d dir=%d", pane, static_cast<int>(plan.zone),
-      plan.target, static_cast<int>(plan.dir));
+  edge::LayoutImmediately(
+      mcv);  // a pure tree edit: force the re-tile (and its animation)
+  Log("[drag] dropped pane %d: zone=%d target=%d dir=%d", pane,
+      static_cast<int>(plan.zone), plan.target, static_cast<int>(plan.dir));
 }
 
 }  // namespace fixedge::drag

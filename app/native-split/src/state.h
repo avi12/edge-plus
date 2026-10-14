@@ -24,6 +24,8 @@ inline const Node* TreeFor(void* mcv) {
   return it == Trees().end() ? nullptr : &it->second;
 }
 
-inline void ForgetTree(void* mcv) { Trees().erase(mcv); }
+inline void ForgetTree(void* mcv) {
+  Trees().erase(mcv);
+}
 
 }  // namespace fixedge

@@ -25,26 +25,33 @@ constexpr wchar_t kUnloadEvent[] = L"Local\\fixedge-split-unload";
 
 DWORD WINAPI Init(LPVOID) {
   HMODULE edge_module = nullptr;
-  for (int i = 0; i < 100 && !edge_module; ++i) {  // msedge.dll may still be loading
+  for (int i = 0; i < 100 && !edge_module;
+       ++i) {  // msedge.dll may still be loading
     edge_module = GetModuleHandleW(edge::kModule);
-    if (!edge_module) Sleep(50);
+    if (!edge_module) {
+      Sleep(50);
+    }
   }
   if (!edge_module) {
     Log("[err] %ls not found", edge::kModule);
     return 0;
   }
   edge::Bind(edge_module);
-  Log("[init] fixedge-split loaded. %ls base=%p", edge::kModule, reinterpret_cast<void*>(edge::g_base));
+  Log("[init] fixedge-split loaded. %ls base=%p", edge::kModule,
+      reinterpret_cast<void*>(edge::g_base));
 
   // Fail safe: the offsets are specific to one Edge build. Refuse to hook anything
   // if this isn't that exact build or the hook sites don't look like code, so a
   // stale or mismatched DLL can never corrupt a browser it wasn't reversed against.
   if (!verify::Ok()) {
-    Log("[verify] FAILED - refusing to hook (wrong Edge build or unexpected code)");
+    Log("[verify] FAILED - refusing to hook (wrong Edge build or unexpected "
+        "code)");
     return 0;
   }
 
-  if (!hooks::InstallAll()) return 0;
+  if (!hooks::InstallAll()) {
+    return 0;
+  }
   Log("[init] hooks installed; directional-add menu armed");
 
   // Toggle-off from the app: wait for the unload signal, then cleanly detach.
@@ -54,7 +61,9 @@ DWORD WINAPI Init(LPVOID) {
   WaitForSingleObject(unload, INFINITE);
   Log("[unload] signalled; removing hooks");
   hooks::RemoveAll();
-  if (unload) CloseHandle(unload);
+  if (unload) {
+    CloseHandle(unload);
+  }
   Log("[unload] fixedge-split detached");
   FreeLibraryAndExitThread(g_self, 0);
   return 0;
