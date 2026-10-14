@@ -20,7 +20,8 @@ exists). Authorized personal customization of the user's own Edge.
 - [x] Hot-keys (`Ctrl+Shift+Alt` + arrows / A / S / X): directional add, swap, collapse
 - [x] Animated transitions — add / swap / collapse ease each pane into place
       (~220 ms); window resizes snap; off when Windows "Animation effects" is off
-- [ ] Drag-to-rearrange panes
+- [x] Drag-to-rearrange panes — a grip in each pane's hover bar; drop beside a
+      pane, on the split's outer edge, or on a pane's centre to swap
 - [ ] Companion-app toggle: inject / unload / hot-swap from the panel
 
 ## Build
