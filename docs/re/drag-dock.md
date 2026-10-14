@@ -56,8 +56,10 @@ The two scenarios this was built for:
 
 1. A pointer up to 48 DIP outside the split is clamped in; farther out is no
    target.
-2. The split's outer band first: within 16 DIP of an outer edge (nearest edge
-   wins), held until 48 DIP in.
+2. The split's outer band first: within 8% of the split's extent of an outer
+   edge (at least 24, at most 72 DIP; nearest edge wins), held 32 DIP deeper.
+   The libraries use 10-16 px; this is deliberately deeper, so dragging "far
+   enough" toward an edge spans it even when the window touches the screen edge.
 3. Otherwise the pane under the pointer: its centre box (25–75% on both axes)
    swaps; outside it, the pane's diagonals pick the edge (no dead corners); an
    active edge holds until 40% into the pane. The dragged pane offers nothing.

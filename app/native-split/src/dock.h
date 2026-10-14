@@ -19,10 +19,14 @@ enum class Zone : uint8_t {
   kRootEdge,  // an outer edge of the whole split: span it (`dir`)
 };
 
-inline constexpr int kRootBand =
-    16;  // this close to an outer edge targets the whole split...
-inline constexpr int kRootRelease =
-    48;  // ...and keeps it until this far (hysteresis)
+// How far in from an outer edge the pointer targets the whole split: a share
+// of the split's extent along that axis, so dragging "far enough" toward an
+// edge spans it - generous on a big split, never thinner than a fingertip.
+inline constexpr float kRootBandShare = 0.08f;
+inline constexpr int kRootBandMin = 24;
+inline constexpr int kRootBandMax = 72;
+// An active outer band holds this much farther in (hysteresis).
+inline constexpr int kRootReleaseExtra = 32;
 inline constexpr int kOvershoot =
     48;  // a pointer this far outside still counts (clamped in)
 inline constexpr float kCentre =
@@ -49,6 +53,15 @@ inline int DistanceToEdge(const Rect& r, const Point& p, Direction d) {
     default:
       return r.y + r.h - 1 - p.y;
   }
+}
+
+// The outer band's depth for edge `edge` of `layout`.
+inline int RootBand(const Rect& layout, Direction edge) {
+  const bool isVerticalEdge =
+      edge == Direction::kLeft || edge == Direction::kRight;
+  const int extent = isVerticalEdge ? layout.w : layout.h;
+  const int share = static_cast<int>(static_cast<float>(extent) * kRootBandShare);
+  return std::clamp(share, kRootBandMin, kRootBandMax);
 }
 
 // Whether a pane-relative position (u, v in 0..1) is still within the hold band
@@ -114,7 +127,9 @@ inline Plan Finish(const Node& tree, const Rect& layout, int moving, Zone zone,
 // Resolve pointer `p` (split coordinates) while dragging pane `moving`. `prev` is
 // the plan currently shown, for hysteresis. Precedence: the whole split's outer
 // band first (checked before any pane, as dockview's root target is), then the
-// pane under the pointer — its centre swaps, its edges dock beside it.
+// pane under the pointer — its centre swaps, its edges dock beside it. So near
+// a pane's bottom edge docks below that pane, and dragging on, deep toward the
+// split's bottom, spans the whole bottom.
 inline Plan Resolve(const Node& tree, const Rect& layout, Point p, int moving,
                     const Plan& prev) {
   if (layout.w <= 0 || layout.h <= 0) {
@@ -130,17 +145,22 @@ inline Plan Resolve(const Node& tree, const Rect& layout, Point p, int moving,
   // 1. The whole split's outer band.
   bool root = false;
   Direction root_dir = Direction::kUp;
-  if (prev.zone == Zone::kRootEdge &&
-      DistanceToEdge(layout, p, prev.dir) <= kRootRelease) {
+  const bool isHoldingRootEdge =
+      prev.zone == Zone::kRootEdge &&
+      DistanceToEdge(layout, p, prev.dir) <=
+          RootBand(layout, prev.dir) + kRootReleaseExtra;
+  if (isHoldingRootEdge) {
     root = true;
     root_dir = prev.dir;
   } else {
-    int best = kRootBand + 1;
+    int nearest = 0;
     for (Direction d : {Direction::kLeft, Direction::kRight, Direction::kUp,
                         Direction::kDown}) {
       const int dist = DistanceToEdge(layout, p, d);
-      if (dist < best) {
-        best = dist;
+      const bool isNearerEdgeInBand =
+          dist < RootBand(layout, d) && (!root || dist < nearest);
+      if (isNearerEdgeInBand) {
+        nearest = dist;
         root_dir = d;
         root = true;
       }

@@ -32,10 +32,10 @@ int main() {
   const Node row = FlatTree(4, Axis::kHorizontal);
   const Plan none;
 
-  // Scenario (a): the bottom of pane 2 (just outside the outer band) docks below
-  // it; the preview is pane 3's final rect: the bottom half of a third column.
+  // Scenario (a): the bottom of pane 2 (above the outer band) docks below it;
+  // the preview is pane 3's final rect: the bottom half of a third column.
   {
-    const Plan p = Resolve(row, layout, Point{750, 780}, 3, none);
+    const Plan p = Resolve(row, layout, Point{750, 700}, 3, none);
     Check(
         p.zone == Zone::kPaneEdge && p.target == 2 && p.dir == Direction::kDown,
         "bottom of pane 2 -> below 2");
@@ -48,6 +48,13 @@ int main() {
     Check(p.zone == Zone::kRootEdge && p.dir == Direction::kDown,
           "outer bottom band -> root edge");
     Check(Is(p.preview, 0, 400, 1200, 400), "preview = the whole bottom half");
+  }
+  // Dragged "far enough": the outer band is 8% of the split's height (64 of
+  // 800), so 49 DIP above the bottom already spans the whole bottom.
+  {
+    const Plan p = Resolve(row, layout, Point{750, 750}, 3, none);
+    Check(p.zone == Zone::kRootEdge && p.dir == Direction::kDown,
+          "deep toward the bottom -> root edge");
   }
   // A pane's centre swaps: the preview is that pane's own rect.
   {
@@ -84,17 +91,17 @@ int main() {
     const Plan q = Resolve(row, layout, Point{895, 300}, 3, none);
     Check(q.zone == Zone::kNone, "right of 2 is where 3 already is -> nothing");
   }
-  // Hysteresis: an active outer band holds until 48 DIP in...
+  // Hysteresis: an active outer band holds 32 DIP past its 64 DIP depth...
   {
     const Plan shown = Resolve(row, layout, Point{750, 795}, 3, none);
-    const Plan held = Resolve(row, layout, Point{750, 770}, 3, shown);
-    Check(held.zone == Zone::kRootEdge, "outer band holds at 29 DIP");
-    const Plan released = Resolve(row, layout, Point{750, 740}, 3, shown);
-    Check(released.zone == Zone::kPaneEdge, "outer band releases past 48 DIP");
+    const Plan held = Resolve(row, layout, Point{750, 720}, 3, shown);
+    Check(held.zone == Zone::kRootEdge, "outer band holds at 79 DIP");
+    const Plan released = Resolve(row, layout, Point{750, 690}, 3, shown);
+    Check(released.zone == Zone::kPaneEdge, "outer band releases past 96 DIP");
   }
   // ...and an active pane edge holds into the centre box (no flip to swap).
   {
-    const Plan shown = Resolve(row, layout, Point{750, 780}, 3, none);
+    const Plan shown = Resolve(row, layout, Point{750, 700}, 3, none);
     const Plan held =
         Resolve(row, layout, Point{750, 520}, 3, shown);  // v = 0.65
     Check(held.zone == Zone::kPaneEdge && held.dir == Direction::kDown,
@@ -104,7 +111,7 @@ int main() {
   }
   // The returned tree is exactly what the drop commits.
   {
-    const Plan p = Resolve(row, layout, Point{750, 780}, 3, none);
+    const Plan p = Resolve(row, layout, Point{750, 700}, 3, none);
     std::vector<int> order;
     CollectLeaves(p.result, order);
     Check(order == std::vector<int>({0, 1, 2, 3}), "result keeps every pane");
