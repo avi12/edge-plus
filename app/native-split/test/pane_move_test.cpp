@@ -3,8 +3,8 @@
 // test\run.cmd.
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
-#include <cstdlib>
 #include <random>
 #include <string>
 #include <vector>
@@ -14,68 +14,84 @@ using namespace fixedge;
 
 namespace {
 
+// A failed check ends the run: the checks after it read results it vouched for.
+struct CheckFailed {};
+
 int g_checks = 0;
 void Check(bool ok, const char* what, const std::string& got = "") {
-  ++g_checks;
+  g_checks++;
   if (!ok) {
     std::printf("FAIL: %s %s\n", what, got.c_str());
-    std::exit(1);
+    throw CheckFailed{};
   }
 }
 
 // H[0(1) 1(1) V[2(1) 3(1)](1)] — axis, leaves and slot weights.
-std::string Dump(const Node& n) {
-  if (n.isLeaf) {
-    return std::to_string(n.leaf);
+std::string Dump(const Node& node) {
+  if (node.isLeaf) {
+    return std::to_string(node.leaf);
   }
-  std::string s = n.axis == Axis::kHorizontal ? "H[" : "V[";
-  for (size_t i = 0; i < n.children.size(); ++i) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "(%.3g)", n.weights[i]);
-    if (i) {
-      s += " ";
+  std::string text = node.axis == Axis::kHorizontal ? "H[" : "V[";
+  for (size_t i = 0; i < node.children.size(); i++) {
+    char weightText[32];
+    std::snprintf(weightText, sizeof(weightText), "(%.3g)", node.weights[i]);
+    const bool hasPreviousChild = i > 0;
+    if (hasPreviousChild) {
+      text += " ";
     }
-    s += Dump(n.children[i]) + buf;
+    text += Dump(node.children[i]) + weightText;
   }
-  return s + "]";
+  return text + "]";
 }
 
-std::string Layout(const Node& root, int w, int h) {
+std::string Layout(const Node& root, int width, int height) {
   std::vector<LeafRect> leaves;
-  LayoutTree(root, Rect{0, 0, w, h}, 0, leaves);
-  std::string s;
-  for (const LeafRect& lr : leaves) {
-    char buf[64];
-    std::snprintf(buf, sizeof(buf), "%d:[%d,%d,%d,%d] ", lr.leaf, lr.rect.x,
-                  lr.rect.y, lr.rect.width, lr.rect.height);
-    s += buf;
+  LayoutTree(root, Rect{0, 0, width, height}, 0, leaves);
+  std::string text;
+  for (const LeafRect& leafRect : leaves) {
+    char buffer[64];
+    std::snprintf(buffer, sizeof(buffer), "%d:[%d,%d,%d,%d] ", leafRect.leaf,
+                  leafRect.rect.x, leafRect.rect.y, leafRect.rect.width,
+                  leafRect.rect.height);
+    text += buffer;
   }
-  return s;
+  return text;
 }
+
+// How far a split's weights may sum from its child count and still be
+// canonical: float rounding, not a real drift.
+constexpr float kWeightSumTolerance = 1e-3f;
 
 // The canonical form every edit must leave behind.
-bool Canonical(const Node& n) {
-  if (n.isLeaf) {
+bool Canonical(const Node& node) {
+  if (node.isLeaf) {
     return true;
   }
-  if (n.children.size() < 2 || n.weights.size() != n.children.size()) {
+  const bool hasSplitShape =
+      node.children.size() >= 2 && node.weights.size() == node.children.size();
+  if (!hasSplitShape) {
     return false;
   }
   float sum = 0.f;
-  for (float w : n.weights) {
-    if (!(w > 0.f)) {
+  for (const float weight : node.weights) {
+    const bool isPositive = weight > 0.f;
+    if (!isPositive) {
       return false;
     }
-    sum += w;
+    sum += weight;
   }
-  if (std::fabs(sum - static_cast<float>(n.children.size())) > 1e-3f) {
+  const bool hasSumDrifted =
+      std::fabs(sum - static_cast<float>(node.children.size())) >
+      kWeightSumTolerance;
+  if (hasSumDrifted) {
     return false;
   }
-  for (const Node& c : n.children) {
-    if (!c.isLeaf && c.axis == n.axis) {
+  for (const Node& child : node.children) {
+    const bool isSameAxisSplit = !child.isLeaf && child.axis == node.axis;
+    if (isSameAxisSplit) {
       return false;
     }
-    if (!Canonical(c)) {
+    if (!Canonical(child)) {
       return false;
     }
   }
@@ -83,167 +99,199 @@ bool Canonical(const Node& n) {
 }
 
 Node Weighted(int count, Axis axis, std::vector<float> weights) {
-  Node t = FlatTree(count, axis);
-  t.weights = std::move(weights);
-  FixWeights(t);
-  return t;
+  Node tree = FlatTree(count, axis);
+  tree.weights = std::move(weights);
+  FixWeights(tree);
+  return tree;
+}
+
+// The random-edit run. The seed is fixed so a failure reproduces.
+constexpr unsigned kRandomSeed = 12345;
+constexpr int kRandomRuns = 200;
+constexpr int kEditsPerRun = 60;
+constexpr int kMaxPanes = 9;  // a split stops adding panes here
+
+// The edits a random step can make, drawn uniformly.
+enum class Edit : uint8_t {
+  kSplit,
+  kMove,
+  kMoveToRootEdge,
+  kSwap
+};
+constexpr unsigned kEditCount = 4;
+constexpr unsigned kDirectionCount = 4;
+
+void RunChecks() {
+  // The user's scenario (a): row 1..4, drop 4 on the bottom edge of 3 -> thirds
+  // across, and 3 / 4 share the third column at equal heights.
+  {
+    Node tree = FlatTree(4, Axis::kHorizontal);
+    Check(MovePane(tree, 3, 2, Direction::kDown), "drop below 3 moved");
+    Check(Dump(tree) == "H[0(1) 1(1) V[2(1) 3(1)](1)]", "drop below 3 tree",
+          Dump(tree));
+    Check(Layout(tree, 1200, 800) ==
+              "0:[0,0,400,800] 1:[400,0,400,800] 2:[800,0,400,400] "
+              "3:[800,400,400,400] ",
+          "drop below 3 geometry", Layout(tree, 1200, 800));
+  }
+  // The user's scenario (b): drop 4 on the bottom edge of the whole layout -> it
+  // takes the full bottom half; 1..3 share the top half in thirds.
+  {
+    Node tree = FlatTree(4, Axis::kHorizontal);
+    Check(MovePaneToRootEdge(tree, 3, Direction::kDown), "root bottom moved");
+    Check(Dump(tree) == "V[H[0(1) 1(1) 2(1)](1) 3(1)]", "root bottom tree",
+          Dump(tree));
+    Check(Layout(tree, 1200, 800) ==
+              "0:[0,0,400,400] 1:[400,0,400,400] 2:[800,0,400,400] "
+              "3:[0,400,1200,400] ",
+          "root bottom geometry", Layout(tree, 1200, 800));
+  }
+  // No-ops leave the tree untouched.
+  {
+    Node tree = FlatTree(4, Axis::kHorizontal);
+    const std::string before = Dump(tree);
+    Check(!MovePane(tree, 2, 2, Direction::kDown), "drop on itself");
+    Check(!MovePane(tree, 3, 2, Direction::kRight), "already right of target");
+    Check(!MovePane(tree, 2, 3, Direction::kLeft), "already left of target");
+    Check(!MovePaneToRootEdge(tree, 3, Direction::kRight),
+          "already spans right edge");
+    Check(!MovePaneToRootEdge(tree, 0, Direction::kLeft),
+          "already spans left edge");
+    Check(!MovePane(tree, 9, 2, Direction::kDown), "missing moving pane");
+    Check(!MovePane(tree, 2, 9, Direction::kDown), "missing target pane");
+    Check(!SwapLeaves(tree, 1, 1), "swap with itself");
+    Check(!SwapLeaves(tree, 1, 9), "swap with missing");
+    Check(Dump(tree) == before, "no-ops leave the tree unchanged", Dump(tree));
+    Node single = MakeLeaf(0);
+    Check(!MovePaneToRootEdge(single, 0, Direction::kDown),
+          "single pane has no root edge");
+    Node column = Weighted(2, Axis::kVertical, {3.f, 1.f});
+    Check(!MovePane(column, 1, 0, Direction::kDown),
+          "already below -> keeps 3:1");
+  }
+  // A reorder within one split carries the pane's own size.
+  {
+    Node tree = Weighted(3, Axis::kHorizontal, {3.f, 1.f, 1.f});
+    Check(MovePane(tree, 0, 2, Direction::kRight), "reorder moved");
+    Check(Dump(tree) == "H[1(0.6) 2(0.6) 0(1.8)]", "reorder keeps weight",
+          Dump(tree));
+  }
+  // A 2-pane column turned into a row (the emptied split collapses).
+  {
+    Node tree = FlatTree(2, Axis::kVertical);
+    Check(MovePane(tree, 1, 0, Direction::kRight), "pair transpose moved");
+    Check(Dump(tree) == "H[0(1) 1(1)]", "V[0,1] -> H[0,1]", Dump(tree));
+  }
+  // Removing a pane flattens what is left without changing on-screen widths.
+  {
+    Node tree = FlatTree(2, Axis::kHorizontal);
+    SplitPane(tree, 1, Direction::kDown, 2);   // H[0, V[1,2]]
+    SplitPane(tree, 2, Direction::kRight, 3);  // H[0, V[1, H[2,3]]]
+    Check(Canonical(tree), "setup canonical", Dump(tree));
+    Check(MovePaneToRootEdge(tree, 1, Direction::kDown), "flatten move");
+    Check(Dump(tree) == "V[H[0(1.5) 2(0.75) 3(0.75)](1) 1(1)]",
+          "flatten keeps widths", Dump(tree));
+    Check(Layout(tree, 800, 400) ==
+              "0:[0,0,400,200] 2:[400,0,200,200] 3:[600,0,200,200] "
+              "1:[0,200,800,200] ",
+          "flatten geometry", Layout(tree, 800, 400));
+  }
+  // Removal shares the freed space in proportion (a 2:1 pair stays 2:1).
+  {
+    Node tree = Weighted(3, Axis::kHorizontal, {2.f, 1.f, 1.f});
+    MovePaneToRootEdge(tree, 2, Direction::kDown);
+    Check(Dump(tree) == "V[H[0(1.33) 1(0.667)](1) 2(1)]",
+          "proportional removal", Dump(tree));
+  }
+  // Joining a resized row only halves the target; an equal row stays equal.
+  {
+    Node resized = Weighted(2, Axis::kHorizontal, {3.f, 1.f});
+    SplitPane(resized, 1, Direction::kDown, 2);
+    MovePane(resized, 2, 1, Direction::kRight);
+    Check(Dump(resized) == "H[0(2.25) 1(0.375) 2(0.375)]",
+          "resized row: half of target", Dump(resized));
+    Node equal = FlatTree(3, Axis::kHorizontal);
+    SplitPane(equal, 2, Direction::kDown, 3);
+    MovePane(equal, 3, 1, Direction::kRight);
+    Check(Dump(equal) == "H[0(1) 1(1) 3(1) 2(1)]", "equal row: quarters",
+          Dump(equal));
+  }
+  // A root along the drop axis gains the pane as an average-share end child.
+  {
+    Node tree = FlatTree(2, Axis::kHorizontal);
+    MovePaneToRootEdge(tree, 1, Direction::kDown);  // V[0,1]
+    SplitPane(tree, 0, Direction::kRight, 2);       // V[H[0,2],1]
+    MovePaneToRootEdge(tree, 0, Direction::kDown);  // V[2,1,0]
+    Check(Dump(tree) == "V[2(1) 1(1) 0(1)]", "root join -> thirds", Dump(tree));
+  }
+  // Centre drop: positions keep their sizes, the panes trade places.
+  {
+    Node tree = Weighted(3, Axis::kHorizontal, {2.f, 1.f, 1.f});
+    Check(SwapLeaves(tree, 0, 2), "swap moved");
+    Check(Dump(tree) == "H[2(1.5) 1(0.75) 0(0.75)]",
+          "swap keeps sizes with positions", Dump(tree));
+  }
+  // Random edits: the pane set never changes, the tree stays canonical, and a
+  // second Normalize changes nothing.
+  {
+    // NOLINTNEXTLINE(bugprone-random-generator-seed,cert-msc32-c,cert-msc51-cpp)
+    std::mt19937 generator(kRandomSeed);
+    for (int run = 0; run < kRandomRuns; run++) {
+      Node tree =
+          FlatTree(2 + static_cast<int>(generator() % 2), Axis::kHorizontal);
+      int nextLeaf = static_cast<int>(tree.children.size());
+      for (int step = 0; step < kEditsPerRun; step++) {
+        std::vector<int> leaves;
+        CollectLeaves(tree, leaves);
+        const int moving = leaves[generator() % leaves.size()];
+        const int target = leaves[generator() % leaves.size()];
+        const auto direction =
+            static_cast<Direction>(generator() % kDirectionCount);
+        switch (static_cast<Edit>(generator() % kEditCount)) {
+          case Edit::kSplit: {
+            const bool hasRoomForPane = nextLeaf < kMaxPanes;
+            if (hasRoomForPane) {
+              SplitPane(tree, moving, direction, nextLeaf);
+              nextLeaf++;
+            }
+            break;
+          }
+          case Edit::kMove:
+            MovePane(tree, moving, target, direction);
+            break;
+          case Edit::kMoveToRootEdge:
+            MovePaneToRootEdge(tree, moving, direction);
+            break;
+          case Edit::kSwap:
+            SwapLeaves(tree, moving, target);
+            break;
+        }
+        std::vector<int> after;
+        CollectLeaves(tree, after);
+        std::sort(after.begin(), after.end());
+        std::vector<int> expected(static_cast<size_t>(nextLeaf));
+        for (int i = 0; i < nextLeaf; i++) {
+          expected[static_cast<size_t>(i)] = i;
+        }
+        Check(after == expected, "random: pane set preserved", Dump(tree));
+        Check(Canonical(tree), "random: canonical", Dump(tree));
+        Node copy = tree;
+        Normalize(copy);
+        Check(Dump(copy) == Dump(tree), "random: normalize idempotent",
+              Dump(tree));
+      }
+    }
+  }
 }
 
 }  // namespace
 
 int main() {
-  // The user's scenario (a): row 1..4, drop 4 on the bottom edge of 3 -> thirds
-  // across, and 3 / 4 share the third column at equal heights.
-  {
-    Node t = FlatTree(4, Axis::kHorizontal);
-    Check(MovePane(t, 3, 2, Direction::kDown), "drop below 3 moved");
-    Check(Dump(t) == "H[0(1) 1(1) V[2(1) 3(1)](1)]", "drop below 3 tree",
-          Dump(t));
-    Check(Layout(t, 1200, 800) ==
-              "0:[0,0,400,800] 1:[400,0,400,800] 2:[800,0,400,400] "
-              "3:[800,400,400,400] ",
-          "drop below 3 geometry", Layout(t, 1200, 800));
+  try {
+    RunChecks();
+  } catch (...) {
+    return 1;
   }
-  // The user's scenario (b): drop 4 on the bottom edge of the whole layout -> it
-  // takes the full bottom half; 1..3 share the top half in thirds.
-  {
-    Node t = FlatTree(4, Axis::kHorizontal);
-    Check(MovePaneToRootEdge(t, 3, Direction::kDown), "root bottom moved");
-    Check(Dump(t) == "V[H[0(1) 1(1) 2(1)](1) 3(1)]", "root bottom tree",
-          Dump(t));
-    Check(Layout(t, 1200, 800) ==
-              "0:[0,0,400,400] 1:[400,0,400,400] 2:[800,0,400,400] "
-              "3:[0,400,1200,400] ",
-          "root bottom geometry", Layout(t, 1200, 800));
-  }
-  // No-ops leave the tree untouched.
-  {
-    Node t = FlatTree(4, Axis::kHorizontal);
-    const std::string before = Dump(t);
-    Check(!MovePane(t, 2, 2, Direction::kDown), "drop on itself");
-    Check(!MovePane(t, 3, 2, Direction::kRight), "already right of target");
-    Check(!MovePane(t, 2, 3, Direction::kLeft), "already left of target");
-    Check(!MovePaneToRootEdge(t, 3, Direction::kRight),
-          "already spans right edge");
-    Check(!MovePaneToRootEdge(t, 0, Direction::kLeft),
-          "already spans left edge");
-    Check(!MovePane(t, 9, 2, Direction::kDown), "missing moving pane");
-    Check(!MovePane(t, 2, 9, Direction::kDown), "missing target pane");
-    Check(!SwapLeaves(t, 1, 1), "swap with itself");
-    Check(!SwapLeaves(t, 1, 9), "swap with missing");
-    Check(Dump(t) == before, "no-ops leave the tree unchanged", Dump(t));
-    Node one = MakeLeaf(0);
-    Check(!MovePaneToRootEdge(one, 0, Direction::kDown),
-          "single pane has no root edge");
-    Node v = Weighted(2, Axis::kVertical, {3.f, 1.f});
-    Check(!MovePane(v, 1, 0, Direction::kDown), "already below -> keeps 3:1");
-  }
-  // A reorder within one split carries the pane's own size.
-  {
-    Node t = Weighted(3, Axis::kHorizontal, {3.f, 1.f, 1.f});
-    Check(MovePane(t, 0, 2, Direction::kRight), "reorder moved");
-    Check(Dump(t) == "H[1(0.6) 2(0.6) 0(1.8)]", "reorder keeps weight",
-          Dump(t));
-  }
-  // A 2-pane column turned into a row (the emptied split collapses).
-  {
-    Node t = FlatTree(2, Axis::kVertical);
-    Check(MovePane(t, 1, 0, Direction::kRight), "pair transpose moved");
-    Check(Dump(t) == "H[0(1) 1(1)]", "V[0,1] -> H[0,1]", Dump(t));
-  }
-  // Removing a pane flattens what is left without changing on-screen widths.
-  {
-    Node t = FlatTree(2, Axis::kHorizontal);
-    SplitPane(t, 1, Direction::kDown, 2);   // H[0, V[1,2]]
-    SplitPane(t, 2, Direction::kRight, 3);  // H[0, V[1, H[2,3]]]
-    Check(Canonical(t), "setup canonical", Dump(t));
-    Check(MovePaneToRootEdge(t, 1, Direction::kDown), "flatten move");
-    Check(Dump(t) == "V[H[0(1.5) 2(0.75) 3(0.75)](1) 1(1)]",
-          "flatten keeps widths", Dump(t));
-    Check(Layout(t, 800, 400) ==
-              "0:[0,0,400,200] 2:[400,0,200,200] 3:[600,0,200,200] "
-              "1:[0,200,800,200] ",
-          "flatten geometry", Layout(t, 800, 400));
-  }
-  // Removal shares the freed space in proportion (a 2:1 pair stays 2:1).
-  {
-    Node t = Weighted(3, Axis::kHorizontal, {2.f, 1.f, 1.f});
-    MovePaneToRootEdge(t, 2, Direction::kDown);
-    Check(Dump(t) == "V[H[0(1.33) 1(0.667)](1) 2(1)]", "proportional removal",
-          Dump(t));
-  }
-  // Joining a resized row only halves the target; an equal row stays equal.
-  {
-    Node t = Weighted(2, Axis::kHorizontal, {3.f, 1.f});
-    SplitPane(t, 1, Direction::kDown, 2);
-    MovePane(t, 2, 1, Direction::kRight);
-    Check(Dump(t) == "H[0(2.25) 1(0.375) 2(0.375)]",
-          "resized row: half of target", Dump(t));
-    Node e = FlatTree(3, Axis::kHorizontal);
-    SplitPane(e, 2, Direction::kDown, 3);
-    MovePane(e, 3, 1, Direction::kRight);
-    Check(Dump(e) == "H[0(1) 1(1) 3(1) 2(1)]", "equal row: quarters", Dump(e));
-  }
-  // A root along the drop axis gains the pane as an average-share end child.
-  {
-    Node t = FlatTree(2, Axis::kHorizontal);
-    MovePaneToRootEdge(t, 1, Direction::kDown);  // V[0,1]
-    SplitPane(t, 0, Direction::kRight, 2);       // V[H[0,2],1]
-    MovePaneToRootEdge(t, 0, Direction::kDown);  // V[2,1,0]
-    Check(Dump(t) == "V[2(1) 1(1) 0(1)]", "root join -> thirds", Dump(t));
-  }
-  // Centre drop: positions keep their sizes, the panes trade places.
-  {
-    Node t = Weighted(3, Axis::kHorizontal, {2.f, 1.f, 1.f});
-    Check(SwapLeaves(t, 0, 2), "swap moved");
-    Check(Dump(t) == "H[2(1.5) 1(0.75) 0(0.75)]",
-          "swap keeps sizes with positions", Dump(t));
-  }
-  // Random edits: the pane set never changes, the tree stays canonical, and a
-  // second Normalize changes nothing.
-  {
-    std::mt19937 rng(12345);
-    for (int iter = 0; iter < 200; ++iter) {
-      Node t = FlatTree(2 + static_cast<int>(rng() % 2), Axis::kHorizontal);
-      int next = static_cast<int>(t.children.size());
-      for (int step = 0; step < 60; ++step) {
-        std::vector<int> leaves;
-        CollectLeaves(t, leaves);
-        const int a = leaves[rng() % leaves.size()];
-        const int b = leaves[rng() % leaves.size()];
-        const Direction d = static_cast<Direction>(rng() % 4);
-        switch (rng() % 4) {
-          case 0:
-            if (next < 9) {
-              SplitPane(t, a, d, next++);
-            }
-            break;
-          case 1:
-            MovePane(t, a, b, d);
-            break;
-          case 2:
-            MovePaneToRootEdge(t, a, d);
-            break;
-          default:
-            SwapLeaves(t, a, b);
-            break;
-        }
-        std::vector<int> after;
-        CollectLeaves(t, after);
-        std::sort(after.begin(), after.end());
-        std::vector<int> want(static_cast<size_t>(next));
-        for (int i = 0; i < next; ++i) {
-          want[static_cast<size_t>(i)] = i;
-        }
-        Check(after == want, "random: pane set preserved", Dump(t));
-        Check(Canonical(t), "random: canonical", Dump(t));
-        Node copy = t;
-        Normalize(copy);
-        Check(Dump(copy) == Dump(t), "random: normalize idempotent", Dump(t));
-      }
-    }
-  }
-
   std::printf("OK: %d checks passed\n", g_checks);
   return 0;
 }

@@ -1,6 +1,5 @@
 // Unit tests for the pure split-tree model (pane_tree.h). No Edge/Win32 deps, so
 // this builds and runs on the host. Run via test\run.cmd.
-#include <cassert>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -10,50 +9,52 @@ using namespace fixedge;
 
 namespace {
 
+// A failed check ends the run: the checks after it read results it vouched for.
+struct CheckFailed {};
+
 int g_checks = 0;
 void Check(bool ok, const char* what) {
-  ++g_checks;
+  g_checks++;
   if (!ok) {
     std::printf("FAIL: %s\n", what);
-    std::exit(1);
+    throw CheckFailed{};
   }
 }
 
 // Render leaf order + each leaf's rect as a string, for stable assertions.
-std::string Layout(const Node& root, int w, int h) {
+std::string Layout(const Node& root, int width, int height) {
   std::vector<LeafRect> leaves;
-  LayoutTree(root, Rect{0, 0, w, h}, 0, leaves);
-  std::string s;
-  for (const LeafRect& lr : leaves) {
-    char buf[64];
-    std::snprintf(buf, sizeof(buf), "%d:[%d,%d,%d,%d] ", lr.leaf, lr.rect.x,
-                  lr.rect.y, lr.rect.width, lr.rect.height);
-    s += buf;
+  LayoutTree(root, Rect{0, 0, width, height}, 0, leaves);
+  std::string text;
+  for (const LeafRect& leafRect : leaves) {
+    char buffer[64];
+    std::snprintf(buffer, sizeof(buffer), "%d:[%d,%d,%d,%d] ", leafRect.leaf,
+                  leafRect.rect.x, leafRect.rect.y, leafRect.rect.width,
+                  leafRect.rect.height);
+    text += buffer;
   }
-  return s;
+  return text;
 }
 
 std::vector<int> Order(const Node& root) {
-  std::vector<int> v;
-  CollectLeaves(root, v);
-  return v;
+  std::vector<int> order;
+  CollectLeaves(root, order);
+  return order;
 }
 
-}  // namespace
-
-int main() {
+void RunChecks() {
   // Flat equal columns tile the width, last absorbs rounding, full height.
   {
-    Node t = FlatTree(3, Axis::kHorizontal);
-    Check(Layout(t, 900, 600) ==
+    const Node tree = FlatTree(3, Axis::kHorizontal);
+    Check(Layout(tree, 900, 600) ==
               "0:[0,0,300,600] 1:[300,0,300,600] 2:[600,0,300,600] ",
           "flat 3 equal columns");
   }
   // 10 into 3: 3,3,4 (remainder to the last) and they exactly tile 10 wide.
   {
-    Node t = FlatTree(3, Axis::kHorizontal);
+    const Node tree = FlatTree(3, Axis::kHorizontal);
     std::vector<LeafRect> leaves;
-    LayoutTree(t, Rect{0, 0, 10, 2}, 0, leaves);
+    LayoutTree(tree, Rect{0, 0, 10, 2}, 0, leaves);
     Check(leaves[0].rect.width + leaves[1].rect.width + leaves[2].rect.width ==
               10,
           "columns tile exactly");
@@ -62,94 +63,109 @@ int main() {
   }
   // Vertical flat tree stacks top->bottom, full width.
   {
-    Node t = FlatTree(2, Axis::kVertical);
-    Check(Layout(t, 400, 300) == "0:[0,0,400,150] 1:[0,150,400,150] ",
+    const Node tree = FlatTree(2, Axis::kVertical);
+    Check(Layout(tree, 400, 300) == "0:[0,0,400,150] 1:[0,150,400,150] ",
           "flat 2 rows");
   }
 
   // Directional add: start with one horizontal row {0,1}; add pane 2 BELOW pane 1
   // -> pane 1 becomes a vertical split {1 over 2}; order is 0,1,2.
   {
-    Node t = FlatTree(2, Axis::kHorizontal);
-    Check(SplitPane(t, 1, Direction::kDown, 2),
+    Node tree = FlatTree(2, Axis::kHorizontal);
+    Check(SplitPane(tree, 1, Direction::kDown, 2),
           "split pane 1 down found target");
-    Check(Order(t) == std::vector<int>({0, 1, 2}), "order after down-split");
+    Check(Order(tree) == std::vector<int>({0, 1, 2}), "order after down-split");
     // Geometry: left half pane 0 full height; right half split into 1 (top) / 2 (bottom).
-    Check(Layout(t, 400, 200) ==
+    Check(Layout(tree, 400, 200) ==
               "0:[0,0,200,200] 1:[200,0,200,100] 2:[200,100,200,100] ",
           "down-split geometry");
   }
   // Add LEFT of pane 0 in a horizontal row joins the same row before it.
   {
-    Node t = FlatTree(2, Axis::kHorizontal);  // {0,1}
-    Check(SplitPane(t, 0, Direction::kLeft, 2), "split pane 0 left");
-    Check(Order(t) == std::vector<int>({2, 0, 1}),
+    Node tree = FlatTree(2, Axis::kHorizontal);  // {0,1}
+    Check(SplitPane(tree, 0, Direction::kLeft, 2), "split pane 0 left");
+    Check(Order(tree) == std::vector<int>({2, 0, 1}),
           "new pane inserted before on same axis");
   }
   // Add RIGHT of pane 0 in a horizontal row inserts right after it.
   {
-    Node t = FlatTree(2, Axis::kHorizontal);  // {0,1}
-    Check(SplitPane(t, 0, Direction::kRight, 2), "split pane 0 right");
-    Check(Order(t) == std::vector<int>({0, 2, 1}),
+    Node tree = FlatTree(2, Axis::kHorizontal);  // {0,1}
+    Check(SplitPane(tree, 0, Direction::kRight, 2), "split pane 0 right");
+    Check(Order(tree) == std::vector<int>({0, 2, 1}),
           "new pane inserted after on same axis");
   }
 
   // Swap axis: in a horizontal row, a pane's swap faces left/right; after a
   // down-split, pane 1's swap faces up/down (its parent is vertical).
   {
-    Node t = FlatTree(2, Axis::kHorizontal);
-    Check(SwapAxisOf(t, 0) == Axis::kHorizontal, "row pane swaps horizontally");
-    SplitPane(t, 1, Direction::kDown, 2);
-    Check(SwapAxisOf(t, 1) == Axis::kVertical, "stacked pane swaps vertically");
-    Check(SwapAxisOf(t, 0) == Axis::kHorizontal, "outer pane still horizontal");
+    Node tree = FlatTree(2, Axis::kHorizontal);
+    Check(SwapAxisOf(tree, 0) == Axis::kHorizontal,
+          "row pane swaps horizontally");
+    SplitPane(tree, 1, Direction::kDown, 2);
+    Check(SwapAxisOf(tree, 1) == Axis::kVertical,
+          "stacked pane swaps vertically");
+    Check(SwapAxisOf(tree, 0) == Axis::kHorizontal,
+          "outer pane still horizontal");
   }
   // Swap with counterpart exchanges adjacent siblings.
   {
-    Node t = FlatTree(3, Axis::kHorizontal);  // 0,1,2
-    Check(SwapWithCounterpart(t, 0), "swap pane 0");
-    Check(Order(t) == std::vector<int>({1, 0, 2}),
+    Node tree = FlatTree(3, Axis::kHorizontal);  // 0,1,2
+    Check(SwapWithCounterpart(tree, 0), "swap pane 0");
+    Check(Order(tree) == std::vector<int>({1, 0, 2}),
           "0 swapped with next sibling");
   }
 
   // Resize reflows proportionally: a 1:1 row stays 1:1 as the window widens, and
   // a weighted split keeps its ratio across sizes.
   {
-    Node t = FlatTree(2, Axis::kHorizontal);
-    std::vector<LeafRect> a, b;
-    LayoutTree(t, Rect{0, 0, 400, 200}, 0, a);
-    LayoutTree(t, Rect{0, 0, 800, 200}, 0, b);
-    Check(a[0].rect.width == 200 && a[1].rect.width == 200,
+    const Node tree = FlatTree(2, Axis::kHorizontal);
+    std::vector<LeafRect> narrow;
+    std::vector<LeafRect> wide;
+    LayoutTree(tree, Rect{0, 0, 400, 200}, 0, narrow);
+    LayoutTree(tree, Rect{0, 0, 800, 200}, 0, wide);
+    Check(narrow[0].rect.width == 200 && narrow[1].rect.width == 200,
           "400 wide splits 200/200");
-    Check(b[0].rect.width == 400 && b[1].rect.width == 400,
+    Check(wide[0].rect.width == 400 && wide[1].rect.width == 400,
           "800 wide splits 400/400 (reflow)");
-    Check(b[1].rect.x == 400 && b[1].rect.x + b[1].rect.width == 800,
+    Check(wide[1].rect.x == 400 && wide[1].rect.x + wide[1].rect.width == 800,
           "reflow keeps panes seamless");
   }
   {
-    Node t = FlatTree(2, Axis::kHorizontal);
-    t.weights = {3.f, 1.f};  // 3:1
-    std::vector<LeafRect> a, b;
-    LayoutTree(t, Rect{0, 0, 400, 100}, 0, a);
-    LayoutTree(t, Rect{0, 0, 1200, 100}, 0, b);
-    Check(a[0].rect.width == 300 && a[1].rect.width == 100, "3:1 ratio at 400");
-    Check(b[0].rect.width == 900 && b[1].rect.width == 300,
+    Node tree = FlatTree(2, Axis::kHorizontal);
+    tree.weights = {3.f, 1.f};  // 3:1
+    std::vector<LeafRect> narrow;
+    std::vector<LeafRect> wide;
+    LayoutTree(tree, Rect{0, 0, 400, 100}, 0, narrow);
+    LayoutTree(tree, Rect{0, 0, 1200, 100}, 0, wide);
+    Check(narrow[0].rect.width == 300 && narrow[1].rect.width == 100,
+          "3:1 ratio at 400");
+    Check(wide[0].rect.width == 900 && wide[1].rect.width == 300,
           "3:1 ratio preserved at 1200");
   }
   // Minimum pane size: a tiny window never collapses a pane below span/n, and
   // panes still tile exactly (no negative widths, no overflow).
   {
-    Node t = FlatTree(3, Axis::kHorizontal);
-    std::vector<LeafRect> v;
-    LayoutTree(t, Rect{0, 0, 30, 50}, 0, v);
+    const Node tree = FlatTree(3, Axis::kHorizontal);
+    std::vector<LeafRect> leaves;
+    LayoutTree(tree, Rect{0, 0, 30, 50}, 0, leaves);
     int sum = 0;
-    for (const LeafRect& lr : v) {
-      Check(lr.rect.width >= 10, "no pane below span/n on a tiny window");
-      Check(lr.rect.width > 0, "no zero/negative pane");
-      sum += lr.rect.width;
+    for (const LeafRect& leafRect : leaves) {
+      Check(leafRect.rect.width >= 10, "no pane below span/n on a tiny window");
+      Check(leafRect.rect.width > 0, "no zero/negative pane");
+      sum += leafRect.rect.width;
     }
     Check(sum == 30, "panes still tile the tiny window exactly");
   }
+}
 
+}  // namespace
+
+int main() {
+  try {
+    RunChecks();
+  } catch (...) {
+    return 1;
+  }
   std::printf("OK: %d checks passed\n", g_checks);
   return 0;
 }
