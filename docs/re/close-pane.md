@@ -44,3 +44,24 @@ pane:
    and a relayout eases every pane to its new place.
 
 A two-pane split is left to Edge (its X there means the split's own close).
+
+## Dividers and equal sizes
+
+Every seam of a grown split's tree (N - 1 for N panes) gets one of Edge's own
+divider views, `EdgeMultiContentsResizeArea` (ctor rva `0x2ce11b0`, 0x358
+bytes, `(this, MultiContentsView*)`): the two-pane split's handle, with its
+hover pill, and a resize cursor that turns vertical when the view is taller
+than wide (`EdgeTwoDimensionalResizeArea::GetCursor` compares its own width and
+height). They are created outside layout, kept above the panes in z-order, and
+placed over the seams on every layout pass; Edge's single two-pane handle
+(`MCV+0x3f0`) is hidden. A drag is taken from the class's own mouse handlers
+(`EdgeTwoDimensionalResizeArea::OnMousePressed / Dragged / Released /
+CaptureLost`, rvas `0xb1fac20 / 0xb1facb0 / 0xb1facf0 / 0xb1fad50`); Edge's own
+handle still runs the originals. `ResizeSeam` trades the dragged distance
+between the two children of that seam only, so every other proportion holds,
+and the weights persist through window resizes, moves and closes.
+
+The ⋯ menu's "Use equal widths" / "Use equal heights" even out the nearest
+split along that axis around the pane whose ⋯ was clicked; that pane is
+remembered from `ControlButtons::ToggleContextMenu` (rva `0xa011d00`), because
+the `SplitTabMenuModel` it builds only knows "first pane or not".

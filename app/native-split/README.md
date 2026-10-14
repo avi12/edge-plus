@@ -22,6 +22,9 @@ exists). Authorized personal customization of the user's own Edge.
       (~220 ms); window resizes snap; off when Windows "Animation effects" is off
 - [x] Drag-to-rearrange panes — a grip in each pane's hover bar; drop beside a
       pane, on the split's outer edge, or on a pane's centre to swap
+- [x] Close a pane — its X closes just that pane; the rest reflow, animated
+- [x] Dividers — drag between any two panes; proportions persist; the ⋯ menu
+      evens them out again ("Use equal widths / heights")
 - [ ] Companion-app toggle: inject / unload / hot-swap from the panel
 
 ## Build
