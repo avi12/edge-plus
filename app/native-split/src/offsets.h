@@ -185,8 +185,6 @@ inline constexpr uintptr_t ControlButtons_ToggleContextMenu = 0xa011d00;
 inline constexpr uintptr_t TabStripModel_CloseWebContentsAt = 0xa26f916;
 // (tsm, int index, const TabStripUserGestureDetails*)
 inline constexpr uintptr_t TabStripModel_ActivateTabAt = 0xa26c482;
-// (view, const gfx::Rect&)
-inline constexpr uintptr_t View_SetBoundsRect = 0x0fd8234;
 
 // --- the dividers between panes (docs/re/close-pane.md) ---
 // EdgeMultiContentsResizeArea(this, MultiContentsView*): the 2-pane split's

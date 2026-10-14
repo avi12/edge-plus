@@ -20,6 +20,7 @@ namespace fixedge::anim {
 struct Flight {
   std::vector<LeafRect> from;  // parallel to `to`
   std::vector<LeafRect> to;
+  std::vector<const void*> contents;  // the tab each placed container showed
   ULONGLONG start = 0;
 };
 struct HostSize {
@@ -93,7 +94,44 @@ inline void SetLive(void* mcv, bool isLive) {
 // Starts a flight when the targets change, advances it otherwise, and ends it
 // (targets pass through untouched) once the duration has elapsed or on
 // `shouldSnap`.
+// Where each tab (by the WebContents it shows) was last drawn: where its next
+// move starts, even when Edge re-feeds it into a different container (closing a
+// pane shifts every later tab one container earlier).
+inline std::map<const void*, Rect>& LastDrawn() {
+  static std::map<const void*, Rect> rects;
+  return rects;
+}
+inline void ForgetTab(const void* contents) {
+  LastDrawn().erase(contents);
+}
+
+inline std::vector<const void*> ContentsOf(
+    void* mcv, const std::vector<LeafRect>& placed) {
+  std::vector<const void*> contents;
+  contents.reserve(placed.size());
+  for (const LeafRect& leafRect : placed) {
+    contents.push_back(
+        edge::ContainerWebContents(edge::McvContainerAt(mcv, leafRect.leaf)));
+  }
+  return contents;
+}
+
+inline void Remember(const std::vector<const void*>& contents,
+                     const std::vector<LeafRect>& placed) {
+  for (size_t i = 0; i < placed.size(); i++) {
+    if (contents[i]) {
+      LastDrawn()[contents[i]] = placed[i].rect;
+    }
+  }
+}
+
+// Rewrite `placed` (each visible leaf's target rect) to this frame's rects.
+// A flight starts when the targets change or a container now shows a different
+// tab; each pane starts where its tab was last drawn (else where its container
+// is, else growing in from the pane it was carved out of). A flight ends when
+// its duration has elapsed, or at once on `shouldSnap` or a live resize.
 inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
+  const std::vector<const void*> contents = ContentsOf(mcv, placed);
   auto flight = Flights().find(mcv);
   const bool hasFlight = flight != Flights().end();
   const bool shouldAnimate =
@@ -102,10 +140,12 @@ inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
     if (hasFlight) {
       Flights().erase(flight);
     }
+    Remember(contents, placed);
     return;
   }
-  const bool isFlyingToTargets =
-      hasFlight && SameTargets(flight->second.to, placed);
+  const bool isFlyingToTargets = hasFlight &&
+                                 SameTargets(flight->second.to, placed) &&
+                                 flight->second.contents == contents;
   if (!isFlyingToTargets) {
     const int count = static_cast<int>(edge::McvCount(mcv));
     // Every pane on screen now (hidden ones are empty).
@@ -116,13 +156,19 @@ inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
     }
     Flight newFlight;
     newFlight.to = placed;
+    newFlight.contents = contents;
     newFlight.start = GetTickCount64();
     bool isMoving = false;
-    for (const LeafRect& target : placed) {
+    for (size_t i = 0; i < placed.size(); i++) {
+      const LeafRect& target = placed[i];
+      const auto lastDrawn = LastDrawn().find(contents[i]);
       const Rect onScreen = before[target.leaf];
-      const Rect from = motion::Empty(onScreen)
-                            ? motion::EntryRect(target.rect, before)
-                            : onScreen;
+      Rect from = onScreen;
+      if (lastDrawn != LastDrawn().end()) {
+        from = lastDrawn->second;
+      } else if (motion::Empty(onScreen)) {
+        from = motion::EntryRect(target.rect, before);
+      }
       newFlight.from.push_back({target.leaf, from});
       isMoving = isMoving || !motion::Same(from, target.rect);
     }
@@ -130,6 +176,7 @@ inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
       if (hasFlight) {
         Flights().erase(flight);
       }
+      Remember(contents, placed);
       return;
     }
     flight = Flights().insert_or_assign(mcv, std::move(newFlight)).first;
@@ -142,6 +189,7 @@ inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
   const bool hasLanded = progress >= 1.0;
   if (hasLanded) {
     Flights().erase(flight);
+    Remember(contents, placed);
     return;
   }
   const double eased = motion::Ease(progress);
@@ -149,6 +197,7 @@ inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
     placed[i].rect =
         motion::Lerp(flight->second.from[i].rect, placed[i].rect, eased);
   }
+  Remember(contents, placed);
 }
 
 // Forget `mcv`'s flight, so the next layout starts a fresh one from where its

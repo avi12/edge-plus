@@ -173,9 +173,8 @@ inline int NeighbourLeaf(const Node& tree, int closing) {
 
 // Close pane `pane` of a split of three or more: only that pane's tab closes,
 // its siblings share its space in proportion, and the rest of the layout stays.
-// Containers after the closed one are re-fed one slot earlier, so each is first
-// put back where its tab was on screen; the transition then carries every pane
-// to its new place. Returns false to leave a two-pane split to Edge. UI thread.
+// Containers after the closed one are re-fed one slot earlier; the transition
+// eases every pane from where its tab was drawn to its new place. Returns false to leave a two-pane split to Edge. UI thread.
 inline bool ClosePane(void* mcv, int pane) {
   void* browserView = mcv ? edge::McvBrowserView(mcv) : nullptr;
   void* tsm = browserView ? edge::TabStripModelOf(edge::BrowserOf(browserView))
@@ -193,12 +192,6 @@ inline bool ClosePane(void* mcv, int pane) {
       edge::ContainerWebContents(edge::McvContainerAt(mcv, pane));
   const void* activeContents =
       edge::ContainerWebContents(edge::McvContainerAt(mcv, nextActiveLeaf));
-  std::vector<Rect> onScreen;
-  onScreen.reserve(static_cast<size_t>(memberCount));
-  for (int i = 0; i < memberCount; i++) {
-    onScreen.push_back(edge::ViewBounds(edge::McvContainerAt(mcv, i)));
-  }
-
   const int remaining =
       split_data::CloseMember(tsm, closingContents, activeContents);
   if (remaining == 0) {
@@ -206,12 +199,10 @@ inline bool ClosePane(void* mcv, int pane) {
   }
   RemovePane(tree, pane);
   Trees()[mcv] = tree;
-  for (int i = pane; i < remaining; i++) {
-    edge::SetViewBounds(edge::McvContainerAt(mcv, i), onScreen[i + 1]);
-  }
-  anim::Restart(mcv);
+  anim::ForgetTab(closingContents);
+  // Laid out on Edge's own schedule, after it re-feeds the containers; each
+  // pane then eases from where its tab was (anim::LastDrawn).
   edge::InvalidateLayout(mcv);
-  edge::LayoutImmediately(mcv);
   Log("[close] pane %d closed; %d panes remain", pane, remaining);
   return true;
 }

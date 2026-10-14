@@ -119,12 +119,6 @@ inline void McvUpdateBorders(void* mcv) {
       At(rva::MultiContentsView_UpdateContentsBorderAndOverlay))(mcv);
 }
 
-// Move a view now (its children re-lay out against the new size).
-inline void SetViewBounds(void* view, const Rect& bounds) {
-  using SetBoundsFn = void(__fastcall*)(void*, const Rect*);
-  reinterpret_cast<SetBoundsFn>(At(rva::View_SetBoundsRect))(view, &bounds);
-}
-
 inline void InvalidateLayout(void* view) {
   using Fn = void(__fastcall*)(void*);
   reinterpret_cast<Fn>(At(rva::View_InvalidateLayout))(view);
