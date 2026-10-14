@@ -1,7 +1,8 @@
 // hooks.h — MinHook plumbing and the detours, wiring the modules together.
 // One concern: intercept Edge's split methods and delegate to panes/geometry/menu.
 // Every detour is gated so a stock (<=2) split runs the original untouched; panes
-// grow only on an explicit directional-add command (menu.h), never automatically.
+// grow only on an explicit directional-add command (menu.h, control.h), never
+// automatically.
 #pragma once
 #include <cstdint>
 #include "MinHook.h"
@@ -19,6 +20,12 @@ namespace fixedge::hooks {
 
 using namespace fixedge::edge155;
 
+// Each 2-pane CHECK that InstallAll NOPs is a `jcc rel32` (0F 8x + a 4-byte
+// offset; see offsets.h).
+inline constexpr size_t kCheckJumpLength = 6;
+// SetWebContentsAtIndex's `cmp index, 2` becomes `cmp index, 0xff`.
+inline constexpr uint8_t kLiftedIndexCap = 0xff;
+
 // MultiContentsView::SetWebContentsAtIndex — the feeder's one call. For a grown
 // split (index >= the current container count) build the missing container(s)
 // first, then run the original. The index<2 guard is lifted at install (see the
@@ -26,53 +33,56 @@ using namespace fixedge::edge155;
 // unaffected.
 using SetWc_t = void*(__fastcall*)(void*, void*, uint32_t);
 inline SetWc_t o_setwc = nullptr;
-inline void* __fastcall h_setwc(void* mcv, void* web_contents, uint32_t index) {
-  if (index >= edge::McvCount(mcv)) {
+inline void* __fastcall h_setwc(void* mcv, void* webContents, uint32_t index) {
+  const bool shouldBuildContainers = index >= edge::McvCount(mcv);
+  if (shouldBuildContainers) {
     Log("[grow] feeder wants index %u; count %llu - building container(s)",
         index, static_cast<unsigned long long>(edge::McvCount(mcv)));
     while (edge::McvCount(mcv) <= index) {
-      if (!panes::AddContainer(mcv)) {
+      const bool isAdded = panes::AddContainer(mcv);
+      if (!isAdded) {
         break;
       }
     }
   }
-  void* r = o_setwc(mcv, web_contents, index);
+  void* result = o_setwc(mcv, webContents, index);
   // Every pane in a split is on-screen, but Edge only force-paints the ones it
   // natively tracks; a fed background member stays blank until shown. Show it so
   // panes 2+ (and re-fed members) actually paint. Harmless for the active tab.
-  if (web_contents) {
-    edge::WebContentsWasShown(web_contents);
+  if (webContents) {
+    edge::WebContentsWasShown(webContents);
     // Edge only watches the first and last member for hover; watch every pane.
-    edge::ListenSplitInput(web_contents);
+    edge::ListenSplitInput(webContents);
   }
-  panes::EnsureControlButtons(mcv,
-                              static_cast<int>(index));  // pane 3+ needs a bar
-  grip::EnsureGrips(mcv);  // and every pane of a grown split a drag grip
-  return r;
+  // Pane 3+ needs a hover bar, and every pane of a grown split a drag grip.
+  panes::EnsureControlButtons(mcv, static_cast<int>(index));
+  grip::EnsureGrips(mcv);
+  return result;
 }
 
 // LayoutManagerBase::CalculateProposedLayout — `self` is the subobject at
-// MCV+0x340; `avail` is a const SizeBounds& {width@0, has@4, height@8, has@0xc}.
-// Records the active split's MCV (so a menu command knows what to grow) and tiles
-// N panes once the split has grown past two.
+// MCV+0x340; `sizeBounds` is a const SizeBounds& {width@0, has@4, height@8,
+// has@0xc}. Records the active split's MCV (so a menu command knows what to
+// grow) and tiles N panes once the split has grown past two.
 using Calc_t = void*(__fastcall*)(void*, void*, void*);
 inline Calc_t o_calc = nullptr;
-inline void* __fastcall h_calc(void* self, void* out, void* avail) {
+inline void* __fastcall h_calc(void* self, void* out, void* sizeBounds) {
   void* mcv = edge::McvFromLayoutBase(self);
   g_activeMcv = mcv;
-  const bool bounded = edge::Field<uint8_t>(avail, 0x4) == 1 &&
-                       edge::Field<uint8_t>(avail, 0xc) == 1;
-  const int width = edge::Field<int32_t>(avail, 0x0),
-            height = edge::Field<int32_t>(avail, 0x8);
+  const bool isBounded = edge::Field<uint8_t>(sizeBounds, 0x4) == 1 &&
+                         edge::Field<uint8_t>(sizeBounds, 0xc) == 1;
+  const int width = edge::Field<int32_t>(sizeBounds, 0x0);
+  const int height = edge::Field<int32_t>(sizeBounds, 0x8);
   // Track the content size on every pass (native too) so a resize snaps.
-  const bool resized = bounded && anim::NoteHost(mcv, width, height);
-  if (edge::McvCount(mcv) <= 2 || !bounded) {
-    return o_calc(self, out, avail);  // native 1-2 containers
+  const bool isResized = isBounded && anim::NoteHost(mcv, width, height);
+  const bool isNativeLayout = edge::McvCount(mcv) <= 2 || !isBounded;
+  if (isNativeLayout) {
+    return o_calc(self, out, sizeBounds);
   }
   // The MCV was grown past two containers. Tile exactly as many as the live split
   // has members (1 once it has been collapsed); surplus containers are hidden.
-  const int panes = edge::McvActiveSplitPanes(mcv);
-  return geometry::TilePanes(mcv, out, width, height, panes, resized);
+  const int paneCount = edge::McvActiveSplitPanes(mcv);
+  return geometry::TilePanes(mcv, out, width, height, paneCount, isResized);
 }
 
 // MultiContentsView::SetActiveIndex — Edge CHECKs index < 2 (int3 when a pane
@@ -84,17 +94,20 @@ using SetActive_t = void(__fastcall*)(void*, int);
 inline SetActive_t o_set_active = nullptr;
 inline void __fastcall h_set_active(void* mcv, int index) {
   const int count = static_cast<int>(edge::McvCount(mcv));
-  if (count <= 2) {
+  const bool isStockSplit = count <= 2;
+  if (isStockSplit) {
     return o_set_active(mcv, index);
   }
-  if (index < 0 || index >= count ||
-      !edge::ViewGetVisible(edge::McvContainerAt(mcv, index))) {
-    Log("[active] ignored SetActiveIndex(%d) of %d", index,
-        count);  // Edge would CHECK-crash
+  const bool isVisiblePane =
+      index >= 0 && index < count &&
+      edge::ViewGetVisible(edge::McvContainerAt(mcv, index));
+  if (!isVisiblePane) {
+    // Edge would CHECK-crash on it.
+    Log("[active] ignored SetActiveIndex(%d) of %d", index, count);
     return;
   }
   edge::Field<int32_t>(mcv, off::MCV_active_index) = index;
-  for (int i = 0; i < count; ++i) {
+  for (int i = 0; i < count; i++) {
     edge::Field<uint8_t>(edge::ContainerWebView(edge::McvContainerAt(mcv, i)),
                          off::CWV_primary_flag) = i == index ? 1 : 0;
   }
@@ -117,7 +130,8 @@ inline ButtonCaptureLost_t o_capture_lost = nullptr;
 inline bool __fastcall h_pressed(void* button, const void* event) {
   void* mcv = nullptr;
   int pane = -1;
-  if (!grip::Locate(button, &mcv, &pane)) {
+  const bool isGrip = grip::Locate(button, &mcv, &pane);
+  if (!isGrip) {
     return o_pressed(button, event);
   }
   drag::Begin(mcv, pane, edge::EventRootLocation(event));
@@ -148,9 +162,11 @@ inline void __fastcall h_capture_lost(void* button) {
 template <class T>
 inline bool Install(uintptr_t rva, void* detour, T** original,
                     const char* name) {
-  if (MH_CreateHook(edge::At(rva), detour,
-                    reinterpret_cast<void**>(original)) != MH_OK ||
-      MH_EnableHook(edge::At(rva)) != MH_OK) {
+  const bool isHooked =
+      MH_CreateHook(edge::At(rva), detour,
+                    reinterpret_cast<void**>(original)) == MH_OK &&
+      MH_EnableHook(edge::At(rva)) == MH_OK;
+  if (!isHooked) {
     Log("[err] hook %s failed", name);
     return false;
   }
@@ -159,7 +175,8 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
 }
 
 inline bool InstallAll() {
-  if (MH_Initialize() != MH_OK) {
+  const bool isInitialized = MH_Initialize() == MH_OK;
+  if (!isInitialized) {
     Log("[err] MH_Initialize failed");
     return false;
   }
@@ -194,18 +211,20 @@ inline bool InstallAll() {
   // life of the process (never restored on unload): they point at nothing of
   // ours, and a split still grown past two when this DLL unloads (hot-reload or
   // toggle-off) would otherwise hit a CHECK as soon as Edge touches pane 3+.
-  const uint8_t guard_was =
-      edge::PatchByte(rva::SetWebContentsAtIndex_guard_imm, 0xff);
-  Log("[patch] SetWebContentsAtIndex guard %u -> 0xff", guard_was);
-  uint8_t was[6] = {};
-  edge::PatchNop(rva::SplitA11yLabel_paneidx_jne, 6,
-                 was);  // a11y label int3 at index >= 2
-  Log("[patch] a11y pane-index check NOPed (was 0x%02x 0x%02x)", was[0],
-      was[1]);
-  edge::PatchNop(rva::SetActiveIndex_index_jae, 6,
-                 was);  // SetActiveIndex int3 at index >= 2
-  Log("[patch] SetActiveIndex index check NOPed (was 0x%02x 0x%02x)", was[0],
-      was[1]);
+  const uint8_t previousGuard =
+      edge::PatchByte(rva::SetWebContentsAtIndex_guard_imm, kLiftedIndexCap);
+  Log("[patch] SetWebContentsAtIndex guard %u -> 0xff", previousGuard);
+  uint8_t previousBytes[kCheckJumpLength] = {};
+  // The a11y label's int3 at index >= 2.
+  edge::PatchNop(rva::SplitA11yLabel_paneidx_jne, kCheckJumpLength,
+                 previousBytes);
+  Log("[patch] a11y pane-index check NOPed (was 0x%02x 0x%02x)",
+      previousBytes[0], previousBytes[1]);
+  // SetActiveIndex's int3 at index >= 2.
+  edge::PatchNop(rva::SetActiveIndex_index_jae, kCheckJumpLength,
+                 previousBytes);
+  Log("[patch] SetActiveIndex index check NOPed (was 0x%02x 0x%02x)",
+      previousBytes[0], previousBytes[1]);
   control::Install();  // the add-pane control channel (UI-thread trigger)
   return true;
 }

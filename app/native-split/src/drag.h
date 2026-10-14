@@ -29,16 +29,17 @@ struct Session {
   Point pressedAt{};  // window DIPs
   dock::Plan plan;    // what releasing now would do
 };
-inline Session g;
+inline Session g_session;
 
 inline bool IsActive() {
-  return g.isPressed || g.isDragging;
+  return g_session.isPressed || g_session.isDragging;
 }
 
 // --- coordinates: the window's DIPs <-> the split's DIPs <-> screen pixels ---
 
 inline float Scale() {
-  return static_cast<float>(GetDpiForWindow(g_window)) / 96.f;
+  return static_cast<float>(GetDpiForWindow(g_window)) /
+         USER_DEFAULT_SCREEN_DPI;
 }
 
 inline Point RootToSplit(void* mcv, Point point) {
@@ -48,8 +49,8 @@ inline Point RootToSplit(void* mcv, Point point) {
 
 // A rect in the split's DIPs -> screen pixels (for the preview window).
 inline Rect SplitToScreen(void* mcv, const Rect& rect) {
-  Point topLeft{rect.x, rect.y},
-      bottomRight{rect.x + rect.width, rect.y + rect.height};
+  Point topLeft{rect.x, rect.y};
+  Point bottomRight{rect.x + rect.width, rect.y + rect.height};
   void* root = edge::ViewRoot(mcv);
   edge::ConvertPoint(mcv, root, &topLeft);
   edge::ConvertPoint(mcv, root, &bottomRight);
@@ -67,60 +68,69 @@ inline Rect SplitToScreen(void* mcv, const Rect& rect) {
 }
 
 inline overlay::Style StyleOf(dock::Zone zone) {
-  return zone == dock::Zone::kRootEdge ? overlay::Style::kRoot
-         : zone == dock::Zone::kSwap   ? overlay::Style::kSwap
-                                       : overlay::Style::kPane;
+  switch (zone) {
+    case dock::Zone::kRootEdge:
+      return overlay::Style::kRoot;
+    case dock::Zone::kSwap:
+      return overlay::Style::kSwap;
+    default:
+      return overlay::Style::kPane;
+  }
 }
 
 // --- the session -----------------------------------------------------------
 
 // Escape / lost capture / teardown: end without committing.
 inline void Cancel() {
-  const bool wasDragging = g.isDragging;
-  g = Session{};
+  const bool wasDragging = g_session.isDragging;
+  g_session = Session{};
   overlay::Hide();
   if (wasDragging) {
     Log("[drag] cancelled");
   }
 }
 
-// The grip of `pane` in `mcv` was pressed at `root` (window DIPs).
-inline void Begin(void* mcv, int pane, Point root) {
-  g = Session{};
-  g.isPressed = true;
-  g.mcv = mcv;
-  g.pane = pane;
-  g.pressedAt = root;
+// The grip of `pane` in `mcv` was pressed at `rootLocation` (window DIPs).
+inline void Begin(void* mcv, int pane, Point rootLocation) {
+  g_session = Session{};
+  g_session.isPressed = true;
+  g_session.mcv = mcv;
+  g_session.pane = pane;
+  g_session.pressedAt = rootLocation;
   Log("[drag] grip pressed on pane %d", pane);
 }
 
-// The pointer moved to `root` (window DIPs) with the grip held.
-inline void Move(Point root) {
+// The pointer moved to `rootLocation` (window DIPs) with the grip held.
+inline void Move(Point rootLocation) {
   if (!IsActive()) {
     return;
   }
-  if (!g.isDragging) {
+  if (!g_session.isDragging) {
     const float scale = Scale();
-    const int movedX =
-        static_cast<int>(std::abs(root.x - g.pressedAt.x) * scale);
-    const int movedY =
-        static_cast<int>(std::abs(root.y - g.pressedAt.y) * scale);
+    const int movedX = static_cast<int>(
+        std::abs(rootLocation.x - g_session.pressedAt.x) * scale);
+    const int movedY = static_cast<int>(
+        std::abs(rootLocation.y - g_session.pressedAt.y) * scale);
     const bool isWithinDragThreshold = movedX < GetSystemMetrics(SM_CXDRAG) &&
                                        movedY < GetSystemMetrics(SM_CYDRAG);
     if (isWithinDragThreshold) {
       return;
     }
-    g.isDragging = true;
-    Log("[drag] dragging pane %d", g.pane);
+    g_session.isDragging = true;
+    Log("[drag] dragging pane %d", g_session.pane);
   }
-  const Node tree = geometry::LiveTree(g.mcv, edge::McvActiveSplitPanes(g.mcv));
-  g.plan = dock::Resolve(tree, geometry::SplitArea(g.mcv),
-                         RootToSplit(g.mcv, root), g.pane, g.plan);
-  if (g.plan.zone == dock::Zone::kNone) {
-    overlay::Hide();
+  const Node tree = geometry::LiveTree(
+      g_session.mcv, edge::McvActiveSplitPanes(g_session.mcv));
+  g_session.plan = dock::Resolve(tree, geometry::SplitArea(g_session.mcv),
+                                 RootToSplit(g_session.mcv, rootLocation),
+                                 g_session.pane, g_session.plan);
+  const bool hasDropTarget = g_session.plan.zone != dock::Zone::kNone;
+  if (hasDropTarget) {
+    overlay::Show(g_window,
+                  SplitToScreen(g_session.mcv, g_session.plan.preview),
+                  StyleOf(g_session.plan.zone));
   } else {
-    overlay::Show(g_window, SplitToScreen(g.mcv, g.plan.preview),
-                  StyleOf(g.plan.zone));
+    overlay::Hide();
   }
   SetCursor(LoadCursorW(nullptr, reinterpret_cast<LPCWSTR>(IDC_SIZEALL)));
 }
@@ -130,11 +140,12 @@ inline void Release() {
   if (!IsActive()) {
     return;
   }
-  const bool isDropping = g.isDragging && g.plan.zone != dock::Zone::kNone;
-  void* mcv = g.mcv;
-  dock::Plan plan = std::move(g.plan);
-  const int pane = g.pane;
-  g = Session{};
+  const bool isDropping =
+      g_session.isDragging && g_session.plan.zone != dock::Zone::kNone;
+  void* mcv = g_session.mcv;
+  dock::Plan plan = std::move(g_session.plan);
+  const int pane = g_session.pane;
+  g_session = Session{};
   overlay::Hide();
   if (!isDropping) {
     Log("[drag] released pane %d with no drop target", pane);
@@ -142,8 +153,8 @@ inline void Release() {
   }
   Trees()[mcv] = std::move(plan.result);
   edge::InvalidateLayout(mcv);
-  edge::LayoutImmediately(
-      mcv);  // a pure tree edit: force the re-tile (and its animation)
+  // A pure tree edit: force the re-tile (and its animation).
+  edge::LayoutImmediately(mcv);
   Log("[drag] dropped pane %d: zone=%d target=%d dir=%d", pane,
       static_cast<int>(plan.zone), plan.target,
       static_cast<int>(plan.direction));
