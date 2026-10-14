@@ -412,6 +412,32 @@ inline bool Detach(Node& root, int leaf) {
   return true;
 }
 
+// Every leaf id above `removed` moves down by one: the containers after a closed
+// pane's are re-fed one slot earlier, and the tree follows its tabs.
+inline void RenumberAfterRemoval(Node& node, int removed) {
+  if (node.isLeaf) {
+    const bool isAfterRemoved = node.leaf > removed;
+    if (isAfterRemoved) {
+      node.leaf--;
+    }
+    return;
+  }
+  for (Node& child : node.children) {
+    RenumberAfterRemoval(child, removed);
+  }
+}
+
+// Closing pane `leaf`: its siblings share its space in proportion (a sibling
+// in another split is untouched), and later leaf ids close the gap. Returns
+// false if the leaf is missing or is the last pane.
+inline bool RemovePane(Node& root, int leaf) {
+  if (!Detach(root, leaf)) {
+    return false;
+  }
+  RenumberAfterRemoval(root, leaf);
+  return true;
+}
+
 // Move child `from` of `parent` to insert-before position `to` (a pre-removal
 // index), carrying its weight.
 inline void MoveChild(Node& parent, size_t from, size_t to) {

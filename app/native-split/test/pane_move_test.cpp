@@ -231,6 +231,37 @@ void RunChecks() {
     Check(Dump(tree) == "H[2(1.5) 1(0.75) 0(0.75)]",
           "swap keeps sizes with positions", Dump(tree));
   }
+  // Closing the bottom pane of V[H[0 1 2] 3]: the top row takes the full
+  // height.
+  {
+    Node tree = FlatTree(4, Axis::kHorizontal);
+    MovePaneToRootEdge(tree, 3, Direction::kDown);
+    Check(RemovePane(tree, 3), "close bottom pane");
+    Check(Dump(tree) == "H[0(1) 1(1) 2(1)]", "top row fills the split",
+          Dump(tree));
+  }
+  // Closing the top-right pane: the other two top panes split the row in
+  // halves, the bottom pane is untouched, and the bottom pane's id (3) closes
+  // the gap (2) because its container is re-fed one slot earlier.
+  {
+    Node tree = FlatTree(4, Axis::kHorizontal);
+    MovePaneToRootEdge(tree, 3, Direction::kDown);
+    Check(RemovePane(tree, 2), "close top-right pane");
+    Check(Dump(tree) == "V[H[0(1) 1(1)](1) 2(1)]",
+          "top halves, bottom unchanged", Dump(tree));
+    Check(Layout(tree, 1200, 800) ==
+              "0:[0,0,600,400] 1:[600,0,600,400] 2:[0,400,1200,400] ",
+          "close top-right geometry", Layout(tree, 1200, 800));
+  }
+  // Closing a pane keeps the proportions the others were resized to.
+  {
+    Node tree = Weighted(3, Axis::kHorizontal, {2.f, 1.f, 1.f});
+    Check(RemovePane(tree, 2), "close in a resized row");
+    Check(Dump(tree) == "H[0(1.33) 1(0.667)]", "resized ratio 2:1 kept",
+          Dump(tree));
+    Node single = MakeLeaf(0);
+    Check(!RemovePane(single, 0), "the last pane is never removed");
+  }
   // Random edits: the pane set never changes, the tree stays canonical, and a
   // second Normalize changes nothing.
   {
