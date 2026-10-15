@@ -508,9 +508,10 @@ inline constexpr uintptr_t ControlButtons_close_button = 0x350;
 enum class ControlMenuCommand : int {
   kSwitchToVertical = 0,    // SetVerticalSplitStateForTab(active, true)
   kSwitchToHorizontal = 1,  // SetVerticalSplitStateForTab(active, false)
-  kOpenInNewTab = 2,        // copies the first pane's page, or (any other
-                            // pane's ⋯) the last pane's: SplitAction 1 / 0
-  kSeparate = 3,            // SplitAction kDissolveKeepActive / KeepLast
+  kOpenInNewTab = 2,        // SplitAction kCopyFirstToNewTab from the first
+                            // pane's ⋯, else kCopyLastToNewTab
+  kSeparate = 3,            // SplitAction kDissolveKeepFirst from the first
+                            // pane's ⋯, else kDissolveKeepLast
   kSendFeedback = 4,        // Edge's feedback dialog
   kSwitchSides = 5,         // SplitAction kReverseSides
   kLinkMode = 6,            // the "open left links to the right" toggle
@@ -523,15 +524,16 @@ inline constexpr uint32_t TSM_close_user_gesture = 1;
 inline constexpr size_t TSM_gesture_details_size = 16;
 
 // --- SplitWindowController::DoActionToSplitWindow's `action` ---
-// Its 6-way jump table, mapped in docs/re/collapse.md §5. The names are ours:
-// Edge's own enum was not located.
+// Its 6-way jump table, mapped in docs/re/collapse.md §5. Every action works on
+// the split's first tab, or its last (0 and 3); the WebContents it is handed is
+// only checked for null. The names are ours: Edge's own enum was not located.
 enum class SplitAction : int {
-  kCopyLastToNewTab = 0,    // kCopyToNewTab, on the split's last tab
-  kCopyToNewTab = 1,        // the tab's page, copied into a new background tab
-  kDissolveKeepActive = 2,  // dissolve, the active pane stays in front
-  kDissolveKeepLast = 3,    // dissolve, the split's last tab comes to the front
-  kCloseActive = 4,         // CLOSES the active tab — never for collapse
-  kReverseSides = 5,        // ReverseTabsInSplit
+  kCopyLastToNewTab = 0,   // the last tab's page, into a new background tab
+  kCopyFirstToNewTab = 1,  // the first tab's page, into a new background tab
+  kDissolveKeepFirst = 2,  // dissolve; the first tab comes to the front
+  kDissolveKeepLast = 3,   // dissolve; the last tab comes to the front
+  kCloseFirst = 4,         // CLOSES the split's first tab
+  kReverseSides = 5,       // ReverseTabsInSplit: the first tab one step on
 };
 
 // --- gfx::VectorIcon path command ids in this build ---

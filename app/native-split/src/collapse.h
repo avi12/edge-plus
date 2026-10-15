@@ -1,9 +1,13 @@
-// collapse.h — the split button's "off" direction. One concern: when a split is
-// collapsed, keep the ACTIVE pane (fill the whole window) and eject the other
-// panes back to standalone tabs. Edge already does exactly this natively via
-// DoActionToSplitWindow's kDissolveKeepActive; kDissolveKeepLast is the same but
-// keeps the LAST tab. The focused-close path sends the latter, so we clamp it to
-// the former. No tab is ever closed on this path (docs/re/collapse.md).
+// collapse.h — the split button's "off" direction. One concern: which tab stays
+// in front when Edge dissolves a split (the toolbar's split button while split,
+// the ⋯ menu's "Separate two tabs"). Every member goes back to the strip as a
+// standalone tab, and DoActionToSplitWindow brings the split's first tab to the
+// front (kDissolveKeepFirst), or its last when the second pane has focus
+// (kDissolveKeepLast); the latter is clamped to the former. This was meant to
+// keep the ACTIVE pane, but the action ignores the page it is handed, and
+// keeping a third pane or later in front also needs the view re-fed: Edge's
+// two-pane teardown then shows the second pane's page. No tab is ever closed
+// on this path (docs/re/collapse.md).
 #pragma once
 #include "edge.h"
 
@@ -21,9 +25,9 @@ inline void* __fastcall h_do_action(void* controller, void* webContents,
   const bool isKeepingLastTab =
       action == static_cast<int>(off::SplitAction::kDissolveKeepLast);
   if (isKeepingLastTab) {
-    Log("[collapse] action 3 -> 2 (keep the active pane, eject the rest as "
-        "tabs)");
-    action = static_cast<int>(off::SplitAction::kDissolveKeepActive);
+    Log("[collapse] action 3 -> 2 (the first pane stays in front, the rest "
+        "become tabs)");
+    action = static_cast<int>(off::SplitAction::kDissolveKeepFirst);
   }
   return o_do_action(controller, webContents, action);
 }
