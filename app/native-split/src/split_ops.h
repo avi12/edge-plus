@@ -16,22 +16,6 @@ namespace fixedge::split_ops {
 
 using namespace fixedge::edge155;
 
-// Index of the active (primary) pane, else 0. The primary flag lives on each
-// container's ContentsWebView (set when Edge makes that pane active).
-inline int ActiveLeaf(void* mcv) {
-  const int count = static_cast<int>(edge::McvCount(mcv));
-  for (int i = 0; i < count; i++) {
-    void* container = edge::McvContainerAt(mcv, i);
-    const bool isPrimaryPane =
-        container && edge::Field<uint8_t>(edge::ContainerWebView(container),
-                                          off::CWV_primary_flag) == 1;
-    if (isPrimaryPane) {
-      return i;
-    }
-  }
-  return 0;
-}
-
 // The pane (container index) showing `webContents`, or kNoLeaf.
 inline int LeafShowing(void* mcv, const void* webContents) {
   const int count = static_cast<int>(edge::McvCount(mcv));
@@ -43,6 +27,18 @@ inline int LeafShowing(void* mcv, const void* webContents) {
     }
   }
   return kNoLeaf;
+}
+
+// Index of the active pane, the one showing the strip's active tab, else 0.
+// The panes' primary flags can lag the strip: Edge may activate a pane while a
+// rebuild has it hidden, and hooks.h ignores that, so a hidden pane keeps the
+// flag.
+inline int ActiveLeaf(void* mcv) {
+  void* tsm = edge::McvTabStripModel(mcv);
+  void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
+  const int leaf =
+      active ? LeafShowing(mcv, edge::TabContents(active)) : kNoLeaf;
+  return leaf != kNoLeaf ? leaf : 0;
 }
 
 // Give a newly built pane content from a background tab (from the strip tail, so

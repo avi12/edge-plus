@@ -399,6 +399,9 @@ inline constexpr uintptr_t TSM_active_tab = 0x98;
 inline constexpr uintptr_t TABCOLL_count = 0x18;
 
 // --- TabModel virtual-table slots (docs/re/split-grow-impl.md) ---
+// WebContents* TabInterface::GetContents(this) (as GetCurrentMainWebContents
+// calls it on a split's first member).
+inline constexpr uintptr_t TABMODEL_vtbl_GetContents = 0x18;
 // GetSplit(this, out optional<SplitTabId>)
 inline constexpr uintptr_t TABMODEL_vtbl_GetSplit = 0x118;
 inline constexpr uintptr_t TABMODEL_vtbl_IsSplit = 0x108;  // bool IsSplit(this)

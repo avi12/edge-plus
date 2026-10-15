@@ -201,6 +201,11 @@ inline void* ActiveTab(void* tsm) {
 }
 
 // TabModel virtuals, called through the tab's vtable.
+inline void* TabContents(void* tab) {
+  using Fn = void*(__fastcall*)(void*);
+  return reinterpret_cast<Fn>(
+      VirtualFunction(tab, off::TABMODEL_vtbl_GetContents))(tab);
+}
 inline bool TabIsSplit(void* tab) {
   using Fn = bool(__fastcall*)(void*);
   return reinterpret_cast<Fn>(VirtualFunction(tab, off::TABMODEL_vtbl_IsSplit))(
