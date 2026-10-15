@@ -91,9 +91,48 @@ inline void UnregisterHotKeys(HWND hwnd) {
   }
 }
 
-// Everything that must be undone on the UI thread before unload: the drag
-// session, the preview window, the grips, the animation timer and the hot-keys.
+// EnumWindows callback: break up every grown split in each of this process's
+// browser windows (all on this UI thread), so none outlives the DLL. Switching
+// the feature off leaves the user with plain tabs, not a split stock Edge would
+// mis-render.
+inline BOOL CALLBACK BreakUpWindowSplits(HWND hwnd, LPARAM /*unused*/) {
+  DWORD processId = 0;
+  GetWindowThreadProcessId(hwnd, &processId);
+  const bool isOurProcess = processId == GetCurrentProcessId();
+  if (!isOurProcess) {
+    return TRUE;
+  }
+  wchar_t className[kClassNameLength] = {};
+  GetClassNameW(hwnd, className, kClassNameLength);
+  const bool isBrowserWindow = wcscmp(className, kBrowserWindowClass) == 0;
+  if (!isBrowserWindow) {
+    return TRUE;
+  }
+  void* mcv = edge::McvForWindow(hwnd);
+  void* tsm = mcv ? edge::McvTabStripModel(mcv) : nullptr;
+  if (!tsm) {
+    return TRUE;
+  }
+  const int dissolved = split_data::BreakUpGrownSplits(tsm);
+  if (dissolved > 0) {
+    // Nudge Edge to re-evaluate its split view now the active tab has left the
+    // split, so the window starts collapsing before the hooks come off. The
+    // grown MCV keeps surplus containers, so the final full-width layout may
+    // still settle on the user's next interaction with the window.
+    void* active = edge::ActiveTab(tsm);
+    edge::MaybeUpdateSplitView(edge::McvBrowserView(mcv),
+                               active ? edge::TabContents(active) : nullptr);
+    ForgetTree(mcv);
+  }
+  return TRUE;
+}
+
+// Everything that must be undone on the UI thread before unload: first break
+// every grown split back into standalone tabs (while the hooks still render the
+// collapse), then end the drag session, the preview window, the grips, the
+// animation timer and the hot-keys.
 inline void Teardown(HWND hwnd) {
+  EnumWindows(BreakUpWindowSplits, 0);
   drag::Cancel();
   tabdrag::Cancel();
   overlay::Remove();

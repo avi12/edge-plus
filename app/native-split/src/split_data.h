@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <vector>
 #include "edge.h"
 
 namespace fixedge::split_data {
@@ -518,6 +519,62 @@ inline bool CollapseSplit(void* tsm) {
   edge::RemoveSplitImpl(tsm, split.token, kTransactionalRemove);
   Log("[collapse] dissolved split; active tab fills the window");
   return true;
+}
+
+// A split's 16-byte id, by value, so grown splits can be collected before any
+// is dissolved (dissolving one shifts tab indices, but never another's id).
+struct SplitToken {
+  uint8_t bytes[16];
+};
+
+inline bool IsSameToken(const SplitToken& token, const uint8_t* other) {
+  return std::memcmp(token.bytes, other, sizeof(token.bytes)) == 0;
+}
+
+// Break every split of MORE than two panes in `tsm` back into standalone tabs:
+// each member becomes its own tab (none closed), the active tab stays in front.
+// Two-pane splits are Edge's own and left untouched. Returns how many splits
+// were dissolved. Used when the feature is switched off, so no grown split
+// outlives the DLL and renders broken under stock Edge. UI thread.
+inline int BreakUpGrownSplits(void* tsm) {
+  void* root = tsm ? edge::RootCollection(tsm) : nullptr;
+  if (!root) {
+    return 0;
+  }
+  // Collect first, dissolve after: RemoveSplitImpl moves tabs, so scanning and
+  // dissolving in one pass would skip tabs.
+  std::vector<SplitToken> grownSplits;
+  const int tabCount = edge::TabCount(tsm);
+  for (int i = 0; i < tabCount; i++) {
+    void* tab = edge::GetTabAtIndexRecursive(root, i);
+    OptionalSplitId split = {};
+    edge::TabGetSplit(tab, &split);
+    if (!split.hasValue) {
+      continue;
+    }
+    const bool isSeen = std::any_of(grownSplits.begin(), grownSplits.end(),
+                                    [&](const SplitToken& seen) {
+                                      return IsSameToken(seen, split.token);
+                                    });
+    if (isSeen) {
+      continue;
+    }
+    const bool isGrownSplit =
+        edge::SplitMembers(tsm, split.token).Count() > kMinSplitMembers;
+    if (isGrownSplit) {
+      SplitToken token = {};
+      std::memcpy(token.bytes, split.token, sizeof(token.bytes));
+      grownSplits.push_back(token);
+    }
+  }
+  for (const SplitToken& token : grownSplits) {
+    edge::RemoveSplitImpl(tsm, const_cast<uint8_t*>(token.bytes),
+                          kTransactionalRemove);
+  }
+  if (!grownSplits.empty()) {
+    Log("[breakup] dissolved %zu grown split(s) into tabs", grownSplits.size());
+  }
+  return static_cast<int>(grownSplits.size());
 }
 
 }  // namespace fixedge::split_data

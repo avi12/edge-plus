@@ -91,6 +91,12 @@ inline constexpr uintptr_t TabStripModel_GetWebContentsAt = 0x101530e;
 // --- the feed pipeline (controller.md) ---
 // (BrowserView*) feeds panes
 inline constexpr uintptr_t BrowserView_ShowSplitView = 0xc93594a;
+// void BrowserView::MaybeUpdateSplitView(this, WebContents* forContents): with
+// the contents no longer in a split, runs MultiContentsView::CloseSplitView
+// (clears pane 1, hides the resize area, moves content to container 0). The
+// relayout a tab leaving a split would trigger, so a window is full-width right
+// after a split is dissolved rather than on the user's next interaction.
+inline constexpr uintptr_t BrowserView_MaybeUpdateSplitView = 0x2b58058;
 
 // --- native split data-model grow (docs/re/split-insert.md, split-grow-impl.md) ---
 // (size)->void*  (non-View new)

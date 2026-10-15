@@ -969,6 +969,15 @@ inline void* TsmForWindow(void* hwnd) {
   return browserView ? TabStripModelOf(BrowserOf(browserView)) : nullptr;
 }
 
+// Run Edge's own split-view update for `browserView` as if `webContents` just
+// changed: when that tab is no longer in a split, Edge collapses the view to
+// one full-window pane (CloseSplitView). Used after a split is dissolved.
+inline void MaybeUpdateSplitView(void* browserView, void* webContents) {
+  using Fn = void(__fastcall*)(void*, void*);
+  reinterpret_cast<Fn>(At(rva::BrowserView_MaybeUpdateSplitView))(browserView,
+                                                                  webContents);
+}
+
 // MultiContentsView from a top-level Win32 browser window handle.
 inline void* McvForWindow(void* hwnd) {
   void* auraWindow = AuraWindowForHWND(hwnd);
