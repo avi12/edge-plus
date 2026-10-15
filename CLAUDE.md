@@ -5,9 +5,8 @@ Live feature switches for Microsoft Edge (see `README.md`):
 - `app/native-split/` — C++20 DLL injected into Edge's browser process that grows
   Edge's native split view to N panes; pinned to one `msedge.dll` build
   (`src/offsets.h`), reverse-engineered in `docs/re/`
-- `app/panel/` (WinUI 3) and `app/host/` (native-messaging host, NativeAOT) — C#
-- `extension/` — the Edge extension: WXT, Svelte 5, TypeScript,
-  `@webext-core/messaging`, zod
+- `app/panel/` — the WinUI 3 panel (C#) that toggles each feature and injects the
+  DLL
 
 These rules are `avi/youtube-time-manager`'s, carried to C++ the way
 `avi/any-stt` carries them, and overridden only where C++ has a stronger
@@ -138,32 +137,19 @@ what it is, an Edge quirk being worked around, a required ordering or lifetime,
 a dead end recorded so nobody retries it. Delete comments that restate the code,
 and above all any comment that no longer matches it.
 
-# C# (`app/panel/`, `app/host/`)
+# C# (`app/panel/`)
 
 Google C# style, as `app/.editorconfig` states it (2-space indent, K&R braces,
 braces always, `PascalCase` types and members, `camelCase` locals and
 parameters). The two `if` rules above apply unchanged.
-
-# TypeScript / Svelte (`extension/`)
-
-ytm's rules apply as written there; the ones that come up here:
-
-- Use the `browser` namespace, `async` / `await`, early returns, and `for-of`
-  over `.forEach` / `.reduce`
-- `camelCase` full-word names, `SCREAMING_SNAKE_CASE` module constants, `el`
-  prefix for elements, `is` prefix for booleans (positive)
-- Strings that form a closed set are an enum; numbers are named constants
-- Validate loose data (storage, messages) with a zod schema, not hand-rolled checks
-- Never a ternary inside `$derived` — use `$derived.by` with `if` / `else`
 
 # Linting
 
 After each C++ or C# change, run `pwsh tools/lint.ps1` and fix what it reports
 (`-Fix` applies clang-format, clang-tidy's fixes and dotnet format). The gate:
 clang-format (`.clang-format`), clang-tidy (`.clang-tidy`, correctness as
-errors), a restricted-syntax pass, and dotnet format for both C# projects.
+errors), a restricted-syntax pass, and dotnet format for the panel.
 `pwsh tools/lint.ps1 -InstallHook` gates every commit on its staged C++.
-For the extension, `pnpm -C extension svelte:check` and `pnpm -C extension test`.
 
 # Native split: build and test
 

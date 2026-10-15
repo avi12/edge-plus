@@ -1,67 +1,57 @@
 # Fix Edge
 
 Live feature switches for Microsoft Edge. A WinUI 3 panel turns each feature on
-or off, and Edge picks the change up the moment it is made - no restart, ever,
-including when the app itself is updated.
+or off, and Edge picks the change up the moment it is made — no restart, ever.
 
 ## Features
 
-- **Split into any grid** - split a tab into as many panes as you like, side by
-  side or stacked, inside the tab itself; each tab keeps its own layout, the
-  way Arc does it. Every pane has its own address bar, and dividers drag. From
-  the grid button in Edge's toolbar (presets, split right/down, merge), the
-  pane bars, or a right-click on a page or link.
-- **Tabs into panes, as many as you like** - Ctrl + click tabs in the tab strip,
-  then "Put the selected tabs in panes" in the toolbar popup, the way Arc makes
-  a split from a selection. Include a split tab and the rest join it. New panes
-  fill out a grid rather than one ever-thinner row, and "Even out into a grid"
-  re-tiles any number of panes.
-- **Move between panes** - Alt + Shift + an arrow key jumps to the pane on that
-  side.
-- **Hide the developer-mode prompt** - stops Edge asking to turn off
+- **Split into any grid** — grows Edge's *own* split view past two panes, side by
+  side or stacked, inside the tab itself; each tab keeps its own layout, the way
+  Arc does it. Every pane has its own address bar, dividers drag, and a pane's ⋯
+  menu adds a pane above / below / left / right. Loaded straight into Edge as a
+  DLL — no extension (`app/native-split`, reverse-engineered in `docs/re/`).
+- **Move between panes** — `Shift + Alt` + an arrow key focuses the pane on that
+  side, in the split you are on.
+- **Hide the developer-mode prompt** — stops Edge asking to turn off
   developer-mode extensions at startup.
-
-Why the panes are frames in a page rather than an extended Edge split view:
-[docs/edge-split-view.md](docs/edge-split-view.md).
 
 ## How it fits together
 
 ```
 app/
-  panel/      the WinUI 3 panel (fixedge.exe): one switch per feature
-  host/       the native-messaging host (fixedge-host.exe, NativeAOT)
-extension/    the Edge extension (WXT, Svelte 5, @webext-core/messaging, zod)
+  panel/         the WinUI 3 panel (fixedge.exe): one switch per feature
+  native-split/  the C++ DLL the panel injects into Edge's browser process
 ```
 
-The panel writes `%LOCALAPPDATA%\FixEdge\settings.json`; the host, started by
-Edge when the extension connects, watches it and relays every change; the
-extension switches the feature modules on and off. The feature list itself is
-`extension/src/features/catalog.json`, read by both sides.
+The panel writes `%LOCALAPPDATA%\FixEdge\settings.json` and drives each feature
+directly: the split switch injects (or ejects) `fixedge-split.dll` into Edge's
+browser process live, and hiding the developer-mode prompt is handled by the
+panel itself. The split DLL travels inside the panel exe and is unpacked beside
+the settings, so the DLL always matches the build.
 
-The panel carries the extension and the host inside itself and unpacks them
-into `%LOCALAPPDATA%\FixEdge`. A newer extension reloads itself in place; a
-newer host is swapped in by renaming the running one aside.
+Turning the split off breaks any split of three or more panes back into
+standalone tabs first, so nothing Edge can't render on its own is left behind.
 
 ## Setup
 
 ```powershell
-pnpm --dir extension install
-dotnet build app/panel -c Release      # builds the extension and the host too
+dotnet build app/panel -c Release      # builds and carries the split DLL too
 app\panel\bin\Release\net10.0-windows10.0.26100.0\win-x64\fixedge.exe
 ```
 
-Then once, in Edge: `edge://extensions` → Developer mode → Load unpacked →
-`%LOCALAPPDATA%\FixEdge\extension` (the panel offers the button and the path).
+Open the panel, open Edge, and flip the switches. There is no extension to load
+and nothing to pre-install.
 
-Split and merge have no default keys - Edge allows four, and the arrows went to
-moving between panes. Bind them at `edge://extensions/shortcuts`.
+The split DLL is pinned to one `msedge.dll` build (`app/native-split/src/offsets.h`);
+on any other build it refuses to hook and the split simply does nothing, so it is
+always safe to leave on.
 
 ## Develop
 
-In `extension/`:
+The native split DLL:
 
 ```powershell
-pnpm test           # layout and neighbour geometry, under node --test
-pnpm svelte:check   # types
-pnpm ext:dev        # WXT dev browser
+app\native-split\build.cmd       # -> build\fixedge-split.dll and inject.exe
+app\native-split\test\run.cmd    # the pure-logic unit tests
+pwsh tools\lint.ps1              # clang-format/-tidy + dotnet format
 ```
