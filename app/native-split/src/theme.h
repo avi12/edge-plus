@@ -52,6 +52,32 @@ inline bool IsOsDarkMode() {
   return usesLightTheme == 0;
 }
 
+// The new theme lands in the model, but Edge's frame and toolbar only repaint on
+// a frame change; a no-move, no-size SWP_FRAMECHANGED makes them redraw at once.
+// (When the OS light/dark flip is the trigger Edge repaints anyway; a config
+// change pushed from the panel would otherwise lag until the next interaction.)
+// The apply settles asynchronously, so we redraw on a one-shot timer that fires
+// after it has settled (the timer id is handled in control.h). The frame redraws
+// on a frame change; WM_THEMECHANGED is the signal Edge rebuilds its colors from,
+// the same one the OS light/dark flip sends — so a switch driven by that flip
+// refreshes fully, and a switch pushed from the panel refreshes the frame at
+// once and the rest on the next interaction.
+inline constexpr UINT kRepaintTimerId = 0xF1EE;
+inline constexpr UINT kRepaintDelayMs = 180;
+
+inline void ScheduleRepaint(void* hwnd) {
+  SetTimer(static_cast<HWND>(hwnd), kRepaintTimerId, kRepaintDelayMs, nullptr);
+}
+
+inline void Repaint(void* hwnd) {
+  HWND window = static_cast<HWND>(hwnd);
+  KillTimer(window, kRepaintTimerId);
+  SetWindowPos(window, nullptr, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                   SWP_FRAMECHANGED);
+  PostMessageW(window, WM_THEMECHANGED, 0, 0);
+}
+
 // Apply the theme assigned to the given mode to the window's browser, live.
 inline void Apply(void* hwnd, bool isDark) {
   void* tsm = edge::TsmForWindow(hwnd);
@@ -65,6 +91,7 @@ inline void Apply(void* hwnd, bool isDark) {
   const ThemeId& wanted = isDark ? g_darkTheme : g_lightTheme;
   if (wanted.IsEmpty()) {
     edge::ThemeUseDefault(themeService);
+    ScheduleRepaint(hwnd);
     Log("[theme] %s -> default theme", isDark ? "dark" : "light");
     return;
   }
@@ -75,6 +102,7 @@ inline void Apply(void* hwnd, bool isDark) {
     return;
   }
   edge::ThemeSetFromExtension(themeService, extension);
+  ScheduleRepaint(hwnd);
   Log("[theme] %s -> %.*s applied", isDark ? "dark" : "light",
       static_cast<int>(wanted.length), wanted.value);
 }

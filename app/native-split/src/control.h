@@ -410,6 +410,12 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
     anim::Tick();
     return 0;
   }
+  const bool isThemeRepaint =
+      message == WM_TIMER && wparam == theme::kRepaintTimerId;
+  if (isThemeRepaint) {
+    theme::Repaint(hwnd);
+    return 0;
+  }
   const bool isOurHotKey = message == WM_HOTKEY && HasBinding(wparam);
   if (isOurHotKey) {
     RunHotKey(hwnd, static_cast<HotKey>(wparam));
