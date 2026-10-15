@@ -659,6 +659,18 @@ inline void CollectLeaves(const Node& node, std::vector<int>& out) {
   }
 }
 
+// How many panes `node` tiles. Pure.
+inline int LeafCount(const Node& node) {
+  if (node.isLeaf) {
+    return 1;
+  }
+  int count = 0;
+  for (const Node& child : node.children) {
+    count += LeafCount(child);
+  }
+  return count;
+}
+
 // --- seams: where neighbouring panes meet, and dragging them -------------------
 
 // The boundary between child `index` and `index + 1` of the split at `path`

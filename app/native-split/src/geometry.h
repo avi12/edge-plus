@@ -21,11 +21,16 @@ inline Axis SplitAxis(void* mcv) {
   return edge::McvOrientation(mcv) != 0 ? Axis::kVertical : Axis::kHorizontal;
 }
 
-// The tree `mcv`'s `panes` are tiled by: the live one, else a flat equal split
-// along the split's orientation. The one rule the layout, a drag and a
-// directional add all use.
+// The tree `mcv`'s `panes` are tiled by: the live one when it tiles that many
+// panes, else a flat equal split along the split's orientation. The one rule
+// the layout, a drag and a directional add all use. The live tree is the
+// MCV's, not a tab's: a plain tab (one pane) or another split shown in the
+// same window tiles a different count and must not take the grown split's
+// geometry (a plain tab drew in the old first pane's box).
 inline Node LiveTree(void* mcv, int panes) {
-  if (const Node* live = TreeFor(mcv)) {
+  const Node* live = TreeFor(mcv);
+  const bool isLiveForPanes = live && LeafCount(*live) == panes;
+  if (isLiveForPanes) {
     return *live;
   }
   return FlatTree(panes, SplitAxis(mcv));

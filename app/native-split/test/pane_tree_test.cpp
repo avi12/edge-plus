@@ -142,6 +142,15 @@ void RunChecks() {
     Check(wide[0].rect.width == 900 && wide[1].rect.width == 300,
           "3:1 ratio preserved at 1200");
   }
+  // Leaf count: what LiveTree compares against the panes it must tile.
+  {
+    Check(LeafCount(MakeLeaf(0)) == 1, "a leaf tiles one pane");
+    Check(LeafCount(FlatTree(4, Axis::kHorizontal)) == 4,
+          "a flat split tiles its count");
+    Node tree = FlatTree(2, Axis::kHorizontal);
+    SplitPane(tree, 1, Direction::kDown, 2);
+    Check(LeafCount(tree) == 3, "a nested split counts every leaf");
+  }
   // Minimum pane size: a tiny window never collapses a pane below span/n, and
   // panes still tile exactly (no negative widths, no overflow).
   {
