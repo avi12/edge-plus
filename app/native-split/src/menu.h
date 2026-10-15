@@ -6,6 +6,7 @@
 //   - A pane bar's ⋯ (SplitWindowControlMenu): ONE "Add pane" row holding a
 //     d-pad of ↑ ↓ ← → buttons. The row itself does nothing; a click on an
 //     arrow closes the menu and adds a pane beside that pane in that direction.
+//     Edge's own items on that menu are pane_menu.h's.
 #pragma once
 #include <algorithm>
 #include <cstddef>
@@ -14,6 +15,7 @@
 #include "grip.h"
 #include "icons.h"
 #include "offer.h"
+#include "pane_menu.h"
 #include "split_ops.h"
 #include "state.h"
 
@@ -152,8 +154,8 @@ inline void __fastcall h_toggle(void* bar, void* argument2) {
 }
 
 // SplitWindowControlMenu::BuildMenuModel. It RETURNS the model it built (Run
-// hands that to PopulateMenu), so the detour must too. After Edge's own items:
-// a separator and the "Add pane" row.
+// hands that to PopulateMenu), so the detour must too. After Edge's own items
+// (fitted to the split by pane_menu.h): a separator and the "Add pane" row.
 using Build_t = void*(__fastcall*)(void*);
 inline Build_t o_build = nullptr;
 inline void* __fastcall h_build(void* menu) {
@@ -161,6 +163,7 @@ inline void* __fastcall h_build(void* menu) {
   if (!model) {
     return model;
   }
+  pane_menu::FitItems(model, g_menuMcv);
   if (!g_hasLabels) {
     BuildLabels();
   }

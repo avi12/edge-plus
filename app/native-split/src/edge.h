@@ -427,6 +427,23 @@ inline void MenuAddItem(void* model, int commandId, const U16String* label) {
                                                          label);
 }
 
+// A ui::SimpleMenuModel's items, by index (each call CHECKs the index).
+inline size_t MenuItemCount(void* model) {
+  using CountFn = size_t(__fastcall*)(void*);
+  return reinterpret_cast<CountFn>(At(rva::SimpleMenuModel_GetItemCount))(
+      model);
+}
+inline int MenuCommandIdAt(void* model, size_t index) {
+  using IdFn = int(__fastcall*)(void*, size_t);
+  return reinterpret_cast<IdFn>(At(rva::SimpleMenuModel_GetCommandIdAt))(model,
+                                                                         index);
+}
+inline void MenuRemoveItemAt(void* model, size_t index) {
+  using RemoveFn = void(__fastcall*)(void*, size_t);
+  reinterpret_cast<RemoveFn>(At(rva::SimpleMenuModel_RemoveItemAt))(model,
+                                                                    index);
+}
+
 // --- MultiContentsView field accessors (named, typed, one place each) ---------
 
 // The container vector OBJECT begins at this address (pass to ContainersEmplaceBack).

@@ -206,8 +206,9 @@ inline constexpr uintptr_t ControlButtons_ToggleContextMenu = 0xa011d00;
 // The bar's ⋯ menu: SplitWindowControlMenu. BuildMenuModel(this) builds a
 // ui::SimpleMenuModel (kept at this+0x10, delegate this+8) and RETURNS it, and
 // Run passes the return value to PopulateMenu(this, MenuItemView* root, model),
-// which creates the item views. ExecuteCommand(this, int id, int flags)
-// switches on Edge's ids 0..6; IsCommandIdEnabled returns true above 5.
+// which creates one item view per model item, so an item removed from the
+// model first never shows. ExecuteCommand(this, int id, int flags) switches on
+// off::ControlMenuCommand; IsCommandIdEnabled returns true above 5.
 inline constexpr uintptr_t SplitWindowControlMenu_BuildMenuModel = 0xa017fbc;
 inline constexpr uintptr_t SplitWindowControlMenu_PopulateMenu = 0xa017f24;
 inline constexpr uintptr_t SplitWindowControlMenu_ExecuteCommand = 0xa0186c0;
@@ -265,6 +266,12 @@ inline constexpr uintptr_t MenuItemView_ChildPreferredSizeChanged = 0xb25c8d0;
 // MenuItemView* MenuItemView::GetMenuItemByID(this, int id)
 inline constexpr uintptr_t MenuItemView_GetMenuItemByID = 0xb25e012;
 inline constexpr uintptr_t SimpleMenuModel_AddSeparator = 0x317665a;
+// size_t GetItemCount(model)
+inline constexpr uintptr_t SimpleMenuModel_GetItemCount = 0x28cf330;
+// int GetCommandIdAt(model, size_t index)
+inline constexpr uintptr_t SimpleMenuModel_GetCommandIdAt = 0x342b5b0;
+// void RemoveItemAt(model, size_t index)
+inline constexpr uintptr_t SimpleMenuModel_RemoveItemAt = 0xb65da80;
 // (tsm, int index, uint32 closeTypes); HideSplitView passes 1
 inline constexpr uintptr_t TabStripModel_CloseWebContentsAt = 0xa26f916;
 // (tsm, int index, const TabStripUserGestureDetails*)
@@ -490,6 +497,18 @@ inline constexpr int ControlButtons_more_string_id = 0x4676;
 inline constexpr int MENU_normal_separator = 0;
 // The bar's buttons (InitButtons): ⋯ @+0x340, X @+0x350.
 inline constexpr uintptr_t ControlButtons_close_button = 0x350;
+// The ⋯ menu's items (SplitWindowControlMenu). BuildMenuModel adds them in
+// this order: 2, 3, 5, then 0 or 1 (the switch to the other orientation), 6
+// (with the link-mode feature), 4.
+enum class ControlMenuCommand : int {
+  kSwitchToVertical = 0,    // SetVerticalSplitStateForTab(active, true)
+  kSwitchToHorizontal = 1,  // SetVerticalSplitStateForTab(active, false)
+  kOpenInNewTab = 2,        // SplitAction kCopyToNewTab / kCopyLastToNewTab
+  kSeparate = 3,            // SplitAction kDissolveKeepActive / KeepLast
+  kSendFeedback = 4,        // Edge's feedback dialog
+  kSwitchSides = 5,         // SplitAction kReverseSides
+  kLinkMode = 6,            // the "open left links to the right" toggle
+};
 
 // --- TabStripModel close / activate arguments ---
 // TabStripModel::CloseTypes: CLOSE_USER_GESTURE, what Edge's own X passes.
