@@ -38,17 +38,21 @@ internal static class DevModePrompt {
       Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
       "Microsoft", "Edge", "User Data");
 
-  // Starts the waiting copy of the host outside Edge's job, so Edge closing
-  // does not take it down. The panel calls this too, when the switch turns on.
+  // Starts a detached waiter outside Edge's job, so Edge closing does not take
+  // it down. The waiter is this same exe re-run with AfterExitSwitch (the panel,
+  // which handles it in Program.Main); whoever arms it runs itself.
   //
   // A job that forbids breakaway refuses the first attempt; the second runs
-  // inside it, which still outlives the host if the job is not kill-on-close.
+  // inside it, which still outlives the arming process if the job is not
+  // kill-on-close.
   public static void Arm() {
-    string commandLine = $"\"{Paths.HostExecutable}\" {AfterExitSwitch}";
+    string executable = Environment.ProcessPath
+                        ?? Process.GetCurrentProcess().MainModule!.FileName;
+    string commandLine = $"\"{executable}\" {AfterExitSwitch}";
     bool isStarted = StartDetached(commandLine, ProcessCreationFlags.CreateBreakawayFromJob) ||
                      StartDetached(commandLine, ProcessCreationFlags.None);
     if (!isStarted) {
-      Process.Start(new ProcessStartInfo(Paths.HostExecutable, AfterExitSwitch) {
+      Process.Start(new ProcessStartInfo(executable, AfterExitSwitch) {
         UseShellExecute = false,
         CreateNoWindow = true,
       });

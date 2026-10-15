@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 namespace FixEdge;
 
@@ -7,6 +8,17 @@ namespace FixEdge;
 internal static class Program {
   [STAThread]
   private static void Main() {
+    // The panel is also its own quiet-dev-mode waiter: armed with this switch,
+    // it waits for Edge to exit, snoozes the prompt and quits, without ever
+    // showing the window. (Re-homed off the retired native-messaging host.)
+    string[] arguments = Environment.GetCommandLineArgs();
+    bool isDevModeWaiter =
+        arguments.Contains(DevModePrompt.AfterExitSwitch, StringComparer.Ordinal);
+    if (isDevModeWaiter) {
+      DevModePrompt.WaitForEdgeExitThenSnooze(arguments);
+      return;
+    }
+
     WinRT.ComWrappersSupport.InitializeComWrappers();
     Microsoft.UI.Xaml.Application.Start(_ => {
       var context = new Microsoft.UI.Dispatching.DispatcherQueueSynchronizationContext(
