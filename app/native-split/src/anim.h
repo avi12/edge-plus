@@ -127,9 +127,10 @@ inline void Remember(const std::vector<const void*>& contents,
 
 // Rewrite `placed` (each visible leaf's target rect) to this frame's rects.
 // A flight starts when the targets change or a container now shows a different
-// tab; each pane starts where its tab was last drawn (else where its container
-// is, else growing in from the pane it was carved out of). A flight ends when
-// its duration has elapsed, or at once on `shouldSnap` or a live resize.
+// tab; each pane starts where its tab was last drawn, else, in a container new
+// to the screen, grows in from the pane it was carved out of, else appears in
+// place. A flight ends when its duration has elapsed, or at once on
+// `shouldSnap` or a live resize.
 inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
   const std::vector<const void*> contents = ContentsOf(mcv, placed);
   auto flight = Flights().find(mcv);
@@ -148,11 +149,15 @@ inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
                                  flight->second.contents == contents;
   if (!isFlyingToTargets) {
     const int count = static_cast<int>(edge::McvCount(mcv));
-    // Every pane on screen now (hidden ones are empty).
+    // Every pane on screen now. A hidden container counts as empty: it keeps
+    // the bounds it last showed (a layout sets only visible children's).
     std::vector<Rect> before;
     before.reserve(count);
     for (int i = 0; i < count; i++) {
-      before.push_back(edge::ViewBounds(edge::McvContainerAt(mcv, i)));
+      void* container = edge::McvContainerAt(mcv, i);
+      before.push_back(edge::ViewGetVisible(container)
+                           ? edge::ViewBounds(container)
+                           : Rect{});
     }
     Flight newFlight;
     newFlight.to = placed;
@@ -163,7 +168,9 @@ inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
       const LeafRect& target = placed[i];
       const auto lastDrawn = LastDrawn().find(contents[i]);
       const Rect onScreen = before[target.leaf];
-      Rect from = onScreen;
+      // Never drawn and in a container already on screen: a tab switch, not a
+      // pane move, so the tab appears in place.
+      Rect from = target.rect;
       if (lastDrawn != LastDrawn().end()) {
         from = lastDrawn->second;
       } else if (motion::Empty(onScreen)) {
