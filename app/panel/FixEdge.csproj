@@ -8,13 +8,13 @@
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>
-    <!-- Program.Main decides, before WinUI is touched, whether Edge started
-         this exe as its native-messaging host or the user opened the panel. -->
+    <!-- Program.Main owns the entry point: before WinUI is touched it checks for
+         the quiet-dev-mode waiter switch and, if set, waits and exits. -->
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <!-- Unpackaged and self-contained, as any-stt is: a plain exe Edge can
-         launch as its host with nothing to pre-install. -->
+    <!-- Unpackaged and self-contained, as any-stt is: a plain exe with nothing
+         to pre-install. -->
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SelfContained>true</SelfContained>
@@ -32,50 +32,11 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
-  <!-- The extension travels inside the exe, as WXT built it, and is unpacked by
-       ExtensionPayload, so the files Edge loads always match this build. The
-       feature catalog rides along on its own: WXT bundles it into the
-       background script, and the app's switches are built from it. -->
+  <!-- The native split DLL (app\native-split), built with MSVC and carried
+       inside the exe for NativeSplitPayload to unpack and the panel to inject
+       into Edge. -->
   <PropertyGroup>
     <RepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))</RepositoryRoot>
-    <ExtensionRoot>$(RepositoryRoot)extension\</ExtensionRoot>
-    <ExtensionOutput>$(ExtensionRoot).output\chrome-mv3\</ExtensionOutput>
-  </PropertyGroup>
-  <Target Name="BuildExtension" BeforeTargets="BeforeBuild" Condition="'$(SkipExtension)' != 'true'">
-    <Exec Command="pnpm wxt build" WorkingDirectory="$(ExtensionRoot)" />
-    <!-- Metadata is qualified by item type: a bare %(Filename) inside a target
-         batches over every EmbeddedResource, renaming the catalog too. -->
-    <ItemGroup>
-      <ExtensionFile Include="$(ExtensionOutput)**\*" />
-      <EmbeddedResource Include="@(ExtensionFile)"
-                        LogicalName="extension/%(ExtensionFile.RecursiveDir)%(ExtensionFile.Filename)%(ExtensionFile.Extension)" />
-    </ItemGroup>
-  </Target>
-  <ItemGroup>
-    <EmbeddedResource Include="$(ExtensionRoot)src\features\catalog.json" LogicalName="catalog.json" />
-    <!-- The panel arms the developer-mode waiter itself when its switch is
-         turned on; the code is the host's, linked. -->
-    <Compile Include="..\host\DevModePrompt.cs" Link="Edge\DevModePrompt.cs" />
-  </ItemGroup>
-
-  <!-- The native-messaging host, published as its own NativeAOT exe (see
-       app\host\FixEdge.Host.csproj) and carried here for HostPayload to unpack.
-       The linker step finds Visual Studio through vswhere, which a Build Tools
-       install does not put on PATH. -->
-  <PropertyGroup>
-    <HostOutput>$(RepositoryRoot)build\host\</HostOutput>
-    <VsInstallerDirectory>$([System.Environment]::GetFolderPath(SpecialFolder.ProgramFilesX86))\Microsoft Visual Studio\Installer</VsInstallerDirectory>
-  </PropertyGroup>
-  <Target Name="PublishHost" BeforeTargets="BeforeBuild" Condition="'$(SkipHost)' != 'true'">
-    <Exec Command="set &quot;PATH=$(VsInstallerDirectory);%PATH%&quot; &amp;&amp; dotnet publish &quot;$(MSBuildThisFileDirectory)..\host&quot; -c Release -o &quot;$(HostOutput.TrimEnd('\'))&quot; -nologo" />
-    <ItemGroup>
-      <EmbeddedResource Include="$(HostOutput)fixedge-host.exe" LogicalName="fixedge-host.exe" />
-    </ItemGroup>
-  </Target>
-
-  <!-- The native split DLL (app\native-split), built with MSVC and carried here
-       for NativeSplitPayload to unpack and the panel to inject into Edge. -->
-  <PropertyGroup>
     <NativeSplitDir>$(RepositoryRoot)app\native-split\</NativeSplitDir>
   </PropertyGroup>
   <Target Name="BuildNativeSplit" BeforeTargets="BeforeBuild" Condition="'$(SkipNativeSplit)' != 'true'">

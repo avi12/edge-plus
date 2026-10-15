@@ -17,44 +17,11 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Padding="16,4,16,16" Spacing="4">
 
-                <!-- Whether the switches below reach Edge right now: the
-                     extension is loaded and its host is running. -->
-                <ctk:SettingsCard x:Name="ConnectionCard" Header="Microsoft Edge"
-                                  Description="Checking…">
-                    <ctk:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE774;"/>
-                    </ctk:SettingsCard.HeaderIcon>
-                    <FontIcon x:Name="ConnectionIcon" Glyph="&#xE946;" FontSize="16"/>
-                </ctk:SettingsCard>
-
-                <!-- The one manual step: Edge only loads an extension from a
-                     folder when the user points it there. After it, every
-                     switch applies live. -->
-                <InfoBar x:Name="SetupNotice" IsOpen="False" IsClosable="False"
-                         Severity="Informational" Margin="0,4,0,0"
-                         Title="One step, once"
-                         Message="In Edge's extensions page, turn on Developer mode, choose Load unpacked and pick this folder. Edge never needs a restart, now or later.">
-                    <InfoBar.ActionButton>
-                        <Button Content="Open Edge extensions" Click="OnOpenExtensions"/>
-                    </InfoBar.ActionButton>
-                    <InfoBar.Content>
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,0,12">
-                            <TextBox x:Name="ExtensionFolder" Grid.Column="0" IsReadOnly="True"
-                                     FontFamily="Consolas"/>
-                            <Button Grid.Column="1" Click="OnCopyFolder"
-                                    ToolTipService.ToolTip="Copy the folder path">
-                                <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
-                            </Button>
-                        </Grid>
-                    </InfoBar.Content>
-                </InfoBar>
-
                 <TextBlock Margin="4,10,4,2" Style="{StaticResource BodyStrongTextBlockStyle}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                            Text="Features"/>
 
-                <!-- One switch per feature in the extension's catalog, built in
-                     code. Everything else about a feature lives in Edge. -->
+                <!-- One switch per app-managed feature, built in code. -->
                 <StackPanel x:Name="FeatureList" Spacing="4"/>
 
                 <Grid Margin="4,14,4,0" ColumnDefinitions="*,Auto">

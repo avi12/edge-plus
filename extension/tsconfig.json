@@ -1,8 +1,0 @@
-{
-  "extends": ["@tsconfig/svelte/tsconfig.json", "./.wxt/tsconfig.json"],
-  "compilerOptions": {
-    "types": ["svelte", "node"],
-    "noImplicitAny": true,
-    "allowImportingTsExtensions": true
-  }
-}

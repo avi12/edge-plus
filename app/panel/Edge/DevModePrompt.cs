@@ -72,7 +72,7 @@ internal static class DevModePrompt {
     while (IsInUse(userData)) {
       Thread.Sleep(s_pollInterval);
     }
-    if (!FeatureSettings.IsEnabled(FeatureId.QuietDevMode)) {
+    if (!FeatureSettings.IsEnabled(FeatureId.QuietDevMode, isEnabledByDefault: false)) {
       return;
     }
     SnoozeEveryProfile(userData);

@@ -1,28 +1,17 @@
 using System;
-using System.Diagnostics;
 using CommunityToolkit.WinUI.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Windows.ApplicationModel.DataTransfer;
 using Windows.Graphics;
 
 namespace FixEdge;
 
 public sealed partial class MainWindow : Window {
   private const int WindowWidth = 540;
-  private const int WindowHeight = 560;
+  private const int WindowHeight = 460;
 
-  private const string ExtensionsPage = "edge://extensions";
-
-  private const string ConnectedGlyph = "\uE73E";
-  private const string DisconnectedGlyph = "\uE946";
-  private const string NativeSplitGlyph = "\uF0E2";
-
-  // The host rewrites the status the moment a pane opens or closes; a second
-  // is quick enough to read as live and costs one file read.
-  private static readonly TimeSpan s_statusPollInterval = TimeSpan.FromSeconds(1);
-
-  private readonly DispatcherTimer _statusPoll = new() { Interval = s_statusPollInterval };
+  private const string NativeSplitGlyph = "";
+  private const string QuietDevModeGlyph = "";
 
   public MainWindow() {
     InitializeComponent();
@@ -30,41 +19,22 @@ public sealed partial class MainWindow : Window {
     AppWindow.Resize(new SizeInt32(WindowWidth, WindowHeight));
     WindowChrome.CenterOnScreen(AppWindow);
 
-    BuildFeatureList();
+    BuildFeatures();
+  }
+
+  private void BuildFeatures() {
     BuildNativeSplitCard();
-    ExtensionFolder.Text = Paths.Extension;
-    RefreshConnection();
-    _statusPoll.Tick += (_, _) => RefreshConnection();
-    _statusPoll.Start();
-    Closed += (_, _) => _statusPoll.Stop();
+    BuildQuietDevModeCard();
   }
 
-  // A row per catalog feature: its words, its icon and one switch. A new
-  // feature in the extension shows up here with no change to the app.
-  private void BuildFeatureList() {
-    foreach (Feature feature in Catalog.Features) {
-      AddSwitchCard(
-          feature.Title, feature.Description, feature.Glyph,
-          isOn: FeatureSettings.IsEnabled(feature.Id),
-          onToggled: isOn => {
-            FeatureSettings.SetEnabled(feature.Id, isOn);
-            // The one feature that lives outside Edge: it waits for Edge to close.
-            bool isQuietDevModeTurnedOn =
-                feature.Id == FeatureId.QuietDevMode.WireName() && isOn;
-            if (isQuietDevModeTurnedOn) {
-              DevModePrompt.Arm();
-            }
-          });
-    }
-  }
-
-  // The native split is not an extension feature: it is a DLL the panel loads
-  // into Edge itself, so it gets its own switch that injects or ejects live.
+  // The native split is a DLL the panel loads into Edge itself: turning the
+  // switch on injects it, off ejects it, live. It is the split now, so it is on
+  // by default; a build without the DLL carried simply has no switch.
   private void BuildNativeSplitCard() {
     if (!NativeSplitPayload.IsCarried) {
       return;
     }
-    bool isWanted = FeatureSettings.IsEnabled(FeatureId.NativeSplit, isEnabledByDefault: false);
+    bool isWanted = FeatureSettings.IsEnabled(FeatureId.NativeSplit, isEnabledByDefault: true);
     // Re-assert the wanted state against the Edge running now.
     bool shouldInjectIntoRunningEdge =
         isWanted && NativeSplit.IsEdgeRunning && !NativeSplit.IsActive();
@@ -72,9 +42,10 @@ public sealed partial class MainWindow : Window {
       NativeSplit.Enable(Paths.SplitDll);
     }
     AddSwitchCard(
-        "Native split into any grid (experimental)",
-        "Grows Edge's own split past two panes, loaded straight into Edge - no extension. "
-            + "Turning it on injects the module; off removes it, no restart. Open Edge first.",
+        "Split into any grid",
+        "Grows Edge's own split past two panes, loaded straight into Edge. Add panes above, "
+            + "below, left or right; drag the dividers; Shift+Alt+arrow moves between panes. "
+            + "Turning it on injects the module, off removes it — no restart. Open Edge first.",
         NativeSplitGlyph,
         isOn: NativeSplit.IsActive() || isWanted,
         onToggled: isOn => {
@@ -83,6 +54,23 @@ public sealed partial class MainWindow : Window {
             NativeSplit.Enable(Paths.SplitDll);
           } else {
             NativeSplit.Disable();
+          }
+        });
+  }
+
+  // Hiding the developer-mode prompt lives entirely in the app: arming the
+  // after-exit waiter when the switch turns on (DevModePrompt).
+  private void BuildQuietDevModeCard() {
+    AddSwitchCard(
+        "Hide the developer-mode prompt",
+        "Stops Edge asking to turn off developer-mode extensions when it starts. Takes effect "
+            + "from Edge's next start.",
+        QuietDevModeGlyph,
+        isOn: FeatureSettings.IsEnabled(FeatureId.QuietDevMode, isEnabledByDefault: false),
+        onToggled: isOn => {
+          FeatureSettings.SetEnabled(FeatureId.QuietDevMode, isOn);
+          if (isOn) {
+            DevModePrompt.Arm();
           }
         });
   }
@@ -107,34 +95,5 @@ public sealed partial class MainWindow : Window {
     };
     card.Click += (_, _) => toggle.IsOn = !toggle.IsOn;
     FeatureList.Children.Add(card);
-  }
-
-  private void RefreshConnection() {
-    bool isConnected = EdgeConnection.IsConnected;
-    SetupNotice.IsOpen = !isConnected;
-    ConnectionIcon.Glyph = isConnected ? ConnectedGlyph : DisconnectedGlyph;
-    ConnectionCard.Description =
-        isConnected ? DescribeConnected() : "The extension is not running in Edge";
-  }
-
-  private static string DescribeConnected() {
-    SplitStatus? split = EdgeConnection.Split();
-    bool hasSplits = split is { Splits: > 0 };
-    if (!hasSplits) {
-      return "Connected - switches apply instantly";
-    }
-    string splits = split!.Splits == 1 ? "1 split tab" : $"{split.Splits} split tabs";
-    return $"Connected - {split.Panes} panes across {splits}";
-  }
-
-  private void OnOpenExtensions(object sender, RoutedEventArgs e) =>
-      Process.Start(new ProcessStartInfo(EdgeBrowser.ExecutableName, ExtensionsPage) {
-        UseShellExecute = true,
-      });
-
-  private void OnCopyFolder(object sender, RoutedEventArgs e) {
-    var package = new DataPackage();
-    package.SetText(Paths.Extension);
-    Clipboard.SetContent(package);
   }
 }

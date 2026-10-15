@@ -32,11 +32,9 @@ public partial class App : Application {
       return;
     }
 
-    // Every launch re-asserts the setup, so moving the exe or rebuilding it
-    // repairs the registration and swaps newer extension files in live.
-    bool isHostNew = HostPayload.Unpack();
-    HostRegistration.Register();
-    ExtensionPayload.Unpack(isReloadForced: isHostNew);
+    // Retire the old extension + native-messaging host if a previous version
+    // left them behind, then unpack the native split DLL this build carries.
+    LegacyCleanup.Run();
     NativeSplitPayload.Unpack();
 
     _window = new MainWindow();

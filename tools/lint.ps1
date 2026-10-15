@@ -134,7 +134,7 @@ if ($hasCppInScope) {
 # the check into a FIX (any-stt hit exactly this).
 $csharpOk = $true
 if (-not $Staged) {
-    foreach ($project in @('app\panel\FixEdge.csproj', 'app\host\FixEdge.Host.csproj')) {
+    foreach ($project in @('app\panel\FixEdge.csproj')) {
         $projectPath = Join-Path $root $project
         Write-Host "[lint] dotnet format ($project)"
         foreach ($subcommand in @('whitespace', 'style')) {
