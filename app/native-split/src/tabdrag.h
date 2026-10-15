@@ -60,7 +60,7 @@ inline bool CanDock(void* controller, void* tsm) {
     return false;
   }
   void* contents = edge::DraggedContents(controller, 0);
-  void* tab = edge::TabModelAt(tsm, edge::IndexOfWebContents(tsm, contents));
+  void* tab = edge::TabShowing(tsm, contents);
   return tab && !edge::TabIsSplit(tab);
 }
 
@@ -221,8 +221,7 @@ inline void ApplyDrop() {
   Drop drop = std::move(*g_drop);
   g_drop.reset();
   const int splitIndex = edge::IndexOfWebContents(drop.tsm, drop.splitContents);
-  void* draggedTab = edge::TabModelAt(
-      drop.tsm, edge::IndexOfWebContents(drop.tsm, drop.draggedContents));
+  void* draggedTab = edge::TabShowing(drop.tsm, drop.draggedContents);
   const bool hasBothTabs = splitIndex >= 0 && draggedTab;
   if (!hasBothTabs) {
     Log("[tabdrag] drop: a tab went away");

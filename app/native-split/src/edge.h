@@ -271,6 +271,12 @@ inline int IndexOfWebContents(void* tsm, void* webContents) {
       At(rva::TabStripModel_GetIndexOfWebContents))(tsm, webContents);
 }
 
+// The tab model showing `webContents` in `tsm`'s strip, or null (also for a
+// null `tsm`).
+inline void* TabShowing(void* tsm, void* webContents) {
+  return tsm ? TabModelAt(tsm, IndexOfWebContents(tsm, webContents)) : nullptr;
+}
+
 // Move the tab at strip `index` so it ends up at `toIndex`, leaving the
 // selection alone.
 inline void MoveTabTo(void* tsm, int index, int toIndex) {

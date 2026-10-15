@@ -42,9 +42,7 @@ inline bool IsNewTabLink(int disposition, bool hasUserGesture,
 
 inline LinkTarget LinkTargetFor(void* sourceContents) {
   void* tsm = edge::TsmForWindow(channel::g_window);
-  void* tab =
-      tsm ? edge::TabModelAt(tsm, edge::IndexOfWebContents(tsm, sourceContents))
-          : nullptr;
+  void* tab = edge::TabShowing(tsm, sourceContents);
   const bool isSplitPane = tab && edge::TabIsSplit(tab);
   if (!isSplitPane) {
     return LinkTarget::kEdge;
@@ -148,9 +146,7 @@ inline void OpenLinkPane() {
   const NewPaneLink link = std::exchange(g_newPaneLink, NewPaneLink{});
   void* mcv = edge::McvForWindow(channel::g_window);
   void* tsm = edge::TsmForWindow(channel::g_window);
-  void* newTab = tsm ? edge::TabModelAt(
-                           tsm, edge::IndexOfWebContents(tsm, link.newContents))
-                     : nullptr;
+  void* newTab = edge::TabShowing(tsm, link.newContents);
   const int sourceLeaf =
       mcv ? split_ops::LeafShowing(mcv, link.source) : kNoLeaf;
   const bool canAddPane = newTab && sourceLeaf != kNoLeaf;
