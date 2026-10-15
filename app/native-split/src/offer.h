@@ -4,8 +4,8 @@
 // built the page for two panes: the picked tab replaces the split's LAST
 // member and the page's X closes that member, because a two-pane split keeps
 // its starting page there. In a grown split both act on the page's own pane,
-// and a page stays an offer while its split is rebuilt. A two-pane split is
-// Edge's own throughout. UI thread only.
+// the page lists only tabs it can take, and a page stays an offer while its
+// split is rebuilt. A two-pane split is Edge's own throughout. UI thread only.
 // docs/re/split-offer.md.
 #pragma once
 #include <utility>
@@ -76,8 +76,60 @@ inline void __fastcall h_open_tab(void* controller, void* chosenContents) {
     return;
   }
   Log("[offer] picked tab %d replaces the starting page", chosenIndex);
-  split_data::SafeUpdateTabInSplit(tsm, active, chosenIndex,
-                                   kReplaceMemberFlag);
+  const bool hasReplaced = split_data::SafeUpdateTabInSplit(
+      tsm, active, chosenIndex, kReplaceMemberFlag);
+  if (hasReplaced) {
+    edge::WithdrawFromStartingPages(controller, chosenContents);
+  }
+}
+
+// --- the list -----------------------------------------------------------------
+
+// The starting page whose tab list Edge is building (GetTabs), while it does.
+struct Listing {
+  void* tsm = nullptr;
+  void* pageTab = nullptr;
+};
+inline Listing g_listing;
+
+// Whether a grown split's starting page leaves `tab` out of its list: a tab
+// in any split cannot take the page's pane, save the split's first member,
+// which Edge offers to copy into the pane ("Left tab").
+inline bool IsLeftOutOfOffer(const Listing& listing, void* tab) {
+  split_data::OptionalSplitId pageSplit = {};
+  edge::TabGetSplit(listing.pageTab, &pageSplit);
+  if (!pageSplit.hasValue) {
+    return false;
+  }
+  const edge::SplitMembers members(listing.tsm, pageSplit.token);
+  const bool isGrownSplit = members.Count() > split_data::kMinSplitMembers;
+  const bool isFirstMember = members.Count() > 0 && members.TabAt(0) == tab;
+  return isGrownSplit && edge::TabIsSplit(tab) && !isFirstMember;
+}
+
+// SplitWindowStartingUIHandler::GetTabs: the page's tab list. Edge leaves out
+// every tab IsSplitWindowWebContents (below) claims.
+using GetTabs_t = void(__fastcall*)(void*, void*);
+inline GetTabs_t o_get_tabs = nullptr;
+inline void __fastcall h_get_tabs(void* handler, void* callback) {
+  void* tsm = edge::TsmForWindow(channel::g_window);
+  void* page = edge::StartingPageOf(handler);
+  void* pageTab = page ? edge::TabShowing(tsm, page) : nullptr;
+  g_listing = pageTab ? Listing{tsm, pageTab} : Listing{};
+  o_get_tabs(handler, callback);
+  g_listing = Listing{};
+}
+
+// SplitWindowController::IsSplitWindowWebContents: whether `webContents`
+// belongs to Edge's older split. While a grown split's page lists its tabs, it
+// also claims the tabs that page leaves out.
+using IsSplitContents_t = bool(__fastcall*)(void*);
+inline IsSplitContents_t o_is_split_contents = nullptr;
+inline bool __fastcall h_is_split_contents(void* webContents) {
+  void* tab = g_listing.pageTab ? edge::TabShowing(g_listing.tsm, webContents)
+                                : nullptr;
+  const bool isLeftOut = tab && IsLeftOutOfOffer(g_listing, tab);
+  return isLeftOut || o_is_split_contents(webContents);
 }
 
 // --- the page leaving its split -------------------------------------------------

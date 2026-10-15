@@ -334,11 +334,21 @@ inline constexpr uintptr_t SplitWindowController_IsStartingPage = 0xa023034;
 // two-pane split always has its starting page.
 inline constexpr uintptr_t SplitWindowControllerV2_OpenTabInCurrentSplitWindow =
     0xa0213b0;
+// void SplitWindowStartingUIHandler::GetTabs(this, GetTabsCallback*): the
+// page's tab list, every tab of its window but those
+// SplitWindowController::IsSplitWindowWebContents(WebContents*) claims (the
+// contents of Edge's older split, marked by their user data).
+inline constexpr uintptr_t SplitWindowStartingUIHandler_GetTabs = 0x9ab4950;
+inline constexpr uintptr_t SplitWindowController_IsSplitWindowWebContents =
+    0x29d5e22;
 // void base::internal::Invoker<lambda at split_window_controller_impl_v2.cc:1313,
 // WeakPtr<WebContents>>::RunOnce(BindStateBase*): the task OnSplitTabRemoved
 // (0xa022106) posts when the removed split's last member is a starting page;
 // it loads chrome::kChromeUINewTabURL there, replacing the entry.
 inline constexpr uintptr_t StartingPageLeftSplitTask_RunOnce = 0xa022e40;
+// void StartingPageNotifierImpl::OnTabClosing(this, WebContents*): tells every
+// registered starting page that the tab is gone (Page::OnTabRemoved(tab id)).
+inline constexpr uintptr_t StartingPageNotifierImpl_OnTabClosing = 0xa0290ec;
 // void SplitWindowStartingUIHandler::CloseSplitWindow(this): the starting
 // page's X. Edge then closes the split's LAST member too
 // (SplitWindowControllerImplV2::HideSplitView(true), 0xa0201f0).
@@ -522,6 +532,9 @@ inline constexpr size_t SPLITMEMBER_size = 0x10;
 inline constexpr size_t GURL_size = 0x78;
 inline constexpr size_t OptionalTabGroupId_size = 0x18;
 inline constexpr uintptr_t SPLITCONTROLLER_tab_strip_model = 0x48;
+// SplitWindowControllerImplV2's StartingPageNotifierImpl*, made by the first
+// GetStartingPageNotifier (a starting page registering).
+inline constexpr uintptr_t SPLITCONTROLLER_starting_page_notifier = 0x78;
 // A base::BindState's first bound argument (after BindStateBase), here a
 // base::WeakPtr {WeakReference::Flag*, T*}, and the flag's invalidated byte.
 inline constexpr uintptr_t BINDSTATE_first_bound_argument = 0x28;

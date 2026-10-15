@@ -90,6 +90,13 @@ inline bool GrowWithTree(void* mcv, void* tsm, Node tree, void* newTab) {
     return false;
   }
   edge::InvalidateLayout(mcv);
+  // A pane's tab is no longer one an open tab offer may list.
+  if (newTab) {
+    edge::WithdrawFromStartingPages(
+        edge::SplitWindowControllerFor(
+            edge::BrowserOf(edge::McvBrowserView(mcv))),
+        edge::TabContents(newTab));
+  }
   return true;
 }
 

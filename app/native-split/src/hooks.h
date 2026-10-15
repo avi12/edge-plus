@@ -359,6 +359,13 @@ inline bool InstallAll() {
   Install(rva::SplitWindowControllerV2_OpenTabInCurrentSplitWindow,
           reinterpret_cast<void*>(offer::h_open_tab), &offer::o_open_tab,
           "SplitWindowControllerImplV2::OpenTabInCurrentSplitWindow");
+  Install(rva::SplitWindowStartingUIHandler_GetTabs,
+          reinterpret_cast<void*>(offer::h_get_tabs), &offer::o_get_tabs,
+          "SplitWindowStartingUIHandler::GetTabs");
+  Install(rva::SplitWindowController_IsSplitWindowWebContents,
+          reinterpret_cast<void*>(offer::h_is_split_contents),
+          &offer::o_is_split_contents,
+          "SplitWindowController::IsSplitWindowWebContents");
   Install(rva::StartingPageLeftSplitTask_RunOnce,
           reinterpret_cast<void*>(offer::h_page_left_split),
           &offer::o_page_left_split,

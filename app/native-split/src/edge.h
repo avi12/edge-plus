@@ -801,6 +801,22 @@ inline void* SplitWindowControllerFor(void* browser) {
   return reinterpret_cast<Fn>(At(rva::SplitWindowController_FromBrowser))(
       browser);
 }
+// Tell the open starting pages of `controller`'s window that `webContents` is
+// no longer a tab to offer: each drops its card
+// (StartingPageNotifierImpl::OnTabClosing). No notifier yet means no starting
+// page has opened, so none to tell.
+inline void WithdrawFromStartingPages(void* controller, void* webContents) {
+  const void* notifier =
+      controller ? Field<void*>(controller,
+                                off::SPLITCONTROLLER_starting_page_notifier)
+                 : nullptr;
+  if (!notifier) {
+    return;
+  }
+  using ClosingFn = void(__fastcall*)(const void*, void*);
+  reinterpret_cast<ClosingFn>(At(rva::StartingPageNotifierImpl_OnTabClosing))(
+      notifier, webContents);
+}
 // What a pane's hover runs: show the bar of the container showing
 // `webContents`, hide the rest.
 inline bool SplitWindowControllerShowControlButton(void* controller,
