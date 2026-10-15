@@ -9,7 +9,6 @@
 #pragma once
 #include <algorithm>
 #include <cstddef>
-#include <cstring>
 #include <iterator>
 #include "edge.h"
 #include "grip.h"
@@ -71,12 +70,9 @@ inline edge::U16String g_rowLabel;
 inline bool g_hasLabels = false;
 inline void BuildLabels() {
   for (size_t i = 0; i < kMenuItemCount; i++) {
-    const char* label = kMenuItems[i].label;
-    const edge::U8View view{label, std::strlen(label)};
-    edge::Utf8ToUtf16(&g_labels[i], &view);
+    edge::Utf8ToUtf16(&g_labels[i], kMenuItems[i].label);
   }
-  const edge::U8View rowView{kRowLabel, std::strlen(kRowLabel)};
-  edge::Utf8ToUtf16(&g_rowLabel, &rowView);
+  edge::Utf8ToUtf16(&g_rowLabel, kRowLabel);
   g_hasLabels = true;
 }
 

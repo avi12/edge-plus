@@ -354,11 +354,15 @@ inline void Utf8ToUtf16(U16String* out, const U8View* view) {
   using Fn = void*(__fastcall*)(void*, const void*);
   reinterpret_cast<Fn>(At(rva::UTF8ToUTF16))(out, view);
 }
+// The same, from a NUL-terminated UTF-8 string.
+inline void Utf8ToUtf16(U16String* out, const char* utf8) {
+  const U8View view{utf8, strlen(utf8)};
+  Utf8ToUtf16(out, &view);
+}
 // views::View::SetTooltipText(view, const std::u16string&), from UTF-8.
 inline void ViewSetTooltip(void* view, const char* utf8) {
   U16String text{};
-  const U8View utf8View{utf8, strlen(utf8)};
-  Utf8ToUtf16(&text, &utf8View);
+  Utf8ToUtf16(&text, utf8);
   using Fn = void(__fastcall*)(void*, const void*);
   reinterpret_cast<Fn>(At(rva::View_SetTooltipText))(view, &text);
 }
