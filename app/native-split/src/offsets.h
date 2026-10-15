@@ -140,9 +140,8 @@ inline constexpr uintptr_t WebUISplitTabsControl_HandleContextMenu = 0xa2d2fe0;
 inline constexpr uintptr_t UTF8ToUTF16 = 0x101cae0;  // (&out_u16, &string_view)
 
 // --- collapse (docs/re/collapse.md): split button while split = keep active ---
-// SplitWindowControllerImplV2::DoActionToSplitWindow(controller, WebContents*, int action).
-// action 2 = dissolve keeping tabs + activate the active tab (fills window);
-// action 3 = same but keeps the LAST tab. Clamp 3->2 to always keep the active.
+// SplitWindowControllerImplV2::DoActionToSplitWindow(controller, WebContents*,
+// int action), `action` one of off::SplitAction.
 inline constexpr uintptr_t SplitWindowController_DoAction = 0xa021020;
 
 // --- per-pane hover controls (the X / ⋯ bar, old-toolbar mode) ---
@@ -497,6 +496,18 @@ inline constexpr uintptr_t ControlButtons_close_button = 0x350;
 inline constexpr uint32_t TSM_close_user_gesture = 1;
 // sizeof(TabStripUserGestureDetails) {GestureType, base::TimeTicks}
 inline constexpr size_t TSM_gesture_details_size = 16;
+
+// --- SplitWindowController::DoActionToSplitWindow's `action` ---
+// Its 6-way jump table, mapped in docs/re/collapse.md §5. The names are ours:
+// Edge's own enum was not located.
+enum class SplitAction : int {
+  kCopyLastToNewTab = 0,    // kCopyToNewTab, on the split's last tab
+  kCopyToNewTab = 1,        // the tab's page, copied into a new background tab
+  kDissolveKeepActive = 2,  // dissolve, the active pane stays in front
+  kDissolveKeepLast = 3,    // dissolve, the split's last tab comes to the front
+  kCloseActive = 4,         // CLOSES the active tab — never for collapse
+  kReverseSides = 5,        // ReverseTabsInSplit
+};
 
 // --- gfx::VectorIcon path command ids in this build ---
 // Decoded from kEdgeSplitWindowMoreIcon: CANVAS_DIMENSIONS 16, MOVE_TO x y,
