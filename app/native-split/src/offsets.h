@@ -405,6 +405,42 @@ inline constexpr uintptr_t SplitA11yLabel_paneidx_jne = 0x42e6faf;
 // bytes). The detour replaces the function while loaded; NOPing the CHECK too
 // means a click on pane 3+ after unload only mis-flags the primary pane.
 inline constexpr uintptr_t SetActiveIndex_index_jae = 0xc931388;
+
+// --- theming (docs/re/theming.md) ---
+// The whole feature rides one Edge entry point. ThemeService applies a theme
+// that is already INSTALLED in the profile; the panel installs each theme (via
+// Edge's own external-extension loader), and the DLL only switches between
+// installed themes when Windows flips light <-> dark.
+//
+// void ThemeService::RevertToExtensionTheme(this, const std::string& id): looks
+// the id up in the profile's ExtensionRegistry, checks it is a theme, and drives
+// DoSetTheme -> a fresh BrowserThemePack + a notify that repaints the browser
+// in place. This is exactly Edge's own code path when a theme is chosen, so the
+// swap is live with no restart. (SetTheme at 0x87d468e is the Extension* thunk
+// into the same DoSetTheme; the id-string entry is the one we can drive.)
+inline constexpr uintptr_t ThemeService_RevertToExtensionTheme = 0x87d46a0;
+// void ThemeService::UseDefaultTheme(this): drop any extension theme. Used when
+// a mode has no theme assigned.
+inline constexpr uintptr_t ThemeService_UseDefaultTheme = 0x3171ba0;
+// ThemeService* ThemeServiceFactory::GetForProfile(Profile*): the per-profile
+// ThemeService (creates it if needed). Profile is a content::BrowserContext.
+inline constexpr uintptr_t ThemeServiceFactory_GetForProfile = 0xf9b4e2;
+// content::BrowserContext* WebContentsImpl::GetBrowserContext(this): the Profile
+// behind any WebContents, our bridge from a pane to its ThemeService.
+inline constexpr uintptr_t WebContentsImpl_GetBrowserContext = 0x1107ba0;
+
+// The OS light/dark signal does NOT come through Edge. ui::NativeThemeObserver
+// is a base::CheckedObserver (the observer list uses CheckedObserverAdapter), so
+// a hand-rolled observer object would have to fake a weak-ptr factory. Instead
+// the DLL already subclasses the browser window, so it watches that window's
+// WM_SETTINGCHANGE with lParam == "ImmersiveColorSet" and reads the current mode
+// straight from the OS (HKCU Themes\Personalize\AppsUseLightTheme, 0 = dark).
+// No Edge theme-observer ABI is touched.
+
+// std::string::assign(this, const char* s, size_t n): builds a real libc++
+// std::string (heap for our 32-char ids) to hand RevertToExtensionTheme. One
+// reused DLL-lifetime buffer means we never pair an operator delete ourselves.
+inline constexpr uintptr_t BasicStringChar_assign = 0x1fb4b02;
 }  // namespace rva
 
 // Linear addresses (not RVAs): partition-alloc BRP-pool gate for raw_ptr acquire.
