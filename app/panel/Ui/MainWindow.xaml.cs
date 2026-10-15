@@ -24,7 +24,24 @@ public sealed partial class MainWindow : Window {
 
   private void BuildFeatures() {
     BuildNativeSplitCard();
+    BuildThemingCard();
     BuildQuietDevModeCard();
+    // Push the current desired state (both features + the theme assignment) to
+    // an Edge that is already open, injecting the shared DLL if needed.
+    SyncDll();
+  }
+
+  // The split and the theming both ride one injected DLL. This is the single
+  // place that reconciles "what the user wants" with "what Edge is running":
+  // the DLL is loaded while either feature is on, and its live behaviour is
+  // pushed to it. Every switch and theme change ends here.
+  private void SyncDll() {
+    if (!NativeSplitPayload.IsCarried) {
+      return;
+    }
+    bool split = FeatureSettings.IsEnabled(FeatureId.NativeSplit, isEnabledByDefault: true);
+    bool theming = FeatureSettings.IsEnabled(FeatureId.Theming, isEnabledByDefault: false);
+    FixEdgeBridge.Sync(split, theming, ThemeLibrary.Load());
   }
 
   // The native split is a DLL the panel loads into Edge itself: turning the
@@ -35,12 +52,6 @@ public sealed partial class MainWindow : Window {
       return;
     }
     bool isWanted = FeatureSettings.IsEnabled(FeatureId.NativeSplit, isEnabledByDefault: true);
-    // Re-assert the wanted state against the Edge running now.
-    bool shouldInjectIntoRunningEdge =
-        isWanted && NativeSplit.IsEdgeRunning && !NativeSplit.IsActive();
-    if (shouldInjectIntoRunningEdge) {
-      NativeSplit.Enable(Paths.SplitDll);
-    }
     AddSwitchCard(
         "Split into any grid",
         "Grows Edge's own split past two panes, loaded straight into Edge. Add panes above, "
@@ -50,12 +61,19 @@ public sealed partial class MainWindow : Window {
         isOn: NativeSplit.IsActive() || isWanted,
         onToggled: isOn => {
           FeatureSettings.SetEnabled(FeatureId.NativeSplit, isOn);
-          if (isOn) {
-            NativeSplit.Enable(Paths.SplitDll);
-          } else {
-            NativeSplit.Disable();
-          }
+          SyncDll();
         });
+  }
+
+  // The theming feature (its own switch, library and light/dark assignment) is
+  // built by ThemingCard; it shares the split's DLL, so it needs that carried.
+  private void BuildThemingCard() {
+    if (!NativeSplitPayload.IsCarried) {
+      return;
+    }
+    IntPtr windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+    var card = new ThemingCard(windowHandle, SyncDll);
+    FeatureList.Children.Add(card.Build());
   }
 
   // Hiding the developer-mode prompt lives entirely in the app: arming the
