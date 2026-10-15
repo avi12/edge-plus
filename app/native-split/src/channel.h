@@ -31,6 +31,7 @@ enum class Command : WPARAM {
   kTabDrop = 720,          // a tab Alt-dragged onto the split: add it
   kLinkPane = 721,         // a pane's link opened a tab: make it a pane
   kCloseOfferPane = 722,   // a grown split's tab offer was dismissed
+  kApplyTheme = 800,       // apply the theme for the current OS light/dark mode
 };
 
 // The width of each range: one code per Direction (kUp..kRight), and the

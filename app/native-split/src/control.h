@@ -20,6 +20,7 @@
 #include "offer.h"
 #include "overlay.h"
 #include "tabdrag.h"
+#include "theme.h"
 
 namespace fixedge::control {
 
@@ -298,6 +299,9 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
     case Command::kCloseOfferPane:
       offer::CloseOfferPane();
       return;
+    case Command::kApplyTheme:
+      theme::ApplyForCurrentOsMode(hwnd);
+      return;
     default:
       break;
   }
@@ -342,6 +346,16 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
     RunCommand(hwnd, wparam);
     return 0;
   }
+  // Windows broadcasts WM_SETTINGCHANGE with "ImmersiveColorSet" when the user
+  // flips light <-> dark. Re-apply the matching theme, but let Edge handle the
+  // message first (it updates its own native theme), so defer via the channel.
+  const bool isColorSchemeChange =
+      message == WM_SETTINGCHANGE && lparam != 0 &&
+      wcscmp(reinterpret_cast<const wchar_t*>(lparam), L"ImmersiveColorSet") ==
+          0;
+  if (isColorSchemeChange) {
+    channel::Post(CodeOf(Command::kApplyTheme));
+  }
   return CallWindowProcW(g_originalProc, hwnd, message, wparam, lparam);
 }
 
@@ -381,6 +395,10 @@ inline void Install() {
       hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc)));
   Log("[control] subclassed hwnd=%p msg=%u", hwnd, channel::g_message);
   anim::Install(hwnd);
+  // The theming subsystem shares this DLL and its UI-thread window, gated by its
+  // own assignment (idle until the panel assigns a theme). It will get its own
+  // feature toggle when the panel grows a theming switch.
+  theme::Activate(hwnd);
   // A (re)load into a split that is already grown: add the grips on the UI thread.
   channel::Post(CodeOf(Command::kEnsureGrips));
 }
