@@ -443,6 +443,12 @@ inline void MenuRemoveItemAt(void* model, size_t index) {
   reinterpret_cast<RemoveFn>(At(rva::SimpleMenuModel_RemoveItemAt))(model,
                                                                     index);
 }
+// The label is copied into the item.
+inline void MenuSetLabel(void* model, size_t index, const U16String* label) {
+  using LabelFn = void(__fastcall*)(void*, size_t, const void*);
+  reinterpret_cast<LabelFn>(At(rva::SimpleMenuModel_SetLabel))(model, index,
+                                                               label);
+}
 
 // --- MultiContentsView field accessors (named, typed, one place each) ---------
 

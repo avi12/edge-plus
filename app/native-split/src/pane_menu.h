@@ -1,16 +1,18 @@
 // pane_menu.h — Edge's own items on a pane's ⋯ menu (SplitWindowControlMenu),
 // fitted to the N-pane split. One concern: which of Edge's items the menu
-// keeps. Its "Add pane" row is menu.h's.
+// keeps, and what they say. Its "Add pane" row is menu.h's.
 //   - No split offers "Send feedback".
 //   - A split of three or more drops the items another control does there:
 //     "Separate two tabs" (the toolbar's split button), "Switch left and right
 //     tabs" (it only ever swaps the first two panes; dragging a pane onto
 //     another swaps any two) and "Switch to vertical / horizontal" (a grown
 //     split is laid out by its tree, which ignores Edge's orientation).
+//   - The link toggle says what links.h made it do.
 // docs/re/pane-menu.md.
 #pragma once
 #include <cstddef>
 #include "edge.h"
+#include "links.h"
 #include "split_data.h"
 
 namespace fixedge::pane_menu {
@@ -50,6 +52,18 @@ inline bool IsLeftOut(int command, bool isGrownSplit) {
   return false;
 }
 
+// The link toggle's label, built once into a static u16string (a short
+// permanent allocation), the way menu.h builds its own labels.
+inline edge::U16String g_linkModeLabel;
+inline bool g_hasLinkModeLabel = false;
+inline const edge::U16String* LinkModeLabel() {
+  if (!g_hasLinkModeLabel) {
+    edge::Utf8ToUtf16(&g_linkModeLabel, links::kToggleLabel);
+    g_hasLinkModeLabel = true;
+  }
+  return &g_linkModeLabel;
+}
+
 // Fit the ⋯ menu Edge just built (`model`, before PopulateMenu makes its item
 // views) to the split `mcv` shows (null when unknown: a split that never grew).
 inline void FitItems(void* model, void* mcv) {
@@ -57,10 +71,15 @@ inline void FitItems(void* model, void* mcv) {
   // From the last item, so a removal never shifts an index still to be read.
   for (size_t i = edge::MenuItemCount(model); i > 0; i--) {
     const size_t index = i - 1;
-    const bool isLeftOut =
-        IsLeftOut(edge::MenuCommandIdAt(model, index), isGrownSplit);
-    if (isLeftOut) {
+    const int command = edge::MenuCommandIdAt(model, index);
+    if (IsLeftOut(command, isGrownSplit)) {
       edge::MenuRemoveItemAt(model, index);
+      continue;
+    }
+    const bool isLinkMode =
+        command == static_cast<int>(ControlMenuCommand::kLinkMode);
+    if (isLinkMode) {
+      edge::MenuSetLabel(model, index, LinkModeLabel());
     }
   }
 }

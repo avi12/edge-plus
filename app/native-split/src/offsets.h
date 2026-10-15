@@ -272,6 +272,8 @@ inline constexpr uintptr_t SimpleMenuModel_GetItemCount = 0x28cf330;
 inline constexpr uintptr_t SimpleMenuModel_GetCommandIdAt = 0x342b5b0;
 // void RemoveItemAt(model, size_t index)
 inline constexpr uintptr_t SimpleMenuModel_RemoveItemAt = 0xb65da80;
+// void SetLabel(model, size_t index, const std::u16string& label)
+inline constexpr uintptr_t SimpleMenuModel_SetLabel = 0xb65dcce;
 // (tsm, int index, uint32 closeTypes); HideSplitView passes 1
 inline constexpr uintptr_t TabStripModel_CloseWebContentsAt = 0xa26f916;
 // (tsm, int index, const TabStripUserGestureDetails*)

@@ -19,6 +19,10 @@ namespace fixedge::links {
 
 using namespace fixedge::edge155;
 
+// The toggle's label, saying what it does now (Edge's says "Open left links to
+// the right"); pane_menu.h puts it on the ⋯ menu.
+inline constexpr char kToggleLabel[] = "Open new-tab links in a new pane";
+
 // Where a page's new-tab link goes.
 enum class LinkTarget : uint8_t {
   kEdge,          // not a split pane of this window: Edge's own handling
