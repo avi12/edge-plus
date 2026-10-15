@@ -1,4 +1,4 @@
-# The pane bar's ⋯ menu — the "Add pane" d-pad row
+# The pane bar's ⋯ menu — Edge's items and the "Add pane" d-pad row
 
 Target: `msedge.dll` 155.0.4283.45. All addresses are **RVAs**; their one home
 in code is `app/native-split/src/offsets.h`.
@@ -8,7 +8,46 @@ toolbar's `SplitTabMenuModel` (`split-menu.md`). We append one row to it:
 Edge's split icon, the label "Add pane", and a d-pad of ↑ ← → ↓ buttons. The
 row itself does nothing; an arrow adds a pane beside the pane whose ⋯ it was,
 in that direction. The new pane opens on Edge's tab offer, the starting page
-its own split button opens (`split-offer.md`).
+its own split button opens (`split-offer.md`). Edge's own items are fitted to
+the N-pane split first (code: `src/pane_menu.h`).
+
+## Edge's own items
+
+`BuildMenuModel` (`0xa017fbc`) adds them in this order: 2, 3, 5, then 0 or 1
+(the switch to the other orientation), 6 (with the link-mode feature), 4.
+`ExecuteCommand` (`0xa0186c0`) switches on the id through a jump table at
+`0x12603f00`. In code: `off::ControlMenuCommand`.
+
+| id | item | Edge runs | here |
+|---|---|---|---|
+| 0 / 1 | Switch to vertical / horizontal | `SetVerticalSplitStateForTab(active, bool)` (`0xa020960`) → `TabStripModel::UpdateSplitLayout` | left out of a split of three or more: its layout is the tree, which ignores the orientation |
+| 2 | Open this webpage in a new tab | `DoActionToSplitWindow` 1 or 0: a copy of the split's **first** or **last** tab's page (`collapse.md` §5) | a copy of the ⋯'s own pane |
+| 3 | Separate two tabs | `DoActionToSplitWindow` 2 or 3 (dissolve, first or last tab in front) | left out of a split of three or more: the toolbar's split button does it |
+| 4 | Send feedback | `chrome::OpenEdgeFeedbackDialog` | left out of every split |
+| 5 | Switch left and right tabs | `DoActionToSplitWindow` 5 → `ReverseTabsInSplit`: the first member moves one step on | left out of a split of three or more: it swaps only the first two panes; dragging a pane onto another swaps any two |
+| 6 | Open left links to the right (toggle) | `SetLinkedModeStateForTab` (`0xa020880`) | relabelled "Open new-tab links in a new pane" in every split, for its new meaning (`split-links.md`) |
+
+**Which ⋯.** Edge's menu knows only "first pane or not". `ToggleContextMenu`
+builds it with the bar's `bool` at `ControlButtons+0x360` (the ctor's
+`not_first`), or, once set, the bar's callback (`+0x368`):
+`EdgeContentsContainerView::IsSplitWindow` (`0xdccbd70`), true for every
+container after the first in its parent's children. So every ⋯ but the first
+pane's runs the "last tab" variant of items 2 and 3. Our grown panes' bars get
+the same callback through `SetControlButtons`.
+
+**Leaving items out.** `PopulateMenu` makes one item view per model item
+(`MenuModelAdapter::AddMenuItemFromModelAt`) and attaches the toggle to id 6,
+so an item removed from the model before it runs never shows. The
+`BuildMenuModel` detour walks the model from its last item:
+`SimpleMenuModel::GetItemCount` (`0x28cf330`), `GetCommandIdAt` (`0x342b5b0`),
+`RemoveItemAt` (`0xb65da80`), and `SetLabel` (`0xb65dcce`) for the toggle. All
+four CHECK the index.
+
+**The copy.** With the ⋯'s pane known, the `ExecuteCommand` detour runs item 2
+itself: `chrome::AddAndReturnTabAt` (as the tab offer does, `split-offer.md`)
+with the pane's `WebContentsImpl::GetLastCommittedURL` (`0x10ff1a0`, the URL
+Edge's copy reads), in the background at the end of the strip, where Edge's
+copy lands.
 
 ## Building the row
 

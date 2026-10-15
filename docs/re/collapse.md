@@ -6,6 +6,18 @@ Re-verify after an Edge update. Produced with `tools/re/symbols.py`,
 `tools/re/disasm.py`, `scratchpad/drange.py`, and a scratch `vtbl.py`/`jt.py`
 (vtable + jump-table reader). Builds on `controller.md` and `split-view-abi.md`.
 
+> **Correction (2026-10-15).** `DoActionToSplitWindow` never keeps the
+> WebContents it is handed. Its prologue only checks it for null, then loads the
+> split's **first** tab (`ListTabs()[0]`); actions 0 and 3 replace that with the
+> **last**. So action 2 activates the split's first tab, not the active one, and
+> the clamp (3 → 2) brings the first pane to the front. Keeping the active pane
+> of a split of three or more takes more than an action value:
+> `split_data::CollapseSplit` (the hot-key's collapse) keeps the active tab, but
+> then `CloseSplitView` (§4), built for two panes, left the second pane's page
+> in the window when the third pane or later was active, because nothing
+> re-activates a tab to re-feed the view. Read the bottom line, §3 and §5's
+> recommendation with this in mind; §5's table is corrected.
+
 > **Bottom line — the feature already exists natively, as one action value.**
 > The toolbar split button, when a split is open, runs
 > `edge::split_screen::SplitWindowControllerImplV2::DoActionToSplitWindow`
@@ -161,9 +173,9 @@ moves out every member regardless of count.
 | active-pane visual flag | `ContentsWebView+0x450` | per `split-view-abi.md` / `ctor.md` |
 | MCV active-container index | `MultiContentsView+0x420` (int) | `CloseSplitView` `movsxd rax,[mcv+0x420]`; `SwapContentsInSplitView` normalizes it to 0 |
 
-The model-active tab (`model+0x98`) is the "active side". **Action `2` keeps
-exactly this tab** because it calls `GetActiveWebContents` (model-side) for the
-WebContents it preserves.
+The model-active tab (`model+0x98`) is the "active side". Action `2` does
+**not** keep it: the caller passes `GetActiveWebContents`, but the action
+ignores it and activates the split's first tab (see the correction at the top).
 
 ---
 
@@ -196,18 +208,21 @@ container is laid out to fill the whole content region (width **and** height) by
 
 ## 5. `DoActionToSplitWindow` — the full 6-way action map (so we pick the right one)
 
-`SplitWindowControllerImplV2::DoActionToSplitWindow(controller, keepWC, action)`
-(`0xa021020`). `rdx`=`keepWC` (must be non-null), `r8d`=`action` (0–5, jump table
-at RVA `0x1260406c`). Guard `GetSplitData()` must return non-null (there is a split).
+`SplitWindowControllerImplV2::DoActionToSplitWindow(controller, WebContents*,
+action)` (`0xa021020`). `rdx` is only checked for null and then dropped (it is
+never saved before `GetSplitData` clobbers it); `keep` below is `ListTabs()[0]`'s
+contents, loaded at `0xa0210b6`. `r8d`=`action` (0–5, jump table at RVA
+`0x1260406c`). Guard `GetSplitData()` must return non-null (there is a split).
+In code: `off::SplitAction`.
 
 | action | target | what it does | safe for collapse? |
 |---|---|---|---|
-| **2** | `0xa021185` | `GetIndexOfWebContents(keepWC)` → `RemoveSplit(splitId)` → `ActivateTabAt(thatIndex)` — **dissolve, keep the ACTIVE pane foreground** | **YES — this is collapse** |
-| 3 | `0xa02113b` | same, but `keepWC` is overwritten with `ListTabs().back()` first → dissolve, keep the **last** tab foreground | keeps tabs, wrong pane |
-| 4 | `0xa021107` | `GetIndexOfWebContents(keepWC)` → **`CloseWebContentsAt(idx, 1)`** — **CLOSES the active tab** | **NO — closes a tab** |
-| 5 | `0xa0210e1` | `TabStripModel::ReverseTabsInSplit(splitId)` (`0xa2737b4`) — swap sides | n/a (no teardown) |
-| 1 | `0xa021243` | build `OpenURLParams` on `keepWC`'s URL, `MaybeShareCopilotHostBetweenTabs`, open (duplicate-into-split flow) | n/a |
-| 0 | `0xa0211f9` | `keepWC = ListTabs().back()`, then the action-1 open flow | n/a |
+| 2 | `0xa021185` | `GetIndexOfWebContents(keep)` → `RemoveSplit(splitId)` → `ActivateTabAt(thatIndex)` — dissolve, the split's **first** tab in front | keeps tabs; first pane |
+| 3 | `0xa02113b` | same, but `keep` is overwritten with `ListTabs().back()` first → dissolve, the **last** tab in front | keeps tabs; last pane |
+| 4 | `0xa021107` | `GetIndexOfWebContents(keep)` → **`CloseWebContentsAt(idx, 1)`** — **CLOSES the split's first tab** | **NO — closes a tab** |
+| 5 | `0xa0210e1` | `TabStripModel::ReverseTabsInSplit(splitId)` (`0xa2737b4`): moves the first member one step on — swaps the first two | n/a (no teardown) |
+| 1 | `0xa021243` | `OpenURLParams` on `keep`'s last committed URL (WebContents vtable `+0x80`), `NEW_BACKGROUND_TAB` (4), opened through the controller's navigator (`+0x40`, vtable `+8`), then `MaybeShareCopilotHostBetweenTabs` — a copy of the first tab's page | n/a |
+| 0 | `0xa0211f9` | `keep = ListTabs().back()`, then the action-1 flow — a copy of the last tab's page | n/a |
 
 Both collapse-safe actions (2 and 3) go through `RemoveSplit` and **never** touch
 `CloseWebContentsAt`. The tab-closing actions are **4** and the separate method
@@ -215,6 +230,9 @@ Both collapse-safe actions (2 and 3) go through `RemoveSplit` and **never** touc
 `0xa26f916`) — **do not call these for collapse.**
 
 ### Recommended call sequence for the injected DLL (UI thread)
+
+*Superseded by the correction at the top: forcing action 2 keeps the first
+pane, not the active one. Kept as the record of what was tried.*
 
 The goal (keep the active pane full-window, eject every other pane as a standalone
 tab) is precisely **action 2**. The native toolbar already runs `DoActionToSplitWindow`

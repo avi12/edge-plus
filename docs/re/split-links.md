@@ -3,9 +3,10 @@
 Target: `msedge.dll` 155.0.4283.45. All addresses are **RVAs**; their one home
 in code is `app/native-split/src/offsets.h`.
 
-The pane ⋯ menu's toggle "Open left links to the right" now decides where a
-link that would open a **new tab** (`target=_blank`, no opener) goes, when it
-is clicked in any pane of a split:
+The pane ⋯ menu's toggle "Open left links to the right", relabelled "Open
+new-tab links in a new pane" (`pane-menu.md`), now decides where a link that
+would open a **new tab** (`target=_blank`, no opener) goes, when it is clicked
+in any pane of a split:
 
 | toggle | the link opens |
 |---|---|
