@@ -16,6 +16,13 @@ internal static class Paths {
   // The native split DLL, unpacked here for the panel to inject into Edge.
   public static string SplitDll { get; } = Path.Combine(Root, "fixedge-split.dll");
 
+  // The desired-state the DLL reads at load (config::LoadFromFile in the DLL):
+  // the same bytes the panel also pushes live over WM_COPYDATA.
+  public static string ConfigFile { get; } = Path.Combine(Root, "fixedge-config.bin");
+
+  // Local theme .crx files the user added are copied here to install by path.
+  public static string ThemesRoot { get; } = Path.Combine(Root, "themes");
+
   public static string ReadSettings() => File.Exists(Settings) ? File.ReadAllText(Settings) : "{}";
 
   // Written whole then swapped in, so a watcher never reads half a file.
