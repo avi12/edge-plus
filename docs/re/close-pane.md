@@ -53,8 +53,19 @@ bytes, `(this, MultiContentsView*)`): the two-pane split's handle, with its
 hover pill, and a resize cursor that turns vertical when the view is taller
 than wide (`EdgeTwoDimensionalResizeArea::GetCursor` compares its own width and
 height). They are created outside layout, kept above the panes in z-order, and
-placed over the seams on every layout pass; Edge's single two-pane handle
-(`MCV+0x3f0`) is hidden. A drag is taken from the class's own mouse handlers
+placed in the seams on every layout pass. Edge's single two-pane handle
+(`MCV+0x3f0`) stays visible but zero-sized: a hidden one turns every pane's
+hover bar and border off.
+
+**The layout leaves each seam an 8 DIP strip** (`kPaneGap`), as Edge's own
+layout leaves its handle one (`[pane0 | handle | pane1]`, `geom2d.md`). A
+page's web contents is a native window, and a click over it goes to the page,
+never to a view drawn on top. A divider laid over two panes that touch could
+only be grabbed where Edge's padding of its own two panes (4 DIPs on their
+outer sides) happened to leave a sliver. Between two of our added panes there
+was none.
+
+A drag is taken from the class's own mouse handlers
 (`EdgeTwoDimensionalResizeArea::OnMousePressed / Dragged / Released /
 CaptureLost`, rvas `0xb1fac20 / 0xb1facb0 / 0xb1facf0 / 0xb1fad50`); Edge's own
 handle still runs the originals. `ResizeSeam` trades the dragged distance

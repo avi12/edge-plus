@@ -63,6 +63,8 @@ The two scenarios this was built for:
 3. Otherwise the pane under the pointer: its centre box (25–75% on both axes)
    swaps; outside it, the pane's diagonals pick the edge (no dead corners); an
    active edge holds until 40% into the pane. The dragged pane offers nothing.
+   The 8 DIP strip between two panes (a divider's) keeps the pane target
+   already shown, so crossing it does not blink the preview off.
 4. A drop that would change nothing (a no-op edit) shows nothing and, for the
    outer band, falls through to the pane under the pointer.
 
