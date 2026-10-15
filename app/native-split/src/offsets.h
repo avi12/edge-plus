@@ -318,6 +318,9 @@ inline constexpr uintptr_t NavigationControllerImpl_LoadURLWithParams =
 inline constexpr uintptr_t WebContentsImpl_GetController = 0x1107b90;
 // bool WebContentsImpl::HasOpener(this).
 inline constexpr uintptr_t WebContentsImpl_HasOpener = 0x341d580;
+// const GURL& WebContentsImpl::GetLastCommittedURL(this) (WebContents vtable
+// +0x80).
+inline constexpr uintptr_t WebContentsImpl_GetLastCommittedURL = 0x10ff1a0;
 // base::internal::WeakReference::~WeakReference(this): a WeakPtr's first field.
 inline constexpr uintptr_t WeakReference_dtor = 0x0f99f60;
 
@@ -505,7 +508,8 @@ inline constexpr uintptr_t ControlButtons_close_button = 0x350;
 enum class ControlMenuCommand : int {
   kSwitchToVertical = 0,    // SetVerticalSplitStateForTab(active, true)
   kSwitchToHorizontal = 1,  // SetVerticalSplitStateForTab(active, false)
-  kOpenInNewTab = 2,        // SplitAction kCopyToNewTab / kCopyLastToNewTab
+  kOpenInNewTab = 2,        // copies the first pane's page, or (any other
+                            // pane's ⋯) the last pane's: SplitAction 1 / 0
   kSeparate = 3,            // SplitAction kDissolveKeepActive / KeepLast
   kSendFeedback = 4,        // Edge's feedback dialog
   kSwitchSides = 5,         // SplitAction kReverseSides

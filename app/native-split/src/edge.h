@@ -548,10 +548,24 @@ inline void NavigateTo(void* webContents, const void* url) {
   reinterpret_cast<DtorFn>(At(rva::LoadURLParams_dtor))(params);
 }
 
-// Open `url` in a new background tab at strip `index` (chrome::AddTabAt's
-// worker); returns its WebContents, or null. `browser` is what BrowserOf
-// returns: the BrowserWindowInterface view of Edge's Browser (tab_strip_model
-// at +0x30), as AddAndReturnTabAt takes it.
+// Open the GURL `gurl` in a new background tab at strip `index`
+// (chrome::AddTabAt's worker); returns its WebContents, or null. `browser` is
+// what BrowserOf returns: the BrowserWindowInterface view of Edge's Browser
+// (tab_strip_model at +0x30), as AddAndReturnTabAt takes it.
+inline void* AddBackgroundTabForGurl(void* browser, const void* gurl,
+                                     int index) {
+  alignas(8) uint8_t noGroup[off::OptionalTabGroupId_size] = {};
+  constexpr uint32_t kNoExtraTransition = 0;
+  constexpr bool kIsForeground = false;
+  constexpr bool kIsPinned = false;
+  constexpr uint64_t kNoOptionalInt = 0;  // an empty optional<int>
+  using AddFn = void*(__fastcall*)(void*, const void*, uint32_t, int, bool,
+                                   const void*, bool, uint64_t);
+  return reinterpret_cast<AddFn>(At(rva::Chrome_AddAndReturnTabAt))(
+      browser, gurl, kNoExtraTransition, index, kIsForeground, noGroup,
+      kIsPinned, kNoOptionalInt);
+}
+// The same, from a UTF-8 URL string.
 inline void* AddBackgroundTab(void* browser, const char* url, int index) {
   const struct {
     const char* data;
@@ -560,20 +574,18 @@ inline void* AddBackgroundTab(void* browser, const char* url, int index) {
   alignas(16) uint8_t gurl[off::GURL_size] = {};
   using GurlFn = void*(__fastcall*)(void*, const void*);
   reinterpret_cast<GurlFn>(At(rva::GURL_ctor_string))(gurl, &urlView);
-  alignas(8) uint8_t noGroup[off::OptionalTabGroupId_size] = {};
-  constexpr uint32_t kNoExtraTransition = 0;
-  constexpr bool kIsForeground = false;
-  constexpr bool kIsPinned = false;
-  constexpr uint64_t kNoOptionalInt = 0;  // an empty optional<int>
-  using AddFn = void*(__fastcall*)(void*, const void*, uint32_t, int, bool,
-                                   const void*, bool, uint64_t);
-  void* webContents =
-      reinterpret_cast<AddFn>(At(rva::Chrome_AddAndReturnTabAt))(
-          browser, gurl, kNoExtraTransition, index, kIsForeground, noGroup,
-          kIsPinned, kNoOptionalInt);
+  void* webContents = AddBackgroundTabForGurl(browser, gurl, index);
   using DtorFn = void(__fastcall*)(void*);
   reinterpret_cast<DtorFn>(At(rva::GURL_dtor))(gurl);
   return webContents;
+}
+
+// The URL of the page `webContents` last committed (a const GURL&): the page
+// Edge's split "Open this webpage in a new tab" copies.
+inline const void* LastCommittedUrl(void* webContents) {
+  using UrlFn = const void*(__fastcall*)(void*);
+  return reinterpret_cast<UrlFn>(At(rva::WebContentsImpl_GetLastCommittedURL))(
+      webContents);
 }
 
 // The page Edge's split button opens in its new pane: it offers the window's

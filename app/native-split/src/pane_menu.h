@@ -8,11 +8,16 @@
 //     another swaps any two) and "Switch to vertical / horizontal" (a grown
 //     split is laid out by its tree, which ignores Edge's orientation).
 //   - The link toggle says what links.h made it do.
+//   - "Open this webpage in a new tab" copies the menu's own pane. Edge's
+//     copies the first pane from the first pane's ⋯ and the LAST pane from any
+//     other's (DoActionToSplitWindow ignores the page it is handed), which past
+//     two panes is often another pane's page.
 // docs/re/pane-menu.md.
 #pragma once
 #include <cstddef>
 #include "edge.h"
 #include "links.h"
+#include "pane_tree.h"
 #include "split_data.h"
 
 namespace fixedge::pane_menu {
@@ -82,6 +87,30 @@ inline void FitItems(void* model, void* mcv) {
       edge::MenuSetLabel(model, index, LinkModeLabel());
     }
   }
+}
+
+// SplitWindowControlMenu::ExecuteCommand, for the ⋯ menu of `mcv`'s container
+// `pane` (mcv null when unknown): runs `command` here if it acts on that pane,
+// and returns whether it did; else Edge runs it.
+inline bool RunItem(int command, void* mcv, int pane) {
+  const bool isCopyOfMenuPane =
+      command == static_cast<int>(ControlMenuCommand::kOpenInNewTab) && mcv &&
+      pane != kNoLeaf;
+  if (!isCopyOfMenuPane) {
+    return false;
+  }
+  void* contents = edge::ContainerWebContents(edge::McvContainerAt(mcv, pane));
+  void* tsm = edge::McvTabStripModel(mcv);
+  const bool canCopy = contents && tsm;
+  if (!canCopy) {
+    return false;
+  }
+  // A background tab at the end of the strip, where Edge's own copy lands.
+  edge::AddBackgroundTabForGurl(edge::BrowserOf(edge::McvBrowserView(mcv)),
+                                edge::LastCommittedUrl(contents),
+                                edge::TabCount(tsm));
+  Log("[pane menu] pane %d's page copied into a new tab", pane);
+  return true;
 }
 
 }  // namespace fixedge::pane_menu

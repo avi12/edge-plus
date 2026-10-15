@@ -53,9 +53,14 @@ inline constexpr char kRowLabel[] = "Add pane";
 inline constexpr int kNoArrow = -1;
 
 // The pane whose ⋯ opened the menu (ToggleContextMenu), consumed by the next
-// add; without one (a menu opened elsewhere) the active pane is used.
+// action on it; without one (a menu opened elsewhere) an add uses the active
+// pane.
 inline void* g_menuMcv = nullptr;
 inline int g_menuPane = kNoLeaf;
+inline void ForgetMenuPane() {
+  g_menuMcv = nullptr;
+  g_menuPane = kNoLeaf;
+}
 // The open ⋯ menu's arrow buttons.
 inline void* g_arrows[kMenuItemCount] = {};
 // The open ⋯ menu's "Add pane" row (MenuItemView) and its d-pad, centred in
@@ -84,8 +89,7 @@ inline void AddBesideMenuPane(Direction direction) {
   const bool hasMenuPane = g_menuMcv && g_menuPane != kNoLeaf;
   void* mcv = hasMenuPane ? g_menuMcv : g_activeMcv;
   const int pane = hasMenuPane ? g_menuPane : split_ops::ActiveLeaf(mcv);
-  g_menuMcv = nullptr;
-  g_menuPane = kNoLeaf;
+  ForgetMenuPane();
   offer::AddOfferPane(mcv, direction, pane);
 }
 
@@ -139,8 +143,7 @@ inline void* __fastcall h_exec(void* self, int commandId, int eventFlags) {
 using Toggle_t = void(__fastcall*)(void*, void*);
 inline Toggle_t o_toggle = nullptr;
 inline void __fastcall h_toggle(void* bar, void* argument2) {
-  g_menuMcv = nullptr;
-  g_menuPane = kNoLeaf;
+  ForgetMenuPane();
   std::fill(std::begin(g_arrows), std::end(g_arrows), nullptr);
   g_addPaneRow = nullptr;
   g_dpad = nullptr;
@@ -295,16 +298,24 @@ inline bool __fastcall h_should_execute(void* self, int commandId,
   return isAddPaneRow || o_should_execute(self, commandId, event);
 }
 
-// SplitWindowControlMenu::ExecuteCommand(menu, int id, int flags): Edge's
-// items run as before; the "Add pane" row itself does nothing.
+// SplitWindowControlMenu::ExecuteCommand(menu, int id, int flags): an Edge
+// item that acts on a pane runs on the menu's own (pane_menu.h), the rest as
+// before; the "Add pane" row itself does nothing.
 using ControlExec_t = void(__fastcall*)(void*, int, int);
 inline ControlExec_t o_control_exec = nullptr;
 inline void __fastcall h_control_exec(void* menu, int commandId,
                                       int eventFlags) {
-  const bool isEdgeItem = commandId != kAddPaneRowCommand;
-  if (isEdgeItem) {
-    o_control_exec(menu, commandId, eventFlags);
+  const bool isAddPaneRow = commandId == kAddPaneRowCommand;
+  if (isAddPaneRow) {
+    return;
   }
+  const bool hasRunOnMenuPane =
+      pane_menu::RunItem(commandId, g_menuMcv, g_menuPane);
+  if (hasRunOnMenuPane) {
+    ForgetMenuPane();
+    return;
+  }
+  o_control_exec(menu, commandId, eventFlags);
 }
 
 }  // namespace fixedge::menu
