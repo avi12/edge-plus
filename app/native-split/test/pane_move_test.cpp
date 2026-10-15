@@ -257,7 +257,7 @@ void RunChecks() {
   {
     Node tree = FlatTree(3, Axis::kHorizontal);
     SplitPane(tree, 2, Direction::kDown, 3);  // H[0 1 V[2 3]]
-    const std::vector<Seam> seams = Seams(tree, Rect{0, 0, 900, 600});
+    const std::vector<Seam> seams = Seams(tree, Rect{0, 0, 900, 600}, 0);
     Check(seams.size() == 3, "four panes, three seams");
     Check(seams[0].axis == Axis::kHorizontal && seams[0].position == 300 &&
               seams[0].crossLength == 600,
@@ -266,10 +266,29 @@ void RunChecks() {
               seams[2].crossStart == 600 && seams[2].crossLength == 300,
           "seam between 2 and 3: y=300, the third column's width");
   }
+  // Laid out kPaneGap apart, a seam is the strip between its two panes: no
+  // pane covers it (a page would take the pointer from its divider).
+  {
+    const Node tree = FlatTree(3, Axis::kHorizontal);
+    const Rect area{0, 0, 900 + 2 * kPaneGap, 600};
+    const std::vector<Seam> seams = Seams(tree, area, kPaneGap);
+    std::vector<LeafRect> leaves;
+    LayoutTree(tree, area, kPaneGap, leaves);
+    Check(seams[0].position == 300 && seams[0].thickness == kPaneGap,
+          "seam 0 starts where pane 0 ends");
+    Check(seams[0].position + seams[0].thickness == leaves[1].rect.x,
+          "and ends where pane 1 starts");
+    Check(seams[1].position == 600 + kPaneGap && seams[1].lengthBefore == 300,
+          "seam 1 follows pane 1, both panes 300 wide");
+    Node resized = tree;
+    Check(ResizeSeam(resized, seams[0], 60), "drag seam 0 by +60");
+    Check(Seams(resized, area, kPaneGap)[0].position == 360,
+          "the strip moves with the pointer");
+  }
   // Dragging a seam trades length between its two panes only.
   {
     Node tree = FlatTree(3, Axis::kHorizontal);
-    const Seam seam = Seams(tree, Rect{0, 0, 900, 600})[0];
+    const Seam seam = Seams(tree, Rect{0, 0, 900, 600}, 0)[0];
     Check(ResizeSeam(tree, seam, 60), "drag seam 0 by +60");
     Check(Layout(tree, 900, 600) ==
               "0:[0,0,360,600] 1:[360,0,240,600] 2:[600,0,300,600] ",
@@ -290,7 +309,7 @@ void RunChecks() {
     Node tree = FlatTree(3, Axis::kHorizontal);
     SplitPane(tree, 2, Direction::kDown, 3);  // H[0 1 V[2 3]]
     const Rect area{0, 0, 900, 600};
-    std::vector<Seam> seams = Seams(tree, area);
+    std::vector<Seam> seams = Seams(tree, area, 0);
     ResizeSeam(tree, seams[0], 120);   // widen pane 0
     ResizeSeam(tree, seams[2], -100);  // shorten pane 2
     Check(EqualizeSplit(tree, seams[2].path), "reset the column's heights");

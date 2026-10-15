@@ -1,10 +1,10 @@
 // dividers.h — the draggable dividers between panes. One concern: keep one of
 // Edge's own divider views (EdgeMultiContentsResizeArea, the 2-pane split's
 // resize handle: same look, hover pill and resize cursor) per seam of a grown
-// split's tree, place each over its seam on every layout pass, and turn a drag
-// on one into a tree resize that keeps every other proportion. A split of N
-// panes has N - 1 seams. Views are created outside layout and reused; surplus
-// ones are hidden. UI thread only.
+// split's tree, place each in its seam (the strip the layout leaves between two
+// panes) on every layout pass, and turn a drag on one into a tree resize that
+// keeps every other proportion. A split of N panes has N - 1 seams. Views are
+// created outside layout and reused; surplus ones are hidden. UI thread only.
 #pragma once
 #include <map>
 #include <vector>
@@ -17,8 +17,6 @@ namespace fixedge::dividers {
 
 using namespace fixedge::edge155;
 
-// The thickness Edge gives its own resize area (its preferred size).
-inline constexpr int kThickness = 8;
 // A stock split has two containers; dividers belong to grown splits only.
 inline constexpr int kStockContainerCount = 2;
 
@@ -53,17 +51,18 @@ inline void Ensure(void* mcv) {
   }
 }
 
-// The divider's rect over `seam`, centred on the boundary.
+// The divider's rect: the whole strip of `seam`.
 inline Rect RectOf(const Seam& seam) {
-  const int offset = seam.position - kThickness / 2;
   if (seam.axis == Axis::kHorizontal) {
-    return Rect{offset, seam.crossStart, kThickness, seam.crossLength};
+    return Rect{seam.position, seam.crossStart, seam.thickness,
+                seam.crossLength};
   }
-  return Rect{seam.crossStart, offset, seam.crossLength, kThickness};
+  return Rect{seam.crossStart, seam.position, seam.crossLength, seam.thickness};
 }
 
-// Layout pass: one divider over each seam of `tree` in `area`, the rest (and
-// Edge's own two-pane handle) hidden. Appends to the ChildLayouts vector.
+// Layout pass: one divider in each seam of `tree` in `area` (tiled kPaneGap
+// apart), the rest (and Edge's own two-pane handle) hidden. Appends to the
+// ChildLayouts vector.
 inline void Place(void* mcv, const Node& tree, const Rect& area,
                   void* childLayouts) {
   auto entry = Pools().find(mcv);
@@ -81,7 +80,7 @@ inline void Place(void* mcv, const Node& tree, const Rect& area,
     return;
   }
   Pool& pool = entry->second;
-  pool.seams = Seams(tree, area);
+  pool.seams = Seams(tree, area, kPaneGap);
   for (size_t i = 0; i < pool.views.size(); i++) {
     void* view = pool.views[i];
     const bool hasSeam = i < pool.seams.size();

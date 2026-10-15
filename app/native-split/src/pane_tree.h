@@ -42,6 +42,11 @@ struct LeafRect {
 // so a small window shrinks panes evenly instead of overflowing.
 inline constexpr int kDesiredMinPane = 64;
 
+// The strip left between neighbouring panes, where their divider sits: the
+// room Edge's own split leaves its resize handle. No pane may cover a divider,
+// since a page's native window takes every click over it.
+inline constexpr int kPaneGap = 8;
+
 // How a split's span is shared out among its panes.
 struct SpanShare {
   std::vector<bool> isPinned;  // parallel to the weights
@@ -673,35 +678,39 @@ inline int LeafCount(const Node& node) {
 
 // --- seams: where neighbouring panes meet, and dragging them -------------------
 
-// The boundary between child `index` and `index + 1` of the split at `path`
-// (child indices from the root). For a horizontal split it is a vertical line
-// at x = `position`, `crossStart`..`crossStart + crossLength` tall; for a
-// vertical split, a horizontal line at y = `position`. `lengthBefore` /
-// `lengthAfter` are the two children's lengths along the split when measured.
+// The strip between child `index` and `index + 1` of the split at `path`
+// (child indices from the root), as laid out `thickness` apart. For a
+// horizontal split it is a column from x = `position`, `crossStart`..
+// `crossStart + crossLength` tall; for a vertical split, a row from y =
+// `position`. `lengthBefore` / `lengthAfter` are the two children's lengths
+// along the split when measured.
 struct Seam {
   std::vector<int> path;
   int index = 0;
   Axis axis = Axis::kHorizontal;
   int position = 0;
+  int thickness = 0;
   int crossStart = 0;
   int crossLength = 0;
   int lengthBefore = 0;
   int lengthAfter = 0;
 };
 
-inline void CollectSeams(const Node& node, const Rect& bounds,
+inline void CollectSeams(const Node& node, const Rect& bounds, int gap,
                          std::vector<int>& path, std::vector<Seam>& out) {
   if (node.isLeaf) {
     return;
   }
-  const std::vector<Rect> rects = ChildRects(node, bounds, /*gap=*/0);
+  const std::vector<Rect> rects = ChildRects(node, bounds, gap);
   const bool isHorizontal = node.axis == Axis::kHorizontal;
   for (size_t i = 0; i + 1 < rects.size(); i++) {
     Seam seam;
     seam.path = path;
     seam.index = static_cast<int>(i);
     seam.axis = node.axis;
-    seam.position = isHorizontal ? rects[i + 1].x : rects[i + 1].y;
+    seam.position = isHorizontal ? rects[i].x + rects[i].width
+                                 : rects[i].y + rects[i].height;
+    seam.thickness = gap;
     seam.crossStart = isHorizontal ? bounds.y : bounds.x;
     seam.crossLength = isHorizontal ? bounds.height : bounds.width;
     seam.lengthBefore = isHorizontal ? rects[i].width : rects[i].height;
@@ -710,16 +719,17 @@ inline void CollectSeams(const Node& node, const Rect& bounds,
   }
   for (size_t i = 0; i < rects.size(); i++) {
     path.push_back(static_cast<int>(i));
-    CollectSeams(node.children[i], rects[i], path, out);
+    CollectSeams(node.children[i], rects[i], gap, path, out);
     path.pop_back();
   }
 }
 
-// Every seam of `root` laid out in `bounds`: a tree of N panes has N - 1.
-inline std::vector<Seam> Seams(const Node& root, const Rect& bounds) {
+// Every seam of `root` laid out in `bounds` with `gap` px between its panes
+// (LayoutTree's gap): a tree of N panes has N - 1.
+inline std::vector<Seam> Seams(const Node& root, const Rect& bounds, int gap) {
   std::vector<Seam> seams;
   std::vector<int> path;
-  CollectSeams(root, bounds, path, seams);
+  CollectSeams(root, bounds, gap, path, seams);
   return seams;
 }
 

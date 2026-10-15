@@ -62,7 +62,7 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
   const Node root = LiveTree(mcv, shownPanes);
 
   std::vector<LeafRect> leaves;
-  LayoutTree(root, Rect{0, 0, width, height}, /*gap=*/0, leaves);
+  LayoutTree(root, Rect{0, 0, width, height}, kPaneGap, leaves);
 
   // Guard tree/truth drift: only a leaf naming a shown container is placed.
   std::vector<LeafRect> placed;
@@ -92,7 +92,7 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
     edge::EmplaceChildLayout(childLayouts, &containers[i], &isVisible,
                              &zeroRect);
   }
-  // The dividers sit over the seams of the target layout.
+  // The dividers sit in the seams of the target layout.
   dividers::Place(mcv, root, Rect{0, 0, width, height}, childLayouts);
   Log("[layout] tiled %zu/%d panes in %dx%d (%s)", placed.size(), count, width,
       height, axis == Axis::kVertical ? "rows" : "cols");

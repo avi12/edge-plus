@@ -28,8 +28,10 @@ bool HasBounds(const Rect& rect, int x, int y, int width, int height) {
 }
 
 void RunChecks() {
-  // A 1200x800 split holding one row of four 300-wide panes; we drag pane 3.
-  const Rect layout{0, 0, 1200, 800};
+  // A 1216x808 split holding one row of four 298-wide panes, kPaneGap (8)
+  // apart: x = 0, 306, 612, 918. Three columns of it are 400 wide (x = 0, 408,
+  // 816) and two rows 400 tall (y = 0, 408). We drag pane 3.
+  const Rect layout{0, 0, 1216, 808};
   const Node row = FlatTree(4, Axis::kHorizontal);
   const Plan none;
 
@@ -40,7 +42,7 @@ void RunChecks() {
     Check(plan.zone == Zone::kPaneEdge && plan.target == 2 &&
               plan.direction == Direction::kDown,
           "bottom of pane 2 -> below 2");
-    Check(HasBounds(plan.preview, 800, 400, 400, 400),
+    Check(HasBounds(plan.preview, 816, 408, 400, 400),
           "preview = bottom half of the third column");
   }
   // Scenario (b): within the outer band at the bottom -> the full bottom half.
@@ -48,11 +50,11 @@ void RunChecks() {
     const Plan plan = Resolve(row, layout, Point{750, 795}, 3, none);
     Check(plan.zone == Zone::kRootEdge && plan.direction == Direction::kDown,
           "outer bottom band -> root edge");
-    Check(HasBounds(plan.preview, 0, 400, 1200, 400),
+    Check(HasBounds(plan.preview, 0, 408, 1216, 400),
           "preview = the whole bottom half");
   }
   // Dragged "far enough": the outer band is 8% of the split's height (64 of
-  // 800), so 49 DIP above the bottom already spans the whole bottom.
+  // 808), so 57 DIP above the bottom already spans the whole bottom.
   {
     const Plan plan = Resolve(row, layout, Point{750, 750}, 3, none);
     Check(plan.zone == Zone::kRootEdge && plan.direction == Direction::kDown,
@@ -63,12 +65,12 @@ void RunChecks() {
     const Plan plan = Resolve(row, layout, Point{750, 400}, 3, none);
     Check(plan.zone == Zone::kSwap && plan.target == 2,
           "centre of pane 2 -> swap");
-    Check(HasBounds(plan.preview, 600, 0, 300, 800),
+    Check(HasBounds(plan.preview, 612, 0, 298, 808),
           "swap preview = pane 2's rect");
   }
   // Diagonals pick the nearest edge: near pane 2's left side -> left of 2.
   {
-    const Plan plan = Resolve(row, layout, Point{610, 420}, 3, none);
+    const Plan plan = Resolve(row, layout, Point{622, 420}, 3, none);
     Check(plan.zone == Zone::kPaneEdge && plan.target == 2 &&
               plan.direction == Direction::kLeft,
           "left strip of pane 2 -> left of 2");
@@ -82,7 +84,7 @@ void RunChecks() {
   }
   // A slight overshoot is clamped in and still hits the outer band.
   {
-    const Plan plan = Resolve(row, layout, Point{600, 820}, 3, none);
+    const Plan plan = Resolve(row, layout, Point{600, 828}, 3, none);
     Check(plan.zone == Zone::kRootEdge && plan.direction == Direction::kDown,
           "20 DIP overshoot -> root bottom");
   }
@@ -100,19 +102,19 @@ void RunChecks() {
   // Hysteresis: an active outer band holds 32 DIP past its 64 DIP depth...
   {
     const Plan shown = Resolve(row, layout, Point{750, 795}, 3, none);
-    const Plan held = Resolve(row, layout, Point{750, 720}, 3, shown);
+    const Plan held = Resolve(row, layout, Point{750, 728}, 3, shown);
     Check(held.zone == Zone::kRootEdge, "outer band holds at 79 DIP");
-    const Plan released = Resolve(row, layout, Point{750, 690}, 3, shown);
+    const Plan released = Resolve(row, layout, Point{750, 698}, 3, shown);
     Check(released.zone == Zone::kPaneEdge, "outer band releases past 96 DIP");
   }
   // ...and an active pane edge holds into the centre box (no flip to swap).
   {
     const Plan shown = Resolve(row, layout, Point{750, 700}, 3, none);
     const Plan held =
-        Resolve(row, layout, Point{750, 520}, 3, shown);  // paneY = 0.65
+        Resolve(row, layout, Point{750, 525}, 3, shown);  // paneY = 0.65
     Check(held.zone == Zone::kPaneEdge && held.direction == Direction::kDown,
           "pane edge holds at 65%");
-    const Plan fresh = Resolve(row, layout, Point{750, 520}, 3, none);
+    const Plan fresh = Resolve(row, layout, Point{750, 525}, 3, none);
     Check(fresh.zone == Zone::kSwap, "same spot without a held edge -> swap");
   }
   // An incoming pane (a tab dragged in) joins the tree: three panes, the new
@@ -123,14 +125,14 @@ void RunChecks() {
     Check(below.zone == Zone::kPaneEdge && below.target == 1 &&
               below.direction == Direction::kDown,
           "incoming: bottom of pane 1 -> below 1");
-    Check(HasBounds(below.preview, 400, 400, 400, 400),
+    Check(HasBounds(below.preview, 408, 408, 400, 400),
           "incoming preview = bottom half of the middle column");
     std::vector<int> order;
     CollectLeaves(below.result, order);
     Check(order == std::vector<int>({0, 1, 3, 2}), "incoming joins the tree");
     const Plan span = ResolveIncoming(three, layout, Point{600, 795}, 3, none);
     Check(span.zone == Zone::kRootEdge && span.direction == Direction::kDown &&
-              HasBounds(span.preview, 0, 400, 1200, 400),
+              HasBounds(span.preview, 0, 408, 1216, 400),
           "incoming: outer bottom band spans the bottom");
     const Plan centre =
         ResolveIncoming(three, layout, Point{600, 380}, 3, none);
@@ -139,6 +141,18 @@ void RunChecks() {
     Check(ResolveIncoming(three, layout, Point{600, -10}, 3, none).zone ==
               Zone::kNone,
           "incoming: just above the split (the strip) -> nothing");
+  }
+  // The gap between panes 1 and 2 is neither's: a zone already shown holds
+  // there, and with none shown there is nothing to drop on.
+  {
+    const Point inGap{608, 400};
+    Check(Resolve(row, layout, inGap, 3, none).zone == Zone::kNone,
+          "the gap alone -> nothing");
+    const Plan shown = Resolve(row, layout, Point{750, 700}, 3, none);
+    const Plan held = Resolve(row, layout, inGap, 3, shown);
+    Check(held.zone == Zone::kPaneEdge && held.target == 2 &&
+              held.direction == Direction::kDown,
+          "crossing the gap keeps below 2");
   }
   // The returned tree is exactly what the drop commits.
   {

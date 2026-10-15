@@ -140,7 +140,7 @@ inline Plan Finish(const Node& tree, const Rect& layout, int pane,
     return {};
   }
   std::vector<LeafRect> leaves;
-  LayoutTree(plan.result, layout, /*gap=*/0, leaves);
+  LayoutTree(plan.result, layout, kPaneGap, leaves);
   for (const LeafRect& leafRect : leaves) {
     const bool isDraggedPane = leafRect.leaf == pane;
     if (isDraggedPane) {
@@ -157,8 +157,9 @@ inline Plan Finish(const Node& tree, const Rect& layout, int pane,
 // `shown` is the plan currently shown, for hysteresis. Precedence: the whole
 // split's outer band first (checked before any pane, as dockview's root target
 // is), then the pane under the pointer — its centre swaps (a moving pane only),
-// its edges dock beside it. So near a pane's bottom edge docks below that pane,
-// and dragging on, deep toward the split's bottom, spans the whole bottom.
+// its edges dock beside it; the gap between two panes keeps what is shown. So
+// near a pane's bottom edge docks below that pane, and dragging on, deep
+// toward the split's bottom, spans the whole bottom.
 inline Plan ResolveDrop(const Node& tree, const Rect& layout, Point point,
                         int pane, Source source, const Plan& shown) {
   if (Empty(layout)) {
@@ -210,7 +211,7 @@ inline Plan ResolveDrop(const Node& tree, const Rect& layout, Point point,
 
   // 2. The pane under the pointer (the dragged pane itself offers nothing).
   std::vector<LeafRect> leaves;
-  LayoutTree(tree, layout, /*gap=*/0, leaves);
+  LayoutTree(tree, layout, kPaneGap, leaves);
   for (const LeafRect& leafRect : leaves) {
     const Rect& paneRect = leafRect.rect;
     if (!Contains(paneRect, point)) {
@@ -242,6 +243,13 @@ inline Plan ResolveDrop(const Node& tree, const Rect& layout, Point point,
     }
     return Finish(tree, layout, pane, source, Zone::kPaneEdge, leafRect.leaf,
                   DiagonalEdge(paneX, paneY));
+  }
+  // 3. The gap between two panes belongs to neither: a pane's zone already
+  // shown holds there, so crossing from pane to pane does not blink it off.
+  const bool isPaneZoneShown =
+      shown.zone == Zone::kPaneEdge || shown.zone == Zone::kSwap;
+  if (isPaneZoneShown) {
+    return shown;
   }
   return {};
 }
