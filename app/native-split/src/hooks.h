@@ -356,6 +356,16 @@ inline bool InstallAll() {
           reinterpret_cast<void*>(links::h_link_throttle),
           &links::o_link_throttle,
           "SplitWindowLinkModeNavigationThrottle::MaybeCreateThrottleFor");
+  Install(rva::SplitWindowControllerV2_OpenTabInCurrentSplitWindow,
+          reinterpret_cast<void*>(offer::h_open_tab), &offer::o_open_tab,
+          "SplitWindowControllerImplV2::OpenTabInCurrentSplitWindow");
+  Install(rva::StartingPageLeftSplitTask_RunOnce,
+          reinterpret_cast<void*>(offer::h_page_left_split),
+          &offer::o_page_left_split,
+          "OnSplitTabRemoved's starting page task (RunOnce)");
+  Install(rva::SplitWindowStartingUIHandler_CloseSplitWindow,
+          reinterpret_cast<void*>(offer::h_close_page), &offer::o_close_page,
+          "SplitWindowStartingUIHandler::CloseSplitWindow");
   Install(rva::TabDragController_ContinueDragging,
           reinterpret_cast<void*>(tabdrag::h_continue_dragging),
           &tabdrag::o_continue_dragging, "TabDragController::ContinueDragging");

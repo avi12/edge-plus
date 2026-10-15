@@ -521,6 +521,72 @@ inline void NavigateTo(void* webContents, const void* url) {
   reinterpret_cast<DtorFn>(At(rva::LoadURLParams_dtor))(params);
 }
 
+// Open `url` in a new background tab at strip `index` (chrome::AddTabAt's
+// worker); returns its WebContents, or null. `browser` is what BrowserOf
+// returns: the BrowserWindowInterface view of Edge's Browser (tab_strip_model
+// at +0x30), as AddAndReturnTabAt takes it.
+inline void* AddBackgroundTab(void* browser, const char* url, int index) {
+  const struct {
+    const char* data;
+    size_t size;
+  } urlView = {url, std::strlen(url)};
+  alignas(16) uint8_t gurl[off::GURL_size] = {};
+  using GurlFn = void*(__fastcall*)(void*, const void*);
+  reinterpret_cast<GurlFn>(At(rva::GURL_ctor_string))(gurl, &urlView);
+  alignas(8) uint8_t noGroup[off::OptionalTabGroupId_size] = {};
+  constexpr uint32_t kNoExtraTransition = 0;
+  constexpr bool kIsForeground = false;
+  constexpr bool kIsPinned = false;
+  constexpr uint64_t kNoOptionalInt = 0;  // an empty optional<int>
+  using AddFn = void*(__fastcall*)(void*, const void*, uint32_t, int, bool,
+                                   const void*, bool, uint64_t);
+  void* webContents =
+      reinterpret_cast<AddFn>(At(rva::Chrome_AddAndReturnTabAt))(
+          browser, gurl, kNoExtraTransition, index, kIsForeground, noGroup,
+          kIsPinned, kNoOptionalInt);
+  using DtorFn = void(__fastcall*)(void*);
+  reinterpret_cast<DtorFn>(At(rva::GURL_dtor))(gurl);
+  return webContents;
+}
+
+// The page Edge's split button opens in its new pane: it offers the window's
+// other tabs.
+inline const char* StartingPageUrl() {
+  return static_cast<const char*>(At(rva::EdgeUISplitWindowStartingPageURL));
+}
+
+// Whether `webContents` is Edge's split starting page, judged as Edge's split
+// controller judges it: by the user data the page attaches to its contents.
+inline bool IsStartingPage(void* webContents) {
+  constexpr bool kIsJudgedByUrl = false;
+  using StartingFn = bool(__fastcall*)(void*, bool);
+  return reinterpret_cast<StartingFn>(At(
+      rva::SplitWindowController_IsStartingPage))(webContents, kIsJudgedByUrl);
+}
+
+// A task's bound base::WeakPtr (its BindState's first bound argument): its
+// pointer while the WeakPtr is valid, else null.
+inline void* BoundWeakTarget(void* bindState) {
+  void* flag = Field<void*>(bindState, off::BINDSTATE_first_bound_argument);
+  const bool isValid =
+      flag && Field<uint8_t>(flag, off::WEAKFLAG_invalidated) == 0;
+  return isValid ? Field<void*>(bindState, off::BINDSTATE_first_bound_argument +
+                                               sizeof(void*))
+                 : nullptr;
+}
+// Null the bound WeakPtr's pointer, so the task finds nothing to act on and
+// only releases its reference.
+inline void ClearBoundWeakTarget(void* bindState) {
+  Field<void*>(bindState, off::BINDSTATE_first_bound_argument + sizeof(void*)) =
+      nullptr;
+}
+
+// The WebContents of the starting page a SplitWindowStartingUIHandler serves.
+inline void* StartingPageOf(void* handler) {
+  void* webUi = Field<void*>(handler, off::STARTINGHANDLER_web_ui);
+  return webUi ? Field<void*>(webUi, off::WEBUI_web_contents) : nullptr;
+}
+
 // --- events -------------------------------------------------------------------
 
 inline int EventType(void* event) {

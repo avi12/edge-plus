@@ -17,6 +17,7 @@
 #include "grip.h"
 #include "links.h"
 #include "menu.h"
+#include "offer.h"
 #include "overlay.h"
 #include "tabdrag.h"
 
@@ -231,6 +232,9 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
       return;
     case Command::kLinkPane:
       links::OpenLinkPane();
+      return;
+    case Command::kCloseOfferPane:
+      offer::CloseOfferPane();
       return;
     default:
       break;

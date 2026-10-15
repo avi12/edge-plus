@@ -153,6 +153,13 @@ inline bool IsLinkModeOn(void* tsm, void* splitTab) {
   return splitData && edge::Field<bool>(splitData, off::SPLITDATA_link_mode);
 }
 
+// How many members the split `tab` belongs to has (0 if it is in none).
+inline int MemberCountOf(void* tsm, void* tab) {
+  OptionalSplitId split = {};
+  edge::TabGetSplit(tab, &split);
+  return split.hasValue ? edge::SplitMembers(tsm, split.token).Count() : 0;
+}
+
 // A background tab: neither the active tab nor already in any split.
 inline bool IsFreeTab(void* tab, void* active) {
   return tab && tab != active && !edge::TabIsSplit(tab);

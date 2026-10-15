@@ -14,6 +14,7 @@
 #include "edge.h"
 #include "grip.h"
 #include "icons.h"
+#include "offer.h"
 #include "split_ops.h"
 #include "state.h"
 
@@ -79,14 +80,15 @@ inline void BuildLabels() {
   g_hasLabels = true;
 }
 
-// Add a pane in `direction` beside the menu's pane (else the active pane).
+// Add a pane in `direction` beside the menu's pane (else the active pane),
+// offering the window's other tabs for it.
 inline void AddBesideMenuPane(Direction direction) {
   const bool hasMenuPane = g_menuMcv && g_menuPane != kNoLeaf;
   void* mcv = hasMenuPane ? g_menuMcv : g_activeMcv;
   const int pane = hasMenuPane ? g_menuPane : split_ops::ActiveLeaf(mcv);
   g_menuMcv = nullptr;
   g_menuPane = kNoLeaf;
-  split_ops::AddPane(mcv, direction, pane);
+  offer::AddOfferPane(mcv, direction, pane);
 }
 
 // --- the toolbar's split menu (SplitTabMenuModel) ------------------------------

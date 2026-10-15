@@ -95,12 +95,13 @@ inline bool GrowWithTree(void* mcv, void* tsm, Node tree, void* newTab) {
 
 // Add one pane beside pane `besideLeaf`, in `direction`, as a real split-tree
 // edit: `newTab` (null: a free background tab) becomes the new pane. Unsplit,
-// the one pane (the active tab) is container 0. UI thread.
-inline void AddPane(void* mcv, Direction direction, int besideLeaf,
+// the one pane (the active tab) is container 0. Whether the pane was added.
+// UI thread.
+inline bool AddPane(void* mcv, Direction direction, int besideLeaf,
                     void* newTab = nullptr) {
   void* tsm = edge::McvTabStripModel(mcv);
   if (!tsm) {
-    return;
+    return false;
   }
   const bool isAlreadySplit = IsActiveTabSplit(tsm);
   const int oldPanes = isAlreadySplit ? edge::McvActiveSplitPanes(mcv) : 1;
@@ -117,6 +118,7 @@ inline void AddPane(void* mcv, Direction direction, int besideLeaf,
     Log("[dir-add] dir=%d active_leaf=%d new_leaf=%d -> %d panes",
         static_cast<int>(direction), activeLeaf, newLeaf, oldPanes + 1);
   }
+  return hasGrown;
 }
 
 // Add one pane beside the active pane.

@@ -30,6 +30,7 @@ enum class Command : WPARAM {
   kMenuArrowBase = 710,    // + Direction: a ⋯ d-pad arrow was clicked
   kTabDrop = 720,          // a tab Alt-dragged onto the split: add it
   kLinkPane = 721,         // a pane's link opened a tab: make it a pane
+  kCloseOfferPane = 722,   // a grown split's tab offer was dismissed
 };
 
 // The width of each range: one code per Direction (kUp..kRight), and the

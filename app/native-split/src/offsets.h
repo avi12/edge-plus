@@ -313,6 +313,38 @@ inline constexpr uintptr_t WebContentsImpl_HasOpener = 0x341d580;
 // base::internal::WeakReference::~WeakReference(this): a WeakPtr's first field.
 inline constexpr uintptr_t WeakReference_dtor = 0x0f99f60;
 
+// A new pane's tab offer (docs/re/split-offer.md):
+// WebContents* chrome::AddAndReturnTabAt(BrowserWindowInterface*, const GURL&,
+// uint32 extra transition flags, int index, bool foreground,
+// optional<TabGroupId>*, bool pinned, optional<int>): a new tab at `index`,
+// loading the URL; returns its contents.
+inline constexpr uintptr_t Chrome_AddAndReturnTabAt = 0xc951100;
+// GURL::GURL(this, const std::string_view*) and its dtor.
+inline constexpr uintptr_t GURL_ctor_string = 0x0fcc3c2;
+inline constexpr uintptr_t GURL_dtor = 0x0f94bca;
+// chrome::kEdgeUISplitWindowStartingPageURL ("edge://split-window-starting-page"):
+// the page Edge's split button shows in the new pane, offering the window's
+// other tabs.
+inline constexpr uintptr_t EdgeUISplitWindowStartingPageURL = 0x1216ed60;
+// bool SplitWindowController::IsStartingPage(WebContents*, bool by_url).
+inline constexpr uintptr_t SplitWindowController_IsStartingPage = 0xa023034;
+// void SplitWindowControllerImplV2::OpenTabInCurrentSplitWindow(this,
+// WebContents* chosen): the starting page's pick. It puts the chosen tab in
+// place of the active split's LAST member (UpdateTabInSplit), where a
+// two-pane split always has its starting page.
+inline constexpr uintptr_t SplitWindowControllerV2_OpenTabInCurrentSplitWindow =
+    0xa0213b0;
+// void base::internal::Invoker<lambda at split_window_controller_impl_v2.cc:1313,
+// WeakPtr<WebContents>>::RunOnce(BindStateBase*): the task OnSplitTabRemoved
+// (0xa022106) posts when the removed split's last member is a starting page;
+// it loads chrome::kChromeUINewTabURL there, replacing the entry.
+inline constexpr uintptr_t StartingPageLeftSplitTask_RunOnce = 0xa022e40;
+// void SplitWindowStartingUIHandler::CloseSplitWindow(this): the starting
+// page's X. Edge then closes the split's LAST member too
+// (SplitWindowControllerImplV2::HideSplitView(true), 0xa0201f0).
+inline constexpr uintptr_t SplitWindowStartingUIHandler_CloseSplitWindow =
+    0x9ab5750;
+
 // A tab drag (docs/re/tab-drag.md):
 // int TabDragController::ContinueDragging(this, const gfx::Point* screen DIPs):
 // every pointer move of a started drag; it reorders the SELECTED tabs, or tears
@@ -485,6 +517,19 @@ inline constexpr size_t WeakPtr_size = 0x10;
 inline constexpr uintptr_t SPLITDATA_link_mode = 0x28;
 // GetTabsAndIndicesInSplit's entries: {TabModel*, int strip index}.
 inline constexpr size_t SPLITMEMBER_size = 0x10;
+// A new pane's tab offer: sizeof(GURL), sizeof(optional<TabGroupId>), and
+// SplitWindowControllerImplV2's TabStripModel*.
+inline constexpr size_t GURL_size = 0x78;
+inline constexpr size_t OptionalTabGroupId_size = 0x18;
+inline constexpr uintptr_t SPLITCONTROLLER_tab_strip_model = 0x48;
+// A base::BindState's first bound argument (after BindStateBase), here a
+// base::WeakPtr {WeakReference::Flag*, T*}, and the flag's invalidated byte.
+inline constexpr uintptr_t BINDSTATE_first_bound_argument = 0x28;
+inline constexpr uintptr_t WEAKFLAG_invalidated = 4;
+// SplitWindowStartingUIHandler's raw_ptr<content::WebUI>, and that WebUI's
+// WebContents: the starting page's own.
+inline constexpr uintptr_t STARTINGHANDLER_web_ui = 0x38;
+inline constexpr uintptr_t WEBUI_web_contents = 0x68;
 
 // --- a tab drag (docs/re/tab-drag.md) ---
 // TabDragController fields: its state (TABDRAG_state_dragging_tabs once
