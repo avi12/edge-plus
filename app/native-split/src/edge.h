@@ -988,4 +988,55 @@ inline void* McvForWindow(void* hwnd) {
   return browserView ? BrowserViewMcv(browserView) : nullptr;
 }
 
+// --- theming -----------------------------------------------------------------
+// content::BrowserContext* (the Profile) behind a WebContents.
+inline void* BrowserContextOf(void* webContents) {
+  using Fn = void*(__fastcall*)(void*);
+  return reinterpret_cast<Fn>(At(rva::WebContentsImpl_GetBrowserContext))(
+      webContents);
+}
+
+// The per-profile ThemeService behind a TabStripModel's active tab. One
+// ThemeService serves a whole profile, so any tab of the window reaches it.
+inline void* ThemeServiceForTabStrip(void* tsm) {
+  void* tab = tsm ? ActiveTab(tsm) : nullptr;
+  void* webContents = tab ? TabContents(tab) : nullptr;
+  if (!webContents) {
+    return nullptr;
+  }
+  using Fn = void*(__fastcall*)(void*);
+  return reinterpret_cast<Fn>(At(rva::ThemeServiceFactory_GetForProfile))(
+      BrowserContextOf(webContents));
+}
+
+// A libc++ std::string holding a theme id, to hand ThemeService by const-ref.
+// One reused DLL-lifetime buffer: std::string::assign reuses or grows its own
+// heap allocation each call, so we never pair an operator delete ourselves (the
+// one small buffer is reclaimed when Edge exits). Not re-entrant, which the
+// UI-thread-only theme callers satisfy.
+inline const void* ThemeIdString(const char* themeId, size_t length) {
+  static uint64_t storage[3] = {0, 0, 0};  // an empty libc++ std::string
+  using Fn = void*(__fastcall*)(void*, const char*, size_t);
+  reinterpret_cast<Fn>(At(rva::BasicStringChar_assign))(&storage, themeId,
+                                                        length);
+  return &storage;
+}
+
+// Apply the installed theme extension `id` to `themeService`, live: Edge looks
+// the id up in the profile's registry, rebuilds the theme pack and repaints the
+// browser in place, exactly as when a theme is chosen in the UI.
+inline void ThemeRevertToExtension(void* themeService, const char* themeId,
+                                   size_t length) {
+  const void* idString = ThemeIdString(themeId, length);
+  using Fn = void(__fastcall*)(void*, const void*);
+  reinterpret_cast<Fn>(At(rva::ThemeService_RevertToExtensionTheme))(
+      themeService, idString);
+}
+
+// Drop any extension theme and return the profile to the default theme, live.
+inline void ThemeUseDefault(void* themeService) {
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(rva::ThemeService_UseDefaultTheme))(themeService);
+}
+
 }  // namespace fixedge::edge
