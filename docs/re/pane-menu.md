@@ -7,7 +7,8 @@ The ⋯ button in a pane's hover bar opens `SplitWindowControlMenu`, not the
 toolbar's `SplitTabMenuModel` (`split-menu.md`). We append one row to it:
 Edge's split icon, the label "Add pane", and a d-pad of ↑ ← → ↓ buttons. The
 row itself does nothing; an arrow adds a pane beside the pane whose ⋯ it was,
-in that direction.
+in that direction. The new pane opens on Edge's tab offer, the starting page
+its own split button opens (`split-offer.md`).
 
 ## Building the row
 

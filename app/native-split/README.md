@@ -26,7 +26,8 @@ exists). Authorized personal customization of the user's own Edge.
 - [x] Dividers — drag between any two panes; proportions persist; double-click
       one to even out the split it divides
 - [x] ⋯ "Add pane" — a d-pad on the pane bar's ⋯ adds a pane beside that pane
-      (`docs/re/pane-menu.md`)
+      (`docs/re/pane-menu.md`); it opens on Edge's tab offer, where picking a
+      tab or the X acts on that pane alone (`docs/re/split-offer.md`)
 - [x] Alt + drag a tab — hovering a split's tab shows that split; dropping on
       it docks the tab as a new pane (`docs/re/tab-drag.md`)
 - [x] New-tab links in a split — the ⋯ toggle "Open left links to the right"
