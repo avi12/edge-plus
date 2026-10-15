@@ -765,6 +765,11 @@ inline void* BrowserOf(void* browserView) {
 inline void* TabStripModelOf(void* browser) {
   return Field<void*>(browser, off::BROWSER_tab_strip_model);
 }
+// The TabStripModel behind an MCV's browser view (null if none).
+inline void* McvTabStripModel(void* mcv) {
+  void* browserView = mcv ? McvBrowserView(mcv) : nullptr;
+  return browserView ? TabStripModelOf(BrowserOf(browserView)) : nullptr;
+}
 inline int TabCount(void* tabStripModel) {
   void* collection = Field<void*>(tabStripModel, off::TSM_collection);
   return collection ? Field<int32_t>(collection, off::TABCOLL_count) : 0;
@@ -806,8 +811,7 @@ struct SplitMembers {
 // data model is the single source of truth; the container vector is a cache that
 // only grows, so surplus containers are hidden rather than destroyed.
 inline int McvActiveSplitPanes(void* mcv) {
-  void* browserView = McvBrowserView(mcv);
-  void* tsm = browserView ? TabStripModelOf(BrowserOf(browserView)) : nullptr;
+  void* tsm = McvTabStripModel(mcv);
   if (!tsm) {
     return 1;
   }

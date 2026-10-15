@@ -102,12 +102,7 @@ inline bool GrowWithTree(void* mcv, void* tsm, Node tree, void* newTab) {
 // the one pane (the active tab) is container 0. UI thread.
 inline void AddPane(void* mcv, Direction direction, int besideLeaf,
                     void* newTab = nullptr) {
-  if (!mcv) {
-    return;
-  }
-  void* browserView = edge::McvBrowserView(mcv);
-  void* tsm = browserView ? edge::TabStripModelOf(edge::BrowserOf(browserView))
-                          : nullptr;
+  void* tsm = edge::McvTabStripModel(mcv);
   if (!tsm) {
     return;
   }
@@ -181,9 +176,7 @@ inline int NeighbourLeaf(const Node& tree, int closing) {
 // Containers after the closed one are re-fed one slot earlier; the transition
 // eases every pane from where its tab was drawn to its new place. Returns false to leave a two-pane split to Edge. UI thread.
 inline bool ClosePane(void* mcv, int pane) {
-  void* browserView = mcv ? edge::McvBrowserView(mcv) : nullptr;
-  void* tsm = browserView ? edge::TabStripModelOf(edge::BrowserOf(browserView))
-                          : nullptr;
+  void* tsm = edge::McvTabStripModel(mcv);
   const int memberCount = mcv ? edge::McvActiveSplitPanes(mcv) : 0;
   const bool isGrownSplit = tsm && memberCount > 2 && pane < memberCount;
   if (!isGrownSplit) {
