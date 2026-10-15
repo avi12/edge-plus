@@ -45,24 +45,35 @@ enum class HotKey : WPARAM {
   kRight = 5,
   kDown = 6,
   kSwap = 7,
+  kFocusLeft = 8,
+  kFocusUp = 9,
+  kFocusRight = 10,
+  kFocusDown = 11,
 };
 
 struct HotKeyBinding {
   HotKey hotKey;
+  UINT modifiers;
   UINT key;
 };
 
-// Every hot-key is Ctrl+Shift+Alt + its key; registered (and unregistered) in
-// this order.
-inline constexpr UINT kHotKeyModifiers = MOD_CONTROL | MOD_SHIFT | MOD_ALT;
+// Ctrl+Shift+Alt + a key reshapes the split (add / swap / collapse); Shift+Alt +
+// an arrow moves focus between panes, matching the extension's pane focus. Keys
+// are registered (and unregistered) in this order.
+inline constexpr UINT kEditModifiers = MOD_CONTROL | MOD_SHIFT | MOD_ALT;
+inline constexpr UINT kFocusModifiers = MOD_SHIFT | MOD_ALT;
 inline constexpr HotKeyBinding kHotKeyBindings[] = {
-    {HotKey::kAddPane, 'A'},     // add a pane to the right
-    {HotKey::kCollapse, 'X'},    // collapse the split to the active pane
-    {HotKey::kLeft, VK_LEFT},    // add a pane to the left
-    {HotKey::kUp, VK_UP},        // add a pane above
-    {HotKey::kRight, VK_RIGHT},  // add a pane to the right
-    {HotKey::kDown, VK_DOWN},    // add a pane below
-    {HotKey::kSwap, 'S'},        // swap the active pane with its counterpart
+    {HotKey::kAddPane, kEditModifiers, 'A'},     // add a pane to the right
+    {HotKey::kCollapse, kEditModifiers, 'X'},    // collapse to active pane
+    {HotKey::kLeft, kEditModifiers, VK_LEFT},    // add a pane to the left
+    {HotKey::kUp, kEditModifiers, VK_UP},        // add a pane above
+    {HotKey::kRight, kEditModifiers, VK_RIGHT},  // add a pane to the right
+    {HotKey::kDown, kEditModifiers, VK_DOWN},    // add a pane below
+    {HotKey::kSwap, kEditModifiers, 'S'},        // swap with the counterpart
+    {HotKey::kFocusLeft, kFocusModifiers, VK_LEFT},    // focus the pane left
+    {HotKey::kFocusUp, kFocusModifiers, VK_UP},        // focus the pane above
+    {HotKey::kFocusRight, kFocusModifiers, VK_RIGHT},  // focus the pane right
+    {HotKey::kFocusDown, kFocusModifiers, VK_DOWN},    // focus the pane below
 };
 
 inline bool HasBinding(WPARAM wparam) {
@@ -78,11 +89,11 @@ inline bool HasBinding(WPARAM wparam) {
 inline void RegisterHotKeys(HWND hwnd) {
   g_hasHotKeys = true;
   for (const HotKeyBinding& binding : kHotKeyBindings) {
-    RegisterHotKey(hwnd, static_cast<int>(binding.hotKey), kHotKeyModifiers,
+    RegisterHotKey(hwnd, static_cast<int>(binding.hotKey), binding.modifiers,
                    binding.key);
   }
   Log("[control] hotkeys: Ctrl+Shift+Alt + arrows=add, A=add right, S=swap, "
-      "X=collapse");
+      "X=collapse; Shift+Alt + arrows=focus a pane");
 }
 
 inline void UnregisterHotKeys(HWND hwnd) {
@@ -185,6 +196,18 @@ inline void RunHotKey(HWND hwnd, HotKey hotKey) {
       break;
     case HotKey::kDown:
       AddPaneByHotKey(hwnd, Direction::kDown);
+      break;
+    case HotKey::kFocusLeft:
+      split_ops::FocusNeighbour(edge::McvForWindow(hwnd), Direction::kLeft);
+      break;
+    case HotKey::kFocusUp:
+      split_ops::FocusNeighbour(edge::McvForWindow(hwnd), Direction::kUp);
+      break;
+    case HotKey::kFocusRight:
+      split_ops::FocusNeighbour(edge::McvForWindow(hwnd), Direction::kRight);
+      break;
+    case HotKey::kFocusDown:
+      split_ops::FocusNeighbour(edge::McvForWindow(hwnd), Direction::kDown);
       break;
   }
 }

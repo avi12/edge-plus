@@ -205,6 +205,94 @@ inline bool IsBefore(Direction direction) {
   return direction == Direction::kUp || direction == Direction::kLeft;
 }
 
+// --- directional neighbour (pane focus) --------------------------------------
+// The pane on a given side of another, chosen the way a tiling window manager
+// does, matching the extension's Alt+Shift+arrow pane focus
+// (extension/src/features/pane-focus/neighbour.ts): the nearest pane past that
+// edge whose shared side faces it, the one facing it most when several are as
+// near. Operates on laid-out leaf rects, so it reads the same geometry the user
+// sees. Panes sit kPaneGap apart, so a direct neighbour's gap is positive; this
+// tolerance only absorbs layout rounding.
+inline constexpr int kFocusEdgeTolerance = 1;
+
+inline int RectRight(const Rect& rect) {
+  return rect.x + rect.width;
+}
+inline int RectBottom(const Rect& rect) {
+  return rect.y + rect.height;
+}
+
+// How far `candidate` lies past `from` in `direction`; negative when it does
+// not lie that way.
+inline int DirectionalGap(const Rect& from, const Rect& candidate,
+                          Direction direction) {
+  switch (direction) {
+    case Direction::kLeft:
+      return from.x - RectRight(candidate);
+    case Direction::kRight:
+      return candidate.x - RectRight(from);
+    case Direction::kUp:
+      return from.y - RectBottom(candidate);
+    default:  // kDown
+      return candidate.y - RectBottom(from);
+  }
+}
+
+// How much of the two panes' shared side faces each other (their overlap on the
+// cross axis); <= 0 when they do not face at all.
+inline int DirectionalOverlap(const Rect& from, const Rect& candidate,
+                              Direction direction) {
+  const bool isHorizontal =
+      direction == Direction::kLeft || direction == Direction::kRight;
+  if (isHorizontal) {
+    return std::min(RectBottom(from), RectBottom(candidate)) -
+           std::max(from.y, candidate.y);
+  }
+  return std::min(RectRight(from), RectRight(candidate)) -
+         std::max(from.x, candidate.x);
+}
+
+// The leaf on `direction`'s side of `fromLeaf` among `leaves`, or kNoLeaf if
+// there is none.
+inline int DirectionalNeighbour(const std::vector<LeafRect>& leaves,
+                                int fromLeaf, Direction direction) {
+  const Rect* from = nullptr;
+  for (const LeafRect& leafRect : leaves) {
+    if (leafRect.leaf == fromLeaf) {
+      from = &leafRect.rect;
+      break;
+    }
+  }
+  if (!from) {
+    return kNoLeaf;
+  }
+  int best = kNoLeaf;
+  int bestDistance = 0;
+  int bestFacing = 0;
+  for (const LeafRect& leafRect : leaves) {
+    if (leafRect.leaf == fromLeaf) {
+      continue;
+    }
+    const int distance = DirectionalGap(*from, leafRect.rect, direction);
+    const int facing = DirectionalOverlap(*from, leafRect.rect, direction);
+    const bool isOnThatSide = distance >= -kFocusEdgeTolerance && facing > 0;
+    if (!isOnThatSide) {
+      continue;
+    }
+    const bool isNearer = distance < bestDistance - kFocusEdgeTolerance;
+    const bool isAsNearButFacingMore =
+        std::abs(distance - bestDistance) <= kFocusEdgeTolerance &&
+        facing > bestFacing;
+    const bool isBetter = best == kNoLeaf || isNearer || isAsNearButFacingMore;
+    if (isBetter) {
+      best = leafRect.leaf;
+      bestDistance = distance;
+      bestFacing = facing;
+    }
+  }
+  return best;
+}
+
 // --- canonical form + weights -------------------------------------------------
 // After every edit the tree is canonical: every split has >= 2 children, no split
 // shares its parent's axis, and each split's weights are > 0 and sum to its child

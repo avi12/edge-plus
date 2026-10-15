@@ -133,6 +133,39 @@ inline void AddPane(void* mcv, Direction direction) {
   AddPane(mcv, direction, mcv ? ActiveLeaf(mcv) : 0);
 }
 
+// Move focus to the pane on `direction`'s side of the active one — the native
+// equivalent of the extension's Alt+Shift+arrow pane focus. The target is
+// picked from the panes' on-screen rects (DirectionalNeighbour), then its
+// member tab is activated, which focuses that pane the way a click does.
+// No-op when the active tab is not in a split or there is no pane that way.
+// Returns whether focus moved. UI thread.
+inline bool FocusNeighbour(void* mcv, Direction direction) {
+  void* tsm = mcv ? edge::McvTabStripModel(mcv) : nullptr;
+  const int panes = mcv ? edge::McvActiveSplitPanes(mcv) : 0;
+  const bool isSplit = tsm && panes >= split_data::kMinSplitMembers;
+  if (!isSplit) {
+    return false;
+  }
+  std::vector<LeafRect> leaves;
+  LayoutTree(geometry::LiveTree(mcv, panes), geometry::SplitArea(mcv), kPaneGap,
+             leaves);
+  const int target = DirectionalNeighbour(leaves, ActiveLeaf(mcv), direction);
+  if (target == kNoLeaf) {
+    return false;
+  }
+  void* contents =
+      edge::ContainerWebContents(edge::McvContainerAt(mcv, target));
+  const int stripIndex =
+      contents ? edge::IndexOfWebContents(tsm, contents) : -1;
+  if (stripIndex < 0) {
+    return false;
+  }
+  edge::ActivateTabAt(tsm, stripIndex);
+  Log("[focus] active pane -> %d (direction %d)", target,
+      static_cast<int>(direction));
+  return true;
+}
+
 // Swap the active pane with its sibling along its parent split's axis (the
 // position-aware "counterpart"). Pure tree edit: the leaves' container indices
 // swap position, so the two panes' content trades places on relayout. No Edge
