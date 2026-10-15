@@ -18,6 +18,16 @@ inline std::map<void*, Node>& Trees() {
 // does). Set by the layout detour, read by the menu action.
 inline void* g_activeMcv = nullptr;
 
+// Whether the split feature is switched on. The DLL can be loaded for theming
+// alone, so every user-facing split action checks this first; the panel pushes
+// it (config.h). Defaults on: a DLL loaded before the panel's first config, or
+// for the split alone, behaves as it always has.
+inline bool g_splitActive = true;
+
+inline bool SplitActive() {
+  return g_splitActive;
+}
+
 // The tree for `mcv`, or nullptr if none has been set yet.
 inline const Node* TreeFor(void* mcv) {
   const auto entry = Trees().find(mcv);

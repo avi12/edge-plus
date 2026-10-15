@@ -32,6 +32,7 @@ enum class Command : WPARAM {
   kLinkPane = 721,         // a pane's link opened a tab: make it a pane
   kCloseOfferPane = 722,   // a grown split's tab offer was dismissed
   kApplyTheme = 800,       // apply the theme for the current OS light/dark mode
+  kApplyConfig = 801,      // apply the config read from disk, on the UI thread
 };
 
 // The width of each range: one code per Direction (kUp..kRight), and the

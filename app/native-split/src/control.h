@@ -6,7 +6,9 @@
 #pragma once
 #include <windows.h>
 #include <cstring>
+#include "MinHook.h"
 #include "channel.h"
+#include "config.h"
 #include "edge.h"
 #include "split_ops.h"
 #include "split_data.h"
@@ -213,6 +215,57 @@ inline void RunHotKey(HWND hwnd, HotKey hotKey) {
   }
 }
 
+// --- the panel's live configuration ----------------------------------------
+
+// Turn the split's hooks on or off without disturbing the window subclass that
+// theming also rides. Disabling them leaves the menus and layout stock; the
+// byte-patch safety fixes stay (they are inert without a grown split).
+inline void SetSplitHooksEnabled(bool isEnabled) {
+  if (isEnabled) {
+    MH_EnableHook(MH_ALL_HOOKS);
+  } else {
+    MH_DisableHook(MH_ALL_HOOKS);
+  }
+}
+
+// Apply the panel's desired state (config.h): which features are on, and which
+// theme to use for each OS mode. Pushed over WM_COPYDATA whenever the user
+// changes a switch or an assignment, so both take effect live.
+inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
+  const bool wasSplitActive = g_splitActive;
+  g_splitActive = wire.splitActive != 0;
+  const bool isTurningSplitOff = wasSplitActive && !g_splitActive;
+  const bool isTurningSplitOn = !wasSplitActive && g_splitActive;
+  if (isTurningSplitOff) {
+    // Break grown splits up while the hooks still render the collapse, then
+    // leave the menus and layout stock.
+    EnumWindows(BreakUpWindowSplits, 0);
+    SetSplitHooksEnabled(false);
+    if (g_hasHotKeys) {
+      UnregisterHotKeys(hwnd);
+      g_hasHotKeys = false;
+    }
+  } else if (isTurningSplitOn) {
+    SetSplitHooksEnabled(true);
+    if (!g_hasHotKeys) {
+      RegisterHotKeys(hwnd);
+    }
+  }
+  theme::ApplyConfig(hwnd, wire);
+}
+
+// The config read from disk at Install, applied on the UI thread via a posted
+// kApplyConfig (ApplyConfig touches Edge views, so it must not run on the Init
+// thread that does the subclassing).
+inline config::Wire g_pendingConfig = {};
+inline bool g_hasPendingConfig = false;
+
+inline bool IsOurConfigMessage(LPARAM lparam) {
+  const auto* copyData = reinterpret_cast<const COPYDATASTRUCT*>(lparam);
+  return copyData && copyData->dwData == config::kMessageId &&
+         copyData->cbData == sizeof(config::Wire) && copyData->lpData;
+}
+
 // --- the channel's commands ------------------------------------------------
 
 inline void AddPaneByCommand(HWND hwnd, WPARAM wparam) {
@@ -267,6 +320,23 @@ inline void CreateOrGrowByCommand(HWND hwnd, WPARAM wparam) {
 }
 
 inline void RunCommand(HWND hwnd, WPARAM wparam) {
+  // The config read from disk at load, now on the UI thread.
+  if (wparam == CodeOf(Command::kApplyConfig)) {
+    if (g_hasPendingConfig) {
+      ApplyConfig(hwnd, g_pendingConfig);
+    }
+    return;
+  }
+  // With the split switched off (the DLL stays loaded for theming), only the
+  // theming apply and the unload teardown run; every split command is ignored.
+  if (!SplitActive()) {
+    if (wparam == CodeOf(Command::kApplyTheme)) {
+      theme::ApplyForCurrentOsMode(hwnd);
+    } else if (wparam == CodeOf(Command::kTeardown)) {
+      Teardown(hwnd);
+    }
+    return;
+  }
   const bool isMenuArrow =
       IsInRange(wparam, Command::kMenuArrowBase, channel::kDirectionCount);
   if (isMenuArrow) {
@@ -319,8 +389,9 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
 inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
                                    LPARAM lparam) {
   // RegisterHotKey must run on the thread that owns the window; this WndProc is
-  // exactly that thread, so register lazily on the first message we see.
-  if (!g_hasHotKeys) {
+  // exactly that thread, so register lazily on the first message we see — but
+  // only while the split is on (the DLL may be loaded for theming alone).
+  if (!g_hasHotKeys && SplitActive()) {
     RegisterHotKeys(hwnd);
   }
   // Escape cancels a pane drag (the drag itself arrives through views; hooks.h).
@@ -345,6 +416,13 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   if (isCommand) {
     RunCommand(hwnd, wparam);
     return 0;
+  }
+  const bool isConfigPush =
+      message == WM_COPYDATA && IsOurConfigMessage(lparam);
+  if (isConfigPush) {
+    const auto* copyData = reinterpret_cast<const COPYDATASTRUCT*>(lparam);
+    ApplyConfig(hwnd, *static_cast<const config::Wire*>(copyData->lpData));
+    return TRUE;
   }
   // Windows broadcasts WM_SETTINGCHANGE with "ImmersiveColorSet" when the user
   // flips light <-> dark. Re-apply the matching theme, but let Edge handle the
@@ -395,10 +473,13 @@ inline void Install() {
       hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc)));
   Log("[control] subclassed hwnd=%p msg=%u", hwnd, channel::g_message);
   anim::Install(hwnd);
-  // The theming subsystem shares this DLL and its UI-thread window, gated by its
-  // own assignment (idle until the panel assigns a theme). It will get its own
-  // feature toggle when the panel grows a theming switch.
-  theme::Activate(hwnd);
+  // Theming shares this DLL and its UI-thread window but is config-driven. Read
+  // the panel's current choice from disk now (so a DLL injected into an open
+  // Edge doesn't race the panel's WM_COPYDATA), and apply it on the UI thread.
+  g_hasPendingConfig = config::LoadFromFile(&g_pendingConfig);
+  if (g_hasPendingConfig) {
+    channel::Post(CodeOf(Command::kApplyConfig));
+  }
   // A (re)load into a split that is already grown: add the grips on the UI thread.
   channel::Post(CodeOf(Command::kEnsureGrips));
 }

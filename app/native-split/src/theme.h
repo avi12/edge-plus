@@ -1,9 +1,9 @@
 // theme.h — the enhanced-theming subsystem: use one theme when Windows is in
-// light mode and another when it is in dark mode, and re-apply the moment
-// Windows flips, with no browser restart. One concern: picking and applying an
-// already installed theme. The panel installs each theme (through Edge's own
-// external-extension loader) and records which to use for light and which for
-// dark; this module reads that choice and switches between the installed themes.
+// light mode and another when it is in dark, and re-apply the moment Windows
+// flips, with no browser restart. One concern: picking and applying an already
+// installed theme. The panel installs each theme (through Edge's own
+// external-extension loader) and pushes which to use for light and which for
+// dark (config.h, over WM_COPYDATA); this module switches between them.
 //
 // The OS light/dark signal is the browser window's WM_SETTINGCHANGE (control.h
 // forwards it here); the mode itself is read straight from the OS, so no Edge
@@ -12,19 +12,26 @@
 #include <windows.h>
 #include <cstddef>
 #include <cstring>
+#include "config.h"
 #include "edge.h"
 #include "log.h"
 
 namespace fixedge::theme {
 
 // An extension id (32 lowercase letters) or empty for "use the default theme".
-// Sized for the id plus room to spare; never the home of a magic length.
 struct ThemeId {
-  char value[64] = {};
+  char value[config::kIdCapacity] = {};
   size_t length = 0;
 
   bool IsEmpty() const {
     return length == 0;
+  }
+
+  void Set(const char* bytes, size_t count) {
+    length = count < sizeof(value) ? count : 0;
+    if (length > 0) {
+      std::memcpy(value, bytes, length);
+    }
   }
 };
 
@@ -32,12 +39,6 @@ struct ThemeId {
 inline ThemeId g_lightTheme;
 inline ThemeId g_darkTheme;
 inline bool g_isActive = false;
-
-// Where the panel hands this subsystem the two ids until the settings.json
-// reader lands. Set once at Edge launch, which is enough to prove the live
-// switch (the switch fires on every OS flip, not on a config change).
-inline constexpr wchar_t kLightThemeEnv[] = L"FIXEDGE_THEME_LIGHT";
-inline constexpr wchar_t kDarkThemeEnv[] = L"FIXEDGE_THEME_DARK";
 
 // Windows is in dark mode when this value is 0 (apps use the light theme when
 // it is 1 or absent).
@@ -49,27 +50,6 @@ inline bool IsOsDarkMode() {
       L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
       L"AppsUseLightTheme", RRF_RT_REG_DWORD, nullptr, &usesLightTheme, &size);
   return usesLightTheme == 0;
-}
-
-inline void ReadIdFromEnv(const wchar_t* name, ThemeId* out) {
-  wchar_t wide[64] = {};
-  const DWORD wideLength =
-      GetEnvironmentVariableW(name, wide, static_cast<DWORD>(std::size(wide)));
-  const bool isTooLongOrUnset =
-      wideLength == 0 || wideLength >= std::size(wide);
-  if (isTooLongOrUnset) {
-    *out = {};
-    return;
-  }
-  const int length = WideCharToMultiByte(
-      CP_UTF8, 0, wide, static_cast<int>(wideLength), out->value,
-      static_cast<int>(std::size(out->value)), nullptr, nullptr);
-  out->length = length > 0 ? static_cast<size_t>(length) : 0;
-}
-
-inline void LoadConfig() {
-  ReadIdFromEnv(kLightThemeEnv, &g_lightTheme);
-  ReadIdFromEnv(kDarkThemeEnv, &g_darkTheme);
 }
 
 // Apply the theme assigned to the given mode to the window's browser, live.
@@ -98,19 +78,30 @@ inline void ApplyForCurrentOsMode(void* hwnd) {
   }
 }
 
-// Turn the subsystem on: load the assignment and apply it once for the mode
-// Windows is in right now. Active only once at least one mode has a theme.
-inline void Activate(void* hwnd) {
-  LoadConfig();
-  g_isActive = !g_lightTheme.IsEmpty() || !g_darkTheme.IsEmpty();
-  if (!g_isActive) {
-    Log("[theme] no themes assigned; idle");
+// Take the panel's latest theming choice and apply it right away. Turning the
+// feature off returns both modes to the default theme so nothing we set is left
+// behind.
+inline void ApplyConfig(void* hwnd, const config::Wire& wire) {
+  g_lightTheme.Set(wire.lightId, wire.lightLength);
+  g_darkTheme.Set(wire.darkId, wire.darkLength);
+  const bool wasActive = g_isActive;
+  g_isActive = wire.themingActive != 0;
+  if (g_isActive) {
+    Log("[theme] active (light=%s dark=%s)",
+        g_lightTheme.IsEmpty() ? "default" : "set",
+        g_darkTheme.IsEmpty() ? "default" : "set");
+    ApplyForCurrentOsMode(hwnd);
     return;
   }
-  Log("[theme] active (light=%s dark=%s)",
-      g_lightTheme.IsEmpty() ? "default" : "set",
-      g_darkTheme.IsEmpty() ? "default" : "set");
-  ApplyForCurrentOsMode(hwnd);
+  // Just switched off: drop back to the default theme once.
+  if (wasActive) {
+    Log("[theme] disabled; reverting to default theme");
+    void* tsm = edge::TsmForWindow(hwnd);
+    void* themeService = tsm ? edge::ThemeServiceForTabStrip(tsm) : nullptr;
+    if (themeService) {
+      edge::ThemeUseDefault(themeService);
+    }
+  }
 }
 
 }  // namespace fixedge::theme
