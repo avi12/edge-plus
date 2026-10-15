@@ -23,6 +23,11 @@ HMODULE g_self = nullptr;
 // the hooks and drop out of Edge without a restart.
 constexpr wchar_t kUnloadEvent[] = L"Local\\fixedge-split-unload";
 
+// The companion app signals this after it rewrites the config file, so we
+// re-read it and apply the new state live (which features are on, which theme
+// per OS mode). Auto-reset: each change wakes the wait once.
+constexpr wchar_t kConfigEvent[] = L"Local\\fixedge-config-changed";
+
 // msedge.dll may still be loading when Init runs: poll for it this many times,
 // this far apart, before giving up.
 constexpr int kModuleWaitAttempts = 100;
@@ -58,16 +63,31 @@ DWORD WINAPI Init(LPVOID) {
   }
   Log("[init] hooks installed; directional-add menu armed");
 
-  // Toggle-off from the app: wait for the unload signal, then cleanly detach.
-  // Manual-reset; reset first so a quick off->on re-toggle does not self-unload.
+  // Two signals from the app: unload (detach) and config-changed (re-read and
+  // apply the config live). Unload is manual-reset (reset first so a quick
+  // off->on re-toggle does not self-unload); config is auto-reset.
   HANDLE unloadEvent = CreateEventW(nullptr, /*bManualReset=*/TRUE,
                                     /*bInitialState=*/FALSE, kUnloadEvent);
   ResetEvent(unloadEvent);
-  WaitForSingleObject(unloadEvent, INFINITE);
+  HANDLE configEvent = CreateEventW(nullptr, /*bManualReset=*/FALSE,
+                                    /*bInitialState=*/FALSE, kConfigEvent);
+  const HANDLE events[2] = {unloadEvent, configEvent};
+  while (true) {
+    const DWORD which = WaitForMultipleObjects(2, events, FALSE, INFINITE);
+    const bool isConfigChange = which == WAIT_OBJECT_0 + 1;
+    if (isConfigChange) {
+      control::OnConfigChanged();
+      continue;
+    }
+    break;  // unload signalled (or the wait failed)
+  }
   Log("[unload] signalled; removing hooks");
   hooks::RemoveAll();
   if (unloadEvent) {
     CloseHandle(unloadEvent);
+  }
+  if (configEvent) {
+    CloseHandle(configEvent);
   }
   Log("[unload] fixedge-split detached");
   FreeLibraryAndExitThread(g_self, 0);

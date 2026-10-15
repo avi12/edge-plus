@@ -55,7 +55,9 @@ inline bool IsOsDarkMode() {
 // Apply the theme assigned to the given mode to the window's browser, live.
 inline void Apply(void* hwnd, bool isDark) {
   void* tsm = edge::TsmForWindow(hwnd);
-  void* themeService = tsm ? edge::ThemeServiceForTabStrip(tsm) : nullptr;
+  void* profile = tsm ? edge::ProfileForTabStrip(tsm) : nullptr;
+  void* themeService =
+      profile ? edge::ThemeServiceForProfile(profile) : nullptr;
   if (!themeService) {
     Log("[theme] no theme service for hwnd=%p", hwnd);
     return;
@@ -66,8 +68,14 @@ inline void Apply(void* hwnd, bool isDark) {
     Log("[theme] %s -> default theme", isDark ? "dark" : "light");
     return;
   }
-  edge::ThemeRevertToExtension(themeService, wanted.value, wanted.length);
-  Log("[theme] %s -> %.*s", isDark ? "dark" : "light",
+  void* extension = edge::ExtensionById(profile, wanted.value);
+  if (!extension) {
+    Log("[theme] %s theme %.*s not installed yet", isDark ? "dark" : "light",
+        static_cast<int>(wanted.length), wanted.value);
+    return;
+  }
+  edge::ThemeSetFromExtension(themeService, extension);
+  Log("[theme] %s -> %.*s applied", isDark ? "dark" : "light",
       static_cast<int>(wanted.length), wanted.value);
 }
 
@@ -97,7 +105,9 @@ inline void ApplyConfig(void* hwnd, const config::Wire& wire) {
   if (wasActive) {
     Log("[theme] disabled; reverting to default theme");
     void* tsm = edge::TsmForWindow(hwnd);
-    void* themeService = tsm ? edge::ThemeServiceForTabStrip(tsm) : nullptr;
+    void* profile = tsm ? edge::ProfileForTabStrip(tsm) : nullptr;
+    void* themeService =
+        profile ? edge::ThemeServiceForProfile(profile) : nullptr;
     if (themeService) {
       edge::ThemeUseDefault(themeService);
     }

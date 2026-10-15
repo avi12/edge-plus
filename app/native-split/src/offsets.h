@@ -412,13 +412,18 @@ inline constexpr uintptr_t SetActiveIndex_index_jae = 0xc931388;
 // Edge's own external-extension loader), and the DLL only switches between
 // installed themes when Windows flips light <-> dark.
 //
-// void ThemeService::RevertToExtensionTheme(this, const std::string& id): looks
-// the id up in the profile's ExtensionRegistry, checks it is a theme, and drives
-// DoSetTheme -> a fresh BrowserThemePack + a notify that repaints the browser
-// in place. This is exactly Edge's own code path when a theme is chosen, so the
-// swap is live with no restart. (SetTheme at 0x87d468e is the Extension* thunk
-// into the same DoSetTheme; the id-string entry is the one we can drive.)
-inline constexpr uintptr_t ThemeService_RevertToExtensionTheme = 0x87d46a0;
+// Setting a theme = find the installed theme extension, then hand it to
+// DoSetTheme. void ThemeService::DoSetTheme(this, const Extension*, bool
+// suppress_notification): builds a fresh BrowserThemePack and (suppress=false)
+// notifies, which repaints the browser in place — Edge's own path, live, no
+// restart. (RevertToExtensionTheme only re-enables an already-enabled theme
+// extension, so it does not switch the active theme.)
+inline constexpr uintptr_t ThemeService_DoSetTheme = 0x87d7f60;
+// extensions::ExtensionRegistry* ExtensionRegistry::Get(BrowserContext*) and
+// the Extension* lookup on its enabled set (ExtensionSet at registry + 0x28):
+// const Extension* ExtensionSet::GetByID(this, const std::string& id).
+inline constexpr uintptr_t ExtensionRegistry_Get = 0x108dae2;
+inline constexpr uintptr_t ExtensionSet_GetByID = 0x106e7ce;
 // void ThemeService::UseDefaultTheme(this): drop any extension theme. Used when
 // a mode has no theme assigned.
 inline constexpr uintptr_t ThemeService_UseDefaultTheme = 0x3171ba0;
@@ -437,10 +442,14 @@ inline constexpr uintptr_t WebContentsImpl_GetBrowserContext = 0x1107ba0;
 // straight from the OS (HKCU Themes\Personalize\AppsUseLightTheme, 0 = dark).
 // No Edge theme-observer ABI is touched.
 
-// std::string::assign(this, const char* s, size_t n): builds a real libc++
-// std::string (heap for our 32-char ids) to hand RevertToExtensionTheme. One
-// reused DLL-lifetime buffer means we never pair an operator delete ourselves.
-inline constexpr uintptr_t BasicStringChar_assign = 0x1fb4b02;
+// Building the libc++ std::string id we hand RevertToExtensionTheme, into one
+// reused DLL-lifetime buffer (so we never pair an operator delete ourselves):
+// first clear it with the fill assign(size_type n, char c) at n = 0 (keeps any
+// heap buffer), then append(const char* s) the NUL-terminated id. The *string*
+// overloads of assign/append read a source string's own fields, not a raw
+// pointer, so these two char-pointer entries are the ones to call.
+inline constexpr uintptr_t BasicStringChar_assignFill = 0x1fb4b02;
+inline constexpr uintptr_t BasicStringChar_append = 0x27d1ae6;
 }  // namespace rva
 
 // Linear addresses (not RVAs): partition-alloc BRP-pool gate for raw_ptr acquire.
@@ -679,6 +688,9 @@ inline constexpr uintptr_t CL_visible = 0x08;  // bool
 inline constexpr uintptr_t CL_bounds = 0x0c;   // gfx::Rect {int x, y, w, h}
 // views::SizeBounds {SizeBound w{val,has}, h{val,has}}
 inline constexpr uintptr_t CL_avail = 0x1c;
+
+// extensions::ExtensionRegistry::enabled_extensions_, an ExtensionSet.
+inline constexpr uintptr_t REGISTRY_enabled_set = 0x28;
 
 // --- gfx::Rect field offsets within CL_bounds ---
 inline constexpr uintptr_t RECT_x = 0x0;

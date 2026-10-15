@@ -1,6 +1,6 @@
-// config.h — the panel's live configuration of this DLL, pushed over
-// WM_COPYDATA. One concern: the wire struct the panel fills and control.h
-// applies, so its layout is written once here and mirrored field-for-field in
+// config.h — the panel's live configuration of this DLL. One concern: the wire
+// struct the panel writes to the config file and control.h applies, so its
+// layout is written once here and mirrored field-for-field in
 // app/panel/Native/FixEdgeBridge.cs. The panel owns which features are on and
 // which theme to use for each OS mode; the DLL obeys live, with no restart.
 #pragma once
@@ -8,10 +8,6 @@
 #include <cstdint>
 
 namespace fixedge::config {
-
-// COPYDATASTRUCT::dwData tag identifying our message ("FDEX"), so a stray
-// WM_COPYDATA from anything else is ignored.
-inline constexpr DWORD kMessageId = 0x58454446;
 
 // Room for an extension id (32 chars) with slack; never spelled as a bare number.
 inline constexpr uint32_t kIdCapacity = 64;

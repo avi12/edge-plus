@@ -229,8 +229,8 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
 }
 
 // Apply the panel's desired state (config.h): which features are on, and which
-// theme to use for each OS mode. Pushed over WM_COPYDATA whenever the user
-// changes a switch or an assignment, so both take effect live.
+// theme to use for each OS mode. Read from the config file whenever the app
+// signals a change (OnConfigChanged), so both take effect live.
 inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
   const bool wasSplitActive = g_splitActive;
   g_splitActive = wire.splitActive != 0;
@@ -260,10 +260,14 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
 inline config::Wire g_pendingConfig = {};
 inline bool g_hasPendingConfig = false;
 
-inline bool IsOurConfigMessage(LPARAM lparam) {
-  const auto* copyData = reinterpret_cast<const COPYDATASTRUCT*>(lparam);
-  return copyData && copyData->dwData == config::kMessageId &&
-         copyData->cbData == sizeof(config::Wire) && copyData->lpData;
+// The app signalled a config change (dllmain's waiter thread calls this): re-read
+// the file and apply it on the UI thread. Posting to our own subclassed window
+// means we never depend on the app guessing which window we hooked.
+inline void OnConfigChanged() {
+  g_hasPendingConfig = config::LoadFromFile(&g_pendingConfig);
+  if (g_hasPendingConfig) {
+    channel::Post(CodeOf(Command::kApplyConfig));
+  }
 }
 
 // --- the channel's commands ------------------------------------------------
@@ -417,13 +421,6 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
     RunCommand(hwnd, wparam);
     return 0;
   }
-  const bool isConfigPush =
-      message == WM_COPYDATA && IsOurConfigMessage(lparam);
-  if (isConfigPush) {
-    const auto* copyData = reinterpret_cast<const COPYDATASTRUCT*>(lparam);
-    ApplyConfig(hwnd, *static_cast<const config::Wire*>(copyData->lpData));
-    return TRUE;
-  }
   // Windows broadcasts WM_SETTINGCHANGE with "ImmersiveColorSet" when the user
   // flips light <-> dark. Re-apply the matching theme, but let Edge handle the
   // message first (it updates its own native theme), so defer via the channel.
@@ -453,11 +450,19 @@ inline BOOL CALLBACK FindBrowserWindow(HWND hwnd, LPARAM /*unused*/) {
   }
   wchar_t className[kClassNameLength] = {};
   GetClassNameW(hwnd, className, kClassNameLength);
-  const bool isBrowserWindow = wcscmp(className, kBrowserWindowClass) == 0;
-  if (!isBrowserWindow) {
+  const bool isBrowserWindowClass = wcscmp(className, kBrowserWindowClass) == 0;
+  if (!isBrowserWindowClass) {
+    return TRUE;
+  }
+  // Edge has other windows of this class (toasts, the theme-installed bubble,
+  // drag images). Take only a real browser window — one with a live tab strip —
+  // so the hot-keys and the theme apply reach it.
+  const void* tabStrip = edge::TsmForWindow(hwnd);
+  if (!tabStrip) {
     return TRUE;
   }
   channel::g_window = hwnd;
+  Log("[control] found browser window hwnd=%p tsm=%p", hwnd, tabStrip);
   return FALSE;
 }
 

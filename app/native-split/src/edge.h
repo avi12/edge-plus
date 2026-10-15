@@ -996,47 +996,71 @@ inline void* BrowserContextOf(void* webContents) {
       webContents);
 }
 
-// The per-profile ThemeService behind a TabStripModel's active tab. One
-// ThemeService serves a whole profile, so any tab of the window reaches it.
-inline void* ThemeServiceForTabStrip(void* tsm) {
+// The Profile (BrowserContext) behind a TabStripModel's active tab, our bridge
+// to that profile's ThemeService and ExtensionRegistry.
+inline void* ProfileForTabStrip(void* tsm) {
   void* tab = tsm ? ActiveTab(tsm) : nullptr;
   void* webContents = tab ? TabContents(tab) : nullptr;
-  if (!webContents) {
-    return nullptr;
-  }
-  using Fn = void*(__fastcall*)(void*);
-  return reinterpret_cast<Fn>(At(rva::ThemeServiceFactory_GetForProfile))(
-      BrowserContextOf(webContents));
+  return webContents ? BrowserContextOf(webContents) : nullptr;
 }
 
-// A libc++ std::string holding a theme id, to hand ThemeService by const-ref.
-// One reused DLL-lifetime buffer: std::string::assign reuses or grows its own
-// heap allocation each call, so we never pair an operator delete ourselves (the
-// one small buffer is reclaimed when Edge exits). Not re-entrant, which the
-// UI-thread-only theme callers satisfy.
-inline const void* ThemeIdString(const char* themeId, size_t length) {
+// The per-profile ThemeService (one serves the whole profile).
+inline void* ThemeServiceForProfile(void* profile) {
+  using Fn = void*(__fastcall*)(void*);
+  return reinterpret_cast<Fn>(At(rva::ThemeServiceFactory_GetForProfile))(
+      profile);
+}
+
+// A libc++ std::string holding a theme id, to pass by const-ref. One reused
+// DLL-lifetime buffer: we clear it in place (keeps any heap buffer) and append
+// the id, so we never pair an operator delete ourselves and the one small
+// buffer is reclaimed when Edge exits. Not re-entrant, which the UI-thread-only
+// theme callers satisfy.
+inline const void* ThemeIdString(const char* themeId) {
   static uint64_t storage[3] = {0, 0, 0};  // an empty libc++ std::string
-  using Fn = void*(__fastcall*)(void*, const char*, size_t);
-  reinterpret_cast<Fn>(At(rva::BasicStringChar_assign))(&storage, themeId,
-                                                        length);
+  // Clear in place (size 0, keeps any heap buffer): assign(size_type n=0, char).
+  using ClearFn = void(__fastcall*)(void*, size_t, char);
+  reinterpret_cast<ClearFn>(At(rva::BasicStringChar_assignFill))(&storage, 0,
+                                                                 0);
+  // Append the NUL-terminated id (strlen inside), building it fresh each call.
+  using AppendFn = void(__fastcall*)(void*, const char*);
+  reinterpret_cast<AppendFn>(At(rva::BasicStringChar_append))(&storage,
+                                                              themeId);
   return &storage;
 }
 
-// Apply the installed theme extension `id` to `themeService`, live: Edge looks
-// the id up in the profile's registry, rebuilds the theme pack and repaints the
-// browser in place, exactly as when a theme is chosen in the UI.
-inline void ThemeRevertToExtension(void* themeService, const char* themeId,
-                                   size_t length) {
-  const void* idString = ThemeIdString(themeId, length);
-  using Fn = void(__fastcall*)(void*, const void*);
-  reinterpret_cast<Fn>(At(rva::ThemeService_RevertToExtensionTheme))(
-      themeService, idString);
+// The installed theme extension with id `themeId` in `profile`, or null if it
+// is not installed/enabled: ExtensionSet::GetByID on the registry's enabled set.
+inline void* ExtensionById(void* profile, const char* themeId) {
+  using RegistryFn = void*(__fastcall*)(void*);
+  void* registry =
+      reinterpret_cast<RegistryFn>(At(rva::ExtensionRegistry_Get))(profile);
+  if (!registry) {
+    return nullptr;
+  }
+  using GetByIdFn = void*(__fastcall*)(void*, const void*);
+  return reinterpret_cast<GetByIdFn>(At(rva::ExtensionSet_GetByID))(
+      reinterpret_cast<uint8_t*>(registry) + off::REGISTRY_enabled_set,
+      ThemeIdString(themeId));
+}
+
+// Make `extension` the profile's active theme, live: DoSetTheme builds the theme
+// pack and (suppress=false) notifies, repainting the browser in place. Unlike
+// UseDefaultTheme, DoSetTheme takes the primary `this` (its large member offsets
+// prove it; the +0x10 secondary base faults here).
+inline void ThemeSetFromExtension(void* themeService, void* extension) {
+  using Fn = void(__fastcall*)(void*, void*, bool);
+  reinterpret_cast<Fn>(At(rva::ThemeService_DoSetTheme))(themeService,
+                                                         extension, false);
 }
 
 // Drop any extension theme and return the profile to the default theme, live.
+// UseDefaultTheme is an override in a base at ThemeService + 0x10 (it adjusts
+// this - 0x10 back to the primary), so it takes that secondary-base pointer.
 inline void ThemeUseDefault(void* themeService) {
   using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::ThemeService_UseDefaultTheme))(themeService);
+  reinterpret_cast<Fn>(At(rva::ThemeService_UseDefaultTheme))(
+      reinterpret_cast<uint8_t*>(themeService) + 0x10);
 }
 
 }  // namespace fixedge::edge
