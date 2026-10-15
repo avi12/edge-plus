@@ -1,38 +1,37 @@
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 
 namespace FixEdge;
 
 // The live link from the panel to the injected DLL. Both features — the split
 // and the theming — ride one DLL, so this owns the shared decisions: the DLL is
 // loaded while either feature is on, and the DLL's behaviour (which features are
-// active, which theme per OS mode) is pushed over WM_COPYDATA so changes take
-// effect with no restart. The wire struct mirrors config.h field-for-field.
+// active, which theme per OS mode) is driven by a config file the DLL reads.
+//
+// The desired state is written to that file, then a named event is signalled so
+// the loaded DLL re-reads and applies it live (no restart). The DLL posts the
+// apply to its own window, so the panel never has to know which window the DLL
+// hooked. The wire bytes mirror config.h field-for-field.
 internal static class FixEdgeBridge {
-  // Must equal config::kMessageId ("FDEX") in app/native-split/src/config.h.
-  private const uint ConfigMessageId = 0x58454446;
-  // Must equal config::kIdCapacity.
+  // Must match config::kIdCapacity in app/native-split/src/config.h.
   private const int IdCapacity = 64;
+  // Must match kConfigEvent in app/native-split/src/dllmain.cpp.
+  private const string ConfigEventName = @"Local\fixedge-config-changed";
 
   // Bring the running Edge in line with what the user wants: record the desired
   // state to disk (so a DLL injected now or later reads it), load or unload the
-  // DLL, then push the state live to any already-running DLL.
+  // DLL, then signal a loaded DLL to re-read and apply it live.
   public static void Sync(bool splitEnabled, bool themingEnabled, ThemingConfig theming) {
-    byte[] payload = BuildPayload(splitEnabled, themingEnabled, theming);
-    WriteConfigFile(payload);
+    WriteConfigFile(BuildPayload(splitEnabled, themingEnabled, theming));
     bool shouldBeLoaded = splitEnabled || themingEnabled;
     if (!shouldBeLoaded) {
       NativeSplit.Disable();
       return;
     }
     NativeSplit.Enable(Paths.SplitDll);
-    foreach (Process browser in EdgeBrowserProcesses()) {
-      SendCopyData(browser.MainWindowHandle, payload);
-    }
+    SignalConfigChanged();
   }
 
   private static void WriteConfigFile(byte[] payload) {
@@ -42,7 +41,16 @@ internal static class FixEdgeBridge {
       File.WriteAllBytes(temporary, payload);
       File.Move(temporary, Paths.ConfigFile, overwrite: true);
     } catch (IOException) {
-      // A running DLL still gets the state over WM_COPYDATA below.
+      // The DLL will read whatever is there now; the next Sync retries.
+    }
+  }
+
+  private static void SignalConfigChanged() {
+    try {
+      using EventWaitHandle changed = EventWaitHandle.OpenExisting(ConfigEventName);
+      changed.Set();
+    } catch (WaitHandleCannotBeOpenedException) {
+      // No DLL is loaded to listen; it reads the file when it next loads.
     }
   }
 
@@ -58,44 +66,4 @@ internal static class FixEdgeBridge {
     Array.Copy(darkId, 0, wire, 16 + IdCapacity, Math.Min(darkId.Length, IdCapacity));
     return wire;
   }
-
-  private static void SendCopyData(IntPtr window, byte[] payload) {
-    if (window == IntPtr.Zero) {
-      return;
-    }
-    IntPtr buffer = Marshal.AllocHGlobal(payload.Length);
-    try {
-      Marshal.Copy(payload, 0, buffer, payload.Length);
-      var data = new CopyDataStruct {
-        DwData = (IntPtr)ConfigMessageId,
-        CbData = payload.Length,
-        LpData = buffer,
-      };
-      SendMessageTimeout(window, WmCopyData, IntPtr.Zero, ref data,
-                         SmtoAbortIfHung, TimeoutMilliseconds, out _);
-    } finally {
-      Marshal.FreeHGlobal(buffer);
-    }
-  }
-
-  private static Process[] EdgeBrowserProcesses() =>
-      Process.GetProcessesByName(EdgeBrowser.ExecutableName)
-          .Where(process => process.MainWindowHandle != IntPtr.Zero)
-          .ToArray();
-
-  private const uint WmCopyData = 0x004A;
-  private const uint SmtoAbortIfHung = 0x0002;
-  private const uint TimeoutMilliseconds = 2000;
-
-  [StructLayout(LayoutKind.Sequential)]
-  private struct CopyDataStruct {
-    public IntPtr DwData;
-    public int CbData;
-    public IntPtr LpData;
-  }
-
-  [DllImport("user32.dll", SetLastError = true)]
-  private static extern IntPtr SendMessageTimeout(
-      IntPtr window, uint message, IntPtr wParam, ref CopyDataStruct lParam, uint flags,
-      uint timeoutMilliseconds, out IntPtr result);
 }
