@@ -33,7 +33,10 @@ exists). Authorized personal customization of the user's own Edge.
 - [x] New-tab links in a split — the ⋯ toggle "Open left links to the right"
       off: a pane's `target=_blank` link opens in that pane; on: in a new pane
       right of it (`docs/re/split-links.md`)
-- [ ] Companion-app toggle: inject / unload / hot-swap from the panel
+- [x] Move between panes — `Shift+Alt` + an arrow key focuses the pane on that
+      side (parity with the extension's pane focus)
+- [x] Companion-app toggle: inject / unload / hot-swap from the panel; toggling
+      off breaks every split of 3+ panes back into standalone tabs first
 
 ## Build
 
