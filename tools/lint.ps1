@@ -3,16 +3,15 @@
 #
 #   pwsh tools/lint.ps1              check everything, non-zero exit on any finding
 #   pwsh tools/lint.ps1 -Fix         apply what can be applied (clang-format -i,
-#                                    clang-tidy --fix, dotnet format), then re-check
+#                                    clang-tidy --fix), then re-check
 #   pwsh tools/lint.ps1 -Staged      only C++ files staged for commit (what the
 #                                    pre-commit hook runs)
 #   pwsh tools/lint.ps1 -InstallHook point git at .githooks so commits are gated
 #
-# Four passes:
+# Three passes (the panel has its own `pnpm --dir app/panel lint`):
 #   clang-format (.clang-format)   C++ layout    <- eslint @stylistic
 #   clang-tidy   (.clang-tidy)     correctness   <- oxlint categories.correctness
 #   $restrictedSyntax (below)      house rules   <- eslint no-restricted-syntax
-#   dotnet format (app\.editorconfig)  C# layout and style, Google C# style
 #
 # clang-tidy parses with clang-cl so it sees the SAME headers and defines the
 # MSVC build uses — the flags are read out of fixedge-split.buildscript, the one
@@ -123,36 +122,13 @@ if ($hasCppInScope) {
     }
 }
 
-# --- pass 4: C# formatting and style ---------------------------------------
-# app\.editorconfig is the Google C# Style Guide the way .clang-format is the
-# Google C++ one, and dotnet format is what reads it. Skipped under -Staged:
-# dotnet format works on a project, not a file list, so it would judge unstaged
-# files too.
-#
-# The flag is written out twice rather than splatted in: a conditional array
-# unrolls to a bare string, and `@v` on a string drops it — which silently turns
-# the check into a FIX (any-stt hit exactly this).
-$csharpOk = $true
-if (-not $Staged) {
-    foreach ($project in @('app\panel\FixEdge.csproj')) {
-        $projectPath = Join-Path $root $project
-        Write-Host "[lint] dotnet format ($project)"
-        foreach ($subcommand in @('whitespace', 'style')) {
-            if ($Fix) {
-                & dotnet format $subcommand $projectPath
-            } else {
-                & dotnet format $subcommand $projectPath --verify-no-changes
-            }
-            if ($LASTEXITCODE -ne 0) {
-                $csharpOk = $false
-            }
-        }
-    }
-}
+# The panel (app\panel) has its own lint stack — `pnpm --dir app/panel lint`
+# (oxlint + eslint + stylelint + cargo clippy + fallow); this script lints the
+# C++ DLL only.
 
-if ($formatOk -and $tidyOk -and $syntaxOk -and $csharpOk) {
+if ($formatOk -and $tidyOk -and $syntaxOk) {
     Write-Host "[lint] clean"
     exit 0
 }
-Write-Host "[lint] FAILED (format=$formatOk tidy=$tidyOk syntax=$syntaxOk csharp=$csharpOk)"
+Write-Host "[lint] FAILED (format=$formatOk tidy=$tidyOk syntax=$syntaxOk)"
 exit 1

@@ -5,8 +5,10 @@ Live feature switches for Microsoft Edge (see `README.md`):
 - `app/native-split/` — C++20 DLL injected into Edge's browser process that grows
   Edge's native split view to N panes; pinned to one `msedge.dll` build
   (`src/offsets.h`), reverse-engineered in `docs/re/`
-- `app/panel/` — the WinUI 3 panel (C#) that toggles each feature and injects the
-  DLL
+- `app/panel/` — the Tauri panel that toggles each feature and injects the DLL:
+  a Svelte front end (`src/`, styled as Fluent 2 by hand — no UI library) over a
+  Rust core (`src-tauri/`), with every Win32 call isolated in the `edge-native`
+  member crate so the rest of the core keeps `unsafe` forbidden
 
 These rules are `avi/youtube-time-manager`'s, carried to C++ the way
 `avi/any-stt` carries them, and overridden only where C++ has a stronger
@@ -57,15 +59,16 @@ reader fluent in code but not in Edge's internals.
    for a condition whose terms must not all be evaluated (a null check guarding a
    dereference stays in one `&&`, extracted whole).
 
-Rule 1 is enforced by the formatters (clang-format `InsertBraces`, the C#
-`.editorconfig`'s `csharp_prefer_braces`). Rule 2 is a review concern.
+Rule 1 is enforced by the formatters (clang-format `InsertBraces` for C++,
+oxlint's `curly: all` for the panel's TypeScript/Svelte, and `cargo fmt` for the
+Rust). Rule 2 is a review concern.
 
 # Every language: hardcoded values
 
 - **A closed set of values is an enum** — command codes, modes, kinds, ids,
   message types, zone or direction names, whether they are strings or numbers:
-  an `enum class` in C++, an `enum` in C# and TypeScript. Never the same literal
-  repeated at its producer and its consumers.
+  an `enum class` in C++, an `enum` in TypeScript, and an `enum` in Rust. Never
+  the same literal repeated at its producer and its consumers.
 - **A lone magic number or string is a named constant** (`kName` in C++,
   `SCREAMING_SNAKE_CASE` in TypeScript), unless it is self-evident (`0`, `1`,
   a `/ 2`).
@@ -137,19 +140,36 @@ what it is, an Edge quirk being worked around, a required ordering or lifetime,
 a dead end recorded so nobody retries it. Delete comments that restate the code,
 and above all any comment that no longer matches it.
 
-# C# (`app/panel/`)
+# The panel (`app/panel/`)
 
-Google C# style, as `app/.editorconfig` states it (2-space indent, K&R braces,
-braces always, `PascalCase` types and members, `camelCase` locals and
-parameters). The two `if` rules above apply unchanged.
+A Tauri app: a Svelte 5 front end in `src/` over a Rust core in `src-tauri/`.
+
+- **Rust** (`src-tauri/`): the main crate `fix-edge-panel` is `unsafe_code =
+  "forbid"`; every Win32 call (process enumeration, DLL injection, the external-
+  extension registry, CRX parsing, the dev-mode snooze) lives in the member crate
+  `edge-native`, which alone allows `unsafe`. Idiomatic Rust naming
+  (`snake_case`), `cargo fmt`, and clippy `pedantic` as warnings with
+  `-D warnings` in CI. One module per concern, mirroring the C++ side's layering.
+- **Front end** (`src/`): Svelte + TypeScript. The lint stack and its config are
+  carried from `avi/pade` (oxlint + eslint + stylelint + fallow): correctness in
+  oxlint, formatting/Svelte/local rules in eslint, double quotes, 2-space indent,
+  functions declared not arrow-assigned, no `as` assertions (narrow with `in` /
+  `instanceof` instead). The UI is Fluent 2 built by hand from CSS tokens in
+  `src/app.css` — no component library, to keep the supply-chain surface small.
+
+The two `if` rules above apply to both. A value both sides need (event names, the
+config wire layout, data-folder paths) has one home per side and must match the
+DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h}`).
 
 # Linting
 
-After each C++ or C# change, run `pwsh tools/lint.ps1` and fix what it reports
-(`-Fix` applies clang-format, clang-tidy's fixes and dotnet format). The gate:
-clang-format (`.clang-format`), clang-tidy (`.clang-tidy`, correctness as
-errors), a restricted-syntax pass, and dotnet format for the panel.
-`pwsh tools/lint.ps1 -InstallHook` gates every commit on its staged C++.
+- The panel: `pnpm --dir app/panel lint` (oxlint, eslint, stylelint, `cargo
+  clippy -D warnings`, then `fallow`). `pnpm --dir app/panel check` runs
+  svelte-check. Run after each panel change and fix what it reports.
+- The C++ DLL: `pwsh tools/lint.ps1` (`-Fix` applies clang-format and
+  clang-tidy's fixes). The gate is clang-format (`.clang-format`), clang-tidy
+  (`.clang-tidy`, correctness as errors) and a restricted-syntax pass.
+  `pwsh tools/lint.ps1 -InstallHook` gates every commit on its staged C++.
 
 # Native split: build and test
 
