@@ -287,6 +287,22 @@ inline void __fastcall h_button_click(void* bar, void* button) {
   o_button_click(bar, button);
 }
 
+// ThemeService::RemoveUnusedThemes: Chromium's one-active-theme garbage
+// collector. While theming is active we keep both the light and the dark theme
+// installed so a mode flip switches between them instantly, so the GC must not
+// run — it would unload whichever theme is not currently active. Suppressed only
+// while the feature is on; otherwise Edge GCs normally. This hook is NOT a split
+// hook: it stays enabled whenever theming is on, even with the split switched off
+// (control.h re-enables it after disabling the split hooks).
+using RemoveUnusedThemes_t = void(__fastcall*)(void*);
+inline RemoveUnusedThemes_t o_remove_unused_themes = nullptr;
+inline void __fastcall h_remove_unused_themes(void* themeService) {
+  if (theme::g_isActive) {
+    return;
+  }
+  o_remove_unused_themes(themeService);
+}
+
 template <class T>
 inline bool Install(uintptr_t rva, void* detour, T** original,
                     const char* name) {
@@ -421,6 +437,9 @@ inline bool InstallAll() {
   Install(rva::WebUISplitTabsControl_HandleContextMenu,
           reinterpret_cast<void*>(menu::h_handle_ctx), &menu::o_handle_ctx,
           "WebUISplitTabsControl::HandleContextMenu");
+  Install(rva::ThemeService_RemoveUnusedThemes,
+          reinterpret_cast<void*>(h_remove_unused_themes),
+          &o_remove_unused_themes, "ThemeService::RemoveUnusedThemes");
   // Safety patches: turn Edge's 2-pane CHECKs into fallbacks. They stay for the
   // life of the process (never restored on unload): they point at nothing of
   // ours, and a split still grown past two when this DLL unloads (hot-reload or

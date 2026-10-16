@@ -427,6 +427,14 @@ inline constexpr uintptr_t ExtensionSet_GetByID = 0x106e7ce;
 // void ThemeService::UseDefaultTheme(this): drop any extension theme. Used when
 // a mode has no theme assigned.
 inline constexpr uintptr_t ThemeService_UseDefaultTheme = 0x3171ba0;
+// void ThemeService::RemoveUnusedThemes(this): Chromium keeps only the one
+// active theme extension and unloads every other theme from the profile, so the
+// two themes a user assigns to light and dark modes cannot both stay installed —
+// the moment one is applied the other is garbage-collected, and the next flip
+// finds it gone. The detour no-ops it while theming is active (hooks.h), so both
+// assigned themes remain installed and either mode's flip switches instantly.
+// Takes the primary `this` (rcx), reads large member offsets (+0x728, +0x6b8).
+inline constexpr uintptr_t ThemeService_RemoveUnusedThemes = 0x331a9a0;
 // ThemeService* ThemeServiceFactory::GetForProfile(Profile*): the per-profile
 // ThemeService (creates it if needed). Profile is a content::BrowserContext.
 inline constexpr uintptr_t ThemeServiceFactory_GetForProfile = 0xf9b4e2;

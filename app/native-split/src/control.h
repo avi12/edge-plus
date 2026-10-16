@@ -225,6 +225,10 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     MH_EnableHook(MH_ALL_HOOKS);
   } else {
     MH_DisableHook(MH_ALL_HOOKS);
+    // The theme garbage-collector suppressor is not a split hook: keep it on so
+    // both assigned themes stay installed for live switching while the split is
+    // off but theming is still on. (MH_ALL_HOOKS turned it off above.)
+    MH_EnableHook(edge::At(edge155::rva::ThemeService_RemoveUnusedThemes));
   }
 }
 
