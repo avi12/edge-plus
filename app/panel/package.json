@@ -1,0 +1,50 @@
+{
+  "name": "fix-edge-panel",
+  "version": "0.1.0",
+  "description": "Fix Edge - the desktop panel that toggles Edge's live feature switches (Tauri + Svelte)",
+  "license": "Apache-2.0",
+  "type": "module",
+  "packageManager": "pnpm@11.13.1",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "app": "tauri dev",
+    "app:build": "tauri build",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "lint:js": "oxlint --type-aware --fix && eslint --fix .",
+    "lint:css": "stylelint --fix \"src/**/*.{css,svelte}\"",
+    "lint:rust": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings && cargo fmt --manifest-path src-tauri/Cargo.toml",
+    "lint": "pnpm lint:js && pnpm lint:css && pnpm lint:rust && pnpm fallow",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "fallow": "fallow audit --base HEAD"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-dialog": "^2.8.3"
+  },
+  "devDependencies": {
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tauri-apps/cli": "^2.12.3",
+    "eslint": "^10.12.0",
+    "eslint-plugin-import-newlines": "^2.0.0",
+    "eslint-plugin-perfectionist": "^5.12.1",
+    "eslint-plugin-svelte": "^3.23.1",
+    "fallow": "2.103.0",
+    "globals": "^17.13.0",
+    "oxlint": "1.88.0",
+    "oxlint-tsgolint": "^7.0.2004",
+    "postcss": "^8.5.30",
+    "postcss-html": "^2.0.0",
+    "stylelint": "^17.16.0",
+    "stylelint-config-ccb": "^3.32.0",
+    "svelte": "^5.57.2",
+    "svelte-check": "^4.7.6",
+    "svelte-eslint-parser": "^1.9.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.2",
+    "vite": "^8.3.4"
+  }
+}
