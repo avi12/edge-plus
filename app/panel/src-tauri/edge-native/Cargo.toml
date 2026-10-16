@@ -1,0 +1,39 @@
+[package]
+name = "edge-native"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Win32 glue for the Fix Edge panel: process enumeration, DLL injection, the external-extension registry, CRX parsing, and the dev-mode snooze."
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.11"
+zip = { version = "9", default-features = false, features = ["deflate"] }
+
+[dependencies.windows-sys]
+version = "0.59"
+features = [
+  "Win32_Foundation",
+  "Win32_System_Threading",
+  "Win32_System_Memory",
+  "Win32_System_Diagnostics_Debug",
+  "Win32_System_LibraryLoader",
+  "Win32_System_Diagnostics_ToolHelp",
+  "Win32_System_Registry",
+  "Win32_System_SystemInformation",
+  "Win32_Storage_FileSystem",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_Security",
+]
+
+# This crate is the one place unsafe FFI is allowed; the panel crate forbids it.
+[lints.rust]
+unsafe_code = "allow"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
