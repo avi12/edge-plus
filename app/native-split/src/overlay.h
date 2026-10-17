@@ -155,6 +155,13 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
     return HTTRANSPARENT;
   }
   const bool isMoveFrame = message == WM_TIMER && wparam == kTimerId;
+  // KillTimer does not drop a WM_TIMER already queued, and painting a layered
+  // window (UpdateLayeredWindow) can put a hidden one back on screen: a frame
+  // arriving after Hide left the preview stuck over the panes.
+  const bool isStaleFrame = isMoveFrame && !g_isShown;
+  if (isStaleFrame) {
+    return 0;
+  }
   if (isMoveFrame) {
     const double progress =
         static_cast<double>(GetTickCount64() - g_moveStart) / kMoveMs;
