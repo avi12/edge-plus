@@ -1,5 +1,8 @@
 <script lang="ts">
+  import Mark from "@/components/Mark.svelte";
+
   interface SelectOption {
+    icon?: string;
     label: string;
     value: string;
   }
@@ -16,7 +19,8 @@
 
   let listbox: HTMLDivElement | undefined = $state();
 
-  const selectedLabel = $derived(options.find(option => option.value === value)?.label ?? "");
+  const selected = $derived(options.find(option => option.value === value));
+  const selectedLabel = $derived(selected?.label ?? "");
 
   function choose(next: string): void {
     listbox?.hidePopover();
@@ -60,6 +64,7 @@
     popovertarget="list-{uid}"
     type="button"
   >
+    <Mark icon={selected?.icon} />
     <span class="value">{selectedLabel}</span>
     <svg class="chevron" aria-hidden="true" viewBox="0 0 12 12">
       <path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor" stroke-width="1.2" />
@@ -84,6 +89,7 @@
         role="option"
         type="button"
       >
+        <Mark icon={option.icon} />
         {option.label}
       </button>
     {/each}
@@ -120,6 +126,11 @@
     outline: none;
   }
 
+  .select .value {
+    flex: 1;
+    text-align: start;
+  }
+
   .chevron {
     flex: none;
     width: 12px;
@@ -149,7 +160,9 @@
 
   .option {
     position: relative;
-    display: block;
+    display: flex;
+    gap: var(--space-s);
+    align-items: center;
     width: 100%;
     min-height: 32px;
     padding-inline: var(--space-m);

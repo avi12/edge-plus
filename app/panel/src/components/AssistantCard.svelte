@@ -1,6 +1,7 @@
 <script lang="ts">
   import CardHeader from "@/components/CardHeader.svelte";
   import Select from "@/components/Select.svelte";
+  import { COPILOT_ICON, GEMINI_ICON } from "@/lib/assistantIcons";
   import { Assistant } from "@/lib/bridge";
 
   interface Props {
@@ -17,11 +18,13 @@
   const options = [
     {
       value: Assistant.Copilot,
-      label: "Copilot (Edge's default)"
+      label: "Copilot (Edge's default)",
+      icon: COPILOT_ICON
     },
     {
       value: Assistant.Gemini,
-      label: "Gemini"
+      label: "Gemini",
+      icon: GEMINI_ICON
     }
   ];
 
