@@ -9,8 +9,7 @@ import { Feature } from "@/lib/bridge";
 const featureNames: Record<Feature, string> = {
   [Feature.NativeSplit]: "Split view",
   [Feature.Theming]: "Theming",
-  [Feature.QuietDevMode]: "Hiding the developer-mode prompt",
-  [Feature.WebHandlers]: "Gmail and Google Calendar links"
+  [Feature.QuietDevMode]: "Hiding the developer-mode prompt"
 };
 
 function joinNames(features: Feature[]): string {

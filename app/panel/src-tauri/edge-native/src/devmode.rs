@@ -1,11 +1,11 @@
-//! Editing each Edge profile's `Preferences` once Edge has exited.
+//! Snoozing Edge's "turn off extensions in developer mode" prompt.
 //!
-//! Edge rewrites `Preferences` from memory while it runs, so an edit only
-//! sticks once Edge has fully exited - which is also when Edge next reads it.
-//! The panel re-runs itself headless with a switch to do the waiting, so it
-//! survives the panel window closing; what to write is the caller's (the
-//! panel's `edge_prefs`), this module only waits, finds the profiles and swaps
-//! each file in whole.
+//! Edge keeps the snooze in each profile's `Preferences` as
+//! `extensions.ui.dev_mode_warning_snooze_end_time` (microseconds since 1601).
+//! Edge rewrites `Preferences` from memory while it runs, so the edit only
+//! sticks once Edge has fully exited - which is exactly when the prompt is next
+//! checked. The panel re-runs itself headless with a switch to do the waiting,
+//! so it survives the panel window closing. Mirrors the old `DevModePrompt.cs`.
 
 use std::os::windows::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
@@ -20,8 +20,11 @@ use windows_sys::Win32::System::SystemInformation::GetSystemTimeAsFileTime;
 use windows_sys::Win32::System::Threading::CreateMutexW;
 
 // One waiter at a time (every armed panel starts one).
-const WAITER_MUTEX: &str = r"Local\fix-edge.preferences-waiter";
+const WAITER_MUTEX: &str = r"Local\fix-edge.dev-mode-prompt";
+const SNOOZE_KEY_PATH: [&str; 3] = ["extensions", "ui", "dev_mode_warning_snooze_end_time"];
 const POLL: Duration = Duration::from_secs(2);
+// A hundred years, in microseconds - "never ask again" in practice.
+const SNOOZE_MICROSECONDS: u64 = 100 * 365 * 24 * 60 * 60 * 1_000_000;
 const GENERIC_READ: u32 = 0x8000_0000;
 
 /// Edge's default user-data directory, where its profiles live.
@@ -31,42 +34,17 @@ pub fn default_user_data() -> PathBuf {
     local.join("Microsoft").join("Edge").join("User Data")
 }
 
-/// Wait until the Edge at `user_data` has fully exited. Returns false at once,
-/// without waiting, when another waiter already holds the single-waiter mutex:
-/// that one reads the settings when Edge exits, so it applies this change too.
-#[must_use]
-pub fn wait_for_edge_exit(user_data: &Path) -> bool {
+/// Wait until the Edge at `user_data` has fully exited, then write the snooze
+/// into every one of its profiles. No-op if another waiter already holds the
+/// single-waiter mutex.
+pub fn wait_for_edge_exit_then_snooze(user_data: &Path) {
     if !claim_sole_waiter() {
-        return false;
+        return;
     }
     while is_in_use(user_data) {
         sleep(POLL);
     }
-    true
-}
-
-/// Apply `edit` to the parsed `Preferences` of every profile of `user_data`,
-/// writing each file back whole. Call only while Edge is not running.
-pub fn edit_every_profile(user_data: &Path, edit: impl Fn(&mut serde_json::Value)) {
-    for profile in profile_directories(user_data) {
-        edit_preferences(&user_data.join(&profile).join("Preferences"), &edit);
-    }
-}
-
-/// Now, the way Edge stamps its preferences: microseconds since 1601.
-#[must_use]
-pub fn now_microseconds_since_1601() -> u64 {
-    let mut filetime = windows_sys::Win32::Foundation::FILETIME {
-        dwLowDateTime: 0,
-        dwHighDateTime: 0,
-    };
-    // SAFETY: writes the current time into the local FILETIME.
-    unsafe {
-        GetSystemTimeAsFileTime(std::ptr::addr_of_mut!(filetime));
-    }
-    let hundred_nanoseconds =
-        (u64::from(filetime.dwHighDateTime) << 32) | u64::from(filetime.dwLowDateTime);
-    hundred_nanoseconds / 10
+    snooze_every_profile(user_data);
 }
 
 fn claim_sole_waiter() -> bool {
@@ -107,7 +85,15 @@ fn is_in_use(user_data: &Path) -> bool {
     }
 }
 
-fn edit_preferences(preferences: &Path, edit: &impl Fn(&mut serde_json::Value)) {
+fn snooze_every_profile(user_data: &Path) {
+    let snooze = (now_microseconds_since_1601() + SNOOZE_MICROSECONDS).to_string();
+    for profile in profile_directories(user_data) {
+        let preferences = user_data.join(&profile).join("Preferences");
+        write_snooze(&preferences, &snooze);
+    }
+}
+
+fn write_snooze(preferences: &Path, snooze: &str) {
     let Ok(text) = std::fs::read_to_string(preferences) else {
         return;
     };
@@ -117,13 +103,29 @@ fn edit_preferences(preferences: &Path, edit: &impl Fn(&mut serde_json::Value)) 
     if !root.is_object() {
         return;
     }
-    edit(&mut root);
+    let mut node = &mut root;
+    for key in &SNOOZE_KEY_PATH[..SNOOZE_KEY_PATH.len() - 1] {
+        node = node
+            .as_object_mut()
+            .unwrap_or_else(|| unreachable!("checked object above / inserted below"))
+            .entry((*key).to_owned())
+            .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
+        if !node.is_object() {
+            *node = serde_json::Value::Object(serde_json::Map::new());
+        }
+    }
+    if let Some(object) = node.as_object_mut() {
+        object.insert(
+            SNOOZE_KEY_PATH[SNOOZE_KEY_PATH.len() - 1].to_owned(),
+            serde_json::Value::String(snooze.to_owned()),
+        );
+    }
     let temporary = preferences.with_extension("fixedge-tmp");
-    let is_written = serde_json::to_string(&root)
+    if serde_json::to_string(&root)
         .ok()
         .and_then(|serialized| std::fs::write(&temporary, serialized).ok())
-        .is_some();
-    if is_written {
+        .is_some()
+    {
         let _ = std::fs::rename(&temporary, preferences);
     }
 }
@@ -142,4 +144,18 @@ fn profile_directories(user_data: &Path) -> Vec<String> {
         .and_then(serde_json::Value::as_object)
         .map(|cache| cache.keys().cloned().collect())
         .unwrap_or_default()
+}
+
+fn now_microseconds_since_1601() -> u64 {
+    let mut filetime = windows_sys::Win32::Foundation::FILETIME {
+        dwLowDateTime: 0,
+        dwHighDateTime: 0,
+    };
+    // SAFETY: writes the current time into the local FILETIME.
+    unsafe {
+        GetSystemTimeAsFileTime(std::ptr::addr_of_mut!(filetime));
+    }
+    let hundred_nanoseconds =
+        (u64::from(filetime.dwHighDateTime) << 32) | u64::from(filetime.dwLowDateTime);
+    hundred_nanoseconds / 10
 }

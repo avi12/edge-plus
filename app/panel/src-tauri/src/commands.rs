@@ -12,7 +12,7 @@ use serde::Serialize;
 
 use crate::edge_build::BuildChange;
 use crate::settings::{Feature, Features, Mode, Settings, ThemeEntry, ThemeSource, Theming};
-use crate::{edge_build, edge_watch, paths, payload, store_url, PREFERENCES_WAITER_ARG};
+use crate::{edge_build, edge_watch, paths, payload, store_url, DEVMODE_WAITER_ARG};
 
 const REAPPLY_DELAYS: [std::time::Duration; 3] = [
     std::time::Duration::from_millis(1500),
@@ -22,8 +22,8 @@ const REAPPLY_DELAYS: [std::time::Duration; 3] = [
 const UNLOAD_POLLS: u32 = 40;
 const UNLOAD_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(100);
 const SPLIT_MODULE: &str = "fixedge-split.dll";
-// DETACHED_PROCESS | CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB: the
-// Preferences waiter must outlive the panel window and Edge's job object.
+// DETACHED_PROCESS | CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB: the dev-mode
+// waiter must outlive the panel window and Edge's job object.
 const DETACHED_FLAGS: u32 = 0x0000_0008 | 0x0800_0000 | 0x0100_0000;
 
 /// The whole state the UI renders.
@@ -155,19 +155,8 @@ pub fn set_quiet_dev_mode(enabled: bool) -> Result<StateDto, String> {
     settings.features.quiet_dev_mode = enabled;
     settings.save().map_err(|error| error.to_string())?;
     if enabled {
-        arm_preferences_waiter();
+        arm_dev_mode_waiter();
     }
-    Ok(state_of(&settings))
-}
-
-/// Gmail opens email links and Google Calendar calendar links, from Edge's
-/// next start. Turning it off also needs Edge to exit, to remove the entries.
-#[tauri::command]
-pub fn set_web_handlers(enabled: bool) -> Result<StateDto, String> {
-    let mut settings = Settings::load();
-    settings.features.web_handlers = enabled;
-    settings.save().map_err(|error| error.to_string())?;
-    arm_preferences_waiter();
     Ok(state_of(&settings))
 }
 
@@ -294,24 +283,14 @@ fn add_or_replace(theming: &mut Theming, entry: ThemeEntry) {
     }
 }
 
-/// At startup, re-arm the waiter for a switch that edits `Preferences`, so its
-/// edit lands even if the last waiter never saw Edge exit (a reboot ends it).
-pub fn arm_preferences_waiter_if_needed() {
-    let features = Settings::load().features;
-    let has_preferences_edit = features.quiet_dev_mode || features.web_handlers;
-    if has_preferences_edit {
-        arm_preferences_waiter();
-    }
-}
-
 // Re-run this same executable headless to do the waiting, detached so it
 // outlives the panel window.
-fn arm_preferences_waiter() {
+fn arm_dev_mode_waiter() {
     let Ok(executable) = std::env::current_exe() else {
         return;
     };
     let _ = Command::new(executable)
-        .arg(PREFERENCES_WAITER_ARG)
+        .arg(DEVMODE_WAITER_ARG)
         .creation_flags(DETACHED_FLAGS)
         .spawn();
 }

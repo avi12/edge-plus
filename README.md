@@ -19,11 +19,6 @@ or off, and Edge picks the change up the moment it is made — no restart, ever.
   applies the right one).
 - **Hide the developer-mode prompt** — stops Edge asking to turn off
   developer-mode extensions at startup.
-- **Open mail and calendar links in Google** — `mailto:` links open a Gmail
-  draft and `webcal:` links Google Calendar, as Chrome does once Gmail is
-  allowed to handle them; an earlier Block of either is lifted. Both this and
-  the prompt switch edit each profile's `Preferences` once Edge has exited, so
-  they take effect from Edge's next start.
 
 ## How it fits together
 
@@ -38,8 +33,7 @@ app/
 The panel keeps the user's choices in `%LOCALAPPDATA%\FixEdge\settings.json` and
 drives each feature directly. Every Win32 action — enumerating Edge's browser
 processes, injecting (or ejecting) `fixedge-split.dll`, adding a theme through
-Edge's external-extension loader, waiting for Edge to exit to edit its
-`Preferences` — lives in
+Edge's external-extension loader, snoozing the developer-mode prompt — lives in
 the `edge-native` crate, so the rest of the Rust core keeps `unsafe` forbidden.
 The split DLL travels inside the panel binary and is unpacked beside the
 settings, so the DLL always matches the build.
@@ -66,9 +60,8 @@ always safe to leave on. The panel reads that build from `offsets.h` at compile
 time and compares it with the `msedge.dll` each Edge browser process actually
 loaded — at start and whenever a new browser process appears, which is how an
 update's restart shows up. On any other build it switches the split and the
-theming off (both call into `msedge.dll`; hiding the developer-mode prompt and
-the Google link handlers only edit `Preferences` and stay on), says so, and never
-injects into that Edge.
+theming off (both call into `msedge.dll`; hiding the developer-mode prompt only
+edits `Preferences` and stays on), says so, and never injects into that Edge.
 
 ## Develop
 

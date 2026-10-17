@@ -10,9 +10,9 @@
 //!
 //! * The split and the theming both run inside the injected DLL and call into
 //!   `msedge.dll` by RVA (`edge.h`), so a different `msedge.dll` breaks both.
-//! * The developer-mode prompt and the web handlers only edit keys in each
-//!   profile's `Preferences` (`edge_prefs.rs`) and touch no Edge binary, so an
-//!   update leaves them alone.
+//! * The developer-mode prompt only edits a key in each profile's `Preferences`
+//!   (`edge-native/src/devmode.rs`) and touches no Edge binary, so an update
+//!   leaves it alone.
 
 use edge_native::FileVersion;
 use serde::Serialize;
@@ -53,7 +53,7 @@ pub fn pinned() -> FileVersion {
 pub fn depends_on_pinned_build(feature: Feature) -> bool {
     match feature {
         Feature::NativeSplit | Feature::Theming => true,
-        Feature::QuietDevMode | Feature::WebHandlers => false,
+        Feature::QuietDevMode => false,
     }
 }
 
@@ -153,7 +153,6 @@ mod tests {
             native_split: true,
             theming: true,
             quiet_dev_mode: true,
-            web_handlers: true,
         }
     }
 
@@ -170,7 +169,6 @@ mod tests {
         assert!(depends_on_pinned_build(Feature::NativeSplit));
         assert!(depends_on_pinned_build(Feature::Theming));
         assert!(!depends_on_pinned_build(Feature::QuietDevMode));
-        assert!(!depends_on_pinned_build(Feature::WebHandlers));
     }
 
     #[test]
@@ -208,7 +206,6 @@ mod tests {
             native_split: false,
             theming: true,
             quiet_dev_mode: true,
-            web_handlers: true,
         };
         assert_eq!(
             blocked_features(only_theming, updated, pinned),
