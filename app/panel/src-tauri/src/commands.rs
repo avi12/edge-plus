@@ -1,6 +1,6 @@
 //! The Tauri command surface the Svelte UI calls, and the one place that
 //! reconciles "what the user wants" with "what Edge is running": the DLL is
-//! loaded while either feature is on, its config is pushed live, and a theme is
+//! loaded while any of its features is on, its config is pushed live, and a theme is
 //! installed through Edge's loader. Mirrors the old `FixEdgeBridge` +
 //! `MainWindow.SyncDll`.
 
@@ -63,19 +63,18 @@ fn state_of(settings: &Settings) -> StateDto {
 // reads, load or unload the DLL, then signal a live re-read. The DLL only ever
 // goes into a browser process running the build it was made for.
 pub(crate) fn apply(settings: &Settings) {
-    let split = settings.features.native_split;
-    let theming = settings.features.theming;
+    let features = settings.features;
     let _ = edge_native::write_config(
         &paths::config_file(),
         &edge_native::DllConfig {
-            split_active: split,
-            theming_active: theming,
-            protocol_handlers_active: false,
+            split_active: features.native_split,
+            theming_active: features.theming,
+            protocol_handlers_active: features.protocol_handlers,
             light_id: &settings.theming.light,
             dark_id: &settings.theming.dark,
         },
     );
-    if !(split || theming) {
+    if !features.needs_dll() {
         edge_native::signal_unload();
         return;
     }
@@ -103,7 +102,7 @@ pub(crate) fn apply(settings: &Settings) {
 /// restart.
 pub fn sync_on_start() {
     let settings = Settings::load();
-    let is_enabled = settings.features.native_split || settings.features.theming;
+    let is_enabled = settings.features.needs_dll();
     let is_stale = edge_native::is_split_loaded() && !payload::is_unpacked_current();
     if is_enabled && is_stale {
         edge_native::signal_unload();
@@ -149,6 +148,13 @@ pub fn set_split(enabled: bool) -> Result<StateDto, String> {
 pub fn set_theming(enabled: bool) -> Result<StateDto, String> {
     let mut settings = Settings::load();
     settings.features.theming = enabled;
+    persist_and_apply(&settings)
+}
+
+#[tauri::command]
+pub fn set_protocol_handlers(enabled: bool) -> Result<StateDto, String> {
+    let mut settings = Settings::load();
+    settings.features.protocol_handlers = enabled;
     persist_and_apply(&settings)
 }
 

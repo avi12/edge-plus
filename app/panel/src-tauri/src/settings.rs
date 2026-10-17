@@ -35,13 +35,20 @@ pub struct Theming {
     pub dark: String,
 }
 
-/// The three feature switches, with their defaults (split on, the rest off).
+/// The feature switches, with their defaults (split on, the rest off).
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "each is an independent on/off switch"
+)]
 pub struct Features {
     pub native_split: bool,
     pub theming: bool,
     pub quiet_dev_mode: bool,
+    /// A site's request to handle a link type is only blocked when the user
+    /// says so (the DLL's `protocol_handlers.h`).
+    pub protocol_handlers: bool,
 }
 
 impl Default for Features {
@@ -50,6 +57,7 @@ impl Default for Features {
             native_split: true,
             theming: false,
             quiet_dev_mode: false,
+            protocol_handlers: false,
         }
     }
 }
@@ -61,10 +69,16 @@ pub enum Feature {
     NativeSplit,
     Theming,
     QuietDevMode,
+    ProtocolHandlers,
 }
 
 impl Feature {
-    pub const ALL: [Self; 3] = [Self::NativeSplit, Self::Theming, Self::QuietDevMode];
+    pub const ALL: [Self; 4] = [
+        Self::NativeSplit,
+        Self::Theming,
+        Self::QuietDevMode,
+        Self::ProtocolHandlers,
+    ];
 }
 
 impl Features {
@@ -74,7 +88,15 @@ impl Features {
             Feature::NativeSplit => self.native_split,
             Feature::Theming => self.theming,
             Feature::QuietDevMode => self.quiet_dev_mode,
+            Feature::ProtocolHandlers => self.protocol_handlers,
         }
+    }
+
+    /// Whether any switch that lives in the injected DLL is on, so the DLL
+    /// must be loaded.
+    #[must_use]
+    pub fn needs_dll(self) -> bool {
+        self.native_split || self.theming || self.protocol_handlers
     }
 
     pub fn set(&mut self, feature: Feature, is_on: bool) {
@@ -82,6 +104,7 @@ impl Features {
             Feature::NativeSplit => self.native_split = is_on,
             Feature::Theming => self.theming = is_on,
             Feature::QuietDevMode => self.quiet_dev_mode = is_on,
+            Feature::ProtocolHandlers => self.protocol_handlers = is_on,
         }
     }
 }

@@ -17,7 +17,8 @@ export const EDGE_UPDATED_EVENT = "edge-updated";
 export enum Feature {
   NativeSplit = "nativeSplit",
   Theming = "theming",
-  QuietDevMode = "quietDevMode"
+  QuietDevMode = "quietDevMode",
+  ProtocolHandlers = "protocolHandlers"
 }
 
 /** A newly seen Edge build and what it switched off (often nothing); matches `BuildChange` in edge_build.rs. */
@@ -59,6 +60,7 @@ export interface Features {
   nativeSplit: boolean;
   theming: boolean;
   quietDevMode: boolean;
+  protocolHandlers: boolean;
 }
 
 export interface AppState {
@@ -95,6 +97,10 @@ export function setTheming(enabled: boolean): Promise<AppState> {
 
 export function setQuietDevMode(enabled: boolean): Promise<AppState> {
   return invoke<AppState>("set_quiet_dev_mode", { enabled });
+}
+
+export function setProtocolHandlers(enabled: boolean): Promise<AppState> {
+  return invoke<AppState>("set_protocol_handlers", { enabled });
 }
 
 export function addStoreTheme(url: string): Promise<AppState> {

@@ -19,6 +19,10 @@ or off, and Edge picks the change up the moment it is made — no restart, ever.
   applies the right one).
 - **Hide the developer-mode prompt** — stops Edge asking to turn off
   developer-mode extensions at startup.
+- **Ask to handle links, like Chrome** — when a site such as Gmail offers to
+  open email or calendar links, Edge's address-bar handler icon stays an open
+  question: closing its bubble or answering "Just this time" no longer blocks
+  the site for good (`docs/re/protocol-handlers.md`). Runs in the injected DLL.
 
 ## How it fits together
 
@@ -59,8 +63,8 @@ on any other build it refuses to hook and the split simply does nothing, so it i
 always safe to leave on. The panel reads that build from `offsets.h` at compile
 time and compares it with the `msedge.dll` each Edge browser process actually
 loaded — at start and whenever a new browser process appears, which is how an
-update's restart shows up. On any other build it switches the split and the
-theming off (both call into `msedge.dll`; hiding the developer-mode prompt only
+update's restart shows up. On any other build it switches the split, the
+theming and the link-handler switch off (all call into `msedge.dll`; hiding the developer-mode prompt only
 edits `Preferences` and stays on), says so, and never injects into that Edge.
 
 ## Develop

@@ -19,6 +19,10 @@
   const shieldIcon =
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
       `<path d="M12 3 L20 6 V11 C20 16 16 20 12 21 C8 20 4 16 4 11 V6 Z"/></svg>`;
+  // Chrome's handler icon: two overlapping diamonds.
+  const handlerIcon =
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
+      `<path d="M9 5 L16 12 L9 19 L2 12 Z"/><path d="M15 5 L22 12 L15 19 L12 16"/></svg>`;
 
   const splitDescription =
     "Grows Edge's own split past two panes, loaded straight into Edge. Add panes above, below, " +
@@ -30,6 +34,11 @@
   const devModeDescription =
     "Stops Edge asking to turn off developer-mode extensions when it starts. Takes effect from " +
       "Edge's next start.";
+  const handlersDescription =
+    "When a site such as Gmail offers to open a kind of link (email, calendar), Edge shows its " +
+      "handler icon in the address bar, as Chrome does. Closing that bubble or choosing \"Just this " +
+      "time\" no longer blocks the site for good; only Done on Ignore, or Block, does. Live, no " +
+      "restart.";
 
   let appState = $state<AppState | null>(null);
   let isDraggingOver = $state(false);
@@ -41,6 +50,9 @@
   // A held-off switch can still be turned off, never on.
   const isSplitHeldOff = $derived(unsupported.has(Feature.NativeSplit) && appState?.features.nativeSplit !== true);
   const isThemingHeldOff = $derived(unsupported.has(Feature.Theming) && appState?.features.theming !== true);
+  const isHandlersHeldOff = $derived(
+    unsupported.has(Feature.ProtocolHandlers) && appState?.features.protocolHandlers !== true
+  );
   // The update notice replaces the standing hint it would only repeat.
   const notices = $derived(
     [
@@ -125,6 +137,10 @@
     appState = await bridge.setQuietDevMode(value);
   }
 
+  async function onProtocolHandlers(value: boolean): Promise<void> {
+    appState = await bridge.setProtocolHandlers(value);
+  }
+
   async function onAddStore(url: string): Promise<void> {
     appState = await bridge.addStoreTheme(url);
   }
@@ -192,6 +208,15 @@
       icon={shieldIcon}
       onchange={onQuietDevMode}
       title="Hide the developer-mode prompt"
+    />
+
+    <FeatureCard
+      checked={appState.features.protocolHandlers}
+      description={handlersDescription}
+      disabled={isHandlersHeldOff}
+      icon={handlerIcon}
+      onchange={onProtocolHandlers}
+      title="Ask to handle links, like Chrome"
     />
   </main>
 {/if}

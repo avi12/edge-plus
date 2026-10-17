@@ -1,6 +1,6 @@
 //! The Fix Edge panel: a Tauri app that toggles Edge's live feature switches
-//! (the N-pane native split, light/dark theming, and the developer-mode prompt)
-//! and drives the injected DLL. The web UI (Svelte + Fluent) calls the commands
+//! (the N-pane native split, light/dark theming, the developer-mode prompt and
+//! asking to handle links like Chrome) and drives the injected DLL. The web UI (Svelte + Fluent) calls the commands
 //! in [`commands`]; every Win32 action is isolated in the `edge-native` crate so
 //! this crate keeps `unsafe_code = "forbid"`.
 
@@ -38,6 +38,7 @@ pub fn run() {
             commands::set_split,
             commands::set_theming,
             commands::set_quiet_dev_mode,
+            commands::set_protocol_handlers,
             commands::add_store_theme,
             commands::add_local_theme,
             commands::remove_theme,

@@ -8,8 +8,9 @@
 //!
 //! What each feature depends on:
 //!
-//! * The split and the theming both run inside the injected DLL and call into
-//!   `msedge.dll` by RVA (`edge.h`), so a different `msedge.dll` breaks both.
+//! * The split, the theming and asking to handle links all run inside the
+//!   injected DLL and call into `msedge.dll` by RVA (`edge.h`; the link handler
+//!   also rewrites a vtable slot), so a different `msedge.dll` breaks all three.
 //! * The developer-mode prompt only edits a key in each profile's `Preferences`
 //!   (`edge-native/src/devmode.rs`) and touches no Edge binary, so an update
 //!   leaves it alone.
@@ -52,7 +53,7 @@ pub fn pinned() -> FileVersion {
 #[must_use]
 pub fn depends_on_pinned_build(feature: Feature) -> bool {
     match feature {
-        Feature::NativeSplit | Feature::Theming => true,
+        Feature::NativeSplit | Feature::Theming | Feature::ProtocolHandlers => true,
         Feature::QuietDevMode => false,
     }
 }
@@ -153,6 +154,7 @@ mod tests {
             native_split: true,
             theming: true,
             quiet_dev_mode: true,
+            protocol_handlers: true,
         }
     }
 
@@ -168,6 +170,7 @@ mod tests {
     fn only_the_dll_features_depend_on_the_build() {
         assert!(depends_on_pinned_build(Feature::NativeSplit));
         assert!(depends_on_pinned_build(Feature::Theming));
+        assert!(depends_on_pinned_build(Feature::ProtocolHandlers));
         assert!(!depends_on_pinned_build(Feature::QuietDevMode));
     }
 
@@ -179,12 +182,16 @@ mod tests {
     }
 
     #[test]
-    fn an_update_blocks_the_split_and_theming_only() {
+    fn an_update_blocks_the_dll_features_only() {
         let pinned = version("155.0.4283.45");
         let updated = version("155.0.4300.2");
         assert_eq!(
             blocked_features(all_on(), updated, pinned),
-            vec![Feature::NativeSplit, Feature::Theming]
+            vec![
+                Feature::NativeSplit,
+                Feature::Theming,
+                Feature::ProtocolHandlers
+            ]
         );
     }
 
@@ -194,7 +201,11 @@ mod tests {
         let older = version("154.0.4100.1");
         assert_eq!(
             unsupported_features(older, pinned),
-            vec![Feature::NativeSplit, Feature::Theming]
+            vec![
+                Feature::NativeSplit,
+                Feature::Theming,
+                Feature::ProtocolHandlers
+            ]
         );
     }
 
@@ -206,6 +217,7 @@ mod tests {
             native_split: false,
             theming: true,
             quiet_dev_mode: true,
+            protocol_handlers: false,
         };
         assert_eq!(
             blocked_features(only_theming, updated, pinned),
