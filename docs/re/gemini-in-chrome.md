@@ -275,3 +275,53 @@ Chrome's Gemini. It does not read the active tab, pin other tabs, act on
 pages, or use the microphone through Chrome's permission plumbing; the user
 shares a page the way the web app allows (paste, upload). Section 7 records
 what was implemented and verified.
+
+## 7. What shipped, and how it was verified
+
+The implementation is the design above, built into the existing injected DLL
+(no new process) and driven by the panel's config file.
+
+- **DLL** (`app/native-split/`): `assistant.h` hooks the chat-action's
+  `GetNormalStateImage` / `GetPressedStateImage` (`0x2a93360` / `0x3407240`),
+  `GetButtonTooltipText` (`0x3407230`), `GetAccessibleName` (`0xdac0660`) and
+  `OnClick` (`0xdac0670`), plus the button's `UpdateLabelFromController`
+  (`0xc799e6c`). While Copilot is chosen every hook runs the original, so
+  Edge's button and pane are byte-for-byte untouched. While Gemini is chosen
+  the image is the spark from `icons.h`, the tooltip/name/label are "Gemini",
+  and the click toggles a `gemini.h` panel: a `views::WebView` on the window's
+  profile, docked over the right of the content, loading
+  `https://gemini.google.com/app`. On a config change the live button is
+  re-skinned by walking the window's view tree for the button
+  (`CopilotButton_vftables`); on unload the button is restored and the panel
+  removed before the hooks come off. The reskin is independent of the split,
+  so turning the split off does not un-reskin the button.
+- **Panel** (`app/panel/`): a `Browser assistant` card (`AssistantCard.svelte`,
+  a `Select` of Copilot / Gemini) → `set_assistant` → `settings.features.assistant`
+  → the config wire's assistant field (`protocol.rs`, mirroring `config.h`).
+  The DLL stays loaded while Gemini is selected, and `edge_build.rs` registers
+  the assistant as depending on the pinned `msedge.dll` build, so an Edge
+  update forces it back to Copilot like the split and theming.
+
+Verified in a throwaway Edge (own `--user-data-dir` and `LOCALAPPDATA`, killed
+by marker; captured with `PrintWindow`):
+
+- Gemini selected: the toolbar button reads "Gemini" with the spark icon, and
+  clicking it opens the Gemini web app docked at the right ("Ask Gemini",
+  signed out). Clicking again closes it.
+- Copilot selected: the button is the stock "Chat" with the Copilot logo, and
+  clicking it opens Edge's own `edge://discover-chat-v2/` Copilot pane — no
+  regression.
+
+Open / not done:
+
+- **Signed-in chat** needs a Google sign-in in the panel's partition; not done
+  (not signing in with the user's account). The web app loads and prompts to
+  sign in.
+- **Tab context and multi-tab** are not wired: this is the Gemini web app, not
+  Chrome's glic host, so there is no `getContextFromFocusedTab` / pinned-tab
+  bridge. The user shares a page the way the web app allows.
+- The panel UI itself was not launched live, because running the real panel
+  writes the shared config file and signals the shared named events, which
+  must not be touched while the user's real Edge is listening; it is type- and
+  lint-clean and mirrors the existing cards.
+- The docked panel **overlays** the right of the page rather than reflowing it.
