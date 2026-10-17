@@ -54,12 +54,48 @@ impl Default for Features {
     }
 }
 
+/// One feature switch, named the way [`Features`] serializes it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Feature {
+    NativeSplit,
+    Theming,
+    QuietDevMode,
+}
+
+impl Feature {
+    pub const ALL: [Self; 3] = [Self::NativeSplit, Self::Theming, Self::QuietDevMode];
+}
+
+impl Features {
+    #[must_use]
+    pub fn is_on(self, feature: Feature) -> bool {
+        match feature {
+            Feature::NativeSplit => self.native_split,
+            Feature::Theming => self.theming,
+            Feature::QuietDevMode => self.quiet_dev_mode,
+        }
+    }
+
+    pub fn set(&mut self, feature: Feature, is_on: bool) {
+        match feature {
+            Feature::NativeSplit => self.native_split = is_on,
+            Feature::Theming => self.theming = is_on,
+            Feature::QuietDevMode => self.quiet_dev_mode = is_on,
+        }
+    }
+}
+
 /// The whole settings file.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
     pub features: Features,
     pub theming: Theming,
+    /// The `msedge.dll` build last seen running, so a different one is
+    /// recognized as an Edge update.
+    #[serde(rename = "lastEdgeBuild")]
+    pub last_edge_build: Option<String>,
 }
 
 impl Settings {

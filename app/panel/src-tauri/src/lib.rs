@@ -5,6 +5,8 @@
 //! this crate keeps `unsafe_code = "forbid"`.
 
 mod commands;
+mod edge_build;
+mod edge_watch;
 mod paths;
 mod payload;
 mod settings;
@@ -26,12 +28,13 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|_app, _argv, _cwd| {}))
         .setup(|app| {
             payload::unpack();
-            std::thread::spawn(commands::sync_on_start);
+            edge_watch::start(app.handle().clone());
             watch::start(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::load_state,
+            commands::take_edge_update,
             commands::set_split,
             commands::set_theming,
             commands::set_quiet_dev_mode,

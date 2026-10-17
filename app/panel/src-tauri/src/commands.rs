@@ -10,8 +10,9 @@ use std::process::Command;
 
 use serde::Serialize;
 
-use crate::settings::{Features, Mode, Settings, ThemeEntry, ThemeSource, Theming};
-use crate::{paths, payload, store_url, DEVMODE_WAITER_ARG};
+use crate::edge_build::BuildChange;
+use crate::settings::{Feature, Features, Mode, Settings, ThemeEntry, ThemeSource, Theming};
+use crate::{edge_build, edge_watch, paths, payload, store_url, DEVMODE_WAITER_ARG};
 
 const REAPPLY_DELAYS: [std::time::Duration; 3] = [
     std::time::Duration::from_millis(1500),
@@ -33,20 +34,35 @@ pub struct StateDto {
     theming: Theming,
     edge_running: bool,
     split_loaded: bool,
+    /// The `msedge.dll` build running Edge is on, when Edge is running.
+    edge_build: Option<String>,
+    /// The only build the split DLL supports.
+    supported_edge_build: String,
+    /// The features that cannot run on the running build; their switches are
+    /// held off until Edge is on the supported build.
+    unsupported: Vec<Feature>,
 }
 
 fn state_of(settings: &Settings) -> StateDto {
+    let pinned = edge_build::pinned();
+    let running = edge_build::running_build();
     StateDto {
         features: settings.features,
         theming: settings.theming.clone(),
         edge_running: !edge_native::edge_browser_pids().is_empty(),
         split_loaded: edge_native::is_split_loaded(),
+        edge_build: running.map(|build| build.to_string()),
+        supported_edge_build: pinned.to_string(),
+        unsupported: running.map_or_else(Vec::new, |build| {
+            edge_build::unsupported_features(build, pinned)
+        }),
     }
 }
 
 // Bring the running Edge in line with the settings: write the config the DLL
-// reads, load or unload the DLL, then signal a live re-read.
-fn apply(settings: &Settings) {
+// reads, load or unload the DLL, then signal a live re-read. The DLL only ever
+// goes into a browser process running the build it was made for.
+pub(crate) fn apply(settings: &Settings) {
     let split = settings.features.native_split;
     let theming = settings.features.theming;
     let _ = edge_native::write_config(
@@ -68,7 +84,11 @@ fn apply(settings: &Settings) {
             edge_native::free_module(pid, SPLIT_MODULE);
         }
     }
-    let missing = edge_native::edge_pids_missing_module(SPLIT_MODULE);
+    let pinned = edge_build::pinned();
+    let missing: Vec<u32> = edge_native::edge_pids_missing_module(SPLIT_MODULE)
+        .into_iter()
+        .filter(|&pid| edge_build::build_of(pid) == Some(pinned))
+        .collect();
     if !missing.is_empty() {
         let _ = edge_native::inject_into(&missing, &paths::split_dll());
     }
@@ -106,6 +126,13 @@ fn persist_and_apply(settings: &Settings) -> Result<StateDto, String> {
 #[tauri::command]
 pub fn load_state() -> StateDto {
     state_of(&Settings::load())
+}
+
+/// The Edge update that switched features off before the UI was listening, if
+/// any; handed over once.
+#[tauri::command]
+pub fn take_edge_update() -> Option<BuildChange> {
+    edge_watch::take_unseen()
 }
 
 #[tauri::command]
