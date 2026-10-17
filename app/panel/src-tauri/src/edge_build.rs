@@ -53,7 +53,13 @@ pub fn pinned() -> FileVersion {
 #[must_use]
 pub fn depends_on_pinned_build(feature: Feature) -> bool {
     match feature {
-        Feature::NativeSplit | Feature::Theming | Feature::ProtocolHandlers => true,
+        // The split, theming, the link handlers and the Gemini reskin all run
+        // inside the injected DLL and call into msedge.dll by RVA, so a
+        // different build breaks them.
+        Feature::NativeSplit
+        | Feature::Theming
+        | Feature::ProtocolHandlers
+        | Feature::Assistant => true,
         Feature::QuietDevMode => false,
     }
 }
@@ -155,6 +161,7 @@ mod tests {
             theming: true,
             quiet_dev_mode: true,
             protocol_handlers: true,
+            assistant: crate::settings::Assistant::Gemini,
         }
     }
 
@@ -171,6 +178,7 @@ mod tests {
         assert!(depends_on_pinned_build(Feature::NativeSplit));
         assert!(depends_on_pinned_build(Feature::Theming));
         assert!(depends_on_pinned_build(Feature::ProtocolHandlers));
+        assert!(depends_on_pinned_build(Feature::Assistant));
         assert!(!depends_on_pinned_build(Feature::QuietDevMode));
     }
 
@@ -190,7 +198,8 @@ mod tests {
             vec![
                 Feature::NativeSplit,
                 Feature::Theming,
-                Feature::ProtocolHandlers
+                Feature::ProtocolHandlers,
+                Feature::Assistant
             ]
         );
     }
@@ -204,7 +213,8 @@ mod tests {
             vec![
                 Feature::NativeSplit,
                 Feature::Theming,
-                Feature::ProtocolHandlers
+                Feature::ProtocolHandlers,
+                Feature::Assistant
             ]
         );
     }
@@ -218,6 +228,7 @@ mod tests {
             theming: true,
             quiet_dev_mode: true,
             protocol_handlers: false,
+            assistant: crate::settings::Assistant::Copilot,
         };
         assert_eq!(
             blocked_features(only_theming, updated, pinned),
