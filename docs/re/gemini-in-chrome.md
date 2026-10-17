@@ -23,8 +23,9 @@ multi-tab sharing Gemini gets in Chrome?
 - **The glic client is bound to Chrome's host.** `gemini.google.com/glic`
   only starts its in-browser mode on a message from origin `chrome://glic`,
   and Google's server then decides whether the account may use it (signed
-  out it shows "Gemini isn't available right now"). fix-edge does not
-  imitate that host: section 6 hosts the regular Gemini web app instead.
+  out it shows "Gemini isn't available right now"). Section 9 works out what
+  that takes and what fix-edge now provides (a JavaScript host for Chrome's own
+  client library); section 6 is the fallback, the regular web app.
 - Edge's chat button is `EdgeCopilotToolbarLabelButton`, driven by an
   "action" object, `EdgeDiscoverToolbarButtonActionEdgeCopilot`, that supplies
   its image, tooltip, accessible name and click. Hooking those five functions
@@ -256,8 +257,9 @@ another origin.
 Enabling dormant glic is impossible (section 4), and the Copilot pane's
 plumbing is bound to its WebUI and origin. Chrome's in-browser Gemini mode
 belongs to Chrome: its client only starts on Chrome's own host, and Google
-decides server-side who may use it. fix-edge does not imitate that host or
-work around Google's checks. What it does:
+decides server-side who may use it. The first version did not imitate that
+host (section 9 later does, still leaving Google's own account checks to
+Google). What that version did, and still does as the fallback:
 
 1. **Reskin, by hooking the action, not the view.** With Gemini picked, the
    action's image, tooltip and accessible name become Gemini's and `OnClick`
@@ -270,11 +272,10 @@ work around Google's checks. What it does:
    the window's contents, laid out by the existing `MultiContentsView` layout
    detour, and stays put while tabs change, as Chrome's panel does.
 
-The limit, stated plainly: this is the Gemini web app beside the page, not
-Chrome's Gemini. It does not read the active tab, pin other tabs, act on
-pages, or use the microphone through Chrome's permission plumbing; the user
-shares a page the way the web app allows (paste, upload). Section 7 records
-what was implemented and verified.
+The limit, stated plainly (as first shipped): this is the Gemini web app
+beside the page, not Chrome's Gemini. Sections 8 and 9 supersede it: the panel
+can now share tabs with the web app, and hosts Chrome's own glic client where
+Google serves it. Section 7 records what was implemented first.
 
 ## 7. What shipped, and how it was verified
 
@@ -317,11 +318,138 @@ Open / not done:
 - **Signed-in chat** needs a Google sign-in in the panel's partition; not done
   (not signing in with the user's account). The web app loads and prompts to
   sign in.
-- **Tab context and multi-tab** are not wired: this is the Gemini web app, not
-  Chrome's glic host, so there is no `getContextFromFocusedTab` / pinned-tab
-  bridge. The user shares a page the way the web app allows.
+- **Tab context and multi-tab** were not wired in this first version; see
+  sections 8 and 9.
 - The panel UI itself was not launched live, because running the real panel
   writes the shared config file and signals the shared named events, which
   must not be touched while the user's real Edge is listening; it is type- and
   lint-clean and mirrors the existing cards.
-- The docked panel **overlays** the right of the page rather than reflowing it.
+- The docked panel overlaid the right of the page (fixed: section 10).
+
+## 8. Sharing the current tab and other tabs with the web app [run]
+
+The fallback mode, and the one that works signed out. A slim strip (our own page,
+loaded as a `data:` URL in a second `views::WebView` above Gemini's page) holds
+"Share this tab" and "Pick tabs". It cannot call the DLL, so a UI-thread timer
+(150 ms, only while a panel is open) asks it for its clicks and answers.
+
+- **Reading a tab.** `RenderFrameHostImpl::ExecuteJavaScriptInIsolatedWorld`
+  (`0x78d3d90`: `this`, `const u16string*`, `OnceCallback<void(Value)>*`, world id
+  1..11). The main-world `ExecuteJavaScript` is unusable: it `CHECK`s
+  `CanExecuteJavaScript` (`0x78d3b2a`), which a web page fails. The callback is a
+  `BindStateBase` we lay out ourselves (`BindStateBase::BindStateBase`, `0xf94c70`:
+  refcount 1 at +0, invoke at +8, destructor at +0x10, bound state from +0x28); the
+  reply `base::Value` is read in place (variant index byte at +0x18, 4 = string;
+  libc++ strings use the alternate layout). The title is `WebContentsImpl::GetTitle`
+  (`0x10ca640`), the address `GURL::spec` (`0xf9fc3a`). Unload waits for
+  outstanding callbacks, or stays loaded, so no reply can jump into a freed DLL.
+- **What is shared.** Address, title, selection and `innerText`, cut at 30,000
+  characters with a visible note, inserted into Gemini's prompt box with the editing
+  command a paste uses. Sharing never sends. `edge://` pages, asleep (discarded)
+  tabs and PDFs are refused with a message. Several tabs can be added at once from
+  the picker.
+- **Not done.** Screenshots (would need `CopyFromSurface` plus PNG encoding) and
+  Edge's own `ChatExtractionHandler` (PDF, Google Docs, reader mode, transcripts).
+- **Verified** in a throwaway Edge, signed out: tab text into the prompt, a
+  four-tab picker with Edge pages marked "Can't be shared", three tabs added in one
+  go (8,770 characters), read back through CDP.
+
+## 9. The real glic host: what is feasible [src] [run] [disasm]
+
+Question: can fix-edge host Chrome's glic client (`gemini.google.com/glic`) so the
+Gemini panel is the same as Chrome's?
+
+**What the client checks.** Only this, in the Gemini page's bundle: a `message`
+event with `origin === "chrome://glic"`, `source !== null` and
+`data.type === "glic-bootstrap"`. It then runs `data.glicApiSource` as a script
+(through a Trusted Types policy) and calls `window.internalAutoGlicBoot`. The check
+is on the event's `origin` property, so a `MessageEvent` dispatched from our
+isolated world with `origin: "chrome://glic"` and `source: window` is accepted.
+There is no client-side check of user agent, client hints, cookies or the `X-Glic`
+request headers. [run]
+
+**The library.** Chrome's `glicApiSource` is read from an installed Chrome's
+`resources.pak` (public Program Files; 155.0.8059.85: a gzip resource of 485,656
+bytes holding `internalAutoGlicBoot`). Edge's own zlib (`GzipUncompressHelper`,
+`0x2a53484`) and brotli (`BrotliDecoderDecompress`, `0x1ebef00`) decode it; it is
+held in memory only. [run]
+
+**Why not a postMessage host.** In Chrome 155 that script is client and host in
+one: `InFrameGlicBoot` builds the `GlicApiHost`, which speaks mojo
+(`glic.mojom.WebClientHandler`, bound through the page's global `Mojo`) straight to
+Chrome's browser process. Edge has no such service (section 4) and a web page has no
+`Mojo` global. [src] [run]
+
+**What fix-edge does instead** (`glic_host_script.h`). The patcher renames the
+library's generated mojo `*Remote` / `*Receiver` classes and puts stand-ins first
+(the handler remote becomes a JavaScript object answering the handler's methods; a
+receiver just hands its implementation to whoever asks for its pipe). The host
+answers what Chrome's browser answers, from the tabs of the Edge window, over a DOM
+bridge the DLL polls (the one thing the page's main world and our isolated world
+share): `webClientCreated` (initial state), the focused tab and its changes,
+`getContextFromFocusedTab` / `getContextFromTab` (title, address, origin, text), pin
+candidates and `pinTabs` / `unpinTabs` / `setMaximumNumberOfPinnedTabs`,
+`activateTab`, and `invoke` for a summary. Every other handler method is accepted
+and ignored.
+
+**Verified (signed out), against Chrome's real library and Google's real page:**
+
+- the page's own bootstrap listener took our message and the library booted;
+- a test web client registered the way the app does got: Chrome version and
+  platform, the focused tab (`hasFocus`), the focused tab's text, another tab's text
+  by id, the window's pin candidates, and pinned tabs;
+- the Gemini app's own client, when it registered, reached the host (its mojo calls
+  arrived: permission state, profile, synthetic experiment state). [run]
+
+**What blocks it, with evidence.** Signed out, `/glic` renders "Gemini isn't
+available right now" before and after a host answers, and also with Google's own
+built-in `?glic=fake` development host. So the gate that decides whether glic is
+served is the account or the server (Google's `glicStatus` and the sign-in), which
+cannot be seen signed out and was not tried signed in. The panel therefore tries
+glic first and, when the page says it is unavailable, the client never registers
+within 15 s, or `initialize` fails, falls back to the web app and strip of section 8
+in the same page. With no Chrome installed it never tries glic.
+
+**Not identical to Chrome** (not done, or not possible):
+
+- no viewport screenshot (`viewportScreenshot` is null), no annotated page content
+  (blink's `AIPageContentAgent`; Edge only has `FetchPageContext` at `0x8751780`),
+  no PDF bytes, no scroll-to-citation, no actor or agentic browsing, no zero-state
+  suggestions, no skills, no favicons, no region capture;
+- `createTab` answers "no tab"; microphone and location permission go through Edge's
+  own prompt, not Chrome's plumbing; "Talk" cannot start voice in glic (the client
+  starts it from its own button);
+- Chrome's panel chrome (header, detach to a floating window, resize handle) is not
+  reproduced; the panel is a fixed 420 DIP dock;
+- the host is JavaScript in the page, so it lives as long as the page; a Chrome
+  whose library changes shape breaks the patcher (it fails safe: the client never
+  registers and the panel falls back).
+
+## 10. Making room for the panel, the chat dropdown, windows
+
+- **Real space.** The panel used to overlay the page. The layout detour of
+  `MultiContentsView` now hands Edge narrower bounds by the width an open panel
+  reserves (`reserve.h`), and the split's content box subtracts it, so the page and
+  every pane reflow beside the panel on open, close and resize. The detour stays
+  enabled with the split off. Not done: Chrome's resize handle, and Edge's own
+  side-pane slot (a `SidePanelEntry` needs hand-made callbacks and views; the
+  reserved-width detour gives the same reflow with what the DLL already has).
+- **A pending Copilot nudge** makes `EdgeCopilotToolbarLabelButton::ButtonPressed`
+  (`0xc79a0d0`) run the nudge instead of `OnClick`, which opened Copilot's pane under
+  the Gemini button; with Gemini chosen the press is always the click.
+- **New windows** get the Gemini label from `OnThemeChanged` (`0x2e255b0`), which
+  runs when a button is attached and themed.
+- **Closed windows.** A panel remembers its window and is dropped untouched once the
+  window or its `MultiContentsView` is gone (the window already destroyed the
+  views). Not reproduced live: a second window cannot take a posted click without
+  becoming the foreground window.
+- **The dropdown.** `EdgeCopilotMenuModel::BuildMenu` (`0xf04e1f4`) runs on each
+  open, so while Gemini is chosen its voice item (command 1) is renamed "Talk to
+  Gemini + Share tab" after the build and Edge's text returns by itself with
+  Copilot. `ExecuteCommand` (`0xf04e420`): Chat (0) opens the Gemini panel; Summarize
+  page (3) opens it, shares the tab and presses send; Talk (1) opens it, shares the
+  tab and presses Gemini's voice button once it exists. Nudges stay Edge's. Verified
+  with UI Automation (item names `Summarize page`, `Chat`, `Talk to Gemini + Share
+  tab`) and a capture of the open menu; Summarize page produced a Gemini summary of
+  the shared page signed out. The voice button is signed-in only, so Talk was
+  verified up to the shared prompt.
