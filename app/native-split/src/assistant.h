@@ -257,6 +257,12 @@ inline void Refresh(void* mcv, bool isRestoring) {
     if (isRestoring) {
       RestoreStockLabel(button);
     }
+    void* dropdown = chat_menu::DropdownBeside(button);
+    const Rect dropdownBounds = dropdown ? edge::ViewBounds(dropdown) : Rect{};
+    Log("[assistant] chevron %p visible=%d bounds=%d,%d %dx%d", dropdown,
+        static_cast<int>(dropdown && edge::ViewGetVisible(dropdown)),
+        dropdownBounds.x, dropdownBounds.y, dropdownBounds.width,
+        dropdownBounds.height);
     // The chevron's title follows the choice; stock Copilot leaves it as Edge
     // set it.
     const bool shouldRetitleMenu = IsGemini() || isRestoring;
