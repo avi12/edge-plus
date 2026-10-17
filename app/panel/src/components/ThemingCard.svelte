@@ -8,6 +8,7 @@
 
   interface Props {
     description: string;
+    disabled?: boolean;
     enabled: boolean;
     icon: string;
     onAddLocal: (kind: LocalThemeKind) => Promise<void>;
@@ -20,6 +21,7 @@
 
   const {
     description,
+    disabled = false,
     enabled,
     icon,
     onAddLocal,
@@ -96,7 +98,14 @@
 </script>
 
 <section class="card">
-  <CardHeader checked={enabled} {description} {icon} onchange={onToggle} title="Theme by Windows light and dark" />
+  <CardHeader
+    checked={enabled}
+    {description}
+    {disabled}
+    {icon}
+    onchange={onToggle}
+    title="Theme by Windows light and dark"
+  />
 
   <div class="panel" class:dimmed={!enabled}>
     <div class="add-row">

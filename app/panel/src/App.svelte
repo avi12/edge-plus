@@ -3,7 +3,8 @@
   import ThemingCard from "@/components/ThemingCard.svelte";
   import type { AppState, Mode } from "@/lib/bridge";
   import * as bridge from "@/lib/bridge";
-  import { LocalThemeKind } from "@/lib/bridge";
+  import { Feature, LocalThemeKind } from "@/lib/bridge";
+  import { describeUnsupported, describeUpdate } from "@/lib/edgeBuild";
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
   import { open } from "@tauri-apps/plugin-dialog";
@@ -33,9 +34,43 @@
   let appState = $state<AppState | null>(null);
   let isDraggingOver = $state(false);
   let themeNotice = $state("");
+  let updateNotice = $state("");
+
+  // Features held off because Edge runs a build the split DLL was not made for.
+  const unsupported = $derived(new Set(appState?.unsupported ?? []));
+  // A held-off switch can still be turned off, never on.
+  const isSplitHeldOff = $derived(unsupported.has(Feature.NativeSplit) && appState?.features.nativeSplit !== true);
+  const isThemingHeldOff = $derived(unsupported.has(Feature.Theming) && appState?.features.theming !== true);
+  // The update notice replaces the standing hint it would only repeat.
+  const notices = $derived(
+    [
+      updateNotice || (appState ? describeUnsupported(appState) : ""),
+      themeNotice
+    ].filter(notice => notice.length > 0)
+  );
 
   onMount(async () => {
     appState = await bridge.loadState();
+    const missedUpdate = await bridge.takeEdgeUpdate();
+    if (missedUpdate) {
+      updateNotice = describeUpdate(missedUpdate);
+    }
+  });
+
+  // Edge came up on a build not seen before; features that depend on the old
+  // msedge.dll may have been switched off.
+  $effect(() => {
+    const unlisten = listen<bridge.EdgeUpdate>(bridge.EDGE_UPDATED_EVENT, event => {
+      updateNotice = describeUpdate(event.payload);
+      void bridge.loadState().then(state => {
+        appState = state;
+      });
+    });
+    return () => {
+      void unlisten.then(stop => {
+        stop();
+      });
+    };
   });
 
   // A local theme edited on disk was re-checked and re-installed (or refused).
@@ -124,14 +159,15 @@
       {#if !appState.edgeRunning}
         <p class="hint">Open Edge to apply changes.</p>
       {/if}
-      {#if themeNotice.length > 0}
-        <p class="hint error">{themeNotice}</p>
-      {/if}
+      {#each notices as notice (notice)}
+        <p class="hint error">{notice}</p>
+      {/each}
     </header>
 
     <FeatureCard
       checked={appState.features.nativeSplit}
       description={splitDescription}
+      disabled={isSplitHeldOff}
       icon={splitIcon}
       onchange={onSplit}
       title="Split into any grid"
@@ -139,6 +175,7 @@
 
     <ThemingCard
       description={themeDescription}
+      disabled={isThemingHeldOff}
       enabled={appState.features.theming}
       icon={themeIcon}
       {onAddLocal}

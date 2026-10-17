@@ -7,6 +7,27 @@ import { invoke } from "@tauri-apps/api/core";
 /** The core's event for a local theme that changed on disk; same name as `WATCH_EVENT` in watch.rs. */
 export const THEME_REFRESHED_EVENT = "theme-refreshed";
 
+/**
+ * The core's event for a newly seen Edge build and what it switched off; same name as
+ * `EDGE_UPDATED_EVENT` in edge_watch.rs.
+ */
+export const EDGE_UPDATED_EVENT = "edge-updated";
+
+/** One feature switch; the values match `Feature` in settings.rs. */
+export enum Feature {
+  NativeSplit = "nativeSplit",
+  Theming = "theming",
+  QuietDevMode = "quietDevMode"
+}
+
+/** A newly seen Edge build and what it switched off (often nothing); matches `BuildChange` in edge_build.rs. */
+export interface EdgeUpdate {
+  edgeBuild: string;
+  previousBuild: string | null;
+  supportedBuild: string;
+  disabled: Feature[];
+}
+
 export interface ThemeRefresh {
   id: string;
   /** Why the edit was not applied; null when it was. */
@@ -45,12 +66,23 @@ export interface AppState {
   theming: Theming;
   edgeRunning: boolean;
   splitLoaded: boolean;
+  /** The `msedge.dll` build running Edge is on; null when Edge is not running. */
+  edgeBuild: string | null;
+  /** The only build the split DLL supports. */
+  supportedEdgeBuild: string;
+  /** The features that cannot run on the running build. */
+  unsupported: Feature[];
 }
 
 export type Mode = "light" | "dark";
 
 export function loadState(): Promise<AppState> {
   return invoke<AppState>("load_state");
+}
+
+/** The Edge update that switched features off before the UI was listening, handed over once. */
+export function takeEdgeUpdate(): Promise<EdgeUpdate | null> {
+  return invoke<EdgeUpdate | null>("take_edge_update");
 }
 
 export function setSplit(enabled: boolean): Promise<AppState> {
