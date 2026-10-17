@@ -1,7 +1,7 @@
 // config.h — the panel's live configuration of this DLL. One concern: the wire
 // struct the panel writes to the config file and control.h applies, so its
 // layout is written once here and mirrored field-for-field in
-// app/panel/Native/FixEdgeBridge.cs. The panel owns which features are on and
+// app/panel/src-tauri/edge-native/src/protocol.rs. The panel owns which features are on and
 // which theme to use for each OS mode; the DLL obeys live, with no restart.
 #pragma once
 #include <windows.h>
@@ -16,17 +16,25 @@ inline constexpr uint32_t kIdCapacity = 64;
 // assignment. Fixed-size and trivially-copyable so it crosses the process
 // boundary as plain bytes. An empty id length means "use the default theme".
 struct Wire {
-  uint32_t splitActive;    // 1 = the split feature is on
-  uint32_t themingActive;  // 1 = the theming feature is on
-  uint32_t lightLength;    // bytes of lightId in use (0 = default theme)
-  uint32_t darkLength;     // bytes of darkId in use (0 = default theme)
+  uint32_t splitActive;             // 1 = the split feature is on
+  uint32_t themingActive;           // 1 = the theming feature is on
+  uint32_t protocolHandlersActive;  // 1 = ask to handle links, like Chrome
+  uint32_t lightLength;  // bytes of lightId in use (0 = default theme)
+  uint32_t darkLength;   // bytes of darkId in use (0 = default theme)
   char lightId[kIdCapacity];
   char darkId[kIdCapacity];
 };
+// protocol.rs writes exactly WIRE_SIZE bytes and LoadFromFile wants all of
+// them, so the struct must stay packed: five u32 fields, then the two ids.
+inline constexpr size_t kWireFieldCount = 5;
+inline constexpr size_t kWireIdCount = 2;
+static_assert(sizeof(Wire) == kWireFieldCount * sizeof(uint32_t) +
+                                  kWireIdCount * size_t{kIdCapacity},
+              "Wire must stay packed as protocol.rs writes it");
 
 // The same bytes the panel also writes beside its settings, so a DLL injected
-// into an already-open Edge reads the current state at load instead of racing
-// the panel's WM_COPYDATA push. Live changes still come over WM_COPYDATA.
+// into an already-open Edge reads the current state at load. Live changes come
+// the same way: the panel rewrites the file and signals kConfigEvent.
 inline constexpr char kFileRelativePath[] = "\\FixEdge\\fixedge-config.bin";
 
 inline bool LoadFromFile(Wire* out) {

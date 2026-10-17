@@ -1142,4 +1142,49 @@ inline void ThemeUseDefault(void* themeService) {
       reinterpret_cast<uint8_t*>(themeService) + 0x10);
 }
 
+// --- web protocol handlers -------------------------------------------------------
+// The handler bubble model's OnDoneButtonClicked vtable slot, as an RVA.
+inline constexpr uintptr_t kRphDoneSlotRva =
+    rva::ContentSettingRPHBubbleModel_vftable +
+    off::BubbleModel_OnDoneButtonClicked_slot;
+
+// The function the handler bubble's Done slot points at now.
+inline void* RphDoneSlot() {
+  return *reinterpret_cast<void**>(At(kRphDoneSlotRva));
+}
+
+// Whether the Done slot still holds Edge's own empty virtual (the build check
+// for the slot, before we ever write it).
+inline bool RphDoneSlotIsStock() {
+  return RphDoneSlot() == At(rva::ContentSettingBubbleModel_EmptyVirtual);
+}
+
+// Point the handler bubble's Done slot at `function` (the vtable lives in
+// read-only data, so the page is made writable for the one pointer).
+inline void SetRphDoneSlot(void* function) {
+  void* address = At(kRphDoneSlotRva);
+  DWORD oldProtection = 0;
+  if (VirtualProtect(address, sizeof(void*), PAGE_READWRITE, &oldProtection)) {
+    *reinterpret_cast<void**>(address) = function;
+    VirtualProtect(address, sizeof(void*), oldProtection, &oldProtection);
+  }
+}
+
+// Put Edge's own empty virtual back in the Done slot.
+inline void RestoreRphDoneSlot() {
+  SetRphDoneSlot(At(rva::ContentSettingBubbleModel_EmptyVirtual));
+}
+
+// A permission prompt's decision, as PermissionDecided reads it.
+struct PermissionDecision {
+  bool hasValue;  // false when the prompt was dismissed without a choice
+  int value;      // 0 = Allow; anything else Edge treats as Block
+};
+
+inline PermissionDecision ReadPermissionDecision(const void* decision) {
+  void* raw = const_cast<void*>(decision);
+  return {Field<uint8_t>(raw, off::PERMISSION_DECISION_has_value) == 1,
+          Field<int32_t>(raw, off::PERMISSION_DECISION_value)};
+}
+
 }  // namespace fixedge::edge

@@ -21,6 +21,7 @@
 #include "menu.h"
 #include "offer.h"
 #include "overlay.h"
+#include "protocol_handlers.h"
 #include "tabdrag.h"
 #include "tabrows.h"
 #include "theme.h"
@@ -230,6 +231,9 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     // both assigned themes stay installed for live switching while the split is
     // off but theming is still on. (MH_ALL_HOOKS turned it off above.)
     MH_EnableHook(edge::At(edge155::rva::ThemeService_RemoveUnusedThemes));
+    // Nor are the link-handler detours (they pass through while that feature
+    // is off).
+    protocol_handlers::EnableHooks();
   }
 }
 
@@ -257,6 +261,7 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
     }
   }
   theme::ApplyConfig(hwnd, wire);
+  protocol_handlers::ApplyConfig(wire);
 }
 
 // The config read from disk at Install, applied on the UI thread via a posted

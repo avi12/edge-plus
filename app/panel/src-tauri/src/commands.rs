@@ -67,10 +67,13 @@ pub(crate) fn apply(settings: &Settings) {
     let theming = settings.features.theming;
     let _ = edge_native::write_config(
         &paths::config_file(),
-        split,
-        theming,
-        &settings.theming.light,
-        &settings.theming.dark,
+        &edge_native::DllConfig {
+            split_active: split,
+            theming_active: theming,
+            protocol_handlers_active: false,
+            light_id: &settings.theming.light,
+            dark_id: &settings.theming.dark,
+        },
     );
     if !(split || theming) {
         edge_native::signal_unload();

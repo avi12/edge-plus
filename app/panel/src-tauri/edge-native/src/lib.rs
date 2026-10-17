@@ -30,6 +30,6 @@ pub use pack::{pack_theme, PackedTheme};
 pub use process::{
     edge_browser_pids, edge_pids_missing_module, edge_pids_with_module, module_path,
 };
-pub use protocol::{signal_config_changed, write_config};
+pub use protocol::{signal_config_changed, write_config, DllConfig};
 pub use registry::{install_local, install_store, uninstall, Store};
 pub use version::{file_version, FileVersion, ParseVersionError};

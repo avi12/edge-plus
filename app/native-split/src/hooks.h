@@ -12,6 +12,7 @@
 #include "collapse.h"
 #include "menu.h"
 #include "control.h"
+#include "protocol_handlers.h"
 #include "dividers.h"
 #include "tabrows.h"
 #include "drag.h"
@@ -441,6 +442,16 @@ inline bool InstallAll() {
   Install(rva::ThemeService_RemoveUnusedThemes,
           reinterpret_cast<void*>(h_remove_unused_themes),
           &o_remove_unused_themes, "ThemeService::RemoveUnusedThemes");
+  // Asking to handle links: pass-through until the feature is switched on
+  // (protocol_handlers.h).
+  Install(rva::ContentSettingRPHBubbleModel_CommitChanges,
+          reinterpret_cast<void*>(protocol_handlers::h_commit_changes),
+          &protocol_handlers::o_commit_changes,
+          "ContentSettingRPHBubbleModel::CommitChanges");
+  Install(rva::RegisterProtocolHandlerPermissionRequest_PermissionDecided,
+          reinterpret_cast<void*>(protocol_handlers::h_permission_decided),
+          &protocol_handlers::o_permission_decided,
+          "RegisterProtocolHandlerPermissionRequest::PermissionDecided");
   // Safety patches: turn Edge's 2-pane CHECKs into fallbacks. They stay for the
   // life of the process (never restored on unload): they point at nothing of
   // ours, and a split still grown past two when this DLL unloads (hot-reload or
@@ -470,6 +481,7 @@ inline bool InstallAll() {
 }
 
 inline void RemoveAll() {
+  protocol_handlers::Remove();
   control::Remove();
   MH_DisableHook(MH_ALL_HOOKS);  // the safety patches stay (see InstallAll)
   MH_Uninitialize();

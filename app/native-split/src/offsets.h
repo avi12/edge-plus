@@ -481,6 +481,32 @@ inline constexpr uintptr_t WebContentsImpl_GetBrowserContext = 0x1107ba0;
 // pointer, so these two char-pointer entries are the ones to call.
 inline constexpr uintptr_t BasicStringChar_assignFill = 0x1fb4b02;
 inline constexpr uintptr_t BasicStringChar_append = 0x27d1ae6;
+
+// --- web protocol handlers (docs/re/protocol-handlers.md) ---
+// A site's registerProtocolHandler without a user gesture lights the omnibox
+// handler icon; its bubble (Allow / Deny / Ignore, Ignore preselected) commits
+// the selected radio from ContentSettingBubbleContents::WindowClosing, so ANY
+// close - Esc, the X, a click elsewhere - commits Ignore and writes the ignored
+// list. void ContentSettingRPHBubbleModel::CommitChanges(this): performs the
+// selected radio's action, then clears the pending handler (hides the icon).
+inline constexpr uintptr_t ContentSettingRPHBubbleModel_CommitChanges =
+    0xa2090a0;
+// The bubble model's vftable. Its Done button is the dialog's accept callback,
+// bound to the model's virtual at off::BubbleModel_OnDoneButtonClicked_slot
+// (a `vcall'{56}` thunk); for this model that slot holds the base class's empty
+// virtual below, so it is the one place that sees Done as distinct from every
+// other way the bubble closes.
+inline constexpr uintptr_t ContentSettingRPHBubbleModel_vftable = 0x1123cd80;
+// The shared empty virtual (`ret`) the slot holds before we point it at ours.
+inline constexpr uintptr_t ContentSettingBubbleModel_EmptyVirtual = 0x5466b60;
+// void RegisterProtocolHandlerPermissionRequest::PermissionDecided(this,
+// const Decision* decision): Edge's permission prompt (the user-gesture path).
+// With a decision, 0 (Allow) accepts and EVERY other value ignores - including
+// Edge's "Just this time", which Chromium's prompt never offers for handlers.
+// No decision (the prompt dismissed) does nothing. Decision layout:
+// off::PERMISSION_DECISION_*.
+inline constexpr uintptr_t
+    RegisterProtocolHandlerPermissionRequest_PermissionDecided = 0xbdadfd0;
 }  // namespace rva
 
 // Linear addresses (not RVAs): partition-alloc BRP-pool gate for raw_ptr acquire.
@@ -746,6 +772,14 @@ inline constexpr uintptr_t CL_avail = 0x1c;
 // disabled at +0x28 (RemoveDisabled, EnableExtension).
 inline constexpr uintptr_t REGISTRY_enabled_set = 0x08;
 inline constexpr uintptr_t REGISTRY_disabled_set = 0x28;
+
+// ContentSettingBubbleModel's vtable slot (byte offset) for OnDoneButtonClicked,
+// the accept callback ContentSettingBubbleContents' ctor binds (`vcall'{56}`).
+inline constexpr uintptr_t BubbleModel_OnDoneButtonClicked_slot = 0x38;
+// The decision PermissionDecided reads: the value at +0 (0 = Allow) and, at +8,
+// whether there is one (1) or the prompt was dismissed (0).
+inline constexpr uintptr_t PERMISSION_DECISION_value = 0x0;
+inline constexpr uintptr_t PERMISSION_DECISION_has_value = 0x8;
 
 // --- gfx::Rect field offsets within CL_bounds ---
 inline constexpr uintptr_t RECT_x = 0x0;

@@ -90,6 +90,8 @@ inline bool HookSitesLookSane() {
       edge155::rva::SplitWindowController_DoAction,
       edge155::rva::SplitTabMenuModel_ctor,
       edge155::rva::SplitTabMenuModel_ExecuteCommand,
+      edge155::rva::ContentSettingRPHBubbleModel_CommitChanges,
+      edge155::rva::RegisterProtocolHandlerPermissionRequest_PermissionDecided,
   };
   for (const uintptr_t rva : sites) {
     if (!LooksLikeCode(rva)) {
@@ -97,6 +99,12 @@ inline bool HookSitesLookSane() {
           static_cast<unsigned long long>(rva));
       return false;
     }
+  }
+  // The link-handler bubble's Done slot is written while that feature is on;
+  // it must hold Edge's own empty virtual, or it is not the vtable we read.
+  if (!edge::RphDoneSlotIsStock()) {
+    Log("[verify] handler bubble Done slot is not Edge's empty virtual");
+    return false;
   }
   return true;
 }
