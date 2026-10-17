@@ -5,6 +5,7 @@
 // automatically.
 #pragma once
 #include <cstdint>
+#include <cstring>
 #include "MinHook.h"
 #include "edge.h"
 #include "panes.h"
@@ -20,6 +21,7 @@
 #include "state.h"
 #include "assistant.h"
 #include "gemini.h"
+#include "reserve.h"
 
 namespace fixedge::hooks {
 
@@ -80,11 +82,21 @@ inline void* __fastcall h_calc(void* self, void* out, void* sizeBounds) {
   gemini::Reposition(mcv);
   const bool isBounded = edge::Field<uint8_t>(sizeBounds, 0x4) == 1 &&
                          edge::Field<uint8_t>(sizeBounds, 0xc) == 1;
+  // An open Gemini panel takes the right of the content: lay the page (and
+  // every pane) out in what is left, by handing the layout narrower bounds.
+  alignas(8) uint8_t narrowedBounds[off::SizeBounds_size];
+  const int reservedWidth = isBounded ? reserve::WidthFor(mcv) : 0;
+  if (reservedWidth > 0) {
+    std::memcpy(narrowedBounds, sizeBounds, sizeof(narrowedBounds));
+    edge::Field<int32_t>(narrowedBounds, 0x0) -= reservedWidth;
+    sizeBounds = narrowedBounds;
+  }
   const int width = edge::Field<int32_t>(sizeBounds, 0x0);
   const int height = edge::Field<int32_t>(sizeBounds, 0x8);
   // Track the content size on every pass (native too) so a resize snaps.
   const bool isResized = isBounded && anim::NoteHost(mcv, width, height);
-  const bool isNativeLayout = edge::McvCount(mcv) <= 2 || !isBounded;
+  const bool isNativeLayout =
+      !SplitActive() || edge::McvCount(mcv) <= 2 || !isBounded;
   if (isNativeLayout) {
     return o_calc(self, out, sizeBounds);
   }

@@ -354,6 +354,7 @@ inline void ExpireStaleRead(void* mcv, Session& session,
 
 // One timer tick (control.h's window procedure): poll every open panel's strip.
 inline void Tick() {
+  gemini::DropStale();
   for (auto& [mcv, panel] : gemini::Panels()) {
     Session& session = Sessions()[mcv];
     if (!gemini::IsOpen(panel)) {

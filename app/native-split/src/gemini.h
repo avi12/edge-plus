@@ -11,10 +11,12 @@
 // sits a slim strip of our own, a second page that holds the "share a tab"
 // buttons (strip_page.h).
 #pragma once
+#include <windows.h>
 #include <map>
 #include <string>
 #include "edge.h"
 #include "panel_layout.h"
+#include "reserve.h"
 #include "share_text.h"
 #include "strip_page.h"
 
@@ -31,6 +33,7 @@ struct Panel {
   void* webView = nullptr;  // Gemini's page
   void* strip = nullptr;    // the share strip, over the top of the panel
   void* parent = nullptr;
+  HWND window = nullptr;         // the browser window the panel was built in
   bool isStripExpanded = false;  // the tab picker is open: the strip covers it
 };
 
@@ -39,7 +42,28 @@ inline std::map<void*, Panel>& Panels() {
   return panels;
 }
 
+// Whether `panel` still belongs to `mcv`: its window exists and still shows
+// that MultiContentsView. A closed window destroyed its views, panel pages
+// included, so a stale entry must never be touched, and a new window may even
+// reuse the freed address.
+inline bool IsLive(void* mcv, const Panel& panel) {
+  return IsWindow(panel.window) && edge::McvForWindow(panel.window) == mcv;
+}
+
+// Forget the panels of closed windows, without touching their pointers.
+inline void DropStale() {
+  for (auto entry = Panels().begin(); entry != Panels().end();) {
+    if (IsLive(entry->first, entry->second)) {
+      ++entry;
+    } else {
+      reserve::Set(entry->first, 0);
+      entry = Panels().erase(entry);
+    }
+  }
+}
+
 inline Panel* PanelFor(void* mcv) {
+  DropStale();
   const auto entry = Panels().find(mcv);
   return entry == Panels().end() ? nullptr : &entry->second;
 }
@@ -54,6 +78,14 @@ inline void Layout(void* mcv, const Panel& panel) {
       panel_layout::PanelLayout(edge::ViewBounds(mcv), panel.isStripExpanded);
   edge::SetViewBounds(panel.webView, layout.page);
   edge::SetViewBounds(panel.strip, layout.strip);
+  reserve::Set(mcv, layout.page.width);
+}
+
+// Lay the page out again beside the panel, or across the whole window once it
+// is gone.
+inline void RelayoutPage(void* mcv) {
+  edge::InvalidateLayout(mcv);
+  edge::LayoutImmediately(mcv);
 }
 
 // Keep an open panel glued to the right edge after a window resize or a layout
@@ -79,7 +111,7 @@ inline void SetStripExpanded(void* mcv, bool isExpanded) {
 // docked as the last child of the MCV's parent (so it draws over the page),
 // loading Gemini, and the strip over it. Returns null if the profile can't be
 // found.
-inline Panel* EnsurePanel(void* mcv) {
+inline Panel* EnsurePanel(HWND window, void* mcv) {
   if (Panel* existing = PanelFor(mcv)) {
     return existing;
   }
@@ -103,14 +135,15 @@ inline Panel* EnsurePanel(void* mcv) {
   panel.webView = webView;
   panel.strip = strip;
   panel.parent = parent;
+  panel.window = window;
   Log("[gemini] panel created webView=%p strip=%p parent=%p", webView, strip,
       parent);
   return &panel;
 }
 
 // Returns whether the panel is now open (the toolbar button's toggle).
-inline bool Toggle(void* mcv) {
-  const Panel* panel = EnsurePanel(mcv);
+inline bool Toggle(HWND window, void* mcv) {
+  const Panel* panel = EnsurePanel(window, mcv);
   if (!panel) {
     return false;
   }
@@ -120,7 +153,10 @@ inline bool Toggle(void* mcv) {
   if (isOpening) {
     Layout(mcv, *panel);
     edge::ViewRequestFocus(panel->webView);
+  } else {
+    reserve::Set(mcv, 0);
   }
+  RelayoutPage(mcv);
   Log("[gemini] panel %s", isOpening ? "opened" : "closed");
   return isOpening;
 }
@@ -132,14 +168,17 @@ inline void Remove(void* mcv) {
   if (!panel) {
     return;
   }
+  reserve::Set(mcv, 0);
   edge::ViewRemoveChild(panel->parent, panel->strip);
   edge::DeleteWebView(panel->strip);
   edge::ViewRemoveChild(panel->parent, panel->webView);
   edge::DeleteWebView(panel->webView);
   Panels().erase(mcv);
+  RelayoutPage(mcv);
 }
 
 inline void RemoveAll() {
+  DropStale();
   while (!Panels().empty()) {
     Remove(Panels().begin()->first);
   }

@@ -17,10 +17,17 @@ struct Layout {
   Rect page;  // Gemini's page, under the strip
 };
 
+// The panel's width in a content area `contentWidth` wide: its own width, or
+// half the area when that is narrower. The page keeps the rest.
+inline int PanelWidth(int contentWidth) {
+  const int half = contentWidth / 2;
+  return kPanelWidth < half ? kPanelWidth : half;
+}
+
 // Lay the panel out in `content`, the area the page occupies. Both rects are in
 // the same coordinates as `content`.
 inline Layout PanelLayout(const Rect& content, bool isStripExpanded) {
-  const int width = kPanelWidth < content.width ? kPanelWidth : content.width;
+  const int width = PanelWidth(content.width);
   const int x = content.x + content.width - width;
   const int stripHeight = isStripExpanded || kStripHeight > content.height
                               ? content.height

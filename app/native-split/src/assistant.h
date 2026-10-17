@@ -99,16 +99,18 @@ inline OnClick_t o_on_click = nullptr;
 
 // The browser window the click is in (the foreground browser window), so the
 // right window's Gemini panel toggles.
-inline void* ActiveBrowserMcv() {
-  void* mcv = edge::McvForWindow(GetForegroundWindow());
-  return mcv ? mcv : edge::McvForWindow(channel::g_window);
+inline HWND ActiveBrowserWindow() {
+  HWND foreground = GetForegroundWindow();
+  const bool isBrowserWindow = edge::McvForWindow(foreground) != nullptr;
+  return isBrowserWindow ? foreground : channel::g_window;
 }
 
 inline void __fastcall h_on_click(void* action) {
   if (IsGemini()) {
-    void* mcv = ActiveBrowserMcv();
+    HWND window = ActiveBrowserWindow();
+    void* mcv = edge::McvForWindow(window);
     if (mcv) {
-      gemini::Toggle(mcv);
+      gemini::Toggle(window, mcv);
       share::StartTimer(channel::g_window);
     }
     return;
@@ -116,18 +118,49 @@ inline void __fastcall h_on_click(void* action) {
   o_on_click(action);
 }
 
+// The button's press runs the tab's pending Copilot nudge instead of the action
+// when there is one, which would open Copilot's pane under a Gemini button.
+// With Gemini picked the press is always the action's click.
+using ButtonPressed_t = void(__fastcall*)(void*, const void*);
+inline ButtonPressed_t o_button_pressed = nullptr;
+
+inline void __fastcall h_button_pressed(void* button, const void* event) {
+  if (IsGemini()) {
+    h_on_click(edge::CopilotButtonAction(button));
+    return;
+  }
+  o_button_pressed(button, event);
+}
+
 // --- the button's "Chat" label -----------------------------------------------
 
 using Label_t = void(__fastcall*)(void*);
 inline Label_t o_update_label = nullptr;
 
+inline void SetGeminiLabel(void* button) {
+  edge::LabelButtonSetText(
+      button, edge::U16View{kGeminiNameUtf16,
+                            sizeof(kGeminiNameUtf16) / sizeof(char16_t) - 1});
+  edge::ViewSetAccessibleName(button, kGeminiName);
+}
+
 inline void __fastcall h_update_label(void* button) {
   o_update_label(button);
   if (IsGemini()) {
-    edge::LabelButtonSetText(
-        button, edge::U16View{kGeminiNameUtf16,
-                              sizeof(kGeminiNameUtf16) / sizeof(char16_t) - 1});
-    edge::ViewSetAccessibleName(button, kGeminiName);
+    SetGeminiLabel(button);
+  }
+}
+
+// A button's OnThemeChanged runs when it is attached to a window and themed, so
+// a window opened after Gemini was picked is labelled here: nothing calls the
+// label update for it, and without its label controller that returns at once.
+using ThemeChanged_t = void(__fastcall*)(void*);
+inline ThemeChanged_t o_theme_changed = nullptr;
+
+inline void __fastcall h_theme_changed(void* button) {
+  o_theme_changed(button);
+  if (IsGemini()) {
+    SetGeminiLabel(button);
   }
 }
 
@@ -203,43 +236,65 @@ inline void Refresh(void* mcv, bool isRestoring) {
 
 // --- install / apply ---------------------------------------------------------
 
+// One hook of the reskin: where it goes, what runs there, where the original
+// is kept.
+struct HookSite {
+  uintptr_t rva;
+  void* detour;
+  void** original;
+};
+
+inline std::vector<HookSite> HookSites() {
+  return {
+      {rva::CopilotAction_GetNormalStateImage,
+       reinterpret_cast<void*>(h_normal_image),
+       reinterpret_cast<void**>(&o_normal_image)},
+      {rva::CopilotAction_GetPressedStateImage,
+       reinterpret_cast<void*>(h_pressed_image),
+       reinterpret_cast<void**>(&o_pressed_image)},
+      {rva::CopilotAction_GetButtonTooltipText,
+       reinterpret_cast<void*>(h_tooltip), reinterpret_cast<void**>(&o_tooltip)},
+      {rva::CopilotAction_GetAccessibleName,
+       reinterpret_cast<void*>(h_accessible_name),
+       reinterpret_cast<void**>(&o_accessible_name)},
+      {rva::CopilotAction_OnClick, reinterpret_cast<void*>(h_on_click),
+       reinterpret_cast<void**>(&o_on_click)},
+      {rva::CopilotButton_UpdateLabelFromController,
+       reinterpret_cast<void*>(h_update_label),
+       reinterpret_cast<void**>(&o_update_label)},
+      {rva::CopilotButton_OnThemeChanged,
+       reinterpret_cast<void*>(h_theme_changed),
+       reinterpret_cast<void**>(&o_theme_changed)},
+      {rva::CopilotButton_ButtonPressed,
+       reinterpret_cast<void*>(h_button_pressed),
+       reinterpret_cast<void**>(&o_button_pressed)},
+  };
+}
+
 // The assistant hooks are independent of the split: keep them live whenever the
 // DLL is loaded (they are gated on g_assistant, so Copilot is pass-through), so
-// turning the split off with MH_ALL_HOOKS does not un-reskin the button.
+// turning the split off with MH_ALL_HOOKS does not un-reskin the button. The
+// page's layout detour (hooks.h) rides along: it makes room for an open panel
+// (reserve.h) and, with the split off, does only that. Enabling a hook that is
+// already on is fine.
 inline bool EnableAll() {
-  return MH_EnableHook(edge::At(rva::CopilotAction_GetNormalStateImage)) ==
-             MH_OK &&
-         MH_EnableHook(edge::At(rva::CopilotAction_GetPressedStateImage)) ==
-             MH_OK &&
-         MH_EnableHook(edge::At(rva::CopilotAction_GetButtonTooltipText)) ==
-             MH_OK &&
-         MH_EnableHook(edge::At(rva::CopilotAction_GetAccessibleName)) ==
-             MH_OK &&
-         MH_EnableHook(edge::At(rva::CopilotAction_OnClick)) == MH_OK &&
-         MH_EnableHook(
-             edge::At(rva::CopilotButton_UpdateLabelFromController)) == MH_OK;
+  bool isEnabled = true;
+  for (const HookSite& site : HookSites()) {
+    const MH_STATUS status = MH_EnableHook(edge::At(site.rva));
+    isEnabled = isEnabled && (status == MH_OK || status == MH_ERROR_ENABLED);
+  }
+  const MH_STATUS layoutStatus =
+      MH_EnableHook(edge::At(rva::MultiContentsView_CalculateProposedLayout));
+  return isEnabled &&
+         (layoutStatus == MH_OK || layoutStatus == MH_ERROR_ENABLED);
 }
 
 inline bool Install() {
-  const bool isHooked =
-      MH_CreateHook(edge::At(rva::CopilotAction_GetNormalStateImage),
-                    reinterpret_cast<void*>(h_normal_image),
-                    reinterpret_cast<void**>(&o_normal_image)) == MH_OK &&
-      MH_CreateHook(edge::At(rva::CopilotAction_GetPressedStateImage),
-                    reinterpret_cast<void*>(h_pressed_image),
-                    reinterpret_cast<void**>(&o_pressed_image)) == MH_OK &&
-      MH_CreateHook(edge::At(rva::CopilotAction_GetButtonTooltipText),
-                    reinterpret_cast<void*>(h_tooltip),
-                    reinterpret_cast<void**>(&o_tooltip)) == MH_OK &&
-      MH_CreateHook(edge::At(rva::CopilotAction_GetAccessibleName),
-                    reinterpret_cast<void*>(h_accessible_name),
-                    reinterpret_cast<void**>(&o_accessible_name)) == MH_OK &&
-      MH_CreateHook(edge::At(rva::CopilotAction_OnClick),
-                    reinterpret_cast<void*>(h_on_click),
-                    reinterpret_cast<void**>(&o_on_click)) == MH_OK &&
-      MH_CreateHook(edge::At(rva::CopilotButton_UpdateLabelFromController),
-                    reinterpret_cast<void*>(h_update_label),
-                    reinterpret_cast<void**>(&o_update_label)) == MH_OK;
+  bool isHooked = true;
+  for (const HookSite& site : HookSites()) {
+    isHooked = isHooked && MH_CreateHook(edge::At(site.rva), site.detour,
+                                         site.original) == MH_OK;
+  }
   if (!isHooked) {
     Log("[err] assistant hooks failed");
     return false;

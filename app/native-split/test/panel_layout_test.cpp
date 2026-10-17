@@ -43,8 +43,12 @@ void RunChecks() {
         "Gemini keeps its place under the picker");
 
   const Layout narrow = PanelLayout(Rect{10, 0, 300, 500}, false);
-  Check(HasBounds(narrow.strip, 10, 0, 300, kStripHeight),
-        "a narrow window gives the panel all of it");
+  Check(HasBounds(narrow.strip, 160, 0, 150, kStripHeight),
+        "a narrow window gives the panel half of it, at the right");
+
+  Check(PanelWidth(1400) == kPanelWidth, "a wide window gets the full width");
+  Check(PanelWidth(600) == 300, "a narrow window gives the panel half");
+  Check(PanelWidth(0) == 0, "no room, no panel");
 
   const Layout tiny = PanelLayout(Rect{0, 0, 300, 20}, false);
   Check(tiny.strip.height == 20 && tiny.page.height == 0,

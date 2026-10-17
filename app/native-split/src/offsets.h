@@ -549,6 +549,10 @@ inline constexpr uintptr_t CopilotAction_OnClick = 0xdac0670;
 // (this) re-reads the action's images (EdgeDiscoverToolbarButton::SetImages).
 inline constexpr uintptr_t CopilotButton_UpdateLabelFromController = 0xc799e6c;
 inline constexpr uintptr_t CopilotButton_OnThemeChanged = 0x2e255b0;
+// EdgeCopilotToolbarLabelButton::ButtonPressed(this, const ui::Event&): runs
+// the tab's pending Copilot nudge (a suggestion chip) instead of OnClick when
+// there is one.
+inline constexpr uintptr_t CopilotButton_ButtonPressed = 0xc79a0d0;
 // The button's vftables (one per base; EdgeCopilotToolbarLabelButton has
 // multiple inheritance). A view is a chat button when its object+0 vptr is any
 // of these, so the recognition does not depend on which base is primary.
