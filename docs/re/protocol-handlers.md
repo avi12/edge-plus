@@ -34,6 +34,9 @@ binary; **[infer]** Chromium behaviour not re-checked in this build.
 | `::OnAcceptRegisterProtocolHandler` | `0xbdaf2fe` |
 | `::OnIgnoreRegisterProtocolHandler` | `0xbdafa1a` |
 | `::RemoveIgnoredHandler` | `0xbdb054c` |
+| `::GetIgnoredHandlers` (returns a copy of the list) | `0xbdb065a` |
+| `ProtocolHandler::ProtocolHandler(const ProtocolHandler&)` (copy) | `0x2c68d24` |
+| `ProtocolHandler::~ProtocolHandler` | `0x2d69d28` |
 | `::Translate` (mailto: -> handler URL) | `0xbdb0a46` |
 | `RegisterProtocolHandlerPermissionRequest::PermissionDecided` | `0xbdadfd0` |
 | `ChromeProtocolHandlerRegistryDelegate` (vftable `0x11168ee0`) | `0x2f53950` |
@@ -109,10 +112,13 @@ feature symbol exists. Only unrelated flags mention protocol handlers
 (`kStripCredentialsForExternalProtocolHandler`,
 `kSafelistPaytoToRegisterProtocolHandler`). Policy keys exist
 (`custom_handlers.policy`, `protocol_handler.policy` strings).
-Settings page `edge://settings/content/handlers` is backed by
-`ProtocolHandlersHandler` (HandleSetHandlersEnabled `0xa31c860`, HandleRemoveHandler
-`0xa31c7b0`, HandleSetDefault `0xa31c8c0`, GetIgnoredHandlers `0xa31d870`)
-**[infer]** (page not opened).
+The settings back end `ProtocolHandlersHandler` is compiled in
+(HandleSetHandlersEnabled `0xa31c860`, HandleRemoveHandler `0xa31c7b0`,
+HandleSetDefault `0xa31c8c0`, GetIgnoredHandlers `0xa31d870`), but **Edge 155
+has no page that uses it**: `edge://settings/content/handlers` does not exist,
+and the only `allPermissions` route with "handlers" in `msedge.dll` and the
+`.pak` files is `paymentHandlers`. So a blocked handler cannot be lifted from
+Edge's UI at all (section 6).
 
 ## 2. Where handlers are stored
 
@@ -181,9 +187,10 @@ protocol path and the OS default mail app.
 
 ## 4. Recommendation (best first)
 
-**(a) Documented path, no tooling [run for the mechanism, infer for the UI].**
-1. `edge://settings/content/handlers`: delete Gmail from the *not allowed* list
-   (this is `RemoveIgnoredHandler` `0xbdb054c`).
+**(a) Documented path, no tooling [run for the mechanism].**
+1. Lift the Gmail block. Chromium does this from
+   `chrome://settings/content/handlers`, which Edge 155 lacks (section 1); the
+   DLL's switch now does it (section 6).
 2. Open `https://mail.google.com`, and in DevTools run
    `navigator.registerProtocolHandler('mailto','https://mail.google.com/mail/?extsrc=mailto&url=%s')`
    (needs the page focused, i.e. a user gesture; Gmail's own "enable" link does the same).
@@ -209,15 +216,11 @@ not re-validate it.
 (For several Google accounts the URL can be `.../mail/u/0/?extsrc=mailto&url=%s`.)
 Cost: a restart of Edge, and a race if Edge is open (it overwrites the file).
 
-**(c) Live DLL call [infer, not built].** In the injected DLL, resolve the
-profile's registry with `ProtocolHandlerRegistryFactory::GetForBrowserContext`
-(`0x29da376`), call `RemoveIgnoredHandler` (`0xbdb054c`) then
-`OnAcceptRegisterProtocolHandler` (`0xbdaf2fe`) with a `ProtocolHandler`
-(0xe0 bytes; build via `ProtocolHandler::CreateProtocolHandler`-style ctor
-`0x2c68d24`). No restart, but it adds three new ABI offsets to `offsets.h` and a
-hand-built libc++-string-laden struct; only worth it if the panel must flip it
-on a running Edge. A smaller live variant: hook nothing, and just drive (a)
-step 2 over a CDP port. Not recommended before (a)/(b).
+**(c) Live DLL call.** The lifting half is built (section 6): the DLL calls
+`RemoveIgnoredHandler` on a copy of each ignored entry. Accepting on the
+user's behalf (`OnAcceptRegisterProtocolHandler` `0xbdaf2fe`) is not: once the
+block is lifted, the site's own next request lights the icon, and the user
+answers it.
 
 ## 5. The omnibox icon, and how a non-answer becomes a permanent block
 
@@ -296,9 +299,71 @@ the default handler and a clicked `mailto:` navigated to
 nothing, Block still wrote the ignored entry; with the switch off, Esc wrote
 the ignored entry as stock.
 
-Lifting an existing ignore is still Edge's job: `edge://settings/content/handlers`
-lists them (`ProtocolHandlersHandler::GetIgnoredHandlers`) and removes one with
-`RemoveIgnoredHandler`; after that the site's next load lights the icon again.
+This stops new accidental blocks; the old ones are lifted by section 6.
+
+## 6. Lifting the blocks already on record
+
+Edge 155 has no page that lists or removes ignored handlers (section 1), so a
+site blocked by an old non-answer stays silent forever. Whenever the switch
+turns on - the DLL loading with it on, or the panel switching it on - the DLL
+lifts every block in each profile that has a browser window open, and logs
+`[handlers] lifted N blocked link handler(s)`. A block made after that (Ignore
++ Done, or the prompt's Block) sticks until the switch next turns on or the
+DLL next loads.
+
+### The calls [disasm]
+
+- `ProtocolHandlerRegistryFactory::GetForBrowserContext` (`0x29da376`):
+  `GetInstance`, then `GetServiceForBrowserContext(factory, context, create=1)`.
+  The profile comes from each browser window's active tab
+  (`WebContentsImpl::GetBrowserContext`), as theming does.
+- The live ignored list is a size-based libc++ vector at **registry+0x28**:
+  `{ProtocolHandler* data @+0x28, size_t size @+0x30, capacity @+0x38}`, element
+  stride **0xe0**. `GetIgnoredHandlers` (`0xbdb065a`) copies exactly
+  `[+0x28] .. [+0x28] + [+0x30] * 0xe0`; `RemoveIgnoredHandler` and
+  `SilentlyHandleRegisterHandlerRequest` walk the same span.
+- `RemoveIgnoredHandler(this, const ProtocolHandler& h, bool save)`
+  (`0xbdb054c`): returns unless `h` is in the live list (+0x28) **and** the
+  user's list (+0x80; "user" and "policy" below follow Chromium's member
+  order [infer]); erases it from the user's list; `save` (an Edge
+  addition; the bubble's Allow path passes 1, `0xa209162`) calls `Save`
+  (writes the prefs); then unless the policy list (+0x98) also holds it,
+  erases it from the live list and `NotifyChanged`. Its erases compare
+  against `h` while shifting the vector, so `h` must not point into the list.
+- `ProtocolHandler` is 0xe0 bytes: protocol `std::string` @0, `GURL` @0x18,
+  two `optional<std::string>` @0x90 / @0xb0 (engaged flags @0xa8 / @0xc8), 16
+  bytes @0xd0. Its copy constructor is `0x2c68d24` (the one
+  `vector<ProtocolHandler>::__init_with_size` calls per element; the other
+  ctor, `0xbdb1be8`, takes the fields), its destructor `0x2d69d28`.
+- Edge itself lifts every block this way: `ClearUserDefinedHandlers` calls
+  `GetIgnoredHandlers` for a copy, then `RemoveIgnoredHandler` per element.
+
+### The DLL (`protocol_handlers.h`, `LiftIgnoredHandlers`)
+
+Per profile, on the UI thread: copy every entry of the live list into storage
+the DLL owns with Edge's copy constructor, call `RemoveIgnoredHandler(copy,
+save=true)` for each, then Edge's destructor on each copy. The count lifted is
+the live list's size before minus after, so a policy block (which stays) is
+not counted. A profile with several windows is visited once per window; the
+later visits find nothing.
+
+### Verified [run]
+
+Throwaway Edge (own `--user-data-dir`, `LOCALAPPDATA` redirected), its
+`Default\Preferences` seeded before launch with one ignored `mailto` handler
+for a localhost page that calls `registerProtocolHandler` on load without a
+gesture:
+
+1. Without the DLL: the page registered, no icon (the request was swallowed).
+2. DLL injected with the switch on: `[handlers] on`, `[handlers] lifted 1
+   blocked link handler(s)`.
+3. Page reloaded: the handler icon is back left of the star.
+4. About 12 s later Edge had rewritten `Preferences`:
+   `ignored_protocol_handlers` is `[]`.
+
+Not run live: the switch turning on through the config event (another Edge
+had the DLL loaded, and the event would have reached it). It takes the same
+`LiftWindowHandlerBlocks` pass as the load, from the same `ApplyConfig`.
 
 ## Method notes
 
