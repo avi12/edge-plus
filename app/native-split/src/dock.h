@@ -173,6 +173,69 @@ inline Plan DetachPlan(const Node& tree, const Rect& layout, int pane) {
   return plan;
 }
 
+// The outer-band edge `point` is in, if any: the edge already shown holds a
+// little longer than it took to enter, otherwise the nearest edge in its band.
+inline bool FindRootEdge(const Rect& layout, Point point, const Plan& shown,
+                         Direction& rootEdge) {
+  const bool isHoldingRootEdge =
+      shown.zone == Zone::kRootEdge &&
+      DistanceToEdge(layout, point, shown.direction) <=
+          RootBand(layout, shown.direction) + kRootReleaseExtra;
+  if (isHoldingRootEdge) {
+    rootEdge = shown.direction;
+    return true;
+  }
+  bool hasRootEdge = false;
+  int nearestDistance = 0;
+  for (const Direction edge : {Direction::kLeft, Direction::kRight,
+                               Direction::kUp, Direction::kDown}) {
+    const int distance = DistanceToEdge(layout, point, edge);
+    const bool isNearerEdgeInBand =
+        distance < RootBand(layout, edge) &&
+        (!hasRootEdge || distance < nearestDistance);
+    if (isNearerEdgeInBand) {
+      nearestDistance = distance;
+      rootEdge = edge;
+      hasRootEdge = true;
+    }
+  }
+  return hasRootEdge;
+}
+
+// The plan for a pointer inside `leafRect`: its centre swaps (a moving pane
+// only), its edges dock beside it; the dragged pane itself offers nothing.
+inline Plan ResolvePaneDrop(const Node& tree, const Rect& layout, Point point,
+                            int pane, Source source, const Plan& shown,
+                            const LeafRect& leafRect) {
+  const Rect& paneRect = leafRect.rect;
+  const bool canDropOnPane = leafRect.leaf != pane && !Empty(paneRect);
+  if (!canDropOnPane) {
+    return {};
+  }
+  const float paneX =
+      (static_cast<float>(point.x - paneRect.x) + kPixelCentre) /
+      static_cast<float>(paneRect.width);
+  const float paneY =
+      (static_cast<float>(point.y - paneRect.y) + kPixelCentre) /
+      static_cast<float>(paneRect.height);
+  const bool isHoldingPaneEdge = shown.zone == Zone::kPaneEdge &&
+                                 shown.target == leafRect.leaf &&
+                                 HoldsEdge(shown.direction, paneX, paneY);
+  if (isHoldingPaneEdge) {
+    return Finish(tree, layout, pane, source, Zone::kPaneEdge, leafRect.leaf,
+                  shown.direction);
+  }
+  const bool isInCentre = paneX >= kCentre && paneX < 1.f - kCentre &&
+                          paneY >= kCentre && paneY < 1.f - kCentre;
+  const bool isSwap = isInCentre && source == Source::kMoving;
+  if (isSwap) {
+    return Finish(tree, layout, pane, source, Zone::kSwap, leafRect.leaf,
+                  Direction::kUp);
+  }
+  return Finish(tree, layout, pane, source, Zone::kPaneEdge, leafRect.leaf,
+                DiagonalEdge(paneX, paneY));
+}
+
 // Resolve `point` (split coordinates) while dragging `pane` from `source`.
 // `shown` is the plan currently shown, for hysteresis. Precedence: the whole
 // split's outer band first (checked before any pane, as dockview's root target
@@ -196,30 +259,8 @@ inline Plan ResolveDrop(const Node& tree, const Rect& layout, Point point,
   point.y = std::clamp(point.y, layout.y, layout.y + layout.height - 1);
 
   // 1. The whole split's outer band.
-  bool hasRootEdge = false;
   Direction rootEdge = Direction::kUp;
-  const bool isHoldingRootEdge =
-      shown.zone == Zone::kRootEdge &&
-      DistanceToEdge(layout, point, shown.direction) <=
-          RootBand(layout, shown.direction) + kRootReleaseExtra;
-  if (isHoldingRootEdge) {
-    hasRootEdge = true;
-    rootEdge = shown.direction;
-  } else {
-    int nearestDistance = 0;
-    for (const Direction edge : {Direction::kLeft, Direction::kRight,
-                                 Direction::kUp, Direction::kDown}) {
-      const int distance = DistanceToEdge(layout, point, edge);
-      const bool isNearerEdgeInBand =
-          distance < RootBand(layout, edge) &&
-          (!hasRootEdge || distance < nearestDistance);
-      if (isNearerEdgeInBand) {
-        nearestDistance = distance;
-        rootEdge = edge;
-        hasRootEdge = true;
-      }
-    }
-  }
+  const bool hasRootEdge = FindRootEdge(layout, point, shown, rootEdge);
   if (hasRootEdge) {
     Plan plan =
         Finish(tree, layout, pane, source, Zone::kRootEdge, kNoLeaf, rootEdge);
@@ -233,36 +274,10 @@ inline Plan ResolveDrop(const Node& tree, const Rect& layout, Point point,
   std::vector<LeafRect> leaves;
   LayoutTree(tree, layout, kPaneGap, leaves);
   for (const LeafRect& leafRect : leaves) {
-    const Rect& paneRect = leafRect.rect;
-    if (!Contains(paneRect, point)) {
-      continue;
+    if (Contains(leafRect.rect, point)) {
+      return ResolvePaneDrop(tree, layout, point, pane, source, shown,
+                             leafRect);
     }
-    const bool canDropOnPane = leafRect.leaf != pane && !Empty(paneRect);
-    if (!canDropOnPane) {
-      return {};
-    }
-    const float paneX =
-        (static_cast<float>(point.x - paneRect.x) + kPixelCentre) /
-        static_cast<float>(paneRect.width);
-    const float paneY =
-        (static_cast<float>(point.y - paneRect.y) + kPixelCentre) /
-        static_cast<float>(paneRect.height);
-    const bool isHoldingPaneEdge = shown.zone == Zone::kPaneEdge &&
-                                   shown.target == leafRect.leaf &&
-                                   HoldsEdge(shown.direction, paneX, paneY);
-    if (isHoldingPaneEdge) {
-      return Finish(tree, layout, pane, source, Zone::kPaneEdge, leafRect.leaf,
-                    shown.direction);
-    }
-    const bool isInCentre = paneX >= kCentre && paneX < 1.f - kCentre &&
-                            paneY >= kCentre && paneY < 1.f - kCentre;
-    const bool isSwap = isInCentre && isMoving;
-    if (isSwap) {
-      return Finish(tree, layout, pane, source, Zone::kSwap, leafRect.leaf,
-                    Direction::kUp);
-    }
-    return Finish(tree, layout, pane, source, Zone::kPaneEdge, leafRect.leaf,
-                  DiagonalEdge(paneX, paneY));
   }
   // 3. The gap between two panes belongs to neither: a pane's zone already
   // shown holds there, so crossing from pane to pane does not blink it off.
