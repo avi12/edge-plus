@@ -20,12 +20,11 @@ multi-tab sharing Gemini gets in Chrome?
   `glic::Host`, the sharing managers or `glic::mojom::*` stubs. Only shared
   leftovers ship (the actor framework, contextual cueing, feature flags, the
   page-content fetcher). There is no dormant glic to switch on.
-- **The Gemini web client does not need Chrome to boot, only a host.** It
-  waits for one `postMessage` from origin `chrome://glic` carrying the API
-  library as source, and it ships its own fake host for development
-  (`?glic=fake`). With the fake host, the page boots in Edge and stops at
-  "Gemini isn't available right now" while signed out. So a host that speaks
-  the same JS API can be supplied from outside Chrome.
+- **The glic client is bound to Chrome's host.** `gemini.google.com/glic`
+  only starts its in-browser mode on a message from origin `chrome://glic`,
+  and Google's server then decides whether the account may use it (signed
+  out it shows "Gemini isn't available right now"). fix-edge does not
+  imitate that host: section 6 hosts the regular Gemini web app instead.
 - Edge's chat button is `EdgeCopilotToolbarLabelButton`, driven by an
   "action" object, `EdgeDiscoverToolbarButtonActionEdgeCopilot`, that supplies
   its image, tooltip, accessible name and click. Hooking those five functions
@@ -99,8 +98,7 @@ shipped `chrome.dll` (`https://gemini.google.com/glic` at file offset
 2. The guest's listener accepts it only when `event.origin === 'chrome://glic'`
    and `event.source !== null`. It runs the source as a `<script>` through a
    Trusted Types wrapper, then calls `window.internalAutoGlicBoot(source)`,
-   which returns a `GlicHostRegistry`. [run: the shipped Gemini bundle does
-   exactly this, function `rle` in its main module]
+   which returns a `GlicHostRegistry`.
 3. The client calls `registry.registerWebClient(client)`; the host calls
    `client.initialize(browserHost)` and later
    `client.notifyPanelWillOpen({kind: ATTACHED, ...})`.
@@ -109,19 +107,13 @@ shipped `chrome.dll` (`https://gemini.google.com/glic` at file offset
    each request to the browser over the mojo interface `glic.mojom.WebClientHandler`
    (`host/glic.mojom`); `glic.mojom.WebClient` carries notifications back.
 
-The Gemini bundle also contains a complete **fake host**, selected by
-`?glic=fake` (`GlicHostRegistryFactory` picks `new Xle` instead of `rle()`).
-Loaded at `https://gemini.google.com/glic?glic=fake&hl=en` in a throwaway
-Edge, the page boots: the tab title becomes the fake tab's ("Gemini Chrome ::
-New Conversation"), the panel controls appear, and the body reads "Something
-went wrong / Gemini isn't available right now": the server refuses the
-signed-out user. Without `?glic=fake` the page waits for the boot message and
-shows the same error. [run]
+Loaded directly in a throwaway Edge, `https://gemini.google.com/glic` shows
+the panel chrome and "Something went wrong / Gemini isn't available right
+now": no Chrome host, and no signed-in account. [run]
 
 ### The `GlicBrowserHost` surface
 
-The fake host lists what the shipped client calls (all optional in
-`glic_api.ts`; an `Observable` is `{subscribe(cb), subscribeObserver?(o)}`
+From `glic_api.ts` (most methods optional; an `Observable` is `{subscribe(cb), subscribeObserver?(o)}`
 returning `{unsubscribe()}`, an `ObservableValue` adds `getCurrentValue()`):
 
 | area | methods |
@@ -262,38 +254,24 @@ another origin.
 ## 6. What this allows, and the design fix-edge uses
 
 Enabling dormant glic is impossible (section 4), and the Copilot pane's
-plumbing is bound to its WebUI and origin. The least invasive design that
-still gives Gemini the Chrome experience:
+plumbing is bound to its WebUI and origin. Chrome's in-browser Gemini mode
+belongs to Chrome: its client only starts on Chrome's own host, and Google
+decides server-side who may use it. fix-edge does not imitate that host or
+work around Google's checks. What it does:
 
 1. **Reskin, by hooking the action, not the view.** With Gemini picked, the
-   five action functions return the Gemini icon, "Gemini" as tooltip and
-   accessible name, and `OnClick` toggles Gemini instead of Copilot; the
-   "Chat" label becomes "Gemini". Copilot picked = the originals run.
-2. **Host the real client in a side panel of our own.** A `views::WebView`
-   (`WebView(BrowserContext*)`, `LoadInitialURL`) loads
-   `https://gemini.google.com/glic` in the profile's own storage, so a user
-   signed in to Google in Edge is signed in there. It sits at the right of the
-   window's contents, laid out by the existing `MultiContentsView` layout
+   action's image, tooltip and accessible name become Gemini's and `OnClick`
+   toggles Gemini instead of Copilot; the "Chat" label becomes "Gemini".
+   Copilot picked = the originals run.
+2. **Host the regular Gemini web app in a side panel of our own.** A
+   `views::WebView` (`WebView(BrowserContext*)`, `LoadInitialURL`) loads
+   `https://gemini.google.com/app` with the profile's own storage, so a user
+   signed in to Google in Edge is signed in there. It sits at the right of
+   the window's contents, laid out by the existing `MultiContentsView` layout
    detour, and stays put while tabs change, as Chrome's panel does.
-3. **Be the glic host.** The DLL runs a script in an isolated world of the
-   Gemini page (`RenderFrameHostImpl::ExecuteJavaScriptInIsolatedWorld`) that
-   dispatches the `glic-bootstrap` message the client waits for. A
-   `MessageEvent` built in script may name any origin, and an event's data is
-   cloned across worlds, so the client's own listener accepts it and runs our
-   API library in the page's main world with its Trusted Types policy. The
-   library implements `GlicBrowserHost` for the methods that matter and
-   answers the rest like the client's own fake host.
-4. **Tab context from the DLL.** The library's requests travel to the
-   isolated world by `postMessage` and on to the DLL as tagged console
-   messages, caught in `WebContentsImpl::DidAddMessageToConsole`; answers come
-   back by running script in the page again. The DLL knows the window's tabs
-   (tab strip model): it reports the active tab (focus), lists tabs for
-   pinning, and reads a tab's text by running an isolated-world script in
-   that tab, whose console reply it forwards to Gemini.
 
-What this cannot match: anything Chrome does in the browser process that has
-no page-level equivalent (viewport screenshots, PDF bytes, annotated page
-content, the actor, the OS hotkey, cookie sync into a separate partition), and
-anything Google gates on its side (a signed-in, eligible account; the server
-may also refuse a client it does not recognise as Chrome). Section 7 records
-what the implementation does and what was verified.
+The limit, stated plainly: this is the Gemini web app beside the page, not
+Chrome's Gemini. It does not read the active tab, pin other tabs, act on
+pages, or use the microphone through Chrome's permission plumbing; the user
+shares a page the way the web app allows (paste, upload). Section 7 records
+what was implemented and verified.
