@@ -1,15 +1,21 @@
 # Web protocol handlers (`mailto:` -> Gmail)
 
-Target: `msedge.dll` 155.0.4283.45. All addresses are **RVAs**. Nothing here is
-used by the DLL yet; this is the research behind "make Gmail open `mailto:`
-links from Edge".
+Target: `msedge.dll` 155.0.4283.45. All addresses are **RVAs**. The DLL's
+"ask to handle links, like Chrome" switch (`app/native-split/src/protocol_handlers.h`)
+is built on section 5.
 
-**Short answer.** Edge ships Chromium's `custom_handlers` stack unchanged and
-it works: `navigator.registerProtocolHandler('mailto', ...)` shows an Edge
-permission prompt ("wants to Open email links"), and once allowed, a clicked
-`mailto:` link navigates to the web handler. On Avi's profile Gmail is already
-in the **ignored** list (an old "Block"), and Edge silently drops every later
-registration request from an ignored handler, so the prompt never reappears.
+**Short answer.** Edge ships Chromium's `custom_handlers` stack *and* Chrome's
+omnibox UI for it. A gesture-less `navigator.registerProtocolHandler` (what
+Gmail does on load) shows Chrome's two-diamond handler icon in the address
+bar, and its bubble offers Allow / Deny / **Ignore** (preselected). A request
+with a user gesture gets Edge's own permission prompt instead. Both UIs
+**silently block the site for good on a non-answer**: the bubble commits its
+preselected Ignore however it closes (Esc, its X, a click elsewhere), and the
+prompt's "Just this time" writes the same ignored list as Block. Edge then
+drops every later request from an ignored handler without a trace, so the
+icon never comes back - which is why the icon looks like it "never shows" on
+Avi's profile, where Gmail `mailto` and Calendar `webcal` are both ignored.
+See section 5.
 
 Evidence levels: **[run]** observed in a throwaway Edge (own
 `--user-data-dir`, killed by that marker only); **[disasm]** read from the
@@ -56,12 +62,20 @@ The Edge split-view delegates (`SplitWindowWebContentsDelegate`
 `BrowserWebContentsDelegate::RegisterProtocolHandler`:
 
 1. `SilentlyHandleRegisterHandlerRequest` -> if true, return (no UI).
-2. else set the omnibox handler icon's pending handler
-   (`PageSpecificContentSettingsDelegate`, +0x28 / +0x108).
-3. if the registry's mode (`registry+0x138`) is 1 (CDP `autoAccept`),
-   `OnAcceptRegisterProtocolHandler`; otherwise
+2. **No user gesture** (5th argument, `[rsp+0x1c0]`, false; Gmail's case):
+   set the omnibox icon's pending handler (`PageSpecificContentSettingsDelegate`
+   +0x28) and the previous default (+0x108, from `GetHandlerFor`), call
+   `window->GetLocationBar()->UpdateContentSettingsIcons()` (`[this+0x48]`,
+   vtable +0x150 then +0x18) and **return** - no permission request at all.
+   This is Chrome's `Browser::RegisterProtocolHandler` exactly.
+3. **With a gesture**: clear the pending handler (`EmptyProtocolHandler`),
+   update the icons, then if the registry's mode (`registry+0x138`) is 1 (CDP
+   `autoAccept`) `OnAcceptRegisterProtocolHandler`, otherwise
    `PermissionRequestManager::AddRequest(RegisterProtocolHandlerPermissionRequest)`
    (`0x9fb7181`).
+
+(An earlier reading of this doc had steps 2 and 3 as one path; the gesture
+branch at `0x9fb700c` splits them [disasm].)
 
 `SilentlyHandleRegisterHandlerRequest` is stock: return true (swallow) when the
 scheme is empty, `CanSchemeBeOverridden` fails, the registry is disabled
@@ -69,9 +83,13 @@ scheme is empty, `CanSchemeBeOverridden` fails, the registry is disabled
 list (loop over `registry+0x28`, stride `0xe0`, `ProtocolHandler::operator==`);
 else `AttemptReplace`.
 
-`PermissionDecided` (`0xbdadfd0`): result 0 (Allow) ->
-`OnAcceptRegisterProtocolHandler`; anything else -> `OnIgnoreRegisterProtocolHandler`
-(writes the ignored list). So Edge's **Block** is persistent.
+`PermissionDecided` (`0xbdadfd0`) reads a decision `{int value @0, bool
+has_value @8}`: no value (prompt dismissed) -> nothing; 0 (Allow) ->
+`OnAcceptRegisterProtocolHandler`; **anything else** -> `OnIgnoreRegisterProtocolHandler`
+(writes the ignored list). Values seen live: Block = 2, **"Just this time" =
+1** - so Edge's "Just this time" blocks the site permanently [run, logged by
+the DLL's detour]. Chromium's prompt never offers "Just this time" for
+handlers; Edge's generic dialog does.
 
 ### Edge's UI for it [run]
 
@@ -80,9 +98,11 @@ Edge draws the prompt as its own WebUI page `edge://permission-request-dialog/`
 "`<origin>` wants to **Open email links**" with **Block / Just this time /
 Allow**. "Allow" -> registered + default; clicking a `mailto:` link then
 navigated the tab to `http://localhost:PORT/mail?u=mailto%3A...` (the handler
-URL with `%s` filled, URL-escaped). The prompt appeared only when
+URL with `%s` filled, URL-escaped). The prompt appears only when
 `registerProtocolHandler` ran with a user gesture (CDP
-`Runtime.evaluate(userGesture:true)`); without it, no dialog.
+`Runtime.evaluate(userGesture:true)`); without one, the omnibox icon below
+appears instead (the previous run looked only for a dialog target and missed
+it).
 
 No feature flag gates this: no `kProtocolHandler*` / `RegisterProtocolHandler`
 feature symbol exists. Only unrelated flags mention protocol handlers
@@ -199,12 +219,102 @@ hand-built libc++-string-laden struct; only worth it if the panel must flip it
 on a running Edge. A smaller live variant: hook nothing, and just drive (a)
 step 2 over a CDP port. Not recommended before (a)/(b).
 
+## 5. The omnibox icon, and how a non-answer becomes a permanent block
+
+### The icon is there [disasm + run]
+
+- `ContentSettingImageModel::GenerateContentSettingImageModels` (`0x2d40aa6`)
+  walks a fixed list of image types at `0x12637240`
+  (`0,1,2,5,6,7,8,9,16,10,11,12,13,14,18,21,19,23`); type **8** is
+  `PROTOCOL_HANDLERS`, and `CreateForContentType` (`0x2d40c04`, jump-table
+  index 8) builds `ContentSettingRPHImageModel`. No feature flag guards it.
+- `ContentSettingRPHImageModel::UpdateAndGetVisibility` (`0x27b0840`): visible
+  while the delegate's pending handler (+0x28) has a protocol (libc++ string
+  size byte at +0x3f). Stock Chromium.
+- `LocationBarView::UpdateContentSettingsIcons` (`0x26f18f0`) ->
+  `RefreshContentSettingViews` (`0x26f1aae`) updates every view, gating only
+  media (9) and sensors (16) on Edge's left-hand indicator flags.
+- [run] Throwaway Edge, a localhost page calling
+  `registerProtocolHandler('mailto', ...)` on load with no gesture: the
+  two-diamond icon appears left of the star, and disappears on a page that does
+  not register. Clicking it opens "Allow localhost to open all email links?"
+  with **Allow / Deny / Ignore**, Ignore preselected, Done + Manage.
+
+### The bubble commits Ignore on any close [disasm + run]
+
+- `ContentSettingRPHBubbleModel` ctor (`0xa2089d2`): radio labels
+  `0x9a55/0x9a56/0x9a57` (Allow, Deny, Ignore); default item from the delegate's
+  `pending_protocol_handler_setting` (+0x1f0): 1 (allow) -> 0, 2 (block) -> 1,
+  else (0, the normal case) -> **2, Ignore**.
+- `ContentSettingBubbleContents::WindowClosing` (`0x96f0030`) calls the model's
+  vtable +0x48 = `ContentSettingRPHBubbleModel::CommitChanges` (`0xa2090a0`)
+  for **every** close of the bubble widget.
+- `CommitChanges` -> `PerformActionForSelectedItem` (`0xa2090ec`, reads
+  `ContentSettingBubbleContents::GetSelectedRadioOption`): 0 ->
+  `RegisterProtocolHandler` (`RemoveIgnoredHandler` + `OnAccept...`), 1 ->
+  `UnregisterProtocolHandler` (`OnDeny...`, registered but not default), 2 ->
+  `IgnoreProtocolHandler` (`OnIgnoreRegisterProtocolHandler`); then clears the
+  pending handler (icon gone) and refreshes the location bar.
+- The Done button is the dialog's accept callback: the ctor (`0x96ef1b6`) binds
+  the model's `vcall'{56}` (vtable +0x38, `OnDoneButtonClicked`) with
+  `SetAcceptCallback`. For the RPH model that slot holds the shared empty
+  virtual `0x5466b60`; Done runs it, then the widget closes -> `CommitChanges`.
+- [run, stock Edge] open the bubble, press **Esc** -> `ignored_protocol_handlers`
+  gains the entry; open it, **click the page** -> same. Ignore is the default
+  and the commit is unconditional, so a glance at the bubble blocks the site.
+  The same code is in upstream Chromium; Chrome behaves the same way.
+- Callers of `OnIgnoreRegisterProtocolHandler` (scan of every `E8/E9 rel32` in
+  `.text`): exactly two, `IgnoreProtocolHandler` (`0xa20922e`) and
+  `PermissionDecided` (`0xbdae012`). So the two non-answers above are the only
+  ways a request lands in the ignored list from the UI.
+
+**So, Avi's ignored Gmail / Calendar entries** [infer, consistent with all of
+the above]: Gmail and Calendar register on load without a gesture; the icon
+appeared; the bubble was opened once and closed without picking Allow (or
+Done pressed on the preselected Ignore). From then on
+`SilentlyHandleRegisterHandlerRequest` swallows every request, so the icon never
+returns. Nothing auto-dismisses a gesture-less request: it never reaches the
+permission manager.
+
+### The fix (`protocol_handlers.h`) [run]
+
+Least invasive, Chrome's UI kept:
+
+1. Point the RPH bubble model's Done slot (`vftable 0x1123cd80 + 0x38`) at our
+   `OnDoneButtonClicked`, which records the model; hook `CommitChanges` to run
+   Edge's commit **only** for that model. Any other close does nothing, and the
+   pending handler stays, so the icon remains for a later answer. Allow + Done,
+   Deny + Done and Ignore + Done keep Edge's behaviour.
+2. Hook `PermissionDecided`: a decision of 1 ("Just this time") returns without
+   calling Edge's, so nothing is remembered. Allow (0) and Block (2) unchanged.
+
+Verified in a throwaway Edge with the DLL injected (config written with only
+this switch on): icon shown; Esc and click-away logged "closed without Done"
+with no `custom_handlers` written and the icon still shown; Allow + Done wrote
+the default handler and a clicked `mailto:` navigated to
+`/mail?u=mailto%3Atest%40example.com`; the prompt's "Just this time" wrote
+nothing, Block still wrote the ignored entry; with the switch off, Esc wrote
+the ignored entry as stock.
+
+Lifting an existing ignore is still Edge's job: `edge://settings/content/handlers`
+lists them (`ProtocolHandlersHandler::GetIgnoredHandlers`) and removes one with
+`RemoveIgnoredHandler`; after that the site's next load lights the icon again.
+
 ## Method notes
 
 - Throwaway Edge: `--user-data-dir=<temp> --remote-debugging-port=<p>
   --remote-allow-origins=*`, a localhost page serving a `mailto:` link and a
   `registerProtocolHandler` helper, driven with Node `WebSocket` CDP; killed by
   `--user-data-dir` marker.
+- Testing the DLL next to a real Edge that may have it loaded: launch the
+  throwaway Edge with `LOCALAPPDATA` pointed at a scratch folder, so the DLL
+  reads its config from (and logs to) there, and write the config before
+  injecting. Never signal `Local\fixedge-config-changed` /
+  `Local\fixedge-split-unload` from a test: they are session-wide, so they
+  would reach the real Edge's DLL too. Kill the test Edge by marker instead of
+  unloading.
+- The bubble is a separate `Chrome_WidgetWin_1` window (344 x 284); posted
+  clicks and Esc reach it, and `PrintWindow` captures it.
 - The permission dialog is a separate CDP page target
   (`edge://permission-request-dialog/`); its buttons are Fluent web components
   in shadow DOM.
