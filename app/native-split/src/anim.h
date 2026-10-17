@@ -33,6 +33,13 @@ inline HWND g_hwnd = nullptr;     // the window whose timer drives the frames
 inline constexpr UINT_PTR kTimerId = 0xF1ED;
 inline constexpr UINT kFrameMs = 15;
 
+// Set before a pane is added that must paint at once (a tab dropped in): its
+// page then takes its final size in one step instead of being resized every
+// frame while it grows in, which left it blank until the growth finished. The
+// next flight's new panes appear in place; the flag clears when that flight is
+// planned.
+inline bool g_isNextEntryInPlace = false;
+
 inline std::map<void*, Flight>& Flights() {
   static std::map<void*, Flight> flights;
   return flights;
@@ -173,12 +180,13 @@ inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
       Rect from = target.rect;
       if (lastDrawn != LastDrawn().end()) {
         from = lastDrawn->second;
-      } else if (motion::Empty(onScreen)) {
+      } else if (motion::Empty(onScreen) && !g_isNextEntryInPlace) {
         from = motion::EntryRect(target.rect, before);
       }
       newFlight.from.push_back({target.leaf, from});
       isMoving = isMoving || !motion::Same(from, target.rect);
     }
+    g_isNextEntryInPlace = false;
     if (!isMoving) {
       if (hasFlight) {
         Flights().erase(flight);

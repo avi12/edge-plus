@@ -16,6 +16,7 @@
 #include "edge.h"
 #include "geometry.h"
 #include "overlay.h"
+#include "repaint.h"
 #include "split_ops.h"
 #include "state.h"
 
@@ -229,9 +230,13 @@ inline void ApplyDrop() {
   }
   edge::ActivateTabAt(drop.tsm,
                       splitIndex);  // the split shows again
+  anim::g_isNextEntryInPlace = true;
   const bool hasGrown = split_ops::GrowWithTree(
       drop.mcv, drop.tsm, std::move(drop.tree), draggedTab);
   Log("[tabdrag] drop: %s", hasGrown ? "the tab is a new pane" : "failed");
+  if (hasGrown) {
+    repaint::ScheduleAll();
+  }
 }
 
 }  // namespace fixedge::tabdrag

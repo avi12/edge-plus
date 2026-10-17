@@ -14,6 +14,7 @@
 #include "edge.h"
 #include "geometry.h"
 #include "overlay.h"
+#include "repaint.h"
 #include "state.h"
 
 namespace fixedge::drag {
@@ -152,6 +153,7 @@ inline void Release() {
   edge::InvalidateLayout(mcv);
   // A pure tree edit: force the re-tile (and its animation).
   edge::LayoutImmediately(mcv);
+  repaint::ScheduleAll();
   Log("[drag] dropped pane %d: zone=%d target=%d dir=%d", pane,
       static_cast<int>(plan.zone), plan.target,
       static_cast<int>(plan.direction));

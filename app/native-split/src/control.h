@@ -418,6 +418,11 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
     anim::Tick();
     return 0;
   }
+  const bool isRenderNudge = message == WM_TIMER && wparam == repaint::kTimerId;
+  if (isRenderNudge) {
+    repaint::NudgeAll();
+    return 0;
+  }
   const bool isThemeRepaint =
       message == WM_TIMER && wparam == theme::kRepaintTimerId;
   if (isThemeRepaint) {
