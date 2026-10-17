@@ -18,6 +18,8 @@ using namespace fixedge;
 namespace {
 
 HMODULE g_self = nullptr;
+HANDLE g_unloadEvent = nullptr;
+HANDLE g_configEvent = nullptr;
 
 // The companion app toggles the feature off by signalling this; we then remove
 // the hooks and drop out of Edge without a restart.
@@ -33,6 +35,13 @@ constexpr wchar_t kConfigEvent[] = L"Local\\fixedge-config-changed";
 constexpr int kModuleWaitAttempts = 100;
 constexpr DWORD kModuleWaitStepMilliseconds = 50;
 
+// Close the signal events so the panel sees this DLL as gone (a stale leftover
+// it can free), not as one still running.
+void ReleaseEvents() {
+  CloseHandle(g_unloadEvent);
+  CloseHandle(g_configEvent);
+}
+
 DWORD WINAPI Init(LPVOID) {
   HMODULE edgeModule = nullptr;
   for (int i = 0; i < kModuleWaitAttempts && !edgeModule; i++) {
@@ -43,6 +52,7 @@ DWORD WINAPI Init(LPVOID) {
   }
   if (!edgeModule) {
     Log("[err] %ls not found", edge::kModule);
+    ReleaseEvents();
     return 0;
   }
   edge::Bind(edgeModule);
@@ -55,23 +65,17 @@ DWORD WINAPI Init(LPVOID) {
   if (!verify::Ok()) {
     Log("[verify] FAILED - refusing to hook (wrong Edge build or unexpected "
         "code)");
+    ReleaseEvents();
     return 0;
   }
 
   if (!hooks::InstallAll()) {
+    ReleaseEvents();
     return 0;
   }
   Log("[init] hooks installed; directional-add menu armed");
 
-  // Two signals from the app: unload (detach) and config-changed (re-read and
-  // apply the config live). Unload is manual-reset (reset first so a quick
-  // off->on re-toggle does not self-unload); config is auto-reset.
-  HANDLE unloadEvent = CreateEventW(nullptr, /*bManualReset=*/TRUE,
-                                    /*bInitialState=*/FALSE, kUnloadEvent);
-  ResetEvent(unloadEvent);
-  HANDLE configEvent = CreateEventW(nullptr, /*bManualReset=*/FALSE,
-                                    /*bInitialState=*/FALSE, kConfigEvent);
-  const HANDLE events[2] = {unloadEvent, configEvent};
+  const HANDLE events[2] = {g_unloadEvent, g_configEvent};
   while (true) {
     const DWORD which = WaitForMultipleObjects(2, events, FALSE, INFINITE);
     const bool isConfigChange = which == WAIT_OBJECT_0 + 1;
@@ -83,12 +87,7 @@ DWORD WINAPI Init(LPVOID) {
   }
   Log("[unload] signalled; removing hooks");
   hooks::RemoveAll();
-  if (unloadEvent) {
-    CloseHandle(unloadEvent);
-  }
-  if (configEvent) {
-    CloseHandle(configEvent);
-  }
+  ReleaseEvents();
   Log("[unload] fixedge-split detached");
   FreeLibraryAndExitThread(g_self, 0);
   return 0;
@@ -101,6 +100,17 @@ BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID) {
   if (isProcessAttach) {
     g_self = module;
     DisableThreadLibraryCalls(module);
+    // Two signals from the app: unload (detach) and config-changed (re-read and
+    // apply the config live). Unload is manual-reset (reset first so a quick
+    // off->on re-toggle does not self-unload); config is auto-reset. Created
+    // here, not in Init: the unload event existing is how the panel tells a
+    // DLL that is loading from a stale leftover, and it must never free the
+    // first.
+    g_unloadEvent = CreateEventW(nullptr, /*bManualReset=*/TRUE,
+                                 /*bInitialState=*/FALSE, kUnloadEvent);
+    ResetEvent(g_unloadEvent);
+    g_configEvent = CreateEventW(nullptr, /*bManualReset=*/FALSE,
+                                 /*bInitialState=*/FALSE, kConfigEvent);
     // Init waits and hooks, which must not run under the loader lock.
     CreateThread(nullptr, 0, Init, nullptr, 0, nullptr);
   }

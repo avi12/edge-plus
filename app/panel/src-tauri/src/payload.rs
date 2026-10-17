@@ -10,13 +10,17 @@ use crate::paths;
 
 const DLL_BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/fixedge-split.dll"));
 
+/// Whether the unpacked DLL is byte-identical to the one embedded in this build.
+pub fn is_unpacked_current() -> bool {
+    std::fs::read(paths::split_dll()).is_ok_and(|existing| existing == DLL_BYTES)
+}
+
 /// Write the embedded DLL to its data-folder path unless an identical copy is
 /// already there. A write failure (the DLL is loaded and the file is locked) is
 /// ignored - the loaded copy stays.
 pub fn unpack() {
     let target = paths::split_dll();
-    let is_current = std::fs::read(&target).is_ok_and(|existing| existing == DLL_BYTES);
-    if is_current {
+    if is_unpacked_current() {
         return;
     }
     if let Some(parent) = target.parent() {

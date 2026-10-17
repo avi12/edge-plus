@@ -10,6 +10,8 @@ use std::io;
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
 
+use crate::process::module_base;
+
 use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
 use windows_sys::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress};
 use windows_sys::Win32::System::Memory::{
@@ -66,6 +68,62 @@ pub fn signal_unload() {
     unsafe {
         SetEvent(handle);
         CloseHandle(handle);
+    }
+}
+
+/// Drop every remaining reference to `module_basename` in `pid`. A DLL that
+/// unloaded itself but was re-injected meanwhile keeps an extra reference: its
+/// hooks are gone and its unload event is closed, yet the module stays mapped,
+/// so `LoadLibrary` would only bump the count and never run `DllMain` again.
+pub fn free_module(pid: u32, module_basename: &str) {
+    const MAX_REFERENCES: usize = 16;
+    for _ in 0..MAX_REFERENCES {
+        let Some(base) = module_base(pid, module_basename) else {
+            return;
+        };
+        if !call_remote_free_library(pid, base) {
+            return;
+        }
+    }
+}
+
+fn call_remote_free_library(pid: u32, base: usize) -> bool {
+    // SAFETY: the process handle and thread handle are closed on every path;
+    // `FreeLibrary` takes one pointer-sized argument, which is the module base.
+    unsafe {
+        let process = OpenProcess(
+            PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION,
+            0,
+            pid,
+        );
+        if process.is_null() {
+            return false;
+        }
+        let kernel32: Vec<u16> = "kernel32.dll".encode_utf16().chain([0]).collect();
+        let module = GetModuleHandleW(kernel32.as_ptr());
+        let Some(free_library) = GetProcAddress(module, c"FreeLibrary".as_ptr().cast()) else {
+            CloseHandle(process);
+            return false;
+        };
+        let thread = CreateRemoteThread(
+            process,
+            std::ptr::null(),
+            0,
+            Some(std::mem::transmute::<
+                unsafe extern "system" fn() -> isize,
+                unsafe extern "system" fn(*mut std::ffi::c_void) -> u32,
+            >(free_library)),
+            base as *const std::ffi::c_void,
+            0,
+            std::ptr::null_mut(),
+        );
+        let is_started = !thread.is_null();
+        if is_started {
+            WaitForSingleObject(thread, LOAD_LIBRARY_TIMEOUT_MS);
+            CloseHandle(thread);
+        }
+        CloseHandle(process);
+        is_started
     }
 }
 

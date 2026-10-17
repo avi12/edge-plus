@@ -59,6 +59,15 @@ unsafe extern "system" fn collect_window(window: HWND, lparam: LPARAM) -> BOOL {
     TRUE
 }
 
+/// The pids of Edge browser processes that currently have `module_basename` loaded.
+#[must_use]
+pub fn edge_pids_with_module(module_basename: &str) -> Vec<u32> {
+    edge_browser_pids()
+        .into_iter()
+        .filter(|&pid| module_base(pid, module_basename).is_some())
+        .collect()
+}
+
 /// The pids of Edge browser processes that do NOT already have a module named
 /// `module_basename` loaded - the ones an injection still needs to reach. This
 /// fixes the old panel's gap where a second profile opened after the DLL loaded
@@ -67,25 +76,26 @@ unsafe extern "system" fn collect_window(window: HWND, lparam: LPARAM) -> BOOL {
 pub fn edge_pids_missing_module(module_basename: &str) -> Vec<u32> {
     edge_browser_pids()
         .into_iter()
-        .filter(|&pid| !has_module(pid, module_basename))
+        .filter(|&pid| module_base(pid, module_basename).is_none())
         .collect()
 }
 
-fn has_module(pid: u32, module_basename: &str) -> bool {
+/// The load address of `module_basename` in `pid`, or `None` when it is not loaded.
+pub(crate) fn module_base(pid: u32, module_basename: &str) -> Option<usize> {
     // SAFETY: the snapshot handle is created, walked and closed in this scope;
     // each MODULEENTRY32W is zeroed with its dwSize set as the API requires.
     unsafe {
         let snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid);
         if snapshot == INVALID_HANDLE_VALUE {
-            return false;
+            return None;
         }
         let mut entry: MODULEENTRY32W = std::mem::zeroed();
         entry.dwSize = u32::try_from(std::mem::size_of::<MODULEENTRY32W>()).unwrap_or(0);
-        let mut found = false;
+        let mut found = None;
         let mut more = Module32FirstW(snapshot, std::ptr::addr_of_mut!(entry));
         while more != 0 {
             if module_name_matches(&entry.szModule, module_basename) {
-                found = true;
+                found = Some(entry.modBaseAddr as usize);
                 break;
             }
             more = Module32NextW(snapshot, std::ptr::addr_of_mut!(entry));

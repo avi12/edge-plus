@@ -25,6 +25,7 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|_app, _argv, _cwd| {}))
         .setup(|_app| {
             payload::unpack();
+            std::thread::spawn(commands::sync_on_start);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

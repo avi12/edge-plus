@@ -13,6 +13,8 @@ use serde::Serialize;
 use crate::settings::{Features, Mode, Settings, ThemeEntry, ThemeSource, Theming};
 use crate::{paths, payload, store_url, DEVMODE_WAITER_ARG};
 
+const UNLOAD_POLLS: u32 = 40;
+const UNLOAD_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(100);
 const SPLIT_MODULE: &str = "fixedge-split.dll";
 // DETACHED_PROCESS | CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB: the dev-mode
 // waiter must outlive the panel window and Edge's job object.
@@ -54,11 +56,40 @@ fn apply(settings: &Settings) {
         return;
     }
     payload::unpack();
+    // The unload event exists exactly while a live DLL does; a module still
+    // mapped without it is a stale leftover that would swallow the injection.
+    if !edge_native::is_split_loaded() {
+        for pid in edge_native::edge_pids_with_module(SPLIT_MODULE) {
+            edge_native::free_module(pid, SPLIT_MODULE);
+        }
+    }
     let missing = edge_native::edge_pids_missing_module(SPLIT_MODULE);
     if !missing.is_empty() {
         let _ = edge_native::inject_into(&missing, &paths::split_dll());
     }
     edge_native::signal_config_changed();
+}
+
+/// At startup: if the DLL loaded in Edge is not this build's, eject it and let
+/// `apply` inject the fresh one, so a rebuilt panel takes effect with no Edge
+/// restart.
+pub fn sync_on_start() {
+    let settings = Settings::load();
+    let is_enabled = settings.features.native_split || settings.features.theming;
+    let is_stale = edge_native::is_split_loaded() && !payload::is_unpacked_current();
+    if is_enabled && is_stale {
+        edge_native::signal_unload();
+        for _ in 0..UNLOAD_POLLS {
+            let is_gone = edge_native::edge_pids_with_module(SPLIT_MODULE).is_empty();
+            if is_gone {
+                break;
+            }
+            std::thread::sleep(UNLOAD_POLL_INTERVAL);
+        }
+    }
+    if is_enabled {
+        apply(&settings);
+    }
 }
 
 fn persist_and_apply(settings: &Settings) -> Result<StateDto, String> {

@@ -20,7 +20,7 @@ mod registry;
 
 pub use crx::{read_crx, CrxInfo};
 pub use devmode::{default_user_data, wait_for_edge_exit_then_snooze};
-pub use inject::{inject_into, is_split_loaded, signal_unload};
-pub use process::{edge_browser_pids, edge_pids_missing_module};
+pub use inject::{free_module, inject_into, is_split_loaded, signal_unload};
+pub use process::{edge_browser_pids, edge_pids_missing_module, edge_pids_with_module};
 pub use protocol::{signal_config_changed, write_config};
 pub use registry::{install_local, install_store, uninstall, Store};
