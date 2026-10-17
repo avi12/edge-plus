@@ -7,7 +7,7 @@
 
 use std::collections::HashSet;
 use std::os::windows::ffi::OsStringExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use windows_sys::Win32::Foundation::{
     CloseHandle, BOOL, HWND, INVALID_HANDLE_VALUE, LPARAM, MAX_PATH, TRUE,
@@ -82,6 +82,26 @@ pub fn edge_pids_missing_module(module_basename: &str) -> Vec<u32> {
 
 /// The load address of `module_basename` in `pid`, or `None` when it is not loaded.
 pub(crate) fn module_base(pid: u32, module_basename: &str) -> Option<usize> {
+    find_module(pid, module_basename).map(|entry| entry.modBaseAddr as usize)
+}
+
+/// The full path `pid` loaded `module_basename` from, or `None` when it is not
+/// loaded. Edge keeps each version in its own folder, so this names the build
+/// the process is actually running, not whatever is installed now.
+#[must_use]
+pub fn module_path(pid: u32, module_basename: &str) -> Option<PathBuf> {
+    let entry = find_module(pid, module_basename)?;
+    let end = entry
+        .szExePath
+        .iter()
+        .position(|&c| c == 0)
+        .unwrap_or(entry.szExePath.len());
+    Some(PathBuf::from(std::ffi::OsString::from_wide(
+        &entry.szExePath[..end],
+    )))
+}
+
+fn find_module(pid: u32, module_basename: &str) -> Option<MODULEENTRY32W> {
     // SAFETY: the snapshot handle is created, walked and closed in this scope;
     // each MODULEENTRY32W is zeroed with its dwSize set as the API requires.
     unsafe {
@@ -95,7 +115,7 @@ pub(crate) fn module_base(pid: u32, module_basename: &str) -> Option<usize> {
         let mut more = Module32FirstW(snapshot, std::ptr::addr_of_mut!(entry));
         while more != 0 {
             if module_name_matches(&entry.szModule, module_basename) {
-                found = Some(entry.modBaseAddr as usize);
+                found = Some(entry);
                 break;
             }
             more = Module32NextW(snapshot, std::ptr::addr_of_mut!(entry));
