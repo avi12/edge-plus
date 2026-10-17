@@ -553,6 +553,12 @@ inline constexpr uintptr_t CopilotButton_OnThemeChanged = 0x2e255b0;
 // the tab's pending Copilot nudge (a suggestion chip) instead of OnClick when
 // there is one.
 inline constexpr uintptr_t CopilotButton_ButtonPressed = 0xc79a0d0;
+// The chat button's dropdown menu, an ui::SimpleMenuModel built afresh on each
+// open: BuildMenu(this) clears and fills it (items: command 3 "Summarize page",
+// a separator, 0 "Chat", and 1 "Talk to Copilot + Share tab" when [this+0x58]
+// is 0), ExecuteCommand(this, command id, event flags) runs one.
+inline constexpr uintptr_t EdgeCopilotMenuModel_BuildMenu = 0xf04e1f4;
+inline constexpr uintptr_t EdgeCopilotMenuModel_ExecuteCommand = 0xf04e420;
 // The button's vftables (one per base; EdgeCopilotToolbarLabelButton has
 // multiple inheritance). A view is a chat button when its object+0 vptr is any
 // of these, so the recognition does not depend on which base is primary.

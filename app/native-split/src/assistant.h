@@ -9,6 +9,8 @@
 #include <vector>
 #include "MinHook.h"
 #include "channel.h"
+#include "chat_action.h"
+#include "chat_actions.h"
 #include "chat_menu.h"
 #include "config.h"
 #include "edge.h"
@@ -130,6 +132,38 @@ inline void __fastcall h_button_pressed(void* button, const void* event) {
     return;
   }
   o_button_pressed(button, event);
+}
+
+// --- the dropdown's items ----------------------------------------------------
+
+// Edge builds the menu afresh each time it opens: rename the voice item after
+// the build, so switching back to Copilot needs nothing undone.
+using BuildMenu_t = void(__fastcall*)(void*);
+inline BuildMenu_t o_build_menu = nullptr;
+
+inline void __fastcall h_build_menu(void* model) {
+  o_build_menu(model);
+  if (IsGemini()) {
+    chat_actions::RelabelTalkItem(model);
+  }
+}
+
+// Chat, Summarize page and the voice item do their Gemini version while Gemini
+// is chosen; any other item (a nudge), or a window without a panel to open, is
+// Edge's.
+using ExecuteMenu_t = void(__fastcall*)(void*, int, int);
+inline ExecuteMenu_t o_execute_menu = nullptr;
+
+inline void __fastcall h_execute_menu(void* model, int commandId,
+                                      int eventFlags) {
+  const chat_action::ChatAction action = chat_action::ActionFor(commandId);
+  const bool isOurs = IsGemini() && action != chat_action::ChatAction::kNone;
+  HWND window = isOurs ? ActiveBrowserWindow() : nullptr;
+  const bool isHandled =
+      isOurs && chat_actions::Run(window, edge::McvForWindow(window), action);
+  if (!isHandled) {
+    o_execute_menu(model, commandId, eventFlags);
+  }
 }
 
 // --- the button's "Chat" label -----------------------------------------------
@@ -269,6 +303,12 @@ inline std::vector<HookSite> HookSites() {
       {rva::CopilotButton_ButtonPressed,
        reinterpret_cast<void*>(h_button_pressed),
        reinterpret_cast<void**>(&o_button_pressed)},
+      {rva::EdgeCopilotMenuModel_BuildMenu,
+       reinterpret_cast<void*>(h_build_menu),
+       reinterpret_cast<void**>(&o_build_menu)},
+      {rva::EdgeCopilotMenuModel_ExecuteCommand,
+       reinterpret_cast<void*>(h_execute_menu),
+       reinterpret_cast<void**>(&o_execute_menu)},
   };
 }
 
