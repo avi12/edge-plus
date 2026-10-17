@@ -176,6 +176,7 @@ inline void SetGeminiLabel(void* button) {
       button, edge::U16View{kGeminiNameUtf16,
                             sizeof(kGeminiNameUtf16) / sizeof(char16_t) - 1});
   edge::ViewSetAccessibleName(button, kGeminiName);
+  edge::ViewSetTooltip(button, kGeminiName);
 }
 
 inline void __fastcall h_update_label(void* button) {
@@ -238,6 +239,7 @@ inline void RestoreStockLabel(void* button) {
   }
   edge::LabelButtonSetText(button, stockLabel);
   edge::ViewSetAccessibleName(button, LabelAsUtf8(stockLabel).c_str());
+  edge::ViewSetTooltip(button, LabelAsUtf8(stockLabel).c_str());
 }
 
 // Re-skin (or restore) each live chat button now: its images and its label are
@@ -257,12 +259,6 @@ inline void Refresh(void* mcv, bool isRestoring) {
     if (isRestoring) {
       RestoreStockLabel(button);
     }
-    void* dropdown = chat_menu::DropdownBeside(button);
-    const Rect dropdownBounds = dropdown ? edge::ViewBounds(dropdown) : Rect{};
-    Log("[assistant] chevron %p visible=%d bounds=%d,%d %dx%d", dropdown,
-        static_cast<int>(dropdown && edge::ViewGetVisible(dropdown)),
-        dropdownBounds.x, dropdownBounds.y, dropdownBounds.width,
-        dropdownBounds.height);
     // The chevron's title follows the choice; stock Copilot leaves it as Edge
     // set it.
     const bool shouldRetitleMenu = IsGemini() || isRestoring;
@@ -362,6 +358,15 @@ inline void Apply(void* mcv, config::Assistant assistant) {
     gemini::Remove(mcv);
   }
   Refresh(mcv, isRestoring);
+  // Rewriting the button's label and icon relaid the toolbar out and left the
+  // page a little off: invalidate every view from the page up to the window's
+  // root and lay the whole window out again.
+  if (mcv) {
+    for (void* view = mcv; view; view = edge::ViewParent(view)) {
+      edge::InvalidateLayout(view);
+    }
+    edge::LayoutImmediately(edge::ViewRoot(mcv));
+  }
 }
 
 }  // namespace fixedge::assistant
