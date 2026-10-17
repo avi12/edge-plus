@@ -288,7 +288,11 @@ inline void AddPaneByCommand(HWND hwnd, WPARAM wparam) {
 }
 
 inline void EnsureGripsByCommand(HWND hwnd) {
-  if (void* mcv = edge::McvForWindow(hwnd)) {
+  void* mcv = edge::McvForWindow(hwnd);
+  // A collapsed split keeps its surplus containers; they get no grips.
+  const bool isGrownSplit =
+      mcv && edge::McvActiveSplitPanes(mcv) > split_data::kMinSplitMembers;
+  if (isGrownSplit) {
     grip::EnsureGrips(mcv);
     dividers::Ensure(mcv);
   }
