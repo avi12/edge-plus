@@ -10,6 +10,7 @@
 #include "channel.h"
 #include "config.h"
 #include "edge.h"
+#include "geometry.h"
 #include "split_ops.h"
 #include "split_data.h"
 #include "state.h"
@@ -140,6 +141,9 @@ inline BOOL CALLBACK BreakUpWindowSplits(HWND hwnd, LPARAM /*unused*/) {
                                active ? edge::TabContents(active) : nullptr);
     ForgetTree(mcv);
   }
+  // Every window, dissolved or not: a split collapsed earlier is in the same
+  // state Edge's stock layout cannot take.
+  geometry::RestoreStockVisibility(mcv);
   return TRUE;
 }
 

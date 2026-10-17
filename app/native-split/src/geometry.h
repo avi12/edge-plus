@@ -99,4 +99,26 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
   return out;
 }
 
+// Before the layout hook comes off (the split switched off, or this DLL
+// unloading), leave `mcv`'s views as Edge's own layout expects them. Edge's
+// GetViewSizes CHECKs that panes 0 and 1 are both visible whenever its divider
+// handle is, and TilePanes leaves exactly that combination on a grown split
+// collapsed to one pane (pane 1 hidden as surplus, the handle kept visible for
+// the borders): the next stock layout, e.g. the frame relayout of a theme
+// change, crashed Edge. The first two panes and the handle show only while the
+// active tab is in a split; every surplus container stays hidden.
+inline void RestoreStockVisibility(void* mcv) {
+  const int count = static_cast<int>(edge::McvCount(mcv));
+  const bool isSplitShown = edge::McvActiveSplitPanes(mcv) >= 2;
+  void* const* containers = edge::McvContainers(mcv);
+  for (int i = 0; i < count; i++) {
+    const bool isShownPane = i == 0 || (i == 1 && isSplitShown);
+    edge::SetViewVisible(containers[i], isShownPane);
+  }
+  if (void* edgeHandle = edge::McvResizeArea(mcv)) {
+    edge::SetViewVisible(edgeHandle, isSplitShown);
+  }
+  edge::InvalidateLayout(mcv);
+}
+
 }  // namespace fixedge::geometry
