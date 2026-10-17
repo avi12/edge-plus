@@ -1,10 +1,12 @@
 // config.h — the panel's live configuration of this DLL. One concern: the wire
 // struct the panel writes to the config file and control.h applies, so its
 // layout is written once here and mirrored field-for-field in
-// app/panel/src-tauri/edge-native/src/protocol.rs. The panel owns which features are on and
-// which theme to use for each OS mode; the DLL obeys live, with no restart.
+// app/panel/src-tauri/edge-native/src/protocol.rs. The panel owns which
+// features are on, which theme to use for each OS mode and which assistant the
+// chat button opens; the DLL obeys live, with no restart.
 #pragma once
 #include <windows.h>
+#include <cstddef>
 #include <cstdint>
 
 namespace fixedge::config {
@@ -15,6 +17,12 @@ inline constexpr uint32_t kIdCapacity = 64;
 // The whole desired state, sent whenever the user changes a switch or a theme
 // assignment. Fixed-size and trivially-copyable so it crosses the process
 // boundary as plain bytes. An empty id length means "use the default theme".
+// The browser assistant the toolbar chat button opens.
+enum class Assistant : uint32_t {
+  kCopilot = 0,  // Edge's own: the button and pane stay stock
+  kGemini = 1,   // the button reskinned, opening Gemini in a side panel
+};
+
 struct Wire {
   uint32_t splitActive;             // 1 = the split feature is on
   uint32_t themingActive;           // 1 = the theming feature is on
@@ -23,14 +31,21 @@ struct Wire {
   uint32_t darkLength;   // bytes of darkId in use (0 = default theme)
   char lightId[kIdCapacity];
   char darkId[kIdCapacity];
+  // Appended last, so a DLL built before it still reads the fields above and
+  // a file written before it still loads (as kCopilot).
+  Assistant assistant;
 };
 // protocol.rs writes exactly WIRE_SIZE bytes and LoadFromFile wants all of
-// them, so the struct must stay packed: five u32 fields, then the two ids.
-inline constexpr size_t kWireFieldCount = 5;
+// them, so the struct must stay packed: five u32 fields, the two ids, then the
+// assistant (a u32).
+inline constexpr size_t kWireFieldCount = 6;
 inline constexpr size_t kWireIdCount = 2;
 static_assert(sizeof(Wire) == kWireFieldCount * sizeof(uint32_t) +
                                   kWireIdCount * size_t{kIdCapacity},
               "Wire must stay packed as protocol.rs writes it");
+
+// The size of the file a panel wrote before `assistant` existed.
+inline constexpr DWORD kLegacyWireSize = offsetof(Wire, assistant);
 
 // The same bytes the panel also writes beside its settings, so a DLL injected
 // into an already-open Edge reads the current state at load. Live changes come
@@ -53,11 +68,12 @@ inline bool LoadFromFile(Wire* out) {
   if (file == INVALID_HANDLE_VALUE) {
     return false;
   }
+  *out = Wire{};
   DWORD read = 0;
-  const bool isWholeStruct =
-      ReadFile(file, out, sizeof(Wire), &read, nullptr) && read == sizeof(Wire);
+  const bool isKnownSize = ReadFile(file, out, sizeof(Wire), &read, nullptr) &&
+                           (read == sizeof(Wire) || read == kLegacyWireSize);
   CloseHandle(file);
-  return isWholeStruct;
+  return isKnownSize;
 }
 
 }  // namespace fixedge::config
