@@ -30,7 +30,7 @@ pub fn read_crx(bytes: &[u8]) -> io::Result<CrxInfo> {
     Ok(CrxInfo { id, version })
 }
 
-fn id_from_public_key(public_key: &[u8]) -> String {
+pub(crate) fn id_from_public_key(public_key: &[u8]) -> String {
     let hash = Sha256::digest(public_key);
     let mut id = String::with_capacity(32);
     for &byte in &hash[..16] {
@@ -88,7 +88,12 @@ fn read_proof_public_key(bytes: &[u8], start: usize, end: usize) -> io::Result<V
 
 fn read_version(bytes: &[u8]) -> io::Result<String> {
     let zip_start = 12 + header_length(bytes)?;
-    let cursor = Cursor::new(&bytes[zip_start..]);
+    read_zip_version(&bytes[zip_start..])
+}
+
+/// The `version` in the `manifest.json` of ZIP `bytes`.
+pub(crate) fn read_zip_version(zip_bytes: &[u8]) -> io::Result<String> {
+    let cursor = Cursor::new(zip_bytes);
     let mut archive = zip::ZipArchive::new(cursor).map_err(|_| invalid("bad .crx ZIP"))?;
     let mut manifest = archive
         .by_name("manifest.json")

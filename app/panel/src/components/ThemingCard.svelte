@@ -3,13 +3,14 @@
   import CardHeader from "@/components/CardHeader.svelte";
   import Select from "@/components/Select.svelte";
   import TextInput from "@/components/TextInput.svelte";
+  import { LocalThemeKind } from "@/lib/bridge";
   import type { Mode, ThemeSource, Theming } from "@/lib/bridge";
 
   interface Props {
     description: string;
     enabled: boolean;
     icon: string;
-    onAddLocal: () => Promise<void>;
+    onAddLocal: (kind: LocalThemeKind) => Promise<void>;
     onAddStore: (url: string) => Promise<void>;
     onRemove: (id: string) => Promise<void>;
     onSetMode: (mode: Mode, id: string) => Promise<void>;
@@ -75,8 +76,10 @@
     });
   }
 
-  function addLocal(): void {
-    void run(onAddLocal);
+  function addLocal(kind: LocalThemeKind): void {
+    void run(async () => {
+      await onAddLocal(kind);
+    });
   }
 
   function remove(id: string): void {
@@ -104,31 +107,13 @@
         value={url}
       />
       <Button disabled={busy} label="Add" onclick={addStore} variant="primary" />
-      <Button disabled={busy} label="Local .crx…" onclick={addLocal} />
+      <Button disabled={busy} label="Local theme file…" onclick={() => addLocal(LocalThemeKind.File)} />
+      <Button disabled={busy} label="Local theme folder…" onclick={() => addLocal(LocalThemeKind.Folder)} />
     </div>
 
     {#if error.length > 0}
       <p class="error">{error}</p>
     {/if}
-
-    <ul class="themes">
-      {#each theming.themes as theme (theme.id)}
-        <li class="theme">
-          <span class="name">{theme.name}</span>
-          <span class="badge">{sourceLabel(theme.source)}</span>
-          <button
-            class="remove"
-            aria-label={`Remove ${theme.name}`}
-            onclick={() => remove(theme.id)}
-            type="button"
-          >
-            ✕
-          </button>
-        </li>
-      {:else}
-        <li class="empty">No themes yet — paste a store link or add a local .crx.</li>
-      {/each}
-    </ul>
 
     <div class="assign">
       <span class="assign-label">When Windows is light</span>
@@ -148,6 +133,25 @@
         value={theming.dark}
       />
     </div>
+
+    <ul class="themes">
+      {#each theming.themes as theme (theme.id)}
+        <li class="theme">
+          <span class="name">{theme.name}</span>
+          <span class="badge">{sourceLabel(theme.source)}</span>
+          <button
+            class="remove"
+            aria-label={`Remove ${theme.name}`}
+            onclick={() => remove(theme.id)}
+            type="button"
+          >
+            ✕
+          </button>
+        </li>
+      {:else}
+        <li class="empty">No themes yet — paste a store link or add a local theme (.crx, .zip or folder).</li>
+      {/each}
+    </ul>
   </div>
 </section>
 

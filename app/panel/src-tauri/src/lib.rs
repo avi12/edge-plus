@@ -9,6 +9,7 @@ mod paths;
 mod payload;
 mod settings;
 mod store_url;
+mod watch;
 
 /// The switch that re-runs the panel headless as the dev-mode snooze waiter.
 pub const DEVMODE_WAITER_ARG: &str = "--quiet-dev-mode-after-exit";
@@ -23,9 +24,10 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_single_instance::init(|_app, _argv, _cwd| {}))
-        .setup(|_app| {
+        .setup(|app| {
             payload::unpack();
             std::thread::spawn(commands::sync_on_start);
+            watch::start(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

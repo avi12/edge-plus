@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Core window controls and the file-open dialog for picking a local theme .crx.",
+  "description": "Core window controls and the file and folder dialog for picking a local theme.",
   "windows": ["main"],
   "permissions": [
     "core:default",

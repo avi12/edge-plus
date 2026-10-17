@@ -4,6 +4,21 @@ import { invoke } from "@tauri-apps/api/core";
 // Tauri command. One wrapper per command keeps the invoke-string names in a
 // single place, matching src-tauri/src/commands.rs.
 
+/** The core's event for a local theme that changed on disk; same name as `WATCH_EVENT` in watch.rs. */
+export const THEME_REFRESHED_EVENT = "theme-refreshed";
+
+export interface ThemeRefresh {
+  id: string;
+  /** Why the edit was not applied; null when it was. */
+  error: string | null;
+}
+
+/** What a local theme is picked from: a `.crx` / `.zip` file, or an unpacked folder. */
+export enum LocalThemeKind {
+  File = "file",
+  Folder = "folder"
+}
+
 export type ThemeSource = "store" | "local";
 
 export interface ThemeEntry {

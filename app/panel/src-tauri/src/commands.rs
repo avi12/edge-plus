@@ -13,6 +13,11 @@ use serde::Serialize;
 use crate::settings::{Features, Mode, Settings, ThemeEntry, ThemeSource, Theming};
 use crate::{paths, payload, store_url, DEVMODE_WAITER_ARG};
 
+const REAPPLY_DELAYS: [std::time::Duration; 3] = [
+    std::time::Duration::from_millis(1500),
+    std::time::Duration::from_millis(2500),
+    std::time::Duration::from_millis(5000),
+];
 const UNLOAD_POLLS: u32 = 40;
 const UNLOAD_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(100);
 const SPLIT_MODULE: &str = "fixedge-split.dll";
@@ -148,28 +153,67 @@ pub fn add_store_theme(url: String) -> Result<StateDto, String> {
 
 #[tauri::command]
 pub fn add_local_theme(path: String) -> Result<StateDto, String> {
-    let bytes = std::fs::read(&path).map_err(|error| error.to_string())?;
-    let info = edge_native::read_crx(&bytes).map_err(|error| error.to_string())?;
-    let stored = paths::themes_root().join(format!("{}.crx", info.id));
+    let source = Path::new(&path);
+    let (id, version, crx) = local_theme_crx(source).map_err(|error| error.to_string())?;
+    let stored = paths::themes_root().join(format!("{id}.crx"));
     std::fs::create_dir_all(paths::themes_root()).map_err(|error| error.to_string())?;
-    std::fs::copy(&path, &stored).map_err(|error| error.to_string())?;
-    edge_native::install_local(&info.id, &stored, &info.version)
-        .map_err(|error| error.to_string())?;
-    let name = Path::new(&path).file_stem().map_or_else(
-        || info.id.clone(),
-        |stem| stem.to_string_lossy().into_owned(),
-    );
+    std::fs::write(&stored, crx).map_err(|error| error.to_string())?;
+    edge_native::install_local(&id, &stored, &version).map_err(|error| error.to_string())?;
+    let name = Path::new(&path)
+        .file_stem()
+        .map_or_else(|| id.clone(), |stem| stem.to_string_lossy().into_owned());
     let mut settings = Settings::load();
     add_or_replace(
         &mut settings.theming,
         ThemeEntry {
-            id: info.id,
+            id,
             name,
             source: ThemeSource::Local,
             origin: path,
         },
     );
     persist_and_apply(&settings)
+}
+
+/// Re-install a local theme whose source changed on disk, then have Edge show
+/// the new copy. A theme that fails its checks is refused with the reason, and
+/// what Edge has installed is left as it was.
+///
+/// # Errors
+/// Returns why the edited theme cannot be applied.
+pub fn refresh_local_theme(id: &str, origin: &str) -> Result<(), String> {
+    let (packed_id, version, crx) =
+        local_theme_crx(Path::new(origin)).map_err(|error| error.to_string())?;
+    if packed_id != id {
+        return Err("The theme's identity changed; add it again.".to_owned());
+    }
+    let stored = paths::themes_root().join(format!("{id}.crx"));
+    std::fs::write(&stored, crx).map_err(|error| error.to_string())?;
+    edge_native::install_local(id, &stored, &version).map_err(|error| error.to_string())?;
+    let settings = Settings::load();
+    apply(&settings);
+    // Edge installs the new version a moment later; ask the DLL to re-apply the
+    // active theme once that has landed.
+    for delay in REAPPLY_DELAYS {
+        std::thread::sleep(delay);
+        edge_native::signal_config_changed();
+    }
+    Ok(())
+}
+
+// A local theme's id, version and `.crx` bytes: a `.crx` is used as it is, a
+// folder or `.zip` is packed and signed first.
+fn local_theme_crx(source: &Path) -> std::io::Result<(String, String, Vec<u8>)> {
+    let is_crx = source
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("crx"));
+    if is_crx {
+        let bytes = std::fs::read(source)?;
+        let info = edge_native::read_crx(&bytes)?;
+        return Ok((info.id, info.version, bytes));
+    }
+    let packed = edge_native::pack_theme(source, &paths::theme_keys())?;
+    Ok((packed.id, packed.version, packed.crx))
 }
 
 #[tauri::command]

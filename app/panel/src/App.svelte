@@ -3,6 +3,9 @@
   import ThemingCard from "@/components/ThemingCard.svelte";
   import type { AppState, Mode } from "@/lib/bridge";
   import * as bridge from "@/lib/bridge";
+  import { LocalThemeKind } from "@/lib/bridge";
+  import { listen } from "@tauri-apps/api/event";
+  import { getCurrentWebview } from "@tauri-apps/api/webview";
   import { open } from "@tauri-apps/plugin-dialog";
   import { onMount } from "svelte";
 
@@ -27,61 +30,107 @@
     "Stops Edge asking to turn off developer-mode extensions when it starts. Takes effect from " +
       "Edge's next start.";
 
-  let state = $state<AppState | null>(null);
+  let appState = $state<AppState | null>(null);
+  let isDraggingOver = $state(false);
+  let themeNotice = $state("");
 
   onMount(async () => {
-    state = await bridge.loadState();
+    appState = await bridge.loadState();
   });
 
+  // A local theme edited on disk was re-checked and re-installed (or refused).
+  $effect(() => {
+    const unlisten = listen<bridge.ThemeRefresh>(bridge.THEME_REFRESHED_EVENT, event => {
+      themeNotice = event.payload.error ?? "";
+    });
+    return () => {
+      void unlisten.then(stop => {
+        stop();
+      });
+    };
+  });
+
+  $effect(() => {
+    const unlisten = getCurrentWebview().onDragDropEvent(event => {
+      const { type } = event.payload;
+      isDraggingOver = type === "enter" || type === "over";
+
+      if (type === "drop") {
+        void addDropped(event.payload.paths);
+      }
+    });
+    return () => {
+      void unlisten.then(stop => {
+        stop();
+      });
+    };
+  });
+
+  // Every dropped folder, .zip or .crx becomes a theme (the core tells them apart).
+  async function addDropped(paths: string[]): Promise<void> {
+    themeNotice = "";
+    for (const path of paths) {
+      try {
+        appState = await bridge.addLocalTheme(path);
+      } catch (error) {
+        themeNotice = String(error);
+      }
+    }
+  }
+
   async function onSplit(value: boolean): Promise<void> {
-    state = await bridge.setSplit(value);
+    appState = await bridge.setSplit(value);
   }
 
   async function onTheming(value: boolean): Promise<void> {
-    state = await bridge.setTheming(value);
+    appState = await bridge.setTheming(value);
   }
 
   async function onQuietDevMode(value: boolean): Promise<void> {
-    state = await bridge.setQuietDevMode(value);
+    appState = await bridge.setQuietDevMode(value);
   }
 
   async function onAddStore(url: string): Promise<void> {
-    state = await bridge.addStoreTheme(url);
+    appState = await bridge.addStoreTheme(url);
   }
 
-  async function onAddLocal(): Promise<void> {
+  async function onAddLocal(kind: LocalThemeKind): Promise<void> {
     const picked = await open({
       multiple: false,
-      filters: [{
+      directory: kind === LocalThemeKind.Folder,
+      filters: kind === LocalThemeKind.File ? [{
         name: "Edge theme",
-        extensions: ["crx"]
-      }]
+        extensions: ["crx", "zip"]
+      }] : []
     });
     if (typeof picked === "string") {
-      state = await bridge.addLocalTheme(picked);
+      appState = await bridge.addLocalTheme(picked);
     }
   }
 
   async function onRemove(id: string): Promise<void> {
-    state = await bridge.removeTheme(id);
+    appState = await bridge.removeTheme(id);
   }
 
   async function onSetMode(mode: Mode, id: string): Promise<void> {
-    state = await bridge.setModeTheme(mode, id);
+    appState = await bridge.setModeTheme(mode, id);
   }
 </script>
 
-{#if state}
+{#if appState}
   <main class="app">
     <header class="title">
       <h1>Fix Edge</h1>
-      {#if !state.edgeRunning}
+      {#if !appState.edgeRunning}
         <p class="hint">Open Edge to apply changes.</p>
+      {/if}
+      {#if themeNotice.length > 0}
+        <p class="hint error">{themeNotice}</p>
       {/if}
     </header>
 
     <FeatureCard
-      checked={state.features.nativeSplit}
+      checked={appState.features.nativeSplit}
       description={splitDescription}
       icon={splitIcon}
       onchange={onSplit}
@@ -90,18 +139,18 @@
 
     <ThemingCard
       description={themeDescription}
-      enabled={state.features.theming}
+      enabled={appState.features.theming}
       icon={themeIcon}
       {onAddLocal}
       {onAddStore}
       {onRemove}
       {onSetMode}
       onToggle={onTheming}
-      theming={state.theming}
+      theming={appState.theming}
     />
 
     <FeatureCard
-      checked={state.features.quietDevMode}
+      checked={appState.features.quietDevMode}
       description={devModeDescription}
       icon={shieldIcon}
       onchange={onQuietDevMode}
@@ -109,6 +158,10 @@
     />
   </main>
 {/if}
+
+<div class="drop-veil" class:visible={isDraggingOver} aria-hidden="true">
+  <p>Drop a theme folder, .zip or .crx to add it</p>
+</div>
 
 <style>
   .app {
@@ -130,6 +183,30 @@
     margin: 0;
     font-weight: 600;
     font-size: 20px;
+  }
+
+  .drop-veil {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    margin: var(--space-m);
+    border: 2px dashed var(--brand);
+    border-radius: var(--radius-l);
+    background: color-mix(in sRGB, var(--bg-canvas) 85%, transparent);
+    color: var(--fg-1);
+    font-size: 16px;
+    opacity: 0%;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+  }
+
+  .drop-veil.visible {
+    opacity: 100%;
+  }
+
+  .error {
+    color: var(--danger-fg);
   }
 
   .hint {
