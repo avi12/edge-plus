@@ -1289,15 +1289,49 @@ inline void LabelButtonSetText(void* button, U16View text) {
 
 // The accessible name of `view`, from UTF-8. SetName takes its u16string by
 // value, so the callee owns (and frees) the one built here.
-inline void ViewSetAccessibleName(void* view, const char* utf8) {
+inline void ViewSetAccessibleName(void* view, U16String* name) {
   using AccessibilityFn = void*(__fastcall*)(void*);
   using SetNameFn = void(__fastcall*)(void*, U16String*);
-  U16String name{};
-  Utf8ToUtf16(&name, utf8);
   reinterpret_cast<SetNameFn>(At(rva::ViewAccessibility_SetName))(
       reinterpret_cast<AccessibilityFn>(At(rva::View_GetViewAccessibility))(
           view),
-      &name);
+      name);
+}
+inline void ViewSetAccessibleName(void* view, const char* utf8) {
+  U16String name{};
+  Utf8ToUtf16(&name, utf8);
+  ViewSetAccessibleName(view, &name);
+}
+
+// Edge's localized string for message id `messageId`, built into `out`
+// (uninitialised storage the caller owns; short strings hold nothing on the
+// heap, which every title used here is).
+inline void LocalizedString(U16String* out, int messageId) {
+  using Fn = void*(__fastcall*)(void*, int);
+  reinterpret_cast<Fn>(At(rva::L10n_GetStringUTF16))(out, messageId);
+}
+// The same with one argument: message `messageId` with `$1` replaced by `arg`.
+inline void LocalizedString(U16String* out, int messageId,
+                            const U16String* arg) {
+  using Fn = void*(__fastcall*)(void*, int, const void*);
+  reinterpret_cast<Fn>(At(rva::L10n_GetStringFUTF16))(out, messageId, arg);
+}
+// views::View::SetTooltipText(view, const std::u16string&).
+inline void ViewSetTooltip(void* view, const U16String* text) {
+  using Fn = void(__fastcall*)(void*, const void*);
+  reinterpret_cast<Fn>(At(rva::View_SetTooltipText))(view, text);
+}
+
+// Whether `view` is the chevron beside the chat pill
+// (EdgeCopilotDropdownMenuButton).
+inline bool IsCopilotDropdownButton(void* view) {
+  const uintptr_t vtable = VtableRva(view);
+  for (const uintptr_t candidate : rva::CopilotDropdownButton_vftables) {
+    if (vtable == candidate) {
+      return true;
+    }
+  }
+  return false;
 }
 
 // Draw `vectorIcon` at `dipSize` in `color` (ARGB) into the gfx::ImageSkia at

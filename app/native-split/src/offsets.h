@@ -556,6 +556,19 @@ inline constexpr uintptr_t CopilotButton_vftables[] = {
     0x1136ba20, 0x1136ba40, 0x1136ba60, 0x1136ba80, 0x1136bac0, 0x1136bb10,
     0x1136bb28, 0x1136bb40, 0x1136bb70, 0x1136bc20, 0x1136bc40, 0x1136bc80,
     0x1136bc98, 0x1136bcb0, 0x1136bce0, 0x1136bcf8, 0x115be7c8, 0x11748158};
+// EdgeCopilotDropdownMenuButton: the chevron beside the chat pill (a sibling in
+// EdgeCopilotToolbarSplitButtonContainer). Its constructor sets both its tooltip
+// and its accessible name from the formatted string
+// (COPILOT_MENU_TITLE_FORMAT); the vftables are matched like the chat button's.
+inline constexpr uintptr_t CopilotDropdownButton_vftables[] = {
+    0x113c92a0, 0x113c92c0, 0x113c92e0, 0x113c9300, 0x113c9340,
+    0x113c9390, 0x113c93a8, 0x113c93c0, 0x113c93f0, 0x113c94a0,
+    0x113c94c0, 0x113c9500, 0x113c9518, 0x117762b8};
+// std::u16string l10n_util::GetStringUTF16(std::u16string* out, int message id).
+inline constexpr uintptr_t L10n_GetStringUTF16 = 0xfcab30;
+// l10n_util::GetStringFUTF16(std::u16string* out, int message id, const
+// std::u16string& $1): the one-argument formatted string.
+inline constexpr uintptr_t L10n_GetStringFUTF16 = 0x10e11e0;
 // views::LabelButton::SetText(this, std::u16string_view*) (a 16-byte view,
 // passed by address).
 inline constexpr uintptr_t LabelButton_SetText = 0x29ca320;
@@ -877,6 +890,11 @@ inline constexpr uintptr_t DISCOVERBUTTON_action = 0xa20;
 // EdgeCopilotToolbarLabelButton's cached label (std::u16string), what
 // UpdateLabelFromController last set.
 inline constexpr uintptr_t COPILOTBUTTON_label = 0xb70;
+// The chat chevron's tooltip and accessible name: string 0x4708 ("$1 menu")
+// formatted with string 0x46f9 ("Copilot") gives "Copilot menu". (The chat
+// pill's own default label is 0x46f8, "Chat".)
+inline constexpr int COPILOT_NAME = 0x46f9;
+inline constexpr int COPILOT_MENU_TITLE_FORMAT = 0x4708;
 // sizeof(views::WebView): every `new views::WebView` asks for 0x540.
 inline constexpr size_t WebView_size = 0x540;
 // sizeof(base::Location) {function, file, line, program counter}, which

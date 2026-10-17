@@ -9,6 +9,7 @@
 #include <vector>
 #include "MinHook.h"
 #include "channel.h"
+#include "chat_menu.h"
 #include "config.h"
 #include "edge.h"
 #include "gemini.h"
@@ -186,6 +187,12 @@ inline void Refresh(void* mcv, bool isRestoring) {
     edge::CopilotButtonUpdateLabel(button);
     if (isRestoring) {
       RestoreStockLabel(button);
+    }
+    // The chevron's title follows the choice; stock Copilot leaves it as Edge
+    // set it.
+    const bool shouldRetitleMenu = IsGemini() || isRestoring;
+    if (shouldRetitleMenu) {
+      chat_menu::Retitle(button, IsGemini());
     }
   }
   Log("[assistant] refreshed %zu chat button(s), gemini=%d", buttons.size(),
