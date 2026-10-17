@@ -22,7 +22,9 @@ or off, and Edge picks the change up the moment it is made — no restart, ever.
 - **Ask to handle links, like Chrome** — when a site such as Gmail offers to
   open email or calendar links, Edge's address-bar handler icon stays an open
   question: closing its bubble or answering "Just this time" no longer blocks
-  the site for good (`docs/re/protocol-handlers.md`). Runs in the injected DLL.
+  the site for good, and turning it on lifts the blocks already on record
+  (Edge has no page for them) (`docs/re/protocol-handlers.md`). Runs in the
+  injected DLL.
 
 ## How it fits together
 

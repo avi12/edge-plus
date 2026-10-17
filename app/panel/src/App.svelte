@@ -37,8 +37,9 @@
   const handlersDescription =
     "When a site such as Gmail offers to open a kind of link (email, calendar), Edge shows its " +
       "handler icon in the address bar, as Chrome does. Closing that bubble or choosing \"Just this " +
-      "time\" no longer blocks the site for good; only Done on Ignore, or Block, does. Live, no " +
-      "restart.";
+      "time\" no longer blocks the site for good; only Done on Ignore, or Block, does. Turning this " +
+      "on (or opening Edge with it on) lifts every block so far, so blocked sites can ask again. " +
+      "Live, no restart.";
 
   let appState = $state<AppState | null>(null);
   let isDraggingOver = $state(false);
