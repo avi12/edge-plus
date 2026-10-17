@@ -340,7 +340,20 @@ inline constexpr char kHostScript[] = R"JS((function () {
       var tab = await call("create", { url: url });
       return { tabData: tab ? tabData(tab) : null };
     },
-    getUserProfileInfo: function () { return { profileInfo: null }; },
+    // Chrome answers with the signed-in Google profile; the page's own cookies
+    // carry the sign-in here, so this only has to be a profile.
+    getUserProfileInfo: function () {
+      return {
+        profileInfo: {
+          avatarIcon: null,
+          displayName: "Edge profile",
+          givenName: "",
+          localProfileName: "",
+          email: "",
+          isManaged: false,
+        },
+      };
+    },
     syncCookies: function () { return { success: true }; },
     getModelQualityClientId: function () { return { modelQualityClientId: "" }; },
     captureScreenshot: function () { return { result: { errorReason: 0 } }; },
@@ -359,7 +372,6 @@ inline constexpr char kHostScript[] = R"JS((function () {
   host.method = function (name) {
     var handler = answers[name];
     return function () {
-      (host.trace = host.trace || []).push(name);
       var args = arguments;
       return new Promise(function (resolve) {
         resolve(handler ? handler.apply(null, args) : {});
@@ -408,6 +420,13 @@ inline constexpr char kPatchScript[] = R"JS((function () {
   function patch(hostSource, library) {
     var names = [];
     var renamed = library.replace(/class (\w+?)(Remote|Receiver)\{/g, function (match, base, kind) {
+      // The generated mojo classes only: the library's own postMessage plumbing
+      // has Receivers too (PostMessageRequestReceiver), and a pending receiver
+      // is just a handle the stand-ins never touch.
+      var isMojo = base.indexOf("PostMessage") !== 0 && !/Pending$/.test(base);
+      if (!isMojo) {
+        return match;
+      }
       names.push({ name: base + kind, isReceiver: kind === "Receiver" });
       return "class " + base + kind + "__orig{";
     });
