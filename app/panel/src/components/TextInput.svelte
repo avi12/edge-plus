@@ -22,7 +22,7 @@
 </script>
 
 <input
-  class="input"
+  class="field input"
   oninput={handleInput}
   onkeydown={handleKeydown}
   {placeholder}
@@ -31,19 +31,6 @@
 />
 
 <style>
-  .input {
-    width: 100%;
-    height: 32px;
-    padding: 0 var(--space-m);
-    border: 1px solid var(--stroke-1);
-    border-bottom-color: var(--stroke-accessible);
-    border-radius: var(--radius-m);
-    background: var(--bg-card);
-    color: var(--fg-1);
-    font-family: inherit;
-    font-size: 13px;
-  }
-
   .input::placeholder {
     color: var(--fg-3);
   }
