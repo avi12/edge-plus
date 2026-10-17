@@ -34,6 +34,9 @@ enum class Command : WPARAM {
   kDumpTabRows = 900,      // log the split rows of the vertical tab list
   kApplyTheme = 800,       // apply the theme for the current OS light/dark mode
   kApplyConfig = 801,      // apply the config read from disk, on the UI thread
+  kReloadConfig = 802,     // re-read the config file and apply it (a script's
+                           // stand-in for the config event, which wakes only
+                           // one of the DLLs loaded in the system)
 };
 
 // The width of each range: one code per Direction (kUp..kRight), and the

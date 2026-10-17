@@ -5,6 +5,7 @@
 // those (plus the button's label) reskins and reroutes it without touching the
 // button class. Every hook runs the original untouched while Copilot is picked.
 #pragma once
+#include <string>
 #include <vector>
 #include "MinHook.h"
 #include "channel.h"
@@ -143,10 +144,36 @@ inline void CollectButtons(void* view, std::vector<void*>* buttons) {
   }
 }
 
+// The accessible name the stock button shows for its label: the label itself,
+// as UTF-8 (a label is a few ASCII-range words).
+inline std::string LabelAsUtf8(const edge::U16View label) {
+  std::string utf8;
+  for (size_t i = 0; i < label.length; i++) {
+    utf8.push_back(static_cast<char>(label.data[i]));
+  }
+  return utf8;
+}
+
+// Put the stock label back on `button` after the reskin replaced it. Edge's own
+// label update does not always run to the end (without its label controller it
+// returns at once) and, when it does run, skips the write when the text equals
+// its cache, so it cannot be relied on to undo the reskin. The cache still
+// holds the stock text the reskin never touched: write that, and make it the
+// accessible name again.
+inline void RestoreStockLabel(void* button) {
+  const edge::U16View stockLabel = edge::CopilotButtonCachedLabel(button);
+  const bool hasStockLabel = stockLabel.length > 0;
+  if (!hasStockLabel) {
+    return;
+  }
+  edge::LabelButtonSetText(button, stockLabel);
+  edge::ViewSetAccessibleName(button, LabelAsUtf8(stockLabel).c_str());
+}
+
 // Re-skin (or restore) each live chat button now: its images and its label are
 // cached, so force both to be rebuilt through our hooks. `mcv` names one
-// window's view tree.
-inline void Refresh(void* mcv) {
+// window's view tree. `isRestoring` is switching back from Gemini.
+inline void Refresh(void* mcv, bool isRestoring) {
   if (!mcv) {
     return;
   }
@@ -157,6 +184,9 @@ inline void Refresh(void* mcv) {
   for (void* button : buttons) {
     edge::CopilotButtonRefreshImages(button);
     edge::CopilotButtonUpdateLabel(button);
+    if (isRestoring) {
+      RestoreStockLabel(button);
+    }
   }
   Log("[assistant] refreshed %zu chat button(s), gemini=%d", buttons.size(),
       static_cast<int>(IsGemini()));
@@ -215,10 +245,11 @@ inline bool Install() {
 inline void Apply(void* mcv, config::Assistant assistant) {
   const bool wasGemini = IsGemini();
   g_assistant = assistant;
-  if (wasGemini && !IsGemini()) {
+  const bool isRestoring = wasGemini && !IsGemini();
+  if (isRestoring) {
     gemini::Remove(mcv);
   }
-  Refresh(mcv);
+  Refresh(mcv, isRestoring);
 }
 
 }  // namespace fixedge::assistant

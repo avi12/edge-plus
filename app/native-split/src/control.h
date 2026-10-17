@@ -377,6 +377,10 @@ inline void CreateOrGrowByCommand(HWND hwnd, WPARAM wparam) {
 
 inline void RunCommand(HWND hwnd, WPARAM wparam) {
   // The config read from disk at load, now on the UI thread.
+  if (wparam == CodeOf(Command::kReloadConfig)) {
+    OnConfigChanged();
+    return;
+  }
   if (wparam == CodeOf(Command::kApplyConfig)) {
     if (g_hasPendingConfig) {
       ApplyConfig(hwnd, g_pendingConfig);
