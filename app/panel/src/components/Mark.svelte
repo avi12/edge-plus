@@ -19,7 +19,8 @@
     height: 16px;
   }
 
-  .mark :global(svg) {
+  .mark :global(svg),
+  .mark :global(img) {
     width: 100%;
     height: 100%;
   }
