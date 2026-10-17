@@ -590,6 +590,26 @@ inline constexpr uintptr_t WebView_LoadInitialURL = 0xc403a30;
 inline constexpr uintptr_t WebView_ScalarDeletingDtor = 0x33efc80;
 // View::RequestFocus(this).
 inline constexpr uintptr_t View_RequestFocus = 0x2d861a0;
+// --- running a script in a page, and reading a tab (docs/re/gemini-in-chrome.md
+// section 8) ---
+// RenderFrameHost* WebContentsImpl::GetPrimaryMainFrame(this).
+inline constexpr uintptr_t WebContentsImpl_GetPrimaryMainFrame = 0x1107bb0;
+// const std::u16string& WebContentsImpl::GetTitle(this): the page's title.
+inline constexpr uintptr_t WebContentsImpl_GetTitle = 0x10ca640;
+// const std::string& GURL::spec(this).
+inline constexpr uintptr_t GURL_spec = 0xf9fc3a;
+// bool RenderFrameHostImpl::IsRenderFrameLive(this): false for a discarded tab.
+inline constexpr uintptr_t RenderFrameHostImpl_IsRenderFrameLive = 0x1100090;
+// void RenderFrameHostImpl::ExecuteJavaScriptInIsolatedWorld(this,
+// const std::u16string*, JavaScriptResultCallback* (a OnceCallback<void(Value)>,
+// moved from), int worldId). The main-world ExecuteJavaScript CHECKs
+// CanExecuteJavaScript, which a web page fails, so this is the one to call.
+inline constexpr uintptr_t
+    RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld = 0x78d3d90;
+// BindStateBase::BindStateBase(this, polymorphic_invoke, destructor): refcount 1
+// at +0, invoke at +8, destructor at +0x10, the default cancellation query at
+// +0x18; a BindState's bound state starts at BINDSTATE_first_bound_argument.
+inline constexpr uintptr_t BindStateBase_ctor = 0xf94c70;
 }  // namespace rva
 
 // Linear addresses (not RVAs): partition-alloc BRP-pool gate for raw_ptr acquire.
@@ -905,6 +925,14 @@ inline constexpr size_t Location_size = 0x20;
 inline constexpr uintptr_t U16STRING_short_size = 0x17;
 inline constexpr uint8_t U16STRING_long_flag = 0x80;
 inline constexpr uintptr_t U16STRING_long_size = 0x08;
+// base::Value: a std::variant whose index byte sits after its 24 bytes of
+// storage (a std::string for the string alternative, index 4).
+inline constexpr uintptr_t VALUE_variant_index = 0x18;
+inline constexpr uint8_t VALUE_string_index = 4;
+// The isolated world our scripts run in. ExecuteJavaScriptInIsolatedWorld
+// accepts 1..11 and an isolated world shares the page's DOM but not its
+// globals, so a page cannot see or tamper with our script.
+inline constexpr int kScriptWorldId = 11;
 }  // namespace off
 
 }  // namespace fixedge::edge155

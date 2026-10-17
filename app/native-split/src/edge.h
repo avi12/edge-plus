@@ -7,8 +7,12 @@
 // `__fastcall` tags are documentation, not behaviour.
 #pragma once
 #include <windows.h>
+#include <atomic>
 #include <cstdint>
 #include <cstring>
+#include <functional>
+#include <string>
+#include <utility>
 #include "offsets.h"
 #include "geom.h"
 #include "log.h"
@@ -1376,6 +1380,163 @@ inline void DeleteWebView(void* webView) {
 inline void ViewRequestFocus(void* view) {
   using Fn = void(__fastcall*)(void*);
   reinterpret_cast<Fn>(At(rva::View_RequestFocus))(view);
+}
+
+// --- reading a tab, and running a script in a page ---------------------------
+// (docs/re/gemini-in-chrome.md section 8)
+
+// The WebContents a views::WebView shows (null before its first load).
+inline void* WebViewContents(void* webView) {
+  return Field<void*>(webView, off::CWV_web_contents);
+}
+
+// A libc++ std::string's characters (the same layout as the u16string above).
+inline std::string StdStringText(const void* string) {
+  auto* bytes = static_cast<const uint8_t*>(string);
+  const bool isLong =
+      (bytes[off::U16STRING_short_size] & off::U16STRING_long_flag) != 0;
+  if (isLong) {
+    return std::string(
+        *reinterpret_cast<const char* const*>(bytes),
+        *reinterpret_cast<const size_t*>(bytes + off::U16STRING_long_size));
+  }
+  return std::string(reinterpret_cast<const char*>(bytes),
+                     bytes[off::U16STRING_short_size]);
+}
+
+inline std::string Utf16ToUtf8(U16View text) {
+  if (text.length == 0) {
+    return std::string();
+  }
+  const int length = static_cast<int>(text.length);
+  const int byteCount = WideCharToMultiByte(
+      CP_UTF8, 0, reinterpret_cast<const wchar_t*>(text.data), length, nullptr,
+      0, nullptr, nullptr);
+  std::string utf8(static_cast<size_t>(byteCount), '\0');
+  WideCharToMultiByte(CP_UTF8, 0, reinterpret_cast<const wchar_t*>(text.data),
+                      length, utf8.data(), byteCount, nullptr, nullptr);
+  return utf8;
+}
+
+// The page title and last committed URL of `webContents`, in UTF-8.
+inline std::string TabTitle(void* webContents) {
+  using TitleFn = const void*(__fastcall*)(void*);
+  const void* title =
+      reinterpret_cast<TitleFn>(At(rva::WebContentsImpl_GetTitle))(webContents);
+  return title ? Utf16ToUtf8(U16StringView(title)) : std::string();
+}
+inline std::string TabUrl(void* webContents) {
+  using SpecFn = const void*(__fastcall*)(const void*);
+  const void* url = LastCommittedUrl(webContents);
+  const void* spec =
+      url ? reinterpret_cast<SpecFn>(At(rva::GURL_spec))(url) : nullptr;
+  return spec ? StdStringText(spec) : std::string();
+}
+
+inline void* PrimaryMainFrame(void* webContents) {
+  using Fn = void*(__fastcall*)(void*);
+  return reinterpret_cast<Fn>(At(rva::WebContentsImpl_GetPrimaryMainFrame))(
+      webContents);
+}
+
+// Whether the tab's page has a running renderer: false for a discarded
+// (asleep) tab, whose page cannot run a script.
+inline bool IsPageLive(void* webContents) {
+  const void* frame = PrimaryMainFrame(webContents);
+  using Fn = bool(__fastcall*)(const void*);
+  return frame && reinterpret_cast<Fn>(
+                      At(rva::RenderFrameHostImpl_IsRenderFrameLive))(frame);
+}
+
+// What a finished script handed back: its string result, or nothing when the
+// script returned something else (or threw).
+struct ScriptResult {
+  bool isString = false;
+  std::string text;
+};
+using ScriptDone = std::function<void(const ScriptResult&)>;
+
+// A hand-made base::OnceCallback<void(base::Value)>: a BindState we lay out
+// ourselves (Edge only ever calls its invoke and destructor slots), holding the
+// std::function to run. Edge destroys it exactly once, run or not.
+struct ScriptCallbackState {
+  alignas(8) uint8_t bindStateBase[off::BINDSTATE_first_bound_argument];
+  ScriptDone done;
+};
+// Callbacks Edge still holds. DLL unload waits for this to reach zero: a reply
+// that arrived after the DLL was freed would jump into unmapped code.
+inline std::atomic<int> g_liveScriptCallbacks{0};
+
+inline void __fastcall InvokeScriptCallback(void* bindState, void* value) {
+  auto* state = static_cast<ScriptCallbackState*>(bindState);
+  ScriptResult result;
+  const uint8_t variantIndex =
+      value ? Field<uint8_t>(value, off::VALUE_variant_index) : 0;
+  result.isString = variantIndex == off::VALUE_string_index;
+  if (result.isString) {
+    result.text = StdStringText(value);
+  }
+  state->done(result);
+}
+inline void __fastcall DestroyScriptCallback(const void* bindState) {
+  delete static_cast<const ScriptCallbackState*>(bindState);
+  g_liveScriptCallbacks--;
+}
+
+// Whether every script callback has been destroyed within `timeoutMs`.
+inline bool WaitForScriptCallbacks(DWORD timeoutMs) {
+  constexpr DWORD kStepMs = 20;
+  for (DWORD waited = 0; waited < timeoutMs; waited += kStepMs) {
+    if (g_liveScriptCallbacks == 0) {
+      return true;
+    }
+    Sleep(kStepMs);
+  }
+  return g_liveScriptCallbacks == 0;
+}
+
+// Free a u16string we made with Utf8ToUtf16 (its text is on Edge's heap when
+// it outgrew the inline buffer).
+inline void FreeU16String(U16String* string) {
+  auto* bytes = reinterpret_cast<uint8_t*>(string);
+  const bool isLong =
+      (bytes[off::U16STRING_short_size] & off::U16STRING_long_flag) != 0;
+  if (isLong) {
+    EdgeDelete(*reinterpret_cast<void**>(bytes));
+  }
+}
+
+// Run `utf8Script` in `webContents`' main frame, in our isolated world, and
+// pass `done` the script's string result on the UI thread later (pass an empty
+// `done` to not wait). False if the page has no live renderer to run it.
+inline bool RunScript(void* webContents, const std::string& utf8Script,
+                      ScriptDone done) {
+  const void* frame =
+      IsPageLive(webContents) ? PrimaryMainFrame(webContents) : nullptr;
+  if (!frame) {
+    return false;
+  }
+  const void* callbackSlot = nullptr;
+  if (done) {
+    auto* state = new ScriptCallbackState{};
+    using BaseCtor = void*(__fastcall*)(void*, void*, void*);
+    reinterpret_cast<BaseCtor>(At(rva::BindStateBase_ctor))(
+        state, reinterpret_cast<void*>(InvokeScriptCallback),
+        reinterpret_cast<void*>(DestroyScriptCallback));
+    state->done = std::move(done);
+    g_liveScriptCallbacks++;
+    callbackSlot = state;
+  }
+  U16String script{};
+  const U8View scriptView{utf8Script.data(), utf8Script.size()};
+  Utf8ToUtf16(&script, &scriptView);
+  using ExecuteFn =
+      void(__fastcall*)(const void*, const U16String*, const void**, int);
+  reinterpret_cast<ExecuteFn>(
+      At(rva::RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld))(
+      frame, &script, &callbackSlot, off::kScriptWorldId);
+  FreeU16String(&script);
+  return true;
 }
 
 }  // namespace fixedge::edge

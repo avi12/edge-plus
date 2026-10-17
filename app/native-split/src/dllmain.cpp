@@ -35,6 +35,9 @@ constexpr wchar_t kConfigEvent[] = L"Local\\fixedge-config-changed";
 constexpr int kModuleWaitAttempts = 100;
 constexpr DWORD kModuleWaitStepMilliseconds = 50;
 
+// How long unload waits for scripts Edge is still running for us to finish.
+constexpr DWORD kScriptDrainTimeoutMilliseconds = 5000;
+
 // Close the signal events so the panel sees this DLL as gone (a stale leftover
 // it can free), not as one still running.
 void ReleaseEvents() {
@@ -88,6 +91,12 @@ DWORD WINAPI Init(LPVOID) {
   Log("[unload] signalled; removing hooks");
   hooks::RemoveAll();
   ReleaseEvents();
+  // A script reply Edge still holds would jump into this DLL once it is gone:
+  // wait for them to finish, and stay loaded (harmlessly) if one never does.
+  if (!edge::WaitForScriptCallbacks(kScriptDrainTimeoutMilliseconds)) {
+    Log("[unload] script replies still pending; staying loaded");
+    return 0;
+  }
   Log("[unload] fixedge-split detached");
   FreeLibraryAndExitThread(g_self, 0);
   return 0;
