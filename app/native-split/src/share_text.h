@@ -108,10 +108,13 @@ inline bool IsShareableUrl(const std::string& url) {
          StartsWithIgnoreCase(url, "file://");
 }
 
-// The host of `url` ("github.com"), or the whole URL if it has none.
+// The host of a web `url` ("github.com"), or the whole URL for any other kind
+// (an edge:// page has no host worth showing).
 inline std::string HostOf(const std::string& url) {
+  const bool isWebUrl = StartsWithIgnoreCase(url, "http://") ||
+                        StartsWithIgnoreCase(url, "https://");
   const size_t schemeEnd = url.find("://");
-  if (schemeEnd == std::string::npos) {
+  if (!isWebUrl || schemeEnd == std::string::npos) {
     return url;
   }
   const size_t hostStart = schemeEnd + 3;

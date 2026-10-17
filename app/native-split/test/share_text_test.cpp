@@ -82,6 +82,8 @@ void CheckUrls() {
         "host before path");
   Check(HostOf("https://avi12.com") == "avi12.com", "host with no path");
   Check(HostOf("about:blank") == "about:blank", "no host: the url itself");
+  Check(HostOf("edge://settings/profiles") == "edge://settings/profiles",
+        "an edge page shows its whole address");
 }
 
 void CheckPrompt() {

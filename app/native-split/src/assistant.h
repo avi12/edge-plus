@@ -14,6 +14,7 @@
 #include "edge.h"
 #include "gemini.h"
 #include "icons.h"
+#include "share.h"
 
 namespace fixedge::assistant {
 
@@ -108,6 +109,7 @@ inline void __fastcall h_on_click(void* action) {
     void* mcv = ActiveBrowserMcv();
     if (mcv) {
       gemini::Toggle(mcv);
+      share::StartTimer(channel::g_window);
     }
     return;
   }
@@ -254,6 +256,7 @@ inline void Apply(void* mcv, config::Assistant assistant) {
   g_assistant = assistant;
   const bool isRestoring = wasGemini && !IsGemini();
   if (isRestoring) {
+    share::StopTimer();
     gemini::Remove(mcv);
   }
   Refresh(mcv, isRestoring);

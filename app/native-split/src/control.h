@@ -164,6 +164,7 @@ inline void Teardown(HWND hwnd) {
   // Restore the chat button and drop every Gemini panel while the hooks that
   // render them are still in place, so nothing of ours outlives the DLL.
   assistant::Apply(edge::McvForWindow(hwnd), config::Assistant::kCopilot);
+  share::StopTimer();
   gemini::RemoveAll();
   drag::Cancel();
   tabdrag::Cancel();
@@ -467,6 +468,11 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   const bool isAnimationFrame = message == WM_TIMER && wparam == anim::kTimerId;
   if (isAnimationFrame) {
     anim::Tick();
+    return 0;
+  }
+  const bool isSharePoll = message == WM_TIMER && wparam == share::kTimerId;
+  if (isSharePoll) {
+    share::Tick();
     return 0;
   }
   const bool isRenderNudge = message == WM_TIMER && wparam == repaint::kTimerId;

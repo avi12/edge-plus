@@ -1,15 +1,22 @@
 // gemini.h — the "Gemini" browser assistant. One concern: when the user picks
 // Gemini over Copilot, host the Gemini web app in a panel docked at the right
 // of the window's content and open/close it from the (reskinned) toolbar chat
-// button. The reskin itself is in assistant.h; this file owns only the panel.
+// button. The reskin itself is in assistant.h; this file owns only the panel's
+// pages and where they sit. What the strip does is share.h's.
 //
 // Edge ships none of Chrome's glic host (docs/re/gemini-in-chrome.md), so this
 // is the regular Gemini web app in the profile's own storage, beside the page,
 // not Chrome's in-browser Gemini. It overlays the right of the page rather than
-// reflowing it, so it never fights Edge's own content layout.
+// reflowing it, so it never fights Edge's own content layout. On top of Gemini
+// sits a slim strip of our own, a second page that holds the "share a tab"
+// buttons (strip_page.h).
 #pragma once
 #include <map>
+#include <string>
 #include "edge.h"
+#include "panel_layout.h"
+#include "share_text.h"
+#include "strip_page.h"
 
 namespace fixedge::gemini {
 
@@ -17,16 +24,14 @@ namespace fixedge::gemini {
 // in to Google in this Edge is signed in here too).
 inline constexpr char kGeminiUrl[] = "https://gemini.google.com/app";
 
-// The docked panel's width in DIPs, and the gap it leaves at the content's top
-// (so it sits below the pane's own chrome, like Edge's side pane).
-inline constexpr int kPanelWidth = 420;
-inline constexpr int kPanelTopInset = 0;
-
-// One panel per MultiContentsView (one per browser window): the WebView and the
-// parent it is docked in, so a later reposition or removal finds them again.
+// One panel per MultiContentsView (one per browser window): Gemini's page and
+// the strip above it, and the parent they are docked in, so a later reposition
+// or removal finds them again.
 struct Panel {
-  void* webView = nullptr;
+  void* webView = nullptr;  // Gemini's page
+  void* strip = nullptr;    // the share strip, over the top of the panel
   void* parent = nullptr;
+  bool isStripExpanded = false;  // the tab picker is open: the strip covers it
 };
 
 inline std::map<void*, Panel>& Panels() {
@@ -34,34 +39,48 @@ inline std::map<void*, Panel>& Panels() {
   return panels;
 }
 
-inline const Panel* PanelFor(void* mcv) {
+inline Panel* PanelFor(void* mcv) {
   const auto entry = Panels().find(mcv);
   return entry == Panels().end() ? nullptr : &entry->second;
 }
 
-// The panel's bounds in its parent's coordinates: the right kPanelWidth of the
-// content area the MCV occupies.
-inline Rect PanelBounds(void* mcv) {
-  const Rect content = edge::ViewBounds(mcv);
-  const int width = kPanelWidth < content.width ? kPanelWidth : content.width;
-  return Rect{content.x + content.width - width, content.y + kPanelTopInset,
-              width, content.height - kPanelTopInset};
+inline bool IsOpen(const Panel& panel) {
+  return edge::ViewGetVisible(panel.webView);
+}
+
+// Place the panel's two pages in the content area the MCV occupies.
+inline void Layout(void* mcv, const Panel& panel) {
+  const panel_layout::Layout layout =
+      panel_layout::PanelLayout(edge::ViewBounds(mcv), panel.isStripExpanded);
+  edge::SetViewBounds(panel.webView, layout.page);
+  edge::SetViewBounds(panel.strip, layout.strip);
 }
 
 // Keep an open panel glued to the right edge after a window resize or a layout
 // pass (called from the layout detour and WM_SIZE, both on the UI thread).
 inline void Reposition(void* mcv) {
   const Panel* panel = PanelFor(mcv);
-  if (panel && edge::ViewGetVisible(panel->webView)) {
-    edge::SetViewBounds(panel->webView, PanelBounds(mcv));
+  if (panel && IsOpen(*panel)) {
+    Layout(mcv, *panel);
+  }
+}
+
+// The picker opened or closed: the strip grows to cover the panel, or shrinks
+// back to its bar.
+inline void SetStripExpanded(void* mcv, bool isExpanded) {
+  Panel* panel = PanelFor(mcv);
+  if (panel && panel->isStripExpanded != isExpanded) {
+    panel->isStripExpanded = isExpanded;
+    Reposition(mcv);
   }
 }
 
 // Build the panel for `mcv` on first use: a WebView on the window's profile,
 // docked as the last child of the MCV's parent (so it draws over the page),
-// loading Gemini. Returns null if the profile can't be found.
-inline const Panel* EnsurePanel(void* mcv) {
-  if (const Panel* existing = PanelFor(mcv)) {
+// loading Gemini, and the strip over it. Returns null if the profile can't be
+// found.
+inline Panel* EnsurePanel(void* mcv) {
+  if (Panel* existing = PanelFor(mcv)) {
     return existing;
   }
   void* tsm = edge::McvTabStripModel(mcv);
@@ -74,10 +93,18 @@ inline const Panel* EnsurePanel(void* mcv) {
   edge::SetViewVisible(webView, false);
   edge::AddChildViewAt(parent, webView, edge::ViewChildCount(parent));
   edge::WebViewLoadUrl(webView, kGeminiUrl);
+  void* strip = edge::NewWebView(profile);
+  edge::SetViewVisible(strip, false);
+  edge::AddChildViewAt(parent, strip, edge::ViewChildCount(parent));
+  const std::string stripUrl = share_text::BuildDataUrl(
+      std::string(strip_page::kHtmlStyle) + strip_page::kHtmlBody);
+  edge::WebViewLoadUrl(strip, stripUrl.c_str());
   Panel& panel = Panels()[mcv];
   panel.webView = webView;
+  panel.strip = strip;
   panel.parent = parent;
-  Log("[gemini] panel created webView=%p parent=%p", webView, parent);
+  Log("[gemini] panel created webView=%p strip=%p parent=%p", webView, strip,
+      parent);
   return &panel;
 }
 
@@ -87,10 +114,11 @@ inline bool Toggle(void* mcv) {
   if (!panel) {
     return false;
   }
-  const bool isOpening = !edge::ViewGetVisible(panel->webView);
+  const bool isOpening = !IsOpen(*panel);
   edge::SetViewVisible(panel->webView, isOpening);
+  edge::SetViewVisible(panel->strip, isOpening);
   if (isOpening) {
-    edge::SetViewBounds(panel->webView, PanelBounds(mcv));
+    Layout(mcv, *panel);
     edge::ViewRequestFocus(panel->webView);
   }
   Log("[gemini] panel %s", isOpening ? "opened" : "closed");
@@ -104,6 +132,8 @@ inline void Remove(void* mcv) {
   if (!panel) {
     return;
   }
+  edge::ViewRemoveChild(panel->parent, panel->strip);
+  edge::DeleteWebView(panel->strip);
   edge::ViewRemoveChild(panel->parent, panel->webView);
   edge::DeleteWebView(panel->webView);
   Panels().erase(mcv);
