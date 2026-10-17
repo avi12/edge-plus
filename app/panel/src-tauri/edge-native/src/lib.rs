@@ -10,21 +10,23 @@
 //! * [`registry`] - add / remove a theme through Edge's external-extension loader.
 //! * [`crx`] - read a local theme `.crx`'s extension id and version.
 //! * [`pack`] - pack a theme folder or `.zip` into a signed `.crx`.
-//! * [`devmode`] - wait for Edge to exit, then snooze its developer-mode prompt.
+//! * [`preferences`] - wait for Edge to exit, then edit every profile's `Preferences`.
 //! * [`version`] - read a binary's file version, as the DLL's self-check does.
 
 mod crx;
-mod devmode;
 mod inject;
 mod manifest;
 mod pack;
+mod preferences;
 mod process;
 mod protocol;
 mod registry;
 mod version;
 
 pub use crx::{read_crx, CrxInfo};
-pub use devmode::{default_user_data, wait_for_edge_exit_then_snooze};
+pub use preferences::{
+    default_user_data, edit_every_profile, now_microseconds_since_1601, wait_for_edge_exit,
+};
 pub use inject::{free_module, inject_into, is_split_loaded, signal_unload};
 pub use pack::{pack_theme, PackedTheme};
 pub use process::{

@@ -1,8 +1,9 @@
 # Web protocol handlers (`mailto:` -> Gmail)
 
-Target: `msedge.dll` 155.0.4283.45. All addresses are **RVAs**. Nothing here is
-used by the DLL yet; this is the research behind "make Gmail open `mailto:`
-links from Edge".
+Target: `msedge.dll` 155.0.4283.45. All addresses are **RVAs**. This is the
+research behind "make Gmail open `mailto:` links from Edge". The panel ships
+option (b) of section 4 (`app/panel/src-tauri/src/edge_prefs.rs`); nothing here
+is used by the DLL.
 
 **Short answer.** Edge ships Chromium's `custom_handlers` stack unchanged and
 it works: `navigator.registerProtocolHandler('mailto', ...)` shows an Edge

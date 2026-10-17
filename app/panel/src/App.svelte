@@ -19,6 +19,9 @@
   const shieldIcon =
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
       `<path d="M12 3 L20 6 V11 C20 16 16 20 12 21 C8 20 4 16 4 11 V6 Z"/></svg>`;
+  const mailIcon =
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
+      `<rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3.5 6 L12 13 L20.5 6"/></svg>`;
 
   const splitDescription =
     "Grows Edge's own split past two panes, loaded straight into Edge. Add panes above, below, " +
@@ -30,6 +33,10 @@
   const devModeDescription =
     "Stops Edge asking to turn off developer-mode extensions when it starts. Takes effect from " +
       "Edge's next start.";
+  const webHandlersDescription =
+    "Email links open a Gmail draft and calendar links open in Google Calendar, the way Chrome " +
+      "does once you allow Gmail to handle them — and an earlier Block of either is lifted. " +
+      "Takes effect from Edge's next start.";
 
   let appState = $state<AppState | null>(null);
   let isDraggingOver = $state(false);
@@ -125,6 +132,10 @@
     appState = await bridge.setQuietDevMode(value);
   }
 
+  async function onWebHandlers(value: boolean): Promise<void> {
+    appState = await bridge.setWebHandlers(value);
+  }
+
   async function onAddStore(url: string): Promise<void> {
     appState = await bridge.addStoreTheme(url);
   }
@@ -192,6 +203,14 @@
       icon={shieldIcon}
       onchange={onQuietDevMode}
       title="Hide the developer-mode prompt"
+    />
+
+    <FeatureCard
+      checked={appState.features.webHandlers}
+      description={webHandlersDescription}
+      icon={mailIcon}
+      onchange={onWebHandlers}
+      title="Open mail and calendar links in Google"
     />
   </main>
 {/if}

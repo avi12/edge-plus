@@ -35,13 +35,19 @@ pub struct Theming {
     pub dark: String,
 }
 
-/// The three feature switches, with their defaults (split on, the rest off).
+/// The feature switches, with their defaults (split on, the rest off).
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "each is an independent on/off switch"
+)]
 pub struct Features {
     pub native_split: bool,
     pub theming: bool,
     pub quiet_dev_mode: bool,
+    /// Gmail and Google Calendar open email and calendar links (`edge_prefs`).
+    pub web_handlers: bool,
 }
 
 impl Default for Features {
@@ -50,6 +56,7 @@ impl Default for Features {
             native_split: true,
             theming: false,
             quiet_dev_mode: false,
+            web_handlers: false,
         }
     }
 }
@@ -61,10 +68,16 @@ pub enum Feature {
     NativeSplit,
     Theming,
     QuietDevMode,
+    WebHandlers,
 }
 
 impl Feature {
-    pub const ALL: [Self; 3] = [Self::NativeSplit, Self::Theming, Self::QuietDevMode];
+    pub const ALL: [Self; 4] = [
+        Self::NativeSplit,
+        Self::Theming,
+        Self::QuietDevMode,
+        Self::WebHandlers,
+    ];
 }
 
 impl Features {
@@ -74,6 +87,7 @@ impl Features {
             Feature::NativeSplit => self.native_split,
             Feature::Theming => self.theming,
             Feature::QuietDevMode => self.quiet_dev_mode,
+            Feature::WebHandlers => self.web_handlers,
         }
     }
 
@@ -82,6 +96,7 @@ impl Features {
             Feature::NativeSplit => self.native_split = is_on,
             Feature::Theming => self.theming = is_on,
             Feature::QuietDevMode => self.quiet_dev_mode = is_on,
+            Feature::WebHandlers => self.web_handlers = is_on,
         }
     }
 }
