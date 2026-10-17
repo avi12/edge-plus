@@ -56,7 +56,12 @@ and nothing to pre-install.
 
 The split DLL is pinned to one `msedge.dll` build (`app/native-split/src/offsets.h`);
 on any other build it refuses to hook and the split simply does nothing, so it is
-always safe to leave on.
+always safe to leave on. The panel reads that build from `offsets.h` at compile
+time and compares it with the `msedge.dll` each Edge browser process actually
+loaded — at start and whenever a new browser process appears, which is how an
+update's restart shows up. On any other build it switches the split and the
+theming off (both call into `msedge.dll`; hiding the developer-mode prompt only
+edits `Preferences` and stays on), says so, and never injects into that Edge.
 
 ## Develop
 
