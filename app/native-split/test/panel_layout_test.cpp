@@ -46,6 +46,10 @@ void RunChecks() {
   Check(HasBounds(narrow.strip, 160, 0, 150, kStripHeight),
         "a narrow window gives the panel half of it, at the right");
 
+  const Layout bare = PanelLayout(content, false, false);
+  Check(HasBounds(bare.page, 1400 - kPanelWidth, 100, kPanelWidth, 800) &&
+            Empty(bare.strip),
+        "without a strip Gemini fills the whole panel");
   Check(PanelWidth(1400) == kPanelWidth, "a wide window gets the full width");
   Check(PanelWidth(600) == 300, "a narrow window gives the panel half");
   Check(PanelWidth(0) == 0, "no room, no panel");

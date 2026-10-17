@@ -25,14 +25,20 @@ inline int PanelWidth(int contentWidth) {
 }
 
 // Lay the panel out in `content`, the area the page occupies. Both rects are in
-// the same coordinates as `content`.
-inline Layout PanelLayout(const Rect& content, bool isStripExpanded) {
+// the same coordinates as `content`. Without a strip (Chrome's glic UI has
+// none) Gemini's page fills the panel.
+inline Layout PanelLayout(const Rect& content, bool isStripExpanded,
+                          bool hasStrip = true) {
   const int width = PanelWidth(content.width);
   const int x = content.x + content.width - width;
   const int stripHeight = isStripExpanded || kStripHeight > content.height
                               ? content.height
                               : kStripHeight;
   Layout layout;
+  if (!hasStrip) {
+    layout.page = Rect{x, content.y, width, content.height};
+    return layout;
+  }
   layout.strip = Rect{x, content.y, width, stripHeight};
   layout.page =
       Rect{x, content.y + kStripHeight, width, content.height - kStripHeight};

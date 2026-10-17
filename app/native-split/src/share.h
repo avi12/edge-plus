@@ -18,11 +18,15 @@
 #include <vector>
 #include "edge.h"
 #include "gemini.h"
+#include "glic.h"
 #include "page_scripts.h"
 #include "share_text.h"
 #include "strip_page.h"
+#include "tab_list.h"
 
 namespace fixedge::share {
+
+using namespace fixedge::tab_list;
 
 // The poll timer on the browser window, and how long a tab may take to answer.
 inline constexpr UINT_PTR kTimerId = 0x5A4E;
@@ -97,63 +101,6 @@ inline void ShowStatus(const gemini::Panel& panel, StatusKind kind,
                              share_text::JsStringLiteral(StatusKindName(kind)) +
                              "," + share_text::JsStringLiteral(text) + "); 0";
   edge::RunScript(contents, script, nullptr);
-}
-
-// --- the window's tabs --------------------------------------------------------------
-
-inline std::string TabIdOf(void* contents) {
-  return std::to_string(reinterpret_cast<uintptr_t>(contents));
-}
-
-// The tab with picker id `tabId` in `mcv`'s window, or null if it was closed.
-inline void* FindTab(void* mcv, const std::string& tabId) {
-  void* tsm = edge::McvTabStripModel(mcv);
-  const int count = tsm ? edge::TabCount(tsm) : 0;
-  for (int i = 0; i < count; i++) {
-    void* contents = edge::TabWebContentsAt(tsm, i);
-    if (contents && TabIdOf(contents) == tabId) {
-      return contents;
-    }
-  }
-  return nullptr;
-}
-
-inline void* ActiveContents(void* mcv) {
-  void* tsm = edge::McvTabStripModel(mcv);
-  void* tab = tsm ? edge::ActiveTab(tsm) : nullptr;
-  return tab ? edge::TabContents(tab) : nullptr;
-}
-
-inline share_text::TabState StateOf(void* contents) {
-  if (!share_text::IsShareableUrl(edge::TabUrl(contents))) {
-    return share_text::TabState::kBlocked;
-  }
-  return edge::IsPageLive(contents) ? share_text::TabState::kReady
-                                    : share_text::TabState::kAsleep;
-}
-
-inline std::vector<share_text::TabEntry> ListTabs(void* mcv) {
-  std::vector<share_text::TabEntry> entries;
-  void* tsm = edge::McvTabStripModel(mcv);
-  const int count = tsm ? edge::TabCount(tsm) : 0;
-  const void* active = ActiveContents(mcv);
-  for (int i = 0; i < count; i++) {
-    void* contents = edge::TabWebContentsAt(tsm, i);
-    if (!contents) {
-      continue;
-    }
-    share_text::TabEntry entry;
-    entry.id = TabIdOf(contents);
-    entry.url = edge::TabUrl(contents);
-    entry.title = edge::TabTitle(contents);
-    if (entry.title.empty()) {
-      entry.title = entry.url;
-    }
-    entry.isCurrent = contents == active;
-    entry.state = StateOf(contents);
-    entries.push_back(entry);
-  }
-  return entries;
 }
 
 inline void PushTabs(const gemini::Panel& panel,
@@ -362,6 +309,10 @@ inline void Tick() {
       session.isReading = false;
       continue;
     }
+    if (panel.mode == gemini::PanelMode::kGlic) {
+      glic::Tick(mcv, panel);
+      continue;
+    }
     ExpireStaleRead(mcv, session, panel);
     void* contents = edge::WebViewContents(panel.strip);
     const bool isStripReady = contents && edge::IsPageLive(contents);
@@ -407,6 +358,7 @@ inline void StopTimer() {
     g_timerWindow = nullptr;
   }
   Sessions().clear();
+  glic::Forget();
 }
 
 }  // namespace fixedge::share
