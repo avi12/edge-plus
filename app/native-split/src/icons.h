@@ -103,6 +103,39 @@ inline const VectorIcon* Grip() {
   return icon;
 }
 
+// --- the Gemini spark ----------------------------------------------------------
+
+// Gemini's four-pointed spark on a 24 canvas: its points at the canvas's edge
+// midpoints, joined by quarter circles centred on the corners, so each side
+// curves in toward the middle (sweep 0 = counter-clockwise picks that centre).
+inline const VectorIcon* GeminiSpark() {
+  static const VectorIcon* icon = [] {
+    constexpr float kCanvasSize = 24.f;
+    constexpr float kTopX = 12.f;
+    constexpr float kTopY = 2.f;
+    constexpr float kRadius = 10.f;
+    std::vector<PathElement> path{
+        CommandElement(off::ICON_CANVAS_DIMENSIONS),
+        ArgumentElement(kCanvasSize), CommandElement(off::ICON_MOVE_TO),
+        ArgumentElement(kTopX), ArgumentElement(kTopY)};
+    // Top -> right -> bottom -> left -> top, one radius across and down each.
+    const float steps[][2] = {{kRadius, kRadius},
+                              {-kRadius, kRadius},
+                              {-kRadius, -kRadius},
+                              {kRadius, -kRadius}};
+    for (const auto& step : steps) {
+      path.push_back(CommandElement(off::ICON_R_ARC_TO));
+      for (const float argument :
+           {kRadius, kRadius, 0.f, 0.f, 0.f, step[0], step[1]}) {
+        path.push_back(ArgumentElement(argument));
+      }
+    }
+    path.push_back(CommandElement(off::ICON_CLOSE));
+    return Build("kFixEdgeGeminiSparkIcon", path);
+  }();
+  return icon;
+}
+
 // --- the arrows --------------------------------------------------------------
 
 // How many arguments a path command takes, for the commands Edge's arrow icon

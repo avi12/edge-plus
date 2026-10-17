@@ -1232,4 +1232,116 @@ inline void RemoveIgnoredHandler(void* registry,
       registry, handler, kShouldSave);
 }
 
+// --- the browser assistant (docs/re/gemini-in-chrome.md) ---------------------
+
+// A read-only view of a libc++ std::u16string's characters.
+struct U16View {
+  const char16_t* data;
+  size_t length;
+};
+inline U16View U16StringView(const void* string) {
+  auto* bytes = static_cast<const uint8_t*>(string);
+  const bool isLong =
+      (bytes[off::U16STRING_short_size] & off::U16STRING_long_flag) != 0;
+  if (isLong) {
+    return U16View{
+        *reinterpret_cast<const char16_t* const*>(bytes),
+        *reinterpret_cast<const size_t*>(bytes + off::U16STRING_long_size)};
+  }
+  return U16View{reinterpret_cast<const char16_t*>(bytes),
+                 bytes[off::U16STRING_short_size]};
+}
+
+// Whether `view` is Edge's toolbar chat button (EdgeCopilotToolbarLabelButton).
+inline bool IsCopilotButton(void* view) {
+  const uintptr_t vtable = VtableRva(view);
+  for (const uintptr_t candidate : rva::CopilotButton_vftables) {
+    if (vtable == candidate) {
+      return true;
+    }
+  }
+  return false;
+}
+// The behaviour object a chat button holds.
+inline void* CopilotButtonAction(void* button) {
+  return Field<void*>(button, off::DISCOVERBUTTON_action);
+}
+// The label UpdateLabelFromController last set ("Chat" unless a nudge).
+inline U16View CopilotButtonCachedLabel(void* button) {
+  return U16StringView(reinterpret_cast<uint8_t*>(button) +
+                       off::COPILOTBUTTON_label);
+}
+inline void CopilotButtonUpdateLabel(void* button) {
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(rva::CopilotButton_UpdateLabelFromController))(
+      button);
+}
+// Re-read the action's images (and the button's theme colours).
+inline void CopilotButtonRefreshImages(void* button) {
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(rva::CopilotButton_OnThemeChanged))(button);
+}
+
+inline void LabelButtonSetText(void* button, U16View text) {
+  using Fn = void(__fastcall*)(void*, const U16View*);
+  reinterpret_cast<Fn>(At(rva::LabelButton_SetText))(button, &text);
+}
+
+// The accessible name of `view`, from UTF-8. SetName takes its u16string by
+// value, so the callee owns (and frees) the one built here.
+inline void ViewSetAccessibleName(void* view, const char* utf8) {
+  using AccessibilityFn = void*(__fastcall*)(void*);
+  using SetNameFn = void(__fastcall*)(void*, U16String*);
+  U16String name{};
+  Utf8ToUtf16(&name, utf8);
+  reinterpret_cast<SetNameFn>(At(rva::ViewAccessibility_SetName))(
+      reinterpret_cast<AccessibilityFn>(At(rva::View_GetViewAccessibility))(
+          view),
+      &name);
+}
+
+// Draw `vectorIcon` at `dipSize` in `color` (ARGB) into the gfx::ImageSkia at
+// `outImage` (uninitialised storage the caller owns).
+inline void CreateVectorIcon(void* outImage, const void* vectorIcon,
+                             int dipSize, uint32_t color) {
+  using Fn = void*(__fastcall*)(void*, const void*, int, uint32_t);
+  reinterpret_cast<Fn>(At(rva::Gfx_CreateVectorIcon))(outImage, vectorIcon,
+                                                      dipSize, color);
+}
+
+// A views::WebView for `browserContext` (its WebContents is created on first
+// load, in that profile's own storage), not yet parented.
+inline void* NewWebView(void* browserContext) {
+  void* webView = NewView(off::WebView_size);
+  using CtorFn = void*(__fastcall*)(void*, void*);
+  reinterpret_cast<CtorFn>(At(rva::WebView_ctor))(webView, browserContext);
+  return webView;
+}
+// Load `url` (UTF-8) in `webView`, creating its WebContents.
+inline void WebViewLoadUrl(void* webView, const char* url) {
+  const U8View urlView{url, std::strlen(url)};
+  alignas(16) uint8_t gurl[off::GURL_size] = {};
+  using GurlFn = void*(__fastcall*)(void*, const void*);
+  reinterpret_cast<GurlFn>(At(rva::GURL_ctor_string))(gurl, &urlView);
+  constexpr int kNoHttpsUpgradePolicy = 0;
+  // An empty base::Location: it only labels the WebContents creation.
+  alignas(8) uint8_t location[off::Location_size] = {};
+  using LoadFn = void(__fastcall*)(void*, const void*, int, void*);
+  reinterpret_cast<LoadFn>(At(rva::WebView_LoadInitialURL))(
+      webView, gurl, kNoHttpsUpgradePolicy, location);
+  using DtorFn = void(__fastcall*)(void*);
+  reinterpret_cast<DtorFn>(At(rva::GURL_dtor))(gurl);
+}
+// Destroy an unparented WebView and the WebContents it owns.
+inline void DeleteWebView(void* webView) {
+  constexpr int kDeleteSelf = 1;
+  using DtorFn = void*(__fastcall*)(void*, int);
+  reinterpret_cast<DtorFn>(At(rva::WebView_ScalarDeletingDtor))(webView,
+                                                                kDeleteSelf);
+}
+inline void ViewRequestFocus(void* view) {
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(rva::View_RequestFocus))(view);
+}
+
 }  // namespace fixedge::edge

@@ -530,6 +530,53 @@ inline constexpr uintptr_t ProtocolHandlerRegistry_RemoveIgnoredHandler =
 inline constexpr uintptr_t ProtocolHandler_CopyConstructor = 0x2c68d24;
 // ProtocolHandler::~ProtocolHandler(this): frees its strings and GURL.
 inline constexpr uintptr_t ProtocolHandler_Destructor = 0x2d69d28;
+
+// --- the browser assistant (docs/re/gemini-in-chrome.md) ---
+// The toolbar chat button's behaviour object,
+// EdgeDiscoverToolbarButtonActionEdgeCopilot (held at button+0xa20).
+// gfx::ImageSkia (this, ImageSkia* out, ColorProvider*, NativeTheme*): the
+// bitmap Copilot logo, per button state.
+inline constexpr uintptr_t CopilotAction_GetNormalStateImage = 0x2a93360;
+inline constexpr uintptr_t CopilotAction_GetPressedStateImage = 0x3407240;
+// std::u16string (this, u16string* out): string 0x134 / 0x5160.
+inline constexpr uintptr_t CopilotAction_GetButtonTooltipText = 0x3407230;
+inline constexpr uintptr_t CopilotAction_GetAccessibleName = 0xdac0660;
+// void (this): ToggleDiscoverChatSidePane, the Copilot pane.
+inline constexpr uintptr_t CopilotAction_OnClick = 0xdac0670;
+// EdgeCopilotToolbarLabelButton: the "Chat" pill. UpdateLabelFromController
+// (this) sets the label from the tab's nudge signal, else string 0x46f8
+// ("Chat"), and caches what it set at COPILOTBUTTON_label. OnThemeChanged
+// (this) re-reads the action's images (EdgeDiscoverToolbarButton::SetImages).
+inline constexpr uintptr_t CopilotButton_UpdateLabelFromController = 0xc799e6c;
+inline constexpr uintptr_t CopilotButton_OnThemeChanged = 0x2e255b0;
+// The button's vftables (one per base; EdgeCopilotToolbarLabelButton has
+// multiple inheritance). A view is a chat button when its object+0 vptr is any
+// of these, so the recognition does not depend on which base is primary.
+inline constexpr uintptr_t CopilotButton_vftables[] = {
+    0x1136ba20, 0x1136ba40, 0x1136ba60, 0x1136ba80, 0x1136bac0, 0x1136bb10,
+    0x1136bb28, 0x1136bb40, 0x1136bb70, 0x1136bc20, 0x1136bc40, 0x1136bc80,
+    0x1136bc98, 0x1136bcb0, 0x1136bce0, 0x1136bcf8, 0x115be7c8, 0x11748158};
+// views::LabelButton::SetText(this, std::u16string_view*) (a 16-byte view,
+// passed by address).
+inline constexpr uintptr_t LabelButton_SetText = 0x29ca320;
+// ViewAccessibility& View::GetViewAccessibility(this) and
+// ViewAccessibility::SetName(this, std::u16string* by value, callee-owned).
+inline constexpr uintptr_t View_GetViewAccessibility = 0x1018844;
+inline constexpr uintptr_t ViewAccessibility_SetName = 0x101be3e;
+// gfx::ImageSkia gfx::CreateVectorIcon(ImageSkia* out, const VectorIcon&,
+// int dip size, SkColor).
+inline constexpr uintptr_t Gfx_CreateVectorIcon = 0x26b8006;
+// SkColor ui::ColorProvider::GetColor(this, ColorId): the button's own
+// foreground colour, so the spark matches the toolbar in light and dark.
+inline constexpr uintptr_t ColorProvider_GetColor = 0xfc90ce;
+// views::WebView: (this, BrowserContext*); LoadInitialURL(this, const GURL&,
+// HttpsUpgradePolicy, base::Location* by value); the scalar deleting dtor
+// (this, 1).
+inline constexpr uintptr_t WebView_ctor = 0x2ce306e;
+inline constexpr uintptr_t WebView_LoadInitialURL = 0xc403a30;
+inline constexpr uintptr_t WebView_ScalarDeletingDtor = 0x33efc80;
+// View::RequestFocus(this).
+inline constexpr uintptr_t View_RequestFocus = 0x2d861a0;
 }  // namespace rva
 
 // Linear addresses (not RVAs): partition-alloc BRP-pool gate for raw_ptr acquire.
@@ -818,6 +865,23 @@ inline constexpr uintptr_t RECT_x = 0x0;
 inline constexpr uintptr_t RECT_y = 0x4;
 inline constexpr uintptr_t RECT_w = 0x8;
 inline constexpr uintptr_t RECT_h = 0xc;
+
+// --- the browser assistant ---
+// EdgeDiscoverToolbarButton's action (EdgeDiscoverToolbarButtonAction*).
+inline constexpr uintptr_t DISCOVERBUTTON_action = 0xa20;
+// EdgeCopilotToolbarLabelButton's cached label (std::u16string), what
+// UpdateLabelFromController last set.
+inline constexpr uintptr_t COPILOTBUTTON_label = 0xb70;
+// sizeof(views::WebView): every `new views::WebView` asks for 0x540.
+inline constexpr size_t WebView_size = 0x540;
+// sizeof(base::Location) {function, file, line, program counter}, which
+// LoadInitialURL takes by value (by address under the x64 ABI).
+inline constexpr size_t Location_size = 0x20;
+// libc++ std::u16string: a short string keeps its length in the last byte,
+// and its top bit marks the long form {data, size, capacity}.
+inline constexpr uintptr_t U16STRING_short_size = 0x17;
+inline constexpr uint8_t U16STRING_long_flag = 0x80;
+inline constexpr uintptr_t U16STRING_long_size = 0x08;
 }  // namespace off
 
 }  // namespace fixedge::edge155
