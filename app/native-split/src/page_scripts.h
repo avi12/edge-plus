@@ -80,4 +80,37 @@ inline std::string InsertIntoPromptScript(const std::string& text) {
   return script;
 }
 
+// Press the Gemini page's button whose label (aria-label or text) matches
+// `labelPattern`, once it exists and is enabled; the page needs a moment after
+// text goes in before its send button wakes, and a moment after load before
+// its voice button is there, so the script keeps looking for a few seconds.
+// It answers at once ("scheduled"); there is nothing to wait for.
+inline std::string PressButtonScript(const std::string& labelPattern) {
+  std::string script = R"JS((function (pattern) {
+  var deadline = Date.now() + 4000;
+  var timer = setInterval(function () {
+    var button = Array.from(document.querySelectorAll("button")).find(function (candidate) {
+      var label = (candidate.getAttribute("aria-label") || "") + " " + (candidate.innerText || "");
+      return pattern.test(label) && !candidate.disabled &&
+             candidate.getAttribute("aria-disabled") !== "true";
+    });
+    if (button) {
+      clearInterval(timer);
+      button.click();
+    } else if (Date.now() > deadline) {
+      clearInterval(timer);
+    }
+  }, 150);
+  return "scheduled";
+}))JS";
+  script +=
+      "(new RegExp(" + share_text::JsStringLiteral(labelPattern) + ", \"i\"))";
+  return script;
+}
+
+// The patterns for Gemini's own buttons: the send arrow and the voice
+// (Gemini Live) button.
+inline constexpr char kSendButtonPattern[] = "^\\s*send";
+inline constexpr char kLiveButtonPattern[] = "\\blive\\b";
+
 }  // namespace fixedge::page_scripts

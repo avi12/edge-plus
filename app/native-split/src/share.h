@@ -18,6 +18,7 @@
 #include <vector>
 #include "edge.h"
 #include "gemini.h"
+#include "chat_action.h"
 #include "glic.h"
 #include "page_scripts.h"
 #include "share_text.h"
@@ -72,8 +73,20 @@ struct Session {
   unsigned long long readId =
       0;  // names the read in flight; a late answer to an older one is dropped
   ULONGLONG readStartedAt = 0;
+  std::string
+      retryTabId;  // the tab being put in, to try again if Gemini is not up
   std::string readTitle;  // the page being put into the prompt, for the status
+  // What to do once the shared page is in the prompt (a chat menu item), and how
+  // many times the prompt box has been waited for.
+  chat_action::ChatAction followup = chat_action::ChatAction::kNone;
+  int insertRetries = 0;
+  ULONGLONG nextReadAt = 0;  // not before this (GetTickCount64), after a retry
 };
+
+// Gemini may still be loading when the menu opens the panel: wait for its
+// prompt box, trying again this often, this many times, before giving up.
+inline constexpr int kMaxInsertRetries = 80;
+inline constexpr ULONGLONG kInsertRetryDelayMs = 150;
 
 inline std::map<void*, Session>& Sessions() {
   static std::map<void*, Session> sessions;
@@ -118,23 +131,59 @@ inline void PushTabs(const gemini::Panel& panel,
 
 inline void ReadNext(void* mcv);
 
+// The page is in the prompt: carry out what the menu item asked next, in
+// Gemini's own page (press send for a summary, the voice button for a talk).
+inline void RunFollowup(const gemini::Panel& panel, Session& session) {
+  void* geminiContents = edge::WebViewContents(panel.webView);
+  const chat_action::ChatAction followup = session.followup;
+  session.followup = chat_action::ChatAction::kNone;
+  if (!geminiContents) {
+    return;
+  }
+  if (followup == chat_action::ChatAction::kSummarize) {
+    edge::RunScript(
+        geminiContents,
+        page_scripts::PressButtonScript(page_scripts::kSendButtonPattern),
+        nullptr);
+  } else if (followup == chat_action::ChatAction::kTalk) {
+    edge::RunScript(
+        geminiContents,
+        page_scripts::PressButtonScript(page_scripts::kLiveButtonPattern),
+        nullptr);
+  }
+}
+
 // Gemini's prompt box took (or did not take) the text; go on to the next tab.
+// A box that is not there yet is waited for: the panel may have just opened.
 inline void OnInserted(void* mcv, void* strip,
                        const edge::ScriptResult& result) {
   Session& session = Sessions()[mcv];
-  const std::string& title = session.readTitle;
+  const std::string title = session.readTitle;
   session.isReading = false;
   const gemini::Panel* panel = OpenPanel(mcv, strip);
   if (panel) {
     const bool isInserted =
         result.isString && result.text == page_scripts::kInsertedAnswer;
+    const bool isWaiting = !isInserted && result.isString &&
+                           result.text == page_scripts::kNoPromptBoxAnswer &&
+                           session.insertRetries < kMaxInsertRetries;
     if (isInserted) {
-      ShowStatus(
-          *panel, StatusKind::kOk,
-          "Added \"" + title + "\" to the prompt. Review it, then send.");
+      session.insertRetries = 0;
+      const bool isSending = session.followup != chat_action::ChatAction::kNone;
+      ShowStatus(*panel, StatusKind::kOk,
+                 isSending ? "Added \"" + title + "\"."
+                           : "Added \"" + title +
+                                 "\" to the prompt. Review it, then send.");
+      RunFollowup(*panel, session);
+    } else if (isWaiting) {
+      session.insertRetries++;
+      session.nextReadAt = GetTickCount64() + kInsertRetryDelayMs;
+      session.queue.push_front(session.retryTabId);
     } else {
       ShowStatus(*panel, StatusKind::kError, kNoPromptBoxMessage);
       session.queue.clear();
+      session.followup = chat_action::ChatAction::kNone;
+      session.insertRetries = 0;
     }
   }
   ReadNext(mcv);
@@ -165,8 +214,11 @@ inline void OnRead(void* mcv, void* strip, unsigned long long readId,
   }
   void* geminiContents = edge::WebViewContents(panel->webView);
   session.readTitle = snapshot.title.empty() ? snapshot.url : snapshot.title;
-  const std::string insertScript = page_scripts::InsertIntoPromptScript(
-      share_text::BuildPromptBlock(snapshot));
+  std::string block = share_text::BuildPromptBlock(snapshot);
+  if (session.followup == chat_action::ChatAction::kSummarize) {
+    block += chat_action::kSummarizeInstruction;
+  }
+  const std::string insertScript = page_scripts::InsertIntoPromptScript(block);
   const bool isRunning =
       geminiContents &&
       edge::RunScript(geminiContents, insertScript,
@@ -186,9 +238,10 @@ inline void ReadNext(void* mcv) {
   Session& session = Sessions()[mcv];
   const gemini::Panel* panel = gemini::PanelFor(mcv);
   while (!session.isReading && !session.queue.empty() && panel &&
-         gemini::IsOpen(*panel)) {
+         gemini::IsOpen(*panel) && GetTickCount64() >= session.nextReadAt) {
     const std::string tabId = session.queue.front();
     session.queue.pop_front();
+    session.retryTabId = tabId;
     void* contents = FindTab(mcv, tabId);
     if (!contents) {
       ShowStatus(*panel, StatusKind::kError, kTabClosedMessage);
@@ -299,6 +352,31 @@ inline void ExpireStaleRead(void* mcv, Session& session,
   }
 }
 
+// Carry out a chat menu item in the open panel of `mcv`: for the web app, queue
+// the active tab with what to do once it is in the prompt; for glic (which
+// shares the focused tab by itself) leave it for glic.h to hand to the client.
+inline void RequestAction(void* mcv, chat_action::ChatAction action) {
+  gemini::Panel* panel = gemini::PanelFor(mcv);
+  const bool isShareAction = action == chat_action::ChatAction::kSummarize ||
+                             action == chat_action::ChatAction::kTalk;
+  if (!panel || !isShareAction) {
+    return;
+  }
+  if (panel->mode == gemini::PanelMode::kGlic) {
+    panel->pendingAction = action;
+    return;
+  }
+  void* active = ActiveContents(mcv);
+  if (!active) {
+    ShowStatus(*panel, StatusKind::kError, kNoTabMessage);
+    return;
+  }
+  Session& session = Sessions()[mcv];
+  session.followup = action;
+  session.insertRetries = 0;
+  session.queue.push_back(TabIdOf(active));
+}
+
 // One timer tick (control.h's window procedure): poll every open panel's strip.
 inline void Tick() {
   gemini::DropStale();
@@ -312,6 +390,14 @@ inline void Tick() {
     if (panel.mode == gemini::PanelMode::kGlic) {
       glic::Tick(mcv, panel);
       continue;
+    }
+    const bool hasPendingAppAction =
+        panel.mode == gemini::PanelMode::kApp &&
+        panel.pendingAction != chat_action::ChatAction::kNone;
+    if (hasPendingAppAction) {
+      const chat_action::ChatAction pending = panel.pendingAction;
+      panel.pendingAction = chat_action::ChatAction::kNone;
+      RequestAction(mcv, pending);
     }
     ExpireStaleRead(mcv, session, panel);
     void* contents = edge::WebViewContents(panel.strip);

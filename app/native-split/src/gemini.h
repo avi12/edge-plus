@@ -14,6 +14,7 @@
 #include <windows.h>
 #include <map>
 #include <string>
+#include "chat_action.h"
 #include "edge.h"
 #include "glic_library.h"
 #include "panel_layout.h"
@@ -48,6 +49,9 @@ struct Panel {
   HWND window = nullptr;         // the browser window the panel was built in
   bool isStripExpanded = false;  // the tab picker is open: the strip covers it
   PanelMode mode = PanelMode::kApp;
+  // What the chat menu asked for before the page was ready to do it (or before
+  // glic gave way to the web app); share.h and glic.h carry it out.
+  chat_action::ChatAction pendingAction = chat_action::ChatAction::kNone;
   ULONGLONG modeSince = 0;  // when this mode began (GetTickCount64)
 };
 
@@ -182,6 +186,16 @@ inline bool Toggle(HWND window, void* mcv) {
   RelayoutPage(mcv);
   Log("[gemini] panel %s", isOpening ? "opened" : "closed");
   return isOpening;
+}
+
+// Open the window's panel if it is closed (the chat menu's items always open
+// it; the toolbar button toggles). False if there is no panel to open.
+inline bool EnsureOpen(HWND window, void* mcv) {
+  const Panel* panel = EnsurePanel(window, mcv);
+  if (!panel) {
+    return false;
+  }
+  return IsOpen(*panel) || Toggle(window, mcv);
 }
 
 // Give up on glic for this panel (Google would not serve it, or the client

@@ -177,6 +177,20 @@ inline constexpr char kHostScript[] = R"JS((function () {
       host.webClient.notifyFocusedTabChanged(focusedTabData(payload));
       host.webClient.notifyPinnedTabsChanged(pinnedTabs(payload.tabs || []));
       notifyPinCandidates(payload.tabs || []);
+    } else if (kind === "invoke") {
+      host.webClient.invoke(Object.assign({
+        invocationSource: 3,
+        prompts: [],
+        context: null,
+        autoSubmit: false,
+        featureMode: 0,
+        actuationTarget: 0,
+        disableZeroStateSuggestions: false,
+        skillId: null,
+        zssConfig: null,
+        payload: null,
+        actuationTabId: null,
+      }, payload));
     }
   }
 

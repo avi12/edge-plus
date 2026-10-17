@@ -12,6 +12,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "chat_action.h"
 #include "edge.h"
 #include "gemini.h"
 #include "glic_host_script.h"
@@ -273,6 +274,27 @@ inline void Install(void* mcv, void* webView, void* contents) {
   }
 }
 
+// What a chat menu item asked of the glic client, once it is running: a summary
+// is the client's own `invoke` with a prompt to send. Starting voice is not
+// something the host can ask of the client (the client starts it from its own
+// button), so "talk" just leaves the panel open with the page shared, as Chrome
+// itself shares the focused tab with whatever it opens.
+inline void PushPendingAction(gemini::Panel& panel) {
+  const chat_action::ChatAction action = panel.pendingAction;
+  panel.pendingAction = chat_action::ChatAction::kNone;
+  if (action != chat_action::ChatAction::kSummarize) {
+    return;
+  }
+  const std::string invocation =
+      std::string("{\"prompts\":[") +
+      share_text::JsStringLiteral(chat_action::kSummarizePrompt) +
+      "],\"autoSubmit\":true}";
+  edge::RunScript(edge::WebViewContents(panel.webView),
+                  "window.__fxg.push(\"invoke\"," +
+                      share_text::JsStringLiteral(invocation) + ")",
+                  nullptr);
+}
+
 inline void OnPoll(void* mcv, void* webView, const edge::ScriptResult& result) {
   Session& session = Sessions()[mcv];
   session.isBusy = false;
@@ -300,6 +322,7 @@ inline void OnPoll(void* mcv, void* webView, const edge::ScriptResult& result) {
   }
   const bool isRunning = report.client == "initialized";
   if (isRunning) {
+    PushPendingAction(*panel);
     const std::string state = glic_text::StateJson(HostTabs(mcv));
     if (state != session.lastState) {
       session.lastState = state;
