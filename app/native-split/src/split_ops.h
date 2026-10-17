@@ -11,6 +11,7 @@
 #include "geometry.h"
 #include "split_data.h"
 #include "anim.h"
+#include "repaint.h"
 
 namespace fixedge::split_ops {
 
@@ -90,6 +91,10 @@ inline bool GrowWithTree(void* mcv, void* tsm, Node tree, void* newTab) {
     return false;
   }
   edge::InvalidateLayout(mcv);
+  // The new pane's page was shown when it was fed, but Edge hides it again and
+  // its growth resizes it every frame: it stays blank until it is nudged once
+  // the layout has settled. Every way a pane is added comes through here.
+  repaint::ScheduleAll();
   // A pane's tab is no longer one an open tab offer may list.
   if (newTab) {
     edge::WithdrawFromStartingPages(
