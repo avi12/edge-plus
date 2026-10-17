@@ -413,6 +413,27 @@ inline int MemberShowing(void* tsm, void* root, void* const* memberTabs,
   return -1;
 }
 
+// The pages of the active split's members in member order, the order the feeder
+// gives the panes (member i in pane i). Returns how many were written to `out`
+// (up to kMemberBufferSize), 0 when the active tab is not in a split.
+inline int ActiveSplitContents(void* tsm, void** out) {
+  void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
+  if (!active) {
+    return 0;
+  }
+  OptionalSplitId split = {};
+  edge::TabGetSplit(active, &split);
+  if (!split.hasValue) {
+    return 0;
+  }
+  const edge::SplitMembers members(tsm, split.token);
+  const int count = std::min(members.Count(), kMemberBufferSize);
+  for (int i = 0; i < count; i++) {
+    out[i] = edge::TabContents(members.TabAt(i));
+  }
+  return count;
+}
+
 // What happens to the tab of the member that leaves a split.
 enum class MemberFate : uint8_t {
   kClose,      // the tab closes

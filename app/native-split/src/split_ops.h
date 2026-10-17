@@ -197,6 +197,50 @@ inline void SwapActive(void* mcv) {
   }
 }
 
+// Put member i's page back in pane i of a grown split. When CloseMember
+// re-creates the split under a new id, Edge re-feeds only the member it
+// activates, through a path that bypasses SetWebContentsAtIndex, and into pane
+// 0: the other panes are left empty and the first member is in no pane at all.
+// Mismatched panes are emptied first, so no page is pulled out of a pane that
+// still needs it, then filled. Runs once the layout has settled, after Edge's
+// own re-feed.
+inline void SyncPanesToMembers(void* mcv) {
+  void* tsm = mcv ? edge::McvTabStripModel(mcv) : nullptr;
+  const bool isGrownView =
+      tsm && edge::McvCount(mcv) > split_data::kMinSplitMembers;
+  if (!isGrownView) {
+    return;
+  }
+  void* contents[split_data::kMemberBufferSize] = {};
+  const int memberCount = split_data::ActiveSplitContents(tsm, contents);
+  const int paneCount =
+      std::min(memberCount, static_cast<int>(edge::McvCount(mcv)));
+  bool isMismatched[split_data::kMemberBufferSize] = {};
+  int mismatches = 0;
+  for (int i = 0; i < paneCount; i++) {
+    void* container = edge::McvContainerAt(mcv, i);
+    isMismatched[i] = edge::ContainerWebContents(container) != contents[i];
+    if (isMismatched[i]) {
+      edge::ContentsWebViewSetContents(edge::ContainerWebView(container),
+                                       nullptr);
+      mismatches++;
+    }
+  }
+  for (int i = 0; i < paneCount; i++) {
+    if (!isMismatched[i]) {
+      continue;
+    }
+    edge::ContentsWebViewSetContents(
+        edge::ContainerWebView(edge::McvContainerAt(mcv, i)), contents[i]);
+    edge::WebContentsWasShown(contents[i]);
+  }
+  if (mismatches > 0) {
+    edge::InvalidateLayout(mcv);
+    Log("[sync] re-fed %d of %d panes to match the split", mismatches,
+        paneCount);
+  }
+}
+
 // The pane that takes over activity when `closing` closes: the one before it in
 // reading order, else the one after.
 inline int NeighbourLeaf(const Node& tree, int closing) {
@@ -243,8 +287,10 @@ inline bool RemovePaneFromSplit(void* mcv, int pane,
   Trees()[mcv] = tree;
   anim::ForgetTab(closingContents);
   // Laid out on Edge's own schedule, after it re-feeds the containers; each
-  // pane then eases from where its tab was (anim::LastDrawn).
+  // pane then eases from where its tab was (anim::LastDrawn). Once that has
+  // settled, the panes are matched to the members and nudged to paint.
   edge::InvalidateLayout(mcv);
+  repaint::ScheduleAll();
   Log("[close] pane %d left the split (%s); %d panes remain", pane,
       fate == split_data::MemberFate::kClose ? "closed" : "kept as a tab",
       remaining);

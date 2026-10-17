@@ -433,6 +433,7 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   }
   const bool isRenderNudge = message == WM_TIMER && wparam == repaint::kTimerId;
   if (isRenderNudge) {
+    split_ops::SyncPanesToMembers(edge::McvForWindow(hwnd));
     repaint::NudgeAll();
     return 0;
   }
