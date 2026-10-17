@@ -26,6 +26,8 @@
 #include "tabdrag.h"
 #include "tabrows.h"
 #include "theme.h"
+#include "assistant.h"
+#include "gemini.h"
 
 namespace fixedge::control {
 
@@ -159,6 +161,10 @@ inline BOOL CALLBACK BreakUpWindowSplits(HWND hwnd, LPARAM /*unused*/) {
 // animation timer and the hot-keys.
 inline void Teardown(HWND hwnd) {
   EnumWindows(BreakUpWindowSplits, 0);
+  // Restore the chat button and drop every Gemini panel while the hooks that
+  // render them are still in place, so nothing of ours outlives the DLL.
+  assistant::Apply(edge::McvForWindow(hwnd), config::Assistant::kCopilot);
+  gemini::RemoveAll();
   drag::Cancel();
   tabdrag::Cancel();
   overlay::Remove();
@@ -244,6 +250,8 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     // Nor are the link-handler detours (they pass through while that feature
     // is off).
     protocol_handlers::EnableHooks();
+    // The assistant reskin is its own feature, not a split hook: keep it live.
+    assistant::EnableAll();
   }
 }
 
@@ -291,6 +299,7 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
                 reinterpret_cast<LPARAM>(&liftedCount));
     Log("[handlers] lifted %zu blocked link handler(s)", liftedCount);
   }
+  assistant::Apply(edge::McvForWindow(hwnd), wire.assistant);
 }
 
 // The config read from disk at Install, applied on the UI thread via a posted

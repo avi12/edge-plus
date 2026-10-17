@@ -18,6 +18,8 @@
 #include "drag.h"
 #include "grip.h"
 #include "state.h"
+#include "assistant.h"
+#include "gemini.h"
 
 namespace fixedge::hooks {
 
@@ -74,6 +76,8 @@ inline Calc_t o_calc = nullptr;
 inline void* __fastcall h_calc(void* self, void* out, void* sizeBounds) {
   void* mcv = edge::McvFromLayoutBase(self);
   g_activeMcv = mcv;
+  // Keep an open Gemini panel glued to the right edge through any relayout.
+  gemini::Reposition(mcv);
   const bool isBounded = edge::Field<uint8_t>(sizeBounds, 0x4) == 1 &&
                          edge::Field<uint8_t>(sizeBounds, 0xc) == 1;
   const int width = edge::Field<int32_t>(sizeBounds, 0x0);
@@ -476,6 +480,9 @@ inline bool InstallAll() {
           reinterpret_cast<void*>(tabrows::h_calculate_ideal_bounds),
           &tabrows::o_calculate_ideal_bounds,
           "TabStripLayoutHelper::CalculateIdealBounds");
+  // The browser-assistant reskin: independent of the split (gated on the
+  // chosen assistant), so it stays live even when the split is toggled off.
+  assistant::Install();
   control::Install();  // the add-pane control channel (UI-thread trigger)
   return true;
 }
