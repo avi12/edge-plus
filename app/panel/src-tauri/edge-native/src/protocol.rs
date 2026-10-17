@@ -13,7 +13,7 @@ use windows_sys::Win32::System::Threading::{OpenEventW, SetEvent, EVENT_MODIFY_S
 
 // Must match config::kIdCapacity in app/native-split/src/config.h.
 const ID_CAPACITY: usize = 64;
-// struct Wire's fields, in order: five u32s, then the two ids.
+// struct Wire's fields, in order: five u32s, the two ids, then the assistant.
 const SPLIT_ACTIVE_OFFSET: usize = 0;
 const THEMING_ACTIVE_OFFSET: usize = 4;
 const PROTOCOL_HANDLERS_ACTIVE_OFFSET: usize = 8;
@@ -21,7 +21,8 @@ const LIGHT_LENGTH_OFFSET: usize = 12;
 const DARK_LENGTH_OFFSET: usize = 16;
 const LIGHT_ID_OFFSET: usize = 20;
 const DARK_ID_OFFSET: usize = LIGHT_ID_OFFSET + ID_CAPACITY;
-const WIRE_SIZE: usize = DARK_ID_OFFSET + ID_CAPACITY;
+const ASSISTANT_OFFSET: usize = DARK_ID_OFFSET + ID_CAPACITY;
+const WIRE_SIZE: usize = ASSISTANT_OFFSET + 4;
 // Must match kConfigEvent in app/native-split/src/dllmain.cpp.
 const CONFIG_EVENT: &str = r"Local\fixedge-config-changed";
 
@@ -34,6 +35,9 @@ pub struct DllConfig<'a> {
     pub protocol_handlers_active: bool,
     pub light_id: &'a str,
     pub dark_id: &'a str,
+    /// The chat button's assistant (0 = Copilot, 1 = Gemini), matching
+    /// `config::Assistant`.
+    pub assistant: u32,
 }
 
 /// Write the desired state to the config file the DLL reads (atomically, so a
@@ -72,6 +76,7 @@ fn encode(config: &DllConfig) -> [u8; WIRE_SIZE] {
         DARK_ID_OFFSET,
         config.dark_id,
     );
+    wire[ASSISTANT_OFFSET..ASSISTANT_OFFSET + 4].copy_from_slice(&config.assistant.to_le_bytes());
     wire
 }
 
@@ -111,9 +116,9 @@ mod tests {
     }
 
     #[test]
-    fn the_wire_is_config_h_s_148_bytes() {
-        // config.h static_asserts the same size: 5 u32 fields + 2 ids of 64.
-        assert_eq!(WIRE_SIZE, 148);
+    fn the_wire_is_config_h_s_152_bytes() {
+        // config.h static_asserts the same size: 6 u32 fields + 2 ids of 64.
+        assert_eq!(WIRE_SIZE, 152);
     }
 
     #[test]
@@ -124,6 +129,7 @@ mod tests {
             protocol_handlers_active: true,
             light_id: "abc",
             dark_id: "",
+            assistant: 1,
         });
         assert_eq!(u32_at(&wire, 0), 0);
         assert_eq!(u32_at(&wire, 4), 1);
@@ -131,5 +137,6 @@ mod tests {
         assert_eq!(u32_at(&wire, 12), 3);
         assert_eq!(u32_at(&wire, 16), 0);
         assert_eq!(&wire[20..23], b"abc");
+        assert_eq!(u32_at(&wire, ASSISTANT_OFFSET), 1);
     }
 }

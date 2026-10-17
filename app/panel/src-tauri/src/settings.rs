@@ -35,6 +35,29 @@ pub struct Theming {
     pub dark: String,
 }
 
+/// The browser assistant the toolbar chat button opens. The wire values match
+/// `config::Assistant` in `app/native-split/src/config.h`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Assistant {
+    /// Edge's own Copilot: the button and pane stay stock.
+    #[default]
+    Copilot,
+    /// Gemini: the button is reskinned and opens Gemini in a side panel.
+    Gemini,
+}
+
+impl Assistant {
+    /// The u32 the DLL reads from the config file (see `config.h`).
+    #[must_use]
+    pub fn wire(self) -> u32 {
+        match self {
+            Self::Copilot => 0,
+            Self::Gemini => 1,
+        }
+    }
+}
+
 /// The feature switches, with their defaults (split on, the rest off).
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -49,6 +72,11 @@ pub struct Features {
     /// A site's request to handle a link type is only blocked when the user
     /// says so (the DLL's `protocol_handlers.h`).
     pub protocol_handlers: bool,
+    /// Which assistant the toolbar chat button opens. Not a switch but a
+    /// choice; picking Gemini is what [`Feature::Assistant`] treats as "on"
+    /// (it calls into `msedge.dll`, so an Edge update forces it back to
+    /// Copilot the same way a mismatched build switches the others off).
+    pub assistant: Assistant,
 }
 
 impl Default for Features {
@@ -58,11 +86,12 @@ impl Default for Features {
             theming: false,
             quiet_dev_mode: false,
             protocol_handlers: false,
+            assistant: Assistant::Copilot,
         }
     }
 }
 
-/// One feature switch, named the way [`Features`] serializes it.
+/// One feature the panel owns, named the way [`Features`] serializes it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Feature {
@@ -70,14 +99,17 @@ pub enum Feature {
     Theming,
     QuietDevMode,
     ProtocolHandlers,
+    /// The non-default assistant (Gemini) is selected.
+    Assistant,
 }
 
 impl Feature {
-    pub const ALL: [Self; 4] = [
+    pub const ALL: [Self; 5] = [
         Self::NativeSplit,
         Self::Theming,
         Self::QuietDevMode,
         Self::ProtocolHandlers,
+        Self::Assistant,
     ];
 }
 
@@ -89,6 +121,7 @@ impl Features {
             Feature::Theming => self.theming,
             Feature::QuietDevMode => self.quiet_dev_mode,
             Feature::ProtocolHandlers => self.protocol_handlers,
+            Feature::Assistant => self.assistant == Assistant::Gemini,
         }
     }
 
@@ -96,7 +129,10 @@ impl Features {
     /// must be loaded.
     #[must_use]
     pub fn needs_dll(self) -> bool {
-        self.native_split || self.theming || self.protocol_handlers
+        self.native_split
+            || self.theming
+            || self.protocol_handlers
+            || self.assistant == Assistant::Gemini
     }
 
     pub fn set(&mut self, feature: Feature, is_on: bool) {
@@ -105,6 +141,13 @@ impl Features {
             Feature::Theming => self.theming = is_on,
             Feature::QuietDevMode => self.quiet_dev_mode = is_on,
             Feature::ProtocolHandlers => self.protocol_handlers = is_on,
+            Feature::Assistant => {
+                self.assistant = if is_on {
+                    Assistant::Gemini
+                } else {
+                    Assistant::Copilot
+                };
+            }
         }
     }
 }
