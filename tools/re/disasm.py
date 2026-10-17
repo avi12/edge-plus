@@ -1,6 +1,6 @@
 # Disassemble named msedge.dll functions, resolving call/lea targets to PDB symbol names.
 # Answers "where is the split capped at two" by reading the geometry functions directly.
-import ctypes as C, ctypes.wintypes as W, sys, struct
+import ctypes as C, ctypes.wintypes as W, os, sys, struct
 from capstone import Cs, CS_ARCH_X86, CS_MODE_64, CS_OP_IMM, CS_OP_MEM, x86
 
 CACHE = sys.argv[1]
@@ -58,7 +58,7 @@ for t in TARGETS:
     rva, size = addr_of(t)
     if rva is None:
         print(f"\n### {t}: not found"); continue
-    size = min(size or 0, 500) or 400
+    size = min(size or 0, int(os.environ.get("DISASM_MAX", "500"))) or 400
     fo = rva_foff(rva); code = d[fo:fo+size]
     print(f"\n### {t}  rva {rva:#x}  size {size}")
     for ins in md.disasm(code, BASE+rva):
