@@ -22,6 +22,7 @@
 #include "offer.h"
 #include "overlay.h"
 #include "tabdrag.h"
+#include "tabrows.h"
 #include "theme.h"
 
 namespace fixedge::control {
@@ -368,6 +369,9 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
       return;
     case Command::kEnsureGrips:
       EnsureGripsByCommand(hwnd);
+      return;
+    case Command::kDumpTabRows:
+      tabrows::Dump(edge::McvForWindow(hwnd));
       return;
     case Command::kTeardown:
       Teardown(hwnd);

@@ -475,6 +475,14 @@ inline uint32_t McvOrientation(void* mcv) {
 inline size_t ViewChildCount(void* view) {
   return Field<size_t>(view, off::VIEW_child_count);
 }
+// Child `index` (< ViewChildCount) of `view`.
+inline void* ViewChildAt(void* view, size_t index) {
+  return Field<void**>(view, off::VIEW_children)[index];
+}
+// Where `object`'s vtable sits in msedge.dll, to name its class from the PDB.
+inline uintptr_t VtableRva(void* object) {
+  return reinterpret_cast<uintptr_t>(Field<void*>(object, 0)) - g_base;
+}
 
 // CalculateProposedLayout runs on the LayoutManagerBase subobject embedded at
 // MCV_layout_base.
@@ -665,6 +673,38 @@ inline void* DragContextTabFor(void* context, void* webContents) {
   using TabFn = void*(__fastcall*)(void*, void*);
   return reinterpret_cast<TabFn>(VirtualFunction(
       context, off::DRAGCONTEXT_vtbl_GetTabForContents))(context, webContents);
+}
+
+// --- the tab list's layout (TabStripLayoutHelper) ------------------------------
+
+inline size_t TabLayoutSlotCount(void* helper) {
+  return Field<size_t>(helper, off::TABLAYOUT_slot_count);
+}
+// The tab view in slot `index`, or null for a slot that holds no tab.
+inline void* TabLayoutSlotTab(void* helper, size_t index) {
+  auto* slots = Field<uint8_t*>(helper, off::TABLAYOUT_slots);
+  uint8_t* slot = slots + index * off::TABSLOT_size;
+  const bool isTab =
+      Field<uint32_t>(slot, off::TABSLOT_type) == off::TABSLOT_type_tab;
+  return isTab ? Field<void*>(slot, off::TABSLOT_view) : nullptr;
+}
+inline bool IsTabViewInSplit(void* tabView) {
+  return (Field<uint8_t>(tabView, off::TABVIEW_split_has_value) & 1) != 0;
+}
+// Whether `other` is a tab of the same class as `tabView`, in the same split.
+inline bool IsTabViewInSameSplit(void* tabView, void* other) {
+  const bool isSameClass = Field<void*>(other, 0) == Field<void*>(tabView, 0);
+  return isSameClass && IsTabViewInSplit(other) &&
+         memcmp(reinterpret_cast<uint8_t*>(tabView) + off::TABVIEW_split_token,
+                reinterpret_cast<uint8_t*>(other) + off::TABVIEW_split_token,
+                off::TABVIEW_split_token_size) == 0;
+}
+// CalculateIdealBounds's result: one rect per slot.
+inline Rect* IdealBoundsRects(void* result) {
+  return Field<Rect*>(result, off::IDEALBOUNDS_data);
+}
+inline size_t IdealBoundsCount(void* result) {
+  return Field<size_t>(result, off::IDEALBOUNDS_count);
 }
 
 // Where a mouse event happened, in the window's DIPs (its root location).

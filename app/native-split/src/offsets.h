@@ -406,6 +406,18 @@ inline constexpr uintptr_t SplitA11yLabel_paneidx_jne = 0x42e6faf;
 // means a click on pane 3+ after unload only mis-flags the primary pane.
 inline constexpr uintptr_t SetActiveIndex_index_jae = 0xc931388;
 
+// --- a split's tabs in the tab list (tabrows.h) ---
+// The horizontal strip and the vertical list lay tabs out through
+// TabStripLayoutHelper, which draws a split as one row of two tabs. With 3+
+// members every member after the first pair is given the second half's rect, so
+// they pile up in one slot (overlapping titles, a hover showing another pane).
+// Result* TabStripLayoutHelper::CalculateIdealBounds(this, Result* out,
+// std::optional<int> availableWidth): one Rect per slot, {Rect* data, size_t
+// count} at the start of the result. UpdateIdealBounds stores it and
+// EdgeTabStripLayoutHelper::CalculatePreferredHeight sizes the container from it.
+inline constexpr uintptr_t TabStripLayoutHelper_CalculateIdealBounds =
+    0x105cb56;
+
 // --- theming (docs/re/theming.md) ---
 // The whole feature rides one Edge entry point. ThemeService applies a theme
 // that is already INSTALLED in the profile; the panel installs each theme (via
@@ -670,9 +682,31 @@ inline constexpr int TABDRAG_end_complete = 0;
 inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetTabForContents = 0x3a0;
 inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetTabStripModel = 0x3c0;
 
+// --- the tab list's layout (tabrows.h) ---
+// TabStripLayoutHelper's slots, {data, count}: TABSLOT_size bytes each, a type
+// (TABSLOT_type_tab for a tab; the others are group headers) and the slot's
+// TabSlotView*.
+inline constexpr uintptr_t TABLAYOUT_slots = 0x38;
+inline constexpr uintptr_t TABLAYOUT_slot_count = 0x40;
+inline constexpr size_t TABSLOT_size = 0x38;
+inline constexpr uintptr_t TABSLOT_type = 0x00;
+inline constexpr uint32_t TABSLOT_type_tab = 0;
+inline constexpr uintptr_t TABSLOT_view = 0x08;
+// A tab view's split: std::optional of the split's 16-byte token, with the
+// has-value flag after it.
+inline constexpr uintptr_t TABVIEW_split_token = 0x358;
+inline constexpr size_t TABVIEW_split_token_size = 16;
+inline constexpr uintptr_t TABVIEW_split_has_value = 0x368;
+// CalculateIdealBounds's result: {gfx::Rect* data, size_t count}, one Rect per
+// slot.
+inline constexpr uintptr_t IDEALBOUNDS_data = 0x00;
+inline constexpr uintptr_t IDEALBOUNDS_count = 0x08;
+
 // --- views::View ---
 // View* parent_ (null at the widget's root view)
 inline constexpr uintptr_t VIEW_parent = 0x198;
+// View** children_ data, the size-based vector before VIEW_child_count
+inline constexpr uintptr_t VIEW_children = 0x1a0;
 // size_t: the number of children (AddChildViewAt's "at the end" index)
 inline constexpr uintptr_t VIEW_child_count = 0x1a8;
 // gfx::Rect bounds_ in parent coords (GetLocalBounds reads size @+0x1d0)

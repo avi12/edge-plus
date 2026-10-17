@@ -13,6 +13,7 @@
 #include "menu.h"
 #include "control.h"
 #include "dividers.h"
+#include "tabrows.h"
 #include "drag.h"
 #include "grip.h"
 #include "state.h"
@@ -458,6 +459,12 @@ inline bool InstallAll() {
                  previousBytes);
   Log("[patch] SetActiveIndex index check NOPed (was 0x%02x 0x%02x)",
       previousBytes[0], previousBytes[1]);
+  // The tab list piles a split bigger than a pair onto one slot; give each of
+  // its tabs a slot of its own (tabrows.h).
+  Install(rva::TabStripLayoutHelper_CalculateIdealBounds,
+          reinterpret_cast<void*>(tabrows::h_calculate_ideal_bounds),
+          &tabrows::o_calculate_ideal_bounds,
+          "TabStripLayoutHelper::CalculateIdealBounds");
   control::Install();  // the add-pane control channel (UI-thread trigger)
   return true;
 }
