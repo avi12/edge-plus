@@ -718,6 +718,11 @@ enum class SplitAction : int {
 // Decoded from kEdgeSplitWindowMoreIcon: CANVAS_DIMENSIONS 16, MOVE_TO x y,
 // R_ARC_TO rx ry angle large sweep dx dy, CLOSE.
 inline constexpr int ICON_NEW_PATH = 0;
+// PATH_COLOR_ARGB a r g b: the colour of the next path, instead of the colour
+// the icon is drawn in. Id 3: it is the command taking four arguments in
+// gfx::GetCommandArgumentCount's table (rva 0x1291be28 here: 0 0 1 4 0 1 0 2 2
+// 7 7 ...), where id 1 takes none.
+inline constexpr int ICON_PATH_COLOR_ARGB = 3;
 inline constexpr int ICON_MOVE_TO = 7;
 inline constexpr int ICON_LINE_TO = 11;    // from kArrowUpIcon
 inline constexpr int ICON_R_LINE_TO = 12;  // from kArrowUpIcon

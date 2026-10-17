@@ -4,6 +4,7 @@
 // dots, and the ⋯ row's arrows — Edge's own ↑ and ↓, and ← → as quarter turns
 // of its ↑, so all four come from one icon family.
 #pragma once
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <initializer_list>
@@ -106,31 +107,102 @@ inline const VectorIcon* Grip() {
 // --- the Gemini spark ----------------------------------------------------------
 
 // Gemini's four-pointed spark on a 24 canvas: its points at the canvas's edge
-// midpoints, joined by quarter circles centred on the corners, so each side
-// curves in toward the middle (sweep 0 = counter-clockwise picks that centre).
+// midpoints (top T, right R, bottom B, left L), joined by quarter circles
+// centred on the corners, so each side curves in toward the middle (sweep 0 =
+// counter-clockwise picks that centre). Drawn in Gemini's colours, blue
+// through purple to red from left to right: the whole spark in the first
+// colour, then the part right of each next cut over it in the next colour,
+// every layer overlapping the one below so no seam shows between them.
+inline constexpr float kSparkCanvasSize = 24.f;
+inline constexpr float kSparkRadius = 10.f;
+inline constexpr float kSparkCentre = 12.f;  // T and B's x, L and R's y
+inline constexpr float kSparkNear =
+    kSparkCentre - kSparkRadius;                                 // T's y, L's x
+inline constexpr float kSparkFar = kSparkCentre + kSparkRadius;  // B's y, R's x
+inline constexpr int kSparkBandCount = 8;
+struct SparkColor {
+  float red, green, blue;
+};
+inline constexpr SparkColor kSparkBlue{0x42, 0x85, 0xf4};
+inline constexpr SparkColor kSparkPurple{0x9b, 0x72, 0xcb};
+inline constexpr SparkColor kSparkRed{0xd9, 0x65, 0x70};
+
+inline SparkColor SparkBandColor(int band) {
+  const float position =
+      static_cast<float>(band) / static_cast<float>(kSparkBandCount - 1);
+  const bool isFirstHalf = position < 0.5f;
+  const SparkColor from = isFirstHalf ? kSparkBlue : kSparkPurple;
+  const SparkColor to = isFirstHalf ? kSparkPurple : kSparkRed;
+  const float mix = (isFirstHalf ? position : position - 0.5f) * 2.f;
+  return SparkColor{from.red + (to.red - from.red) * mix,
+                    from.green + (to.green - from.green) * mix,
+                    from.blue + (to.blue - from.blue) * mix};
+}
+
+inline void AddMoveTo(std::vector<PathElement>& path, float x, float y) {
+  path.push_back(CommandElement(off::ICON_MOVE_TO));
+  path.push_back(ArgumentElement(x));
+  path.push_back(ArgumentElement(y));
+}
+
+// An arc of a spark side, to the point `deltaX`, `deltaY` from where the path
+// is, on the same circle and direction as the side it is part of.
+inline void AddSparkArc(std::vector<PathElement>& path, float deltaX,
+                        float deltaY) {
+  path.push_back(CommandElement(off::ICON_R_ARC_TO));
+  for (const float argument :
+       {kSparkRadius, kSparkRadius, 0.f, 0.f, 0.f, deltaX, deltaY}) {
+    path.push_back(ArgumentElement(argument));
+  }
+}
+
+// The part of the spark at or right of x = `cut`, as one closed path.
+inline void AddSparkRightOf(std::vector<PathElement>& path, float cut) {
+  if (cut <= kSparkNear) {  // the whole spark: T, R, B, L, back to T
+    AddMoveTo(path, kSparkCentre, kSparkNear);
+    AddSparkArc(path, kSparkRadius, kSparkRadius);
+    AddSparkArc(path, -kSparkRadius, kSparkRadius);
+    AddSparkArc(path, -kSparkRadius, -kSparkRadius);
+    AddSparkArc(path, kSparkRadius, -kSparkRadius);
+  } else if (cut < kSparkCentre) {  // cuts the two left sides, keeps T
+    const float reach = std::sqrt(kSparkRadius * kSparkRadius -
+                                  (cut - kSparkNear) * (cut - kSparkNear));
+    const float upperY = kSparkNear + reach;  // on the L-to-T side
+    const float lowerY = kSparkFar - reach;   // on the B-to-L side
+    AddMoveTo(path, cut, upperY);
+    AddSparkArc(path, kSparkCentre - cut, kSparkNear - upperY);
+    AddSparkArc(path, kSparkRadius, kSparkRadius);
+    AddSparkArc(path, -kSparkRadius, kSparkRadius);
+    AddSparkArc(path, cut - kSparkCentre, lowerY - kSparkFar);
+  } else {  // cuts the two right sides, keeps R
+    const float reach = std::sqrt(kSparkRadius * kSparkRadius -
+                                  (kSparkFar - cut) * (kSparkFar - cut));
+    const float upperY = kSparkNear + reach;  // on the T-to-R side
+    const float lowerY = kSparkFar - reach;   // on the R-to-B side
+    AddMoveTo(path, cut, upperY);
+    AddSparkArc(path, kSparkFar - cut, kSparkCentre - upperY);
+    AddSparkArc(path, cut - kSparkFar, lowerY - kSparkCentre);
+  }
+  path.push_back(CommandElement(off::ICON_CLOSE));
+}
+
 inline const VectorIcon* GeminiSpark() {
   static const VectorIcon* icon = [] {
-    constexpr float kCanvasSize = 24.f;
-    constexpr float kTopX = 12.f;
-    constexpr float kTopY = 2.f;
-    constexpr float kRadius = 10.f;
-    std::vector<PathElement> path{
-        CommandElement(off::ICON_CANVAS_DIMENSIONS),
-        ArgumentElement(kCanvasSize), CommandElement(off::ICON_MOVE_TO),
-        ArgumentElement(kTopX), ArgumentElement(kTopY)};
-    // Top -> right -> bottom -> left -> top, one radius across and down each.
-    const float steps[][2] = {{kRadius, kRadius},
-                              {-kRadius, kRadius},
-                              {-kRadius, -kRadius},
-                              {kRadius, -kRadius}};
-    for (const auto& step : steps) {
-      path.push_back(CommandElement(off::ICON_R_ARC_TO));
-      for (const float argument :
-           {kRadius, kRadius, 0.f, 0.f, 0.f, step[0], step[1]}) {
-        path.push_back(ArgumentElement(argument));
+    std::vector<PathElement> path{CommandElement(off::ICON_CANVAS_DIMENSIONS),
+                                  ArgumentElement(kSparkCanvasSize)};
+    constexpr float kOpaque = 255.f;
+    const float bandWidth =
+        (kSparkFar - kSparkNear) / static_cast<float>(kSparkBandCount);
+    for (int band = 0; band < kSparkBandCount; band++) {
+      const SparkColor color = SparkBandColor(band);
+      path.push_back(CommandElement(off::ICON_NEW_PATH));
+      path.push_back(CommandElement(off::ICON_PATH_COLOR_ARGB));
+      for (const float channel :
+           {kOpaque, color.red, color.green, color.blue}) {
+        path.push_back(ArgumentElement(channel));
       }
+      AddSparkRightOf(path, kSparkNear + bandWidth * static_cast<float>(band));
     }
-    path.push_back(CommandElement(off::ICON_CLOSE));
     return Build("kFixEdgeGeminiSparkIcon", path);
   }();
   return icon;
