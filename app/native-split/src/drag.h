@@ -15,6 +15,7 @@
 #include "geometry.h"
 #include "overlay.h"
 #include "repaint.h"
+#include "split_ops.h"
 #include "state.h"
 
 namespace fixedge::drag {
@@ -70,6 +71,7 @@ inline overlay::Style StyleOf(dock::Zone zone) {
     case dock::Zone::kRootEdge:
       return overlay::Style::kRoot;
     case dock::Zone::kSwap:
+    case dock::Zone::kDetach:
       return overlay::Style::kSwap;
     default:
       return overlay::Style::kPane;
@@ -147,6 +149,16 @@ inline void Release() {
   overlay::Hide();
   if (!isDropping) {
     Log("[drag] released pane %d with no drop target", pane);
+    return;
+  }
+  const bool isDetaching = plan.zone == dock::Zone::kDetach;
+  if (isDetaching) {
+    const bool hasDetached = split_ops::DetachPane(mcv, pane);
+    if (hasDetached) {
+      repaint::ScheduleAll();
+    }
+    Log("[drag] pane %d %s", pane,
+        hasDetached ? "detached as a tab" : "could not be detached");
     return;
   }
   Trees()[mcv] = std::move(plan.result);

@@ -15,10 +15,11 @@
 namespace fixedge::dock {
 
 enum class Zone : uint8_t {
-  kNone,      // nowhere to drop (outside, over the dragged pane, or a no-op)
+  kNone,      // nowhere to drop (over the dragged pane, or a no-op)
   kPaneEdge,  // beside a pane: `target` + `direction`
   kSwap,      // a pane's centre: trade places with `target`
   kRootEdge,  // an outer edge of the whole split: span it (`direction`)
+  kDetach,    // outside the split: the pane leaves it as a tab of its own
 };
 
 // How far in from an outer edge the pointer targets the whole split: a share
@@ -153,6 +154,25 @@ inline Plan Finish(const Node& tree, const Rect& layout, int pane,
   return plan;
 }
 
+// Releasing `pane` outside the split takes it out as a tab of its own. The
+// tree is unchanged here (the split's data model does the removal); the
+// preview is where the pane sits now.
+inline Plan DetachPlan(const Node& tree, const Rect& layout, int pane) {
+  Plan plan;
+  plan.zone = Zone::kDetach;
+  plan.target = pane;
+  plan.result = tree;
+  std::vector<LeafRect> leaves;
+  LayoutTree(tree, layout, kPaneGap, leaves);
+  for (const LeafRect& leafRect : leaves) {
+    const bool isDraggedPane = leafRect.leaf == pane;
+    if (isDraggedPane) {
+      plan.preview = leafRect.rect;
+    }
+  }
+  return plan;
+}
+
 // Resolve `point` (split coordinates) while dragging `pane` from `source`.
 // `shown` is the plan currently shown, for hysteresis. Precedence: the whole
 // split's outer band first (checked before any pane, as dockview's root target
@@ -170,7 +190,7 @@ inline Plan ResolveDrop(const Node& tree, const Rect& layout, Point point,
   const Rect reach{layout.x - overshoot, layout.y - overshoot,
                    layout.width + 2 * overshoot, layout.height + 2 * overshoot};
   if (!Contains(reach, point)) {
-    return {};
+    return isMoving ? DetachPlan(tree, layout, pane) : Plan{};
   }
   point.x = std::clamp(point.x, layout.x, layout.x + layout.width - 1);
   point.y = std::clamp(point.y, layout.y, layout.y + layout.height - 1);

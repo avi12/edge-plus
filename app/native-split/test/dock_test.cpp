@@ -75,12 +75,17 @@ void RunChecks() {
               plan.direction == Direction::kLeft,
           "left strip of pane 2 -> left of 2");
   }
-  // Nothing over the dragged pane itself, nor far outside the split.
+  // Nothing over the dragged pane itself; far outside the split it detaches.
   {
     Check(Resolve(row, layout, Point{1050, 400}, 3, none).zone == Zone::kNone,
           "over the dragged pane -> nothing");
-    Check(Resolve(row, layout, Point{600, 900}, 3, none).zone == Zone::kNone,
-          "100 DIP below the split -> nothing");
+    const Plan below = Resolve(row, layout, Point{600, 900}, 3, none);
+    Check(below.zone == Zone::kDetach && below.target == 3,
+          "100 DIP below the split -> detach pane 3");
+    Check(!Empty(below.preview), "detach previews the pane where it sits");
+    const Plan incoming =
+        ResolveIncoming(row, layout, Point{600, -40}, 4, none);
+    Check(incoming.zone == Zone::kNone, "an incoming tab never detaches");
   }
   // A slight overshoot is clamped in and still hits the outer band.
   {

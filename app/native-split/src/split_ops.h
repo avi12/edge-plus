@@ -213,7 +213,8 @@ inline int NeighbourLeaf(const Node& tree, int closing) {
 // its siblings share its space in proportion, and the rest of the layout stays.
 // Containers after the closed one are re-fed one slot earlier; the transition
 // eases every pane from where its tab was drawn to its new place. Returns false to leave a two-pane split to Edge. UI thread.
-inline bool ClosePane(void* mcv, int pane) {
+inline bool RemovePaneFromSplit(void* mcv, int pane,
+                                split_data::MemberFate fate) {
   void* tsm = edge::McvTabStripModel(mcv);
   const int memberCount = mcv ? edge::McvActiveSplitPanes(mcv) : 0;
   const bool isGrownSplit = tsm && memberCount > 2 && pane < memberCount;
@@ -229,7 +230,7 @@ inline bool ClosePane(void* mcv, int pane) {
   const void* activeContents =
       edge::ContainerWebContents(edge::McvContainerAt(mcv, nextActiveLeaf));
   const int remaining =
-      split_data::CloseMember(tsm, closingContents, activeContents);
+      split_data::CloseMember(tsm, closingContents, activeContents, fate);
   if (remaining == 0) {
     return false;
   }
@@ -239,8 +240,19 @@ inline bool ClosePane(void* mcv, int pane) {
   // Laid out on Edge's own schedule, after it re-feeds the containers; each
   // pane then eases from where its tab was (anim::LastDrawn).
   edge::InvalidateLayout(mcv);
-  Log("[close] pane %d closed; %d panes remain", pane, remaining);
+  Log("[close] pane %d left the split (%s); %d panes remain", pane,
+      fate == split_data::MemberFate::kClose ? "closed" : "kept as a tab",
+      remaining);
   return true;
+}
+
+inline bool ClosePane(void* mcv, int pane) {
+  return RemovePaneFromSplit(mcv, pane, split_data::MemberFate::kClose);
+}
+
+// Take pane `pane` out of the split as a standalone tab; nothing closes.
+inline bool DetachPane(void* mcv, int pane) {
+  return RemovePaneFromSplit(mcv, pane, split_data::MemberFate::kKeepAsTab);
 }
 
 }  // namespace fixedge::split_ops

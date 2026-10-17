@@ -413,14 +413,22 @@ inline int MemberShowing(void* tsm, void* root, void* const* memberTabs,
   return -1;
 }
 
-// Close the tab showing `closingContents`, a member of the active split, and
-// keep the other members split. Edge closes a member by dissolving the whole
-// split, so: dissolve keeping every tab, close the one tab, re-split the rest in
-// their order under a fresh id with the same visual, then activate the member
-// showing `activeContents`. Returns how many members remain (1 means the split
-// is gone and that tab fills the window), or 0 if nothing was done.
+// What happens to the tab of the member that leaves a split.
+enum class MemberFate : uint8_t {
+  kClose,      // the tab closes
+  kKeepAsTab,  // the tab stays in the strip, standalone
+};
+
+// Take the member showing `closingContents` out of the active split and keep
+// the other members split. Edge removes a member by dissolving the whole split,
+// so: dissolve keeping every tab, close the one tab (unless `fate` keeps it),
+// re-split the rest in their order under a fresh id with the same visual, then
+// activate the member showing `activeContents`. Returns how many members remain
+// (1 means the split is gone and that tab fills the window), or 0 if nothing
+// was done.
 inline int CloseMember(void* tsm, const void* closingContents,
-                       const void* activeContents) {
+                       const void* activeContents,
+                       MemberFate fate = MemberFate::kClose) {
   void* root = tsm ? edge::RootCollection(tsm) : nullptr;
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
   const bool hasActiveTab = tsm && root && active;
@@ -458,8 +466,10 @@ inline int CloseMember(void* tsm, const void* closingContents,
   const SplitSettings settings = ReadSettings(tsm, split.token);
 
   edge::RemoveSplitImpl(tsm, split.token, kTransactionalRemove);
-  edge::CloseTabAt(tsm,
-                   edge::GetIndexOfTabRecursive(root, memberTabs[closing]));
+  if (fate == MemberFate::kClose) {
+    edge::CloseTabAt(tsm,
+                     edge::GetIndexOfTabRecursive(root, memberTabs[closing]));
+  }
 
   const int remaining = memberCount - 1;
   if (remaining >= kMinSplitMembers) {
