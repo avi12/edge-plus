@@ -12,11 +12,15 @@
 // buttons (strip_page.h).
 #pragma once
 #include <windows.h>
+#include <cmath>
 #include <map>
 #include <string>
+#include <vector>
+#include "anim.h"
 #include "chat_action.h"
 #include "edge.h"
 #include "glic_library.h"
+#include "motion.h"
 #include "panel_layout.h"
 #include "reserve.h"
 #include "share_text.h"
@@ -48,6 +52,12 @@ struct Panel {
   void* parent = nullptr;
   HWND window = nullptr;         // the browser window the panel was built in
   bool isStripExpanded = false;  // the tab picker is open: the strip covers it
+  // The slide: the panel eases between hidden (0) and fully out (1) like
+  // Copilot's sidebar. `isWanted` is where it is heading; it starts from
+  // `slideFrom` at `slideStart`. The views stay visible until a close lands.
+  bool isWanted = false;
+  double slideFrom = 0;
+  ULONGLONG slideStart = 0;
   PanelMode mode = PanelMode::kApp;
   // What the chat menu asked for before the page was ready to do it (or before
   // glic gave way to the web app); share.h and glic.h carry it out.
@@ -90,17 +100,50 @@ inline Panel* PanelFor(void* mcv) {
   return entry == Panels().end() ? nullptr : &entry->second;
 }
 
+// Open as far as the user is concerned: it is, or is sliding out. A closing
+// panel is already closed to everything else.
 inline bool IsOpen(const Panel& panel) {
+  return panel.isWanted;
+}
+
+// On screen at all, which a closing panel still is until its slide lands.
+inline bool IsShown(const Panel& panel) {
   return edge::ViewGetVisible(panel.webView);
 }
 
-// Place the panel's two pages in the content area the MCV occupies.
+inline constexpr UINT_PTR kTimerId = 0xF1F0;
+inline constexpr UINT kFrameMs = 15;
+
+// How far out the panel is now, 0..1.
+inline double SlideFraction(const Panel& panel) {
+  const double target = panel.isWanted ? 1.0 : 0.0;
+  if (!anim::g_isEnabled) {
+    return target;
+  }
+  const double progress =
+      static_cast<double>(GetTickCount64() - panel.slideStart) /
+      motion::kDurationMs;
+  return panel.slideFrom + (target - panel.slideFrom) * motion::Ease(progress);
+}
+
+inline bool IsSliding(const Panel& panel) {
+  const double target = panel.isWanted ? 1.0 : 0.0;
+  return SlideFraction(panel) != target;
+}
+
+// Place the panel's two pages in the content area the MCV occupies, slid in
+// from the right edge by how far out it is.
 inline void Layout(void* mcv, const Panel& panel) {
-  const panel_layout::Layout layout = panel_layout::PanelLayout(
+  const double fraction = SlideFraction(panel);
+  panel_layout::Layout layout = panel_layout::PanelLayout(
       edge::ViewBounds(mcv), panel.isStripExpanded, HasStrip(panel));
+  const int hidden =
+      static_cast<int>(std::lround(layout.page.width * (1.0 - fraction)));
+  layout.page.x += hidden;
+  layout.strip.x += hidden;
   edge::SetViewBounds(panel.webView, layout.page);
   edge::SetViewBounds(panel.strip, layout.strip);
-  reserve::Set(mcv, layout.page.width);
+  reserve::Set(mcv, layout.page.width - hidden);
 }
 
 // Lay the page out again beside the panel, or across the whole window once it
@@ -114,8 +157,38 @@ inline void RelayoutPage(void* mcv) {
 // pass (called from the layout detour and WM_SIZE, both on the UI thread).
 inline void Reposition(void* mcv) {
   const Panel* panel = PanelFor(mcv);
-  if (panel && IsOpen(*panel)) {
+  if (panel && IsShown(*panel)) {
     Layout(mcv, *panel);
+  }
+}
+
+// WM_TIMER of the slide: lay out every sliding panel of `window` again, and
+// once a close has landed hide its pages. The timer stops when none slides.
+inline void Tick(HWND window) {
+  DropStale();
+  bool isAnySliding = false;
+  std::vector<void*> landed;
+  for (auto& [mcv, panel] : Panels()) {
+    if (panel.window != window || !IsShown(panel)) {
+      continue;
+    }
+    if (IsSliding(panel)) {
+      isAnySliding = true;
+    } else if (!panel.isWanted) {
+      landed.push_back(mcv);
+    }
+    edge::InvalidateLayout(mcv);
+    edge::LayoutImmediately(mcv);
+  }
+  for (void* mcv : landed) {
+    const Panel& panel = Panels().at(mcv);
+    edge::SetViewVisible(panel.webView, false);
+    edge::SetViewVisible(panel.strip, false);
+    reserve::Set(mcv, 0);
+    RelayoutPage(mcv);
+  }
+  if (!isAnySliding) {
+    KillTimer(window, kTimerId);
   }
 }
 
@@ -170,19 +243,21 @@ inline Panel* EnsurePanel(HWND window, void* mcv) {
 
 // Returns whether the panel is now open (the toolbar button's toggle).
 inline bool Toggle(HWND window, void* mcv) {
-  const Panel* panel = EnsurePanel(window, mcv);
+  Panel* panel = EnsurePanel(window, mcv);
   if (!panel) {
     return false;
   }
   const bool isOpening = !IsOpen(*panel);
-  edge::SetViewVisible(panel->webView, isOpening);
-  edge::SetViewVisible(panel->strip, isOpening && HasStrip(*panel));
+  panel->slideFrom = IsShown(*panel) ? SlideFraction(*panel) : 0.0;
+  panel->slideStart = GetTickCount64();
+  panel->isWanted = isOpening;
   if (isOpening) {
-    Layout(mcv, *panel);
+    edge::SetViewVisible(panel->webView, true);
+    edge::SetViewVisible(panel->strip, HasStrip(*panel));
     edge::ViewRequestFocus(panel->webView);
-  } else {
-    reserve::Set(mcv, 0);
   }
+  SetTimer(panel->window, kTimerId, kFrameMs, nullptr);
+  Layout(mcv, *panel);
   RelayoutPage(mcv);
   Log("[gemini] panel %s", isOpening ? "opened" : "closed");
   return isOpening;
@@ -221,6 +296,7 @@ inline void Remove(void* mcv) {
     return;
   }
   reserve::Set(mcv, 0);
+  KillTimer(panel->window, kTimerId);
   edge::ViewRemoveChild(panel->parent, panel->strip);
   edge::DeleteWebView(panel->strip);
   edge::ViewRemoveChild(panel->parent, panel->webView);

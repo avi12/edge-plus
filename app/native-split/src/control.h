@@ -470,6 +470,11 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
     anim::Tick();
     return 0;
   }
+  const bool isPanelSlide = message == WM_TIMER && wparam == gemini::kTimerId;
+  if (isPanelSlide) {
+    gemini::Tick(hwnd);
+    return 0;
+  }
   const bool isSharePoll = message == WM_TIMER && wparam == share::kTimerId;
   if (isSharePoll) {
     share::Tick();
