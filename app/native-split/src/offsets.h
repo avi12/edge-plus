@@ -614,6 +614,12 @@ inline constexpr uintptr_t
 // at +0, invoke at +8, destructor at +0x10, the default cancellation query at
 // +0x18; a BindState's bound state starts at BINDSTATE_first_bound_argument.
 inline constexpr uintptr_t BindStateBase_ctor = 0xf94c70;
+// BrotliDecoderResult BrotliDecoderDecompress(size_t encoded_size, const
+// uint8_t* encoded, size_t* decoded_size, uint8_t* decoded); 1 = success.
+inline constexpr uintptr_t BrotliDecoderDecompress = 0x1ebef00;
+// int zlib_internal::GzipUncompressHelper(Bytef* dest, uLongf* dest_length,
+// const Bytef* source, uLong source_length); 0 = Z_OK (uLong is 32 bits).
+inline constexpr uintptr_t GzipUncompressHelper = 0x2a53484;
 }  // namespace rva
 
 // Linear addresses (not RVAs): partition-alloc BRP-pool gate for raw_ptr acquire.

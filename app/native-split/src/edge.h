@@ -1483,6 +1483,35 @@ inline void __fastcall DestroyScriptCallback(const void* bindState) {
   g_liveScriptCallbacks--;
 }
 
+// Brotli-decompress `size` bytes at `data` with Edge's own decoder into `out`,
+// which must hold `decodedSize` bytes (a pak resource says its size up front).
+inline bool BrotliDecompress(const uint8_t* data, size_t size,
+                             size_t decodedSize, std::string* out) {
+  constexpr int kBrotliDecoderSuccess = 1;
+  out->resize(decodedSize);
+  size_t written = decodedSize;
+  using Fn = int(__fastcall*)(size_t, const uint8_t*, size_t*, uint8_t*);
+  const int result = reinterpret_cast<Fn>(At(rva::BrotliDecoderDecompress))(
+      size, data, &written, reinterpret_cast<uint8_t*>(out->data()));
+  out->resize(written);
+  return result == kBrotliDecoderSuccess;
+}
+
+// Gunzip `size` bytes at `data` with Edge's zlib into `out`, which must hold
+// `decodedSize` bytes (the size a gzip stream ends with).
+inline bool GzipDecompress(const uint8_t* data, size_t size, size_t decodedSize,
+                           std::string* out) {
+  constexpr int kZlibOk = 0;
+  out->resize(decodedSize);
+  uint32_t written = static_cast<uint32_t>(decodedSize);  // uLongf is 32 bits
+  using Fn = int(__fastcall*)(uint8_t*, uint32_t*, const uint8_t*, uint32_t);
+  const int result = reinterpret_cast<Fn>(At(rva::GzipUncompressHelper))(
+      reinterpret_cast<uint8_t*>(out->data()), &written, data,
+      static_cast<uint32_t>(size));
+  out->resize(written);
+  return result == kZlibOk;
+}
+
 // Whether every script callback has been destroyed within `timeoutMs`.
 inline bool WaitForScriptCallbacks(DWORD timeoutMs) {
   constexpr DWORD kStepMs = 20;
