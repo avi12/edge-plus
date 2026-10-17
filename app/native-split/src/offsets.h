@@ -420,10 +420,21 @@ inline constexpr uintptr_t SetActiveIndex_index_jae = 0xc931388;
 // extension, so it does not switch the active theme.)
 inline constexpr uintptr_t ThemeService_DoSetTheme = 0x87d7f60;
 // extensions::ExtensionRegistry* ExtensionRegistry::Get(BrowserContext*) and
-// the Extension* lookup on its enabled set (ExtensionSet at registry + 0x28):
+// the Extension* lookup on either of its sets (off::REGISTRY_*_set):
 // const Extension* ExtensionSet::GetByID(this, const std::string& id).
 inline constexpr uintptr_t ExtensionRegistry_Get = 0x108dae2;
 inline constexpr uintptr_t ExtensionSet_GetByID = 0x106e7ce;
+// A theme the panel installs through the external-extension loader arrives
+// DISABLED (disable reason "external extension") until the user accepts Edge's
+// "extension added" prompt, and Edge also switches a theme off when another
+// becomes active; a disabled theme never paints. Before a theme is applied the
+// DLL turns it on with the call the prompt's Enable button makes.
+// ExtensionRegistrar* ExtensionRegistrar::Get(BrowserContext*)
+inline constexpr uintptr_t ExtensionRegistrar_Get = 0x2babf90;
+// void ExtensionRegistrar::EnableExtension(this, const std::string& id): moves
+// the extension from the disabled set to the enabled one. It CHECKs that the
+// extension is in the disabled set, so only call it for one found there.
+inline constexpr uintptr_t ExtensionRegistrar_EnableExtension = 0x29a74fe;
 // void ThemeService::UseDefaultTheme(this): drop any extension theme. Used when
 // a mode has no theme assigned.
 inline constexpr uintptr_t ThemeService_UseDefaultTheme = 0x3171ba0;
@@ -697,8 +708,10 @@ inline constexpr uintptr_t CL_bounds = 0x0c;   // gfx::Rect {int x, y, w, h}
 // views::SizeBounds {SizeBound w{val,has}, h{val,has}}
 inline constexpr uintptr_t CL_avail = 0x1c;
 
-// extensions::ExtensionRegistry::enabled_extensions_, an ExtensionSet.
-inline constexpr uintptr_t REGISTRY_enabled_set = 0x28;
+// extensions::ExtensionRegistry's ExtensionSets: enabled at +8 (AddEnabled),
+// disabled at +0x28 (RemoveDisabled, EnableExtension).
+inline constexpr uintptr_t REGISTRY_enabled_set = 0x08;
+inline constexpr uintptr_t REGISTRY_disabled_set = 0x28;
 
 // --- gfx::Rect field offsets within CL_bounds ---
 inline constexpr uintptr_t RECT_x = 0x0;

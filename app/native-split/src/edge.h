@@ -1029,9 +1029,18 @@ inline const void* ThemeIdString(const char* themeId) {
   return &storage;
 }
 
-// The installed theme extension with id `themeId` in `profile`, or null if it
-// is not installed/enabled: ExtensionSet::GetByID on the registry's enabled set.
-inline void* ExtensionById(void* profile, const char* themeId) {
+// Where an installed extension sits in the profile's registry.
+enum class ExtensionState : uint8_t {
+  kAbsent,    // not installed
+  kEnabled,   // loaded and on (the active theme is)
+  kDisabled,  // installed but off (an inactive theme, or one not yet accepted)
+};
+
+// The installed extension with id `themeId` in `profile` and which set holds it
+// (ExtensionSet::GetByID on the registry's disabled, then enabled, set).
+inline void* ExtensionById(void* profile, const char* themeId,
+                           ExtensionState* state) {
+  *state = ExtensionState::kAbsent;
   using RegistryFn = void*(__fastcall*)(void*);
   void* registry =
       reinterpret_cast<RegistryFn>(At(rva::ExtensionRegistry_Get))(profile);
@@ -1039,9 +1048,39 @@ inline void* ExtensionById(void* profile, const char* themeId) {
     return nullptr;
   }
   using GetByIdFn = void*(__fastcall*)(void*, const void*);
-  return reinterpret_cast<GetByIdFn>(At(rva::ExtensionSet_GetByID))(
-      reinterpret_cast<uint8_t*>(registry) + off::REGISTRY_enabled_set,
-      ThemeIdString(themeId));
+  const auto getById =
+      reinterpret_cast<GetByIdFn>(At(rva::ExtensionSet_GetByID));
+  void* extension =
+      getById(reinterpret_cast<uint8_t*>(registry) + off::REGISTRY_disabled_set,
+              ThemeIdString(themeId));
+  if (extension) {
+    *state = ExtensionState::kDisabled;
+    return extension;
+  }
+  extension =
+      getById(reinterpret_cast<uint8_t*>(registry) + off::REGISTRY_enabled_set,
+              ThemeIdString(themeId));
+  if (extension) {
+    *state = ExtensionState::kEnabled;
+  }
+  return extension;
+}
+
+// Turn on the installed-but-disabled extension `themeId` (the call Edge's own
+// Enable button makes). It clears whatever disabled it, an external extension
+// the user never accepted or a theme that was switched away from. Only call for
+// an extension ExtensionById reported kDisabled: EnableExtension CHECKs that it
+// is in the disabled set.
+inline void EnableDisabledExtension(void* profile, const char* themeId) {
+  using GetRegistrarFn = void*(__fastcall*)(void*);
+  const void* registrar = reinterpret_cast<GetRegistrarFn>(
+      At(rva::ExtensionRegistrar_Get))(profile);
+  if (!registrar) {
+    return;
+  }
+  using EnableFn = void(__fastcall*)(const void*, const void*);
+  reinterpret_cast<EnableFn>(At(rva::ExtensionRegistrar_EnableExtension))(
+      registrar, ThemeIdString(themeId));
 }
 
 // Make `extension` the profile's active theme, live: DoSetTheme builds the theme

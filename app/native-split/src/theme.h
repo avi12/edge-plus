@@ -95,16 +95,24 @@ inline void Apply(void* hwnd, bool isDark) {
     Log("[theme] %s -> default theme", isDark ? "dark" : "light");
     return;
   }
-  void* extension = edge::ExtensionById(profile, wanted.value);
+  edge::ExtensionState state = edge::ExtensionState::kAbsent;
+  void* extension = edge::ExtensionById(profile, wanted.value, &state);
   if (!extension) {
     Log("[theme] %s theme %.*s not installed yet", isDark ? "dark" : "light",
         static_cast<int>(wanted.length), wanted.value);
     return;
   }
+  // A disabled theme never paints: Edge leaves a theme added from outside off
+  // until the user accepts it, and switches the previous one off on each change.
+  const bool isDisabled = state == edge::ExtensionState::kDisabled;
+  if (isDisabled) {
+    edge::EnableDisabledExtension(profile, wanted.value);
+  }
   edge::ThemeSetFromExtension(themeService, extension);
   ScheduleRepaint(hwnd);
-  Log("[theme] %s -> %.*s applied", isDark ? "dark" : "light",
-      static_cast<int>(wanted.length), wanted.value);
+  Log("[theme] %s -> %.*s applied (was %s)", isDark ? "dark" : "light",
+      static_cast<int>(wanted.length), wanted.value,
+      isDisabled ? "disabled" : "enabled");
 }
 
 // Apply whichever theme matches the current OS mode (a no-op when off).
