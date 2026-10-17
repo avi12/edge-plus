@@ -45,6 +45,15 @@ struct Drop {
 };
 inline std::optional<Drop> g_drop;
 
+// The drag's latest pointer move. A drag only advances on pointer moves, so
+// Alt pressed or released while the pointer rests would otherwise change nothing
+// until it moved; the key event replays this move instead.
+struct LastMove {
+  void* controller = nullptr;
+  Point screenPoint{};
+};
+inline LastMove g_lastMove;
+
 inline bool IsAltHeld() {
   return GetKeyState(VK_MENU) < 0;
 }
@@ -143,6 +152,7 @@ inline void LeaveAltMode() {
 inline void Cancel() {
   overlay::Hide();
   g_session = Session{};
+  g_lastMove = LastMove{};
   g_drop.reset();
 }
 
@@ -154,6 +164,7 @@ using ContinueDragging_t = int(__fastcall*)(void*, const Point*);
 inline ContinueDragging_t o_continue_dragging = nullptr;
 inline int __fastcall h_continue_dragging(void* controller,
                                           const Point* screenPoint) {
+  g_lastMove = LastMove{controller, *screenPoint};
   void* context = edge::DragContext(controller);
   void* tsm = context ? edge::DragContextTabStripModel(context) : nullptr;
   const bool isAltDock = tsm && IsAltHeld() && CanDock(controller, tsm);
@@ -192,6 +203,7 @@ inline void __fastcall h_end_drag(void* controller, int reason) {
   }
   overlay::Hide();
   g_session = Session{};
+  g_lastMove = LastMove{};
   o_end_drag(controller, reason);
   if (isDropping) {
     channel::Post(channel::CodeOf(channel::Command::kTabDrop));
@@ -208,6 +220,13 @@ inline void __fastcall h_tracker_event(void* tracker, void* event) {
                           type == off::EVENT_type_key_released;
   const bool isAltKeyEvent = isKeyEvent && IsAltKey(edge::KeyEventCode(event));
   if (isAltKeyEvent) {
+    // Replay the pointer's last move so the mode switches now, not on the next
+    // move: Alt down over a split's tab shows that split at once.
+    const bool isDragRunning = g_lastMove.controller != nullptr;
+    if (isDragRunning) {
+      const Point restingPoint = g_lastMove.screenPoint;
+      h_continue_dragging(g_lastMove.controller, &restingPoint);
+    }
     return;
   }
   o_tracker_event(tracker, event);
