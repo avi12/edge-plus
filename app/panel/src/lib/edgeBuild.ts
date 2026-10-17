@@ -10,7 +10,8 @@ const featureNames: Record<Feature, string> = {
   [Feature.NativeSplit]: "Split view",
   [Feature.Theming]: "Theming",
   [Feature.QuietDevMode]: "Hiding the developer-mode prompt",
-  [Feature.ProtocolHandlers]: "Asking to handle links"
+  [Feature.ProtocolHandlers]: "Asking to handle links",
+  [Feature.Assistant]: "Gemini as the assistant"
 };
 
 function joinNames(features: Feature[]): string {

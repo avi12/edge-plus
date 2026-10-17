@@ -1,7 +1,8 @@
 <script lang="ts">
+  import AssistantCard from "@/components/AssistantCard.svelte";
   import FeatureCard from "@/components/FeatureCard.svelte";
   import ThemingCard from "@/components/ThemingCard.svelte";
-  import type { AppState, Mode } from "@/lib/bridge";
+  import type { AppState, Assistant, Mode } from "@/lib/bridge";
   import * as bridge from "@/lib/bridge";
   import { Feature, LocalThemeKind } from "@/lib/bridge";
   import { describeUnsupported, describeUpdate } from "@/lib/edgeBuild";
@@ -23,6 +24,9 @@
   const handlerIcon =
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
       `<path d="M9 5 L16 12 L9 19 L2 12 Z"/><path d="M15 5 L22 12 L15 19 L12 16"/></svg>`;
+  const assistantIcon =
+    `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none">` +
+      `<path d="M12 2 A10 10 0 0 0 22 12 A10 10 0 0 0 12 22 A10 10 0 0 0 2 12 A10 10 0 0 0 12 2 Z"/></svg>`;
 
   const splitDescription =
     "Grows Edge's own split past two panes, loaded straight into Edge. Add panes above, below, " +
@@ -40,6 +44,10 @@
       "time\" no longer blocks the site for good; only Done on Ignore, or Block, does. Turning this " +
       "on (or opening Edge with it on) lifts every block so far, so blocked sites can ask again. " +
       "Live, no restart.";
+  const assistantDescription =
+    "Choose what the toolbar chat button opens. Gemini reskins the button and opens the Gemini " +
+      "web app in a side panel; you share a page the way the web app allows. Copilot leaves Edge's " +
+      "own button and pane untouched. Open Edge first.";
 
   let appState = $state<AppState | null>(null);
   let isDraggingOver = $state(false);
@@ -53,6 +61,11 @@
   const isThemingHeldOff = $derived(unsupported.has(Feature.Theming) && appState?.features.theming !== true);
   const isHandlersHeldOff = $derived(
     unsupported.has(Feature.ProtocolHandlers) && appState?.features.protocolHandlers !== true
+  );
+  // The assistant control is held off when Gemini can't run on this build and
+  // isn't already selected; Copilot (the default) is always available.
+  const isAssistantHeldOff = $derived(
+    unsupported.has(Feature.Assistant) && appState?.features.assistant !== "gemini"
   );
   // The update notice replaces the standing hint it would only repeat.
   const notices = $derived(
@@ -142,6 +155,10 @@
     appState = await bridge.setProtocolHandlers(value);
   }
 
+  async function onAssistant(value: Assistant): Promise<void> {
+    appState = await bridge.setAssistant(value);
+  }
+
   async function onAddStore(url: string): Promise<void> {
     appState = await bridge.addStoreTheme(url);
   }
@@ -201,6 +218,15 @@
       {onSetMode}
       onToggle={onTheming}
       theming={appState.theming}
+    />
+
+    <AssistantCard
+      assistant={appState.features.assistant}
+      description={assistantDescription}
+      disabled={isAssistantHeldOff}
+      icon={assistantIcon}
+      onChange={onAssistant}
+      title="Browser assistant"
     />
 
     <FeatureCard

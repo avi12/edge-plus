@@ -1,17 +1,16 @@
 <script lang="ts">
-  // The icon + title + description + toggle row shared by every feature card.
-  import Switch from "@/components/Switch.svelte";
+  // The icon + title + description row shared by every feature card. The
+  // trailing control (a switch, a select) is the caller's, passed as children.
+  import type { Snippet } from "svelte";
 
   interface Props {
     icon: string;
     title: string;
     description: string;
-    checked: boolean;
-    disabled?: boolean;
-    onchange: (value: boolean) => void;
+    children: Snippet;
   }
 
-  const { icon, title, description, checked, disabled = false, onchange }: Props = $props();
+  const { icon, title, description, children }: Props = $props();
 </script>
 
 <div class="head">
@@ -20,7 +19,7 @@
     <h2>{title}</h2>
     <p>{description}</p>
   </div>
-  <Switch {checked} {disabled} label={title} {onchange} />
+  {@render children()}
 </div>
 
 <style>

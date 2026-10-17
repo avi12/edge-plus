@@ -13,12 +13,19 @@ export const THEME_REFRESHED_EVENT = "theme-refreshed";
  */
 export const EDGE_UPDATED_EVENT = "edge-updated";
 
-/** One feature switch; the values match `Feature` in settings.rs. */
+/** One feature the panel owns; the values match `Feature` in settings.rs. */
 export enum Feature {
   NativeSplit = "nativeSplit",
   Theming = "theming",
   QuietDevMode = "quietDevMode",
-  ProtocolHandlers = "protocolHandlers"
+  ProtocolHandlers = "protocolHandlers",
+  Assistant = "assistant"
+}
+
+/** The browser assistant the chat button opens; matches `Assistant` in settings.rs. */
+export enum Assistant {
+  Copilot = "copilot",
+  Gemini = "gemini"
 }
 
 /** A newly seen Edge build and what it switched off (often nothing); matches `BuildChange` in edge_build.rs. */
@@ -61,6 +68,7 @@ export interface Features {
   theming: boolean;
   quietDevMode: boolean;
   protocolHandlers: boolean;
+  assistant: Assistant;
 }
 
 export interface AppState {
@@ -93,6 +101,10 @@ export function setSplit(enabled: boolean): Promise<AppState> {
 
 export function setTheming(enabled: boolean): Promise<AppState> {
   return invoke<AppState>("set_theming", { enabled });
+}
+
+export function setAssistant(assistant: Assistant): Promise<AppState> {
+  return invoke<AppState>("set_assistant", { assistant });
 }
 
 export function setQuietDevMode(enabled: boolean): Promise<AppState> {

@@ -1,5 +1,6 @@
 <script lang="ts">
   import CardHeader from "@/components/CardHeader.svelte";
+  import Switch from "@/components/Switch.svelte";
 
   interface Props {
     checked: boolean;
@@ -14,7 +15,9 @@
 </script>
 
 <section class="card">
-  <CardHeader {checked} {description} {disabled} {icon} {onchange} {title} />
+  <CardHeader {description} {icon} {title}>
+    <Switch {checked} {disabled} label={title} {onchange} />
+  </CardHeader>
 </section>
 
 <style>

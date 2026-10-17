@@ -2,6 +2,7 @@
   import Button from "@/components/Button.svelte";
   import CardHeader from "@/components/CardHeader.svelte";
   import Select from "@/components/Select.svelte";
+  import Switch from "@/components/Switch.svelte";
   import TextInput from "@/components/TextInput.svelte";
   import { LocalThemeKind } from "@/lib/bridge";
   import type { Mode, ThemeSource, Theming } from "@/lib/bridge";
@@ -98,14 +99,14 @@
 </script>
 
 <section class="card">
-  <CardHeader
-    checked={enabled}
-    {description}
-    {disabled}
-    {icon}
-    onchange={onToggle}
-    title="Theme by Windows light and dark"
-  />
+  <CardHeader {description} {icon} title="Theme by Windows light and dark">
+    <Switch
+      checked={enabled}
+      {disabled}
+      label="Theme by Windows light and dark"
+      onchange={onToggle}
+    />
+  </CardHeader>
 
   <div class="panel" class:dimmed={!enabled}>
     <div class="add-row">
