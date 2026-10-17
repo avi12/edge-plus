@@ -108,21 +108,27 @@ inline void UnregisterHotKeys(HWND hwnd) {
   }
 }
 
+// Whether `hwnd` is a top-level window of this Edge process with the browser
+// window class (it may still be a toast or bubble; callers check for a tab
+// strip).
+inline bool IsOurBrowserClassWindow(HWND hwnd) {
+  DWORD processId = 0;
+  GetWindowThreadProcessId(hwnd, &processId);
+  const bool isOurProcess = processId == GetCurrentProcessId();
+  if (!isOurProcess) {
+    return false;
+  }
+  wchar_t className[kClassNameLength] = {};
+  GetClassNameW(hwnd, className, kClassNameLength);
+  return wcscmp(className, kBrowserWindowClass) == 0;
+}
+
 // EnumWindows callback: break up every grown split in each of this process's
 // browser windows (all on this UI thread), so none outlives the DLL. Switching
 // the feature off leaves the user with plain tabs, not a split stock Edge would
 // mis-render.
 inline BOOL CALLBACK BreakUpWindowSplits(HWND hwnd, LPARAM /*unused*/) {
-  DWORD processId = 0;
-  GetWindowThreadProcessId(hwnd, &processId);
-  const bool isOurProcess = processId == GetCurrentProcessId();
-  if (!isOurProcess) {
-    return TRUE;
-  }
-  wchar_t className[kClassNameLength] = {};
-  GetClassNameW(hwnd, className, kClassNameLength);
-  const bool isBrowserWindow = wcscmp(className, kBrowserWindowClass) == 0;
-  if (!isBrowserWindow) {
+  if (!IsOurBrowserClassWindow(hwnd)) {
     return TRUE;
   }
   void* mcv = edge::McvForWindow(hwnd);
@@ -241,6 +247,19 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
   }
 }
 
+// EnumWindows callback: lift the link-handler blocks of the profile behind each
+// of this process's browser windows (protocol_handlers.h), adding the count to
+// the size_t at `lparam`. A profile with no window open is not reached.
+inline BOOL CALLBACK LiftWindowHandlerBlocks(HWND hwnd, LPARAM lparam) {
+  if (!IsOurBrowserClassWindow(hwnd)) {
+    return TRUE;
+  }
+  void* profile = edge::ProfileForTabStrip(edge::TsmForWindow(hwnd));
+  *reinterpret_cast<size_t*>(lparam) +=
+      protocol_handlers::LiftIgnoredHandlers(profile);
+  return TRUE;
+}
+
 // Apply the panel's desired state (config.h): which features are on, and which
 // theme to use for each OS mode. Read from the config file whenever the app
 // signals a change (OnConfigChanged), so both take effect live.
@@ -265,7 +284,13 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
     }
   }
   theme::ApplyConfig(hwnd, wire);
-  protocol_handlers::ApplyConfig(wire);
+  const bool isTurningHandlersOn = protocol_handlers::ApplyConfig(wire);
+  if (isTurningHandlersOn) {
+    size_t liftedCount = 0;
+    EnumWindows(LiftWindowHandlerBlocks,
+                reinterpret_cast<LPARAM>(&liftedCount));
+    Log("[handlers] lifted %zu blocked link handler(s)", liftedCount);
+  }
 }
 
 // The config read from disk at Install, applied on the UI thread via a posted
@@ -470,21 +495,12 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
 // EnumWindows callback: claim the first visible, titled browser window of this
 // process.
 inline BOOL CALLBACK FindBrowserWindow(HWND hwnd, LPARAM /*unused*/) {
-  DWORD processId = 0;
-  GetWindowThreadProcessId(hwnd, &processId);
-  const bool isOurProcess = processId == GetCurrentProcessId();
-  if (!isOurProcess) {
-    return TRUE;
-  }
   const bool isVisibleWithTitle =
       IsWindowVisible(hwnd) && GetWindowTextLengthW(hwnd) != 0;
   if (!isVisibleWithTitle) {
     return TRUE;
   }
-  wchar_t className[kClassNameLength] = {};
-  GetClassNameW(hwnd, className, kClassNameLength);
-  const bool isBrowserWindowClass = wcscmp(className, kBrowserWindowClass) == 0;
-  if (!isBrowserWindowClass) {
+  if (!IsOurBrowserClassWindow(hwnd)) {
     return TRUE;
   }
   // Edge has other windows of this class (toasts, the theme-installed bubble,

@@ -1187,4 +1187,49 @@ inline PermissionDecision ReadPermissionDecision(const void* decision) {
           Field<int32_t>(raw, off::PERMISSION_DECISION_value)};
 }
 
+// Room for one custom_handlers::ProtocolHandler that our DLL owns: the bytes
+// are ours, the strings and GURL inside are built and freed by Edge's own copy
+// constructor and destructor.
+struct alignas(16) ProtocolHandlerStorage {
+  uint8_t bytes[off::PROTOCOL_HANDLER_size];
+};
+
+// The profile's ProtocolHandlerRegistry (created if it does not exist yet).
+inline void* ProtocolHandlerRegistryFor(void* profile) {
+  using Fn = void*(__fastcall*)(void*);
+  return reinterpret_cast<Fn>(
+      At(rva::ProtocolHandlerRegistryFactory_GetForBrowserContext))(profile);
+}
+
+// How many handlers the registry's live ignored list holds.
+inline size_t IgnoredHandlerCount(void* registry) {
+  return Field<size_t>(registry, off::RPH_REGISTRY_ignored_size);
+}
+
+// Copy-construct the registry's ignored handler `index` into `storage`, so it
+// stays valid while the list it came from is erased from. Pair every copy with
+// DestroyProtocolHandler.
+inline void CopyIgnoredHandler(void* registry, size_t index,
+                               ProtocolHandlerStorage* storage) {
+  auto* data = Field<uint8_t*>(registry, off::RPH_REGISTRY_ignored_data);
+  using Fn = void*(__fastcall*)(void*, const void*);
+  reinterpret_cast<Fn>(At(rva::ProtocolHandler_CopyConstructor))(
+      storage, data + index * off::PROTOCOL_HANDLER_size);
+}
+
+inline void DestroyProtocolHandler(ProtocolHandlerStorage* storage) {
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(rva::ProtocolHandler_Destructor))(storage);
+}
+
+// Lift the block on `handler` (a copy, never an element of the ignored list)
+// and save the profile's prefs, as the bubble's Allow does before it accepts.
+inline void RemoveIgnoredHandler(void* registry,
+                                 const ProtocolHandlerStorage* handler) {
+  constexpr bool kShouldSave = true;
+  using Fn = void(__fastcall*)(void*, const void*, bool);
+  reinterpret_cast<Fn>(At(rva::ProtocolHandlerRegistry_RemoveIgnoredHandler))(
+      registry, handler, kShouldSave);
+}
+
 }  // namespace fixedge::edge

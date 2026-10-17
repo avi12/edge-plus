@@ -11,11 +11,17 @@
 // a trace, so the icon never comes back. This module makes:
 //   - the bubble act only on Done; any other close leaves everything as it was,
 //     the icon included, so the user can still answer later;
-//   - the prompt's "Just this time" remember nothing, rather than block.
+//   - the prompt's "Just this time" remember nothing, rather than block;
+//   - every block already on record lifted whenever the feature turns on (at
+//     load with it on, or when the panel switches it on), so a site blocked by
+//     an old non-answer can ask again. Edge 155 has no settings page that
+//     lists them.
 // Allow, Deny, an explicit Ignore + Done, and the prompt's Block keep Edge's
-// behaviour.
+// behaviour, until the feature next turns on.
 #pragma once
+#include <cstddef>
 #include <cstdint>
+#include <vector>
 #include "MinHook.h"
 #include "config.h"
 #include "edge.h"
@@ -79,6 +85,33 @@ inline void __fastcall h_permission_decided(void* request,
   o_permission_decided(request, decision);
 }
 
+// Lift every block in `profile`'s ignored list; returns how many were lifted.
+// RemoveIgnoredHandler erases from that very list, so each handler is first
+// copied out (Edge's copy constructor into storage we own), then removed by
+// its copy, then destroyed. A profile with several windows is visited once per
+// window; the later visits find nothing left to lift. A policy block stays
+// (Edge keeps it in the live list), and is not counted.
+inline size_t LiftIgnoredHandlers(void* profile) {
+  void* registry =
+      profile ? edge::ProtocolHandlerRegistryFor(profile) : nullptr;
+  if (!registry) {
+    return 0;
+  }
+  const size_t ignoredCount = edge::IgnoredHandlerCount(registry);
+  if (ignoredCount == 0) {
+    return 0;
+  }
+  std::vector<edge::ProtocolHandlerStorage> copies(ignoredCount);
+  for (size_t i = 0; i < ignoredCount; i++) {
+    edge::CopyIgnoredHandler(registry, i, &copies[i]);
+  }
+  for (edge::ProtocolHandlerStorage& copy : copies) {
+    edge::RemoveIgnoredHandler(registry, &copy);
+    edge::DestroyProtocolHandler(&copy);
+  }
+  return ignoredCount - edge::IgnoredHandlerCount(registry);
+}
+
 // Switch the hooks on or off with the feature. The two detours are created once
 // (hooks.h) and pass straight through while the feature is off; only the Done
 // slot is written and restored here.
@@ -107,8 +140,12 @@ inline void EnableHooks() {
                    RegisterProtocolHandlerPermissionRequest_PermissionDecided));
 }
 
-inline void ApplyConfig(const config::Wire& wire) {
+// Returns whether this config turns the feature on, the moment control.h lifts
+// every profile's blocks (LiftIgnoredHandlers).
+inline bool ApplyConfig(const config::Wire& wire) {
+  const bool wasActive = g_isActive;
   SetActive(wire.protocolHandlersActive != 0);
+  return !wasActive && g_isActive;
 }
 
 // Before unload: no vtable slot may point into a DLL that is going away.

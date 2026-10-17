@@ -507,6 +507,29 @@ inline constexpr uintptr_t ContentSettingBubbleModel_EmptyVirtual = 0x5466b60;
 // off::PERMISSION_DECISION_*.
 inline constexpr uintptr_t
     RegisterProtocolHandlerPermissionRequest_PermissionDecided = 0xbdadfd0;
+// Lifting the blocks: once a handler is ignored, Edge drops every later request
+// from it, so the icon never returns. While the feature turns on, the DLL
+// lifts each one with Edge's own call (the bubble's Allow path makes it too).
+// ProtocolHandlerRegistry* ProtocolHandlerRegistryFactory::GetForBrowserContext(
+// BrowserContext*): the profile's registry (GetServiceForBrowserContext, create).
+inline constexpr uintptr_t ProtocolHandlerRegistryFactory_GetForBrowserContext =
+    0x29da376;
+// void ProtocolHandlerRegistry::RemoveIgnoredHandler(this, const
+// ProtocolHandler& handler, bool save): erases the handler from the user's
+// ignored list and, unless policy also ignores it, from the live ignored list
+// (off::RPH_REGISTRY_ignored_*), then notifies. `save` (Edge's addition; the
+// bubble passes 1) writes the prefs. Its second erase compares against
+// `handler` while shifting the very vector it erases from, so `handler` must
+// be a copy, never an element of that list.
+inline constexpr uintptr_t ProtocolHandlerRegistry_RemoveIgnoredHandler =
+    0xbdb054c;
+// ProtocolHandler::ProtocolHandler(this, const ProtocolHandler& other): the
+// copy constructor (what vector<ProtocolHandler>'s copy, used by
+// GetIgnoredHandlers, calls per element). The other ProtocolHandler ctor,
+// 0xbdb1be8, is the by-field one.
+inline constexpr uintptr_t ProtocolHandler_CopyConstructor = 0x2c68d24;
+// ProtocolHandler::~ProtocolHandler(this): frees its strings and GURL.
+inline constexpr uintptr_t ProtocolHandler_Destructor = 0x2d69d28;
 }  // namespace rva
 
 // Linear addresses (not RVAs): partition-alloc BRP-pool gate for raw_ptr acquire.
@@ -780,6 +803,15 @@ inline constexpr uintptr_t BubbleModel_OnDoneButtonClicked_slot = 0x38;
 // whether there is one (1) or the prompt was dismissed (0).
 inline constexpr uintptr_t PERMISSION_DECISION_value = 0x0;
 inline constexpr uintptr_t PERMISSION_DECISION_has_value = 0x8;
+// ProtocolHandlerRegistry's live ignored list, a size-based libc++ vector
+// {ProtocolHandler* data, size_t size, size_t capacity} at +0x28: read as
+// `[rcx+0x28]` + `[rcx+0x30] * 0xe0` by RemoveIgnoredHandler,
+// SilentlyHandleRegisterHandlerRequest and GetIgnoredHandlers.
+inline constexpr uintptr_t RPH_REGISTRY_ignored_data = 0x28;
+inline constexpr uintptr_t RPH_REGISTRY_ignored_size = 0x30;
+// sizeof(custom_handlers::ProtocolHandler): the stride of every handler
+// vector, and what the copy constructor fills (its last field is at +0xd0..0xe0).
+inline constexpr size_t PROTOCOL_HANDLER_size = 0xe0;
 
 // --- gfx::Rect field offsets within CL_bounds ---
 inline constexpr uintptr_t RECT_x = 0x0;
