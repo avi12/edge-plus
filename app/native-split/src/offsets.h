@@ -531,57 +531,7 @@ inline constexpr uintptr_t ProtocolHandler_CopyConstructor = 0x2cb1804;
 // ProtocolHandler::~ProtocolHandler(this): frees its strings and GURL.
 inline constexpr uintptr_t ProtocolHandler_Destructor = 0x2d97898;
 
-// --- the browser assistant (docs/re/gemini-in-chrome.md) ---
-// The toolbar chat button's behaviour object,
-// EdgeDiscoverToolbarButtonActionEdgeCopilot (held at button+0xa20).
-// gfx::ImageSkia (this, ImageSkia* out, ColorProvider*, NativeTheme*): the
-// bitmap Copilot logo, per button state.
-inline constexpr uintptr_t CopilotAction_GetNormalStateImage = 0x2ab5a40;
-inline constexpr uintptr_t CopilotAction_GetPressedStateImage = 0x34387d0;
-// std::u16string (this, u16string* out): string 0x134 / 0x5160.
-inline constexpr uintptr_t CopilotAction_GetButtonTooltipText = 0x34387c0;
-inline constexpr uintptr_t CopilotAction_GetAccessibleName = 0xdabb650;
-// void (this): ToggleDiscoverChatSidePane, the Copilot pane.
-inline constexpr uintptr_t CopilotAction_OnClick = 0xdabb660;
-// EdgeCopilotToolbarLabelButton: the "Chat" pill. UpdateLabelFromController
-// (this) sets the label from the tab's nudge signal, else string 0x46f8
-// ("Chat"), and caches what it set at COPILOTBUTTON_label. OnThemeChanged
-// (this) re-reads the action's images (EdgeDiscoverToolbarButton::SetImages).
-inline constexpr uintptr_t CopilotButton_UpdateLabelFromController = 0xc79452c;
-inline constexpr uintptr_t CopilotButton_OnThemeChanged = 0x2e557d0;
-// EdgeCopilotToolbarLabelButton::ButtonPressed(this, const ui::Event&): runs
-// the tab's pending Copilot nudge (a suggestion chip) instead of OnClick when
-// there is one.
-inline constexpr uintptr_t CopilotButton_ButtonPressed = 0xc794790;
-// The chat button's dropdown menu, an ui::SimpleMenuModel built afresh on each
-// open: BuildMenu(this) clears and fills it (items: command 3 "Summarize page",
-// a separator, 0 "Chat", and 1 "Talk to Copilot + Share tab" when [this+0x58]
-// is 0), ExecuteCommand(this, command id, event flags) runs one.
-inline constexpr uintptr_t EdgeCopilotMenuModel_BuildMenu = 0xf048824;
-inline constexpr uintptr_t EdgeCopilotMenuModel_ExecuteCommand = 0xf048a50;
-// The chat button's right-click menu is a ToolbarMenuButtonContextMenu (made by
-// EdgeToolbarView::CreateCopilotButtonContextMenu, which passes it a "hide
-// button" command id). AddHideButtonItem(this, command id) adds the item with
-// string 0x4545 ("Hide Copilot") for the two Copilot ids below; other buttons'
-// ids get other strings. It runs once, from the menu's constructor, so the text
-// is fixed at toolbar creation; the right-click is ToolbarButton's
-// ShowContextMenuForViewImpl(controller, source, point, source type).
-inline constexpr uintptr_t ToolbarButton_ShowContextMenuForViewImpl = 0xa2c74e0;
-// The page's right-click menu (RenderViewContextMenu, rebuilt on every
-// right-click). Its "Ask Copilot" items come from three builders, each `this`
-// only: AddEdgeCopilotContextMenuItemsInL1 adds a lone "Summarize with Copilot"
-// (command 0xcd71, string 0x44e9); ...InL2 adds the "Ask Copilot" submenu
-// (command 0xcd76, string 0x44f7) holding Summarize (0xcd71, 0x44ef) and Create
-// podcast (0xcd77, 0x44ec); AppendChatItem adds, for a selection or a PDF, a
-// submenu of the same name (0xcd68 / 0xcd69, string 0x44f7) whose items
-// (0xcd6a..0xcd6d) open Copilot's chat. Choosing 0xcd71 or 0xcd77 runs
-// SendPageContextualPromptToChat(this, commandId), which sends the canned prompt
-// (strings 0x44ea/0x44ed, 0x44e9/0x44ec) with the page to Copilot's pane.
-inline constexpr uintptr_t RenderViewContextMenu_AddCopilotItemsL1 = 0xaec7ffa;
-inline constexpr uintptr_t RenderViewContextMenu_AddCopilotItemsL2 = 0xaec7ea6;
-inline constexpr uintptr_t RenderViewContextMenu_AppendChatItem = 0xaec74be;
-inline constexpr uintptr_t
-    RenderViewContextMenu_SendPageContextualPromptToChat = 0xaed0b3c;
+// --- the browser assistant's toolbar button ---
 // The button's vftables (one per base; EdgeCopilotToolbarLabelButton has
 // multiple inheritance). A view is a chat button when its object+0 vptr is any
 // of these, so the recognition does not depend on which base is primary.
@@ -591,8 +541,8 @@ inline constexpr uintptr_t CopilotButton_vftables[] = {
     0x11363758, 0x11363770, 0x113637a0, 0x113637b8, 0x115b6220, 0x1173fd10};
 // EdgeCopilotDropdownMenuButton: the chevron beside the chat pill (a sibling in
 // EdgeCopilotToolbarSplitButtonContainer). Its constructor sets both its tooltip
-// and its accessible name from the formatted string
-// (COPILOT_MENU_TITLE_FORMAT); the vftables are matched like the chat button's.
+// and its accessible name from the formatted string "$1 menu"; the vftables
+// are matched like the chat button's.
 inline constexpr uintptr_t CopilotDropdownButton_vftables[] = {
     0x113c0d60, 0x113c0d80, 0x113c0da0, 0x113c0dc0, 0x113c0e00,
     0x113c0e50, 0x113c0e68, 0x113c0e80, 0x113c0eb0, 0x113c0f60,
@@ -601,7 +551,7 @@ inline constexpr uintptr_t CopilotDropdownButton_vftables[] = {
 // EdgeToolbarView::CreateDiscoverButtonIfNecessary asks (through
 // IsCopilotLabeledButtonWithDropdownEnabled) before building the chevron's
 // split-button container for a personal profile; false builds the bare chat
-// button. See docs/re/gemini-in-chrome.md section 12.
+// button. See docs/re/removed-gemini-integration.md section 12.
 inline constexpr uintptr_t Copilot_IsConsumerLabelButtonWithDropdownEnabled =
     0x3221438;
 // void EdgeToolbarView::CreateDiscoverButtonIfNecessary(this = the toolbar's
@@ -611,38 +561,15 @@ inline constexpr uintptr_t Copilot_IsConsumerLabelButtonWithDropdownEnabled =
 // for a button already built, and stores the new one in EDGETOOLBAR_chatButton.
 inline constexpr uintptr_t EdgeToolbarView_CreateDiscoverButtonIfNecessary =
     0x3221240;
-// std::u16string l10n_util::GetStringUTF16(std::u16string* out, int message id).
-inline constexpr uintptr_t L10n_GetStringUTF16 = 0x10041b0;
-// l10n_util::GetStringFUTF16(std::u16string* out, int message id, const
-// std::u16string& $1): the one-argument formatted string.
-inline constexpr uintptr_t L10n_GetStringFUTF16 = 0x1115d60;
-// views::LabelButton::SetText(this, std::u16string_view*) (a 16-byte view,
-// passed by address).
-inline constexpr uintptr_t LabelButton_SetText = 0x29f28b0;
-// ViewAccessibility& View::GetViewAccessibility(this) and
-// ViewAccessibility::SetName(this, std::u16string* by value, callee-owned).
-inline constexpr uintptr_t View_GetViewAccessibility = 0x1054f1c;
-inline constexpr uintptr_t ViewAccessibility_SetName = 0x105850e;
-// gfx::ImageSkia gfx::CreateVectorIcon(ImageSkia* out, const VectorIcon&,
-// int dip size, SkColor).
-inline constexpr uintptr_t Gfx_CreateVectorIcon = 0x2705eb6;
-// SkColor ui::ColorProvider::GetColor(this, ColorId): the button's own
-// foreground colour, so the spark matches the toolbar in light and dark.
-inline constexpr uintptr_t ColorProvider_GetColor = 0xffd9ce;
 // views::WebView: (this, BrowserContext*); LoadInitialURL(this, const GURL&,
 // HttpsUpgradePolicy, base::Location* by value); the scalar deleting dtor
 // (this, 1).
 inline constexpr uintptr_t WebView_ctor = 0x2d27f6e;
 inline constexpr uintptr_t WebView_LoadInitialURL = 0xc3fe140;
 inline constexpr uintptr_t WebView_ScalarDeletingDtor = 0x34208b0;
-// View::RequestFocus(this).
-inline constexpr uintptr_t View_RequestFocus = 0x2db50e0;
-// --- running a script in a page, and reading a tab (docs/re/gemini-in-chrome.md
-// section 8) ---
+// --- running a script in a page, and reading a tab ---
 // RenderFrameHost* WebContentsImpl::GetPrimaryMainFrame(this).
 inline constexpr uintptr_t WebContentsImpl_GetPrimaryMainFrame = 0x113caf0;
-// const std::u16string& WebContentsImpl::GetTitle(this): the page's title.
-inline constexpr uintptr_t WebContentsImpl_GetTitle = 0x10f9580;
 // const std::string& GURL::spec(this).
 inline constexpr uintptr_t GURL_spec = 0xfd4aca;
 // bool RenderFrameHostImpl::IsRenderFrameLive(this): false for a discarded tab.
@@ -657,12 +584,6 @@ inline constexpr uintptr_t
 // at +0, invoke at +8, destructor at +0x10, the default cancellation query at
 // +0x18; a BindState's bound state starts at BINDSTATE_first_bound_argument.
 inline constexpr uintptr_t BindStateBase_ctor = 0xfca4b0;
-// BrotliDecoderResult BrotliDecoderDecompress(size_t encoded_size, const
-// uint8_t* encoded, size_t* decoded_size, uint8_t* decoded); 1 = success.
-inline constexpr uintptr_t BrotliDecoderDecompress = 0x1efca60;
-// int zlib_internal::GzipUncompressHelper(Bytef* dest, uLongf* dest_length,
-// const Bytef* source, uLong source_length); 0 = Z_OK (uLong is 32 bits).
-inline constexpr uintptr_t GzipUncompressHelper = 0x2a762b4;
 // The native find bar (docs/re/find-bar.md). FindBarView is the bar's content
 // view; its text field's edits end in Find(this, const u16string_view*), and
 // Enter and the arrow buttons in FindNext(this, bool reverse), which reads the
@@ -843,11 +764,6 @@ enum class SplitAction : int {
 // Decoded from kEdgeSplitWindowMoreIcon: CANVAS_DIMENSIONS 16, MOVE_TO x y,
 // R_ARC_TO rx ry angle large sweep dx dy, CLOSE.
 inline constexpr int ICON_NEW_PATH = 0;
-// PATH_COLOR_ARGB a r g b: the colour of the next path, instead of the colour
-// the icon is drawn in. Id 3: it is the command taking four arguments in
-// gfx::GetCommandArgumentCount's table (rva 0x1291be28 here: 0 0 1 4 0 1 0 2 2
-// 7 7 ...), where id 1 takes none.
-inline constexpr int ICON_PATH_COLOR_ARGB = 3;
 inline constexpr int ICON_MOVE_TO = 7;
 inline constexpr int ICON_LINE_TO = 11;    // from kArrowUpIcon
 inline constexpr int ICON_R_LINE_TO = 12;  // from kArrowUpIcon
@@ -997,33 +913,6 @@ inline constexpr uintptr_t RECT_w = 0x8;
 inline constexpr uintptr_t RECT_h = 0xc;
 
 // --- the browser assistant ---
-// EdgeDiscoverToolbarButton's action (EdgeDiscoverToolbarButtonAction*).
-inline constexpr uintptr_t DISCOVERBUTTON_action = 0xa20;
-// EdgeCopilotToolbarLabelButton's cached label (std::u16string), what
-// UpdateLabelFromController last set.
-inline constexpr uintptr_t COPILOTBUTTON_label = 0xb70;
-// The chat chevron's tooltip and accessible name: string 0x46eb ("$1 menu")
-// formatted with string 0x46dc ("Copilot") gives "Copilot menu". (The chat
-// pill's own default label is 0x46db, "Chat".)
-inline constexpr int COPILOT_NAME = 0x46dc;
-inline constexpr int COPILOT_MENU_TITLE_FORMAT = 0x46eb;
-// The chat button's "hide button" command ids (IDC_...): the ones
-// AddHideButtonItem gives "Hide Copilot". The first opens Edge's settings
-// instead of hiding when IsHideCopilotNavigatesToSettingsEnabled.
-inline constexpr int COPILOT_HIDE_COMMAND = 0x9e67;
-inline constexpr int COPILOT_HIDE_SETTINGS_COMMAND = 0xcea4;
-// The "Hide Copilot" string itself.
-inline constexpr int COPILOT_HIDE_LABEL = 0x4545;
-// ToolbarMenuButtonContextMenu's ui::SimpleMenuModel*.
-inline constexpr uintptr_t TOOLBARMENU_model = 0x18;
-// RenderViewContextMenu: the menu's own ui::SimpleMenuModel is embedded at this
-// offset (the builders pass `this + 0x5c0` to AddItem...).
-inline constexpr uintptr_t RVCM_menuModel = 0x5c0;
-// ToolbarButton: its ContextMenuController subobject (what
-// ShowContextMenuForViewImpl receives as this) sits this far into the button, and
-// the button's ToolbarMenuButtonContextMenu* (SetContextMenu) at the other.
-inline constexpr uintptr_t TOOLBARBUTTON_contextMenuController = 0x6f0;
-inline constexpr uintptr_t TOOLBARBUTTON_contextMenu = 0x710;
 // EdgeToolbarView: the base CreateDiscoverButtonIfNecessary is called on, and
 // the raw_ptr to the chat button (the bare button, or the one inside the
 // split-button container).

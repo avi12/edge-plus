@@ -1238,7 +1238,7 @@ inline void RemoveIgnoredHandler(void* registry,
       registry, handler, kShouldSave);
 }
 
-// --- the browser assistant (docs/re/gemini-in-chrome.md) ---------------------
+// --- the browser assistant's toolbar button ----------------------------------
 
 // A read-only view of a libc++ std::u16string's characters.
 struct U16View {
@@ -1267,80 +1267,6 @@ inline bool IsCopilotButton(void* view) {
     }
   }
   return false;
-}
-// The view a ToolbarButton's context-menu-controller subobject belongs to.
-inline void* ContextMenuControllerButton(void* controller) {
-  return reinterpret_cast<uint8_t*>(controller) -
-         off::TOOLBARBUTTON_contextMenuController;
-}
-// The ui::SimpleMenuModel of a chat button's right-click menu, or null.
-inline void* ChatButtonContextMenuModel(void* button) {
-  void* contextMenu = Field<void*>(button, off::TOOLBARBUTTON_contextMenu);
-  return contextMenu ? Field<void*>(contextMenu, off::TOOLBARMENU_model)
-                     : nullptr;
-}
-// The ui::SimpleMenuModel embedded in a page context menu (RenderViewContextMenu).
-inline void* PageContextMenuModel(void* contextMenu) {
-  return reinterpret_cast<uint8_t*>(contextMenu) + off::RVCM_menuModel;
-}
-// The behaviour object a chat button holds.
-inline void* CopilotButtonAction(void* button) {
-  return Field<void*>(button, off::DISCOVERBUTTON_action);
-}
-// The label UpdateLabelFromController last set ("Chat" unless a nudge).
-inline U16View CopilotButtonCachedLabel(void* button) {
-  return U16StringView(reinterpret_cast<uint8_t*>(button) +
-                       off::COPILOTBUTTON_label);
-}
-inline void CopilotButtonUpdateLabel(void* button) {
-  using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::CopilotButton_UpdateLabelFromController))(
-      button);
-}
-// Re-read the action's images (and the button's theme colours).
-inline void CopilotButtonRefreshImages(void* button) {
-  using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::CopilotButton_OnThemeChanged))(button);
-}
-
-inline void LabelButtonSetText(void* button, U16View text) {
-  using Fn = void(__fastcall*)(void*, const U16View*);
-  reinterpret_cast<Fn>(At(rva::LabelButton_SetText))(button, &text);
-}
-
-// The accessible name of `view`, from UTF-8. SetName takes its u16string by
-// value, so the callee owns (and frees) the one built here.
-inline void ViewSetAccessibleName(void* view, U16String* name) {
-  using AccessibilityFn = void*(__fastcall*)(void*);
-  using SetNameFn = void(__fastcall*)(void*, U16String*);
-  reinterpret_cast<SetNameFn>(At(rva::ViewAccessibility_SetName))(
-      reinterpret_cast<AccessibilityFn>(At(rva::View_GetViewAccessibility))(
-          view),
-      name);
-}
-inline void ViewSetAccessibleName(void* view, const char* utf8) {
-  U16String name{};
-  Utf8ToUtf16(&name, utf8);
-  ViewSetAccessibleName(view, &name);
-}
-
-// Edge's localized string for message id `messageId`, built into `out`
-// (uninitialised storage the caller owns; short strings hold nothing on the
-// heap, which every title used here is).
-inline void LocalizedString(U16String* out, int messageId) {
-  using Fn = void*(__fastcall*)(void*, int);
-  reinterpret_cast<Fn>(At(rva::L10n_GetStringUTF16))(out, messageId);
-}
-// The same with one argument: message `messageId` with `$1` replaced by `arg`.
-inline void LocalizedString(U16String* out, int messageId,
-                            const U16String* arg) {
-  using Fn = void*(__fastcall*)(void*, int, const void*);
-  reinterpret_cast<Fn>(At(rva::L10n_GetStringFUTF16))(out, messageId, arg);
-}
-// views::View::SetTooltipText(view, const std::u16string&).
-inline void ViewSetTooltip(void* view, const U16String* text) {
-  using Fn = void(__fastcall*)(void*, const void*);
-  reinterpret_cast<Fn>(At(rva::View_SetTooltipText))(view, text);
 }
 
 // Whether `size` bytes at `address` can be read.
@@ -1403,15 +1329,6 @@ inline bool IsCopilotDropdownButton(void* view) {
   return false;
 }
 
-// Draw `vectorIcon` at `dipSize` in `color` (ARGB) into the gfx::ImageSkia at
-// `outImage` (uninitialised storage the caller owns).
-inline void CreateVectorIcon(void* outImage, const void* vectorIcon,
-                             int dipSize, uint32_t color) {
-  using Fn = void*(__fastcall*)(void*, const void*, int, uint32_t);
-  reinterpret_cast<Fn>(At(rva::Gfx_CreateVectorIcon))(outImage, vectorIcon,
-                                                      dipSize, color);
-}
-
 // A views::WebView for `browserContext` (its WebContents is created on first
 // load, in that profile's own storage), not yet parented.
 inline void* NewWebView(void* browserContext) {
@@ -1442,13 +1359,8 @@ inline void DeleteWebView(void* webView) {
   reinterpret_cast<DtorFn>(At(rva::WebView_ScalarDeletingDtor))(webView,
                                                                 kDeleteSelf);
 }
-inline void ViewRequestFocus(void* view) {
-  using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::View_RequestFocus))(view);
-}
 
 // --- reading a tab, and running a script in a page ---------------------------
-// (docs/re/gemini-in-chrome.md section 8)
 
 // The WebContents a views::WebView shows (null before its first load).
 inline void* WebViewContents(void* webView) {
@@ -1483,13 +1395,7 @@ inline std::string Utf16ToUtf8(U16View text) {
   return utf8;
 }
 
-// The page title and last committed URL of `webContents`, in UTF-8.
-inline std::string TabTitle(void* webContents) {
-  using TitleFn = const void*(__fastcall*)(void*);
-  const void* title =
-      reinterpret_cast<TitleFn>(At(rva::WebContentsImpl_GetTitle))(webContents);
-  return title ? Utf16ToUtf8(U16StringView(title)) : std::string();
-}
+// The last committed URL of `webContents`, in UTF-8.
 inline std::string TabUrl(void* webContents) {
   using SpecFn = const void*(__fastcall*)(const void*);
   const void* url = LastCommittedUrl(webContents);
@@ -1546,35 +1452,6 @@ inline void __fastcall InvokeScriptCallback(void* bindState, void* value) {
 inline void __fastcall DestroyScriptCallback(const void* bindState) {
   delete static_cast<const ScriptCallbackState*>(bindState);
   g_liveScriptCallbacks--;
-}
-
-// Brotli-decompress `size` bytes at `data` with Edge's own decoder into `out`,
-// which must hold `decodedSize` bytes (a pak resource says its size up front).
-inline bool BrotliDecompress(const uint8_t* data, size_t size,
-                             size_t decodedSize, std::string* out) {
-  constexpr int kBrotliDecoderSuccess = 1;
-  out->resize(decodedSize);
-  size_t written = decodedSize;
-  using Fn = int(__fastcall*)(size_t, const uint8_t*, size_t*, uint8_t*);
-  const int result = reinterpret_cast<Fn>(At(rva::BrotliDecoderDecompress))(
-      size, data, &written, reinterpret_cast<uint8_t*>(out->data()));
-  out->resize(written);
-  return result == kBrotliDecoderSuccess;
-}
-
-// Gunzip `size` bytes at `data` with Edge's zlib into `out`, which must hold
-// `decodedSize` bytes (the size a gzip stream ends with).
-inline bool GzipDecompress(const uint8_t* data, size_t size, size_t decodedSize,
-                           std::string* out) {
-  constexpr int kZlibOk = 0;
-  out->resize(decodedSize);
-  uint32_t written = static_cast<uint32_t>(decodedSize);  // uLongf is 32 bits
-  using Fn = int(__fastcall*)(uint8_t*, uint32_t*, const uint8_t*, uint32_t);
-  const int result = reinterpret_cast<Fn>(At(rva::GzipUncompressHelper))(
-      reinterpret_cast<uint8_t*>(out->data()), &written, data,
-      static_cast<uint32_t>(size));
-  out->resize(written);
-  return result == kZlibOk;
 }
 
 // Whether every script callback has been destroyed within `timeoutMs`.

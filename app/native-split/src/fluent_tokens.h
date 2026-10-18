@@ -1,8 +1,8 @@
 // fluent_tokens.h — the look shared by the small pages of our own that Edge
-// shows (the Gemini share strip, the find bar). One concern: the Fluent 2
-// design tokens by hand (like the panel app), light and dark following the
-// browser, and the base rules for the page, buttons and inputs written once. A
-// page adds its own rules after these.
+// shows (the find bar). One concern: the Fluent 2 design tokens by hand (like
+// the panel app), light and dark following the browser, and the base rules for
+// the page, buttons and inputs written once. A page adds its own rules after
+// these.
 #pragma once
 
 namespace fixedge::fluent_tokens {
