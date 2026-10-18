@@ -173,14 +173,15 @@ inline void __fastcall h_build_menu(void* model) {
 
 // A personal profile in Edge's Copilot Mode gets the chat button without its
 // chevron: Edge answers "no" here when the toolbar is built. The chevron
-// carries the menu (and its Gemini titles), so Gemini's choice answers "yes".
-// Takes effect for each toolbar built after the answer changes (a new window).
+// carries the chat menu (Summarize, Talk, and Gemini's titles), so it is always
+// wanted, whichever assistant is chosen: this answers "yes".
+// Takes effect for each toolbar built after the DLL loads (a new window);
+// EnsureChevron rebuilds the ones already open.
 using DropdownEnabled_t = bool(__fastcall*)(bool);
 inline DropdownEnabled_t o_dropdown_enabled = nullptr;
 
-inline bool __fastcall h_dropdown_enabled(bool isChecked) {
-  const bool isForcedOn = IsGemini();
-  return isForcedOn || o_dropdown_enabled(isChecked);
+inline bool __fastcall h_dropdown_enabled(bool /*isChecked*/) {
+  return true;
 }
 
 // The button's right-click menu is built once with the toolbar, "Hide Copilot"
@@ -349,20 +350,16 @@ inline void RestoreStockLabel(void* button) {
   edge::ViewSetTooltip(button, LabelAsUtf8(stockLabel).c_str());
 }
 
-// A toolbar built before this DLL loaded, or before Gemini was chosen, has the
-// bare chat button: build it again so it gets the split-button container and
-// its chevron. Edge's own answer decides the other way round: once Copilot is
-// chosen again the chevron is hidden (kept, so choosing Gemini again only shows
-// it) unless Edge would have built it.
+// A toolbar built before this DLL loaded has the bare chat button: build it again
+// so it gets the split-button container and its chevron.
 inline void EnsureChevron(void* mcv) {
   std::vector<void*> buttons;
   CollectButtons(edge::ViewRoot(mcv), &buttons);
   for (void* button : buttons) {
     void* dropdown = chat_menu::DropdownBeside(button);
     if (dropdown) {
-      const bool isShown = IsGemini() || o_dropdown_enabled(true);
-      edge::SetViewVisible(dropdown, isShown);
-    } else if (IsGemini()) {
+      edge::SetViewVisible(dropdown, true);
+    } else {
       void* toolbar = edge::ToolbarOfChatButton(button);
       const bool isRebuilt = toolbar && edge::RebuildChatButton(toolbar);
       Log("[assistant] chat button rebuilt with chevron: %d",
