@@ -34,10 +34,8 @@ inline bool IsGemini() {
 inline constexpr char kGeminiName[] = "Ask Gemini";
 inline const char16_t kGeminiNameUtf16[] = u"Ask Gemini";
 
-// The spark is drawn at the toolbar icon size, in the button's foreground
-// colour. The id is Edge's own toolbar-foreground ColorId.
+// The spark is drawn at the toolbar icon size.
 inline constexpr int kIconDipSize = 16;
-inline constexpr uint32_t kToolbarForegroundColorId = 0xcf6;
 
 // --- the action's image / tooltip / accessible-name / click ------------------
 
@@ -45,17 +43,30 @@ using Image_t = void*(__fastcall*)(void*, void*, void*, void*);
 inline Image_t o_normal_image = nullptr;
 inline Image_t o_pressed_image = nullptr;
 
-// Draw the Gemini spark into the ImageSkia out-param, in the button's colour
-// from the color provider, instead of Copilot's bitmap logo.
-inline void* DrawGeminiSpark(void* out, void* colorProvider) {
-  uint32_t color = 0xff000000;
-  if (colorProvider) {
-    using GetColorFn = uint32_t(__fastcall*)(void*, uint32_t);
-    color = reinterpret_cast<GetColorFn>(edge::At(rva::ColorProvider_GetColor))(
-        colorProvider, kToolbarForegroundColorId);
-  }
-  // Colourful while the panel is closed; plain, in the button's own colour,
-  // while it is open.
+// The open-state spark's one colour: solid white on a dark theme, near-black
+// on a light one, as Chrome draws it. (Edge's toolbar-foreground colour is
+// translucent in the button's pressed state, so it cannot be borrowed.)
+inline constexpr uint32_t kSparkOnDark = 0xffffffff;
+inline constexpr uint32_t kSparkOnLight = 0xff1b1b1b;
+
+inline bool IsDarkTheme() {
+  DWORD isLight = 1;
+  DWORD size = sizeof(isLight);
+  RegGetValueW(
+      HKEY_CURRENT_USER,
+      L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+      L"AppsUseLightTheme", RRF_RT_REG_DWORD, nullptr, &isLight, &size);
+  return isLight == 0;
+}
+
+inline uint32_t SparkColor() {
+  return IsDarkTheme() ? kSparkOnDark : kSparkOnLight;
+}
+
+// Draw the Gemini spark into the ImageSkia out-param, instead of Copilot's
+// bitmap logo: colourful while the panel is closed, plain while it is open.
+inline void* DrawGeminiSpark(void* out) {
+  const uint32_t color = SparkColor();
   const auto* spark =
       gemini::IsAnyOpen() ? icons::GeminiSparkMono() : icons::GeminiSpark();
   edge::CreateVectorIcon(out, spark, kIconDipSize, color);
@@ -65,7 +76,7 @@ inline void* DrawGeminiSpark(void* out, void* colorProvider) {
 inline void* __fastcall h_normal_image(void* action, void* out,
                                        void* colorProvider, void* nativeTheme) {
   if (IsGemini()) {
-    return DrawGeminiSpark(out, colorProvider);
+    return DrawGeminiSpark(out);
   }
   return o_normal_image(action, out, colorProvider, nativeTheme);
 }
@@ -73,7 +84,7 @@ inline void* __fastcall h_pressed_image(void* action, void* out,
                                         void* colorProvider,
                                         void* nativeTheme) {
   if (IsGemini()) {
-    return DrawGeminiSpark(out, colorProvider);
+    return DrawGeminiSpark(out);
   }
   return o_pressed_image(action, out, colorProvider, nativeTheme);
 }
