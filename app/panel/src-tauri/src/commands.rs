@@ -105,7 +105,6 @@ pub(crate) fn apply(settings: &Settings) {
         edge_native::signal_unload();
         return;
     }
-    payload::unpack();
     // The unload event exists exactly while a live DLL does; a module still
     // mapped without it is a stale leftover that would swallow the injection.
     if !edge_native::is_split_loaded() {
@@ -113,6 +112,9 @@ pub(crate) fn apply(settings: &Settings) {
             edge_native::free_module(pid, SPLIT_MODULE);
         }
     }
+    // After the stale copy is freed: a mapped DLL holds its file open, so the
+    // fresh one cannot be written over it until then.
+    payload::unpack();
     let pinned = edge_build::pinned();
     let missing: Vec<u32> = edge_native::edge_pids_missing_module(SPLIT_MODULE)
         .into_iter()
