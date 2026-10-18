@@ -81,6 +81,35 @@ inline bool LooksLikeCode(uintptr_t rva) {
   }
 }
 
+// True when the bytes at `rva` are exactly `expected`.
+inline bool BytesAre(uintptr_t rva, const uint8_t* expected, size_t length) {
+  const auto* actual = reinterpret_cast<const uint8_t*>(edge::At(rva));
+  for (size_t i = 0; i < length; i++) {
+    if (actual[i] != expected[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// The three bytes hooks.h overwrites to lift Edge's 2-pane CHECKs. A stale
+// address would corrupt unrelated code, so each must hold the instruction it was
+// reversed from: the `2` in `cmp r8d, 2`, and the two-byte opcode of a rel32
+// `jne` (0F 85) / `jae` (0F 83).
+inline bool PatchSitesHoldTheirInstructions() {
+  constexpr uint8_t kIndexCapImmediate[] = {0x02};
+  constexpr uint8_t kJneRel32[] = {0x0f, 0x85};
+  constexpr uint8_t kJaeRel32[] = {0x0f, 0x83};
+  const bool isGuardIntact =
+      BytesAre(edge155::rva::SetWebContentsAtIndex_guard_imm,
+               kIndexCapImmediate, sizeof(kIndexCapImmediate));
+  const bool isLabelCheckIntact = BytesAre(
+      edge155::rva::SplitA11yLabel_paneidx_jne, kJneRel32, sizeof(kJneRel32));
+  const bool isActiveIndexCheckIntact = BytesAre(
+      edge155::rva::SetActiveIndex_index_jae, kJaeRel32, sizeof(kJaeRel32));
+  return isGuardIntact && isLabelCheckIntact && isActiveIndexCheckIntact;
+}
+
 // The critical hook sites (a subset of what hooks.h installs). If any fails, we
 // do not install.
 inline bool HookSitesLookSane() {
@@ -99,6 +128,11 @@ inline bool HookSitesLookSane() {
           static_cast<unsigned long long>(rva));
       return false;
     }
+  }
+  if (!PatchSitesHoldTheirInstructions()) {
+    Log("[verify] a patch site does not hold the instruction it was reversed "
+        "from");
+    return false;
   }
   // The link-handler bubble's Done slot is written while that feature is on;
   // it must hold Edge's own empty virtual, or it is not the vtable we read.
