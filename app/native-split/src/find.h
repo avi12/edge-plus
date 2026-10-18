@@ -199,6 +199,68 @@ inline void ClearLabel(const Session& session) {
   ShowStatus(session.findBarView, Status{});
 }
 
+// --- our switches in the bar's options ------------------------------------------------------------
+
+// Which of our two switches is on in this bar (they are the bar's own views, so
+// the state is per window and goes with the bar). None while the find is off.
+inline find_text::Option OptionOf(void* findBarView) {
+  if (!g_isEnabled) {
+    return find_text::Option::kNone;
+  }
+  void* regExp = edge::FindToggle(findBarView, off::FINDTOGGLE_id_regexp);
+  void* ask = edge::FindToggle(findBarView, off::FINDTOGGLE_id_ask);
+  if (regExp && edge::FindToggleIsOn(regExp)) {
+    return find_text::Option::kRegExp;
+  }
+  if (ask && edge::FindToggleIsOn(ask)) {
+    return find_text::Option::kAsk;
+  }
+  return find_text::Option::kNone;
+}
+
+inline void* EnsureToggle(void* findBarView, int toggleId, bool* isAdded) {
+  void* toggle = edge::FindToggle(findBarView, toggleId);
+  if (!toggle && g_isEnabled) {
+    toggle = edge::AddFindToggle(findBarView, toggleId);
+    *isAdded = *isAdded || toggle != nullptr;
+  }
+  return toggle;
+}
+
+// Bring the bar's options up to date: our two switches exist (and show the
+// chosen assistant's name), and Edge's own three are greyed out while either of
+// ours is on, since they mean nothing to a RegExp or a question. With the find
+// switched off ours are hidden and Edge's are back.
+inline void SyncToggles(void* findBarView) {
+  bool isAdded = false;
+  void* regExp = EnsureToggle(findBarView, off::FINDTOGGLE_id_regexp, &isAdded);
+  void* ask = EnsureToggle(findBarView, off::FINDTOGGLE_id_ask, &isAdded);
+  if (regExp) {
+    const std::u16string title = Utf16FromUtf8(find_text::kRegExpName);
+    edge::FindToggleSetTitle(regExp, Utf16Of(title));
+    edge::SetViewVisible(regExp, g_isEnabled);
+  }
+  if (ask) {
+    const std::u16string title =
+        Utf16FromUtf8(find_text::AskTitle(assistant::Name()));
+    edge::FindToggleSetTitle(ask, Utf16Of(title));
+    edge::SetViewVisible(ask, g_isEnabled);
+  }
+  const bool isEdgeLocked = OptionOf(findBarView) != find_text::Option::kNone;
+  const int edgeIds[] = {off::FINDTOGGLE_id_match_case,
+                         off::FINDTOGGLE_id_whole_word,
+                         off::FINDTOGGLE_id_diacritics};
+  for (const int toggleId : edgeIds) {
+    void* toggle = edge::FindToggle(findBarView, toggleId);
+    if (toggle) {
+      edge::FindToggleSetEnabled(toggle, !isEdgeLocked);
+    }
+  }
+  if (isAdded) {
+    edge::FindBarRelayoutOptions(findBarView);
+  }
+}
+
 // --- the page being searched ------------------------------------------------------------------------
 
 // Whether `contents` is still a tab of `mcv`'s window: a tab that was closed
@@ -255,6 +317,13 @@ inline void OnSearched(void* mcv, void* view, unsigned long long seq,
 inline void RunSearch(void* mcv, Session& session,
                       const find_text::Query& query) {
   const find_text::Search search = find_text::BuildSearch(query);
+  const bool isNothingTyped =
+      search.problem == find_text::PatternProblem::kEmpty;
+  if (isNothingTyped) {
+    ClearTarget(mcv, session);
+    ClearLabel(session);
+    return;
+  }
   const bool isUnusable = search.problem != find_text::PatternProblem::kNone;
   if (isUnusable) {
     ClearTarget(mcv, session);
@@ -623,6 +692,7 @@ inline Session* SessionOfBar(void* findBarView, void** mcvOut) {
   if (isNewBar) {
     Reset(mcv, session);
     session.findBarView = findBarView;
+    SyncToggles(findBarView);
   }
   session.window = window;
   *mcvOut = mcv;
@@ -637,6 +707,12 @@ inline Find_t o_find = nullptr;
 inline FindNext_t o_find_next = nullptr;
 inline HandleKeyEvent_t o_handle_key_event = nullptr;
 inline EndFindSession_t o_end_find_session = nullptr;
+using AddOptionsView_t = void(__fastcall*)(void*, bool);
+using ToggleOptions_t = void(__fastcall*)(void*, void*);
+using ButtonToggled_t = void(__fastcall*)(void*);
+inline AddOptionsView_t o_add_options_view = nullptr;
+inline ToggleOptions_t o_toggle_options = nullptr;
+inline ButtonToggled_t o_button_toggled = nullptr;
 
 // The text changed. Plain text is Edge's search. A RegExp is searched by us (and
 // Edge's own marks and count are cleared first, by asking it to find nothing); a
@@ -648,7 +724,8 @@ inline void __fastcall h_find(void* findBarView, const edge::U16View* typed) {
   }
   void* mcv = nullptr;
   Session* session = SessionOfBar(findBarView, &mcv);
-  const find_text::Query query = find_text::ParseQuery(TextOf(*typed));
+  const find_text::Query query =
+      find_text::ParseQuery(TextOf(*typed), OptionOf(findBarView));
   const bool isOurs = session && query.mode != find_text::Mode::kText;
   if (!isOurs) {
     if (session) {
@@ -678,7 +755,8 @@ inline bool HandleNext(void* findBarView, bool isReverse) {
   void* mcv = nullptr;
   Session* session = SessionOfBar(findBarView, &mcv);
   const std::string typed = TextOf(edge::FindBarText(findBarView));
-  const find_text::Query query = find_text::ParseQuery(typed);
+  const find_text::Query query =
+      find_text::ParseQuery(typed, OptionOf(findBarView));
   const bool isOurs = session && query.mode != find_text::Mode::kText;
   if (!isOurs) {
     return false;
@@ -732,6 +810,45 @@ inline bool __fastcall h_handle_key_event(void* controller, void* textfield,
   return isHandled || o_handle_key_event(controller, textfield, keyEvent);
 }
 
+// The bar builds its options the first time they are needed: put our switches
+// in with Edge's.
+inline void __fastcall h_add_options_view(void* findBarView, bool isArgument) {
+  o_add_options_view(findBarView, isArgument);
+  SyncToggles(findBarView);
+}
+
+// The options are shown or hidden: say the chosen assistant's name as they appear.
+inline void __fastcall h_toggle_options(void* findBarView, void* argument) {
+  o_toggle_options(findBarView, argument);
+  SyncToggles(findBarView);
+}
+
+// One of the switches was clicked. Edge's three go on as Edge has them; ours
+// are ours alone: take the switch's new state, turn the other off, grey out
+// Edge's, and search the box again the way the switches now read it.
+inline void __fastcall h_button_toggled(void* toggle) {
+  const int toggleId = edge::FindToggleId(toggle);
+  const bool isOurs = g_isEnabled && (toggleId == off::FINDTOGGLE_id_regexp ||
+                                      toggleId == off::FINDTOGGLE_id_ask);
+  void* findBarView = isOurs ? edge::FindBarViewOfToggle(toggle) : nullptr;
+  if (!findBarView) {
+    o_button_toggled(toggle);
+    return;
+  }
+  // The switch has already moved by the time its callback runs.
+  const bool isTurningOn = edge::FindToggleIsOn(toggle);
+  const int otherId = toggleId == off::FINDTOGGLE_id_regexp
+                          ? off::FINDTOGGLE_id_ask
+                          : off::FINDTOGGLE_id_regexp;
+  void* other = edge::FindToggle(findBarView, otherId);
+  if (isTurningOn && other) {
+    edge::FindToggleSetOn(other, false);
+  }
+  SyncToggles(findBarView);
+  const edge::U16View typed = edge::FindBarText(findBarView);
+  h_find(findBarView, &typed);
+}
+
 // The bar closes: take our marks off the page.
 inline void __fastcall h_end_find_session(void* controller, int action,
                                           int isKeepingSelection) {
@@ -765,6 +882,15 @@ inline std::vector<HookSite> HookSites() {
       {rva::FindBarController_EndFindSession,
        reinterpret_cast<void*>(h_end_find_session),
        reinterpret_cast<void**>(&o_end_find_session)},
+      {rva::FindBarView_EdgeMaybeAddFindOptionsView,
+       reinterpret_cast<void*>(h_add_options_view),
+       reinterpret_cast<void**>(&o_add_options_view)},
+      {rva::FindBarView_EdgeToggleFindOptions,
+       reinterpret_cast<void*>(h_toggle_options),
+       reinterpret_cast<void**>(&o_toggle_options)},
+      {rva::FindInPageOptionToggleView_OnButtonToggled,
+       reinterpret_cast<void*>(h_button_toggled),
+       reinterpret_cast<void**>(&o_button_toggled)},
   };
 }
 
@@ -826,9 +952,19 @@ inline void Apply(bool isEnabled) {
   if (isChanging) {
     Log("[find] switched %s", isEnabled ? "on" : "off");
   }
+  DropStale();
+  std::vector<void*> bars;
+  for (const auto& [mcv, session] : Sessions()) {
+    bars.push_back(session.findBarView);
+  }
   g_isEnabled = isEnabled;
   if (isTurningOff) {
     RemoveAll();
+  }
+  if (isChanging) {
+    for (void* findBarView : bars) {
+      SyncToggles(findBarView);
+    }
   }
 }
 
