@@ -77,6 +77,9 @@ pub struct Features {
     /// (it calls into `msedge.dll`, so an Edge update forces it back to
     /// Copilot the same way a mismatched build switches the others off).
     pub assistant: Assistant,
+    /// Ctrl+F opens a find bar of our own with regular-expression search and
+    /// "Ask Copilot" (the DLL's `find.h`).
+    pub enhanced_find: bool,
 }
 
 impl Default for Features {
@@ -87,6 +90,7 @@ impl Default for Features {
             quiet_dev_mode: false,
             protocol_handlers: false,
             assistant: Assistant::Copilot,
+            enhanced_find: false,
         }
     }
 }
@@ -101,15 +105,17 @@ pub enum Feature {
     ProtocolHandlers,
     /// The non-default assistant (Gemini) is selected.
     Assistant,
+    EnhancedFind,
 }
 
 impl Feature {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::NativeSplit,
         Self::Theming,
         Self::QuietDevMode,
         Self::ProtocolHandlers,
         Self::Assistant,
+        Self::EnhancedFind,
     ];
 }
 
@@ -122,6 +128,7 @@ impl Features {
             Feature::QuietDevMode => self.quiet_dev_mode,
             Feature::ProtocolHandlers => self.protocol_handlers,
             Feature::Assistant => self.assistant == Assistant::Gemini,
+            Feature::EnhancedFind => self.enhanced_find,
         }
     }
 
@@ -133,6 +140,7 @@ impl Features {
             || self.theming
             || self.protocol_handlers
             || self.assistant == Assistant::Gemini
+            || self.enhanced_find
     }
 
     pub fn set(&mut self, feature: Feature, is_on: bool) {
@@ -148,6 +156,7 @@ impl Features {
                     Assistant::Copilot
                 };
             }
+            Feature::EnhancedFind => self.enhanced_find = is_on,
         }
     }
 }
