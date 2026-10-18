@@ -25,13 +25,18 @@ or off, and Edge picks the change up the moment it is made — no restart, ever.
   the site for good, and turning it on lifts the blocks already on record
   (Edge has no page for them) (`docs/re/protocol-handlers.md`). Runs in the
   injected DLL.
-- **Enhanced find: RegExp and Ask Copilot / Gemini** — Edge's own `Ctrl + F`
+- **Enhanced find: RegExp and Ask Copilot** — Edge's own `Ctrl + F`
   bar gets two modes, chosen by what you type in its box: `/pattern/i` is a
   RegExp search (every match highlighted, counted in the bar's own n/m, Enter
-  steps), and `? where do they discuss pricing?` asks the browser assistant you
-  chose (Copilot or Gemini) and highlights the paragraphs it names. Anything else
+  steps), and `? where do they discuss pricing?` asks Copilot and
+  highlights the paragraphs it names. Anything else
   is Edge's own find, as are Edge pages and PDFs (`docs/re/find-bar.md`). Runs in
   the injected DLL.
+
+Removed for now: the Gemini integration (Gemini in a side panel from the
+toolbar chat button, with tab sharing). Copilot is the only assistant. The code
+is in git history at `4ee5113`; the notes are in
+`docs/re/removed-gemini-integration.md`.
 
 ## How it fits together
 

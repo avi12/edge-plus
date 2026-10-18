@@ -10,7 +10,7 @@ wire, `config.h`, carries it as the last u32):
 | typed | what happens |
 |---|---|
 | `/pattern/flags` (flags from `gimsu`) | a RegExp search of the page: every match highlighted, counted in the bar's own "n/m", Enter / Shift+Enter / the arrows step through them |
-| `? your question` (a question mark, a space) | the page's paragraphs go to the **chosen browser assistant** (Copilot or Gemini, `assistant::g_assistant`), which names the ones that answer; they are highlighted and stepped through the same way |
+| `? your question` (a question mark, a space) | the page's paragraphs go to the **browser assistant** (Copilot), which names the ones that answer; they are highlighted and stepped through the same way |
 | anything else | Edge's own search, untouched (so is every Edge page and PDF) |
 
 A RegExp that is not closed yet (`/pri`) is plain text until its closing slash
@@ -109,7 +109,7 @@ A RegExp is case sensitive unless it says `i` (as in JavaScript); the bar's own
 
 ## Asking the assistant
 
-Edge exposes no API to ask Copilot or Gemini from outside. A web chat of our own
+Edge exposes no API to ask Copilot from outside. A web chat of our own
 (a hidden WebView in the window's profile) is driven like a person would:
 
 1. The page script splits the page into one paragraph per block of text.
@@ -119,11 +119,7 @@ Edge exposes no API to ask Copilot or Gemini from outside. A web chat of our own
    answers, plus one sentence.
 3. `chat_scripts.h` puts the prompt in the chat's message box and presses send;
    `assistant_chat.h` waits for the answer to stop growing and hands it back.
-   Which assistant, and so which page and selectors (`chat_target.h`), is chosen
-   per question from the panel's choice: change the assistant while the bar is
-   open and the next question goes to the new one (the bar's wording is read at
-   the time it is shown). A chat page left on the other assistant is pointed at
-   the new one's page first.
+   The page and selectors it drives are `chat_target.h`'s.
 4. `ParseAnswer` reads labels **only if they were offered in that prompt**.
 
 When the assistant needs the person (no message box after 12 s, or a dialog),
@@ -133,17 +129,11 @@ through once they have dealt with it.
 
 ### Verified, and not
 
-- **Gemini** (`gemini.google.com/app`) [run, anonymous InPrivate profile]: the
-  whole pipeline. Selectors read off the live page: the message box is
-  `rich-textarea .ql-editor[contenteditable="true"]` (also aria-label "Enter a
-  prompt here"); the send button is `button[aria-label="Send message"]` and
-  exists only while the box has text; an answer is a `message-content` inside a
-  `model-response`. A real question about the test page came back as
-  `P2, P5, P1` plus a sentence, was parsed, and three paragraphs were highlighted
-  with "1/3" in the bar. **Not verified:** the stop-button and dialog
-  selectors (`button[aria-label*="Stop"]`, `mat-dialog-container`) and a signed-in
-  or consent-page case; if Gemini shows no box the driver shows its page for the
-  user as for Copilot.
+- **Gemini** [run, removed since]: the whole pipeline was run against
+  `gemini.google.com/app` while the find bar could also ask Gemini (the choice
+  has been removed; see `docs/re/removed-gemini-integration.md`). A real question
+  came back as `P2, P5, P1` plus a sentence, was parsed, and three paragraphs were
+  highlighted with "1/3" in the bar.
 - **Copilot** [run, anonymous InPrivate profile]: `copilot.com` now answers a
   signed-out profile with a sign-in page; the driver found no box, said
   "Needs you" and showed the page (screenshot). **A real Copilot answer was
@@ -159,7 +149,7 @@ through once they have dealt with it.
 
 - [run] `/pric/i` typed into the native bar: "1/6", the matches painted in the
   page; Enter stepped to 3/6; Esc cleared the highlights; `? what does it cost`
-  showed "Enter to ask", then (Gemini) the answer's paragraphs painted and "1/3";
+  showed "Enter to ask", then (Gemini, since removed) the answer's paragraphs painted and "1/3";
   (Copilot) "Needs you" with its page at the top right.
 - [run] Typing was posted `WM_CHAR`s to the bar's window and Enter a posted
   `WM_KEYDOWN`, not a physical keyboard. Ctrl+F was a posted `WM_KEYDOWN` with the
@@ -215,7 +205,7 @@ own constructor:
 - **Their words.** `Label::SetText(label, const u16string_view*)` on the toggle's
   label (toggle +0x358): "RegExp" and "Ask <assistant::Name()>", set whenever the
   options are built or shown (a hook on `EdgeToggleFindOptions`, after the
-  original) and when the panel's switch changes. [run: "Ask Gemini", "Ask Copilot"]
+  original) and when the panel's switch changes. [run: "Ask Copilot"]
 - **Their state is the switch itself** (`EdgeToggleButton::GetIsOn` on the button
   at toggle +0x360): `find::OptionOf(findBarView)` reads it each time, so it is
   per window and goes with the bar; nothing of ours stores it. Edge's own
@@ -236,7 +226,7 @@ own constructor:
   the question, asked on Enter as before. Typed slashes and `? ` are plain text
   then. With no switch on the old shortcuts (`/pattern/flags`, `? question`) work
   as before. An empty box searches nothing. [unit: 12 checks; run: `(?i)pric` 1/6
-  with "Pricing" and "pricing" marked, `pric` 1/4, a Gemini question 1/2]
+  with "Pricing" and "pricing" marked, `pric` 1/4, a question 1/2]
 - **Switching the enhanced find off** hides ours and enables Edge's (the panel's
   switch goes through `find::Apply`). [infer: not run, it needs the panel's shared
   config event]

@@ -1,3 +1,13 @@
+> **Removed feature.** The Gemini integration this note describes (the glic
+> host, the share strip and picker, the chat-button reskin and the "Browser
+> assistant" choice in the panel) was taken out of fix-edge on 2026-10-19.
+> Copilot is the only assistant. The code lives in git history: the last
+> commit that still has it is `4ee5113`, so `git show 4ee5113:app/native-split/src/gemini.h`
+> (and `glic.h`, `share.h`, `glic_host_script.h`, ...) reads it. The reverse
+> engineering below is kept because section 12 (why the chat button's chevron
+> needs `IsConsumerCopilotLabelButtonWithDropdownEnabled` answered "yes") still
+> explains a live hook; every other section describes code that is gone.
+
 # Gemini in Chrome (`glic`) and Edge's Copilot button
 
 Targets: Chromium source at tag `155.0.8059.85` (the Chrome build installed
