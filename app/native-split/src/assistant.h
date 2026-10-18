@@ -31,8 +31,8 @@ inline bool IsGemini() {
 
 // Gemini's own name, for the tooltip, accessible name and label (the one place
 // the reskin's visible text is written).
-inline constexpr char kGeminiName[] = "Gemini";
-inline const char16_t kGeminiNameUtf16[] = u"Gemini";
+inline constexpr char kGeminiName[] = "Ask Gemini";
+inline const char16_t kGeminiNameUtf16[] = u"Ask Gemini";
 
 // The spark is drawn at the toolbar icon size, in the button's foreground
 // colour. The id is Edge's own toolbar-foreground ColorId.
@@ -54,7 +54,11 @@ inline void* DrawGeminiSpark(void* out, void* colorProvider) {
     color = reinterpret_cast<GetColorFn>(edge::At(rva::ColorProvider_GetColor))(
         colorProvider, kToolbarForegroundColorId);
   }
-  edge::CreateVectorIcon(out, icons::GeminiSpark(), kIconDipSize, color);
+  // Colourful while the panel is closed; plain, in the button's own colour,
+  // while it is open.
+  const auto* spark =
+      gemini::IsAnyOpen() ? icons::GeminiSparkMono() : icons::GeminiSpark();
+  edge::CreateVectorIcon(out, spark, kIconDipSize, color);
   return out;
 }
 
@@ -215,6 +219,16 @@ inline void CollectButtons(void* view, std::vector<void*>* buttons) {
   }
 }
 
+// Redraw `mcv`'s chat button(s): the panel opened or closed, which changes the
+// icon.
+inline void RedrawButtons(void* mcv) {
+  std::vector<void*> buttons;
+  CollectButtons(edge::ViewRoot(mcv), &buttons);
+  for (void* button : buttons) {
+    edge::CopilotButtonRefreshImages(button);
+  }
+}
+
 // The accessible name the stock button shows for its label: the label itself,
 // as UTF-8 (a label is a few ASCII-range words).
 inline std::string LabelAsUtf8(const edge::U16View label) {
@@ -342,6 +356,7 @@ inline bool Install() {
     Log("[err] assistant hooks failed");
     return false;
   }
+  gemini::g_onOpenChanged = RedrawButtons;
   const bool isEnabled = EnableAll();
   Log("[ok] assistant hooks installed (%d)", static_cast<int>(isEnabled));
   return isEnabled;

@@ -208,6 +208,19 @@ inline const VectorIcon* GeminiSpark() {
   return icon;
 }
 
+// The same spark in one colour, the one the icon is drawn in: Chrome's Gemini
+// button shows it so while its panel is open.
+inline const VectorIcon* GeminiSparkMono() {
+  static const VectorIcon* icon = [] {
+    std::vector<PathElement> path{CommandElement(off::ICON_CANVAS_DIMENSIONS),
+                                  ArgumentElement(kSparkCanvasSize)};
+    path.push_back(CommandElement(off::ICON_NEW_PATH));
+    AddSparkRightOf(path, kSparkNear);
+    return Build("kFixEdgeGeminiSparkMonoIcon", path);
+  }();
+  return icon;
+}
+
 // --- the arrows --------------------------------------------------------------
 
 // How many arguments a path command takes, for the commands Edge's arrow icon

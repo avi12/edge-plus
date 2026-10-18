@@ -106,7 +106,21 @@ inline bool IsOpen(const Panel& panel) {
   return panel.isWanted;
 }
 
+// Told, after a panel opens or closes, so the toolbar button can follow (its
+// icon is the open state's). Set by assistant.h.
+inline void (*g_onOpenChanged)(void* mcv) = nullptr;
+
 // On screen at all, which a closing panel still is until its slide lands.
+// Whether any window's panel is open.
+inline bool IsAnyOpen() {
+  for (const auto& [mcv, panel] : Panels()) {
+    if (IsOpen(panel)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 inline bool IsShown(const Panel& panel) {
   return edge::ViewGetVisible(panel.webView);
 }
@@ -259,6 +273,9 @@ inline bool Toggle(HWND window, void* mcv) {
   SetTimer(panel->window, kTimerId, kFrameMs, nullptr);
   Layout(mcv, *panel);
   RelayoutPage(mcv);
+  if (g_onOpenChanged) {
+    g_onOpenChanged(mcv);
+  }
   Log("[gemini] panel %s", isOpening ? "opened" : "closed");
   return isOpening;
 }
