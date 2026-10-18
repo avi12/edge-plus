@@ -28,6 +28,13 @@
     `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none">` +
       `<path d="M12 2 A10 10 0 0 0 22 12 A10 10 0 0 0 12 22 A10 10 0 0 0 2 12 A10 10 0 0 0 12 2 Z"/></svg>`;
 
+  // A magnifying glass with a "regex" asterisk.
+  const findIcon =
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
+      `<circle cx="10" cy="10" r="6"/><line x1="14.5" y1="14.5" x2="20" y2="20"/>` +
+      `<line x1="10" y1="7.5" x2="10" y2="12.5"/><line x1="7.8" y1="8.7" x2="12.2" y2="11.3"/>` +
+      `<line x1="12.2" y1="8.7" x2="7.8" y2="11.3"/></svg>`;
+
   const splitDescription =
     "Grows Edge's own split past two panes, loaded straight into Edge. Add panes above, below, " +
       "left or right; drag the dividers; Shift+Alt+arrow moves between panes. Turning it on injects " +
@@ -44,6 +51,13 @@
       "time\" no longer blocks the site for good; only Done on Ignore, or Block, does. Turning this " +
       "on (or opening Edge with it on) lifts every block so far, so blocked sites can ask again. " +
       "Live, no restart.";
+  const findDescription =
+    "Ctrl+F opens a find bar of our own with three modes: plain text, a regular expression (every " +
+      "match is highlighted, with a count and next/previous), and Ask Copilot, where you type a " +
+      "question such as \"where do they discuss pricing?\" and Copilot names the paragraphs of the " +
+      "page that answer it, which are highlighted. Edge pages and PDFs keep Edge's own find. Copilot " +
+      "answers from its own web page in your Edge profile, so it may ask you to sign in or pass a " +
+      "check once. Ctrl+Shift+Alt+F also opens it. Live, no restart. Open Edge first.";
   const assistantDescription =
     "Choose what the toolbar chat button opens. Gemini reskins the button and opens the Gemini " +
       "web app in a side panel; you share a page the way the web app allows. Copilot leaves Edge's " +
@@ -61,6 +75,9 @@
   const isThemingHeldOff = $derived(unsupported.has(Feature.Theming) && appState?.features.theming !== true);
   const isHandlersHeldOff = $derived(
     unsupported.has(Feature.ProtocolHandlers) && appState?.features.protocolHandlers !== true
+  );
+  const isFindHeldOff = $derived(
+    unsupported.has(Feature.EnhancedFind) && appState?.features.enhancedFind !== true
   );
   // The assistant control is held off when Gemini can't run on this build and
   // isn't already selected; Copilot (the default) is always available.
@@ -155,6 +172,10 @@
     appState = await bridge.setProtocolHandlers(value);
   }
 
+  async function onEnhancedFind(value: boolean): Promise<void> {
+    appState = await bridge.setEnhancedFind(value);
+  }
+
   async function onAssistant(value: Assistant): Promise<void> {
     appState = await bridge.setAssistant(value);
   }
@@ -227,6 +248,15 @@
       icon={assistantIcon}
       onChange={onAssistant}
       title="Browser assistant"
+    />
+
+    <FeatureCard
+      checked={appState.features.enhancedFind}
+      description={findDescription}
+      disabled={isFindHeldOff}
+      icon={findIcon}
+      onchange={onEnhancedFind}
+      title="Enhanced find: regex and Ask Copilot"
     />
 
     <FeatureCard
