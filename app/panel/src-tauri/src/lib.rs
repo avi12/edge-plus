@@ -63,7 +63,6 @@ pub fn run() {
             commands::take_edge_update,
             commands::set_split,
             commands::set_theming,
-            commands::set_assistant,
             commands::set_quiet_dev_mode,
             commands::set_start_with_windows,
             commands::set_protocol_handlers,

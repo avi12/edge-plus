@@ -13,8 +13,8 @@ use windows_sys::Win32::System::Threading::{OpenEventW, SetEvent, EVENT_MODIFY_S
 
 // Must match config::kIdCapacity in app/native-split/src/config.h.
 const ID_CAPACITY: usize = 64;
-// struct Wire's fields, in order: five u32s, the two ids, then the assistant and
-// the find switch.
+// struct Wire's fields, in order: five u32s, the two ids, then a reserved u32
+// (once the chosen assistant; written as zero, never read) and the find switch.
 const SPLIT_ACTIVE_OFFSET: usize = 0;
 const THEMING_ACTIVE_OFFSET: usize = 4;
 const PROTOCOL_HANDLERS_ACTIVE_OFFSET: usize = 8;
@@ -22,8 +22,8 @@ const LIGHT_LENGTH_OFFSET: usize = 12;
 const DARK_LENGTH_OFFSET: usize = 16;
 const LIGHT_ID_OFFSET: usize = 20;
 const DARK_ID_OFFSET: usize = LIGHT_ID_OFFSET + ID_CAPACITY;
-const ASSISTANT_OFFSET: usize = DARK_ID_OFFSET + ID_CAPACITY;
-const ENHANCED_FIND_ACTIVE_OFFSET: usize = ASSISTANT_OFFSET + 4;
+const RESERVED_OFFSET: usize = DARK_ID_OFFSET + ID_CAPACITY;
+const ENHANCED_FIND_ACTIVE_OFFSET: usize = RESERVED_OFFSET + 4;
 const WIRE_SIZE: usize = ENHANCED_FIND_ACTIVE_OFFSET + 4;
 // Must match kConfigEvent in app/native-split/src/dllmain.cpp.
 const CONFIG_EVENT: &str = r"Local\fixedge-config-changed";
@@ -41,9 +41,6 @@ pub struct DllConfig<'a> {
     pub protocol_handlers_active: bool,
     pub light_id: &'a str,
     pub dark_id: &'a str,
-    /// The chat button's assistant (0 = Copilot, 1 = Gemini), matching
-    /// `config::Assistant`.
-    pub assistant: u32,
     /// Ctrl+F opens the enhanced find bar (`find.h`).
     pub enhanced_find_active: bool,
 }
@@ -84,7 +81,6 @@ fn encode(config: &DllConfig) -> [u8; WIRE_SIZE] {
         DARK_ID_OFFSET,
         config.dark_id,
     );
-    wire[ASSISTANT_OFFSET..ASSISTANT_OFFSET + 4].copy_from_slice(&config.assistant.to_le_bytes());
     write_flag(
         &mut wire,
         ENHANCED_FIND_ACTIVE_OFFSET,
@@ -142,7 +138,6 @@ mod tests {
             protocol_handlers_active: true,
             light_id: "abc",
             dark_id: "",
-            assistant: 1,
             enhanced_find_active: true,
         });
         assert_eq!(u32_at(&wire, 0), 0);
@@ -151,7 +146,7 @@ mod tests {
         assert_eq!(u32_at(&wire, 12), 3);
         assert_eq!(u32_at(&wire, 16), 0);
         assert_eq!(&wire[20..23], b"abc");
-        assert_eq!(u32_at(&wire, ASSISTANT_OFFSET), 1);
+        assert_eq!(u32_at(&wire, RESERVED_OFFSET), 0);
         assert_eq!(u32_at(&wire, ENHANCED_FIND_ACTIVE_OFFSET), 1);
         assert_eq!(ENHANCED_FIND_ACTIVE_OFFSET, 152);
     }

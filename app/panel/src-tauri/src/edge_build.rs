@@ -53,13 +53,12 @@ pub fn pinned() -> FileVersion {
 #[must_use]
 pub fn depends_on_pinned_build(feature: Feature) -> bool {
     match feature {
-        // The split, theming, the link handlers, the Gemini reskin and the
-        // find bar all run inside the injected DLL and call into msedge.dll by
-        // RVA, so a different build breaks them.
+        // The split, theming, the link handlers and the find bar all run
+        // inside the injected DLL and call into msedge.dll by RVA, so a
+        // different build breaks them.
         Feature::NativeSplit
         | Feature::Theming
         | Feature::ProtocolHandlers
-        | Feature::Assistant
         | Feature::EnhancedFind => true,
         Feature::QuietDevMode => false,
     }
@@ -162,7 +161,6 @@ mod tests {
             theming: true,
             quiet_dev_mode: true,
             protocol_handlers: true,
-            assistant: crate::settings::Assistant::Gemini,
             enhanced_find: true,
         }
     }
@@ -180,7 +178,6 @@ mod tests {
         assert!(depends_on_pinned_build(Feature::NativeSplit));
         assert!(depends_on_pinned_build(Feature::Theming));
         assert!(depends_on_pinned_build(Feature::ProtocolHandlers));
-        assert!(depends_on_pinned_build(Feature::Assistant));
         assert!(depends_on_pinned_build(Feature::EnhancedFind));
         assert!(!depends_on_pinned_build(Feature::QuietDevMode));
     }
@@ -202,7 +199,6 @@ mod tests {
                 Feature::NativeSplit,
                 Feature::Theming,
                 Feature::ProtocolHandlers,
-                Feature::Assistant,
                 Feature::EnhancedFind
             ]
         );
@@ -218,7 +214,6 @@ mod tests {
                 Feature::NativeSplit,
                 Feature::Theming,
                 Feature::ProtocolHandlers,
-                Feature::Assistant,
                 Feature::EnhancedFind
             ]
         );
@@ -233,7 +228,6 @@ mod tests {
             theming: true,
             quiet_dev_mode: true,
             protocol_handlers: false,
-            assistant: crate::settings::Assistant::Copilot,
             enhanced_find: false,
         };
         assert_eq!(

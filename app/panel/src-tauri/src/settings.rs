@@ -35,30 +35,9 @@ pub struct Theming {
     pub dark: String,
 }
 
-/// The browser assistant the toolbar chat button opens. The wire values match
-/// `config::Assistant` in `app/native-split/src/config.h`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Assistant {
-    /// Edge's own Copilot: the button and pane stay stock.
-    #[default]
-    Copilot,
-    /// Gemini: the button is reskinned and opens Gemini in a side panel.
-    Gemini,
-}
-
-impl Assistant {
-    /// The u32 the DLL reads from the config file (see `config.h`).
-    #[must_use]
-    pub fn wire(self) -> u32 {
-        match self {
-            Self::Copilot => 0,
-            Self::Gemini => 1,
-        }
-    }
-}
-
-/// The feature switches, with their defaults (split on, the rest off).
+/// The feature switches, with their defaults (split on, the rest off). A
+/// settings file written when a removed switch existed still loads: an unknown
+/// field is ignored.
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 #[allow(
@@ -72,13 +51,8 @@ pub struct Features {
     /// A site's request to handle a link type is only blocked when the user
     /// says so (the DLL's `protocol_handlers.h`).
     pub protocol_handlers: bool,
-    /// Which assistant the toolbar chat button opens. Not a switch but a
-    /// choice; picking Gemini is what [`Feature::Assistant`] treats as "on"
-    /// (it calls into `msedge.dll`, so an Edge update forces it back to
-    /// Copilot the same way a mismatched build switches the others off).
-    pub assistant: Assistant,
     /// Edge's own Ctrl+F bar also takes `/pattern/flags` (a `RegExp` search)
-    /// and `? question` (ask the chosen [`Assistant`]); the DLL's `find.h`.
+    /// and `? question` (ask Copilot); the DLL's `find.h`.
     pub enhanced_find: bool,
 }
 
@@ -89,7 +63,6 @@ impl Default for Features {
             theming: false,
             quiet_dev_mode: false,
             protocol_handlers: false,
-            assistant: Assistant::Copilot,
             enhanced_find: false,
         }
     }
@@ -103,18 +76,15 @@ pub enum Feature {
     Theming,
     QuietDevMode,
     ProtocolHandlers,
-    /// The non-default assistant (Gemini) is selected.
-    Assistant,
     EnhancedFind,
 }
 
 impl Feature {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 5] = [
         Self::NativeSplit,
         Self::Theming,
         Self::QuietDevMode,
         Self::ProtocolHandlers,
-        Self::Assistant,
         Self::EnhancedFind,
     ];
 }
@@ -127,7 +97,6 @@ impl Features {
             Feature::Theming => self.theming,
             Feature::QuietDevMode => self.quiet_dev_mode,
             Feature::ProtocolHandlers => self.protocol_handlers,
-            Feature::Assistant => self.assistant == Assistant::Gemini,
             Feature::EnhancedFind => self.enhanced_find,
         }
     }
@@ -136,11 +105,7 @@ impl Features {
     /// must be loaded.
     #[must_use]
     pub fn needs_dll(self) -> bool {
-        self.native_split
-            || self.theming
-            || self.protocol_handlers
-            || self.assistant == Assistant::Gemini
-            || self.enhanced_find
+        self.native_split || self.theming || self.protocol_handlers || self.enhanced_find
     }
 
     pub fn set(&mut self, feature: Feature, is_on: bool) {
@@ -149,13 +114,6 @@ impl Features {
             Feature::Theming => self.theming = is_on,
             Feature::QuietDevMode => self.quiet_dev_mode = is_on,
             Feature::ProtocolHandlers => self.protocol_handlers = is_on,
-            Feature::Assistant => {
-                self.assistant = if is_on {
-                    Assistant::Gemini
-                } else {
-                    Assistant::Copilot
-                };
-            }
             Feature::EnhancedFind => self.enhanced_find = is_on,
         }
     }
@@ -205,4 +163,17 @@ impl Settings {
 pub enum Mode {
     Light,
     Dark,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_settings_file_from_the_gemini_days_still_loads() {
+        let text = r#"{"features":{"nativeSplit":false,"assistant":"gemini","enhancedFind":true}}"#;
+        let settings: Settings = serde_json::from_str(text).expect("old file loads");
+        assert!(!settings.features.native_split);
+        assert!(settings.features.enhanced_find);
+    }
 }

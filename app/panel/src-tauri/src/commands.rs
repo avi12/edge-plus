@@ -12,9 +12,7 @@ use serde::Serialize;
 
 use crate::edge_build::BuildChange;
 use crate::installed_themes::{self, InstalledTheme};
-use crate::settings::{
-    Assistant, Feature, Features, Mode, Settings, ThemeEntry, ThemeSource, Theming,
-};
+use crate::settings::{Feature, Features, Mode, Settings, ThemeEntry, ThemeSource, Theming};
 use crate::startup::{run_command, STARTUP_ENTRY_NAME};
 use crate::{edge_build, edge_watch, paths, payload, store_url, DEVMODE_WAITER_ARG};
 
@@ -94,13 +92,11 @@ pub(crate) fn apply(settings: &Settings) {
             protocol_handlers_active: features.protocol_handlers,
             light_id: &settings.theming.light,
             dark_id: &settings.theming.dark,
-            assistant: features.assistant.wire(),
             enhanced_find_active: features.enhanced_find,
         },
     );
-    // `needs_dll` includes Gemini (it reskins the chat button and hosts the
-    // Gemini panel from inside Edge) and the enhanced find bar, like the split
-    // and theming do.
+    // `needs_dll` includes the enhanced find bar, like the split and theming
+    // do.
     if !features.needs_dll() {
         edge_native::signal_unload();
         return;
@@ -191,18 +187,6 @@ pub fn set_protocol_handlers(enabled: bool) -> Result<StateDto, String> {
 pub fn set_enhanced_find(enabled: bool) -> Result<StateDto, String> {
     let mut settings = Settings::load();
     settings.features.enhanced_find = enabled;
-    persist_and_apply(&settings)
-}
-
-#[tauri::command]
-pub fn set_assistant(assistant: String) -> Result<StateDto, String> {
-    let chosen = match assistant.as_str() {
-        "copilot" => Assistant::Copilot,
-        "gemini" => Assistant::Gemini,
-        other => return Err(format!("unknown assistant: {other}")),
-    };
-    let mut settings = Settings::load();
-    settings.features.assistant = chosen;
     persist_and_apply(&settings)
 }
 
