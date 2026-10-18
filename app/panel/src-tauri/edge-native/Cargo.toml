@@ -3,7 +3,7 @@ name = "edge-native"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "Win32 glue for the Fix Edge panel: process enumeration, DLL injection, the external-extension registry, CRX parsing, and the dev-mode snooze."
+description = "Win32 glue for the Edge+ panel: process enumeration, DLL injection, the external-extension registry, CRX parsing, and the dev-mode snooze."
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

@@ -1,7 +1,7 @@
 {
   "name": "fix-edge-panel",
   "version": "0.1.0",
-  "description": "Fix Edge - the desktop panel that toggles Edge's live feature switches (Tauri + Svelte)",
+  "description": "Edge+ - the desktop panel that toggles Edge's live feature switches (Tauri + Svelte)",
   "license": "Apache-2.0",
   "type": "module",
   "packageManager": "pnpm@11.13.1",

@@ -204,7 +204,7 @@
 {#if appState}
   <main class="app">
     <header class="title">
-      <h1>Fix Edge</h1>
+      <h1>Edge+</h1>
       {#if !appState.edgeRunning}
         <p class="hint">Open Edge to apply changes.</p>
       {/if}

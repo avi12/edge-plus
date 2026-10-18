@@ -1,4 +1,4 @@
-//! The Fix Edge panel: a Tauri app that toggles Edge's live feature switches
+//! The Edge+ panel: a Tauri app that toggles Edge's live feature switches
 //! (the N-pane native split, light/dark theming, the developer-mode prompt and
 //! asking to handle links like Chrome) and drives the injected DLL. The web UI (Svelte + Fluent) calls the commands
 //! in [`commands`]; every Win32 action is isolated in the `edge-native` crate so
@@ -47,5 +47,5 @@ pub fn run() {
             commands::set_mode_theme
         ])
         .run(tauri::generate_context!())
-        .expect("error while running the Fix Edge panel");
+        .expect("error while running the Edge+ panel");
 }

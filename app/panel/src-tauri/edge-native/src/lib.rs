@@ -1,4 +1,4 @@
-//! Win32 glue for the Fix Edge panel.
+//! Win32 glue for the Edge+ panel.
 //!
 //! This is the one crate allowed `unsafe`; the panel crate forbids it. Each
 //! module owns one concern:

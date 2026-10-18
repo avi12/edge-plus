@@ -1,6 +1,6 @@
 # Edge's split view, from the binary
 
-Why Fix Edge splits a tab with its own windows instead of extending Edge's
+Why Edge+ splits a tab with its own windows instead of extending Edge's
 split view. Read off `msedge.dll` 155.0.4283.45 (353 MB, no symbols) with REA
 and a string sweep of the image, on 2026-10-13.
 
@@ -45,7 +45,7 @@ layouts change every four weeks.
   invisible resize border on the left, right and bottom, and Edge will not make
   a tabbed window narrower than 516 or shorter than 150.
 
-## What Fix Edge does instead
+## What Edge+ does instead
 
 A split tab shows the extension's split page, and each pane is a frame inside
 it, on the user's own profile. The layout is a tree of row and column splits

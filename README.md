@@ -1,4 +1,4 @@
-# Fix Edge
+# Edge+
 
 Live feature switches for Microsoft Edge. A desktop panel turns each feature on
 or off, and Edge picks the change up the moment it is made — no restart, ever.
