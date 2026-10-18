@@ -136,16 +136,21 @@
   </CardHeader>
 
   <div class="panel" class:dimmed={!enabled}>
-    <div class="add-row">
-      <TextInput
-        onEnter={addStore}
-        onInput={value => (url = value)}
-        placeholder="Paste a Chrome Web Store or Edge Add-ons link"
-        value={url}
-      />
-      <Button disabled={busy} label="Add" onclick={addStore} variant="primary" />
-      <Button disabled={busy} label="Local theme file…" onclick={() => addLocal(LocalThemeKind.File)} />
-      <Button disabled={busy} label="Local theme folder…" onclick={() => addLocal(LocalThemeKind.Folder)} />
+    <div class="add">
+      <div class="add-row">
+        <TextInput
+          onEnter={addStore}
+          onInput={value => (url = value)}
+          placeholder="Paste a Chrome Web Store or Edge Add-ons link"
+          value={url}
+        />
+        <Button disabled={busy} label="Add" onclick={addStore} variant="primary" />
+      </div>
+      <div class="add-row local">
+        <span class="local-label">Or add a local theme</span>
+        <Button disabled={busy} label="File…" onclick={() => addLocal(LocalThemeKind.File)} />
+        <Button disabled={busy} label="Folder…" onclick={() => addLocal(LocalThemeKind.Folder)} />
+      </div>
     </div>
 
     {#if error.length > 0}
@@ -195,6 +200,12 @@
     opacity: 50%;
   }
 
+  .add {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+  }
+
   .add-row {
     display: flex;
     gap: var(--space-s);
@@ -203,6 +214,12 @@
 
   .add-row :global(.input) {
     flex: 1 1 auto;
+  }
+
+  .local-label {
+    flex: 1 1 auto;
+    color: var(--fg-2);
+    font-size: 12.5px;
   }
 
   .error {
