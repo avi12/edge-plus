@@ -1583,4 +1583,76 @@ inline bool RunScript(void* webContents, const std::string& utf8Script,
   return true;
 }
 
+// --- the native find bar -------------------------------------------------------
+
+// What the bar's text field holds now (a view of the field's own storage, valid
+// until the field next changes).
+inline U16View FindBarText(void* findBarView) {
+  U16View text{nullptr, 0};
+  using Fn = void*(__fastcall*)(void*, U16View*);
+  reinterpret_cast<Fn>(At(rva::Textfield_GetText))(
+      Field<void*>(findBarView, off::FINDBARVIEW_textfield), &text);
+  return text;
+}
+
+// Show "ordinal/matches" in the bar's count label and enable its arrow buttons,
+// as Edge does for its own search's result. `findText` must be what the text
+// field holds: the bar rewrites the field when they differ.
+inline void FindBarShowResult(void* findBarView, int matches, int ordinal,
+                              U16View findText) {
+  static int s_requestId = 0;
+  uint8_t details[off::FINDDETAILS_size] = {};
+  // The bar skips a result equal to the one it last showed; ours may follow a
+  // status line it knows nothing about, so every result is a new one.
+  s_requestId++;
+  std::memcpy(details + off::FINDDETAILS_request_id, &s_requestId,
+              sizeof(s_requestId));
+  std::memcpy(details + off::FINDDETAILS_matches, &matches, sizeof(matches));
+  std::memcpy(details + off::FINDDETAILS_active_ordinal, &ordinal,
+              sizeof(ordinal));
+  details[off::FINDDETAILS_is_final] = 1;
+  // A read-only std::u16string in its long form {data, size, capacity|flag}.
+  struct LongU16String {
+    const char16_t* data;
+    size_t size;
+    size_t capacityAndFlag;
+  };
+  const LongU16String text{
+      findText.data, findText.length,
+      (findText.length + 1) |
+          (size_t{off::U16STRING_long_flag} << (8 * (sizeof(size_t) - 1)))};
+  using Fn = void(__fastcall*)(void*, const void*, const void*);
+  reinterpret_cast<Fn>(At(rva::FindBarView_UpdateForResult))(findBarView,
+                                                             details, &text);
+}
+
+// The bar's count label (a views::Label).
+inline void* FindBarLabel(void* findBarView) {
+  return Field<void*>(findBarView, off::FINDBARVIEW_match_count_label);
+}
+
+// Whether `keyEvent` (a ui::KeyEvent) is Enter being pressed.
+inline bool IsEnterPressed(const void* keyEvent) {
+  auto* bytes = static_cast<const uint8_t*>(keyEvent);
+  int32_t type = 0;
+  std::memcpy(&type, bytes + off::KEYEVENT_type, sizeof(type));
+  const bool isPressed = type == off::KEYEVENT_type_pressed;
+  const bool isEnter = bytes[off::KEYEVENT_key_code] == off::KEYEVENT_key_enter;
+  return isPressed && isEnter;
+}
+
+// The FindBarView behind the TextfieldController its key handler is called on.
+inline void* FindBarViewOfKeyController(void* controller) {
+  return static_cast<uint8_t*>(controller) -
+         off::FINDBARVIEW_textfield_controller;
+}
+
+// Put `text` in the bar's count label in place of "n/m" (a short status).
+inline void FindBarSetLabel(void* findBarView, U16View text) {
+  void* label = FindBarLabel(findBarView);
+  using Fn = void(__fastcall*)(void*, const U16View*);
+  reinterpret_cast<Fn>(VirtualFunction(
+      label, off::FINDBARLABEL_set_text_vtable_offset))(label, &text);
+}
+
 }  // namespace fixedge::edge

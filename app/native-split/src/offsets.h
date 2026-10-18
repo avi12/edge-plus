@@ -656,6 +656,24 @@ inline constexpr uintptr_t BrotliDecoderDecompress = 0x1ebef00;
 // int zlib_internal::GzipUncompressHelper(Bytef* dest, uLongf* dest_length,
 // const Bytef* source, uLong source_length); 0 = Z_OK (uLong is 32 bits).
 inline constexpr uintptr_t GzipUncompressHelper = 0x2a53484;
+// The native find bar (docs/re/find-bar.md). FindBarView is the bar's content
+// view; its text field's edits end in Find(this, const u16string_view*), and
+// Enter and the arrow buttons in FindNext(this, bool reverse), which reads the
+// text field itself. Both go on to FindTabHelper::StartFinding.
+inline constexpr uintptr_t FindBarView_Find = 0xa3721e0;
+inline constexpr uintptr_t FindBarView_FindNext = 0xa370b90;
+// bool HandleKeyEvent(this = the FindBarView's TextfieldController subobject,
+// Textfield*, const ui::KeyEvent&): Enter starts the search itself (FindNext is
+// inlined into it), so Enter needs its own hook.
+inline constexpr uintptr_t FindBarView_HandleKeyEvent = 0xa371cf0;
+// void UpdateForResult(this, const FindNotificationDetails&, const
+// std::u16string& findText): the "n/m" label and the buttons' enabled state.
+inline constexpr uintptr_t FindBarView_UpdateForResult = 0xa370f34;
+// void EndFindSession(this, ?, bool): the bar is closing (Esc, the X, a click
+// into the page); FindBarView::EndFindSession ends in it.
+inline constexpr uintptr_t FindBarController_EndFindSession = 0xa068366;
+// views::Textfield::GetText(this, std::u16string_view* out): fills `out`.
+inline constexpr uintptr_t Textfield_GetText = 0xfb89f6;
 }  // namespace rva
 
 // Linear addresses (not RVAs): partition-alloc BRP-pool gate for raw_ptr acquire.
@@ -996,6 +1014,28 @@ inline constexpr uint8_t VALUE_string_index = 4;
 // accepts 1..11 and an isolated world shares the page's DOM but not its
 // globals, so a page cannot see or tamper with our script.
 inline constexpr int kScriptWorldId = 11;
+// FindBarView: its views::Textfield* and its FindBarMatchCountLabel* (the
+// "n/m" label, a views::Label whose virtual at LABEL_set_text_slot takes a
+// const std::u16string_view*).
+inline constexpr uintptr_t FINDBARVIEW_textfield = 0x390;
+inline constexpr uintptr_t FINDBARVIEW_match_count_label = 0x398;
+inline constexpr uintptr_t FINDBARLABEL_set_text_vtable_offset = 0x3a8;
+// The TextfieldController subobject HandleKeyEvent receives as `this` sits this
+// far into the FindBarView (the text field is at +0x58 of it).
+inline constexpr uintptr_t FINDBARVIEW_textfield_controller = 0x338;
+// ui::KeyEvent: its type (7 = key pressed) and its key code (0x0d = Enter).
+inline constexpr uintptr_t KEYEVENT_type = 0x0c;
+inline constexpr int32_t KEYEVENT_type_pressed = 7;
+inline constexpr uint8_t KEYEVENT_key_enter = 0x0d;
+// find_in_page::FindNotificationDetails (0x28 bytes): request id, number of
+// matches (-1 = unknown), the match's selection rect, the active match's
+// 1-based ordinal (-1 = unknown) and whether this is the final update, then a ref-counted pointer (null here) that the copy constructor
+// reads, so the whole 0x28 must be ours.
+inline constexpr size_t FINDDETAILS_size = 0x28;
+inline constexpr uintptr_t FINDDETAILS_request_id = 0x00;
+inline constexpr uintptr_t FINDDETAILS_matches = 0x04;
+inline constexpr uintptr_t FINDDETAILS_active_ordinal = 0x18;
+inline constexpr uintptr_t FINDDETAILS_is_final = 0x1c;
 }  // namespace off
 
 }  // namespace fixedge::edge155
