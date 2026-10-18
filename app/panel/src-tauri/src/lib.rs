@@ -40,6 +40,12 @@ pub fn run() {
             }
         }))
         .setup(|app| {
+            if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
+                // The width is fixed, so offer no horizontal resize handle.
+                if let Ok(hwnd) = window.hwnd() {
+                    let _ = edge_native::make_vertical_resize_only(hwnd.0 as isize);
+                }
+            }
             // A boot launch keeps the panel in the taskbar instead of in the
             // user's face; it still applies the settings.
             if startup::is_background_launch(std::env::args()) {

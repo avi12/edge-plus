@@ -13,6 +13,7 @@
 //! * [`pack`] - pack a theme folder or `.zip` into a signed `.crx`.
 //! * [`devmode`] - wait for Edge to exit, then snooze its developer-mode prompt.
 //! * [`version`] - read a binary's file version, as the DLL's self-check does.
+//! * [`window`] - take the horizontal resize handles off the panel window.
 
 mod crx;
 mod devmode;
@@ -24,6 +25,7 @@ mod protocol;
 mod registry;
 mod startup;
 mod version;
+mod window;
 
 pub use crx::{read_crx, CrxInfo};
 pub use devmode::{default_user_data, wait_for_edge_exit_then_snooze};
@@ -38,3 +40,4 @@ pub use startup::{
     disable_startup, enable_startup, is_startup_enabled, StartupKeys, USER_STARTUP_KEYS,
 };
 pub use version::{file_version, FileVersion, ParseVersionError};
+pub use window::make_vertical_resize_only;
