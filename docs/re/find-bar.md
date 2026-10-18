@@ -1,9 +1,11 @@
 # The enhanced find
 
 Edge's own `Ctrl+F` bar (its text field, its "n/m" label, its arrow buttons)
-stays the only UI. Two things typed into its box are ours; the panel's "Enhanced
-find" switch turns them on (the DLL's config wire, `config.h`, carries it as the
-last u32):
+stays the only UI. Two switches in its options ("RegExp" and "Ask <assistant>",
+beside Match case; see the last section) make what is typed a pattern or a
+question. With both off, two things typed into its box are still ours, as
+shortcuts; the panel's "Enhanced find" switch turns it all on (the DLL's config
+wire, `config.h`, carries it as the last u32):
 
 | typed | what happens |
 |---|---|
@@ -189,28 +191,57 @@ through once they have dealt with it.
   during testing that can unload a test DLL, and its own is injected in its
   place.
 
-## Explicit toggles instead of typed prefixes (not built)
+## The RegExp and Ask switches in the bar's options (155.0.4283.62)
 
-Asked for: "Use regular expression" and "Ask <assistant>" as checkable options
-in the native bar (mutually exclusive, Match case / Whole word greyed out while
-either is on, RegExp case sensitive with a leading `(?i)`). What reading the
-disassembly (155.0.4283.45) showed, and what stopped the work:
+The bar's "..." button does not open a menu: `FindBarView::EdgeToggleFindOptions`
+shows an inline `FindOptionsControlView` (built by `EdgeMaybeAddFindOptionsView`),
+a column of `FindInPageOptionToggleView`s. Each is a title `views::Label` and a
+`views::EdgeToggleButton`. Edge builds ids 0 Match case, 1 Whole word, 2 Match
+diacritics (each only where its feature is on; title strings 0xa0a5 / 0xa0a6 /
+0xa0a7), and `edge::GetFindInPageOptionToggleTitleText` returns an **empty** title
+for every other id. So the two switches are Edge's own views, built with Edge's
+own constructor:
 
-- **The bar's options button is not a menu.** `FindBarView::
-  EdgeOnFindOptionsButtonClicked` -> `EdgeToggleFindOptions` shows or hides an
-  inline `FindOptionsControlView` (added by `EdgeMaybeAddFindOptionsView`; its
-  children are toggle views added with `AddFindInPageOptionChildView`, and
-  `TurnOffAllFindFilters` / `ExtraParameters::GetNumberOfFindOptionsOn` count
-  them). Match case and Whole word are toggle views in that row, not
-  `SimpleMenuModel` items, so there is no model builder, execute or
-  checked/enabled query to hook. Our two options would be two more toggle views
-  built with Edge's own view constructors and added to that row; greying Match
-  case / Whole word means `View::SetEnabled` on the two existing children.
-- **Edge updated under the DLL.** The machine's Edge went from 155.0.4283.45 to
-  155.0.4283.62 during this work, and the old build's files are gone. The DLL
-  (pinned to .45, `verify.h`) now refuses to hook, so nothing could be run, and
-  the disassembly tooling reads the .45 `msedge.dll`. Doing this needs the DLL
-  re-pinned to the new build (every RVA in `offsets.h` re-derived against a .62
-  PDB) first.
-- Nothing for the toggles was written; the typed `/pattern/flags` and
-  `? question` forms above are what exists.
+- **Adding them.** `FindOptionsControlView::AddFindInPageOptionChildView(this,
+  id, width, FindBarHost*)` creates the toggle for `id` at the end of the column
+  and records it in the view's `std::map<int, raw_ptr<toggle>>` (+0x338; the root
+  at +0x340, a node's key at +0x20 and value at +0x28). We call it for id 3
+  (RegExp) and 4 (Ask) from a hook on `EdgeMaybeAddFindOptionsView` (after the
+  original), taking the width from one of Edge's toggles and the host from
+  `FindBarView+0x370`, then `InvalidateLayout` on the options view and
+  `FindBarView::PreferredSizeChanged`; the bar's window grew by itself.
+  [run: the two rows appeared under Match whole word; diacritics is not built in
+  this profile]
+- **Their words.** `Label::SetText(label, const u16string_view*)` on the toggle's
+  label (toggle +0x358): "RegExp" and "Ask <assistant::Name()>", set whenever the
+  options are built or shown (a hook on `EdgeToggleFindOptions`, after the
+  original) and when the panel's switch changes. [run: "Ask Gemini", "Ask Copilot"]
+- **Their state is the switch itself** (`EdgeToggleButton::GetIsOn` on the button
+  at toggle +0x360): `find::OptionOf(findBarView)` reads it each time, so it is
+  per window and goes with the bar; nothing of ours stores it. Edge's own
+  `GetToggleState` / `SetToggleState` read and write the tab helper's find
+  parameters by id, which means nothing for ids 3 and 4, so ours bypass them.
+- **A click** runs `FindInPageOptionToggleView::OnButtonToggled`, hooked. For ids
+  0..2 it is Edge's. For ours the button has **already moved** when the callback
+  runs (flipping it again put it back, the first try): we take the new state,
+  turn the other of ours off, and search the box again through our own `Find`
+  hook. Switching both off re-runs the box as Edge's own find. [run]
+- **Greying Edge's.** `View::SetEnabled(false)` on both the label and the
+  `EdgeToggleButton` of ids 0..2 (a disabled switch takes no click) while either
+  of ours is on; Match diacritics is included, since it means as little to a
+  RegExp. [run: Match case and Whole word greyed, then back]
+- **What the box means with a switch on.** `find_text::ParseQuery(typed, option)`:
+  RegExp: the whole box is the pattern, **case sensitive** (JavaScript's default),
+  and a leading `(?i)` is dropped and adds the `i` flag; Ask: the trimmed box is
+  the question, asked on Enter as before. Typed slashes and `? ` are plain text
+  then. With no switch on the old shortcuts (`/pattern/flags`, `? question`) work
+  as before. An empty box searches nothing. [unit: 12 checks; run: `(?i)pric` 1/6
+  with "Pricing" and "pricing" marked, `pric` 1/4, a Gemini question 1/2]
+- **Switching the enhanced find off** hides ours and enables Edge's (the panel's
+  switch goes through `find::Apply`). [infer: not run, it needs the panel's shared
+  config event]
+
+Not run: two browser windows (the state is in each window's own views),
+the labels changing when the assistant is changed while the options are open
+(they refresh on the next show), Match diacritics, the keyboard (tab to a
+switch, space), and Shift+Enter / arrows with a switch on.
