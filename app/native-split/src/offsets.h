@@ -567,6 +567,21 @@ inline constexpr uintptr_t EdgeCopilotMenuModel_ExecuteCommand = 0xf04e420;
 // is fixed at toolbar creation; the right-click is ToolbarButton's
 // ShowContextMenuForViewImpl(controller, source, point, source type).
 inline constexpr uintptr_t ToolbarButton_ShowContextMenuForViewImpl = 0xa2c6780;
+// The page's right-click menu (RenderViewContextMenu, rebuilt on every
+// right-click). Its "Ask Copilot" items come from three builders, each `this`
+// only: AddEdgeCopilotContextMenuItemsInL1 adds a lone "Summarize with Copilot"
+// (command 0xcd71, string 0x44e9); ...InL2 adds the "Ask Copilot" submenu
+// (command 0xcd76, string 0x44f7) holding Summarize (0xcd71, 0x44ef) and Create
+// podcast (0xcd77, 0x44ec); AppendChatItem adds, for a selection or a PDF, a
+// submenu of the same name (0xcd68 / 0xcd69, string 0x44f7) whose items
+// (0xcd6a..0xcd6d) open Copilot's chat. Choosing 0xcd71 or 0xcd77 runs
+// SendPageContextualPromptToChat(this, commandId), which sends the canned prompt
+// (strings 0x44ea/0x44ed, 0x44e9/0x44ec) with the page to Copilot's pane.
+inline constexpr uintptr_t RenderViewContextMenu_AddCopilotItemsL1 = 0xaecbfea;
+inline constexpr uintptr_t RenderViewContextMenu_AddCopilotItemsL2 = 0xaecbe96;
+inline constexpr uintptr_t RenderViewContextMenu_AppendChatItem = 0xaecb4ae;
+inline constexpr uintptr_t
+    RenderViewContextMenu_SendPageContextualPromptToChat = 0xaed4b2c;
 // The button's vftables (one per base; EdgeCopilotToolbarLabelButton has
 // multiple inheritance). A view is a chat button when its object+0 vptr is any
 // of these, so the recognition does not depend on which base is primary.
@@ -955,6 +970,9 @@ inline constexpr int COPILOT_HIDE_SETTINGS_COMMAND = 0xcea4;
 inline constexpr int COPILOT_HIDE_LABEL = 0x4562;
 // ToolbarMenuButtonContextMenu's ui::SimpleMenuModel*.
 inline constexpr uintptr_t TOOLBARMENU_model = 0x18;
+// RenderViewContextMenu: the menu's own ui::SimpleMenuModel is embedded at this
+// offset (the builders pass `this + 0x5c0` to AddItem...).
+inline constexpr uintptr_t RVCM_menuModel = 0x5c0;
 // ToolbarButton: its ContextMenuController subobject (what
 // ShowContextMenuForViewImpl receives as this) sits this far into the button, and
 // the button's ToolbarMenuButtonContextMenu* (SetContextMenu) at the other.

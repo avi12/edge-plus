@@ -509,3 +509,55 @@ in the same page. With no Chrome installed it never tries glic.
   prefs set, Gemini chosen via the config file, DLL injected): the first window
   keeps its bare button; a new window (`IDC_NEW_WINDOW`) shows "Ask Gemini" with its
   chevron. Captured with `PrintWindow`.
+
+## 13. The page's right-click "Ask Copilot" items [disasm] [run]
+
+- **Where the items are built.** `RenderViewContextMenu` (rebuilt on every
+  right-click; its own `ui::SimpleMenuModel` is embedded at `this+0x5c0`) adds them
+  in three builders. `AppendAskCopilotInPageContextualMenu` (`0xaecb048`) tail-jumps
+  to `AddEdgeCopilotContextMenuItemsInL2` (`0xaecbe96`) when the profile has contextual
+  podcast (`IsContextualPodcastEnabledForProfile`), else to `...InL1` (`0xaecbfea`).
+  L1 adds one item, command `0xcd71`, string `0x44e9` ("Summarize with Copilot").
+  L2 adds the **"Ask Copilot" submenu** (command `0xcd76`, string `0x44f7`, its model
+  at `this+0x1170`) holding Summarize (`0xcd71`, `0x44ef`) and Create podcast
+  (`0xcd77`, `0x44ec`; also `0xcd77` for PDFs). `AppendChatItem` (`0xaecb4ae`, with
+  `QuickSearchClientImpl::AddChatMenuItemForWeb`) adds, for a selection or a PDF, a
+  separate submenu of the same name (`0xcd68`, or `0xcd69` on a PDF; string
+  `0x44f7`) whose items `0xcd6a..0xcd6d` (strings `0x44e5..0x44e8`) open Copilot's
+  chat.
+- **What Copilot does.** Summarize (`0xcd71`) and Create podcast (`0xcd77`) both run
+  `RenderViewContextMenu::SendPageContextualPromptToChat` (`0xaed4b2c`; `this`,
+  command id): it sends a canned prompt (strings `0x44ea`
+  title / `0x44e9` prompt for summarize, `0x44ed` / `0x44ec` for the podcast, source
+  tag `EDGTCXPD` for the podcast) with the page to **Copilot's side pane** via
+  `edge_copilot::utils::SendPageContextualPromptToChat` (or the commercial
+  variant). So the podcast is a prompt to Copilot's chat about the current page, not
+  a separate window; the audio is Copilot's reply there. The selection items go
+  through `EdgeExecCopilotItem` (`0xaed0ec6`) and `QuickSearchClientImpl::OpenChat`
+  with the command id.
+- **What fix-edge does with Gemini chosen** (`page_menu.h` is the one table).
+  After each of the three builders runs (hooks in `assistant.h`), the top-level
+  items are relabelled ("Ask Gemini", "Summarize with Gemini") or removed (the
+  selection submenus). `SendPageContextualPromptToChat` is hooked: Summarize runs
+  the same action as the chat dropdown's Summarize (`chat_actions::Run`, share the
+  tab, press send / glic `invoke`), Create podcast runs `ChatAction::kPodcast`: the
+  same path with the prompt "Create a podcast (an Audio Overview) of this page" (a
+  `chat_action.h` constant). The submenu's children keep Edge's text (it names no
+  assistant). With Copilot chosen every hook calls Edge's own code.
+- **Verified live** (throwaway Edge, marker `fixedge-ctx-`, own `LOCALAPPDATA` with
+  Gemini chosen, DLL injected; right-click posted to the page's render widget, items
+  read through UIA): the page menu shows "Summarize with Gemini" (L1 variant); invoking
+  it opened the Gemini panel, shared the page and Gemini answered with a summary
+  (captured with `PrintWindow`). With Copilot chosen the same menu reads "Summarize
+  with Copilot" (Edge's text, pass-through).
+- **Not verified.** (1) The L2 submenu with Create podcast and the selection submenu
+  never appear in a fresh personal profile (podcast and chat-prompt eligibility), so
+  the relabel of `0xcd76`, the removal of `0xcd68`/`0xcd69` and the podcast prompt
+  were not seen live; they use the same code path as the verified L1 relabel and
+  Summarize run. (2) Whether Gemini returns audio for the podcast prompt in the web
+  app or the glic client: Audio Overview is a NotebookLM feature; the prompt is sent
+  and what Gemini does with it is Google's. (3) Selection items: the selection text
+  (`this+0x1d0`, a `u16string`, from `AppendSearchProvider`) could be sent as a
+  prompt, but the panel's web-app path can only insert shared pages, so Gemini
+  selection prompts are a gap; the selection submenu is hidden with Gemini rather
+  than opening Copilot.

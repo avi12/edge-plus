@@ -6,9 +6,11 @@
 // assistant.h's. UI thread only.
 #pragma once
 #include <windows.h>
+#include <cstring>
 #include "chat_action.h"
 #include "edge.h"
 #include "gemini.h"
+#include "page_menu.h"
 #include "share.h"
 
 namespace fixedge::chat_actions {
@@ -56,6 +58,29 @@ inline void RelabelHideItem(void* button, bool isGemini) {
       edge::MenuSetLabel(model, i, &label);
       return;
     }
+  }
+}
+
+// Make a freshly built page context menu Gemini's: each of its Copilot items
+// (page_menu.h's table) is relabelled or removed. Walks from the end so a
+// removal does not shift the items still to visit.
+inline void ApplyPageMenu(void* contextMenu) {
+  void* model = edge::PageContextMenuModel(contextMenu);
+  for (size_t i = edge::MenuItemCount(model); i > 0; i--) {
+    const size_t index = i - 1;
+    const page_menu::Item* item =
+        page_menu::ItemFor(edge::MenuCommandIdAt(model, index));
+    if (!item) {
+      continue;
+    }
+    if (item->treatment == page_menu::GeminiTreatment::kRemove) {
+      edge::MenuRemoveItemAt(model, index);
+      continue;
+    }
+    edge::U16String label{};
+    const edge::U8View text{item->geminiLabel, std::strlen(item->geminiLabel)};
+    edge::Utf8ToUtf16(&label, &text);
+    edge::MenuSetLabel(model, index, &label);
   }
 }
 

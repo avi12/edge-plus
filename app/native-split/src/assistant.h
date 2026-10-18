@@ -17,6 +17,7 @@
 #include "edge.h"
 #include "gemini.h"
 #include "icons.h"
+#include "page_menu.h"
 #include "share.h"
 
 namespace fixedge::assistant {
@@ -216,6 +217,52 @@ inline void __fastcall h_execute_menu(void* model, int commandId,
   }
 }
 
+// --- the page's right-click "Ask Copilot" items ------------------------------
+
+// Edge builds the page context menu afresh on each right-click, in three
+// builders that add Copilot items; each is hooked to take the items over after
+// it has run, so with Copilot chosen they are Edge's untouched.
+using BuildPageMenu_t = void(__fastcall*)(void*);
+inline BuildPageMenu_t o_add_items_l1 = nullptr;
+inline BuildPageMenu_t o_add_items_l2 = nullptr;
+inline BuildPageMenu_t o_append_chat_item = nullptr;
+
+inline void __fastcall h_add_items_l1(void* contextMenu) {
+  o_add_items_l1(contextMenu);
+  if (IsGemini()) {
+    chat_actions::ApplyPageMenu(contextMenu);
+  }
+}
+inline void __fastcall h_add_items_l2(void* contextMenu) {
+  o_add_items_l2(contextMenu);
+  if (IsGemini()) {
+    chat_actions::ApplyPageMenu(contextMenu);
+  }
+}
+inline void __fastcall h_append_chat_item(void* contextMenu) {
+  o_append_chat_item(contextMenu);
+  if (IsGemini()) {
+    chat_actions::ApplyPageMenu(contextMenu);
+  }
+}
+
+// Summarize and Create podcast send their canned prompt, with the page, to
+// Copilot's pane; with Gemini chosen the Gemini panel gets them instead, and a
+// window without a panel to open is left to Edge.
+using SendPagePrompt_t = void(__fastcall*)(void*, int);
+inline SendPagePrompt_t o_send_page_prompt = nullptr;
+
+inline void __fastcall h_send_page_prompt(void* contextMenu, int commandId) {
+  const chat_action::ChatAction action = page_menu::ActionFor(commandId);
+  const bool isOurs = IsGemini() && action != chat_action::ChatAction::kNone;
+  HWND window = isOurs ? ActiveBrowserWindow() : nullptr;
+  const bool isHandled =
+      isOurs && chat_actions::Run(window, edge::McvForWindow(window), action);
+  if (!isHandled) {
+    o_send_page_prompt(contextMenu, commandId);
+  }
+}
+
 // --- the button's "Chat" label -----------------------------------------------
 
 using Label_t = void(__fastcall*)(void*);
@@ -374,6 +421,18 @@ inline std::vector<HookSite> HookSites() {
       {rva::EdgeCopilotMenuModel_ExecuteCommand,
        reinterpret_cast<void*>(h_execute_menu),
        reinterpret_cast<void**>(&o_execute_menu)},
+      {rva::RenderViewContextMenu_AddCopilotItemsL1,
+       reinterpret_cast<void*>(h_add_items_l1),
+       reinterpret_cast<void**>(&o_add_items_l1)},
+      {rva::RenderViewContextMenu_AddCopilotItemsL2,
+       reinterpret_cast<void*>(h_add_items_l2),
+       reinterpret_cast<void**>(&o_add_items_l2)},
+      {rva::RenderViewContextMenu_AppendChatItem,
+       reinterpret_cast<void*>(h_append_chat_item),
+       reinterpret_cast<void**>(&o_append_chat_item)},
+      {rva::RenderViewContextMenu_SendPageContextualPromptToChat,
+       reinterpret_cast<void*>(h_send_page_prompt),
+       reinterpret_cast<void**>(&o_send_page_prompt)},
       {rva::Copilot_IsConsumerLabelButtonWithDropdownEnabled,
        reinterpret_cast<void*>(h_dropdown_enabled),
        reinterpret_cast<void**>(&o_dropdown_enabled)},

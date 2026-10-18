@@ -1277,6 +1277,10 @@ inline void* ChatButtonContextMenuModel(void* button) {
   return contextMenu ? Field<void*>(contextMenu, off::TOOLBARMENU_model)
                      : nullptr;
 }
+// The ui::SimpleMenuModel embedded in a page context menu (RenderViewContextMenu).
+inline void* PageContextMenuModel(void* contextMenu) {
+  return reinterpret_cast<uint8_t*>(contextMenu) + off::RVCM_menuModel;
+}
 // The behaviour object a chat button holds.
 inline void* CopilotButtonAction(void* button) {
   return Field<void*>(button, off::DISCOVERBUTTON_action);
