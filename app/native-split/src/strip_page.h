@@ -5,59 +5,19 @@
 // share.h polls it for clicks and pushes tabs and status into it. Fluent 2
 // tokens by hand (like the panel app), light and dark following the browser.
 #pragma once
+#include <string>
+#include "fluent_tokens.h"
 
 namespace fixedge::strip_page {
 
 // The strip page. It carries no script: the script below runs in our isolated
 // world, so nothing in this document is reachable from a page of the web.
-inline constexpr char kHtmlStyle[] = R"CSS(
-<!doctype html>
-<html lang="en">
-<meta charset="utf-8">
-<meta name="color-scheme" content="light dark">
-<title>Share with Gemini</title>
-<style>
-:root {
-  --surface: #ffffff; --surface-hover: #f5f5f5; --surface-pressed: #e0e0e0;
-  --stroke: #d1d1d1; --text: #242424; --text-muted: #616161;
-  --brand: #0f6cbd; --brand-hover: #115ea3; --brand-pressed: #0f548c; --on-brand: #ffffff;
-  --danger: #b10e1c; --success: #0e700e;
-  --radius: 4px; --radius-lg: 8px;
-  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface: #292929; --surface-hover: #3d3d3d; --surface-pressed: #1f1f1f;
-    --stroke: #666666; --text: #ffffff; --text-muted: #adadad;
-    --brand: #479ef5; --brand-hover: #62abf5; --brand-pressed: #2886de; --on-brand: #000000;
-    --danger: #dc626d; --success: #54b054;
-  }
-}
-* { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; }
-body {
-  display: flex; flex-direction: column; overflow: hidden;
-  background: var(--surface); color: var(--text);
-  font: 400 13px/1.4 var(--font);
-}
+inline constexpr char kStripCss[] = R"CSS(
+body { display: flex; flex-direction: column; }
 #bar {
   flex: none; height: 44px; display: flex; align-items: center; gap: 8px;
   padding: 0 10px; border-bottom: 1px solid var(--stroke);
 }
-button {
-  font: inherit; color: var(--text); background: var(--surface);
-  border: 1px solid var(--stroke); border-radius: var(--radius);
-  height: 30px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px;
-  cursor: pointer; white-space: nowrap;
-}
-button:hover { background: var(--surface-hover); }
-button:active { background: var(--surface-pressed); }
-button:focus-visible, input:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
-button svg { width: 16px; height: 16px; fill: currentColor; flex: none; }
-button.primary { background: var(--brand); border-color: transparent; color: var(--on-brand); font-weight: 600; }
-button.primary:hover { background: var(--brand-hover); }
-button.primary:active { background: var(--brand-pressed); }
-button:disabled { opacity: .5; cursor: default; }
 #status {
   flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   color: var(--text-muted); font-size: 12px;
@@ -88,11 +48,14 @@ body[data-sheet] #sheet { display: flex; }
   border: 1px solid var(--stroke); border-radius: 999px; padding: 0 8px;
 }
 #empty { padding: 20px; color: var(--text-muted); text-align: center; }
-@media (prefers-reduced-motion: no-preference) {
-  button { transition: background-color 80ms ease-out; }
-}
-</style>
 )CSS";
+
+// The page's head and style: the shared look, then the strip's own rules.
+inline std::string HtmlStyle() {
+  return std::string(fluent_tokens::kPageHead) +
+         "<title>Share with Gemini</title>\n<style>" + fluent_tokens::kBaseCss +
+         kStripCss + "</style>\n";
+}
 
 inline constexpr char kHtmlBody[] = R"HTML(
 <body>

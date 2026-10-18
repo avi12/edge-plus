@@ -209,6 +209,27 @@ inline std::string BuildDataUrl(const std::string& html) {
   return url;
 }
 
+// --- a status line's kinds -------------------------------------------------------
+
+// The kind of a status line in one of our pages (the share strip, the find bar),
+// and the name the page's style keys on.
+enum class StatusKind {
+  kInfo,
+  kOk,
+  kError
+};
+inline const char* StatusKindName(StatusKind kind) {
+  switch (kind) {
+    case StatusKind::kInfo:
+      return "info";
+    case StatusKind::kOk:
+      return "ok";
+    case StatusKind::kError:
+      return "error";
+  }
+  return "info";
+}
+
 // --- the tab list the picker shows ---------------------------------------------
 
 enum class TabState {

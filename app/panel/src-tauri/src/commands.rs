@@ -75,10 +75,12 @@ pub(crate) fn apply(settings: &Settings) {
             light_id: &settings.theming.light,
             dark_id: &settings.theming.dark,
             assistant: features.assistant.wire(),
+            enhanced_find_active: features.enhanced_find,
         },
     );
-    // `needs_dll` includes Gemini: it reskins the chat button and hosts the
-    // Gemini panel from inside Edge, like the split and theming do.
+    // `needs_dll` includes Gemini (it reskins the chat button and hosts the
+    // Gemini panel from inside Edge) and the enhanced find bar, like the split
+    // and theming do.
     if !features.needs_dll() {
         edge_native::signal_unload();
         return;
@@ -160,6 +162,13 @@ pub fn set_theming(enabled: bool) -> Result<StateDto, String> {
 pub fn set_protocol_handlers(enabled: bool) -> Result<StateDto, String> {
     let mut settings = Settings::load();
     settings.features.protocol_handlers = enabled;
+    persist_and_apply(&settings)
+}
+
+#[tauri::command]
+pub fn set_enhanced_find(enabled: bool) -> Result<StateDto, String> {
+    let mut settings = Settings::load();
+    settings.features.enhanced_find = enabled;
     persist_and_apply(&settings)
 }
 

@@ -12,6 +12,7 @@ struct Rect {
   int32_t y = 0;
   int32_t width = 0;
   int32_t height = 0;
+  bool operator==(const Rect& other) const = default;
 };
 
 // gfx::Point is two int32s {x, y}; a Point* can be handed to Edge as a gfx::Point*.

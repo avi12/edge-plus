@@ -40,6 +40,7 @@ pub fn run() {
             commands::set_assistant,
             commands::set_quiet_dev_mode,
             commands::set_protocol_handlers,
+            commands::set_enhanced_find,
             commands::add_store_theme,
             commands::add_local_theme,
             commands::remove_theme,

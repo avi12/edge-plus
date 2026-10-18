@@ -11,7 +11,8 @@ const featureNames: Record<Feature, string> = {
   [Feature.Theming]: "Theming",
   [Feature.QuietDevMode]: "Hiding the developer-mode prompt",
   [Feature.ProtocolHandlers]: "Asking to handle links",
-  [Feature.Assistant]: "Gemini as the assistant"
+  [Feature.Assistant]: "Gemini as the assistant",
+  [Feature.EnhancedFind]: "The enhanced find bar"
 };
 
 function joinNames(features: Feature[]): string {

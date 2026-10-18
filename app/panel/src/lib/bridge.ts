@@ -19,7 +19,8 @@ export enum Feature {
   Theming = "theming",
   QuietDevMode = "quietDevMode",
   ProtocolHandlers = "protocolHandlers",
-  Assistant = "assistant"
+  Assistant = "assistant",
+  EnhancedFind = "enhancedFind"
 }
 
 /** The browser assistant the chat button opens; matches `Assistant` in settings.rs. */
@@ -69,6 +70,7 @@ export interface Features {
   quietDevMode: boolean;
   protocolHandlers: boolean;
   assistant: Assistant;
+  enhancedFind: boolean;
 }
 
 export interface AppState {
@@ -113,6 +115,10 @@ export function setQuietDevMode(enabled: boolean): Promise<AppState> {
 
 export function setProtocolHandlers(enabled: boolean): Promise<AppState> {
   return invoke<AppState>("set_protocol_handlers", { enabled });
+}
+
+export function setEnhancedFind(enabled: boolean): Promise<AppState> {
+  return invoke<AppState>("set_enhanced_find", { enabled });
 }
 
 export function addStoreTheme(url: string): Promise<AppState> {

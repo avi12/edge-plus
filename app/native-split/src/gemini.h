@@ -240,8 +240,8 @@ inline Panel* EnsurePanel(HWND window, void* mcv) {
   void* strip = edge::NewWebView(profile);
   edge::SetViewVisible(strip, false);
   edge::AddChildViewAt(parent, strip, edge::ViewChildCount(parent));
-  const std::string stripUrl = share_text::BuildDataUrl(
-      std::string(strip_page::kHtmlStyle) + strip_page::kHtmlBody);
+  const std::string stripUrl =
+      share_text::BuildDataUrl(strip_page::HtmlStyle() + strip_page::kHtmlBody);
   edge::WebViewLoadUrl(strip, stripUrl.c_str());
   Panel& panel = Panels()[mcv];
   panel.webView = webView;

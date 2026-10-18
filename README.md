@@ -25,6 +25,11 @@ or off, and Edge picks the change up the moment it is made — no restart, ever.
   the site for good, and turning it on lifts the blocks already on record
   (Edge has no page for them) (`docs/re/protocol-handlers.md`). Runs in the
   injected DLL.
+- **Enhanced find: regex and Ask Copilot** — `Ctrl + F` opens a find bar of our
+  own with a regular-expression mode (every match highlighted, count, next and
+  previous) and an Ask Copilot mode (type "where do they discuss pricing?" and
+  the paragraphs Copilot names are highlighted). Edge pages and PDFs keep Edge's
+  own find (`docs/re/find-bar.md`). Runs in the injected DLL.
 
 ## How it fits together
 
