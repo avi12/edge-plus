@@ -12,15 +12,14 @@ inline constexpr std::string_view kChromeScheme = "chrome://";
 inline constexpr std::string_view kEdgeScheme = "edge://";
 
 // Chrome pages with a differently-named counterpart in Edge, by URL prefix
-// (first match wins). Gemini's settings live under Edge's Copilot and sidebar
-// settings.
+// (first match wins). Gemini's settings are Edge's AI settings.
 struct Mapping {
   std::string_view chromePrefix;
   std::string_view edgeUrl;
 };
 inline constexpr Mapping kMappings[] = {
-    {"chrome://settings/ai", "edge://settings/sidebar"},
-    {"chrome://settings/gemini", "edge://settings/sidebar"},
+    {"chrome://settings/ai", "edge://settings/ai"},
+    {"chrome://settings/gemini", "edge://settings/ai"},
     {"chrome://password-manager", "edge://wallet/passwords"},
     {"chrome://settings/passwords", "edge://wallet/passwords"},
     {"chrome://settings/addresses", "edge://settings/profiles"},

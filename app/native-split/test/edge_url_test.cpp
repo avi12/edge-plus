@@ -20,8 +20,8 @@ void Check(bool ok, const char* what) {
 }
 
 void RunChecks() {
-  Check(EdgeUrlFor("chrome://settings/ai/gemini") == "edge://settings/sidebar",
-        "Gemini's settings are the sidebar settings");
+  Check(EdgeUrlFor("chrome://settings/ai/gemini") == "edge://settings/ai",
+        "Gemini's settings are the AI settings");
   Check(EdgeUrlFor("chrome://password-manager/settings") ==
             "edge://wallet/passwords",
         "the password manager is the wallet's passwords");
