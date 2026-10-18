@@ -127,7 +127,7 @@ inline void RunFollowup(const gemini::Panel& panel, Session& session) {
   if (!geminiContents) {
     return;
   }
-  if (followup == chat_action::ChatAction::kSummarize) {
+  if (chat_action::IsPageQuestion(followup)) {
     edge::RunScript(
         geminiContents,
         page_scripts::PressButtonScript(page_scripts::kSendButtonPattern),
@@ -202,9 +202,7 @@ inline void OnRead(void* mcv, void* strip, unsigned long long readId,
   void* geminiContents = edge::WebViewContents(panel->webView);
   session.readTitle = snapshot.title.empty() ? snapshot.url : snapshot.title;
   std::string block = share_text::BuildPromptBlock(snapshot);
-  if (session.followup == chat_action::ChatAction::kSummarize) {
-    block += chat_action::kSummarizeInstruction;
-  }
+  block += chat_action::InstructionFor(session.followup);
   const std::string insertScript = page_scripts::InsertIntoPromptScript(block);
   const bool isRunning =
       geminiContents &&
@@ -344,7 +342,7 @@ inline void ExpireStaleRead(void* mcv, Session& session,
 // shares the focused tab by itself) leave it for glic.h to hand to the client.
 inline void RequestAction(void* mcv, chat_action::ChatAction action) {
   gemini::Panel* panel = gemini::PanelFor(mcv);
-  const bool isShareAction = action == chat_action::ChatAction::kSummarize ||
+  const bool isShareAction = chat_action::IsPageQuestion(action) ||
                              action == chat_action::ChatAction::kTalk;
   if (!panel || !isShareAction) {
     return;

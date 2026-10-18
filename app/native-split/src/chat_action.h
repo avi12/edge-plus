@@ -11,6 +11,7 @@ enum class ChatAction {
   kChat,       // "Chat": open the assistant
   kSummarize,  // "Summarize page": share the tab and ask for a summary
   kTalk,       // "Talk to ... + Share tab": share the tab and start voice
+  kPodcast,    // the page menu's "Create podcast": share the tab, ask for audio
 };
 
 // The command ids of EdgeCopilotMenuModel's items (BuildMenu adds them).
@@ -34,10 +35,44 @@ inline ChatAction ActionFor(int commandId) {
   return ChatAction::kNone;
 }
 
-// What Gemini is asked after the page is shared for a summary, and the label
-// of the voice item with Gemini's name in it.
+// What Gemini is asked after the page is shared (the text appended to the
+// shared page), and what it is sent when it shares the tab itself (glic), for
+// each action that works on the page; and the label of the voice item with
+// Gemini's name in it.
 inline constexpr char kSummarizeInstruction[] = "Summarize this page.";
 inline constexpr char kSummarizePrompt[] = "Summarize this page";
+inline constexpr char kPodcastInstruction[] =
+    "Create a podcast (an Audio Overview) of this page.";
+inline constexpr char kPodcastPrompt[] =
+    "Create a podcast (an Audio Overview) of this page";
+
+// Whether the action shares the active tab and then asks Gemini something
+// about it (a talk shares it and starts voice instead).
+inline bool IsPageQuestion(ChatAction action) {
+  return action == ChatAction::kSummarize || action == ChatAction::kPodcast;
+}
+
+// The text appended to the shared page for a page question; empty for others.
+inline const char* InstructionFor(ChatAction action) {
+  if (action == ChatAction::kSummarize) {
+    return kSummarizeInstruction;
+  }
+  if (action == ChatAction::kPodcast) {
+    return kPodcastInstruction;
+  }
+  return "";
+}
+
+// The prompt glic is invoked with for a page question; empty for others.
+inline const char* PromptFor(ChatAction action) {
+  if (action == ChatAction::kSummarize) {
+    return kSummarizePrompt;
+  }
+  if (action == ChatAction::kPodcast) {
+    return kPodcastPrompt;
+  }
+  return "";
+}
 inline constexpr char kTalkLabel[] = "Talk to Gemini + Share tab";
 inline constexpr char kHideLabel[] = "Hide Gemini";
 

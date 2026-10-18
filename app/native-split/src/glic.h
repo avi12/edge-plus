@@ -307,12 +307,12 @@ inline void Install(void* mcv, void* webView, void* contents) {
 inline void PushPendingAction(gemini::Panel& panel) {
   const chat_action::ChatAction action = panel.pendingAction;
   panel.pendingAction = chat_action::ChatAction::kNone;
-  if (action != chat_action::ChatAction::kSummarize) {
+  if (!chat_action::IsPageQuestion(action)) {
     return;
   }
   const std::string invocation =
       std::string("{\"prompts\":[") +
-      share_text::JsStringLiteral(chat_action::kSummarizePrompt) +
+      share_text::JsStringLiteral(chat_action::PromptFor(action)) +
       "],\"autoSubmit\":true}";
   edge::RunScript(edge::WebViewContents(panel.webView),
                   "window.__fxg.push(\"invoke\"," +
