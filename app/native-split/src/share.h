@@ -34,23 +34,10 @@ inline constexpr UINT_PTR kTimerId = 0x5A4E;
 inline constexpr UINT kPollIntervalMs = 150;
 inline constexpr ULONGLONG kAnswerTimeoutMs = 8000;
 
-// What the strip says. The one place its words are written.
-enum class StatusKind {
-  kInfo,
-  kOk,
-  kError
-};
-inline const char* StatusKindName(StatusKind kind) {
-  switch (kind) {
-    case StatusKind::kInfo:
-      return "info";
-    case StatusKind::kOk:
-      return "ok";
-    case StatusKind::kError:
-      return "error";
-  }
-  return "info";
-}
+// What the strip says. The one place its words are written; the kinds are
+// share_text.h's, which the find bar's status line shares.
+using share_text::StatusKind;
+using share_text::StatusKindName;
 inline constexpr char kNoTabMessage[] = "There is no tab to share.";
 inline constexpr char kTabClosedMessage[] = "That tab was closed.";
 inline constexpr char kBlockedTabMessage[] =
