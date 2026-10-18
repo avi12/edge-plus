@@ -561,3 +561,16 @@ in the same page. With no Chrome installed it never tries glic.
   prompt, but the panel's web-app path can only insert shared pages, so Gemini
   selection prompts are a gap; the selection submenu is hidden with Gemini rather
   than opening Copilot.
+- **Windows already open.** The hook above only reaches toolbars built afterwards, so
+  `assistant::Refresh` also rebuilds an open window's chat button: the chat button's
+  owner is the ancestor whose `[+0x5d0]` is the button (`EdgeToolbarView`; `+0x5a8` is
+  the base `CreateDiscoverButtonIfNecessary` takes). Calling it again builds the
+  container and chevron (it does not check for an existing button, and stores the
+  new button at `[+0x5d0]`); the old bare button is then detached with
+  `View::RemoveChildView` and never deleted, since other Edge objects may still point
+  at it. Choosing Copilot again hides the chevron unless Edge's own answer is yes;
+  choosing Gemini shows it. Verified live on 155.0.4283.45 with one switch (the
+  existing window showed "Ask Gemini" and its chevron, and stayed responsive). Not
+  verified after the last tweak (the toolbar's layout is invalidated so the label is
+  not clipped) nor with repeated switching: Edge updated to .62 mid-task and the
+  DLL's build check (rightly) refuses it, so no .45 was left to test against.

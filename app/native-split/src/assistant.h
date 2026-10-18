@@ -349,6 +349,28 @@ inline void RestoreStockLabel(void* button) {
   edge::ViewSetTooltip(button, LabelAsUtf8(stockLabel).c_str());
 }
 
+// A toolbar built before this DLL loaded, or before Gemini was chosen, has the
+// bare chat button: build it again so it gets the split-button container and
+// its chevron. Edge's own answer decides the other way round: once Copilot is
+// chosen again the chevron is hidden (kept, so choosing Gemini again only shows
+// it) unless Edge would have built it.
+inline void EnsureChevron(void* mcv) {
+  std::vector<void*> buttons;
+  CollectButtons(edge::ViewRoot(mcv), &buttons);
+  for (void* button : buttons) {
+    void* dropdown = chat_menu::DropdownBeside(button);
+    if (dropdown) {
+      const bool isShown = IsGemini() || o_dropdown_enabled(true);
+      edge::SetViewVisible(dropdown, isShown);
+    } else if (IsGemini()) {
+      void* toolbar = edge::ToolbarOfChatButton(button);
+      const bool isRebuilt = toolbar && edge::RebuildChatButton(toolbar);
+      Log("[assistant] chat button rebuilt with chevron: %d",
+          static_cast<int>(isRebuilt));
+    }
+  }
+}
+
 // Re-skin (or restore) each live chat button now: its images and its label are
 // cached, so force both to be rebuilt through our hooks. `mcv` names one
 // window's view tree. `isRestoring` is switching back from Gemini.
@@ -356,6 +378,7 @@ inline void Refresh(void* mcv, bool isRestoring) {
   if (!mcv) {
     return;
   }
+  EnsureChevron(mcv);
   std::vector<void*> buttons;
   g_viewsVisited = 0;
   CollectButtons(edge::ViewRoot(mcv), &buttons);
@@ -371,6 +394,11 @@ inline void Refresh(void* mcv, bool isRestoring) {
     const bool shouldRetitleMenu = IsGemini() || isRestoring;
     if (shouldRetitleMenu) {
       chat_menu::Retitle(button, IsGemini());
+    }
+    // The toolbar is not above the page in the view tree: its own layout is
+    // told, so the new label and chevron get their room.
+    for (void* view = button; view; view = edge::ViewParent(view)) {
+      edge::InvalidateLayout(view);
     }
   }
   Log("[assistant] refreshed %zu chat button(s), gemini=%d", buttons.size(),

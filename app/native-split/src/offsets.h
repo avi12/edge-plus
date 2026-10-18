@@ -604,6 +604,13 @@ inline constexpr uintptr_t CopilotDropdownButton_vftables[] = {
 // button. See docs/re/gemini-in-chrome.md section 12.
 inline constexpr uintptr_t Copilot_IsConsumerLabelButtonWithDropdownEnabled =
     0x31f6048;
+// void EdgeToolbarView::CreateDiscoverButtonIfNecessary(this = the toolbar's
+// secondary base, EDGETOOLBAR_discoverBase into the toolbar): builds the chat
+// button, inside a split-button container with its chevron when
+// IsConsumerCopilotLabelButtonWithDropdownEnabled says so. It does not check
+// for a button already built, and stores the new one in EDGETOOLBAR_chatButton.
+inline constexpr uintptr_t EdgeToolbarView_CreateDiscoverButtonIfNecessary =
+    0x31f5e50;
 // std::u16string l10n_util::GetStringUTF16(std::u16string* out, int message id).
 inline constexpr uintptr_t L10n_GetStringUTF16 = 0xfcab30;
 // l10n_util::GetStringFUTF16(std::u16string* out, int message id, const
@@ -996,6 +1003,11 @@ inline constexpr uintptr_t RVCM_menuModel = 0x5c0;
 // the button's ToolbarMenuButtonContextMenu* (SetContextMenu) at the other.
 inline constexpr uintptr_t TOOLBARBUTTON_contextMenuController = 0x6f0;
 inline constexpr uintptr_t TOOLBARBUTTON_contextMenu = 0x710;
+// EdgeToolbarView: the base CreateDiscoverButtonIfNecessary is called on, and
+// the raw_ptr to the chat button (the bare button, or the one inside the
+// split-button container).
+inline constexpr uintptr_t EDGETOOLBAR_discoverBase = 0x5a8;
+inline constexpr uintptr_t EDGETOOLBAR_chatButton = 0x5d0;
 // sizeof(views::WebView): every `new views::WebView` asks for 0x540.
 inline constexpr size_t WebView_size = 0x540;
 // sizeof(base::Location) {function, file, line, program counter}, which

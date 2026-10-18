@@ -1341,6 +1341,54 @@ inline void ViewSetTooltip(void* view, const U16String* text) {
   reinterpret_cast<Fn>(At(rva::View_SetTooltipText))(view, text);
 }
 
+// Whether `size` bytes at `address` can be read.
+inline bool IsReadable(const void* address, size_t size) {
+  MEMORY_BASIC_INFORMATION info{};
+  const bool isQueried = VirtualQuery(address, &info, sizeof(info)) != 0;
+  const uint8_t* end = reinterpret_cast<const uint8_t*>(address) + size;
+  const uint8_t* regionEnd =
+      reinterpret_cast<const uint8_t*>(info.BaseAddress) + info.RegionSize;
+  const bool isMapped = info.State == MEM_COMMIT &&
+                        (info.Protect & (PAGE_NOACCESS | PAGE_GUARD)) == 0;
+  return isQueried && isMapped && end <= regionEnd;
+}
+
+// The EdgeToolbarView that owns chat button `button`, or null: the ancestor
+// whose chat-button field is the button.
+inline void* ToolbarOfChatButton(void* button) {
+  for (void* view = ViewParent(button); view; view = ViewParent(view)) {
+    const void* field =
+        reinterpret_cast<uint8_t*>(view) + off::EDGETOOLBAR_chatButton;
+    const bool isOwner =
+        IsReadable(field, sizeof(void*)) &&
+        Field<void*>(view, off::EDGETOOLBAR_chatButton) == button;
+    if (isOwner) {
+      return view;
+    }
+  }
+  return nullptr;
+}
+
+// Build `toolbar`'s chat button again, as Edge does for a new window (so the
+// chevron's container if Edge now says so), and take the old one out of the
+// view tree. The old button is detached, never deleted: other Edge objects may
+// still point at it, and a view nobody draws is harmless. False when Edge built
+// nothing.
+inline bool RebuildChatButton(void* toolbar) {
+  void* oldButton = Field<void*>(toolbar, off::EDGETOOLBAR_chatButton);
+  void* oldParent = ViewParent(oldButton);
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(
+      At(rva::EdgeToolbarView_CreateDiscoverButtonIfNecessary))(
+      reinterpret_cast<uint8_t*>(toolbar) + off::EDGETOOLBAR_discoverBase);
+  const bool isRebuilt =
+      Field<void*>(toolbar, off::EDGETOOLBAR_chatButton) != oldButton;
+  if (isRebuilt && oldParent) {
+    ViewRemoveChild(oldParent, oldButton);
+  }
+  return isRebuilt;
+}
+
 // Whether `view` is the chevron beside the chat pill
 // (EdgeCopilotDropdownMenuButton).
 inline bool IsCopilotDropdownButton(void* view) {
