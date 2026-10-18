@@ -8,6 +8,7 @@
 //! * [`protocol`] - the DLL's config channel: the wire struct, the config file
 //!   and the named events, mirroring `app/native-split/src/{config.h,dllmain.cpp}`.
 //! * [`registry`] - add / remove a theme through Edge's external-extension loader.
+//! * [`startup`] - start the panel at sign-in through the per-user Run key.
 //! * [`crx`] - read a local theme `.crx`'s extension id and version.
 //! * [`pack`] - pack a theme folder or `.zip` into a signed `.crx`.
 //! * [`devmode`] - wait for Edge to exit, then snooze its developer-mode prompt.
@@ -21,6 +22,7 @@ mod pack;
 mod process;
 mod protocol;
 mod registry;
+mod startup;
 mod version;
 
 pub use crx::{read_crx, CrxInfo};
@@ -32,4 +34,7 @@ pub use process::{
 };
 pub use protocol::{signal_config_changed, write_config, DllConfig};
 pub use registry::{install_local, install_store, uninstall, Store};
+pub use startup::{
+    disable_startup, enable_startup, is_startup_enabled, StartupKeys, USER_STARTUP_KEYS,
+};
 pub use version::{file_version, FileVersion, ParseVersionError};
