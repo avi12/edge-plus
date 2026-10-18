@@ -188,3 +188,29 @@ through once they have dealt with it.
 - The panel's dev instance signals the DLL's shared unload and config events;
   during testing that can unload a test DLL, and its own is injected in its
   place.
+
+## Explicit toggles instead of typed prefixes (not built)
+
+Asked for: "Use regular expression" and "Ask <assistant>" as checkable options
+in the native bar (mutually exclusive, Match case / Whole word greyed out while
+either is on, RegExp case sensitive with a leading `(?i)`). What reading the
+disassembly (155.0.4283.45) showed, and what stopped the work:
+
+- **The bar's options button is not a menu.** `FindBarView::
+  EdgeOnFindOptionsButtonClicked` -> `EdgeToggleFindOptions` shows or hides an
+  inline `FindOptionsControlView` (added by `EdgeMaybeAddFindOptionsView`; its
+  children are toggle views added with `AddFindInPageOptionChildView`, and
+  `TurnOffAllFindFilters` / `ExtraParameters::GetNumberOfFindOptionsOn` count
+  them). Match case and Whole word are toggle views in that row, not
+  `SimpleMenuModel` items, so there is no model builder, execute or
+  checked/enabled query to hook. Our two options would be two more toggle views
+  built with Edge's own view constructors and added to that row; greying Match
+  case / Whole word means `View::SetEnabled` on the two existing children.
+- **Edge updated under the DLL.** The machine's Edge went from 155.0.4283.45 to
+  155.0.4283.62 during this work, and the old build's files are gone. The DLL
+  (pinned to .45, `verify.h`) now refuses to hook, so nothing could be run, and
+  the disassembly tooling reads the .45 `msedge.dll`. Doing this needs the DLL
+  re-pinned to the new build (every RVA in `offsets.h` re-derived against a .62
+  PDB) first.
+- Nothing for the toggles was written; the typed `/pattern/flags` and
+  `? question` forms above are what exists.
