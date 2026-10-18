@@ -1,8 +1,8 @@
 // find.h — the enhanced find, through Edge's own find bar. One concern: Edge's
 // Ctrl+F bar (its text field, its "n/m" label, its arrow buttons) stays the only
 // UI. Typing `/pattern/flags` there searches the page for a RegExp, and typing
-// `? your question` asks the browser assistant (Copilot or Gemini, as the panel
-// chose) which paragraphs answer it; anything else is Edge's own search,
+// `? your question` asks the browser assistant (Copilot) which paragraphs
+// answer it; anything else is Edge's own search,
 // untouched. Two bar functions are hooked: Find (the text changed) and FindNext
 // (Enter, Shift+Enter, the arrow buttons). For one of our queries they run our
 // search instead of Edge's, draw the matches in the page (find_scripts.h, the
@@ -536,8 +536,7 @@ inline void SendNextChunk(void* mcv, Session& session) {
   const unsigned long long askId = ask.id;
   void* view = session.findBarView;
   const bool isAsked = assistant_chat::Ask(
-      session.window, mcv, assistant::g_assistant,
-      ask.plan.chunks[ask.nextChunk].prompt,
+      session.window, mcv, ask.plan.chunks[ask.nextChunk].prompt,
       [mcv, view, askId](const ask_text::Reply& reply) {
         OnAssistantReply(mcv, view, askId, reply);
       },

@@ -2,8 +2,8 @@
 // struct the panel writes to the config file and control.h applies, so its
 // layout is written once here and mirrored field-for-field in
 // app/panel/src-tauri/edge-native/src/protocol.rs. The panel owns which
-// features are on, which theme to use for each OS mode and which assistant the
-// chat button opens; the DLL obeys live, with no restart.
+// features are on and which theme to use for each OS mode; the DLL obeys live,
+// with no restart.
 #pragma once
 #include <windows.h>
 #include <cstddef>
@@ -17,12 +17,6 @@ inline constexpr uint32_t kIdCapacity = 64;
 // The whole desired state, sent whenever the user changes a switch or a theme
 // assignment. Fixed-size and trivially-copyable so it crosses the process
 // boundary as plain bytes. An empty id length means "use the default theme".
-// The browser assistant the toolbar chat button opens.
-enum class Assistant : uint32_t {
-  kCopilot = 0,  // Edge's own: the button and pane stay stock
-  kGemini = 1,   // the button reskinned, opening Gemini in a side panel
-};
-
 struct Wire {
   uint32_t splitActive;             // 1 = the split feature is on
   uint32_t themingActive;           // 1 = the theming feature is on
@@ -32,22 +26,22 @@ struct Wire {
   char lightId[kIdCapacity];
   char darkId[kIdCapacity];
   // Appended after the ids, so a DLL built before each still reads the fields
-  // above it and a file written before it still loads (as kCopilot, and as off).
-  Assistant assistant;
+  // above it and a file written before it still loads (as off).
+  uint32_t reserved;  // once the chosen assistant; the panel writes 0, unread
   uint32_t enhancedFindActive;  // 1 = Ctrl+F opens the enhanced find bar
 };
 // protocol.rs writes exactly WIRE_SIZE bytes and LoadFromFile wants all of
 // them, so the struct must stay packed: five u32 fields, the two ids, then the
-// assistant and the find switch (u32s).
+// reserved field and the find switch (u32s).
 inline constexpr size_t kWireFieldCount = 7;
 inline constexpr size_t kWireIdCount = 2;
 static_assert(sizeof(Wire) == kWireFieldCount * sizeof(uint32_t) +
                                   kWireIdCount * size_t{kIdCapacity},
               "Wire must stay packed as protocol.rs writes it");
 
-// The sizes of the files a panel wrote before `assistant` and before
+// The sizes of the files a panel wrote before `reserved` and before
 // `enhancedFindActive` existed.
-inline constexpr DWORD kLegacyWireSize = offsetof(Wire, assistant);
+inline constexpr DWORD kLegacyWireSize = offsetof(Wire, reserved);
 inline constexpr DWORD kBeforeFindWireSize = offsetof(Wire, enhancedFindActive);
 
 // The same bytes the panel also writes beside its settings, so a DLL injected

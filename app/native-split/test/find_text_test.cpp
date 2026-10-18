@@ -149,7 +149,7 @@ void CheckParseQueryWithOption() {
   query = ParseQuery("? what", Option::kNone);
   Check(query.mode == Mode::kAsk && query.pattern == "what",
         "no switch keeps the typed question");
-  Check(AskTitle("Gemini") == "Ask Gemini", "the switch names the assistant");
+  Check(AskTitle("Copilot") == "Ask Copilot", "the switch names the assistant");
 }
 
 void CheckBuildSearch() {

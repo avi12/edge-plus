@@ -27,7 +27,6 @@
 #include "tabrows.h"
 #include "theme.h"
 #include "assistant.h"
-#include "gemini.h"
 #include "find.h"
 
 namespace fixedge::control {
@@ -162,11 +161,6 @@ inline BOOL CALLBACK BreakUpWindowSplits(HWND hwnd, LPARAM /*unused*/) {
 // animation timer and the hot-keys.
 inline void Teardown(HWND hwnd) {
   EnumWindows(BreakUpWindowSplits, 0);
-  // Restore the chat button and drop every Gemini panel while the hooks that
-  // render them are still in place, so nothing of ours outlives the DLL.
-  assistant::Apply(edge::McvForWindow(hwnd), config::Assistant::kCopilot);
-  share::StopTimer();
-  gemini::RemoveAll();
   find::Apply(false);
   drag::Cancel();
   tabdrag::Cancel();
@@ -258,7 +252,8 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     // Nor are the link-handler detours (they pass through while that feature
     // is off).
     protocol_handlers::EnableHooks();
-    // The assistant reskin is its own feature, not a split hook: keep it live.
+    // The chat button's chevron is its own feature, not a split hook: keep it
+    // live.
     assistant::EnableAll();
     // Nor is the enhanced find: it follows its own switch.
     find::EnableAll();
@@ -309,7 +304,7 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
                 reinterpret_cast<LPARAM>(&liftedCount));
     Log("[handlers] lifted %zu blocked link handler(s)", liftedCount);
   }
-  assistant::Apply(edge::McvForWindow(hwnd), wire.assistant);
+  assistant::Apply(edge::McvForWindow(hwnd));
   const bool isFindActive = wire.enhancedFindActive != 0;
   find::Apply(isFindActive);
 }
@@ -479,16 +474,6 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   const bool isAnimationFrame = message == WM_TIMER && wparam == anim::kTimerId;
   if (isAnimationFrame) {
     anim::Tick();
-    return 0;
-  }
-  const bool isPanelSlide = message == WM_TIMER && wparam == gemini::kTimerId;
-  if (isPanelSlide) {
-    gemini::Tick(hwnd);
-    return 0;
-  }
-  const bool isSharePoll = message == WM_TIMER && wparam == share::kTimerId;
-  if (isSharePoll) {
-    share::Tick();
     return 0;
   }
   const bool isFindPoll = message == WM_TIMER && wparam == find::kTimerId;

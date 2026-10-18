@@ -21,8 +21,6 @@
 #include "state.h"
 #include "assistant.h"
 #include "find.h"
-#include "gemini.h"
-#include "reserve.h"
 
 namespace fixedge::hooks {
 
@@ -78,19 +76,8 @@ inline Calc_t o_calc = nullptr;
 inline void* __fastcall h_calc(void* self, void* out, void* sizeBounds) {
   void* mcv = edge::McvFromLayoutBase(self);
   g_activeMcv = mcv;
-  // Keep an open Gemini panel glued to the right edge through any relayout.
-  gemini::Reposition(mcv);
   const bool isBounded = edge::Field<uint8_t>(sizeBounds, 0x4) == 1 &&
                          edge::Field<uint8_t>(sizeBounds, 0xc) == 1;
-  // An open Gemini panel takes the right of the content: lay the page (and
-  // every pane) out in what is left, by handing the layout narrower bounds.
-  alignas(8) uint8_t narrowedBounds[off::SizeBounds_size];
-  const int reservedWidth = isBounded ? reserve::WidthFor(mcv) : 0;
-  if (reservedWidth > 0) {
-    std::memcpy(narrowedBounds, sizeBounds, sizeof(narrowedBounds));
-    edge::Field<int32_t>(narrowedBounds, 0x0) -= reservedWidth;
-    sizeBounds = narrowedBounds;
-  }
   const int width = edge::Field<int32_t>(sizeBounds, 0x0);
   const int height = edge::Field<int32_t>(sizeBounds, 0x8);
   // Track the content size on every pass (native too) so a resize snaps.
@@ -492,8 +479,8 @@ inline bool InstallAll() {
           reinterpret_cast<void*>(tabrows::h_calculate_ideal_bounds),
           &tabrows::o_calculate_ideal_bounds,
           "TabStripLayoutHelper::CalculateIdealBounds");
-  // The browser-assistant reskin: independent of the split (gated on the
-  // chosen assistant), so it stays live even when the split is toggled off.
+  // The chat button's chevron: independent of the split, so it stays live even
+  // when the split is toggled off.
   assistant::Install();
   // The enhanced find rides Edge's own find bar, whatever the split does.
   find::Install();

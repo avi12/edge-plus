@@ -7,7 +7,6 @@
 #include <vector>
 #include "edge.h"
 #include "pane_tree.h"
-#include "reserve.h"
 #include "state.h"
 #include "anim.h"
 #include "dividers.h"
@@ -40,7 +39,7 @@ inline Node LiveTree(void* mcv, int panes) {
 // The split's content box in its own coordinates (what TilePanes tiles).
 inline Rect SplitArea(void* mcv) {
   const Rect bounds = edge::ViewBounds(mcv);
-  return Rect{0, 0, bounds.width - reserve::WidthFor(mcv), bounds.height};
+  return Rect{0, 0, bounds.width, bounds.height};
 }
 
 // Build the out ProposedLayout for `mcv` across a `width`x`height` content box,

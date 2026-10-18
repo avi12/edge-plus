@@ -1,4 +1,4 @@
-// assistant_chat.h — asking the chosen assistant (Copilot or Gemini) a question
+// assistant_chat.h — asking the assistant (Copilot) a question
 // from inside Edge. One concern: a web chat of our own per browser window (a
 // WebView on the assistant's page, in the window's profile, so a user signed in
 // to Edge is signed in here too), and the steps of one question: wait for its
@@ -6,9 +6,7 @@
 // answer back. It is hidden unless the assistant needs the user (a sign-in or a
 // consent page), when it is shown at the top right of the page so they can deal
 // with it; the question goes through once they have. Edge ships no API for this:
-// chat_scripts.h drives the web app the way a person would. Which assistant is
-// asked is chosen per question (the panel's choice, config.h); a chat page left
-// on the other one is pointed at the new one's page first.
+// chat_scripts.h drives the web app the way a person would.
 #pragma once
 #include <windows.h>
 #include <functional>
@@ -22,8 +20,6 @@
 #include "find_layout.h"
 
 namespace fixedge::assistant_chat {
-
-using chat_target::Assistant;
 
 // How long to look for the message box before asking the user to sign in, how
 // long to keep looking in all, how long an answer may take, and how often each
@@ -57,7 +53,6 @@ struct Chat {
   void* view = nullptr;
   void* parent = nullptr;
   HWND window = nullptr;
-  Assistant assistant = Assistant::kCopilot;  // whose page the view is on
   Phase phase = Phase::kIdle;
   unsigned long long token =
       0;  // names the question; a late answer to an older one is dropped
@@ -73,8 +68,8 @@ struct Chat {
 };
 
 // The assistant's name, for what is said to the user about it.
-inline std::string NameOf(const Chat& chat) {
-  return chat_target::Name(chat.assistant);
+inline std::string NameOf(const Chat& /*chat*/) {
+  return chat_target::kCopilotTarget.name;
 }
 
 inline std::map<void*, Chat>& Chats() {
@@ -152,7 +147,7 @@ inline void Fail(void* mcv, Chat& chat, const std::string& why) {
 
 // The chat page for `mcv`, built on first use: a hidden WebView docked as the
 // last child of the MCV's parent (so, when shown, it draws over the page).
-inline Chat* EnsureChat(HWND window, void* mcv, Assistant assistant) {
+inline Chat* EnsureChat(HWND window, void* mcv) {
   if (Chat* existing = ChatFor(mcv)) {
     return existing;
   }
@@ -165,31 +160,25 @@ inline Chat* EnsureChat(HWND window, void* mcv, Assistant assistant) {
   void* view = edge::NewWebView(profile);
   edge::SetViewVisible(view, false);
   edge::AddChildViewAt(parent, view, edge::ViewChildCount(parent));
-  edge::WebViewLoadUrl(view, chat_target::For(assistant).url);
+  edge::WebViewLoadUrl(view, chat_target::kCopilotTarget.url);
   Chat& chat = Chats()[mcv];
   chat.view = view;
   chat.parent = parent;
   chat.window = window;
-  chat.assistant = assistant;
-  Log("[chat] %s page created view=%p", chat_target::Name(assistant), view);
+  Log("[chat] %s page created view=%p", chat_target::kCopilotTarget.name, view);
   return &chat;
 }
 
-// Start asking `assistant`: `prompt` goes to it, and `onDone` gets its answer
+// Start asking: `prompt` goes to the assistant, and `onDone` gets its answer
 // (or why there is none) later, on the UI thread. False if the window has no
 // profile to open its page in. One question at a time per window: a new one
 // replaces the old (whose callback is never called).
-inline bool Ask(HWND window, void* mcv, Assistant assistant,
-                const std::string& prompt, DoneFn onDone, NoticeFn onNotice) {
+inline bool Ask(HWND window, void* mcv, const std::string& prompt,
+                DoneFn onDone, NoticeFn onNotice) {
   static unsigned long long nextToken = 1;
-  Chat* chat = EnsureChat(window, mcv, assistant);
+  Chat* chat = EnsureChat(window, mcv);
   if (!chat) {
     return false;
-  }
-  const bool isOtherAssistant = chat->assistant != assistant;
-  if (isOtherAssistant) {
-    chat->assistant = assistant;
-    edge::WebViewLoadUrl(chat->view, chat_target::For(assistant).url);
   }
   if (chat->isShownForUser) {
     SetShownForUser(mcv, *chat, false);
@@ -329,7 +318,7 @@ inline void StepWaitingForBox(void* mcv, Chat& chat, void* contents,
   const unsigned long long token = chat.token;
   const bool isRunning = edge::RunScript(
       contents,
-      chat_scripts::SendScript(chat_target::For(chat.assistant), chat.prompt),
+      chat_scripts::SendScript(chat_target::kCopilotTarget, chat.prompt),
       [mcv, token](const edge::ScriptResult& result) {
         OnSendAnswer(mcv, token, result);
       });
@@ -352,7 +341,7 @@ inline void StepWaitingForReply(void* mcv, Chat& chat, void* contents,
   chat.isScriptRunning = true;
   const unsigned long long token = chat.token;
   const bool isRunning = edge::RunScript(
-      contents, chat_scripts::ReplyScript(chat_target::For(chat.assistant)),
+      contents, chat_scripts::ReplyScript(chat_target::kCopilotTarget),
       [mcv, token](const edge::ScriptResult& result) {
         OnReplyAnswer(mcv, token, result);
       });

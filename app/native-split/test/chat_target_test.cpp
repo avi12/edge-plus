@@ -33,21 +33,11 @@ bool IsFullyDescribed(const Target& target) {
 }
 
 void RunChecks() {
-  Check(std::strcmp(Name(Assistant::kCopilot), "Copilot") == 0,
+  Check(std::strcmp(kCopilotTarget.name, "Copilot") == 0,
         "Copilot is called Copilot");
-  Check(std::strcmp(Name(Assistant::kGemini), "Gemini") == 0,
-        "Gemini is called Gemini, not 'Ask Gemini'");
-  Check(&For(Assistant::kCopilot) == &kCopilotTarget &&
-            &For(Assistant::kGemini) == &kGeminiTarget,
-        "each assistant has its own row");
-  Check(IsFullyDescribed(For(Assistant::kCopilot)) &&
-            IsFullyDescribed(For(Assistant::kGemini)),
-        "every row fills every column");
-  Check(std::strstr(For(Assistant::kCopilot).url, "copilot.microsoft.com") !=
-                nullptr &&
-            std::strstr(For(Assistant::kGemini).url, "gemini.google.com/app") !=
-                nullptr,
-        "each row opens its own web app");
+  Check(IsFullyDescribed(kCopilotTarget), "the row fills every column");
+  Check(std::strstr(kCopilotTarget.url, "copilot.microsoft.com") != nullptr,
+        "the row opens Copilot's web app");
 }
 
 }  // namespace

@@ -1,17 +1,14 @@
 // chat_target.h — which web chat "Ask" drives. One concern, pure (no Edge, no
-// Win32; unit-tested in test/chat_target_test.cpp): for each browser assistant
-// (config.h) its display name, the page that is opened for it and the selectors
-// its chat page is driven by. The driver (chat_scripts.h, assistant_chat.h) is
-// the same for every assistant and reads this table; a web app is not ours and
-// changes without notice, so these are the one place to fix when one does.
+// Win32; unit-tested in test/chat_target_test.cpp): the assistant's display
+// name, the page that is opened for it and the selectors its chat page is
+// driven by. The driver (chat_scripts.h, assistant_chat.h) reads this table; a
+// web app is not ours and changes without notice, so this is the one place to
+// fix when it does.
 #pragma once
-#include "config.h"
 
 namespace fixedge::chat_target {
 
-using config::Assistant;
-
-// What one assistant's chat page looks like to the driver: where it lives, the
+// What the assistant's chat page looks like to the driver: where it lives, the
 // message box, the send button, an answer, the button that stops one being
 // written, and a dialog that needs the person (a security check, a consent
 // page). Each is a CSS selector list.
@@ -25,7 +22,7 @@ struct Target {
   const char* dialogSelectors;
 };
 
-// What was verified for each is in docs/re/find-bar.md.
+// What was verified is in docs/re/find-bar.md.
 inline constexpr Target kCopilotTarget = {
     "Copilot",
     "https://copilot.microsoft.com/",
@@ -39,25 +36,5 @@ inline constexpr Target kCopilotTarget = {
     "button[aria-label*=\"Stop\" i], [data-testid=\"stop-button\"]",
     "[role=\"dialog\"][aria-modal=\"true\"]",
 };
-
-inline constexpr Target kGeminiTarget = {
-    "Gemini",
-    "https://gemini.google.com/app",
-    "rich-textarea .ql-editor[contenteditable=\"true\"], "
-    "[contenteditable=\"true\"][aria-label*=\"prompt\" i]",
-    "button[aria-label=\"Send message\" i]",
-    "message-content, model-response",
-    "button[aria-label*=\"Stop\" i], button.stop",
-    "[role=\"dialog\"][aria-modal=\"true\"], mat-dialog-container",
-};
-
-inline constexpr const Target& For(Assistant assistant) {
-  return assistant == Assistant::kGemini ? kGeminiTarget : kCopilotTarget;
-}
-
-// The assistant's name, for every place the UI mentions it.
-inline constexpr const char* Name(Assistant assistant) {
-  return For(assistant).name;
-}
 
 }  // namespace fixedge::chat_target
