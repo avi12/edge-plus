@@ -12,6 +12,7 @@
 #include "chat_action.h"
 #include "chat_actions.h"
 #include "chat_menu.h"
+#include "chat_target.h"
 #include "config.h"
 #include "edge.h"
 #include "gemini.h"
@@ -27,6 +28,12 @@ inline config::Assistant g_assistant = config::Assistant::kCopilot;
 
 inline bool IsGemini() {
   return g_assistant == config::Assistant::kGemini;
+}
+
+// The chosen assistant's name, for every place the UI mentions it (the enhanced
+// find's "Ask <name>"); the table is chat_target.h's.
+inline const char* Name() {
+  return chat_target::Name(g_assistant);
 }
 
 // Gemini's own name, for the tooltip, accessible name and label (the one place

@@ -1,4 +1,4 @@
-// ask_text.h — the text side of "Ask Copilot" in the find bar. One concern, all
+// ask_text.h — the text side of "Ask" in the find bar. One concern, all
 // of it pure (no Edge, no Win32; unit-tested in test/ask_text_test.cpp): the
 // page's paragraphs, the prompts that carry them (with the question) to Copilot
 // in pieces its message box can take, and the reading of Copilot's reply into
@@ -216,7 +216,7 @@ inline Reply ParseReply(const std::string& raw) {
   } else if (marker == "err") {
     reply.error = rest;
   } else {
-    reply.error = "Copilot's page gave an answer Edge could not read.";
+    reply.error = "The chat page gave an answer Edge could not read.";
   }
   return reply;
 }

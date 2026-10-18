@@ -114,8 +114,8 @@ void CheckPlan() {
 void CheckReply() {
   Reply reply = ParseReply(Fields({"ok", "P3, P7. Pricing is on both."}));
   Check(reply.isOk && reply.text == "P3, P7. Pricing is on both.", "ok");
-  reply = ParseReply(Fields({"err", "Copilot did not answer."}));
-  Check(!reply.isOk && reply.error == "Copilot did not answer.", "err");
+  reply = ParseReply(Fields({"err", "It did not answer."}));
+  Check(!reply.isOk && reply.error == "It did not answer.", "err");
   reply = ParseReply("junk");
   Check(!reply.isOk && !reply.error.empty(), "junk");
 }

@@ -19,7 +19,8 @@
 #include <vector>
 #include "ask_text.h"
 #include "channel.h"
-#include "copilot_chat.h"
+#include "assistant.h"
+#include "assistant_chat.h"
 #include "edge.h"
 #include "find_layout.h"
 #include "find_page.h"
@@ -331,7 +332,7 @@ inline void FailAsk(Bar& bar, const std::string& why) {
 inline void CancelAsk(void* mcv, Bar& bar) {
   const bool isAsking = bar.ask.id != 0;
   if (isAsking) {
-    copilot_chat::Cancel(mcv);
+    assistant_chat::Cancel(mcv);
     EndAsk(bar);
   }
 }
@@ -442,13 +443,13 @@ inline void OnCopilotReply(void* mcv, void* view, unsigned long long askId,
 }
 
 inline void OnCopilotNotice(void* mcv, void* view, unsigned long long askId,
-                            copilot_chat::Notice notice) {
+                            assistant_chat::Notice notice) {
   const Bar* bar = OpenBarOf(mcv, view);
   const bool isCurrentAsk = bar && bar->ask.id == askId;
   if (!isCurrentAsk) {
     return;
   }
-  const bool isNeedingUser = notice == copilot_chat::Notice::kNeedsUser;
+  const bool isNeedingUser = notice == assistant_chat::Notice::kNeedsUser;
   SetStatus(*bar, isNeedingUser ? StatusKind::kError : StatusKind::kInfo,
             isNeedingUser ? kSignInMessage : kWaitingMessage);
 }
@@ -463,12 +464,13 @@ inline void SendNextChunk(void* mcv, Bar& bar) {
   SetStatus(bar, StatusKind::kInfo, "Asking Copilot" + progress + "...");
   const unsigned long long askId = ask.id;
   void* view = bar.view;
-  const bool isAsked = copilot_chat::Ask(
-      bar.window, mcv, ask.plan.chunks[ask.nextChunk].prompt,
+  const bool isAsked = assistant_chat::Ask(
+      bar.window, mcv, assistant::g_assistant,
+      ask.plan.chunks[ask.nextChunk].prompt,
       [mcv, view, askId](const ask_text::Reply& reply) {
         OnCopilotReply(mcv, view, askId, reply);
       },
-      [mcv, view, askId](copilot_chat::Notice notice) {
+      [mcv, view, askId](assistant_chat::Notice notice) {
         OnCopilotNotice(mcv, view, askId, notice);
       });
   if (!isAsked) {
@@ -567,7 +569,7 @@ inline void Reposition(void* mcv, const Bar& bar) {
   if (edge::ViewBounds(bar.view) != wanted) {
     edge::SetViewBounds(bar.view, wanted);
   }
-  copilot_chat::Reposition(mcv);
+  assistant_chat::Reposition(mcv);
 }
 
 // Give the keyboard back to the page that was being searched.
@@ -671,7 +673,7 @@ inline void Close(void* mcv) {
   }
   CancelAsk(mcv, *bar);
   ClearTarget(mcv, *bar);
-  copilot_chat::Cancel(mcv);
+  assistant_chat::Cancel(mcv);
   bar->isOpen = false;
   bar->openStep = OpenStep::kNone;
   edge::SetViewVisible(bar->view, false);
@@ -808,7 +810,7 @@ inline void TickBar(void* mcv, Bar& bar) {
 // step and poll every open bar.
 inline void Tick() {
   DropStale();
-  copilot_chat::Tick();
+  assistant_chat::Tick();
   for (auto& [mcv, bar] : Bars()) {
     if (bar.isOpen) {
       TickBar(mcv, bar);
@@ -827,7 +829,7 @@ inline void RemoveAll() {
   for (void* mcv : windows) {
     Close(mcv);
   }
-  copilot_chat::RemoveAll();
+  assistant_chat::RemoveAll();
   for (auto& [mcv, bar] : Bars()) {
     edge::ViewRemoveChild(bar.parent, bar.view);
     edge::DeleteWebView(bar.view);

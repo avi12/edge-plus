@@ -1,22 +1,22 @@
-// copilot_scripts.h — the scripts that drive Copilot's web chat for "Ask
-// Copilot". One concern: the JavaScript that puts a prompt into the chat's
-// message box and presses send, and the JavaScript that reads the answer once
-// it has stopped growing. Edge has no public API to ask Copilot a question, so
-// this drives the signed-in web app the way a person would. The selectors are
-// what copilot.com's composer looked like when this was written (probed in a
-// throwaway profile); the web app is not ours and changes without notice, and
-// they are the one place to fix when it does. They run in our isolated world.
+// chat_scripts.h — the scripts that drive an assistant's web chat for "Ask".
+// One concern: the JavaScript that puts a prompt into the chat's message box and
+// presses send, and the JavaScript that reads the answer once it has stopped
+// growing. Edge has no public API to ask Copilot or Gemini a question, so this
+// drives the signed-in web app the way a person would. The scripts are the same
+// for every assistant: what differs (selectors, name) is a chat_target::Target,
+// the one table to fix when a web app changes. They run in our isolated world.
 //
-// What was verified live: the message box and the send button below exist, the
-// prompt goes into the box and the button wakes. What was not: an answer. In the
-// throwaway profile Copilot met the first send with a "Security check required"
-// dialog that only a person can pass, so the answer's markup is a guess, backed
-// by a fallback that needs no markup: the text that appears after the prompt.
+// The answer's markup is a guess backed by a fallback that needs no markup: the
+// text that appears after the prompt. What was verified live for each assistant
+// is in docs/re/find-bar.md.
 #pragma once
 #include <string>
+#include "chat_target.h"
 #include "share_text.h"
 
-namespace fixedge::copilot_scripts {
+namespace fixedge::chat_scripts {
+
+using chat_target::Target;
 
 // What the send script answers at once, and the reason it gives for failing.
 inline constexpr char kScheduledAnswer[] = "scheduled";
@@ -39,31 +39,14 @@ inline constexpr int kSendButtonWaitMs = 4000;
 // the answer begins when the answer's own markup is not known.
 inline constexpr int kEchoTailChars = 60;
 
-// The message box, the send button, an answer from Copilot, the button that
-// stops one being written, and a dialog that needs the person.
-inline constexpr char kBoxSelectors[] =
-    "#m365-chat-editor-target-element, textarea#userInput, "
-    "[contenteditable=\"true\"][aria-label*=\"Message Copilot\" i]";
-inline constexpr char kSendSelectors[] =
-    "button.fai-SendButton, button[type=\"submit\"][aria-label=\"Send\" i], "
-    "button[data-testid=\"submit-button\"], "
-    "button[aria-label=\"Submit message\" i]";
-inline constexpr char kAnswerSelectors[] =
-    "[data-content=\"ai-message\"], [data-testid=\"ai-message\"], "
-    "[data-testid=\"copilot-message\"]";
-inline constexpr char kStopSelectors[] =
-    "button[aria-label*=\"Stop\" i], [data-testid=\"stop-button\"]";
-inline constexpr char kDialogSelectors[] =
-    "[role=\"dialog\"][aria-modal=\"true\"]";
-
 // Both scripts share this: press the send button once it is enabled.
-inline std::string PressSendFunction() {
+inline std::string PressSendFunction(const Target& target) {
   std::string script = R"JS(
   function pressSend(state, giveUpMs) {
     var deadline = Date.now() + giveUpMs;
     var timer = setInterval(function () {
       var button = document.querySelector()JS";
-  script += share_text::JsStringLiteral(kSendSelectors);
+  script += share_text::JsStringLiteral(target.sendSelectors);
   script += R"JS();
       var isReady = button && !button.disabled && button.getAttribute("aria-disabled") !== "true";
       if (isReady) {
@@ -71,7 +54,10 @@ inline std::string PressSendFunction() {
         button.click();
       } else if (Date.now() > deadline) {
         clearInterval(timer);
-        state.failure = "Copilot's send button did not wake up.";
+        state.failure = )JS";
+  script += share_text::JsStringLiteral(std::string(target.name) +
+                                        "'s send button did not wake up.");
+  script += R"JS(;
       }
     }, 150);
   }
@@ -82,20 +68,20 @@ inline std::string PressSendFunction() {
 // Put `prompt` into the message box and press send once the button wakes. It
 // answers at once: kScheduledAnswer, or kNoBoxAnswer when the page has no message
 // box yet (still loading, signed out, or a consent page).
-inline std::string SendScript(const std::string& prompt) {
-  std::string script = "(function (prompt) {" + PressSendFunction();
+inline std::string SendScript(const Target& target, const std::string& prompt) {
+  std::string script = "(function (prompt) {" + PressSendFunction(target);
   script += R"JS(
   var box = document.querySelector()JS";
-  script += share_text::JsStringLiteral(kBoxSelectors);
+  script += share_text::JsStringLiteral(target.boxSelectors);
   script += R"JS();
   if (!box) {
     return ")JS";
   script += kNoBoxAnswer;
   script += R"JS(";
   }
-  var state = window.__fxCopilot = {
+  var state = window.__fxChat = {
     baseline: document.querySelectorAll()JS";
-  script += share_text::JsStringLiteral(kAnswerSelectors);
+  script += share_text::JsStringLiteral(target.answerSelectors);
   script += R"JS().length,
     prompt: prompt, lastText: "", changedAt: Date.now(), failure: "", wasBlocked: false
   };
@@ -130,10 +116,10 @@ inline std::string SendScript(const std::string& prompt) {
 // missing or still being written, kUserAnswer while a dialog needs the person
 // (and, once it is gone with no answer yet, the send is pressed again), then
 // `ok US text` (ask_text::ParseReply's format), or `err US why`.
-inline std::string ReplyScript() {
-  std::string script = "(function () {" + PressSendFunction();
+inline std::string ReplyScript(const Target& target) {
+  std::string script = "(function () {" + PressSendFunction(target);
   script += R"JS(
-  var state = window.__fxCopilot;
+  var state = window.__fxChat;
   if (!state) {
     return ")JS";
   script += kReloadedAnswer;
@@ -143,7 +129,7 @@ inline std::string ReplyScript() {
     return "err\x1f" + state.failure;
   }
   var dialog = document.querySelector()JS";
-  script += share_text::JsStringLiteral(kDialogSelectors);
+  script += share_text::JsStringLiteral(target.dialogSelectors);
   script += R"JS();
   if (dialog && dialog.offsetWidth) {
     state.wasBlocked = true;
@@ -153,7 +139,7 @@ inline std::string ReplyScript() {
   }
   var squeeze = function (text) { return String(text).replace(/\s+/g, " ").trim(); };
   var answers = document.querySelectorAll()JS";
-  script += share_text::JsStringLiteral(kAnswerSelectors);
+  script += share_text::JsStringLiteral(target.answerSelectors);
   script += R"JS();
   var text = null;
   if (answers.length > state.baseline) {
@@ -187,7 +173,7 @@ inline std::string ReplyScript() {
   script += R"JS(";
   }
   var isWriting = !!document.querySelector()JS";
-  script += share_text::JsStringLiteral(kStopSelectors);
+  script += share_text::JsStringLiteral(target.stopSelectors);
   script += R"JS();
   var isSettled = Date.now() - state.changedAt >= )JS";
   script += std::to_string(kSettleMs);
@@ -202,4 +188,4 @@ inline std::string ReplyScript() {
   return script;
 }
 
-}  // namespace fixedge::copilot_scripts
+}  // namespace fixedge::chat_scripts
