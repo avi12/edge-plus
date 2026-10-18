@@ -95,6 +95,53 @@ inline Query ParseQuery(const std::string& typed) {
   return query;
 }
 
+// Our two switches in the bar's options (its "..." button). With one on, the
+// whole box is the pattern or the question and the typed forms above are not
+// read; with none on they still work as shortcuts.
+enum class Option {
+  kNone,
+  kRegExp,
+  kAsk,
+};
+
+// A RegExp from the switch is case sensitive (JavaScript's own default), unless
+// it starts with this: it is dropped and the search ignores case.
+inline constexpr char kIgnoreCasePrefix[] = "(?i)";
+inline constexpr char kIgnoreCaseFlag[] = "i";
+
+// The switch for a question, named for the assistant that will answer it.
+inline std::string AskTitle(const std::string& assistantName) {
+  return "Ask " + assistantName;
+}
+
+inline bool StartsWith(const std::string& text, const std::string& prefix) {
+  return text.compare(0, prefix.size(), prefix) == 0;
+}
+
+// Read the box with a switch on: what is typed is the pattern (case sensitive
+// unless it starts with "(?i)") or the question. An empty box asks nothing.
+inline Query ParseQuery(const std::string& typed, Option option) {
+  if (option == Option::kNone) {
+    return ParseQuery(typed);
+  }
+  Query query;
+  const std::string question = TrimmedSpaces(typed);
+  if (question.empty()) {
+    return query;
+  }
+  if (option == Option::kAsk) {
+    query.mode = Mode::kAsk;
+    query.pattern = question;
+    return query;
+  }
+  query.mode = Mode::kRegExp;
+  const bool isIgnoringCase = StartsWith(typed, kIgnoreCasePrefix);
+  query.pattern =
+      isIgnoringCase ? typed.substr(sizeof(kIgnoreCasePrefix) - 1) : typed;
+  query.flags = isIgnoringCase ? kIgnoreCaseFlag : "";
+  return query;
+}
+
 // Limits: a pattern longer than this is refused, and a page script stops
 // marking after this many matches (it says so).
 inline constexpr size_t kMaxPatternChars = 500;

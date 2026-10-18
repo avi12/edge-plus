@@ -115,6 +115,43 @@ void CheckParseQuery() {
   Check(ParseQuery("?").mode == Mode::kText, "a lone question mark");
 }
 
+void CheckParseQueryWithOption() {
+  Query query = ParseQuery("pri[cs]e", Option::kRegExp);
+  Check(query.mode == Mode::kRegExp && query.pattern == "pri[cs]e" &&
+            query.flags.empty(),
+        "a switched-on RegExp is the whole box, case sensitive");
+  query = ParseQuery("(?i)price", Option::kRegExp);
+  Check(query.mode == Mode::kRegExp && query.pattern == "price" &&
+            query.flags == "i",
+        "a leading (?i) ignores case and is not part of the pattern");
+  query = ParseQuery("price(?i)", Option::kRegExp);
+  Check(query.pattern == "price(?i)" && query.flags.empty(),
+        "(?i) anywhere else is the page's to judge");
+  query = ParseQuery("(?i)", Option::kRegExp);
+  Check(query.mode == Mode::kRegExp && query.pattern.empty(),
+        "only the prefix is an empty pattern");
+  query = ParseQuery("/pric/i", Option::kRegExp);
+  Check(query.pattern == "/pric/i" && query.flags.empty(),
+        "typed slashes are not a shortcut with the switch on");
+  query = ParseQuery("", Option::kRegExp);
+  Check(query.mode == Mode::kText, "an empty box searches nothing");
+  query = ParseQuery("   ", Option::kAsk);
+  Check(query.mode == Mode::kText, "a blank question asks nothing");
+  query = ParseQuery("  what does it cost ", Option::kAsk);
+  Check(query.mode == Mode::kAsk && query.pattern == "what does it cost",
+        "a switched-on question is the trimmed box");
+  query = ParseQuery("? what does it cost", Option::kAsk);
+  Check(query.pattern == "? what does it cost",
+        "the question mark is not a shortcut with the switch on");
+  query = ParseQuery("/pric/i", Option::kNone);
+  Check(query.mode == Mode::kRegExp && query.pattern == "pric",
+        "no switch keeps the typed shortcuts");
+  query = ParseQuery("? what", Option::kNone);
+  Check(query.mode == Mode::kAsk && query.pattern == "what",
+        "no switch keeps the typed question");
+  Check(AskTitle("Gemini") == "Ask Gemini", "the switch names the assistant");
+}
+
 void CheckBuildSearch() {
   Search search = BuildSearch(ParseQuery("/a.b/"));
   Check(search.problem == PatternProblem::kNone && search.source == "a.b" &&
@@ -168,6 +205,7 @@ int main() {
     CheckSearchableUrls();
     CheckPatternShape();
     CheckParseQuery();
+    CheckParseQueryWithOption();
     CheckBuildSearch();
     CheckStepping();
     CheckSearchResults();
