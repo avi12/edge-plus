@@ -44,6 +44,7 @@ enum class Operation {
   kContext,
   kActivate,
   kCreate,
+  kClose,
   kUnknown
 };
 
@@ -59,6 +60,9 @@ inline Operation OperationOf(const std::string& name) {
   }
   if (name == "create") {
     return Operation::kCreate;
+  }
+  if (name == "close") {
+    return Operation::kClose;
   }
   return Operation::kUnknown;
 }
@@ -221,6 +225,10 @@ inline void HandleCall(void* mcv, gemini::Panel& panel,
     case Operation::kCreate:
       // Opening a tab for Gemini is not done yet: the host answers "no tab".
       Reply(guest, call.id, true, "null");
+      return;
+    case Operation::kClose:
+      Reply(guest, call.id, true, "null");
+      gemini::Toggle(panel.window, mcv);
       return;
     case Operation::kUnknown:
       Reply(guest, call.id, false, kUnknownOperationMessage);

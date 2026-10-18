@@ -347,6 +347,10 @@ inline constexpr char kHostScript[] = R"JS((function () {
       var state = await currentState();
       notifyPinCandidates((state && state.tabs) || []);
     },
+    // The panel's own close button: Chrome's browser hides the panel.
+    closePanel: function () {
+      call("close", null).catch(function () {});
+    },
     activateTab: function (tabId) {
       call("activate", { tabId: tabId }).catch(function () {});
     },
