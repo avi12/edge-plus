@@ -1,9 +1,8 @@
 <script lang="ts">
-  import AssistantCard from "@/components/AssistantCard.svelte";
   import FeatureCard from "@/components/FeatureCard.svelte";
   import ThemingCard from "@/components/ThemingCard.svelte";
-  import { findDescription, findTitle } from "@/lib/assistantNames";
-  import type { AppState, Assistant, Mode } from "@/lib/bridge";
+  import { FIND_DESCRIPTION, FIND_TITLE } from "@/lib/assistantNames";
+  import type { AppState, Mode } from "@/lib/bridge";
   import * as bridge from "@/lib/bridge";
   import { Feature, LocalThemeKind } from "@/lib/bridge";
   import { describeHeldOff, describeUnsupported, describeUpdate } from "@/lib/edgeBuild";
@@ -25,9 +24,6 @@
   const handlerIcon =
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
       `<path d="M9 5 L16 12 L9 19 L2 12 Z"/><path d="M15 5 L22 12 L15 19 L12 16"/></svg>`;
-  const assistantIcon =
-    `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none">` +
-      `<path d="M12 2 A10 10 0 0 0 22 12 A10 10 0 0 0 12 22 A10 10 0 0 0 2 12 A10 10 0 0 0 12 2 Z"/></svg>`;
 
   // A magnifying glass with a RegExp asterisk.
   const findIcon =
@@ -60,10 +56,6 @@
       "time\" no longer blocks the site for good; only Done on Ignore, or Block, does. Turning this " +
       "on (or opening Edge with it on) lifts every block so far, so blocked sites can ask again. " +
       "Live, no restart.";
-  const assistantDescription =
-    "Choose what the toolbar chat button opens. Gemini reskins the button and opens the Gemini " +
-      "web app in a side panel; you share a page the way the web app allows. Copilot leaves Edge's " +
-      "own button and pane untouched. Open Edge first.";
 
   let appState = $state<AppState | null>(null);
   let isDraggingOver = $state(false);
@@ -80,11 +72,6 @@
   );
   const isFindHeldOff = $derived(
     unsupported.has(Feature.EnhancedFind) && appState?.features.enhancedFind !== true
-  );
-  // The assistant control is held off when Gemini can't run on this build and
-  // isn't already selected; Copilot (the default) is always available.
-  const isAssistantHeldOff = $derived(
-    unsupported.has(Feature.Assistant) && appState?.features.assistant !== "gemini"
   );
   // What a locked card says about why, on the card itself.
   function heldOffNote(isHeldOff: boolean): string {
@@ -199,10 +186,6 @@
     appState = await bridge.setEnhancedFind(value);
   }
 
-  async function onAssistant(value: Assistant): Promise<void> {
-    appState = await bridge.setAssistant(value);
-  }
-
   async function onAddStore(url: string): Promise<void> {
     appState = await bridge.addStoreTheme(url);
   }
@@ -267,24 +250,14 @@
       theming={appState.theming}
     />
 
-    <AssistantCard
-      assistant={appState.features.assistant}
-      description={assistantDescription}
-      disabled={isAssistantHeldOff}
-      icon={assistantIcon}
-      note={heldOffNote(isAssistantHeldOff)}
-      onChange={onAssistant}
-      title="Browser assistant"
-    />
-
     <FeatureCard
       checked={appState.features.enhancedFind}
-      description={findDescription(appState.features.assistant)}
+      description={FIND_DESCRIPTION}
       disabled={isFindHeldOff}
       icon={findIcon}
       note={heldOffNote(isFindHeldOff)}
       onchange={onEnhancedFind}
-      title={findTitle(appState.features.assistant)}
+      title={FIND_TITLE}
     />
 
     <FeatureCard

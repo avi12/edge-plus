@@ -19,14 +19,7 @@ export enum Feature {
   Theming = "theming",
   QuietDevMode = "quietDevMode",
   ProtocolHandlers = "protocolHandlers",
-  Assistant = "assistant",
   EnhancedFind = "enhancedFind"
-}
-
-/** The browser assistant the chat button opens; matches `Assistant` in settings.rs. */
-export enum Assistant {
-  Copilot = "copilot",
-  Gemini = "gemini"
 }
 
 /** A newly seen Edge build and what it switched off (often nothing); matches `BuildChange` in edge_build.rs. */
@@ -77,7 +70,6 @@ export interface Features {
   theming: boolean;
   quietDevMode: boolean;
   protocolHandlers: boolean;
-  assistant: Assistant;
   enhancedFind: boolean;
 }
 
@@ -115,10 +107,6 @@ export function setSplit(enabled: boolean): Promise<AppState> {
 
 export function setTheming(enabled: boolean): Promise<AppState> {
   return invoke<AppState>("set_theming", { enabled });
-}
-
-export function setAssistant(assistant: Assistant): Promise<AppState> {
-  return invoke<AppState>("set_assistant", { assistant });
 }
 
 export function setQuietDevMode(enabled: boolean): Promise<AppState> {
