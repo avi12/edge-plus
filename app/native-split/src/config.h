@@ -31,21 +31,24 @@ struct Wire {
   uint32_t darkLength;   // bytes of darkId in use (0 = default theme)
   char lightId[kIdCapacity];
   char darkId[kIdCapacity];
-  // Appended last, so a DLL built before it still reads the fields above and
-  // a file written before it still loads (as kCopilot).
+  // Appended after the ids, so a DLL built before each still reads the fields
+  // above it and a file written before it still loads (as kCopilot, and as off).
   Assistant assistant;
+  uint32_t enhancedFindActive;  // 1 = Ctrl+F opens the enhanced find bar
 };
 // protocol.rs writes exactly WIRE_SIZE bytes and LoadFromFile wants all of
 // them, so the struct must stay packed: five u32 fields, the two ids, then the
-// assistant (a u32).
-inline constexpr size_t kWireFieldCount = 6;
+// assistant and the find switch (u32s).
+inline constexpr size_t kWireFieldCount = 7;
 inline constexpr size_t kWireIdCount = 2;
 static_assert(sizeof(Wire) == kWireFieldCount * sizeof(uint32_t) +
                                   kWireIdCount * size_t{kIdCapacity},
               "Wire must stay packed as protocol.rs writes it");
 
-// The size of the file a panel wrote before `assistant` existed.
+// The sizes of the files a panel wrote before `assistant` and before
+// `enhancedFindActive` existed.
 inline constexpr DWORD kLegacyWireSize = offsetof(Wire, assistant);
+inline constexpr DWORD kBeforeFindWireSize = offsetof(Wire, enhancedFindActive);
 
 // The same bytes the panel also writes beside its settings, so a DLL injected
 // into an already-open Edge reads the current state at load. Live changes come
@@ -70,8 +73,10 @@ inline bool LoadFromFile(Wire* out) {
   }
   *out = Wire{};
   DWORD read = 0;
-  const bool isKnownSize = ReadFile(file, out, sizeof(Wire), &read, nullptr) &&
-                           (read == sizeof(Wire) || read == kLegacyWireSize);
+  const bool isRead = ReadFile(file, out, sizeof(Wire), &read, nullptr);
+  const bool isKnownSize =
+      isRead && (read == sizeof(Wire) || read == kBeforeFindWireSize ||
+                 read == kLegacyWireSize);
   CloseHandle(file);
   return isKnownSize;
 }
