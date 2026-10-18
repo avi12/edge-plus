@@ -4,12 +4,15 @@
   import Select from "@/components/Select.svelte";
   import Switch from "@/components/Switch.svelte";
   import TextInput from "@/components/TextInput.svelte";
+  import ThemeList from "@/components/ThemeList.svelte";
+  import type { ThemeRow } from "@/components/ThemeList.svelte";
   import { LocalThemeKind } from "@/lib/bridge";
-  import type { Mode, ThemeSource, Theming } from "@/lib/bridge";
+  import type { EdgeTheme, Mode, ThemeSource, Theming } from "@/lib/bridge";
 
   interface Props {
     description: string;
     disabled?: boolean;
+    edgeThemes: EdgeTheme[];
     enabled: boolean;
     icon: string;
     onAddLocal: (kind: LocalThemeKind) => Promise<void>;
@@ -23,6 +26,7 @@
   const {
     description,
     disabled = false,
+    edgeThemes,
     enabled,
     icon,
     onAddLocal,
@@ -32,6 +36,9 @@
     onToggle,
     theming
   }: Props = $props();
+
+  const EDGE_LABEL = "Installed in Edge";
+  const IN_USE_LABEL = "In use";
 
   let url = $state("");
   let error = $state("");
@@ -45,6 +52,26 @@
     ...theming.themes.map(theme => ({
       value: theme.id,
       label: theme.name
+    })),
+    ...edgeThemes.map(theme => ({
+      value: theme.id,
+      label: theme.name
+    }))
+  ]);
+
+  // The panel's own themes (removable) first, then those Edge already had.
+  const rows: ThemeRow[] = $derived([
+    ...theming.themes.map(theme => ({
+      id: theme.id,
+      name: theme.name,
+      badges: [sourceLabel(theme.source)],
+      isRemovable: true
+    })),
+    ...edgeThemes.map(theme => ({
+      id: theme.id,
+      name: theme.name,
+      badges: theme.isActive ? [IN_USE_LABEL, EDGE_LABEL] : [EDGE_LABEL],
+      isRemovable: false
     }))
   ]);
 
@@ -144,24 +171,7 @@
       />
     </div>
 
-    <ul class="themes">
-      {#each theming.themes as theme (theme.id)}
-        <li class="theme">
-          <span class="name">{theme.name}</span>
-          <span class="badge">{sourceLabel(theme.source)}</span>
-          <button
-            class="remove"
-            aria-label={`Remove ${theme.name}`}
-            onclick={() => remove(theme.id)}
-            type="button"
-          >
-            ✕
-          </button>
-        </li>
-      {:else}
-        <li class="empty">No themes yet — paste a store link or add a local theme (.crx, .zip or folder).</li>
-      {/each}
-    </ul>
+    <ThemeList onRemove={remove} {rows} />
   </div>
 </section>
 
@@ -202,60 +212,6 @@
     border-radius: var(--radius-m);
     background: var(--danger-bg);
     color: var(--danger-fg);
-    font-size: 12.5px;
-  }
-
-  .themes {
-    margin: var(--space-m) 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .theme {
-    display: flex;
-    gap: var(--space-s);
-    align-items: center;
-    padding: var(--space-s) 0;
-    border-bottom: 1px solid var(--stroke-2);
-  }
-
-  .name {
-    flex: 1 1 auto;
-    overflow: hidden;
-    min-width: 0;
-    font-size: 13px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .badge {
-    padding: 1px var(--space-s);
-    border: 1px solid var(--stroke-2);
-    border-radius: var(--radius-s);
-    color: var(--fg-3);
-    font-size: 11px;
-    text-transform: uppercase;
-  }
-
-  .remove {
-    width: 24px;
-    height: 24px;
-    border: none;
-    border-radius: var(--radius-m);
-    background: transparent;
-    color: var(--fg-3);
-    font-size: 12px;
-    cursor: pointer;
-  }
-
-  .remove:hover {
-    background: var(--bg-hover);
-    color: var(--danger-fg);
-  }
-
-  .empty {
-    padding: var(--space-s) 0;
-    color: var(--fg-3);
     font-size: 12.5px;
   }
 

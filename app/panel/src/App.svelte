@@ -110,6 +110,19 @@
     };
   });
 
+  // Coming back to the panel picks up themes installed in Edge meanwhile.
+  $effect(() => {
+    function refresh(): void {
+      void bridge.loadState().then(state => {
+        appState = state;
+      });
+    }
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+    };
+  });
+
   // A local theme edited on disk was re-checked and re-installed (or refused).
   $effect(() => {
     const unlisten = listen<bridge.ThemeRefresh>(bridge.THEME_REFRESHED_EVENT, event => {
@@ -225,6 +238,7 @@
     <ThemingCard
       description={themeDescription}
       disabled={isThemingHeldOff}
+      edgeThemes={appState.edgeThemes}
       enabled={appState.features.theming}
       icon={themeIcon}
       {onAddLocal}

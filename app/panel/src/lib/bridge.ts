@@ -58,6 +58,14 @@ export interface ThemeEntry {
   origin: string;
 }
 
+/** A theme Edge already has installed, read from its profiles; matches `InstalledTheme` in installed_themes.rs. */
+export interface EdgeTheme {
+  id: string;
+  name: string;
+  /** Edge is showing it right now. */
+  isActive: boolean;
+}
+
 export interface Theming {
   themes: ThemeEntry[];
   light: string;
@@ -76,6 +84,8 @@ export interface Features {
 export interface AppState {
   features: Features;
   theming: Theming;
+  /** Themes installed in Edge that the panel did not add. */
+  edgeThemes: EdgeTheme[];
   edgeRunning: boolean;
   splitLoaded: boolean;
   /** The `msedge.dll` build running Edge is on; null when Edge is not running. */
