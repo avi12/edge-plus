@@ -1,4 +1,4 @@
-// Unit tests for the pure text side of the find bar (find_text.h). No Edge/Win32
+// Unit tests for the pure text side of the enhanced find (find_text.h). No Edge/Win32
 // deps. Run via test\run.cmd.
 #include <cstdio>
 #include <string>
@@ -77,32 +77,60 @@ void CheckPatternShape() {
         "a problem has words");
 }
 
+void CheckParseQuery() {
+  Query query = ParseQuery("plain words");
+  Check(query.mode == Mode::kText, "plain text is Edge's");
+  query = ParseQuery("");
+  Check(query.mode == Mode::kText, "an empty box is Edge's");
+  query = ParseQuery("/\\d{3}-\\d{4}/");
+  Check(query.mode == Mode::kRegExp && query.pattern == "\\d{3}-\\d{4}" &&
+            query.flags.empty(),
+        "a closed RegExp");
+  query = ParseQuery("/price/i");
+  Check(query.mode == Mode::kRegExp && query.pattern == "price" &&
+            query.flags == "i",
+        "a RegExp with a flag");
+  query = ParseQuery("/a/b/gi");
+  Check(query.mode == Mode::kRegExp && query.pattern == "a/b" &&
+            query.flags == "gi",
+        "a slash inside the pattern");
+  Check(ParseQuery("/price").mode == Mode::kText,
+        "a RegExp not closed yet is plain text");
+  Check(ParseQuery("//").mode == Mode::kText, "an empty RegExp is plain text");
+  Check(ParseQuery("/etc/passwd").mode == Mode::kText,
+        "a path whose tail is not flags is plain text");
+  Check(ParseQuery("/a/ii").mode == Mode::kText, "a repeated flag");
+  Check(ParseQuery("/a/x").mode == Mode::kText, "an unknown flag");
+  query = ParseQuery("? where is the pricing?");
+  Check(query.mode == Mode::kAsk && query.pattern == "where is the pricing?",
+        "a question");
+  query = ParseQuery("?   spaced out  ");
+  Check(query.mode == Mode::kAsk && query.pattern == "spaced out",
+        "a question is trimmed");
+  query = ParseQuery("? ");
+  Check(query.mode == Mode::kAsk && query.pattern.empty(),
+        "a question mark and a space is a question not yet typed");
+  Check(ParseQuery("?id=3").mode == Mode::kText,
+        "a question mark without a space is text");
+  Check(ParseQuery("?").mode == Mode::kText, "a lone question mark");
+}
+
 void CheckBuildSearch() {
-  Options options;
-  Search search = BuildSearch("a.b", options);
-  Check(search.problem == PatternProblem::kNone && search.source == "a\\.b" &&
-            search.flags == "gim",
-        "text mode escapes and ignores case");
-  options.isCaseSensitive = true;
-  search = BuildSearch("x", options);
-  Check(search.flags == "gm", "case sensitive drops i");
-  options.mode = Mode::kRegex;
-  search = BuildSearch("a.b", options);
-  Check(search.source == "a.b", "regex mode keeps the pattern");
-  options.isWholeWord = true;
-  search = BuildSearch("cat|dog", options);
-  Check(search.source == "(?<!\\w)(?:cat|dog)(?!\\w)",
-        "whole word wraps the alternatives together");
-  search = BuildSearch("(a", options);
+  Search search = BuildSearch(ParseQuery("/a.b/"));
+  Check(search.problem == PatternProblem::kNone && search.source == "a.b" &&
+            search.flags == "gm",
+        "case sensitive unless it says i");
+  search = BuildSearch(ParseQuery("/x/i"));
+  Check(search.flags == "gmi", "i ignores case");
+  search = BuildSearch(ParseQuery("/x/gmis"));
+  Check(search.flags == "gmis", "g and m are always on, not twice");
+  search = BuildSearch(ParseQuery("/(a/"));
   Check(search.problem == PatternProblem::kUnbalanced && search.source.empty(),
         "a bad pattern builds nothing");
-  options.mode = Mode::kText;
-  search = BuildSearch("(a", options);
-  Check(search.problem == PatternProblem::kNone,
-        "text mode takes brackets literally");
-  search = BuildSearch("", options);
-  Check(search.problem == PatternProblem::kEmpty, "empty text");
-  Check(EscapeLiteral("a-b/c") == "a\\-b\\/c", "escapes - and /");
+  search = BuildSearch(ParseQuery("/(a+)+/"));
+  Check(search.problem == PatternProblem::kNestedRepeat,
+        "a pattern that could hang the page is refused");
+  Check(std::string(kRegExpName) == "RegExp", "the mode is called RegExp");
 }
 
 void CheckStepping() {
@@ -114,12 +142,6 @@ void CheckStepping() {
   Check(StepMatch(2, 5, Step::kPrevious) == 1, "previous");
   Check(StepMatch(0, 0, Step::kNext) == kNoMatch, "nothing to step through");
   Check(StepMatch(9, 5, Step::kNext) == 0, "a stale index starts over");
-  Check(MatchLabel(2, 12, false) == "3 of 12", "label");
-  Check(MatchLabel(kNoMatch, 12, false) == "12 results",
-        "label before stepping");
-  Check(MatchLabel(kNoMatch, 1, false) == "1 result", "one result");
-  Check(MatchLabel(0, 5000, true) == "1 of 5000+", "capped label");
-  Check(MatchLabel(kNoMatch, 0, false) == "No results", "no results");
 }
 
 void CheckSearchResults() {
@@ -139,52 +161,16 @@ void CheckSearchResults() {
   Check(!result.isOk, "empty answer");
 }
 
-void CheckReport() {
-  Report report = ParseReport(kNotInstalledAnswer);
-  Check(!report.isInstalled && report.events.empty(), "not installed");
-  report = ParseReport("fixedge-find");
-  Check(report.isInstalled && report.events.empty(), "installed, quiet");
-  report = ParseReport(
-      "fixedge-find\n" + Fields({"query", "regex", "1", "0", "(a|b)"}) +
-      "\nnext\nprev\n" + Fields({"ask", "ask", "0", "0", "where is pricing?"}) +
-      "\nclose");
-  Check(report.isInstalled && report.events.size() == 5, "five events");
-  Check(report.events[0].kind == EventKind::kQuery &&
-            report.events[0].options.mode == Mode::kRegex &&
-            report.events[0].options.isCaseSensitive &&
-            !report.events[0].options.isWholeWord &&
-            report.events[0].text == "(a|b)",
-        "query event");
-  Check(report.events[1].kind == EventKind::kNext &&
-            report.events[2].kind == EventKind::kPrevious,
-        "next and previous");
-  Check(report.events[3].kind == EventKind::kAsk &&
-            report.events[3].options.mode == Mode::kAsk &&
-            report.events[3].text == "where is pricing?",
-        "ask event");
-  Check(report.events[4].kind == EventKind::kClose, "close");
-  report =
-      ParseReport("fixedge-find\n" + Fields({"query", "bogus", "0", "0", "x"}) +
-                  "\nwhat\n" + Fields({"query", "x"}));
-  Check(report.isInstalled && report.events.empty(),
-        "lines it cannot read are dropped");
-  report =
-      ParseReport("fixedge-find\n" + Fields({"query", "text", "0", "1", ""}));
-  Check(report.events.size() == 1 && report.events[0].text.empty() &&
-            report.events[0].options.isWholeWord,
-        "an emptied box is a query too");
-}
-
 }  // namespace
 
 int main() {
   try {
     CheckSearchableUrls();
     CheckPatternShape();
+    CheckParseQuery();
     CheckBuildSearch();
     CheckStepping();
     CheckSearchResults();
-    CheckReport();
   } catch (...) {
     return 1;
   }

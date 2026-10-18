@@ -37,8 +37,6 @@ enum class Command : WPARAM {
   kReloadConfig = 802,     // re-read the config file and apply it (a script's
                            // stand-in for the config event, which wakes only
                            // one of the DLLs loaded in the system)
-  kOpenFind = 810,         // open the enhanced find bar (Ctrl+F's stand-in)
-  kCloseFind = 811,        // close it
 };
 
 // The width of each range: one code per Direction (kUp..kRight), and the

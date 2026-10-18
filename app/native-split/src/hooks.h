@@ -20,6 +20,7 @@
 #include "grip.h"
 #include "state.h"
 #include "assistant.h"
+#include "find.h"
 #include "gemini.h"
 #include "reserve.h"
 
@@ -495,6 +496,8 @@ inline bool InstallAll() {
   // The browser-assistant reskin: independent of the split (gated on the
   // chosen assistant), so it stays live even when the split is toggled off.
   assistant::Install();
+  // The enhanced find rides Edge's own find bar, whatever the split does.
+  find::Install();
   control::Install();  // the add-pane control channel (UI-thread trigger)
   return true;
 }

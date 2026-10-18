@@ -1,8 +1,9 @@
-// find_text.h — the text side of the enhanced find bar. One concern, all of it
-// pure (no Edge, no Win32; unit-tested in test/find_text_test.cpp): turning what
-// the user typed into the regular expression the page script runs, checking that
-// expression before it reaches a page, stepping through the matches, and reading
-// what the bar page and the page script report back.
+// find_text.h — the text side of the enhanced find. One concern, all of it pure
+// (no Edge, no Win32; unit-tested in test/find_text_test.cpp): telling from what
+// the user typed into Edge's find bar whether it is a RegExp or a question for
+// the browser assistant, turning a RegExp into what the page script runs,
+// checking it before it reaches a page, stepping through the matches, and
+// reading what the page script reports back.
 #pragma once
 #include <cctype>
 #include <cstddef>
@@ -12,18 +13,87 @@
 
 namespace fixedge::find_text {
 
-// How the bar reads its input box.
+// What Edge's find bar is asked for. Plain text is Edge's own search, untouched;
+// the other two are ours.
 enum class Mode {
-  kText,   // the words typed, literally
-  kRegex,  // a JavaScript regular expression
-  kAsk,    // a question for Copilot (ask_text.h)
+  kText,    // the words typed: Edge's find
+  kRegExp,  // /pattern/flags: a JavaScript regular expression
+  kAsk,     // ? question: a question for the browser assistant (ask_text.h)
 };
 
-struct Options {
+// The one name of the regular-expression mode in everything the user reads.
+inline constexpr char kRegExpName[] = "RegExp";
+
+// What a question is introduced by, and the delimiter of a RegExp.
+inline constexpr char kAskMark = '?';
+inline constexpr char kRegExpDelimiter = '/';
+// The flags `/pattern/flags` takes: g and m are always on, i ignores case, s
+// lets . match a line break, u reads the pattern as Unicode.
+inline constexpr char kRegExpFlags[] = "gimsu";
+
+struct Query {
   Mode mode = Mode::kText;
-  bool isCaseSensitive = false;
-  bool isWholeWord = false;
+  std::string pattern;  // kRegExp: the pattern; kAsk: the question, trimmed
+  std::string flags;    // kRegExp: the flags typed after the closing slash
 };
+
+inline bool IsSpace(char character) {
+  return std::isspace(static_cast<unsigned char>(character)) != 0;
+}
+
+inline std::string TrimmedSpaces(const std::string& text) {
+  size_t start = 0;
+  size_t end = text.size();
+  while (start < end && IsSpace(text[start])) {
+    start++;
+  }
+  while (end > start && IsSpace(text[end - 1])) {
+    end--;
+  }
+  return text.substr(start, end - start);
+}
+
+// Whether `flags` are RegExp flags we take, each at most once.
+inline bool AreRegExpFlags(const std::string& flags) {
+  for (size_t i = 0; i < flags.size(); i++) {
+    const bool isKnown =
+        std::string(kRegExpFlags).find(flags[i]) != std::string::npos;
+    const bool isRepeated = flags.find(flags[i]) != i;
+    if (!isKnown || isRepeated) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Read what is in the find bar's box. `? question` (a question mark and a space
+// first) is a question; `/pattern/flags` (a slash, a pattern, the last slash,
+// then only known flags) is a RegExp; anything else, including a RegExp not yet
+// closed, is plain text for Edge.
+inline Query ParseQuery(const std::string& typed) {
+  Query query;
+  const bool isQuestion =
+      typed.size() >= 2 && typed[0] == kAskMark && IsSpace(typed[1]);
+  if (isQuestion) {
+    query.mode = Mode::kAsk;
+    query.pattern = TrimmedSpaces(typed.substr(1));
+    return query;
+  }
+  const size_t closing = typed.rfind(kRegExpDelimiter);
+  const bool isDelimited =
+      typed.size() >= 3 && typed[0] == kRegExpDelimiter && closing > 1;
+  if (!isDelimited) {
+    return query;
+  }
+  const std::string flags = typed.substr(closing + 1);
+  if (!AreRegExpFlags(flags)) {
+    return query;
+  }
+  query.mode = Mode::kRegExp;
+  query.pattern = typed.substr(1, closing - 1);
+  query.flags = flags;
+  return query;
+}
 
 // Limits: a pattern longer than this is refused, and a page script stops
 // marking after this many matches (it says so).
@@ -32,7 +102,6 @@ inline constexpr int kMaxMatches = 5000;
 
 // Fields of a report, and its lines (the same separators share_text.h uses).
 inline constexpr char kFieldSeparator = '\x1f';
-inline constexpr char kLineSeparator = '\n';
 
 // --- which pages the bar can search ------------------------------------------------
 
@@ -151,19 +220,6 @@ inline PatternProblem CheckRegex(const std::string& pattern) {
   return isOpen ? PatternProblem::kUnbalanced : PatternProblem::kNone;
 }
 
-// Escape every character a regular expression gives a meaning to.
-inline std::string EscapeLiteral(const std::string& text) {
-  static const std::string kSpecial = "\\^$.*+?()[]{}|/-";
-  std::string escaped;
-  for (const char character : text) {
-    if (kSpecial.find(character) != std::string::npos) {
-      escaped.push_back('\\');
-    }
-    escaped.push_back(character);
-  }
-  return escaped;
-}
-
 // What the page script builds its RegExp from.
 struct Search {
   PatternProblem problem = PatternProblem::kEmpty;
@@ -171,29 +227,30 @@ struct Search {
   std::string flags;
 };
 
-// "g" finds every match, "m" lets ^ and $ stand for the start and end of a
-// line (a page's text is one line per block), "i" ignores case.
-inline Search BuildSearch(const std::string& typed, const Options& options) {
-  Search search;
-  const bool isRegex = options.mode == Mode::kRegex;
-  search.problem = isRegex ? CheckRegex(typed) : PatternProblem::kNone;
-  if (!isRegex) {
-    if (typed.empty()) {
-      search.problem = PatternProblem::kEmpty;
-    } else if (typed.size() > kMaxPatternChars) {
-      search.problem = PatternProblem::kTooLong;
+// The flags the page script runs: "g" finds every match, "m" lets ^ and $ stand
+// for the start and end of a line (a page's text is one line per block), and
+// the typed ones add "i", "s" and "u" (a RegExp is case sensitive unless it
+// says "i", as in JavaScript).
+inline std::string ScriptFlags(const std::string& typedFlags) {
+  std::string flags = "gm";
+  for (const char flag : typedFlags) {
+    const bool isImplied = flag == 'g' || flag == 'm';
+    if (!isImplied) {
+      flags.push_back(flag);
     }
   }
+  return flags;
+}
+
+// The search a RegExp query runs, or why it cannot.
+inline Search BuildSearch(const Query& query) {
+  Search search;
+  search.problem = CheckRegex(query.pattern);
   if (search.problem != PatternProblem::kNone) {
     return search;
   }
-  search.source = isRegex ? typed : EscapeLiteral(typed);
-  if (options.isWholeWord) {
-    // Look-arounds, not \b: a word edge is only a boundary next to a word
-    // character, and the typed text may start or end with a symbol.
-    search.source = "(?<!\\w)(?:" + search.source + ")(?!\\w)";
-  }
-  search.flags = options.isCaseSensitive ? "gm" : "gim";
+  search.source = query.pattern;
+  search.flags = ScriptFlags(query.flags);
   return search;
 }
 
@@ -219,19 +276,6 @@ inline int StepMatch(int current, int count, Step step) {
     return current + 1 == count ? 0 : current + 1;
   }
   return current == 0 ? count - 1 : current - 1;
-}
-
-// "3 of 12", or why there is nothing to count.
-inline std::string MatchLabel(int current, int count, bool isCapped) {
-  if (count <= 0) {
-    return "No results";
-  }
-  const std::string total =
-      std::to_string(count) + (isCapped ? "+" : std::string());
-  if (current < 0) {
-    return total + (count == 1 && !isCapped ? " result" : " results");
-  }
-  return std::to_string(current + 1) + " of " + total;
 }
 
 // --- what the page script answers ---------------------------------------------------
@@ -292,92 +336,6 @@ inline SearchResult ParseSearchResult(const std::string& raw) {
   result.isCapped = fields[2] == "1";
   result.current = std::stoi(fields[3]);
   return result;
-}
-
-// --- what the bar page reports -------------------------------------------------------
-
-enum class EventKind {
-  kQuery,  // the box, a mode or an option changed: search again
-  kNext,
-  kPrevious,
-  kAsk,  // Enter in the question box
-  kClose,
-};
-
-struct Event {
-  EventKind kind = EventKind::kClose;
-  Options options;
-  std::string text;  // the box's contents, for kQuery and kAsk
-};
-
-struct Report {
-  bool isInstalled = false;
-  std::vector<Event> events;
-};
-
-inline constexpr char kBarMarker[] = "fixedge-find";
-inline constexpr char kNotInstalledAnswer[] = "not-installed";
-
-inline bool ModeFromName(const std::string& name, Mode* mode) {
-  if (name == "text") {
-    *mode = Mode::kText;
-  } else if (name == "regex") {
-    *mode = Mode::kRegex;
-  } else if (name == "ask") {
-    *mode = Mode::kAsk;
-  } else {
-    return false;
-  }
-  return true;
-}
-
-// The bar's poll answer: `fixedge-find` on the first line, then one event per
-// line: `next`, `prev`, `close`, or `query|ask US mode US case(0|1) US
-// word(0|1) US text`. A line it cannot read is dropped.
-inline Report ParseReport(const std::string& raw) {
-  Report report;
-  size_t start = 0;
-  bool isFirstLine = true;
-  while (start <= raw.size()) {
-    size_t end = raw.find(kLineSeparator, start);
-    if (end == std::string::npos) {
-      end = raw.size();
-    }
-    const std::string line = raw.substr(start, end - start);
-    start = end + 1;
-    if (isFirstLine) {
-      isFirstLine = false;
-      report.isInstalled = line == kBarMarker;
-      if (!report.isInstalled) {
-        return report;
-      }
-      continue;
-    }
-    Event event;
-    if (line == "next") {
-      event.kind = EventKind::kNext;
-    } else if (line == "prev") {
-      event.kind = EventKind::kPrevious;
-    } else if (line == "close") {
-      event.kind = EventKind::kClose;
-    } else {
-      const std::vector<std::string> fields = SplitFields(line);
-      constexpr size_t kBoxFieldCount = 5;
-      const bool isQuery = fields[0] == "query";
-      const bool isAsk = fields[0] == "ask";
-      const bool isBoxEvent =
-          (isQuery || isAsk) && fields.size() == kBoxFieldCount;
-      if (!isBoxEvent || !ModeFromName(fields[1], &event.options.mode)) {
-        continue;
-      }
-      event.kind = isQuery ? EventKind::kQuery : EventKind::kAsk;
-      event.options.isCaseSensitive = fields[2] == "1";
-      event.options.isWholeWord = fields[3] == "1";
-      event.text = fields[4];
-    }
-    report.events.push_back(event);
-  }
-  return report;
 }
 
 }  // namespace fixedge::find_text

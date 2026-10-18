@@ -58,7 +58,6 @@ enum class HotKey : WPARAM {
   kFocusUp = 9,
   kFocusRight = 10,
   kFocusDown = 11,
-  kFind = 12,  // the find bar's own key, outside the split's table below
 };
 
 struct HotKeyBinding {
@@ -85,25 +84,6 @@ inline constexpr HotKeyBinding kHotKeyBindings[] = {
     {HotKey::kFocusRight, kFocusModifiers, VK_RIGHT},  // focus the pane right
     {HotKey::kFocusDown, kFocusModifiers, VK_DOWN},    // focus the pane below
 };
-
-// The enhanced find bar answers Ctrl+F when Edge delivers it to this window
-// (WindowProc below); Ctrl+Shift+Alt+F is the same thing as a hot-key, for
-// where Edge handles Ctrl+F before this window sees it. It is registered only
-// while the find bar's switch is on, whatever the split's is.
-inline constexpr HotKeyBinding kFindHotKeyBinding = {HotKey::kFind,
-                                                     kEditModifiers, 'F'};
-inline bool g_hasFindHotKey = false;
-
-inline void SetFindHotKey(HWND hwnd, bool isWanted) {
-  if (isWanted && !g_hasFindHotKey) {
-    RegisterHotKey(hwnd, static_cast<int>(kFindHotKeyBinding.hotKey),
-                   kFindHotKeyBinding.modifiers, kFindHotKeyBinding.key);
-    g_hasFindHotKey = true;
-  } else if (!isWanted && g_hasFindHotKey) {
-    UnregisterHotKey(hwnd, static_cast<int>(kFindHotKeyBinding.hotKey));
-    g_hasFindHotKey = false;
-  }
-}
 
 inline bool HasBinding(WPARAM wparam) {
   for (const HotKeyBinding& binding : kHotKeyBindings) {
@@ -188,7 +168,6 @@ inline void Teardown(HWND hwnd) {
   share::StopTimer();
   gemini::RemoveAll();
   find::Apply(false);
-  SetFindHotKey(hwnd, false);
   drag::Cancel();
   tabdrag::Cancel();
   overlay::Remove();
@@ -281,6 +260,8 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     protocol_handlers::EnableHooks();
     // The assistant reskin is its own feature, not a split hook: keep it live.
     assistant::EnableAll();
+    // Nor is the enhanced find: it follows its own switch.
+    find::EnableAll();
   }
 }
 
@@ -331,7 +312,6 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
   assistant::Apply(edge::McvForWindow(hwnd), wire.assistant);
   const bool isFindActive = wire.enhancedFindActive != 0;
   find::Apply(isFindActive);
-  SetFindHotKey(hwnd, isFindActive);
 }
 
 // The config read from disk at Install, applied on the UI thread via a posted
@@ -417,15 +397,6 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
     if (g_hasPendingConfig) {
       ApplyConfig(hwnd, g_pendingConfig);
     }
-    return;
-  }
-  // The find bar does not depend on the split being on.
-  if (wparam == CodeOf(Command::kOpenFind)) {
-    find::Open(hwnd);
-    return;
-  }
-  if (wparam == CodeOf(Command::kCloseFind)) {
-    find::Close(edge::McvForWindow(hwnd));
     return;
   }
   // With the split switched off (the DLL stays loaded for theming), only the
@@ -523,20 +494,6 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   const bool isFindPoll = message == WM_TIMER && wparam == find::kTimerId;
   if (isFindPoll) {
     find::Tick();
-    return 0;
-  }
-  const bool isFindHotKey =
-      message == WM_HOTKEY && wparam == static_cast<WPARAM>(HotKey::kFind);
-  if (isFindHotKey) {
-    find::Open(hwnd);
-    return 0;
-  }
-  // Ctrl+F alone (not with Shift or Alt) while the find bar is on: ours opens
-  // when the page is one it can search, otherwise Edge's own find.
-  const bool isCtrlF = message == WM_KEYDOWN && wparam == 'F' &&
-                       IsKeyDown(VK_CONTROL) && !IsKeyDown(VK_SHIFT) &&
-                       !IsKeyDown(VK_MENU);
-  if (isCtrlF && find::Open(hwnd)) {
     return 0;
   }
   const bool isRenderNudge = message == WM_TIMER && wparam == repaint::kTimerId;

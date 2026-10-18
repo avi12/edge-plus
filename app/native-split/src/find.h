@@ -1,40 +1,36 @@
-// find.h — the enhanced find bar. One concern: when the user presses Ctrl+F (the
-// panel's switch for it is on), show a bar of our own over the top right of the
-// page instead of Edge's, and run what the user types in the page: a text or
-// regular-expression search with every match marked and a count, or a question
-// for Copilot whose answer is the paragraphs to mark. The bar is a page of our
-// own in a WebView (find_page.h); this file polls it for what the user did, runs
-// the scripts of find_scripts.h in the tab being searched, and keeps the bar
-// glued to the page. The pure parts are find_text.h and ask_text.h; talking to
-// Copilot is copilot_chat.h's.
-//
-// Like the share strip, the bar cannot call us: a UI-thread timer asks it for
-// its events a few times a second while it is open (share.h does the same for
-// the Gemini panel). Nothing runs while it is closed.
+// find.h — the enhanced find, through Edge's own find bar. One concern: Edge's
+// Ctrl+F bar (its text field, its "n/m" label, its arrow buttons) stays the only
+// UI. Typing `/pattern/flags` there searches the page for a RegExp, and typing
+// `? your question` asks the browser assistant (Copilot or Gemini, as the panel
+// chose) which paragraphs answer it; anything else is Edge's own search,
+// untouched. Two bar functions are hooked: Find (the text changed) and FindNext
+// (Enter, Shift+Enter, the arrow buttons). For one of our queries they run our
+// search instead of Edge's, draw the matches in the page (find_scripts.h, the
+// CSS Custom Highlight API: the page's DOM is not touched) and show the count in
+// the bar's own label. A short status (asking, a bad RegExp) goes into that same
+// label, with the detail as its tooltip. The pure parts are find_text.h and
+// ask_text.h; talking to the assistant's web chat is assistant_chat.h's.
 #pragma once
 #include <windows.h>
 #include <map>
 #include <string>
 #include <utility>
 #include <vector>
+#include "MinHook.h"
 #include "ask_text.h"
-#include "channel.h"
 #include "assistant.h"
 #include "assistant_chat.h"
+#include "channel.h"
 #include "edge.h"
-#include "find_layout.h"
-#include "find_page.h"
 #include "find_scripts.h"
 #include "find_text.h"
-#include "reserve.h"
-#include "share_text.h"
 #include "tab_list.h"
 
 namespace fixedge::find {
 
-using share_text::StatusKind;
+using namespace fixedge::edge155;
 
-// Whether the find bar is switched on; the panel pushes it (config.h).
+// Whether the enhanced find is switched on; the panel pushes it (config.h).
 inline bool g_isEnabled = false;
 
 inline bool IsEnabled() {
@@ -42,135 +38,168 @@ inline bool IsEnabled() {
 }
 
 inline constexpr UINT_PTR kTimerId = 0xF1EC;
-inline constexpr UINT kPollIntervalMs = 100;
+inline constexpr UINT kTickIntervalMs = 100;
 
-// What the bar says. The one place its words are written.
+// --- what the bar says ---------------------------------------------------------------------------
+// The one place its words are written. The bar's label is small, so each status
+// is a short label plus, for the tooltip, the sentence behind it.
+
+struct Status {
+  std::string label;
+  std::string detail;
+};
+
+inline Status HintStatus() {
+  return {"Enter to ask", "Press Enter to ask " +
+                              std::string(assistant::Name()) +
+                              " about this page."};
+}
+inline Status ReadingStatus() {
+  return {"Reading page...", "Reading the page's paragraphs."};
+}
+inline Status AskingStatus(size_t part, size_t partCount) {
+  const std::string progress =
+      partCount > 1
+          ? " (" + std::to_string(part) + "/" + std::to_string(partCount) + ")"
+          : std::string();
+  return {"Asking" + progress + "...",
+          "Asking " + std::string(assistant::Name()) + "..."};
+}
+inline Status WaitingStatus() {
+  return {"Waiting...",
+          "Waiting for " + std::string(assistant::Name()) + "..."};
+}
+inline Status NeedsUserStatus() {
+  return {"Needs you",
+          std::string(assistant::Name()) +
+              " needs you: its page is at the top right of this page."};
+}
+inline Status NoParagraphStatus(const std::string& why) {
+  return {"No answer", why};
+}
+inline Status FailedStatus(const std::string& why) {
+  return {"Failed", why};
+}
+inline Status BadRegExpStatus(const std::string& why) {
+  return {std::string("Bad ") + find_text::kRegExpName, why};
+}
+inline Status CappedStatus() {
+  return {"", "More than " + std::to_string(find_text::kMaxMatches) +
+                  " matches: the first " +
+                  std::to_string(find_text::kMaxMatches) + " are marked."};
+}
+
 inline constexpr char kCannotSearchMessage[] =
     "This page cannot be searched here.";
 inline constexpr char kNoAnswerMessage[] = "The page did not answer.";
-inline constexpr char kAskPromptMessage[] =
-    "Press Enter to ask Copilot about this page.";
-inline constexpr char kReadingMessage[] = "Reading the page...";
 inline constexpr char kNoTextMessage[] = "This page has no text to ask about.";
-inline constexpr char kNoCopilotMessage[] =
-    "Copilot could not be opened in this window.";
 inline constexpr char kTabChangedMessage[] =
     "The tab changed. Ask again for this page.";
 inline constexpr char kPageChangedMessage[] = "The page changed. Ask again.";
-inline constexpr char kSignInMessage[] =
-    "Copilot needs you: see its page below.";
-inline constexpr char kWaitingMessage[] = "Waiting for Copilot...";
 inline constexpr char kLongPageMessage[] =
     " Only the first part of this long page was searched.";
 
-// Where the bar is in showing the user's selection when it opens: the box is
-// filled once the bar's script is up and the page has said what is selected.
-enum class OpenStep {
-  kNone,
-  kReadingSelection,
-  kReady,
-};
-
-// One question for Copilot in flight.
+// One question for the assistant in flight.
 struct AskRun {
   unsigned long long id =
       0;  // 0 = none; a late answer to an older one is dropped
   ask_text::Plan plan;
   size_t nextChunk = 0;
   std::vector<int> highlights;
-  std::string note;  // Copilot's sentence on what it found
+  std::string note;  // the assistant's sentence on what it found
   bool isPageCut = false;
-  std::string failure;  // why a later prompt failed, after earlier ones worked
+  std::string failure;   // why a later prompt failed, after earlier ones worked
+  std::string question;  // what the user asked, without the leading mark
 };
 
-// One bar per MultiContentsView (one per browser window).
-struct Bar {
-  void* view = nullptr;
-  void* parent = nullptr;
+// What one browser window's find bar is doing for us (one per
+// MultiContentsView). `findBarView` is Edge's FindBarView, seen the last time
+// one of its functions ran; every callback checks it is still the same one.
+struct Session {
+  void* findBarView = nullptr;
   HWND window = nullptr;
-  bool isOpen = false;
-  bool isInstalled = false;  // the bar page's script is running
-  bool isPolling = false;    // a poll or install is in flight
-  OpenStep openStep = OpenStep::kNone;
-  std::string selection;
-  find_text::Options options;
-  std::string text;        // the box, as last reported
   void* target = nullptr;  // the tab holding the highlights
   unsigned long long searchSeq = 0;
   int count = 0;
   int current = find_text::kNoMatch;
   bool isCapped = false;
+  std::string askedText;  // the box text the last question was asked for
   AskRun ask;
 };
 
-inline std::map<void*, Bar>& Bars() {
-  static std::map<void*, Bar> bars;
-  return bars;
+inline std::map<void*, Session>& Sessions() {
+  static std::map<void*, Session> sessions;
+  return sessions;
 }
 
-// Whether `bar` still belongs to `mcv`: its window exists and still shows that
-// MultiContentsView (a closed window destroyed its views, ours included).
-inline bool IsLive(void* mcv, const Bar& bar) {
-  return IsWindow(bar.window) && edge::McvForWindow(bar.window) == mcv;
+// Whether `session` still belongs to `mcv`: a closed window destroyed its views.
+inline bool IsLive(void* mcv, const Session& session) {
+  return IsWindow(session.window) && edge::McvForWindow(session.window) == mcv;
 }
 
 inline void DropStale() {
-  for (auto entry = Bars().begin(); entry != Bars().end();) {
+  for (auto entry = Sessions().begin(); entry != Sessions().end();) {
     if (IsLive(entry->first, entry->second)) {
       ++entry;
     } else {
-      entry = Bars().erase(entry);
+      entry = Sessions().erase(entry);
     }
   }
 }
 
-inline Bar* BarFor(void* mcv) {
+inline Session* SessionFor(void* mcv) {
   DropStale();
-  const auto entry = Bars().find(mcv);
-  return entry == Bars().end() ? nullptr : &entry->second;
+  const auto entry = Sessions().find(mcv);
+  return entry == Sessions().end() ? nullptr : &entry->second;
 }
 
-// The open bar of `mcv` if it is still the one whose view is `view`: every
+// The session of `mcv` if its bar is still the one whose view is `view`: every
 // callback checks this, since a callback can arrive after the bar was closed.
-inline Bar* OpenBarOf(void* mcv, void* view) {
-  Bar* bar = BarFor(mcv);
-  const bool isSameBar = bar && bar->view == view && bar->isOpen;
-  return isSameBar ? bar : nullptr;
+inline Session* LiveSessionOf(void* mcv, void* view) {
+  Session* session = SessionFor(mcv);
+  const bool isSameBar = session && session->findBarView == view;
+  return isSameBar ? session : nullptr;
 }
 
-// --- talking to the bar page ------------------------------------------------------------
+// --- talking to the bar ----------------------------------------------------------------------------
 
-inline void CallBar(const Bar& bar, const std::string& statement) {
-  void* contents = edge::WebViewContents(bar.view);
-  if (contents) {
-    edge::RunScript(contents, "window.__ff && " + statement + "; 0", nullptr);
-  }
+inline edge::U16View Utf16Of(const std::u16string& text) {
+  return edge::U16View{text.data(), text.size()};
 }
 
-inline void SetCount(const Bar& bar, const std::string& label) {
-  CallBar(bar,
-          "window.__ff.setCount(" + share_text::JsStringLiteral(label) + ")");
+inline std::u16string Utf16FromUtf8(const std::string& utf8) {
+  edge::U16String converted{};
+  edge::Utf8ToUtf16(&converted, utf8.c_str());
+  const edge::U16View view = edge::U16StringView(&converted);
+  const std::u16string text(view.data, view.length);
+  edge::FreeU16String(&converted);
+  return text;
 }
 
-inline void SetStatus(const Bar& bar, StatusKind kind,
-                      const std::string& text) {
-  CallBar(bar,
-          "window.__ff.setStatus(" +
-              share_text::JsStringLiteral(share_text::StatusKindName(kind)) +
-              "," + share_text::JsStringLiteral(text) + ")");
+// Put a short status in the bar's count label, the sentence behind it as the
+// label's tooltip.
+inline void ShowStatus(void* findBarView, const Status& status) {
+  const std::u16string label = Utf16FromUtf8(status.label);
+  edge::FindBarSetLabel(findBarView, Utf16Of(label));
+  edge::ViewSetTooltip(edge::FindBarLabel(findBarView), status.detail.c_str());
 }
 
-inline void SetBusy(const Bar& bar, bool isBusy) {
-  CallBar(bar, std::string("window.__ff.setBusy(") +
-                   (isBusy ? "true" : "false") + ")");
+// Show the matches as they stand in the bar's own "n/m" label.
+inline void ShowCount(const Session& session) {
+  const edge::U16View boxText = edge::FindBarText(session.findBarView);
+  const int ordinal = session.current < 0 ? 0 : session.current + 1;
+  edge::FindBarShowResult(session.findBarView, session.count, ordinal, boxText);
+  const Status tooltip = session.isCapped ? CappedStatus() : Status{};
+  edge::ViewSetTooltip(edge::FindBarLabel(session.findBarView),
+                       tooltip.detail.c_str());
 }
 
-// The count the bar shows for the matches as they stand.
-inline void ShowCount(const Bar& bar) {
-  SetCount(bar, find_text::MatchLabel(bar.current, bar.count, bar.isCapped));
+// Empty the label (nothing found yet, or nothing asked).
+inline void ClearLabel(const Session& session) {
+  ShowStatus(session.findBarView, Status{});
 }
 
-// --- the page being searched --------------------------------------------------------------
+// --- the page being searched ------------------------------------------------------------------------
 
 // Whether `contents` is still a tab of `mcv`'s window: a tab that was closed
 // must never be run a script.
@@ -185,25 +214,23 @@ inline bool CanSearch(void* contents) {
 
 // Take the highlights out of the tab that holds them (if it is still there)
 // and forget the count.
-inline void ClearTarget(void* mcv, Bar& bar) {
+inline void ClearTarget(void* mcv, Session& session) {
   const bool isClearable =
-      IsTabAlive(mcv, bar.target) && edge::IsPageLive(bar.target);
+      IsTabAlive(mcv, session.target) && edge::IsPageLive(session.target);
   if (isClearable) {
-    edge::RunScript(bar.target, find_scripts::kClearScript, nullptr);
+    edge::RunScript(session.target, find_scripts::kClearScript, nullptr);
   }
-  bar.target = nullptr;
-  bar.count = 0;
-  bar.current = find_text::kNoMatch;
-  bar.isCapped = false;
-  bar.searchSeq++;
+  session.target = nullptr;
+  session.count = 0;
+  session.current = find_text::kNoMatch;
+  session.isCapped = false;
+  session.searchSeq++;
 }
-
-inline void RunSearch(void* mcv, Bar& bar);
 
 inline void OnSearched(void* mcv, void* view, unsigned long long seq,
                        const edge::ScriptResult& result) {
-  Bar* bar = OpenBarOf(mcv, view);
-  const bool isCurrentSearch = bar && bar->searchSeq == seq;
+  Session* session = LiveSessionOf(mcv, view);
+  const bool isCurrentSearch = session && session->searchSeq == seq;
   if (!isCurrentSearch) {
     return;
   }
@@ -211,219 +238,199 @@ inline void OnSearched(void* mcv, void* view, unsigned long long seq,
       result.isString ? find_text::ParseSearchResult(result.text)
                       : find_text::SearchResult{};
   if (!parsed.isOk) {
-    bar->count = 0;
-    bar->current = find_text::kNoMatch;
-    SetCount(*bar, "");
-    SetStatus(*bar, StatusKind::kError,
-              parsed.error.empty() ? kNoAnswerMessage : parsed.error);
+    session->count = 0;
+    session->current = find_text::kNoMatch;
+    ShowStatus(view, BadRegExpStatus(parsed.error.empty() ? kNoAnswerMessage
+                                                          : parsed.error));
     return;
   }
-  bar->count = parsed.count;
-  bar->current = parsed.count > 0 ? parsed.current : find_text::kNoMatch;
-  bar->isCapped = parsed.isCapped;
-  SetStatus(*bar, StatusKind::kInfo, "");
-  if (parsed.count > 0) {
-    ShowCount(*bar);
-  } else {
-    SetCount(*bar, find_text::MatchLabel(find_text::kNoMatch, 0, false));
-  }
+  session->count = parsed.count;
+  session->current = parsed.count > 0 ? parsed.current : find_text::kNoMatch;
+  session->isCapped = parsed.isCapped;
+  ShowCount(*session);
 }
 
-// Search the active tab for what the box holds: mark every match, jump to the
-// first one in view, show the count. A box that is empty clears; a pattern that
-// cannot run says why.
-inline void RunSearch(void* mcv, Bar& bar) {
-  const find_text::Search search =
-      find_text::BuildSearch(bar.text, bar.options);
-  const bool isEmptyBox = search.problem == find_text::PatternProblem::kEmpty;
-  if (isEmptyBox) {
-    ClearTarget(mcv, bar);
-    SetCount(bar, "");
-    SetStatus(bar, StatusKind::kInfo, "");
-    return;
-  }
+// Search the active tab for a RegExp: mark every match, jump to the first one
+// in view, show the count. A pattern that cannot run says why.
+inline void RunSearch(void* mcv, Session& session,
+                      const find_text::Query& query) {
+  const find_text::Search search = find_text::BuildSearch(query);
   const bool isUnusable = search.problem != find_text::PatternProblem::kNone;
   if (isUnusable) {
-    ClearTarget(mcv, bar);
-    SetCount(bar, "");
-    SetStatus(bar, StatusKind::kError, find_text::ProblemText(search.problem));
+    ClearTarget(mcv, session);
+    ShowStatus(session.findBarView,
+               BadRegExpStatus(find_text::ProblemText(search.problem)));
     return;
   }
   void* contents = tab_list::ActiveContents(mcv);
   if (!CanSearch(contents)) {
-    SetStatus(bar, StatusKind::kError, kCannotSearchMessage);
+    ShowStatus(session.findBarView, FailedStatus(kCannotSearchMessage));
     return;
   }
-  const bool isOtherTab = bar.target && bar.target != contents;
+  const bool isOtherTab = session.target && session.target != contents;
   if (isOtherTab) {
-    ClearTarget(mcv, bar);
+    ClearTarget(mcv, session);
   }
-  bar.target = contents;
-  const unsigned long long seq = ++bar.searchSeq;
-  void* view = bar.view;
+  session.target = contents;
+  const unsigned long long seq = ++session.searchSeq;
+  void* view = session.findBarView;
   const bool isRunning =
       edge::RunScript(contents, find_scripts::SearchScript(search),
                       [mcv, view, seq](const edge::ScriptResult& result) {
                         OnSearched(mcv, view, seq, result);
                       });
   if (!isRunning) {
-    SetStatus(bar, StatusKind::kError, kCannotSearchMessage);
+    ShowStatus(view, FailedStatus(kCannotSearchMessage));
   }
 }
 
-// --- next and previous ------------------------------------------------------------------------
+// --- next and previous ------------------------------------------------------------------------------
 
 inline void OnWentTo(void* mcv, void* view, unsigned long long seq, int index,
                      const edge::ScriptResult& result) {
-  Bar* bar = OpenBarOf(mcv, view);
-  const bool isCurrentSearch = bar && bar->searchSeq == seq;
+  Session* session = LiveSessionOf(mcv, view);
+  const bool isCurrentSearch = session && session->searchSeq == seq;
   if (!isCurrentSearch) {
     return;
   }
   const bool isMoved = result.isString && result.text == "ok";
   if (isMoved) {
-    bar->current = index;
-    ShowCount(*bar);
+    session->current = index;
+    ShowCount(*session);
     return;
   }
-  // The page no longer holds the marks (it was reloaded): mark them again, or,
-  // for Copilot's answer, which cannot be remade for free, say so.
-  const bool isAsking = bar->options.mode == find_text::Mode::kAsk;
-  if (isAsking) {
-    ClearTarget(mcv, *bar);
-    SetCount(*bar, "");
-    SetStatus(*bar, StatusKind::kError, kPageChangedMessage);
-  } else {
-    RunSearch(mcv, *bar);
-  }
+  // The page no longer holds the marks (it was reloaded): ShowStatus says so.
+  ClearTarget(mcv, *session);
+  ShowStatus(view, FailedStatus(kPageChangedMessage));
 }
 
-inline void StepBy(void* mcv, Bar& bar, find_text::Step step) {
-  const bool hasMatches = bar.count > 0 && bar.target;
+inline void StepBy(void* mcv, Session& session, find_text::Step step) {
+  const bool hasMatches = session.count > 0 && session.target;
   if (!hasMatches) {
     return;
   }
-  const bool isTargetActive = tab_list::ActiveContents(mcv) == bar.target;
+  const bool isTargetActive = tab_list::ActiveContents(mcv) == session.target;
   if (!isTargetActive) {
     return;
   }
-  const int next = find_text::StepMatch(bar.current, bar.count, step);
-  const unsigned long long seq = bar.searchSeq;
-  void* view = bar.view;
-  edge::RunScript(bar.target, find_scripts::GoToScript(next),
+  const int next = find_text::StepMatch(session.current, session.count, step);
+  const unsigned long long seq = session.searchSeq;
+  void* view = session.findBarView;
+  edge::RunScript(session.target, find_scripts::GoToScript(next),
                   [mcv, view, seq, next](const edge::ScriptResult& result) {
                     OnWentTo(mcv, view, seq, next, result);
                   });
 }
 
-// --- Ask Copilot -------------------------------------------------------------------------------
+// --- asking the assistant --------------------------------------------------------------------------
 
-inline void EndAsk(Bar& bar) {
-  bar.ask = AskRun{};
-  SetBusy(bar, false);
+inline void EndAsk(Session& session) {
+  session.ask = AskRun{};
 }
 
 // The question is over without an answer to show.
-inline void FailAsk(Bar& bar, const std::string& why) {
-  EndAsk(bar);
-  SetStatus(bar, StatusKind::kError, why);
+inline void FailAsk(Session& session, const std::string& why) {
+  EndAsk(session);
+  session.askedText.clear();
+  ShowStatus(session.findBarView, FailedStatus(why));
 }
 
-inline void CancelAsk(void* mcv, Bar& bar) {
-  const bool isAsking = bar.ask.id != 0;
+inline void CancelAsk(void* mcv, Session& session) {
+  const bool isAsking = session.ask.id != 0;
   if (isAsking) {
     assistant_chat::Cancel(mcv);
-    EndAsk(bar);
+    EndAsk(session);
   }
 }
 
 inline void OnHighlighted(void* mcv, void* view, unsigned long long askId,
                           const edge::ScriptResult& result) {
-  Bar* bar = OpenBarOf(mcv, view);
-  const bool isCurrentAsk = bar && bar->ask.id == askId;
+  Session* session = LiveSessionOf(mcv, view);
+  const bool isCurrentAsk = session && session->ask.id == askId;
   if (!isCurrentAsk) {
     return;
   }
   const find_text::SearchResult parsed =
       result.isString ? find_text::ParseSearchResult(result.text)
                       : find_text::SearchResult{};
-  // What Copilot said, or why it stopped early, and whether the page was long
-  // enough that only a part of it went to Copilot.
-  const std::string note =
-      bar->ask.failure.empty() ? bar->ask.note : bar->ask.failure;
-  const bool isCut = bar->ask.isPageCut || bar->ask.plan.isCut;
-  EndAsk(*bar);
+  // What the assistant said, or why it stopped early, and whether the page was
+  // long enough that only a part of it went to the assistant.
+  std::string note =
+      session->ask.failure.empty() ? session->ask.note : session->ask.failure;
+  const bool isCut = session->ask.isPageCut || session->ask.plan.isCut;
+  EndAsk(*session);
   if (!parsed.isOk || parsed.count == 0) {
-    FailAsk(*bar, parsed.error.empty() ? kPageChangedMessage : parsed.error);
+    FailAsk(*session,
+            parsed.error.empty() ? kPageChangedMessage : parsed.error);
     return;
   }
-  bar->count = parsed.count;
-  bar->current = parsed.current;
-  bar->isCapped = false;
-  ShowCount(*bar);
-  std::string text = note;
-  if (text.empty()) {
-    const bool isSingle = parsed.count == 1;
-    text = std::to_string(parsed.count) +
-           (isSingle ? " passage marked." : " passages marked.");
+  session->count = parsed.count;
+  session->current = parsed.current;
+  session->isCapped = false;
+  ShowCount(*session);
+  if (note.empty()) {
+    note = std::to_string(parsed.count) +
+           (parsed.count == 1 ? " passage marked." : " passages marked.");
   }
   if (isCut) {
-    text += kLongPageMessage;
+    note += kLongPageMessage;
   }
-  SetStatus(*bar, StatusKind::kOk, text);
+  edge::ViewSetTooltip(edge::FindBarLabel(view), note.c_str());
 }
 
-// Every prompt is answered: mark what Copilot named.
-inline void FinishAsk(void* mcv, Bar& bar) {
-  const bool isNothing = bar.ask.highlights.empty();
+// Every prompt is answered: mark what the assistant named.
+inline void FinishAsk(void* mcv, Session& session) {
+  const bool isNothing = session.ask.highlights.empty();
   if (isNothing) {
-    std::string why = "Copilot found no paragraph that answers that.";
-    if (!bar.ask.failure.empty()) {
-      why = bar.ask.failure;
-    } else if (!bar.ask.note.empty()) {
-      why = bar.ask.note;
+    std::string why = std::string(assistant::Name()) +
+                      " found no paragraph that answers that.";
+    if (!session.ask.failure.empty()) {
+      why = session.ask.failure;
+    } else if (!session.ask.note.empty()) {
+      why = session.ask.note;
     }
-    EndAsk(bar);
-    SetCount(bar, "");
-    SetStatus(bar, StatusKind::kInfo, why);
+    EndAsk(session);
+    ShowStatus(session.findBarView, NoParagraphStatus(why));
     return;
   }
-  const bool isTargetActive = IsTabAlive(mcv, bar.target) &&
-                              tab_list::ActiveContents(mcv) == bar.target;
+  const bool isTargetActive = IsTabAlive(mcv, session.target) &&
+                              tab_list::ActiveContents(mcv) == session.target;
   if (!isTargetActive) {
-    FailAsk(bar, kTabChangedMessage);
+    FailAsk(session, kTabChangedMessage);
     return;
   }
-  ask_text::SortAscending(&bar.ask.highlights);
-  const unsigned long long askId = bar.ask.id;
-  void* view = bar.view;
+  ask_text::SortAscending(&session.ask.highlights);
+  const unsigned long long askId = session.ask.id;
+  void* view = session.findBarView;
   const bool isRunning = edge::RunScript(
-      bar.target, find_scripts::HighlightParagraphsScript(bar.ask.highlights),
+      session.target,
+      find_scripts::HighlightParagraphsScript(session.ask.highlights),
       [mcv, view, askId](const edge::ScriptResult& result) {
         OnHighlighted(mcv, view, askId, result);
       });
   if (!isRunning) {
-    FailAsk(bar, kPageChangedMessage);
+    FailAsk(session, kPageChangedMessage);
   }
 }
 
-inline void SendNextChunk(void* mcv, Bar& bar);
+inline void SendNextChunk(void* mcv, Session& session);
 
-inline void OnCopilotReply(void* mcv, void* view, unsigned long long askId,
-                           const ask_text::Reply& reply) {
-  Bar* bar = OpenBarOf(mcv, view);
-  const bool isCurrentAsk = bar && bar->ask.id == askId;
+inline void OnAssistantReply(void* mcv, void* view, unsigned long long askId,
+                             const ask_text::Reply& reply) {
+  Session* session = LiveSessionOf(mcv, view);
+  const bool isCurrentAsk = session && session->ask.id == askId;
   if (!isCurrentAsk) {
     return;
   }
-  AskRun& ask = bar->ask;
+  AskRun& ask = session->ask;
   if (!reply.isOk) {
     const bool hasEarlierAnswers = !ask.highlights.empty();
     if (hasEarlierAnswers) {
-      ask.failure = "Copilot stopped early: " + reply.error;
-      FinishAsk(mcv, *bar);
+      ask.failure =
+          std::string(assistant::Name()) + " stopped early: " + reply.error;
+      FinishAsk(mcv, *session);
     } else {
-      FailAsk(*bar, reply.error);
+      FailAsk(*session, reply.error);
     }
     return;
   }
@@ -436,52 +443,48 @@ inline void OnCopilotReply(void* mcv, void* view, unsigned long long askId,
   ask.nextChunk++;
   const bool hasMoreChunks = ask.nextChunk < ask.plan.chunks.size();
   if (hasMoreChunks) {
-    SendNextChunk(mcv, *bar);
+    SendNextChunk(mcv, *session);
   } else {
-    FinishAsk(mcv, *bar);
+    FinishAsk(mcv, *session);
   }
 }
 
-inline void OnCopilotNotice(void* mcv, void* view, unsigned long long askId,
-                            assistant_chat::Notice notice) {
-  const Bar* bar = OpenBarOf(mcv, view);
-  const bool isCurrentAsk = bar && bar->ask.id == askId;
+inline void OnAssistantNotice(void* mcv, void* view, unsigned long long askId,
+                              assistant_chat::Notice notice) {
+  const Session* session = LiveSessionOf(mcv, view);
+  const bool isCurrentAsk = session && session->ask.id == askId;
   if (!isCurrentAsk) {
     return;
   }
   const bool isNeedingUser = notice == assistant_chat::Notice::kNeedsUser;
-  SetStatus(*bar, isNeedingUser ? StatusKind::kError : StatusKind::kInfo,
-            isNeedingUser ? kSignInMessage : kWaitingMessage);
+  ShowStatus(view, isNeedingUser ? NeedsUserStatus() : WaitingStatus());
 }
 
-inline void SendNextChunk(void* mcv, Bar& bar) {
-  AskRun& ask = bar.ask;
-  const std::string progress =
-      ask.plan.chunks.size() > 1
-          ? " (part " + std::to_string(ask.nextChunk + 1) + " of " +
-                std::to_string(ask.plan.chunks.size()) + ")"
-          : std::string();
-  SetStatus(bar, StatusKind::kInfo, "Asking Copilot" + progress + "...");
+inline void SendNextChunk(void* mcv, Session& session) {
+  AskRun& ask = session.ask;
+  ShowStatus(session.findBarView,
+             AskingStatus(ask.nextChunk + 1, ask.plan.chunks.size()));
   const unsigned long long askId = ask.id;
-  void* view = bar.view;
+  void* view = session.findBarView;
   const bool isAsked = assistant_chat::Ask(
-      bar.window, mcv, assistant::g_assistant,
+      session.window, mcv, assistant::g_assistant,
       ask.plan.chunks[ask.nextChunk].prompt,
       [mcv, view, askId](const ask_text::Reply& reply) {
-        OnCopilotReply(mcv, view, askId, reply);
+        OnAssistantReply(mcv, view, askId, reply);
       },
       [mcv, view, askId](assistant_chat::Notice notice) {
-        OnCopilotNotice(mcv, view, askId, notice);
+        OnAssistantNotice(mcv, view, askId, notice);
       });
   if (!isAsked) {
-    FailAsk(bar, kNoCopilotMessage);
+    FailAsk(session, std::string(assistant::Name()) +
+                         " could not be opened in this window.");
   }
 }
 
 inline void OnParagraphsRead(void* mcv, void* view, unsigned long long askId,
                              const edge::ScriptResult& result) {
-  Bar* bar = OpenBarOf(mcv, view);
-  const bool isCurrentAsk = bar && bar->ask.id == askId;
+  Session* session = LiveSessionOf(mcv, view);
+  const bool isCurrentAsk = session && session->ask.id == askId;
   if (!isCurrentAsk) {
     return;
   }
@@ -489,61 +492,29 @@ inline void OnParagraphsRead(void* mcv, void* view, unsigned long long askId,
       result.isString ? ask_text::ParsePageParagraphs(result.text)
                       : ask_text::PageParagraphs{};
   if (!page.isOk) {
-    FailAsk(*bar, page.error.empty() ? kNoAnswerMessage : page.error);
+    FailAsk(*session, page.error.empty() ? kNoAnswerMessage : page.error);
     return;
   }
   const std::vector<ask_text::Paragraph> paragraphs =
       ask_text::Prepare(page.texts);
-  bar->ask.plan = ask_text::PlanQuestion(bar->text, paragraphs);
-  bar->ask.isPageCut = page.isCut;
-  if (bar->ask.plan.chunks.empty()) {
-    FailAsk(*bar, kNoTextMessage);
+  session->ask.plan = ask_text::PlanQuestion(session->ask.question, paragraphs);
+  session->ask.isPageCut = page.isCut;
+  if (session->ask.plan.chunks.empty()) {
+    FailAsk(*session, kNoTextMessage);
     return;
   }
-  SendNextChunk(mcv, *bar);
+  SendNextChunk(mcv, *session);
 }
-
-// Enter in the question box: read the page into paragraphs, ask Copilot which
-// ones answer it, and mark them.
-inline void StartAsk(void* mcv, Bar& bar, const std::string& question) {
-  static unsigned long long nextAskId = 1;
-  CancelAsk(mcv, bar);
-  ClearTarget(mcv, bar);
-  SetCount(bar, "");
-  void* contents = tab_list::ActiveContents(mcv);
-  if (!CanSearch(contents)) {
-    SetStatus(bar, StatusKind::kError, kCannotSearchMessage);
-    return;
-  }
-  bar.text = question;
-  bar.target = contents;
-  bar.ask = AskRun{};
-  bar.ask.id = nextAskId++;
-  SetBusy(bar, true);
-  SetStatus(bar, StatusKind::kInfo, kReadingMessage);
-  const unsigned long long askId = bar.ask.id;
-  void* view = bar.view;
-  const bool isRunning =
-      edge::RunScript(contents, find_scripts::ReadParagraphsScript(),
-                      [mcv, view, askId](const edge::ScriptResult& result) {
-                        OnParagraphsRead(mcv, view, askId, result);
-                      });
-  if (!isRunning) {
-    FailAsk(bar, kCannotSearchMessage);
-  }
-}
-
-// --- opening and closing -------------------------------------------------------------------------
 
 inline void StartTimer() {
   if (channel::g_window) {
-    SetTimer(channel::g_window, kTimerId, kPollIntervalMs, nullptr);
+    SetTimer(channel::g_window, kTimerId, kTickIntervalMs, nullptr);
   }
 }
 
-inline bool IsAnyOpen() {
-  for (const auto& [mcv, bar] : Bars()) {
-    if (bar.isOpen) {
+inline bool IsAnyAsking() {
+  for (const auto& [mcv, session] : Sessions()) {
+    if (session.ask.id != 0) {
       return true;
     }
   }
@@ -551,296 +522,304 @@ inline bool IsAnyOpen() {
 }
 
 inline void StopTimerIfIdle() {
-  if (!IsAnyOpen() && channel::g_window) {
+  if (!IsAnyAsking() && channel::g_window) {
     KillTimer(channel::g_window, kTimerId);
   }
 }
 
-// The bar's rectangle: the top right of the page, beside an open Gemini panel
-// rather than under it.
-inline Rect BarBounds(void* mcv) {
-  Rect content = edge::ViewBounds(mcv);
-  content.width -= reserve::WidthFor(mcv);
-  return find_layout::BarRect(content);
-}
-
-inline void Reposition(void* mcv, const Bar& bar) {
-  const Rect wanted = BarBounds(mcv);
-  if (edge::ViewBounds(bar.view) != wanted) {
-    edge::SetViewBounds(bar.view, wanted);
-  }
-  assistant_chat::Reposition(mcv);
-}
-
-// Give the keyboard back to the page that was being searched.
-inline void FocusPage(void* mcv) {
-  const void* active = tab_list::ActiveContents(mcv);
-  const size_t containerCount = edge::McvCount(mcv);
-  for (size_t i = 0; i < containerCount; i++) {
-    void* container = edge::McvContainerAt(mcv, static_cast<int>(i));
-    const bool isActivePane =
-        active && edge::ContainerWebContents(container) == active;
-    if (isActivePane) {
-      edge::ViewRequestFocus(edge::ContainerWebView(container));
-      return;
-    }
-  }
-}
-
-inline Bar* EnsureBar(HWND window, void* mcv) {
-  if (Bar* existing = BarFor(mcv)) {
-    return existing;
-  }
-  void* tsm = edge::McvTabStripModel(mcv);
-  void* profile = tsm ? edge::ProfileForTabStrip(tsm) : nullptr;
-  void* parent = edge::ViewParent(mcv);
-  if (!profile || !parent) {
-    return nullptr;
-  }
-  void* view = edge::NewWebView(profile);
-  edge::SetViewVisible(view, false);
-  edge::AddChildViewAt(parent, view, edge::ViewChildCount(parent));
-  const std::string url = share_text::BuildDataUrl(find_page::Html());
-  edge::WebViewLoadUrl(view, url.c_str());
-  Bar& bar = Bars()[mcv];
-  bar.view = view;
-  bar.parent = parent;
-  bar.window = window;
-  Log("[find] bar created view=%p parent=%p", view, parent);
-  return &bar;
-}
-
-inline void OnSelectionRead(void* mcv, void* view,
-                            const edge::ScriptResult& result) {
-  Bar* bar = OpenBarOf(mcv, view);
-  const bool isWaiting = bar && bar->openStep == OpenStep::kReadingSelection;
-  if (!isWaiting) {
+// Enter on a question: read the page into paragraphs, ask the assistant which
+// ones answer it, and mark them.
+inline void StartAsk(void* mcv, Session& session, const std::string& typedText,
+                     const std::string& question) {
+  static unsigned long long nextAskId = 1;
+  CancelAsk(mcv, session);
+  ClearTarget(mcv, session);
+  void* contents = tab_list::ActiveContents(mcv);
+  if (!CanSearch(contents)) {
+    ShowStatus(session.findBarView, FailedStatus(kCannotSearchMessage));
     return;
   }
-  bar->selection = result.isString ? result.text : std::string();
-  bar->openStep = OpenStep::kReady;
-}
-
-// Whether Ctrl+F in `window` should open our bar: the feature is on and the
-// active tab is a page whose text our scripts can search. Anything else (an Edge
-// page, a PDF) is left to Edge's own find.
-inline bool CanOpenFor(HWND window) {
-  if (!g_isEnabled) {
-    return false;
-  }
-  void* mcv = edge::McvForWindow(window);
-  void* contents = mcv ? tab_list::ActiveContents(mcv) : nullptr;
-  return CanSearch(contents);
-}
-
-// Show the bar (or, when it is already up, bring it back to the box with the
-// page's selection in it). False when Edge's own find should open instead.
-inline bool Open(HWND window) {
-  if (!CanOpenFor(window)) {
-    Log("[find] left to Edge's own find (enabled=%d)",
-        static_cast<int>(g_isEnabled));
-    return false;
-  }
-  void* mcv = edge::McvForWindow(window);
-  Bar* bar = EnsureBar(window, mcv);
-  if (!bar) {
-    return false;
-  }
-  bar->isOpen = true;
-  edge::SetViewVisible(bar->view, true);
-  Reposition(mcv, *bar);
-  edge::ViewRequestFocus(bar->view);
-  bar->openStep = OpenStep::kReadingSelection;
-  bar->selection.clear();
-  void* view = bar->view;
-  const bool isReading = edge::RunScript(
-      tab_list::ActiveContents(mcv), find_scripts::SelectionScript(),
-      [mcv, view](const edge::ScriptResult& result) {
-        OnSelectionRead(mcv, view, result);
-      });
-  if (!isReading) {
-    bar->openStep = OpenStep::kReady;
+  session.askedText = typedText;
+  session.target = contents;
+  session.ask = AskRun{};
+  session.ask.id = nextAskId++;
+  session.ask.question = question;
+  ShowStatus(session.findBarView, ReadingStatus());
+  const unsigned long long askId = session.ask.id;
+  void* view = session.findBarView;
+  const bool isRunning =
+      edge::RunScript(contents, find_scripts::ReadParagraphsScript(),
+                      [mcv, view, askId](const edge::ScriptResult& result) {
+                        OnParagraphsRead(mcv, view, askId, result);
+                      });
+  if (!isRunning) {
+    FailAsk(session, kCannotSearchMessage);
+    return;
   }
   StartTimer();
-  Log("[find] bar opened");
-  return true;
+}
+
+// --- closing and following the bar ----------------------------------------------------------------
+
+// Take everything of ours off the page and out of the bar's label.
+inline void Reset(void* mcv, Session& session) {
+  CancelAsk(mcv, session);
+  ClearTarget(mcv, session);
+  session.askedText.clear();
 }
 
 inline void Close(void* mcv) {
-  Bar* bar = BarFor(mcv);
-  if (!bar || !bar->isOpen) {
+  Session* session = SessionFor(mcv);
+  if (!session) {
     return;
   }
-  CancelAsk(mcv, *bar);
-  ClearTarget(mcv, *bar);
+  Reset(mcv, *session);
   assistant_chat::Cancel(mcv);
-  bar->isOpen = false;
-  bar->openStep = OpenStep::kNone;
-  edge::SetViewVisible(bar->view, false);
-  FocusPage(mcv);
   StopTimerIfIdle();
   Log("[find] bar closed");
 }
 
-// --- the timer -------------------------------------------------------------------------------------
+// --- the hooks ----------------------------------------------------------------------------------------
 
-inline void HandleEvent(void* mcv, Bar& bar, const find_text::Event& event) {
-  switch (event.kind) {
-    case find_text::EventKind::kQuery: {
-      bar.options = event.options;
-      bar.text = event.text;
-      CancelAsk(mcv, bar);
-      const bool isAsking = event.options.mode == find_text::Mode::kAsk;
-      if (isAsking) {
-        ClearTarget(mcv, bar);
-        SetCount(bar, "");
-        SetStatus(bar, StatusKind::kInfo, kAskPromptMessage);
-      } else {
-        RunSearch(mcv, bar);
-      }
-      return;
-    }
-    case find_text::EventKind::kNext:
-      StepBy(mcv, bar, find_text::Step::kNext);
-      return;
-    case find_text::EventKind::kPrevious:
-      StepBy(mcv, bar, find_text::Step::kPrevious);
-      return;
-    case find_text::EventKind::kAsk:
-      bar.options = event.options;
-      StartAsk(mcv, bar, event.text);
-      return;
-    case find_text::EventKind::kClose:
-      Close(mcv);
-      return;
-  }
+// The browser window whose find bar is being used: the foreground window or the
+// one that owns it, else the window the DLL is subclassing. Edge draws its find
+// bar in a window of its own that also resolves to the browser's views, so a
+// candidate must have a title (the bar's window has none): a session tied to the
+// bar's window would be dropped the moment that window changes.
+inline bool IsBrowserWindow(HWND candidate) {
+  const bool hasTitle = GetWindowTextLengthW(candidate) > 0;
+  return candidate && hasTitle && edge::McvForWindow(candidate);
 }
 
-inline void OnPolled(void* mcv, void* view, const edge::ScriptResult& result) {
-  Bar* bar = OpenBarOf(mcv, view);
-  if (!bar) {
-    return;
-  }
-  bar->isPolling = false;
-  const find_text::Report report = result.isString
-                                       ? find_text::ParseReport(result.text)
-                                       : find_text::Report{};
-  if (!report.isInstalled) {
-    bar->isInstalled = false;
-    return;
-  }
-  for (const find_text::Event& event : report.events) {
-    HandleEvent(mcv, *bar, event);
-    const bool isStillOpen = OpenBarOf(mcv, view) != nullptr;
-    if (!isStillOpen) {
-      return;
+inline HWND BrowserWindowInUse() {
+  HWND foreground = GetForegroundWindow();
+  HWND owner = GetAncestor(foreground, GA_ROOTOWNER);
+  for (HWND candidate : {owner, foreground}) {
+    if (IsBrowserWindow(candidate)) {
+      return candidate;
     }
   }
+  const bool isSubclassedUsable =
+      channel::g_window && edge::McvForWindow(channel::g_window);
+  return isSubclassedUsable ? channel::g_window : nullptr;
 }
 
-inline void OnInstalled(void* mcv, void* view,
-                        const edge::ScriptResult& result) {
-  Bar* bar = OpenBarOf(mcv, view);
-  if (!bar) {
-    return;
-  }
-  bar->isPolling = false;
-  bar->isInstalled =
-      result.isString && result.text == find_page::kInstalledAnswer;
+inline std::string TextOf(const edge::U16View view) {
+  return edge::Utf16ToUtf8(view);
 }
 
-// A tab switch while the bar is up: the marks stay in the old tab (cleared if it
-// is still there), and the new tab is searched for what the box holds.
-inline void FollowActiveTab(void* mcv, Bar& bar) {
-  const bool isTabChanged =
-      bar.target && tab_list::ActiveContents(mcv) != bar.target;
-  if (!isTabChanged) {
+// The session for the bar whose `findBarView` just ran one of its functions,
+// and the window's MultiContentsView it searches; null when the window cannot
+// be found.
+inline Session* SessionOfBar(void* findBarView, void** mcvOut) {
+  HWND window = BrowserWindowInUse();
+  void* mcv = window ? edge::McvForWindow(window) : nullptr;
+  if (!mcv) {
+    return nullptr;
+  }
+  DropStale();
+  Session& session = Sessions()[mcv];
+  const bool isNewBar = session.findBarView != findBarView;
+  if (isNewBar) {
+    Reset(mcv, session);
+    session.findBarView = findBarView;
+  }
+  session.window = window;
+  *mcvOut = mcv;
+  return &session;
+}
+
+using Find_t = void(__fastcall*)(void*, const edge::U16View*);
+using FindNext_t = void(__fastcall*)(void*, bool);
+using HandleKeyEvent_t = bool(__fastcall*)(void*, void*, const void*);
+using EndFindSession_t = void(__fastcall*)(void*, int, int);
+inline Find_t o_find = nullptr;
+inline FindNext_t o_find_next = nullptr;
+inline HandleKeyEvent_t o_handle_key_event = nullptr;
+inline EndFindSession_t o_end_find_session = nullptr;
+
+// The text changed. Plain text is Edge's search. A RegExp is searched by us (and
+// Edge's own marks and count are cleared first, by asking it to find nothing); a
+// question waits for Enter.
+inline void __fastcall h_find(void* findBarView, const edge::U16View* typed) {
+  if (!g_isEnabled) {
+    o_find(findBarView, typed);
     return;
   }
-  const bool isAsking = bar.options.mode == find_text::Mode::kAsk;
-  CancelAsk(mcv, bar);
-  ClearTarget(mcv, bar);
-  SetCount(bar, "");
-  if (isAsking) {
-    SetStatus(bar, StatusKind::kInfo, kTabChangedMessage);
+  void* mcv = nullptr;
+  Session* session = SessionOfBar(findBarView, &mcv);
+  const find_text::Query query = find_text::ParseQuery(TextOf(*typed));
+  const bool isOurs = session && query.mode != find_text::Mode::kText;
+  if (!isOurs) {
+    if (session) {
+      Reset(mcv, *session);
+    }
+    o_find(findBarView, typed);
+    return;
+  }
+  const edge::U16View nothing{u"", 0};
+  o_find(findBarView, &nothing);
+  Reset(mcv, *session);
+  if (query.mode == find_text::Mode::kRegExp) {
+    RunSearch(mcv, *session, query);
   } else {
-    RunSearch(mcv, bar);
+    ShowStatus(findBarView, HintStatus());
   }
 }
 
-inline void TickBar(void* mcv, Bar& bar) {
-  Reposition(mcv, bar);
-  void* contents = edge::WebViewContents(bar.view);
-  const bool isBarReady = contents && edge::IsPageLive(contents);
-  if (!isBarReady) {
-    bar.isInstalled = false;
-    return;
+// Enter, Shift+Enter or an arrow button. A RegExp steps through its matches. A
+// question is asked on the first Enter and stepped through afterwards.
+// Returns whether the box holds one of our queries (and so this was handled);
+// false leaves the press to Edge.
+inline bool HandleNext(void* findBarView, bool isReverse) {
+  if (!g_isEnabled) {
+    return false;
   }
-  if (bar.isPolling) {
-    return;
+  void* mcv = nullptr;
+  Session* session = SessionOfBar(findBarView, &mcv);
+  const std::string typed = TextOf(edge::FindBarText(findBarView));
+  const find_text::Query query = find_text::ParseQuery(typed);
+  const bool isOurs = session && query.mode != find_text::Mode::kText;
+  if (!isOurs) {
+    return false;
   }
-  void* view = bar.view;
-  if (!bar.isInstalled) {
-    bar.isPolling = true;
-    const bool isRunning =
-        edge::RunScript(contents, find_page::InstallScript(),
-                        [mcv, view](const edge::ScriptResult& result) {
-                          OnInstalled(mcv, view, result);
-                        });
-    bar.isPolling = isRunning;
-    return;
+  const find_text::Step step =
+      isReverse ? find_text::Step::kPrevious : find_text::Step::kNext;
+  const bool isOtherTab =
+      session->target && session->target != tab_list::ActiveContents(mcv);
+  if (isOtherTab) {
+    Reset(mcv, *session);
   }
-  if (bar.openStep == OpenStep::kReady) {
-    bar.openStep = OpenStep::kNone;
-    CallBar(bar, "window.__ff.open(" +
-                     share_text::JsStringLiteral(bar.selection) + ")");
-    return;
+  if (query.mode == find_text::Mode::kRegExp) {
+    const bool isSearched = session->target != nullptr;
+    if (isSearched) {
+      StepBy(mcv, *session, step);
+    } else {
+      RunSearch(mcv, *session, query);
+    }
+    return true;
   }
-  FollowActiveTab(mcv, bar);
-  bar.isPolling = true;
-  const bool isRunning =
-      edge::RunScript(contents, find_page::PollScript(),
-                      [mcv, view](const edge::ScriptResult& result) {
-                        OnPolled(mcv, view, result);
-                      });
-  bar.isPolling = isRunning;
+  const bool isAsking = session->ask.id != 0;
+  const bool isAnswered = session->askedText == typed;
+  const bool isQuestionEmpty = query.pattern.empty();
+  if (isAsking || isQuestionEmpty) {
+    return true;
+  }
+  if (isAnswered) {
+    StepBy(mcv, *session, step);
+  } else {
+    StartAsk(mcv, *session, typed, query.pattern);
+  }
+  return true;
 }
 
-// One timer tick (control.h's window procedure): move Copilot's question on a
-// step and poll every open bar.
+// An arrow button.
+inline void __fastcall h_find_next(void* findBarView, bool isReverse) {
+  if (!HandleNext(findBarView, isReverse)) {
+    o_find_next(findBarView, isReverse);
+  }
+}
+
+// Enter in the text field, which Edge turns into a search of its own without
+// going through FindNext: Shift+Enter goes back.
+inline bool __fastcall h_handle_key_event(void* controller, void* textfield,
+                                          const void* keyEvent) {
+  const bool isEnterPressed = g_isEnabled && edge::IsEnterPressed(keyEvent);
+  const bool isShiftDown = GetKeyState(VK_SHIFT) < 0;
+  const bool isHandled =
+      isEnterPressed &&
+      HandleNext(edge::FindBarViewOfKeyController(controller), isShiftDown);
+  return isHandled || o_handle_key_event(controller, textfield, keyEvent);
+}
+
+// The bar closes: take our marks off the page.
+inline void __fastcall h_end_find_session(void* controller, int action,
+                                          int isKeepingSelection) {
+  o_end_find_session(controller, action, isKeepingSelection);
+  std::vector<void*> windows;
+  for (const auto& [mcv, session] : Sessions()) {
+    windows.push_back(mcv);
+  }
+  for (void* mcv : windows) {
+    Close(mcv);
+  }
+}
+
+// --- install and the switch ---------------------------------------------------------------------------
+
+struct HookSite {
+  uintptr_t rva;
+  void* detour;
+  void** original;
+};
+
+inline std::vector<HookSite> HookSites() {
+  return {
+      {rva::FindBarView_Find, reinterpret_cast<void*>(h_find),
+       reinterpret_cast<void**>(&o_find)},
+      {rva::FindBarView_FindNext, reinterpret_cast<void*>(h_find_next),
+       reinterpret_cast<void**>(&o_find_next)},
+      {rva::FindBarView_HandleKeyEvent,
+       reinterpret_cast<void*>(h_handle_key_event),
+       reinterpret_cast<void**>(&o_handle_key_event)},
+      {rva::FindBarController_EndFindSession,
+       reinterpret_cast<void*>(h_end_find_session),
+       reinterpret_cast<void**>(&o_end_find_session)},
+  };
+}
+
+// The hooks are independent of the split: keep them live whenever the DLL is
+// loaded (they are gated on g_isEnabled, so with the switch off they pass
+// through), so turning the split off with MH_ALL_HOOKS does not disable them.
+inline bool EnableAll() {
+  bool isEnabled = true;
+  for (const HookSite& site : HookSites()) {
+    const MH_STATUS status = MH_EnableHook(edge::At(site.rva));
+    isEnabled = isEnabled && (status == MH_OK || status == MH_ERROR_ENABLED);
+  }
+  return isEnabled;
+}
+
+inline bool Install() {
+  bool isHooked = true;
+  for (const HookSite& site : HookSites()) {
+    isHooked = isHooked && MH_CreateHook(edge::At(site.rva), site.detour,
+                                         site.original) == MH_OK;
+  }
+  if (!isHooked) {
+    Log("[err] find hooks failed");
+    return false;
+  }
+  const bool isEnabled = EnableAll();
+  Log("[ok] find hooks installed (%d)", static_cast<int>(isEnabled));
+  return isEnabled;
+}
+
+// One timer tick (control.h's window procedure): move the assistant's question
+// on a step.
 inline void Tick() {
   DropStale();
   assistant_chat::Tick();
-  for (auto& [mcv, bar] : Bars()) {
-    if (bar.isOpen) {
-      TickBar(mcv, bar);
-    }
-  }
+  StopTimerIfIdle();
 }
-
-// --- the switch and teardown ----------------------------------------------------------------------
 
 inline void RemoveAll() {
   DropStale();
   std::vector<void*> windows;
-  for (const auto& [mcv, bar] : Bars()) {
+  for (const auto& [mcv, session] : Sessions()) {
     windows.push_back(mcv);
   }
   for (void* mcv : windows) {
     Close(mcv);
   }
   assistant_chat::RemoveAll();
-  for (auto& [mcv, bar] : Bars()) {
-    edge::ViewRemoveChild(bar.parent, bar.view);
-    edge::DeleteWebView(bar.view);
-  }
-  Bars().clear();
+  Sessions().clear();
   if (channel::g_window) {
     KillTimer(channel::g_window, kTimerId);
   }
 }
 
-// The panel switched the find bar on or off.
+// The panel switched the enhanced find on or off.
 inline void Apply(bool isEnabled) {
   const bool isTurningOff = g_isEnabled && !isEnabled;
   const bool isChanging = g_isEnabled != isEnabled;

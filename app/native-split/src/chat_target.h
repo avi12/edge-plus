@@ -44,11 +44,9 @@ inline constexpr Target kGeminiTarget = {
     "Gemini",
     "https://gemini.google.com/app",
     "rich-textarea .ql-editor[contenteditable=\"true\"], "
-    "div.ql-editor[contenteditable=\"true\"][role=\"textbox\"], "
     "[contenteditable=\"true\"][aria-label*=\"prompt\" i]",
-    "button.send-button, button[aria-label=\"Send message\" i], "
-    "button[mattooltip=\"Send message\" i]",
-    "message-content, .model-response-text, model-response",
+    "button[aria-label=\"Send message\" i]",
+    "message-content, model-response",
     "button[aria-label*=\"Stop\" i], button.stop",
     "[role=\"dialog\"][aria-modal=\"true\"], mat-dialog-container",
 };
