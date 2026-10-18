@@ -95,18 +95,30 @@ inline bool BytesAre(uintptr_t rva, const uint8_t* expected, size_t length) {
 // The three bytes hooks.h overwrites to lift Edge's 2-pane CHECKs. A stale
 // address would corrupt unrelated code, so each must hold the instruction it was
 // reversed from: the `2` in `cmp r8d, 2`, and the two-byte opcode of a rel32
-// `jne` (0F 85) / `jae` (0F 83).
+// `jne` (0F 85) / `jae` (0F 83). The patches stay in the process after this DLL
+// unloads (hooks.h), so a DLL loaded again (hot-reload) finds them already made:
+// the lifted cap, or the NOPs, count as holding the instruction too.
 inline bool PatchSitesHoldTheirInstructions() {
   constexpr uint8_t kIndexCapImmediate[] = {0x02};
+  constexpr uint8_t kLiftedCapImmediate[] = {edge::kLiftedIndexCap};
   constexpr uint8_t kJneRel32[] = {0x0f, 0x85};
   constexpr uint8_t kJaeRel32[] = {0x0f, 0x83};
+  constexpr uint8_t kNopedJump[] = {edge::kNopOpcode, edge::kNopOpcode};
   const bool isGuardIntact =
       BytesAre(edge155::rva::SetWebContentsAtIndex_guard_imm,
-               kIndexCapImmediate, sizeof(kIndexCapImmediate));
-  const bool isLabelCheckIntact = BytesAre(
-      edge155::rva::SplitA11yLabel_paneidx_jne, kJneRel32, sizeof(kJneRel32));
-  const bool isActiveIndexCheckIntact = BytesAre(
-      edge155::rva::SetActiveIndex_index_jae, kJaeRel32, sizeof(kJaeRel32));
+               kIndexCapImmediate, sizeof(kIndexCapImmediate)) ||
+      BytesAre(edge155::rva::SetWebContentsAtIndex_guard_imm,
+               kLiftedCapImmediate, sizeof(kLiftedCapImmediate));
+  const bool isLabelCheckIntact =
+      BytesAre(edge155::rva::SplitA11yLabel_paneidx_jne, kJneRel32,
+               sizeof(kJneRel32)) ||
+      BytesAre(edge155::rva::SplitA11yLabel_paneidx_jne, kNopedJump,
+               sizeof(kNopedJump));
+  const bool isActiveIndexCheckIntact =
+      BytesAre(edge155::rva::SetActiveIndex_index_jae, kJaeRel32,
+               sizeof(kJaeRel32)) ||
+      BytesAre(edge155::rva::SetActiveIndex_index_jae, kNopedJump,
+               sizeof(kNopedJump));
   return isGuardIntact && isLabelCheckIntact && isActiveIndexCheckIntact;
 }
 

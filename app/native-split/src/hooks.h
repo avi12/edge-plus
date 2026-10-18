@@ -31,8 +31,7 @@ using namespace fixedge::edge155;
 // Each 2-pane CHECK that InstallAll NOPs is a `jcc rel32` (0F 8x + a 4-byte
 // offset; see offsets.h).
 inline constexpr size_t kCheckJumpLength = 6;
-// SetWebContentsAtIndex's `cmp index, 2` becomes `cmp index, 0xff`.
-inline constexpr uint8_t kLiftedIndexCap = 0xff;
+using edge::kLiftedIndexCap;
 
 // MultiContentsView::SetWebContentsAtIndex — the feeder's one call. For a grown
 // split (index >= the current container count) build the missing container(s)

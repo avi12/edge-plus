@@ -47,6 +47,8 @@ inline uint8_t PatchByte(uintptr_t rva, uint8_t value) {
 }
 
 inline constexpr uint8_t kNopOpcode = 0x90;  // x86 `nop`, one byte
+// SetWebContentsAtIndex's `cmp index, 2` becomes `cmp index, 0xff`.
+inline constexpr uint8_t kLiftedIndexCap = 0xff;
 
 // Overwrite `byteCount` code bytes with NOPs, copying what was there into
 // `savedBytes` (for the log) — used to neutralize a 2-pane-only CHECK so a grown
