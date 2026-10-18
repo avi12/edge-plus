@@ -163,6 +163,18 @@ inline void __fastcall h_build_menu(void* model) {
   }
 }
 
+// A personal profile in Edge's Copilot Mode gets the chat button without its
+// chevron: Edge answers "no" here when the toolbar is built. The chevron
+// carries the menu (and its Gemini titles), so Gemini's choice answers "yes".
+// Takes effect for each toolbar built after the answer changes (a new window).
+using DropdownEnabled_t = bool(__fastcall*)(bool);
+inline DropdownEnabled_t o_dropdown_enabled = nullptr;
+
+inline bool __fastcall h_dropdown_enabled(bool isChecked) {
+  const bool isForcedOn = IsGemini();
+  return isForcedOn || o_dropdown_enabled(isChecked);
+}
+
 // The button's right-click menu is built once with the toolbar, "Hide Copilot"
 // fixed in its item, so the item is set each time the menu is asked for: Gemini's
 // text while Gemini is chosen, Edge's own string otherwise (so switching back
@@ -355,6 +367,9 @@ inline std::vector<HookSite> HookSites() {
       {rva::EdgeCopilotMenuModel_ExecuteCommand,
        reinterpret_cast<void*>(h_execute_menu),
        reinterpret_cast<void**>(&o_execute_menu)},
+      {rva::Copilot_IsConsumerLabelButtonWithDropdownEnabled,
+       reinterpret_cast<void*>(h_dropdown_enabled),
+       reinterpret_cast<void**>(&o_dropdown_enabled)},
   };
 }
 

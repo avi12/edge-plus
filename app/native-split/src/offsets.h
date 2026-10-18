@@ -582,6 +582,13 @@ inline constexpr uintptr_t CopilotDropdownButton_vftables[] = {
     0x113c92a0, 0x113c92c0, 0x113c92e0, 0x113c9300, 0x113c9340,
     0x113c9390, 0x113c93a8, 0x113c93c0, 0x113c93f0, 0x113c94a0,
     0x113c94c0, 0x113c9500, 0x113c9518, 0x117762b8};
+// bool IsConsumerCopilotLabelButtonWithDropdownEnabled(bool): the one question
+// EdgeToolbarView::CreateDiscoverButtonIfNecessary asks (through
+// IsCopilotLabeledButtonWithDropdownEnabled) before building the chevron's
+// split-button container for a personal profile; false builds the bare chat
+// button. See docs/re/gemini-in-chrome.md section 12.
+inline constexpr uintptr_t Copilot_IsConsumerLabelButtonWithDropdownEnabled =
+    0x31f6048;
 // std::u16string l10n_util::GetStringUTF16(std::u16string* out, int message id).
 inline constexpr uintptr_t L10n_GetStringUTF16 = 0xfcab30;
 // l10n_util::GetStringFUTF16(std::u16string* out, int message id, const

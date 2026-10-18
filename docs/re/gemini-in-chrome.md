@@ -473,3 +473,39 @@ in the same page. With no Chrome installed it never tries glic.
   "Hide Gemini" with Gemini chosen, else back to string `0x4562`. Every other button
   passes straight through.
 - **Verification.** Static only; not exercised live.
+
+## 12. The missing chevron beside the chat button (Copilot Mode) [disasm] [run]
+
+- **Symptom.** In a profile with Copilot Mode on (`edge_copilot_mode_enabled` and
+  `edge_copilot_mode_enabled2` true in Preferences) the toolbar's chat pill has no
+  chevron; a fresh profile has it. Our DLL never hid it.
+- **Where it is decided.** The chevron's `EdgeCopilotToolbarSplitButtonContainer` is
+  built in one place, `EdgeToolbarView::CreateCopilotSplitButtonContainer` (`0x31f62fc`),
+  called only from `EdgeToolbarView::CreateDiscoverButtonIfNecessary` (`0x31f5e50`) when
+  `edge_copilot::utils::IsCopilotLabeledButtonWithDropdownEnabled(profile, true)`
+  (`0x31f600a`) is true. Otherwise the same function builds the bare
+  `EdgeCopilotToolbarLabelButton` (the template at `0xa2e082a`). Both paths build the
+  same button class, so a bare chat button is indistinguishable by vtable.
+- **The predicate.** For a profile with Copilot available, not guest/off-the-record:
+  AAD profile -> feature `CommercialCopilotLabelButtonWithDropdown` (default off);
+  else if `GetProfileSupportResultForChatV2Launch` (`0x2682f7e`) is non-zero -> false;
+  else `IsConsumerCopilotLabelButtonWithDropdownEnabled` (`0x31f6048`), a thin wrapper
+  over `base::FeatureList::IsEnabled` of `ConsumerCopilotLabelButtonWithDropdown`
+  (default **enabled**; the feature object is `kCopilotOmniboxEntryPoint+0x28`,
+  referenced only by that wrapper).
+- **The condition.** The profile here is a personal MSA one, so the consumer feature
+  decides. With the two Copilot Mode prefs set in an otherwise fresh throwaway
+  profile the chevron disappears; launching the same profile with
+  `--enable-features=ConsumerCopilotLabelButtonWithDropdown` brings it back. So it is
+  Edge's own behaviour for Copilot Mode (the feature reads as off, though its default
+  is on; the exact override was not traced) and not something the DLL or the panel
+  did. Nothing in src/ references the feature or the container.
+- **The fix.** `assistant.h` hooks the wrapper (`0x31f6048`, 14 bytes of
+  `mov/lea/jmp`) and answers "yes" while Gemini is the chosen assistant; with Copilot
+  chosen it calls Edge's own answer. It is read when a toolbar is built, so it
+  applies to windows opened after the DLL has the setting (an already-built toolbar
+  is not rebuilt).
+- **Verification.** Live in a throwaway Edge (marker `fixedge-chev-`, Copilot Mode
+  prefs set, Gemini chosen via the config file, DLL injected): the first window
+  keeps its bare button; a new window (`IDC_NEW_WINDOW`) shows "Ask Gemini" with its
+  chevron. Captured with `PrintWindow`.
