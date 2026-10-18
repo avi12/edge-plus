@@ -15,7 +15,8 @@
         "title": "Edge+",
         "width": 560,
         "height": 640,
-        "minWidth": 420,
+        "minWidth": 560,
+        "maxWidth": 560,
         "minHeight": 420,
         "resizable": true
       }
