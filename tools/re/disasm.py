@@ -59,7 +59,8 @@ for t in TARGETS:
     rva, size = addr_of(t)
     if rva is None:
         print(f"\n### {t}: not found"); continue
-    size = min(size or 0, int(os.environ.get("DISASM_MAX", "500"))) or 400
+    # The public PDB records no size for most functions; DISASM_SIZE sets what to read then.
+    size = min(size or 0, int(os.environ.get("DISASM_MAX", "500"))) or int(os.environ.get("DISASM_SIZE", "400"))
     fo = rva_foff(rva); code = d[fo:fo+size]
     print(f"\n### {t}  rva {rva:#x}  size {size}")
     for ins in md.disasm(code, BASE+rva):
