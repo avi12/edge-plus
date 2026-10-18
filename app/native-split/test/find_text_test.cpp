@@ -35,6 +35,18 @@ std::string Fields(std::initializer_list<std::string> fields) {
   return joined;
 }
 
+void CheckSearchableUrls() {
+  Check(IsSearchableUrl("https://example.com/a?b=1"), "a web page");
+  Check(IsSearchableUrl("file:///C:/notes/a.html"), "a local page");
+  Check(!IsSearchableUrl("edge://settings"), "an Edge page is Edge's");
+  Check(!IsSearchableUrl("https://example.com/paper.PDF"), "a PDF is Edge's");
+  Check(!IsSearchableUrl("https://example.com/paper.pdf#page=3"),
+        "a PDF with a fragment");
+  Check(IsSearchableUrl("https://example.com/page?file=paper.pdf"),
+        "a query that names a PDF is still a page");
+  Check(!IsSearchableUrl(""), "no address");
+}
+
 void CheckPatternShape() {
   Check(CheckRegex("") == PatternProblem::kEmpty, "empty is nothing to search");
   Check(CheckRegex("\\d+\\.\\d+") == PatternProblem::kNone, "plain pattern");
@@ -111,15 +123,17 @@ void CheckStepping() {
 }
 
 void CheckSearchResults() {
-  SearchResult result = ParseSearchResult(Fields({"ok", "12", "0"}));
-  Check(result.isOk && result.count == 12 && !result.isCapped, "ok");
-  result = ParseSearchResult(Fields({"ok", "5000", "1"}));
+  SearchResult result = ParseSearchResult(Fields({"ok", "12", "0", "3"}));
+  Check(result.isOk && result.count == 12 && !result.isCapped &&
+            result.current == 3,
+        "ok");
+  result = ParseSearchResult(Fields({"ok", "5000", "1", "0"}));
   Check(result.isOk && result.isCapped, "capped");
   result = ParseSearchResult(Fields({"err", "Invalid regular expression"}));
   Check(!result.isOk && result.error == "Invalid regular expression", "err");
   result = ParseSearchResult("garbage");
   Check(!result.isOk && !result.error.empty(), "unreadable answer");
-  result = ParseSearchResult(Fields({"ok", "x", "0"}));
+  result = ParseSearchResult(Fields({"ok", "x", "0", "0"}));
   Check(!result.isOk, "a count that is not a number");
   result = ParseSearchResult("");
   Check(!result.isOk, "empty answer");
@@ -165,6 +179,7 @@ void CheckReport() {
 
 int main() {
   try {
+    CheckSearchableUrls();
     CheckPatternShape();
     CheckBuildSearch();
     CheckStepping();

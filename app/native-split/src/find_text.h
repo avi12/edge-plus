@@ -4,9 +4,11 @@
 // expression before it reaches a page, stepping through the matches, and reading
 // what the bar page and the page script report back.
 #pragma once
+#include <cctype>
 #include <cstddef>
 #include <string>
 #include <vector>
+#include "share_text.h"
 
 namespace fixedge::find_text {
 
@@ -31,6 +33,28 @@ inline constexpr int kMaxMatches = 5000;
 // Fields of a report, and its lines (the same separators share_text.h uses).
 inline constexpr char kFieldSeparator = '\x1f';
 inline constexpr char kLineSeparator = '\n';
+
+// --- which pages the bar can search ------------------------------------------------
+
+// Web pages and local files whose text is in the page. An Edge page (settings, a
+// new tab) and a PDF (Edge's viewer draws it; its own find searches it) are left
+// to Edge's stock find.
+inline bool IsSearchableUrl(const std::string& url) {
+  if (!share_text::IsShareableUrl(url)) {
+    return false;
+  }
+  const size_t pathEnd = url.find_first_of("?#");
+  std::string path = url.substr(0, pathEnd);
+  for (char& character : path) {
+    character =
+        static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
+  }
+  const std::string kPdfSuffix = ".pdf";
+  const bool isPdf = path.size() >= kPdfSuffix.size() &&
+                     path.compare(path.size() - kPdfSuffix.size(),
+                                  kPdfSuffix.size(), kPdfSuffix) == 0;
+  return !isPdf;
+}
 
 // --- the regular expression ----------------------------------------------------
 
@@ -212,12 +236,13 @@ inline std::string MatchLabel(int current, int count, bool isCapped) {
 
 // --- what the page script answers ---------------------------------------------------
 
-// A search or a highlight answers `ok US count US isCapped(0|1)` or
-// `err US message`.
+// A search or a highlight answers `ok US count US isCapped(0|1) US current` or
+// `err US message`. `current` is the match the page scrolled to.
 struct SearchResult {
   bool isOk = false;
   int count = 0;
   bool isCapped = false;  // the page held more than kMaxMatches
+  int current = 0;
   std::string error;
 };
 
@@ -255,9 +280,9 @@ inline SearchResult ParseSearchResult(const std::string& raw) {
     result.error = fields.size() > 1 ? fields[1] : std::string();
     return result;
   }
-  constexpr size_t kOkFieldCount = 3;
+  constexpr size_t kOkFieldCount = 4;
   const bool isComplete = fields[0] == "ok" && fields.size() == kOkFieldCount &&
-                          IsDigits(fields[1]);
+                          IsDigits(fields[1]) && IsDigits(fields[3]);
   if (!isComplete) {
     result.error = "The page gave an answer Edge could not read.";
     return result;
@@ -265,6 +290,7 @@ inline SearchResult ParseSearchResult(const std::string& raw) {
   result.isOk = true;
   result.count = std::stoi(fields[1]);
   result.isCapped = fields[2] == "1";
+  result.current = std::stoi(fields[3]);
   return result;
 }
 

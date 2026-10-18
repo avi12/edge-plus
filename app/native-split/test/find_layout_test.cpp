@@ -37,6 +37,17 @@ void RunChecks() {
 
   const Rect tiny = BarRect(Rect{0, 0, 10, 10});
   Check(tiny.width == 0 && tiny.height == 4, "never negative");
+
+  const Rect chat = ChatRect(Rect{0, 100, 1400, 800});
+  Check(chat.x == wide.x && chat.width == wide.width,
+        "Copilot's page lines up with the bar");
+  Check(chat.y == wide.y + wide.height + kChatGap && chat.height == kChatHeight,
+        "and sits right under it");
+  const Rect shortChat = ChatRect(Rect{0, 0, 1400, 300});
+  Check(shortChat.y + shortChat.height <= 300 - kTopGap,
+        "it never runs off a short page");
+  const Rect noChat = ChatRect(Rect{0, 0, 1400, 50});
+  Check(noChat.height == 0, "no room, no page");
 }
 
 }  // namespace

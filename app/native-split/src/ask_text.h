@@ -129,8 +129,11 @@ inline std::vector<Paragraph> Prepare(const std::vector<std::string>& texts) {
 
 // --- the prompts -------------------------------------------------------------------------
 
+// A paragraph's label as the prompt shows it. In square brackets so it still
+// stands out when the chat's message box drops the line breaks between
+// paragraphs (Copilot's editor does with plain text).
 inline std::string LabelOf(int index) {
-  return "P" + std::to_string(index);
+  return "[P" + std::to_string(index) + "]";
 }
 
 // One prompt: the question, the rules of the reply, and the paragraphs it
@@ -146,10 +149,12 @@ struct Plan {
 };
 
 inline std::string PromptHead(const std::string& question) {
-  return "I am searching a web page. Below are numbered paragraphs from it.\n"
-         "Question: " +
+  return "I am searching a web page. Below are paragraphs from it, each "
+         "starting with its label in square brackets.\n"
+         "Question: \"" +
          question +
-         "\nReply with the labels of the paragraphs that answer the question, "
+         "\"\nReply with the labels of the paragraphs that answer the "
+         "question, "
          "most relevant first, separated by commas, like: P3, P7. Use at "
          "most " +
          std::to_string(kMaxLabelsPerReply) +
@@ -167,7 +172,7 @@ inline Plan PlanQuestion(const std::string& typedQuestion,
   current.prompt = head;
   for (const Paragraph& paragraph : paragraphs) {
     const std::string line =
-        LabelOf(paragraph.index) + ": " + paragraph.text + "\n";
+        LabelOf(paragraph.index) + " " + paragraph.text + "\n";
     const bool isChunkFull =
         !current.indices.empty() &&
         current.prompt.size() - head.size() + line.size() > kChunkChars;
@@ -266,8 +271,33 @@ inline bool IsLabelPunctuation(char character) {
   return std::string("[]().,;:-* \t").find(character) != std::string::npos;
 }
 
-// What Copilot said after (or instead of) its labels: its first line without the
-// leading labels, plus the lines that follow.
+// The first sentence of `text`, cut at a line end or at a full stop followed by
+// a space, and to kMaxNoteChars at the longest: the reply may run on into the
+// page's own chrome (the answer is read from the page's text when its markup is
+// not known).
+inline constexpr size_t kMaxNoteChars = 200;
+
+inline std::string FirstSentence(const std::string& text) {
+  size_t end = text.find('\n');
+  if (end == std::string::npos) {
+    end = text.size();
+  }
+  for (size_t i = 0; i + 1 < end; i++) {
+    const bool isStop = text[i] == '.' || text[i] == '!' || text[i] == '?';
+    if (isStop && text[i + 1] == ' ') {
+      end = i + 1;
+      break;
+    }
+  }
+  std::string sentence = Trim(text.substr(0, end));
+  if (sentence.size() > kMaxNoteChars) {
+    sentence = share_text::TruncateUtf8(sentence, kMaxNoteChars) + "...";
+  }
+  return sentence;
+}
+
+// What Copilot said after (or instead of) its labels: its first sentence
+// without the leading labels.
 inline std::string NoteOf(const std::string& reply) {
   const std::string text = Trim(reply);
   size_t cursor = 0;
@@ -281,7 +311,7 @@ inline std::string NoteOf(const std::string& reply) {
       break;
     }
   }
-  return Trim(text.substr(cursor));
+  return FirstSentence(Trim(text.substr(cursor)));
 }
 
 // Read Copilot's reply to one prompt. Only labels among `offered` count; a label

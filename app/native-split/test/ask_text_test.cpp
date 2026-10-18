@@ -80,11 +80,11 @@ void CheckPlan() {
   Check(plan.chunks.size() == 1 && !plan.isCut, "a short page is one prompt");
   const Chunk& chunk = plan.chunks[0];
   Check(chunk.indices.size() == 2 && chunk.indices[1] == 4, "its indices");
-  Check(chunk.prompt.find("Question: where do they discuss pricing?") !=
+  Check(chunk.prompt.find("Question: \"where do they discuss pricing?\"") !=
             std::string::npos,
         "the prompt asks the question");
-  Check(chunk.prompt.find("P0: Alpha paragraph") != std::string::npos &&
-            chunk.prompt.find("P4: Beta paragraph") != std::string::npos,
+  Check(chunk.prompt.find("[P0] Alpha paragraph") != std::string::npos &&
+            chunk.prompt.find("[P4] Beta paragraph") != std::string::npos,
         "paragraphs carry the page's labels");
   Check(chunk.prompt.find(kNoneWord) != std::string::npos,
         "the prompt allows NONE");
@@ -154,6 +154,15 @@ void CheckAnswer() {
         "a word starting with P after a label is kept in the note");
   answer = ParseAnswer("P2, P3, P7, P12, P2", {2, 3, 7, 12, 13, 14});
   Check(answer.indices.size() == 4, "up to the per-reply cap");
+  answer = ParseAnswer("P3, P7 Pricing is in both. Message Copilot Explore",
+                       offered);
+  Check(answer.indices.size() == 2 && answer.note == "Pricing is in both.",
+        "the note stops at the end of the first sentence");
+  answer = ParseAnswer("P3\nFirst line.\nSecond line.", offered);
+  Check(answer.note == "First line.", "or at the end of the line");
+  answer = ParseAnswer("P3 " + std::string(500, 'x'), offered);
+  Check(answer.note.size() == kMaxNoteChars + 3,
+        "a sentence that never ends is cut");
 }
 
 void CheckAccumulate() {
