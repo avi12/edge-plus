@@ -2,6 +2,7 @@
   import AssistantCard from "@/components/AssistantCard.svelte";
   import FeatureCard from "@/components/FeatureCard.svelte";
   import ThemingCard from "@/components/ThemingCard.svelte";
+  import { findDescription, findTitle } from "@/lib/assistantNames";
   import type { AppState, Assistant, Mode } from "@/lib/bridge";
   import * as bridge from "@/lib/bridge";
   import { Feature, LocalThemeKind } from "@/lib/bridge";
@@ -28,7 +29,7 @@
     `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none">` +
       `<path d="M12 2 A10 10 0 0 0 22 12 A10 10 0 0 0 12 22 A10 10 0 0 0 2 12 A10 10 0 0 0 12 2 Z"/></svg>`;
 
-  // A magnifying glass with a "regex" asterisk.
+  // A magnifying glass with a RegExp asterisk.
   const findIcon =
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
       `<circle cx="10" cy="10" r="6"/><line x1="14.5" y1="14.5" x2="20" y2="20"/>` +
@@ -51,13 +52,6 @@
       "time\" no longer blocks the site for good; only Done on Ignore, or Block, does. Turning this " +
       "on (or opening Edge with it on) lifts every block so far, so blocked sites can ask again. " +
       "Live, no restart.";
-  const findDescription =
-    "Ctrl+F opens a find bar of our own with three modes: plain text, a regular expression (every " +
-      "match is highlighted, with a count and next/previous), and Ask Copilot, where you type a " +
-      "question such as \"where do they discuss pricing?\" and Copilot names the paragraphs of the " +
-      "page that answer it, which are highlighted. Edge pages and PDFs keep Edge's own find. Copilot " +
-      "answers from its own web page in your Edge profile, so it may ask you to sign in or pass a " +
-      "check once. Ctrl+Shift+Alt+F also opens it. Live, no restart. Open Edge first.";
   const assistantDescription =
     "Choose what the toolbar chat button opens. Gemini reskins the button and opens the Gemini " +
       "web app in a side panel; you share a page the way the web app allows. Copilot leaves Edge's " +
@@ -252,11 +246,11 @@
 
     <FeatureCard
       checked={appState.features.enhancedFind}
-      description={findDescription}
+      description={findDescription(appState.features.assistant)}
       disabled={isFindHeldOff}
       icon={findIcon}
       onchange={onEnhancedFind}
-      title="Enhanced find: regex and Ask Copilot"
+      title={findTitle(appState.features.assistant)}
     />
 
     <FeatureCard

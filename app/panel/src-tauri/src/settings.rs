@@ -77,8 +77,8 @@ pub struct Features {
     /// (it calls into `msedge.dll`, so an Edge update forces it back to
     /// Copilot the same way a mismatched build switches the others off).
     pub assistant: Assistant,
-    /// Ctrl+F opens a find bar of our own with regular-expression search and
-    /// "Ask Copilot" (the DLL's `find.h`).
+    /// Edge's own Ctrl+F bar also takes `/pattern/flags` (a `RegExp` search)
+    /// and `? question` (ask the chosen [`Assistant`]); the DLL's `find.h`.
     pub enhanced_find: bool,
 }
 
