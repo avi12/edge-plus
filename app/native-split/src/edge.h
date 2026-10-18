@@ -1703,4 +1703,106 @@ inline void FindBarSetLabel(void* findBarView, U16View text) {
       label, off::FINDBARLABEL_set_text_vtable_offset))(label, &text);
 }
 
+// --- the bar's option toggles -----------------------------------------------------
+
+// The options view (a column of toggles), or null before the bar first needed it.
+inline void* FindOptionsView(void* findBarView) {
+  return Field<void*>(findBarView, off::FINDBARVIEW_options_view);
+}
+
+// The toggle built for `id`, or null. A walk down the options view's map, as
+// Edge's own AddFindInPageOptionChildView does.
+inline void* FindToggle(void* findBarView, int toggleId) {
+  void* optionsView = FindOptionsView(findBarView);
+  if (!optionsView) {
+    return nullptr;
+  }
+  auto* node = Field<uint8_t*>(optionsView, off::FINDOPTIONS_toggle_map_root);
+  while (node) {
+    const int key = Field<int>(node, off::MAPNODE_key);
+    if (toggleId == key) {
+      return Field<void*>(node, off::MAPNODE_value);
+    }
+    node = Field<uint8_t*>(
+        node, toggleId < key ? off::MAPNODE_left : off::MAPNODE_right);
+  }
+  return nullptr;
+}
+
+// The FindBarView a toggle sits in (through its FindBarHost), or null.
+inline void* FindBarViewOfToggle(void* toggle) {
+  void* host = Field<void*>(toggle, off::FINDTOGGLE_host);
+  return host ? Field<void*>(host, off::FINDBARHOST_view) : nullptr;
+}
+
+inline int FindToggleId(void* toggle) {
+  return Field<int>(toggle, off::FINDTOGGLE_id);
+}
+
+inline bool FindToggleIsOn(void* toggle) {
+  const void* const button = Field<void*>(toggle, off::FINDTOGGLE_button);
+  using Fn = bool(__fastcall*)(const void*);
+  return button &&
+         reinterpret_cast<Fn>(At(rva::EdgeToggleButton_GetIsOn))(button);
+}
+
+// Move the switch alone: Edge's SetToggleState would also write the id into its
+// own find parameters, which means nothing for our two.
+inline void FindToggleSetOn(void* toggle, bool isOn) {
+  const void* const button = Field<void*>(toggle, off::FINDTOGGLE_button);
+  using Fn = void(__fastcall*)(const void*, bool);
+  if (button) {
+    reinterpret_cast<Fn>(At(rva::EdgeToggleButton_SetIsOn))(button, isOn);
+  }
+}
+
+inline void ViewSetEnabled(void* view, bool isEnabled) {
+  using Fn = void(__fastcall*)(void*, bool);
+  reinterpret_cast<Fn>(At(rva::View_SetEnabled))(view, isEnabled);
+}
+
+// Enable or grey out a whole toggle: the title and the switch (a disabled
+// switch takes no click).
+inline void FindToggleSetEnabled(void* toggle, bool isEnabled) {
+  ViewSetEnabled(Field<void*>(toggle, off::FINDTOGGLE_label), isEnabled);
+  ViewSetEnabled(Field<void*>(toggle, off::FINDTOGGLE_button), isEnabled);
+}
+
+inline void FindToggleSetTitle(void* toggle, U16View title) {
+  const void* const label = Field<void*>(toggle, off::FINDTOGGLE_label);
+  using Fn = void(__fastcall*)(const void*, const U16View*);
+  reinterpret_cast<Fn>(At(rva::Label_SetText))(label, &title);
+}
+
+// Build toggle `id` at the end of the options view, sized like Edge's own
+// (whose width it reads off one that exists). Null when there is no options view
+// or no toggle of Edge's to size by.
+inline void* AddFindToggle(void* findBarView, int toggleId) {
+  const void* const optionsView = FindOptionsView(findBarView);
+  void* sibling = nullptr;
+  for (const int siblingId :
+       {off::FINDTOGGLE_id_match_case, off::FINDTOGGLE_id_whole_word,
+        off::FINDTOGGLE_id_diacritics}) {
+    if (!sibling) {
+      sibling = FindToggle(findBarView, siblingId);
+    }
+  }
+  if (!optionsView || !sibling) {
+    return nullptr;
+  }
+  using Fn = void(__fastcall*)(const void*, int, int, void*);
+  reinterpret_cast<Fn>(
+      At(rva::FindOptionsControlView_AddFindInPageOptionChildView))(
+      optionsView, toggleId, Field<int>(sibling, off::FINDTOGGLE_width),
+      Field<void*>(findBarView, off::FINDBARVIEW_host));
+  return FindToggle(findBarView, toggleId);
+}
+
+// The options view grew or shrank: lay it out again and let the bar re-measure.
+inline void FindBarRelayoutOptions(void* findBarView) {
+  InvalidateLayout(FindOptionsView(findBarView));
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(rva::FindBarView_PreferredSizeChanged))(findBarView);
+}
+
 }  // namespace fixedge::edge

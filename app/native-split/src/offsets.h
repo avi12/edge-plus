@@ -681,6 +681,33 @@ inline constexpr uintptr_t FindBarView_UpdateForResult = 0xa371cd4;
 inline constexpr uintptr_t FindBarController_EndFindSession = 0xa068e66;
 // views::Textfield::GetText(this, std::u16string_view* out): fills `out`.
 inline constexpr uintptr_t Textfield_GetText = 0xfec056;
+// The bar's options (the "..." button): an inline FindOptionsControlView, a
+// column of FindInPageOptionToggleViews (Match case, Whole word, Match
+// diacritics), each a title label and an EdgeToggleButton. See
+// docs/re/find-bar.md.
+// void EdgeMaybeAddFindOptionsView(this = FindBarView, bool): builds the options
+// view the first time the bar needs it.
+inline constexpr uintptr_t FindBarView_EdgeMaybeAddFindOptionsView = 0xa3749ce;
+// void EdgeToggleFindOptions(this = FindBarView, ...): shows or hides the view.
+inline constexpr uintptr_t FindBarView_EdgeToggleFindOptions = 0xa37472c;
+// void PreferredSizeChanged(this = FindBarView): the bar re-measures itself.
+inline constexpr uintptr_t FindBarView_PreferredSizeChanged = 0xa373c60;
+// void AddFindInPageOptionChildView(this = FindOptionsControlView, int id, int
+// width, FindBarHost*): builds toggle `id` at the end of the column (one per
+// id; Edge builds 0..2 and its title text for any other id is empty).
+inline constexpr uintptr_t FindOptionsControlView_AddFindInPageOptionChildView =
+    0xc8b4ee6;
+// void OnButtonToggled(this = FindInPageOptionToggleView): the toggle button's
+// click callback; it flips Edge's own state for the id and re-runs the search.
+inline constexpr uintptr_t FindInPageOptionToggleView_OnButtonToggled =
+    0xc8b5a10;
+// bool views::EdgeToggleButton::GetIsOn(this) and void SetIsOn(this, bool).
+inline constexpr uintptr_t EdgeToggleButton_GetIsOn = 0xb1f5c16;
+inline constexpr uintptr_t EdgeToggleButton_SetIsOn = 0xb1f5c44;
+// void views::View::SetEnabled(this, bool).
+inline constexpr uintptr_t View_SetEnabled = 0x1070896;
+// void views::Label::SetText(this, const std::u16string_view*).
+inline constexpr uintptr_t Label_SetText = 0x1058090;
 }  // namespace rva
 
 // --- struct field offsets ---
@@ -1029,6 +1056,35 @@ inline constexpr uintptr_t FINDBARLABEL_set_text_vtable_offset = 0x3a8;
 // The TextfieldController subobject HandleKeyEvent receives as `this` sits this
 // far into the FindBarView (the text field is at +0x58 of it).
 inline constexpr uintptr_t FINDBARVIEW_textfield_controller = 0x338;
+// FindBarView: the FindBarHost* (the bar's widget) and the raw_ptr to the
+// FindOptionsControlView (null until the options were first needed).
+inline constexpr uintptr_t FINDBARVIEW_host = 0x370;
+inline constexpr uintptr_t FINDBARVIEW_options_view = 0x418;
+// FindOptionsControlView: a std::map<int, raw_ptr<FindInPageOptionToggleView>>
+// (libc++): its header node's left child, the tree's root, sits at +0x340; a
+// node is {left +0, right +8, parent +0x10, color +0x18, key +0x20, value +0x28}.
+inline constexpr uintptr_t FINDOPTIONS_toggle_map_root = 0x340;
+inline constexpr uintptr_t MAPNODE_left = 0x00;
+inline constexpr uintptr_t MAPNODE_right = 0x08;
+inline constexpr uintptr_t MAPNODE_key = 0x20;
+inline constexpr uintptr_t MAPNODE_value = 0x28;
+// FindInPageOptionToggleView: the FindBarHost* it belongs to, its id, the width
+// it was built with, its title Label* and its EdgeToggleButton*; and the
+// FindBarView* that FindBarHost keeps.
+inline constexpr uintptr_t FINDTOGGLE_host = 0x340;
+inline constexpr uintptr_t FINDBARHOST_view = 0x210;
+inline constexpr uintptr_t FINDTOGGLE_id = 0x348;
+inline constexpr uintptr_t FINDTOGGLE_width = 0x34c;
+inline constexpr uintptr_t FINDTOGGLE_label = 0x358;
+inline constexpr uintptr_t FINDTOGGLE_button = 0x360;
+// The toggle ids. Edge builds the first three (each only where its feature
+// is on); any other id has an empty title and no meaning to Edge's find, so the
+// next two are ours.
+inline constexpr int FINDTOGGLE_id_match_case = 0;
+inline constexpr int FINDTOGGLE_id_whole_word = 1;
+inline constexpr int FINDTOGGLE_id_diacritics = 2;
+inline constexpr int FINDTOGGLE_id_regexp = 3;
+inline constexpr int FINDTOGGLE_id_ask = 4;
 // ui::KeyEvent: its type (7 = key pressed) and its key code (0x0d = Enter).
 inline constexpr uintptr_t KEYEVENT_type = 0x0c;
 inline constexpr int32_t KEYEVENT_type_pressed = 7;
