@@ -87,6 +87,8 @@ export interface AppState {
   /** Themes installed in Edge that the panel did not add. */
   edgeThemes: EdgeTheme[];
   edgeRunning: boolean;
+  /** Windows starts the panel at sign-in; read from the registry, not from settings. */
+  startWithWindows: boolean;
   splitLoaded: boolean;
   /** The `msedge.dll` build running Edge is on; null when Edge is not running. */
   edgeBuild: string | null;
@@ -121,6 +123,10 @@ export function setAssistant(assistant: Assistant): Promise<AppState> {
 
 export function setQuietDevMode(enabled: boolean): Promise<AppState> {
   return invoke<AppState>("set_quiet_dev_mode", { enabled });
+}
+
+export function setStartWithWindows(enabled: boolean): Promise<AppState> {
+  return invoke<AppState>("set_start_with_windows", { enabled });
 }
 
 export function setProtocolHandlers(enabled: boolean): Promise<AppState> {

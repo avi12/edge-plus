@@ -15,6 +15,7 @@ use crate::installed_themes::{self, InstalledTheme};
 use crate::settings::{
     Assistant, Feature, Features, Mode, Settings, ThemeEntry, ThemeSource, Theming,
 };
+use crate::startup::{run_command, STARTUP_ENTRY_NAME};
 use crate::{edge_build, edge_watch, paths, payload, store_url, DEVMODE_WAITER_ARG};
 
 const REAPPLY_DELAYS: [std::time::Duration; 3] = [
@@ -39,6 +40,8 @@ pub struct StateDto {
     /// panel's own library). Applied by id like the panel's themes.
     edge_themes: Vec<InstalledTheme>,
     edge_running: bool,
+    /// Windows will start the panel at sign-in; read from the Run key itself.
+    start_with_windows: bool,
     split_loaded: bool,
     /// The `msedge.dll` build running Edge is on, when Edge is running.
     edge_build: Option<String>,
@@ -57,6 +60,10 @@ fn state_of(settings: &Settings) -> StateDto {
         theming: settings.theming.clone(),
         edge_themes: edge_themes_not_in(&settings.theming),
         edge_running: !edge_native::edge_browser_pids().is_empty(),
+        start_with_windows: edge_native::is_startup_enabled(
+            edge_native::USER_STARTUP_KEYS,
+            STARTUP_ENTRY_NAME,
+        ),
         split_loaded: edge_native::is_split_loaded(),
         edge_build: running.map(|build| build.to_string()),
         supported_edge_build: pinned.to_string(),
@@ -206,6 +213,21 @@ pub fn set_quiet_dev_mode(enabled: bool) -> Result<StateDto, String> {
         arm_dev_mode_waiter();
     }
     Ok(state_of(&settings))
+}
+
+/// Add or remove the Run entry. In a dev build this points boot at the debug
+/// executable, which is what a developer running the panel from source expects.
+#[tauri::command]
+pub fn set_start_with_windows(enabled: bool) -> Result<StateDto, String> {
+    let keys = edge_native::USER_STARTUP_KEYS;
+    if enabled {
+        let executable = std::env::current_exe().map_err(|error| error.to_string())?;
+        edge_native::enable_startup(keys, STARTUP_ENTRY_NAME, &run_command(&executable))
+    } else {
+        edge_native::disable_startup(keys, STARTUP_ENTRY_NAME)
+    }
+    .map_err(|error| error.to_string())?;
+    Ok(state_of(&Settings::load()))
 }
 
 #[tauri::command]

@@ -36,6 +36,14 @@
       `<line x1="10" y1="7.5" x2="10" y2="12.5"/><line x1="7.8" y1="8.7" x2="12.2" y2="11.3"/>` +
       `<line x1="12.2" y1="8.7" x2="7.8" y2="11.3"/></svg>`;
 
+  // A power button.
+  const startupIcon =
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
+      `<path d="M7 6.5 A8 8 0 1 0 17 6.5"/><line x1="12" y1="3" x2="12" y2="12"/></svg>`;
+
+  const startupDescription =
+    "Opens Edge+ minimized when you sign in to Windows, so your settings apply without opening " +
+      "it. Launch Edge+ again to bring its window back. Also shown in Task Manager under Startup apps.";
   const splitDescription =
     "Grows Edge's own split past two panes, loaded straight into Edge. Add panes above, below, " +
       "left or right; drag the dividers; Shift+Alt+arrow moves between panes. Turning it on injects " +
@@ -175,6 +183,10 @@
     appState = await bridge.setQuietDevMode(value);
   }
 
+  async function onStartWithWindows(value: boolean): Promise<void> {
+    appState = await bridge.setStartWithWindows(value);
+  }
+
   async function onProtocolHandlers(value: boolean): Promise<void> {
     appState = await bridge.setProtocolHandlers(value);
   }
@@ -282,6 +294,14 @@
       icon={handlerIcon}
       onchange={onProtocolHandlers}
       title="Ask to handle links, like Chrome"
+    />
+
+    <FeatureCard
+      checked={appState.startWithWindows}
+      description={startupDescription}
+      icon={startupIcon}
+      onchange={onStartWithWindows}
+      title="Start Edge+ when Windows starts"
     />
   </main>
 {/if}

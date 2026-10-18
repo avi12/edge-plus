@@ -11,11 +11,15 @@ mod installed_themes;
 mod paths;
 mod payload;
 mod settings;
+mod startup;
 mod store_url;
 mod watch;
 
 /// The switch that re-runs the panel headless as the dev-mode snooze waiter.
 pub const DEVMODE_WAITER_ARG: &str = "--quiet-dev-mode-after-exit";
+
+/// The label of the one window `tauri.conf.json` declares.
+const MAIN_WINDOW: &str = "main";
 
 /// Run the headless dev-mode waiter instead of the GUI (see `main`).
 pub fn run_dev_mode_waiter() {
@@ -24,10 +28,25 @@ pub fn run_dev_mode_waiter() {
 
 /// Start the panel window.
 pub fn run() {
+    use tauri::Manager;
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_single_instance::init(|_app, _argv, _cwd| {}))
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            // Launching Edge+ again brings the running panel back.
+            if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }))
         .setup(|app| {
+            // A boot launch keeps the panel in the taskbar instead of in the
+            // user's face; it still applies the settings.
+            if startup::is_background_launch(std::env::args()) {
+                if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
+                    let _ = window.minimize();
+                }
+            }
             payload::unpack();
             edge_watch::start(app.handle().clone());
             watch::start(app.handle().clone());
@@ -40,6 +59,7 @@ pub fn run() {
             commands::set_theming,
             commands::set_assistant,
             commands::set_quiet_dev_mode,
+            commands::set_start_with_windows,
             commands::set_protocol_handlers,
             commands::set_enhanced_find,
             commands::add_store_theme,
