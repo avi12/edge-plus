@@ -8,7 +8,7 @@
 #include <string>
 #include "ask_text.h"
 #include "find_text.h"
-#include "share_text.h"
+#include "web_text.h"
 
 namespace fixedge::find_scripts {
 
@@ -277,8 +277,8 @@ inline std::string SearchScript(const find_text::Search& search) {
     var regex;
     try {
       regex = new RegExp()JS";
-  body += share_text::JsStringLiteral(search.source) + ", " +
-          share_text::JsStringLiteral(search.flags);
+  body += web_text::JsStringLiteral(search.source) + ", " +
+          web_text::JsStringLiteral(search.flags);
   body += R"JS();
     } catch (error) {
       return "err\x1f" + String(error.message).replace(/^[\s\S]*\/[a-z]*: /, "");

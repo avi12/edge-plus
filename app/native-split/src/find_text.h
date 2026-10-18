@@ -9,7 +9,7 @@
 #include <cstddef>
 #include <string>
 #include <vector>
-#include "share_text.h"
+#include "web_text.h"
 
 namespace fixedge::find_text {
 
@@ -147,7 +147,7 @@ inline Query ParseQuery(const std::string& typed, Option option) {
 inline constexpr size_t kMaxPatternChars = 500;
 inline constexpr int kMaxMatches = 5000;
 
-// Fields of a report, and its lines (the same separators share_text.h uses).
+// Fields of a report, and its lines (the same separators the page scripts use).
 inline constexpr char kFieldSeparator = '\x1f';
 
 // --- which pages the bar can search ------------------------------------------------
@@ -156,7 +156,7 @@ inline constexpr char kFieldSeparator = '\x1f';
 // new tab) and a PDF (Edge's viewer draws it; its own find searches it) are left
 // to Edge's stock find.
 inline bool IsSearchableUrl(const std::string& url) {
-  if (!share_text::IsShareableUrl(url)) {
+  if (!web_text::IsWebPageUrl(url)) {
     return false;
   }
   const size_t pathEnd = url.find_first_of("?#");

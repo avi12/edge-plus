@@ -1,18 +1,18 @@
 // chat_scripts.h — the scripts that drive an assistant's web chat for "Ask".
 // One concern: the JavaScript that puts a prompt into the chat's message box and
 // presses send, and the JavaScript that reads the answer once it has stopped
-// growing. Edge has no public API to ask Copilot or Gemini a question, so this
-// drives the signed-in web app the way a person would. The scripts are the same
-// for every assistant: what differs (selectors, name) is a chat_target::Target,
-// the one table to fix when a web app changes. They run in our isolated world.
+// growing. Edge has no public API to ask Copilot a question, so this drives the
+// signed-in web app the way a person would. What differs (selectors, name) is a
+// chat_target::Target, the one table to fix when the web app changes. They run
+// in our isolated world.
 //
 // The answer's markup is a guess backed by a fallback that needs no markup: the
-// text that appears after the prompt. What was verified live for each assistant
-// is in docs/re/find-bar.md.
+// text that appears after the prompt. What was verified live is in
+// docs/re/find-bar.md.
 #pragma once
 #include <string>
 #include "chat_target.h"
-#include "share_text.h"
+#include "web_text.h"
 
 namespace fixedge::chat_scripts {
 
@@ -46,7 +46,7 @@ inline std::string PressSendFunction(const Target& target) {
     var deadline = Date.now() + giveUpMs;
     var timer = setInterval(function () {
       var button = document.querySelector()JS";
-  script += share_text::JsStringLiteral(target.sendSelectors);
+  script += web_text::JsStringLiteral(target.sendSelectors);
   script += R"JS();
       var isReady = button && !button.disabled && button.getAttribute("aria-disabled") !== "true";
       if (isReady) {
@@ -55,8 +55,8 @@ inline std::string PressSendFunction(const Target& target) {
       } else if (Date.now() > deadline) {
         clearInterval(timer);
         state.failure = )JS";
-  script += share_text::JsStringLiteral(std::string(target.name) +
-                                        "'s send button did not wake up.");
+  script += web_text::JsStringLiteral(std::string(target.name) +
+                                      "'s send button did not wake up.");
   script += R"JS(;
       }
     }, 150);
@@ -72,7 +72,7 @@ inline std::string SendScript(const Target& target, const std::string& prompt) {
   std::string script = "(function (prompt) {" + PressSendFunction(target);
   script += R"JS(
   var box = document.querySelector()JS";
-  script += share_text::JsStringLiteral(target.boxSelectors);
+  script += web_text::JsStringLiteral(target.boxSelectors);
   script += R"JS();
   if (!box) {
     return ")JS";
@@ -81,7 +81,7 @@ inline std::string SendScript(const Target& target, const std::string& prompt) {
   }
   var state = window.__fxChat = {
     baseline: document.querySelectorAll()JS";
-  script += share_text::JsStringLiteral(target.answerSelectors);
+  script += web_text::JsStringLiteral(target.answerSelectors);
   script += R"JS().length,
     prompt: prompt, lastText: "", changedAt: Date.now(), failure: "", wasBlocked: false
   };
@@ -108,7 +108,7 @@ inline std::string SendScript(const Target& target, const std::string& prompt) {
   script += kScheduledAnswer;
   script += R"JS(";
 }))JS";
-  script += "(" + share_text::JsStringLiteral(prompt) + ")";
+  script += "(" + web_text::JsStringLiteral(prompt) + ")";
   return script;
 }
 
@@ -129,7 +129,7 @@ inline std::string ReplyScript(const Target& target) {
     return "err\x1f" + state.failure;
   }
   var dialog = document.querySelector()JS";
-  script += share_text::JsStringLiteral(target.dialogSelectors);
+  script += web_text::JsStringLiteral(target.dialogSelectors);
   script += R"JS();
   if (dialog && dialog.offsetWidth) {
     state.wasBlocked = true;
@@ -139,7 +139,7 @@ inline std::string ReplyScript(const Target& target) {
   }
   var squeeze = function (text) { return String(text).replace(/\s+/g, " ").trim(); };
   var answers = document.querySelectorAll()JS";
-  script += share_text::JsStringLiteral(target.answerSelectors);
+  script += web_text::JsStringLiteral(target.answerSelectors);
   script += R"JS();
   var text = null;
   if (answers.length > state.baseline) {
@@ -173,7 +173,7 @@ inline std::string ReplyScript(const Target& target) {
   script += R"JS(";
   }
   var isWriting = !!document.querySelector()JS";
-  script += share_text::JsStringLiteral(target.stopSelectors);
+  script += web_text::JsStringLiteral(target.stopSelectors);
   script += R"JS();
   var isSettled = Date.now() - state.changedAt >= )JS";
   script += std::to_string(kSettleMs);

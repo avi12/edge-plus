@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 #include "find_text.h"
-#include "share_text.h"
+#include "web_text.h"
 
 namespace fixedge::ask_text {
 
@@ -120,7 +120,7 @@ inline std::vector<Paragraph> Prepare(const std::vector<std::string>& texts) {
       continue;
     }
     if (flat.size() > kMaxParagraphChars) {
-      flat = share_text::TruncateUtf8(flat, kMaxParagraphChars) + "...";
+      flat = web_text::TruncateUtf8(flat, kMaxParagraphChars) + "...";
     }
     kept.push_back(Paragraph{static_cast<int>(i), flat});
   }
@@ -165,7 +165,7 @@ inline std::string PromptHead(const std::string& question) {
 inline Plan PlanQuestion(const std::string& typedQuestion,
                          const std::vector<Paragraph>& paragraphs) {
   const std::string question =
-      Flatten(share_text::TruncateUtf8(typedQuestion, kMaxQuestionChars));
+      Flatten(web_text::TruncateUtf8(typedQuestion, kMaxQuestionChars));
   const std::string head = PromptHead(question);
   Plan plan;
   Chunk current;
@@ -291,7 +291,7 @@ inline std::string FirstSentence(const std::string& text) {
   }
   std::string sentence = Trim(text.substr(0, end));
   if (sentence.size() > kMaxNoteChars) {
-    sentence = share_text::TruncateUtf8(sentence, kMaxNoteChars) + "...";
+    sentence = web_text::TruncateUtf8(sentence, kMaxNoteChars) + "...";
   }
   return sentence;
 }
