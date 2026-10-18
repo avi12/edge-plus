@@ -2,9 +2,10 @@
 # Prints "RVA\tname" for symbols matching the split-view classes, so Frida can hook
 # module.base.add(rva) by name. Native dbghelp — no third-party install.
 import ctypes as C, ctypes.wintypes as W, sys, os
+from edge_paths import installed_dll
 
 CACHE = sys.argv[1] if len(sys.argv) > 1 else r"."   # dir holding msedge.dll.pdb
-DLL   = r"C:\Program Files (x86)\Microsoft\Edge\Application\155.0.4283.45\msedge.dll"
+DLL   = installed_dll()
 MASKS = sys.argv[2:] or ["*SplitTab*", "*MultiContents*", "*SplitWindow*", "*split_window*"]
 
 MAX_SYM_NAME = 2000

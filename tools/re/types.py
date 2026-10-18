@@ -1,12 +1,13 @@
 # Dump exact struct layouts (member -> offset, size, type) from the public PDB via
 # Windows dbghelp SymGetTypeInfo. No third-party install; reads the same cache as
 # symbols.py. Usage:
-#   python tools/re/types.py "<cache>" "views::ProposedLayout" "gfx::Rect" ...
+#   python tools/re/types.py "<cache dir | path	o\msedge.dll.pdb>" "views::ProposedLayout" "gfx::Rect" ...
 # Prints each requested type's members as "  +0xNN  size  name : typename".
 import ctypes as C, ctypes.wintypes as W, sys
+from edge_paths import installed_dll
 
 CACHE = sys.argv[1]
-DLL   = r"C:\Program Files (x86)\Microsoft\Edge\Application\155.0.4283.45\msedge.dll"
+DLL   = installed_dll()
 NAMES = sys.argv[2:]
 BASE  = 0x180000000
 MAX_SYM_NAME = 2000
@@ -37,13 +38,17 @@ k32 = C.WinDLL("kernel32.dll")
 proc = C.c_void_p(k32.GetCurrentProcess() or -1)
 
 dbg.SymSetOptions(SYMOPT_DEBUG | SYMOPT_UNDNAME)
+IS_PDB = CACHE.lower().endswith(".pdb")   # a PDB path needs no image (the build may be gone)
 dbg.SymInitialize.argtypes = [C.c_void_p, C.c_char_p, W.BOOL]
-if not dbg.SymInitialize(proc, CACHE.encode(), False):
+if not dbg.SymInitialize(proc, None if IS_PDB else CACHE.encode(), False):
     raise OSError("SymInitialize", C.GetLastError())
 dbg.SymLoadModuleEx.restype = C.c_ulonglong
 dbg.SymLoadModuleEx.argtypes = [C.c_void_p, C.c_void_p, C.c_char_p, C.c_char_p,
                                 C.c_ulonglong, W.DWORD, C.c_void_p, W.DWORD]
-mod = dbg.SymLoadModuleEx(proc, None, DLL.encode(), None, BASE, 0, None, 0)
+if IS_PDB:
+    mod = dbg.SymLoadModuleEx(proc, None, CACHE.encode(), b"msedge.dll", BASE, 0x20000000, None, 0)
+else:
+    mod = dbg.SymLoadModuleEx(proc, None, DLL.encode(), None, BASE, 0, None, 0)
 if not mod:
     raise OSError("SymLoadModuleEx", C.GetLastError())
 

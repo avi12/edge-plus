@@ -1,6 +1,7 @@
 # Print the PDB name + GUID/age (symbol-server key) for a PE, from its debug directory.
 import struct, sys
-DLL = sys.argv[1] if len(sys.argv) > 1 else r"C:\Program Files (x86)\Microsoft\Edge\Application\155.0.4283.45\msedge.dll"
+from edge_paths import installed_dll
+DLL = sys.argv[1] if len(sys.argv) > 1 else installed_dll()
 d = open(DLL, "rb").read()
 pe = struct.unpack_from("<I", d, 0x3c)[0]
 nsec = struct.unpack_from("<H", d, pe+6)[0]; szopt = struct.unpack_from("<H", d, pe+20)[0]

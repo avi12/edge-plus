@@ -1,10 +1,11 @@
 # Disassemble named msedge.dll functions, resolving call/lea targets to PDB symbol names.
 # Answers "where is the split capped at two" by reading the geometry functions directly.
 import ctypes as C, ctypes.wintypes as W, os, sys, struct
+from edge_paths import installed_dll
 from capstone import Cs, CS_ARCH_X86, CS_MODE_64, CS_OP_IMM, CS_OP_MEM, x86
 
 CACHE = sys.argv[1]
-DLL = r"C:\Program Files (x86)\Microsoft\Edge\Application\155.0.4283.45\msedge.dll"
+DLL = installed_dll()
 TARGETS = sys.argv[2:]
 BASE = 0x180000000
 
