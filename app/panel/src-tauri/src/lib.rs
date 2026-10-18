@@ -7,6 +7,7 @@
 mod commands;
 mod edge_build;
 mod edge_watch;
+mod installed_themes;
 mod paths;
 mod payload;
 mod settings;

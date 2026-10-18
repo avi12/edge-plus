@@ -11,6 +11,7 @@ use std::process::Command;
 use serde::Serialize;
 
 use crate::edge_build::BuildChange;
+use crate::installed_themes::{self, InstalledTheme};
 use crate::settings::{
     Assistant, Feature, Features, Mode, Settings, ThemeEntry, ThemeSource, Theming,
 };
@@ -34,6 +35,9 @@ const DETACHED_FLAGS: u32 = 0x0000_0008 | 0x0800_0000 | 0x0100_0000;
 pub struct StateDto {
     features: Features,
     theming: Theming,
+    /// Themes Edge already has installed, read from its profiles (not the
+    /// panel's own library). Applied by id like the panel's themes.
+    edge_themes: Vec<InstalledTheme>,
     edge_running: bool,
     split_loaded: bool,
     /// The `msedge.dll` build running Edge is on, when Edge is running.
@@ -51,6 +55,7 @@ fn state_of(settings: &Settings) -> StateDto {
     StateDto {
         features: settings.features,
         theming: settings.theming.clone(),
+        edge_themes: edge_themes_not_in(&settings.theming),
         edge_running: !edge_native::edge_browser_pids().is_empty(),
         split_loaded: edge_native::is_split_loaded(),
         edge_build: running.map(|build| build.to_string()),
@@ -59,6 +64,14 @@ fn state_of(settings: &Settings) -> StateDto {
             edge_build::unsupported_features(build, pinned)
         }),
     }
+}
+
+// The panel's own themes are installed in Edge too; list each only once.
+fn edge_themes_not_in(theming: &Theming) -> Vec<InstalledTheme> {
+    installed_themes::scan(&edge_native::default_user_data())
+        .into_iter()
+        .filter(|theme| !theming.themes.iter().any(|own| own.id == theme.id))
+        .collect()
 }
 
 // Bring the running Edge in line with the settings: write the config the DLL
