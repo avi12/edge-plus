@@ -6,7 +6,7 @@
   import type { AppState, Assistant, Mode } from "@/lib/bridge";
   import * as bridge from "@/lib/bridge";
   import { Feature, LocalThemeKind } from "@/lib/bridge";
-  import { describeUnsupported, describeUpdate } from "@/lib/edgeBuild";
+  import { describeHeldOff, describeUnsupported, describeUpdate } from "@/lib/edgeBuild";
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
   import { open } from "@tauri-apps/plugin-dialog";
@@ -86,6 +86,10 @@
   const isAssistantHeldOff = $derived(
     unsupported.has(Feature.Assistant) && appState?.features.assistant !== "gemini"
   );
+  // What a locked card says about why, on the card itself.
+  function heldOffNote(isHeldOff: boolean): string {
+    return isHeldOff && appState ? describeHeldOff(appState) : "";
+  }
   // The update notice replaces the standing hint it would only repeat.
   const notices = $derived(
     [
@@ -243,6 +247,7 @@
       description={splitDescription}
       disabled={isSplitHeldOff}
       icon={splitIcon}
+      note={heldOffNote(isSplitHeldOff)}
       onchange={onSplit}
       title="Split into any grid"
     />
@@ -253,6 +258,7 @@
       edgeThemes={appState.edgeThemes}
       enabled={appState.features.theming}
       icon={themeIcon}
+      note={heldOffNote(isThemingHeldOff)}
       {onAddLocal}
       {onAddStore}
       {onRemove}
@@ -266,6 +272,7 @@
       description={assistantDescription}
       disabled={isAssistantHeldOff}
       icon={assistantIcon}
+      note={heldOffNote(isAssistantHeldOff)}
       onChange={onAssistant}
       title="Browser assistant"
     />
@@ -275,6 +282,7 @@
       description={findDescription(appState.features.assistant)}
       disabled={isFindHeldOff}
       icon={findIcon}
+      note={heldOffNote(isFindHeldOff)}
       onchange={onEnhancedFind}
       title={findTitle(appState.features.assistant)}
     />
@@ -292,6 +300,7 @@
       description={handlersDescription}
       disabled={isHandlersHeldOff}
       icon={handlerIcon}
+      note={heldOffNote(isHandlersHeldOff)}
       onchange={onProtocolHandlers}
       title="Ask to handle links, like Chrome"
     />

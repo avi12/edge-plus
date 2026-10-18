@@ -10,11 +10,12 @@
     description: string;
     disabled?: boolean;
     icon: string;
+    note?: string;
     onChange: (assistant: Assistant) => void;
     title: string;
   }
 
-  const { assistant, description, disabled = false, icon, onChange, title }: Props = $props();
+  const { assistant, description, disabled = false, icon, note = "", onChange, title }: Props = $props();
 
   const options = [
     {
@@ -35,7 +36,7 @@
 </script>
 
 <section class="card">
-  <CardHeader {description} {icon} {title}>
+  <CardHeader {description} {icon} {note} {title}>
     <div class="control" class:disabled>
       <Select label={title} onchange={choose} {options} value={assistant} />
     </div>

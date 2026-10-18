@@ -15,6 +15,7 @@
     edgeThemes: EdgeTheme[];
     enabled: boolean;
     icon: string;
+    note?: string;
     onAddLocal: (kind: LocalThemeKind) => Promise<void>;
     onAddStore: (url: string) => Promise<void>;
     onRemove: (id: string) => Promise<void>;
@@ -29,6 +30,7 @@
     edgeThemes,
     enabled,
     icon,
+    note = "",
     onAddLocal,
     onAddStore,
     onRemove,
@@ -126,7 +128,7 @@
 </script>
 
 <section class="card">
-  <CardHeader {description} {icon} title="Theme by Windows light and dark">
+  <CardHeader {description} {icon} {note} title="Theme by Windows light and dark">
     <Switch
       checked={enabled}
       {disabled}

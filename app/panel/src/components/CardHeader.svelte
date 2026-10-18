@@ -7,10 +7,12 @@
     icon: string;
     title: string;
     description: string;
+    // Why the card's control is locked; empty when it is not.
+    note?: string;
     children: Snippet;
   }
 
-  const { icon, title, description, children }: Props = $props();
+  const { icon, title, description, note = "", children }: Props = $props();
 </script>
 
 <div class="head">
@@ -18,6 +20,9 @@
   <div class="body">
     <h2>{title}</h2>
     <p>{description}</p>
+    {#if note.length > 0}
+      <p class="note">{note}</p>
+    {/if}
   </div>
   {@render children()}
 </div>
@@ -50,6 +55,12 @@
     margin-inline: 0;
     font-weight: 600;
     font-size: 15px;
+  }
+
+  .note {
+    margin-block-start: var(--space-s);
+    color: var(--danger-fg);
+    font-weight: 600;
   }
 
   p {

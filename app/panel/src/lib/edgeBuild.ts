@@ -27,7 +27,12 @@ export function describeUpdate(update: EdgeUpdate): string {
 
   const isUpdate = update.previousBuild !== null && update.previousBuild !== update.edgeBuild;
   const lead = isUpdate ? `Edge updated to ${update.edgeBuild}` : `Edge ${update.edgeBuild} is running`;
-  return `${lead}; turned off ${joinNames(update.disabled)} — Edge+ supports Edge${update.supportedBuild}.`;
+  return `${lead}; turned off ${joinNames(update.disabled)} — Edge+ supports Edge ${update.supportedBuild}.`;
+}
+
+/** Why one card's control is locked, shown on the card itself. */
+export function describeHeldOff(state: AppState): string {
+  return `Unavailable on Edge ${state.edgeBuild ?? "this version"} — Edge+ supports Edge ${state.supportedEdgeBuild}.`;
 }
 
 /** Which features the running Edge holds off, as one sentence; empty when it holds none. */

@@ -7,15 +7,16 @@
     description: string;
     disabled?: boolean;
     icon: string;
+    note?: string;
     onchange: (value: boolean) => void;
     title: string;
   }
 
-  const { checked, description, disabled = false, icon, onchange, title }: Props = $props();
+  const { checked, description, disabled = false, icon, note = "", onchange, title }: Props = $props();
 </script>
 
 <section class="card">
-  <CardHeader {description} {icon} {title}>
+  <CardHeader {description} {icon} {note} {title}>
     <Switch {checked} {disabled} label={title} {onchange} />
   </CardHeader>
 </section>
