@@ -113,6 +113,21 @@ inline long long NumberField(const std::string& json, const char* name,
   return isNegative ? -value : value;
 }
 
+// The string after `"name":` in `json` (up to the closing quote; the host's
+// strings here are URLs, which hold no escapes), or empty when absent.
+inline std::string StringField(const std::string& json, const char* name) {
+  const std::string key = std::string("\"") + name + "\":\"";
+  const size_t keyAt = json.find(key);
+  if (keyAt == std::string::npos) {
+    return {};
+  }
+  const size_t valueStart = keyAt + key.size();
+  const size_t valueEnd = json.find('"', valueStart);
+  return valueEnd == std::string::npos
+             ? std::string()
+             : json.substr(valueStart, valueEnd - valueStart);
+}
+
 inline constexpr int kNoTabId = -1;
 
 // The `context` request: which tab (kNoTabId = the focused one) and how many

@@ -347,6 +347,16 @@ inline constexpr char kHostScript[] = R"JS((function () {
       var state = await currentState();
       notifyPinCandidates((state && state.tabs) || []);
     },
+    // Chrome's own pages the panel links to; the DLL opens Edge's closest.
+    openGlicSettingsPage: function () {
+      call("create", { url: "chrome://settings/ai/gemini" }).catch(function () {});
+    },
+    openPasswordManagerSettingsPage: function () {
+      call("create", { url: "chrome://password-manager/settings" }).catch(function () {});
+    },
+    openContactInfoSettingsPage: function () {
+      call("create", { url: "chrome://settings/addresses" }).catch(function () {});
+    },
     // The panel's own close button: Chrome's browser hides the panel.
     closePanel: function () {
       call("close", null).catch(function () {});

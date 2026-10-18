@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 #include "chat_action.h"
+#include "edge_url.h"
 #include "edge.h"
 #include "gemini.h"
 #include "glic_host_script.h"
@@ -199,6 +200,22 @@ inline void HandleContext(void* mcv, gemini::Panel& panel,
   }
 }
 
+// Open `url` (a Chrome page mapped to Edge's closest, or a web page) in a new
+// foreground tab of `mcv`'s window.
+inline void OpenPage(void* mcv, const std::string& requestedUrl) {
+  const std::string url = edge_url::EdgeUrlFor(requestedUrl);
+  void* tsm = edge::McvTabStripModel(mcv);
+  void* browser = edge::BrowserOf(edge::McvBrowserView(mcv));
+  const bool canOpen = edge_url::IsOpenable(url) && tsm && browser;
+  if (!canOpen) {
+    return;
+  }
+  const int index = edge::TabCount(tsm);
+  if (edge::AddBackgroundTab(browser, url.c_str(), index)) {
+    edge::ActivateTabAt(tsm, index);
+  }
+}
+
 inline void HandleCall(void* mcv, gemini::Panel& panel,
                        const glic_text::Call& call) {
   void* guest = edge::WebViewContents(panel.webView);
@@ -223,7 +240,7 @@ inline void HandleCall(void* mcv, gemini::Panel& panel,
       return;
     }
     case Operation::kCreate:
-      // Opening a tab for Gemini is not done yet: the host answers "no tab".
+      OpenPage(mcv, glic_text::StringField(call.json, "url"));
       Reply(guest, call.id, true, "null");
       return;
     case Operation::kClose:
