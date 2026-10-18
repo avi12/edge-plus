@@ -453,3 +453,23 @@ in the same page. With no Chrome installed it never tries glic.
   tab`) and a capture of the open menu; Summarize page produced a Gemini summary of
   the shared page signed out. The voice button is signed-in only, so Talk was
   verified up to the shared prompt.
+
+## 11. The button's right-click menu ("Hide Copilot")
+
+- **Where the text comes from.** `EdgeToolbarView::CreateCopilotButtonContextMenu`
+  (`0x31f6466`) makes a `ToolbarMenuButtonContextMenu` with "hide button" command id
+  `0x9e67` (or `0xcea4` when `IsHideCopilotNavigatesToSettingsEnabled`). Its
+  constructor calls `AddHideButtonItem` (`0x2a3aee0`), which for those two ids adds
+  the item with string `0x4562` ("Hide Copilot"); other toolbar buttons get other ids
+  and strings, so nothing else shares it. It is a fixed string, not formatted with the
+  Copilot name. The menu is built **once**, with the toolbar, and its
+  `ui::SimpleMenuModel` stays at `[menu+0x18]`; the menu is the button's
+  `ToolbarButton::SetContextMenu` pointer at `[button+0x710]`. The menu has no other
+  Copilot-named item (the rest are the generic toolbar commands).
+- **The hook.** Hooking the builder would miss a switch made after the toolbar exists,
+  so the item is set on each right-click instead: `ToolbarButton::ShowContextMenuForViewImpl`
+  (`0xa2c6780`, `this` = the ContextMenuController subobject, button + `0x6f0`). When
+  that view is the chat button and the menu has the hide item, its label is set to
+  "Hide Gemini" with Gemini chosen, else back to string `0x4562`. Every other button
+  passes straight through.
+- **Verification.** Static only; not exercised live.

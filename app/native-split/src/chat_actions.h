@@ -13,6 +13,8 @@
 
 namespace fixedge::chat_actions {
 
+using namespace fixedge::edge155;
+
 // Rename the voice item of a freshly built menu `model` after Gemini. The item
 // is looked up by its command id; a menu that has none (Edge leaves it out in
 // some states) is left alone.
@@ -25,6 +27,32 @@ inline void RelabelTalkItem(void* model) {
     if (isTalkItem) {
       edge::U16String label{};
       edge::Utf8ToUtf16(&label, chat_action::kTalkLabel);
+      edge::MenuSetLabel(model, i, &label);
+      return;
+    }
+  }
+}
+
+// Set the "Hide Copilot" item of chat button `button`'s right-click menu: after
+// Gemini when `isGemini`, else Edge's own string. A button without that menu or
+// item is left alone.
+inline void RelabelHideItem(void* button, bool isGemini) {
+  void* model = edge::ChatButtonContextMenuModel(button);
+  if (!model) {
+    return;
+  }
+  const size_t count = edge::MenuItemCount(model);
+  for (size_t i = 0; i < count; i++) {
+    const int commandId = edge::MenuCommandIdAt(model, i);
+    const bool isHideItem = commandId == off::COPILOT_HIDE_COMMAND ||
+                            commandId == off::COPILOT_HIDE_SETTINGS_COMMAND;
+    if (isHideItem) {
+      edge::U16String label{};
+      if (isGemini) {
+        edge::Utf8ToUtf16(&label, chat_action::kHideLabel);
+      } else {
+        edge::LocalizedString(&label, off::COPILOT_HIDE_LABEL);
+      }
       edge::MenuSetLabel(model, i, &label);
       return;
     }

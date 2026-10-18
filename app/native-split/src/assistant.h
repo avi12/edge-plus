@@ -163,6 +163,22 @@ inline void __fastcall h_build_menu(void* model) {
   }
 }
 
+// The button's right-click menu is built once with the toolbar, "Hide Copilot"
+// fixed in its item, so the item is set each time the menu is asked for: Gemini's
+// text while Gemini is chosen, Edge's own string otherwise (so switching back
+// needs nothing undone). Any other view's menu goes straight to Edge.
+using ShowContextMenu_t = void(__fastcall*)(void*, void*, void*, int);
+inline ShowContextMenu_t o_show_context_menu = nullptr;
+
+inline void __fastcall h_show_context_menu(void* controller, void* source,
+                                           void* point, int sourceType) {
+  void* button = edge::ContextMenuControllerButton(controller);
+  if (edge::IsCopilotButton(button)) {
+    chat_actions::RelabelHideItem(button, IsGemini());
+  }
+  o_show_context_menu(controller, source, point, sourceType);
+}
+
 // Chat, Summarize page and the voice item do their Gemini version while Gemini
 // is chosen; any other item (a nudge), or a window without a panel to open, is
 // Edge's.
@@ -333,6 +349,9 @@ inline std::vector<HookSite> HookSites() {
       {rva::EdgeCopilotMenuModel_BuildMenu,
        reinterpret_cast<void*>(h_build_menu),
        reinterpret_cast<void**>(&o_build_menu)},
+      {rva::ToolbarButton_ShowContextMenuForViewImpl,
+       reinterpret_cast<void*>(h_show_context_menu),
+       reinterpret_cast<void**>(&o_show_context_menu)},
       {rva::EdgeCopilotMenuModel_ExecuteCommand,
        reinterpret_cast<void*>(h_execute_menu),
        reinterpret_cast<void**>(&o_execute_menu)},

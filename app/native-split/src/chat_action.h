@@ -39,5 +39,6 @@ inline ChatAction ActionFor(int commandId) {
 inline constexpr char kSummarizeInstruction[] = "Summarize this page.";
 inline constexpr char kSummarizePrompt[] = "Summarize this page";
 inline constexpr char kTalkLabel[] = "Talk to Gemini + Share tab";
+inline constexpr char kHideLabel[] = "Hide Gemini";
 
 }  // namespace fixedge::chat_action

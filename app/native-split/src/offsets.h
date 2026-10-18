@@ -559,6 +559,14 @@ inline constexpr uintptr_t CopilotButton_ButtonPressed = 0xc79a0d0;
 // is 0), ExecuteCommand(this, command id, event flags) runs one.
 inline constexpr uintptr_t EdgeCopilotMenuModel_BuildMenu = 0xf04e1f4;
 inline constexpr uintptr_t EdgeCopilotMenuModel_ExecuteCommand = 0xf04e420;
+// The chat button's right-click menu is a ToolbarMenuButtonContextMenu (made by
+// EdgeToolbarView::CreateCopilotButtonContextMenu, which passes it a "hide
+// button" command id). AddHideButtonItem(this, command id) adds the item with
+// string 0x4562 ("Hide Copilot") for the two Copilot ids below; other buttons'
+// ids get other strings. It runs once, from the menu's constructor, so the text
+// is fixed at toolbar creation; the right-click is ToolbarButton's
+// ShowContextMenuForViewImpl(controller, source, point, source type).
+inline constexpr uintptr_t ToolbarButton_ShowContextMenuForViewImpl = 0xa2c6780;
 // The button's vftables (one per base; EdgeCopilotToolbarLabelButton has
 // multiple inheritance). A view is a chat button when its object+0 vptr is any
 // of these, so the recognition does not depend on which base is primary.
@@ -931,6 +939,20 @@ inline constexpr uintptr_t COPILOTBUTTON_label = 0xb70;
 // pill's own default label is 0x46f8, "Chat".)
 inline constexpr int COPILOT_NAME = 0x46f9;
 inline constexpr int COPILOT_MENU_TITLE_FORMAT = 0x4708;
+// The chat button's "hide button" command ids (IDC_...): the ones
+// AddHideButtonItem gives "Hide Copilot". The first opens Edge's settings
+// instead of hiding when IsHideCopilotNavigatesToSettingsEnabled.
+inline constexpr int COPILOT_HIDE_COMMAND = 0x9e67;
+inline constexpr int COPILOT_HIDE_SETTINGS_COMMAND = 0xcea4;
+// The "Hide Copilot" string itself.
+inline constexpr int COPILOT_HIDE_LABEL = 0x4562;
+// ToolbarMenuButtonContextMenu's ui::SimpleMenuModel*.
+inline constexpr uintptr_t TOOLBARMENU_model = 0x18;
+// ToolbarButton: its ContextMenuController subobject (what
+// ShowContextMenuForViewImpl receives as this) sits this far into the button, and
+// the button's ToolbarMenuButtonContextMenu* (SetContextMenu) at the other.
+inline constexpr uintptr_t TOOLBARBUTTON_contextMenuController = 0x6f0;
+inline constexpr uintptr_t TOOLBARBUTTON_contextMenu = 0x710;
 // sizeof(views::WebView): every `new views::WebView` asks for 0x540.
 inline constexpr size_t WebView_size = 0x540;
 // sizeof(base::Location) {function, file, line, program counter}, which

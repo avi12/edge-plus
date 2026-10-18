@@ -1266,6 +1266,17 @@ inline bool IsCopilotButton(void* view) {
   }
   return false;
 }
+// The view a ToolbarButton's context-menu-controller subobject belongs to.
+inline void* ContextMenuControllerButton(void* controller) {
+  return reinterpret_cast<uint8_t*>(controller) -
+         off::TOOLBARBUTTON_contextMenuController;
+}
+// The ui::SimpleMenuModel of a chat button's right-click menu, or null.
+inline void* ChatButtonContextMenuModel(void* button) {
+  void* contextMenu = Field<void*>(button, off::TOOLBARBUTTON_contextMenu);
+  return contextMenu ? Field<void*>(contextMenu, off::TOOLBARMENU_model)
+                     : nullptr;
+}
 // The behaviour object a chat button holds.
 inline void* CopilotButtonAction(void* button) {
   return Field<void*>(button, off::DISCOVERBUTTON_action);
