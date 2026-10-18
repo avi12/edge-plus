@@ -109,35 +109,23 @@ inline const VectorIcon* Grip() {
 // Gemini's four-pointed spark on a 24 canvas: its points at the canvas's edge
 // midpoints (top T, right R, bottom B, left L), joined by quarter circles
 // centred on the corners, so each side curves in toward the middle (sweep 0 =
-// counter-clockwise picks that centre). Drawn in Gemini's colours, blue
-// through purple to red from left to right: the whole spark in the first
-// colour, then the part right of each next cut over it in the next colour,
-// every layer overlapping the one below so no seam shows between them.
+// counter-clockwise picks that centre). Drawn as Chrome draws it: each point in
+// its own colour (below), or in one colour for the open state.
 inline constexpr float kSparkCanvasSize = 24.f;
 inline constexpr float kSparkRadius = 10.f;
 inline constexpr float kSparkCentre = 12.f;  // T and B's x, L and R's y
 inline constexpr float kSparkNear =
     kSparkCentre - kSparkRadius;                                 // T's y, L's x
 inline constexpr float kSparkFar = kSparkCentre + kSparkRadius;  // B's y, R's x
-inline constexpr int kSparkBandCount = 8;
 struct SparkColor {
   float red, green, blue;
 };
-inline constexpr SparkColor kSparkBlue{0x42, 0x85, 0xf4};
-inline constexpr SparkColor kSparkPurple{0x9b, 0x72, 0xcb};
-inline constexpr SparkColor kSparkRed{0xd9, 0x65, 0x70};
-
-inline SparkColor SparkBandColor(int band) {
-  const float position =
-      static_cast<float>(band) / static_cast<float>(kSparkBandCount - 1);
-  const bool isFirstHalf = position < 0.5f;
-  const SparkColor from = isFirstHalf ? kSparkBlue : kSparkPurple;
-  const SparkColor to = isFirstHalf ? kSparkPurple : kSparkRed;
-  const float mix = (isFirstHalf ? position : position - 0.5f) * 2.f;
-  return SparkColor{from.red + (to.red - from.red) * mix,
-                    from.green + (to.green - from.green) * mix,
-                    from.blue + (to.blue - from.blue) * mix};
-}
+// Chrome's Gemini spark: each point in one of Google's colours, meeting at the
+// centre. The wedge of the spark around each point is one solid path.
+inline constexpr SparkColor kSparkRed{0xea, 0x43, 0x35};     // top
+inline constexpr SparkColor kSparkBlue{0x42, 0x85, 0xf4};    // right
+inline constexpr SparkColor kSparkGreen{0x34, 0xa8, 0x53};   // bottom
+inline constexpr SparkColor kSparkYellow{0xfb, 0xbc, 0x04};  // left
 
 inline void AddMoveTo(std::vector<PathElement>& path, float x, float y) {
   path.push_back(CommandElement(off::ICON_MOVE_TO));
@@ -186,23 +174,49 @@ inline void AddSparkRightOf(std::vector<PathElement>& path, float cut) {
   path.push_back(CommandElement(off::ICON_CLOSE));
 }
 
+inline void AddLineTo(std::vector<PathElement>& path, float x, float y) {
+  path.push_back(CommandElement(off::ICON_LINE_TO));
+  path.push_back(ArgumentElement(x));
+  path.push_back(ArgumentElement(y));
+}
+
+// Where a spark side's arc is halfway: on the diagonal from the centre, a
+// circle radius at 45 degrees from the side's corner.
+inline constexpr float kSparkMidReach = kSparkRadius * 0.70710678f;
+inline constexpr float kSparkNearMid = kSparkNear + kSparkMidReach;  // upper
+inline constexpr float kSparkFarMid = kSparkFar - kSparkMidReach;    // lower
+
+// The wedge of the spark around the point at (`tipX`, `tipY`): from the centre
+// out to the middle of the side before it (`fromX`, `fromY`), along that side to
+// the point, then along the next side to the middle of it (`toX`, `toY`).
+inline void AddSparkWedge(std::vector<PathElement>& path,
+                          const SparkColor& color, float fromX, float fromY,
+                          float tipX, float tipY, float toX, float toY) {
+  constexpr float kOpaque = 255.f;
+  path.push_back(CommandElement(off::ICON_NEW_PATH));
+  path.push_back(CommandElement(off::ICON_PATH_COLOR_ARGB));
+  for (const float channel : {kOpaque, color.red, color.green, color.blue}) {
+    path.push_back(ArgumentElement(channel));
+  }
+  AddMoveTo(path, kSparkCentre, kSparkCentre);
+  AddLineTo(path, fromX, fromY);
+  AddSparkArc(path, tipX - fromX, tipY - fromY);
+  AddSparkArc(path, toX - tipX, toY - tipY);
+  path.push_back(CommandElement(off::ICON_CLOSE));
+}
+
 inline const VectorIcon* GeminiSpark() {
   static const VectorIcon* icon = [] {
     std::vector<PathElement> path{CommandElement(off::ICON_CANVAS_DIMENSIONS),
                                   ArgumentElement(kSparkCanvasSize)};
-    constexpr float kOpaque = 255.f;
-    const float bandWidth =
-        (kSparkFar - kSparkNear) / static_cast<float>(kSparkBandCount);
-    for (int band = 0; band < kSparkBandCount; band++) {
-      const SparkColor color = SparkBandColor(band);
-      path.push_back(CommandElement(off::ICON_NEW_PATH));
-      path.push_back(CommandElement(off::ICON_PATH_COLOR_ARGB));
-      for (const float channel :
-           {kOpaque, color.red, color.green, color.blue}) {
-        path.push_back(ArgumentElement(channel));
-      }
-      AddSparkRightOf(path, kSparkNear + bandWidth * static_cast<float>(band));
-    }
+    AddSparkWedge(path, kSparkRed, kSparkNearMid, kSparkNearMid, kSparkCentre,
+                  kSparkNear, kSparkFarMid, kSparkNearMid);
+    AddSparkWedge(path, kSparkBlue, kSparkFarMid, kSparkNearMid, kSparkFar,
+                  kSparkCentre, kSparkFarMid, kSparkFarMid);
+    AddSparkWedge(path, kSparkGreen, kSparkFarMid, kSparkFarMid, kSparkCentre,
+                  kSparkFar, kSparkNearMid, kSparkFarMid);
+    AddSparkWedge(path, kSparkYellow, kSparkNearMid, kSparkFarMid, kSparkNear,
+                  kSparkCentre, kSparkNearMid, kSparkNearMid);
     return Build("kFixEdgeGeminiSparkIcon", path);
   }();
   return icon;
