@@ -56,9 +56,10 @@
   const webUiDescription =
     "Makes edge://settings and edge://extensions light or dark to match the theme Edge is " +
       "showing, not Windows: they follow your theme's colors, so a dark theme gives dark pages " +
-      "even when Windows is light, and Theming's live swap changes them too. A profile on Edge's " +
-      "own default theme keeps following Edge's Appearance setting. Web pages see the same " +
-      "light or dark. Live, no restart. Open Edge first.";
+      "even when Windows is light, and Theming's live swap changes them too. Only those two " +
+      "pages change: every other page, websites included, keeps what Edge decides, and a profile " +
+      "on Edge's own default theme keeps following Edge's Appearance setting. An open page " +
+      "reloads when this changes. Live, no restart. Open Edge first.";
   const devModeDescription =
     "Stops Edge asking to turn off developer-mode extensions when it starts. Takes effect from " +
       "Edge's next start.";

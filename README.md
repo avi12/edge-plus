@@ -22,8 +22,9 @@ or off, and Edge picks the change up the moment it is made — no restart, ever.
   Appearance setting, never from the theme, so a dark theme on a light Windows
   leaves them white. With this on they follow the theme's own colors, live
   (including Theming's swap); a default-theme profile still follows Edge's
-  Appearance setting. Web pages see the same light or dark
-  (`docs/re/webui-color-scheme.md`). Runs in the injected DLL.
+  Appearance setting. Only those two pages change; websites and every other
+  Edge page keep what Edge decides (`docs/re/webui-color-scheme.md`). Runs in
+  the injected DLL.
 - **Hide the developer-mode prompt** — stops Edge asking to turn off
   developer-mode extensions at startup.
 - **Ask to handle links, like Chrome** — when a site such as Gmail offers to
