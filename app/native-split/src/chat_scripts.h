@@ -52,6 +52,15 @@ inline std::string PressSendFunction(const Target& target) {
       if (isReady) {
         clearInterval(timer);
         button.click();
+      } else if (!button && Date.now() > deadline) {
+        // No send button at all (its markup changed): press Enter in the box.
+        clearInterval(timer);
+        var focused = document.activeElement;
+        ["keydown", "keypress", "keyup"].forEach(function (type) {
+          if (focused) {
+            focused.dispatchEvent(new KeyboardEvent(type, { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true }));
+          }
+        });
       } else if (Date.now() > deadline) {
         clearInterval(timer);
         state.failure = )JS";

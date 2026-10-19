@@ -27,7 +27,8 @@ inline constexpr Target kCopilotTarget = {
     "Copilot",
     "https://copilot.microsoft.com/",
     "#m365-chat-editor-target-element, textarea#userInput, "
-    "[contenteditable=\"true\"][aria-label*=\"Message Copilot\" i]",
+    "[contenteditable=\"true\"][aria-label*=\"Message Copilot\" i], "
+    "[contenteditable=\"true\"][role=\"textbox\"], textarea",
     "button.fai-SendButton, button[type=\"submit\"][aria-label=\"Send\" i], "
     "button[data-testid=\"submit-button\"], "
     "button[aria-label=\"Submit message\" i]",
