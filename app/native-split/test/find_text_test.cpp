@@ -101,6 +101,7 @@ void CheckParseQuery() {
         "a path whose tail is not flags is plain text");
   Check(ParseQuery("/a/ii").mode == Mode::kText, "a repeated flag");
   Check(ParseQuery("/a/x").mode == Mode::kText, "an unknown flag");
+  Check(ParseQuery("/a/dvy").mode == Mode::kRegExp, "d, v and y are flags too");
   query = ParseQuery("? where is the pricing?");
   Check(query.mode == Mode::kAsk && query.pattern == "where is the pricing?",
         "a question");
@@ -149,7 +150,19 @@ void CheckParseQueryWithOption() {
   query = ParseQuery("? what", Option::kNone);
   Check(query.mode == Mode::kAsk && query.pattern == "what",
         "no switch keeps the typed question");
-  Check(AskTitle("Copilot") == "Ask Copilot", "the switch names the assistant");
+  Check(AskTitle("Copilot") == "Ask Copilot (Enter)",
+        "the switch names the assistant and how to send");
+}
+
+void CheckLineBreaks() {
+  Check(EscapeLineBreaks("a\nb") == "a\\nb", "LF becomes a backslash and n");
+  Check(EscapeLineBreaks("a\r\nb") == "a\\nb", "CRLF is one break");
+  Check(EscapeLineBreaks("a\rb\r\n\nc") == "a\\nb\\n\\nc",
+        "CR alone, and a blank line, each count");
+  Check(EscapeLineBreaks("plain") == "plain", "no break, no change");
+  const Search search = BuildSearch(ParseQuery("foo\\nbar", Option::kRegExp));
+  Check(search.problem == PatternProblem::kNone && search.source == "foo\\nbar",
+        "an escaped newline is an ordinary pattern");
 }
 
 void CheckBuildSearch() {
@@ -158,9 +171,10 @@ void CheckBuildSearch() {
             search.flags == "gm",
         "case sensitive unless it says i");
   search = BuildSearch(ParseQuery("/x/i"));
-  Check(search.flags == "gmi", "i ignores case");
+  Check(search.flags == "gim", "i ignores case");
   search = BuildSearch(ParseQuery("/x/gmis"));
-  Check(search.flags == "gmis", "g and m are always on, not twice");
+  Check(search.flags == "gims",
+        "g and m are always on, not twice, in canonical order");
   search = BuildSearch(ParseQuery("/(a/"));
   Check(search.problem == PatternProblem::kUnbalanced && search.source.empty(),
         "a bad pattern builds nothing");
@@ -206,6 +220,7 @@ int main() {
     CheckPatternShape();
     CheckParseQuery();
     CheckParseQueryWithOption();
+    CheckLineBreaks();
     CheckBuildSearch();
     CheckStepping();
     CheckSearchResults();

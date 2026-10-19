@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include "find_flags.h"
 #include "web_text.h"
 
 namespace fixedge::find_text {
@@ -27,14 +28,17 @@ inline constexpr char kRegExpName[] = "RegExp";
 // What a question is introduced by, and the delimiter of a RegExp.
 inline constexpr char kAskMark = '?';
 inline constexpr char kRegExpDelimiter = '/';
-// The flags `/pattern/flags` takes: g and m are always on, i ignores case, s
-// lets . match a line break, u reads the pattern as Unicode.
-inline constexpr char kRegExpFlags[] = "gimsu";
+// The flags `/pattern/flags` takes: all eight of JavaScript's (find_flags.h says
+// what each one does here). Typed, g and m are always on.
+inline constexpr char kRegExpFlags[] = "dgimsuvy";
 
 struct Query {
   Mode mode = Mode::kText;
   std::string pattern;  // kRegExp: the pattern; kAsk: the question, trimmed
   std::string flags;    // kRegExp: the flags typed after the closing slash
+  // True when `flags` is already the whole story (the typed flags merged with
+  // the bar's flag switches, which include g and m): nothing is implied.
+  bool isFlagsFinal = false;
 };
 
 inline bool IsSpace(char character) {
@@ -109,9 +113,10 @@ enum class Option {
 inline constexpr char kIgnoreCasePrefix[] = "(?i)";
 inline constexpr char kIgnoreCaseFlag[] = "i";
 
-// The switch for a question, named for the assistant that will answer it.
+// The switch for a question, named for the assistant that will answer it. It
+// also says how to send: the box itself stays free for the question.
 inline std::string AskTitle(const std::string& assistantName) {
-  return "Ask " + assistantName;
+  return "Ask " + assistantName + " (Enter)";
 }
 
 inline bool StartsWith(const std::string& text, const std::string& prefix) {
@@ -140,6 +145,33 @@ inline Query ParseQuery(const std::string& typed, Option option) {
       isIgnoringCase ? typed.substr(sizeof(kIgnoreCasePrefix) - 1) : typed;
   query.flags = isIgnoringCase ? kIgnoreCaseFlag : "";
   return query;
+}
+
+// The box is a single line, so a line break in a RegExp is typed (Shift+Enter) or
+// pasted as the two characters \n, which a RegExp reads as a line break exactly
+// as a real one.
+inline constexpr char kEscapedNewline[] = "\\n";
+
+// Text pasted into the box with its line breaks (CR, LF or CRLF, each one break)
+// written as \n.
+inline std::string EscapeLineBreaks(const std::string& pasted) {
+  std::string escaped;
+  for (size_t i = 0; i < pasted.size(); i++) {
+    const char character = pasted[i];
+    const bool isCarriageReturn = character == '\r';
+    const bool isCrLf =
+        isCarriageReturn && i + 1 < pasted.size() && pasted[i + 1] == '\n';
+    if (isCrLf) {
+      continue;
+    }
+    const bool isLineBreak = isCarriageReturn || character == '\n';
+    if (isLineBreak) {
+      escaped += kEscapedNewline;
+    } else {
+      escaped.push_back(character);
+    }
+  }
+  return escaped;
 }
 
 // Limits: a pattern longer than this is refused, and a page script stops
@@ -274,19 +306,13 @@ struct Search {
   std::string flags;
 };
 
-// The flags the page script runs: "g" finds every match, "m" lets ^ and $ stand
-// for the start and end of a line (a page's text is one line per block), and
-// the typed ones add "i", "s" and "u" (a RegExp is case sensitive unless it
-// says "i", as in JavaScript).
+// The flags the page script runs for a typed `/pattern/flags`: "g" finds every
+// match and "m" lets ^ and $ stand for the start and end of a line (a page's
+// text is one line per block), and the typed ones add the rest (a RegExp is case
+// sensitive unless it says "i", as in JavaScript). In JavaScript's canonical
+// order.
 inline std::string ScriptFlags(const std::string& typedFlags) {
-  std::string flags = "gm";
-  for (const char flag : typedFlags) {
-    const bool isImplied = flag == 'g' || flag == 'm';
-    if (!isImplied) {
-      flags.push_back(flag);
-    }
-  }
-  return flags;
+  return find_flags::Merge(typedFlags + "gm", find_flags::FlagSet{});
 }
 
 // The search a RegExp query runs, or why it cannot.
@@ -297,7 +323,7 @@ inline Search BuildSearch(const Query& query) {
     return search;
   }
   search.source = query.pattern;
-  search.flags = ScriptFlags(query.flags);
+  search.flags = query.isFlagsFinal ? query.flags : ScriptFlags(query.flags);
   return search;
 }
 
