@@ -1,12 +1,9 @@
-// assistant_chat.h — asking the assistant (Copilot) a question
-// from inside Edge. One concern: a web chat of our own per browser window (a
-// WebView on the assistant's page, in the window's profile, so a user signed in
-// to Edge is signed in here too), and the steps of one question: wait for its
-// message box, send the prompt, wait for the answer to stop growing, hand the
-// answer back. It is hidden unless the assistant needs the user (a sign-in or a
-// consent page), when it is shown at the top right of the page so they can deal
-// with it; the question goes through once they have. Edge ships no API for this:
-// chat_scripts.h drives the web app the way a person would.
+// assistant_chat.h — asking the assistant (Copilot) a question from inside Edge.
+// One concern: the steps of one question. It goes to Copilot's side panel by
+// the same Edge function the page's "Ask Copilot" menu runs (the panel opens and
+// the question is in it, as for a person), then the panel's page is read until
+// the answer stops growing, and the answer is handed back. Edge has no API that
+// returns the answer, so reading the panel's page (chat_scripts.h) is ours.
 #pragma once
 #include <windows.h>
 #include <functional>
@@ -17,32 +14,31 @@
 #include "chat_scripts.h"
 #include "chat_target.h"
 #include "edge.h"
-#include "find_layout.h"
 
 namespace fixedge::assistant_chat {
 
-// How long to look for the message box before asking the user to sign in, how
-// long to keep looking in all, how long an answer may take, and how often each
-// step is tried.
-inline constexpr ULONGLONG kBoxWaitMs = 12000;
-inline constexpr ULONGLONG kGiveUpOnBoxMs = 180000;
+// How long the side panel may take to open, how long an answer may take, and how
+// often each step is tried.
+inline constexpr ULONGLONG kPanelWaitMs = 20000;
 inline constexpr ULONGLONG kReplyTimeoutMs = 120000;
-// How many times the prompt is sent again after the page was replaced under it.
-inline constexpr int kMaxResends = 3;
+inline constexpr ULONGLONG kStepMs = 700;
+// How many times the question is sent again after the panel was reloaded.
+inline constexpr int kMaxResends = 2;
 // How long a dialog may wait for the person before the question is given up.
-inline constexpr ULONGLONG kUserWaitMs = 300000;
-inline constexpr ULONGLONG kSendRetryMs = 500;
-inline constexpr ULONGLONG kReplyPollMs = 700;
+inline constexpr ULONGLONG kUserWaitMs = 120000;
+
+// The short title the panel is given with the question.
+inline constexpr char kPanelTitle[] = "Find the answer on this page";
 
 // What the caller is told besides the answer.
 enum class Notice {
-  kNeedsUser,  // the assistant shows no message box: it is shown for the user
-  kSent,       // the prompt went into the box; now waiting for the answer
+  kNeedsUser,  // a dialog in the panel waits for the person
+  kSent,       // the panel has the question; now waiting for the answer
 };
 
 enum class Phase {
   kIdle,
-  kWaitingForBox,
+  kWaitingForPanel,
   kWaitingForReply,
 };
 
@@ -50,8 +46,7 @@ using DoneFn = std::function<void(const ask_text::Reply&)>;
 using NoticeFn = std::function<void(Notice)>;
 
 struct Chat {
-  void* view = nullptr;
-  void* parent = nullptr;
+  void* browser = nullptr;
   HWND window = nullptr;
   Phase phase = Phase::kIdle;
   unsigned long long token =
@@ -59,9 +54,9 @@ struct Chat {
   ULONGLONG phaseStartedAt = 0;
   ULONGLONG nextTryAt = 0;
   bool isScriptRunning = false;
-  bool isShownForUser = false;
+  bool isNeedingUser = false;
   ULONGLONG blockedSince = 0;  // when a dialog first waited for the person
-  int resendCount = 0;         // times the page was replaced after the send
+  int resendCount = 0;         // times the question was sent again
   std::string prompt;
   DoneFn onDone;
   NoticeFn onNotice;
@@ -106,93 +101,57 @@ inline Chat* Current(void* mcv, unsigned long long token) {
   return isCurrent ? chat : nullptr;
 }
 
-inline void SetShownForUser(void* mcv, Chat& chat, bool isShown) {
-  chat.isShownForUser = isShown;
-  edge::SetViewVisible(chat.view, isShown);
-  if (isShown) {
-    edge::SetViewBounds(chat.view,
-                        find_layout::ChatRect(edge::ViewBounds(mcv)));
-  }
-}
-
-// Keep a shown page under the bar through a resize.
-inline void Reposition(void* mcv) {
-  const Chat* chat = ChatFor(mcv);
-  if (chat && chat->isShownForUser) {
-    edge::SetViewBounds(chat->view,
-                        find_layout::ChatRect(edge::ViewBounds(mcv)));
-  }
-}
-
-// The question ends: hide the page and tell the caller.
-inline void Finish(void* mcv, Chat& chat, const ask_text::Reply& reply) {
+// The question ends: tell the caller.
+inline void Finish(Chat& chat, const ask_text::Reply& reply) {
   const DoneFn done = std::move(chat.onDone);
   chat.phase = Phase::kIdle;
   chat.onDone = nullptr;
   chat.onNotice = nullptr;
   chat.prompt.clear();
-  if (chat.isShownForUser) {
-    SetShownForUser(mcv, chat, false);
-  }
   if (done) {
     done(reply);
   }
 }
 
-inline void Fail(void* mcv, Chat& chat, const std::string& why) {
+inline void Fail(Chat& chat, const std::string& why) {
+  Log("[chat] failed: %s", why.c_str());
   ask_text::Reply reply;
   reply.error = why;
-  Finish(mcv, chat, reply);
+  Finish(chat, reply);
 }
 
-// The chat page for `mcv`, built on first use: a hidden WebView docked as the
-// last child of the MCV's parent (so, when shown, it draws over the page).
-inline Chat* EnsureChat(HWND window, void* mcv) {
-  if (Chat* existing = ChatFor(mcv)) {
-    return existing;
-  }
-  void* tsm = edge::McvTabStripModel(mcv);
-  void* profile = tsm ? edge::ProfileForTabStrip(tsm) : nullptr;
-  void* parent = edge::ViewParent(mcv);
-  if (!profile || !parent) {
-    return nullptr;
-  }
-  void* view = edge::NewWebView(profile);
-  edge::SetViewVisible(view, false);
-  edge::AddChildViewAt(parent, view, edge::ViewChildCount(parent));
-  edge::WebViewLoadUrl(view, chat_target::kCopilotTarget.url);
-  Chat& chat = Chats()[mcv];
-  chat.view = view;
-  chat.parent = parent;
-  chat.window = window;
-  Log("[chat] %s page created view=%p", chat_target::kCopilotTarget.name, view);
-  return &chat;
+// Put the question in Copilot's side panel (opening it).
+inline void Dispatch(Chat& chat) {
+  edge::SendPromptToSidePanel(chat.browser, chat.prompt, kPanelTitle);
+  chat.phase = Phase::kWaitingForPanel;
+  chat.phaseStartedAt = GetTickCount64();
+  chat.nextTryAt = 0;
+  chat.isScriptRunning = false;
 }
 
 // Start asking: `prompt` goes to the assistant, and `onDone` gets its answer
 // (or why there is none) later, on the UI thread. False if the window has no
-// profile to open its page in. One question at a time per window: a new one
+// browser to open the panel in. One question at a time per window: a new one
 // replaces the old (whose callback is never called).
 inline bool Ask(HWND window, void* mcv, const std::string& prompt,
                 DoneFn onDone, NoticeFn onNotice) {
   static unsigned long long nextToken = 1;
-  Chat* chat = EnsureChat(window, mcv);
-  if (!chat) {
+  void* browserView = edge::McvBrowserView(mcv);
+  void* browser = browserView ? edge::BrowserOf(browserView) : nullptr;
+  if (!browser) {
     return false;
   }
-  if (chat->isShownForUser) {
-    SetShownForUser(mcv, *chat, false);
-  }
-  chat->token = nextToken++;
-  chat->phase = Phase::kWaitingForBox;
-  chat->phaseStartedAt = GetTickCount64();
-  chat->nextTryAt = 0;
-  chat->isScriptRunning = false;
-  chat->blockedSince = 0;
-  chat->resendCount = 0;
-  chat->prompt = prompt;
-  chat->onDone = std::move(onDone);
-  chat->onNotice = std::move(onNotice);
+  Chat& chat = Chats()[mcv];
+  chat.browser = browser;
+  chat.window = window;
+  chat.token = nextToken++;
+  chat.isNeedingUser = false;
+  chat.blockedSince = 0;
+  chat.resendCount = 0;
+  chat.prompt = prompt;
+  chat.onDone = std::move(onDone);
+  chat.onNotice = std::move(onNotice);
+  Dispatch(chat);
   return true;
 }
 
@@ -206,35 +165,29 @@ inline void Cancel(void* mcv) {
   chat->onDone = nullptr;
   chat->onNotice = nullptr;
   chat->prompt.clear();
-  if (chat->isShownForUser) {
-    SetShownForUser(mcv, *chat, false);
-  }
 }
 
 // --- the steps ---------------------------------------------------------------------------
 
-inline void OnSendAnswer(void* mcv, unsigned long long token,
-                         const edge::ScriptResult& result) {
+inline void OnArmed(void* mcv, unsigned long long token,
+                    const edge::ScriptResult& result) {
   Chat* chat = Current(mcv, token);
   if (!chat) {
     return;
   }
   chat->isScriptRunning = false;
-  const bool isScheduled =
-      result.isString && result.text == chat_scripts::kScheduledAnswer;
-  if (isScheduled) {
-    chat->phase = Phase::kWaitingForReply;
-    chat->phaseStartedAt = GetTickCount64();
-    chat->nextTryAt = GetTickCount64() + kReplyPollMs;
-    if (chat->isShownForUser) {
-      SetShownForUser(mcv, *chat, false);
-    }
-    if (chat->onNotice) {
-      chat->onNotice(Notice::kSent);
-    }
+  const bool isArmed =
+      result.isString && result.text == chat_scripts::kArmedAnswer;
+  if (!isArmed) {
     return;
   }
-  chat->nextTryAt = GetTickCount64() + kSendRetryMs;
+  Log("[chat] panel armed");
+  chat->phase = Phase::kWaitingForReply;
+  chat->phaseStartedAt = GetTickCount64();
+  chat->nextTryAt = GetTickCount64() + kStepMs;
+  if (chat->onNotice) {
+    chat->onNotice(Notice::kSent);
+  }
 }
 
 inline void OnReplyAnswer(void* mcv, unsigned long long token,
@@ -245,45 +198,40 @@ inline void OnReplyAnswer(void* mcv, unsigned long long token,
   }
   chat->isScriptRunning = false;
   const ULONGLONG now = GetTickCount64();
-  chat->nextTryAt = now + kReplyPollMs;
+  chat->nextTryAt = now + kStepMs;
   const bool isNeedingUser =
       result.isString && result.text == chat_scripts::kUserAnswer;
   if (isNeedingUser) {
-    // A dialog (a security check, a consent page) waits for the person: show
-    // the page, and do not count their time against the answer's.
+    // A dialog (a security check, a consent page) waits for the person in the
+    // panel, which is open: do not count their time against the answer's.
     if (chat->blockedSince == 0) {
       chat->blockedSince = now;
     }
     chat->phaseStartedAt = now;
-    if (!chat->isShownForUser) {
-      SetShownForUser(mcv, *chat, true);
+    if (!chat->isNeedingUser) {
+      chat->isNeedingUser = true;
       if (chat->onNotice) {
         chat->onNotice(Notice::kNeedsUser);
       }
     }
-    const bool hasWaitedTooLong = now - chat->blockedSince > kUserWaitMs;
-    if (hasWaitedTooLong) {
-      Fail(mcv, *chat, NameOf(*chat) + "'s page is still waiting for you.");
+    if (now - chat->blockedSince > kUserWaitMs) {
+      Fail(*chat,
+           NameOf(*chat) + " is still waiting for you to accept its notice.");
     }
     return;
   }
   chat->blockedSince = 0;
-  if (chat->isShownForUser) {
-    SetShownForUser(mcv, *chat, false);
-  }
   const bool isReloaded =
       result.isString && result.text == chat_scripts::kReloadedAnswer;
   if (isReloaded) {
     const bool canSendAgain = chat->resendCount < kMaxResends;
     if (!canSendAgain) {
-      Fail(mcv, *chat,
-           NameOf(*chat) + "'s page kept reloading before it answered.");
+      Fail(*chat,
+           NameOf(*chat) + "'s panel kept reloading before it answered.");
       return;
     }
     chat->resendCount++;
-    chat->phase = Phase::kWaitingForBox;
-    chat->phaseStartedAt = now;
-    chat->nextTryAt = now + kSendRetryMs;
+    Dispatch(*chat);
     return;
   }
   const bool isWaiting =
@@ -291,47 +239,32 @@ inline void OnReplyAnswer(void* mcv, unsigned long long token,
   if (isWaiting) {
     return;
   }
-  Finish(mcv, *chat, ask_text::ParseReply(result.text));
+  Finish(*chat, ask_text::ParseReply(result.text));
 }
 
-inline void StepWaitingForBox(void* mcv, Chat& chat, void* contents,
-                              ULONGLONG now) {
-  const ULONGLONG waited = now - chat.phaseStartedAt;
-  const bool shouldAskUser = waited > kBoxWaitMs && !chat.isShownForUser;
-  if (shouldAskUser) {
-    SetShownForUser(mcv, chat, true);
-    if (chat.onNotice) {
-      chat.onNotice(Notice::kNeedsUser);
-    }
-  }
-  if (waited > kGiveUpOnBoxMs) {
-    Fail(mcv, chat,
-         NameOf(chat) + " never showed a message box. Sign in to " +
-             NameOf(chat) + ", then ask again.");
-    return;
-  }
+inline void StepWaitingForPanel(void* mcv, Chat& chat, const void* frame,
+                                ULONGLONG now) {
   const bool isDue = !chat.isScriptRunning && now >= chat.nextTryAt;
   if (!isDue) {
     return;
   }
   chat.isScriptRunning = true;
   const unsigned long long token = chat.token;
-  const bool isRunning = edge::RunScript(
-      contents,
-      chat_scripts::SendScript(chat_target::kCopilotTarget, chat.prompt),
+  const bool isRunning = edge::RunScriptInFrame(
+      frame, chat_scripts::ArmScript(chat_target::kCopilotTarget, chat.prompt),
       [mcv, token](const edge::ScriptResult& result) {
-        OnSendAnswer(mcv, token, result);
+        OnArmed(mcv, token, result);
       });
   if (!isRunning) {
     chat.isScriptRunning = false;
-    chat.nextTryAt = now + kSendRetryMs;
+    chat.nextTryAt = now + kStepMs;
   }
 }
 
-inline void StepWaitingForReply(void* mcv, Chat& chat, void* contents,
+inline void StepWaitingForReply(void* mcv, Chat& chat, const void* frame,
                                 ULONGLONG now) {
   if (now - chat.phaseStartedAt > kReplyTimeoutMs) {
-    Fail(mcv, chat, NameOf(chat) + " did not answer in time.");
+    Fail(chat, NameOf(chat) + " did not answer in time.");
     return;
   }
   const bool isDue = !chat.isScriptRunning && now >= chat.nextTryAt;
@@ -340,14 +273,14 @@ inline void StepWaitingForReply(void* mcv, Chat& chat, void* contents,
   }
   chat.isScriptRunning = true;
   const unsigned long long token = chat.token;
-  const bool isRunning = edge::RunScript(
-      contents, chat_scripts::ReplyScript(chat_target::kCopilotTarget),
+  const bool isRunning = edge::RunScriptInFrame(
+      frame, chat_scripts::ReplyScript(chat_target::kCopilotTarget),
       [mcv, token](const edge::ScriptResult& result) {
         OnReplyAnswer(mcv, token, result);
       });
   if (!isRunning) {
     chat.isScriptRunning = false;
-    chat.nextTryAt = now + kReplyPollMs;
+    chat.nextTryAt = now + kStepMs;
   }
 }
 
@@ -359,42 +292,27 @@ inline void Tick() {
     if (chat.phase == Phase::kIdle) {
       continue;
     }
-    void* contents = edge::WebViewContents(chat.view);
-    const bool isPageReady = contents && edge::IsPageLive(contents);
-    if (!isPageReady) {
-      const bool hasWaitedTooLong = now - chat.phaseStartedAt > kGiveUpOnBoxMs;
+    const void* frame = edge::CopilotChatFrame();
+    const bool isPanelReady = frame != nullptr;
+    if (!isPanelReady) {
+      const bool hasWaitedTooLong = now - chat.phaseStartedAt > kPanelWaitMs;
       if (hasWaitedTooLong) {
-        Fail(mcv, chat, NameOf(chat) + "'s page did not load.");
+        Fail(chat, NameOf(chat) + " isn't ready: its side panel did not open.");
       }
       continue;
     }
-    if (chat.phase == Phase::kWaitingForBox) {
-      StepWaitingForBox(mcv, chat, contents, now);
+    if (chat.phase == Phase::kWaitingForPanel) {
+      StepWaitingForPanel(mcv, chat, frame, now);
     } else {
-      StepWaitingForReply(mcv, chat, contents, now);
+      StepWaitingForReply(mcv, chat, frame, now);
     }
   }
 }
 
 // --- teardown -----------------------------------------------------------------------------
 
-inline void Remove(void* mcv) {
-  const auto entry = Chats().find(mcv);
-  if (entry == Chats().end()) {
-    return;
-  }
-  Chat& chat = entry->second;
-  if (IsLive(mcv, chat)) {
-    edge::ViewRemoveChild(chat.parent, chat.view);
-    edge::DeleteWebView(chat.view);
-  }
-  Chats().erase(entry);
-}
-
 inline void RemoveAll() {
-  while (!Chats().empty()) {
-    Remove(Chats().begin()->first);
-  }
+  Chats().clear();
 }
 
 }  // namespace fixedge::assistant_chat

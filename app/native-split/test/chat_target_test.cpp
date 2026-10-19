@@ -26,18 +26,15 @@ bool IsFilled(const char* text) {
 }
 
 bool IsFullyDescribed(const Target& target) {
-  return IsFilled(target.name) && IsFilled(target.url) &&
-         IsFilled(target.boxSelectors) && IsFilled(target.sendSelectors) &&
-         IsFilled(target.answerSelectors) && IsFilled(target.stopSelectors) &&
-         IsFilled(target.dialogSelectors);
+  return IsFilled(target.name) && IsFilled(target.answerSelectors) &&
+         IsFilled(target.stopSelectors) && IsFilled(target.dialogSelectors) &&
+         IsFilled(target.noticeText);
 }
 
 void RunChecks() {
   Check(std::strcmp(kCopilotTarget.name, "Copilot") == 0,
         "Copilot is called Copilot");
   Check(IsFullyDescribed(kCopilotTarget), "the row fills every column");
-  Check(std::strstr(kCopilotTarget.url, "copilot.microsoft.com") != nullptr,
-        "the row opens Copilot's web app");
 }
 
 }  // namespace

@@ -12,6 +12,7 @@
 #include <cstring>
 #include <functional>
 #include <string>
+#include <vector>
 #include <utility>
 #include "offsets.h"
 #include "geom.h"
@@ -1417,6 +1418,49 @@ inline void DeleteWebView(void* webView) {
                                                                 kDeleteSelf);
 }
 
+// --- Copilot's side panel ----------------------------------------------------
+
+// A libc++ std::string in its long form (pointer, size, capacity with the top
+// bit set), over characters that outlive the call: enough for a callee that only
+// reads or copies it.
+struct StdStringView {
+  const char* data;
+  uint64_t size;
+  uint64_t capacityAndFlag;
+};
+
+inline StdStringView MakeStdStringView(const std::string& text) {
+  constexpr uint64_t kLongFlag = uint64_t{1} << 63;
+  return StdStringView{text.c_str(), text.size(),
+                       static_cast<uint64_t>(text.size()) | kLongFlag};
+}
+
+// Send `prompt` (with `pageText` as the page it is about) to Copilot's side
+// panel of `browser`, the way the page's Ask Copilot menu does: the panel opens
+// and the prompt goes into it.
+inline void SendPromptToSidePanel(void* browser, const std::string& text,
+                                  const std::string& title) {
+  const StdStringView page = MakeStdStringView(text);
+  const StdStringView asked = MakeStdStringView(title);
+  using Fn =
+      void(__fastcall*)(void*, const void*, const void*, const void*, bool);
+  reinterpret_cast<Fn>(At(rva::CopilotUtils_SendPageContextualPromptToChat))(
+      browser, &page, nullptr, &asked, false);
+}
+
+// Every WebContents of the browser process (tabs, side panels, hidden pages).
+inline std::vector<void*> AllWebContents() {
+  struct Listing {
+    void** data;
+    size_t count;
+    void* unused;
+  } all{};
+  using Fn = void*(__fastcall*)(Listing*);
+  reinterpret_cast<Fn>(At(rva::WebContentsImpl_GetAllWebContents))(&all);
+  return all.data ? std::vector<void*>(all.data, all.data + all.count)
+                  : std::vector<void*>();
+}
+
 // --- reading a tab, and running a script in a page ---------------------------
 
 // The WebContents a views::WebView shows (null before its first load).
@@ -1550,10 +1594,8 @@ inline void FreeU16String(U16String* string) {
 // Run `utf8Script` in `webContents`' main frame, in our isolated world, and
 // pass `done` the script's string result on the UI thread later (pass an empty
 // `done` to not wait). False if the page has no live renderer to run it.
-inline bool RunScript(void* webContents, const std::string& utf8Script,
-                      ScriptDone done) {
-  const void* frame =
-      IsPageLive(webContents) ? PrimaryMainFrame(webContents) : nullptr;
+inline bool RunScriptInFrame(const void* frame, const std::string& utf8Script,
+                             ScriptDone done) {
   if (!frame) {
     return false;
   }
@@ -1578,6 +1620,42 @@ inline bool RunScript(void* webContents, const std::string& utf8Script,
       frame, &script, &callbackSlot, off::kScriptWorldId);
   FreeU16String(&script);
   return true;
+}
+
+// Run `utf8Script` in the main frame of a live page.
+inline bool RunScript(void* webContents, const std::string& utf8Script,
+                      ScriptDone done) {
+  const void* frame =
+      IsPageLive(webContents) ? PrimaryMainFrame(webContents) : nullptr;
+  return RunScriptInFrame(frame, utf8Script, std::move(done));
+}
+
+// Every frame of a page (the main frame first, then its iframes).
+inline std::vector<void*> FramesOf(void* webContents) {
+  struct FunctionRef {
+    void* object;
+    void* invoker;
+  };
+  std::vector<void*> frames;
+  const FunctionRef collector{
+      &frames, reinterpret_cast<void*>(+[](void* object, void* frame) {
+        static_cast<std::vector<void*>*>(object)->push_back(frame);
+      })};
+  using Fn = void(__fastcall*)(void*, const FunctionRef*);
+  reinterpret_cast<Fn>(At(rva::WebContentsImpl_ForEachRenderFrameHost))(
+      webContents, &collector);
+  return frames;
+}
+
+// The URL a frame last committed, in UTF-8.
+inline std::string FrameUrl(void* frame) {
+  using UrlFn = const void*(__fastcall*)(void*);
+  using SpecFn = const void*(__fastcall*)(const void*);
+  const void* url = reinterpret_cast<UrlFn>(
+      At(rva::RenderFrameHostImpl_GetLastCommittedURL))(frame);
+  const void* spec =
+      url ? reinterpret_cast<SpecFn>(At(rva::GURL_spec))(url) : nullptr;
+  return spec ? StdStringText(spec) : std::string();
 }
 
 // --- the native find bar -------------------------------------------------------
@@ -1757,6 +1835,35 @@ inline void FindBarRelayoutOptions(void* findBarView) {
   InvalidateLayout(FindOptionsView(findBarView));
   using Fn = void(__fastcall*)(void*);
   reinterpret_cast<Fn>(At(rva::FindBarView_PreferredSizeChanged))(findBarView);
+}
+
+// The page of Copilot's side panel, or null while it is not open: the
+// WebContents whose URL is the panel's.
+inline void* CopilotSidePanelContents() {
+  constexpr char kPanelUrl[] = "edge://discover-chat-v2/";
+  for (void* contents : AllWebContents()) {
+    const std::string url = IsPageLive(contents) ? TabUrl(contents) : "";
+    if (url.rfind(kPanelUrl, 0) == 0) {
+      return contents;
+    }
+  }
+  return nullptr;
+}
+
+// The frame of Copilot's side panel that holds the chat (the panel's own page is
+// a shell around an iframe of Copilot's web app), or null.
+inline void* CopilotChatFrame() {
+  constexpr char kChatHost[] = "copilot.microsoft.com";
+  void* panel = CopilotSidePanelContents();
+  if (!panel) {
+    return nullptr;
+  }
+  for (void* frame : FramesOf(panel)) {
+    if (FrameUrl(frame).find(kChatHost) != std::string::npos) {
+      return frame;
+    }
+  }
+  return nullptr;
 }
 
 }  // namespace fixedge::edge

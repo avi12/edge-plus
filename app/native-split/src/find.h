@@ -73,9 +73,10 @@ inline Status WaitingStatus() {
           "Waiting for " + std::string(assistant::Name()) + "..."};
 }
 inline Status NeedsUserStatus() {
-  return {"Needs you",
-          std::string(assistant::Name()) +
-              " needs you: its page is at the top right of this page."};
+  return {"Accept notice",
+          "Accept the " + std::string(assistant::Name()) +
+              " notice in its side panel to continue; the question goes "
+              "through once you have."};
 }
 inline Status NoParagraphStatus(const std::string& why) {
   return {"No answer", why};

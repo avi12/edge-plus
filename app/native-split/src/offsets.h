@@ -619,6 +619,12 @@ inline constexpr uintptr_t WebView_ScalarDeletingDtor = 0x34208b0;
 // --- running a script in a page, and reading a tab ---
 // RenderFrameHost* WebContentsImpl::GetPrimaryMainFrame(this).
 inline constexpr uintptr_t WebContentsImpl_GetPrimaryMainFrame = 0x113caf0;
+// WebContentsImpl::ForEachRenderFrameHost(this, FunctionRef<void(RenderFrameHost*)>*):
+// every frame of a page, main frame first. A FunctionRef is {object, invoker}:
+// the invoker is called (object, frame). RenderFrameHostImpl::GetLastCommittedURL
+// (frame) is the frame's GURL.
+inline constexpr uintptr_t WebContentsImpl_ForEachRenderFrameHost = 0x274b980;
+inline constexpr uintptr_t RenderFrameHostImpl_GetLastCommittedURL = 0x113c6c0;
 // const std::string& GURL::spec(this).
 inline constexpr uintptr_t GURL_spec = 0xfd4aca;
 // bool RenderFrameHostImpl::IsRenderFrameLive(this): false for a discarded tab.
@@ -649,6 +655,20 @@ inline constexpr uintptr_t FindBarView_UpdateForResult = 0xa371cd4;
 // void EndFindSession(this, ?, bool): the bar is closing (Esc, the X, a click
 // into the page); FindBarView::EndFindSession ends in it.
 inline constexpr uintptr_t FindBarController_EndFindSession = 0xa068e66;
+// Copilot's side panel, the path the page's "Ask Copilot" menu uses.
+// edge_copilot::utils::SendPageContextualPromptToChat(BrowserWindowInterface*
+// browser, const std::string& pageText, <unused>, const std::string& prompt,
+// bool): builds an AskCopilotRequest (the prompt, plus the page text as a "text"
+// attachment) and dispatches it to the side panel, opening it. pageText must not
+// be empty or it takes another path.
+inline constexpr uintptr_t CopilotUtils_SendPageContextualPromptToChat =
+    0x93dc691;
+// static content::WebContentsImpl::GetAllWebContents(out): hidden return pointer
+// in rcx. What it fills is not a begin/end vector: its first word points at the
+// WebContents pointers and its second is their count. The panel is the one whose
+// URL is edge://discover-chat-v2/ (the "iframeless" panel has no host manager:
+// CopilotSidePanelController::GetHostManagerForBrowser answers null for it).
+inline constexpr uintptr_t WebContentsImpl_GetAllWebContents = 0x28282c6;
 // views::Textfield::GetText(this, std::u16string_view* out): fills `out`.
 inline constexpr uintptr_t Textfield_GetText = 0xfec056;
 // The bar's options (the "..." button): an inline FindOptionsControlView, a
