@@ -1628,14 +1628,19 @@ inline void* FindBarLabel(void* findBarView) {
   return Field<void*>(findBarView, off::FINDBARVIEW_match_count_label);
 }
 
-// Whether `keyEvent` (a ui::KeyEvent) is Enter being pressed.
-inline bool IsEnterPressed(const void* keyEvent) {
+// The Windows virtual-key code of the key `keyEvent` (a ui::KeyEvent) reports
+// being pressed, or 0 when it is not a key press.
+inline uint8_t PressedKeyCode(const void* keyEvent) {
   auto* bytes = static_cast<const uint8_t*>(keyEvent);
   int32_t type = 0;
   std::memcpy(&type, bytes + off::KEYEVENT_type, sizeof(type));
   const bool isPressed = type == off::KEYEVENT_type_pressed;
-  const bool isEnter = bytes[off::KEYEVENT_key_code] == off::KEYEVENT_key_enter;
-  return isPressed && isEnter;
+  return isPressed ? bytes[off::KEYEVENT_key_code] : uint8_t{0};
+}
+
+// Whether `keyEvent` is Enter being pressed.
+inline bool IsEnterPressed(const void* keyEvent) {
+  return PressedKeyCode(keyEvent) == off::KEYEVENT_key_enter;
 }
 
 // The FindBarView behind the TextfieldController its key handler is called on.

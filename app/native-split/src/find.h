@@ -12,6 +12,7 @@
 // ask_text.h; talking to the assistant's web chat is assistant_chat.h's.
 #pragma once
 #include <windows.h>
+#include <algorithm>
 #include <map>
 #include <string>
 #include <utility>
@@ -22,6 +23,7 @@
 #include "assistant_chat.h"
 #include "channel.h"
 #include "edge.h"
+#include "find_flags.h"
 #include "find_scripts.h"
 #include "find_text.h"
 #include "tab_list.h"
@@ -49,10 +51,11 @@ struct Status {
   std::string detail;
 };
 
+// Nothing in the count label (the box keeps its room; the Ask switch says Enter);
+// the sentence is the label's tooltip.
 inline Status HintStatus() {
-  return {"Enter to ask", "Press Enter to ask " +
-                              std::string(assistant::Name()) +
-                              " about this page."};
+  return {"", "Press Enter to ask " + std::string(assistant::Name()) +
+                  " about this page."};
 }
 inline Status ReadingStatus() {
   return {"Reading page...", "Reading the page's paragraphs."};
@@ -123,6 +126,9 @@ struct Session {
   int count = 0;
   int current = find_text::kNoMatch;
   bool isCapped = false;
+  int stockBarWidth = 0;  // the bar window's width as Edge sized it
+  int widenedBarWidth =
+      0;                  // its width while we hold it wider (0 = not widened)
   std::string askedText;  // the box text the last question was asked for
   AskRun ask;
 };
@@ -227,6 +233,68 @@ inline void* EnsureToggle(void* findBarView, int toggleId, bool* isAdded) {
   return toggle;
 }
 
+// The toggle id of each RegExp flag switch (Edge's ABI, so offsets.h's).
+inline int ToggleIdOfFlag(find_flags::Flag flag) {
+  switch (flag) {
+    case find_flags::Flag::kIndices:
+      return off::FINDTOGGLE_id_flag_indices;
+    case find_flags::Flag::kIgnoreCase:
+      return off::FINDTOGGLE_id_flag_ignore_case;
+    case find_flags::Flag::kMultiline:
+      return off::FINDTOGGLE_id_flag_multiline;
+    case find_flags::Flag::kDotAll:
+      return off::FINDTOGGLE_id_flag_dot_all;
+    case find_flags::Flag::kUnicode:
+      return off::FINDTOGGLE_id_flag_unicode;
+    case find_flags::Flag::kUnicodeSets:
+      return off::FINDTOGGLE_id_flag_unicode_sets;
+    case find_flags::Flag::kSticky:
+      return off::FINDTOGGLE_id_flag_sticky;
+  }
+  return off::FINDTOGGLE_id_flag_indices;
+}
+
+// The flag a toggle id stands for, or null when it is not a flag switch.
+inline const find_flags::FlagInfo* FlagOfToggleId(int toggleId) {
+  for (const find_flags::FlagInfo& info : find_flags::kFlags) {
+    if (ToggleIdOfFlag(info.flag) == toggleId) {
+      return &info;
+    }
+  }
+  return nullptr;
+}
+
+inline bool IsFlagToggleId(int toggleId) {
+  return FlagOfToggleId(toggleId) != nullptr;
+}
+
+// Which flag switches are on in this bar (per window, like the bar's views).
+inline find_flags::FlagSet FlagsOn(void* findBarView) {
+  find_flags::FlagSet set;
+  for (const find_flags::FlagInfo& info : find_flags::kFlags) {
+    void* toggle = edge::FindToggle(findBarView, ToggleIdOfFlag(info.flag));
+    if (toggle && edge::FindToggleIsOn(toggle)) {
+      find_flags::SetOn(&set, info.flag, true);
+    }
+  }
+  return set;
+}
+
+// What the box means in this bar: the typed forms and the RegExp switch, plus
+// the flag switches while RegExp is the chosen switch (they are hidden
+// otherwise, so a stale one never reaches a shortcut such as /pattern/).
+inline find_text::Query QueryOf(void* findBarView, const std::string& typed) {
+  const find_text::Option option = OptionOf(findBarView);
+  find_text::Query query = find_text::ParseQuery(typed, option);
+  const bool isUsingFlagSwitches = option == find_text::Option::kRegExp &&
+                                   query.mode == find_text::Mode::kRegExp;
+  if (isUsingFlagSwitches) {
+    query.flags = find_flags::Merge(query.flags, FlagsOn(findBarView));
+    query.isFlagsFinal = true;
+  }
+  return query;
+}
+
 // Bring the bar's options up to date: our two switches exist (and show the
 // chosen assistant's name), and Edge's own three are greyed out while either of
 // ours is on, since they mean nothing to a RegExp or a question. With the find
@@ -234,6 +302,28 @@ inline void* EnsureToggle(void* findBarView, int toggleId, bool* isAdded) {
 inline void SyncToggles(void* findBarView) {
   bool isAdded = false;
   void* regExp = EnsureToggle(findBarView, off::FINDTOGGLE_id_regexp, &isAdded);
+  // The flag switches are built right after RegExp so they sit under it.
+  const bool isRegExpOn = regExp && edge::FindToggleIsOn(regExp);
+  const bool isShowingFlags = g_isEnabled && isRegExpOn;
+  bool isFlagVisibilityChanged = false;
+  for (const find_flags::FlagInfo& info : find_flags::kFlags) {
+    const int flagToggleId = ToggleIdOfFlag(info.flag);
+    const bool isNewToggle = !edge::FindToggle(findBarView, flagToggleId);
+    void* flagToggle = EnsureToggle(findBarView, flagToggleId, &isAdded);
+    const bool isStartingOn =
+        flagToggle && isNewToggle && find_flags::IsDefaultOn(info.flag);
+    if (isStartingOn) {
+      edge::FindToggleSetOn(flagToggle, true);
+    }
+    if (flagToggle) {
+      const std::u16string title = Utf16FromUtf8(find_flags::SwitchTitle(info));
+      edge::FindToggleSetTitle(flagToggle, Utf16Of(title));
+      isFlagVisibilityChanged =
+          isFlagVisibilityChanged ||
+          edge::ViewGetVisible(flagToggle) != isShowingFlags;
+      edge::SetViewVisible(flagToggle, isShowingFlags);
+    }
+  }
   void* ask = EnsureToggle(findBarView, off::FINDTOGGLE_id_ask, &isAdded);
   if (regExp) {
     const std::u16string title = Utf16FromUtf8(find_text::kRegExpName);
@@ -256,9 +346,86 @@ inline void SyncToggles(void* findBarView) {
       edge::FindToggleSetEnabled(toggle, !isEdgeLocked);
     }
   }
-  if (isAdded) {
+  if (isAdded || isFlagVisibilityChanged) {
     edge::FindBarRelayoutOptions(findBarView);
   }
+}
+
+// --- the bar's width ---------------------------------------------------------------------------------
+
+// Ask Copilot takes a whole question, so the bar is as wide again as Edge makes
+// it (never wider than the browser window leaves room for), anchored by its right
+// edge as Edge anchors it; the box takes the room, since it is the bar's flexible
+// view. Back to Edge's own width with Ask off.
+inline constexpr int kAskWidthFactor = 2;
+inline constexpr int kBarMarginPixels = 24;
+inline constexpr int kBarMaxWidthPixels = 1100;  // wider than any window's bar
+
+// The bar's own top-level window: one of this thread's visible windows with no
+// title that is far narrower than the browser window.
+inline HWND BarWindowOf(HWND browserWindow) {
+  struct Search {
+    HWND browser;
+    HWND found;
+  } search{browserWindow, nullptr};
+  EnumThreadWindows(
+      GetCurrentThreadId(),
+      [](HWND candidate, LPARAM parameter) -> BOOL {
+        auto* inner = reinterpret_cast<Search*>(parameter);
+        RECT candidateRect{};
+        RECT browserRect{};
+        GetWindowRect(candidate, &candidateRect);
+        GetWindowRect(inner->browser, &browserRect);
+        const bool isNarrow = candidateRect.right - candidateRect.left <
+                              (browserRect.right - browserRect.left) / 2;
+        const bool isBar = candidate != inner->browser &&
+                           IsWindowVisible(candidate) &&
+                           GetWindowTextLengthW(candidate) == 0 && isNarrow;
+        if (isBar) {
+          inner->found = candidate;
+        }
+        return isBar ? FALSE : TRUE;
+      },
+      reinterpret_cast<LPARAM>(&search));
+  return search.found;
+}
+
+inline void StartTimer();
+
+inline void ApplyBarWidth(Session& session, bool isAsking) {
+  HWND bar = BarWindowOf(session.window);
+  RECT barRect{};
+  RECT browserRect{};
+  const bool isMeasured = bar && GetWindowRect(bar, &barRect) &&
+                          GetWindowRect(session.window, &browserRect);
+  if (!isMeasured) {
+    return;
+  }
+  const int current = barRect.right - barRect.left;
+  const bool isHeldWide =
+      session.widenedBarWidth != 0 && current == session.widenedBarWidth;
+  if (!isHeldWide) {
+    session.stockBarWidth = current;
+  }
+  const int roomForBar =
+      browserRect.right - browserRect.left - 2 * kBarMarginPixels;
+  const int widest = std::min(kBarMaxWidthPixels, roomForBar);
+  const int wanted =
+      isAsking
+          ? std::max(session.stockBarWidth,
+                     std::min(session.stockBarWidth * kAskWidthFactor, widest))
+          : session.stockBarWidth;
+  session.widenedBarWidth = isAsking ? wanted : 0;
+  if (isAsking) {
+    // Edge puts its own width back whenever it lays the bar out again; the
+    // timer's tick (Tick) holds it.
+    StartTimer();
+  }
+  if (wanted == current) {
+    return;
+  }
+  SetWindowPos(bar, nullptr, barRect.right - wanted, barRect.top, wanted,
+               barRect.bottom - barRect.top, SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
 // --- the page being searched ------------------------------------------------------------------------
@@ -582,7 +749,9 @@ inline void StartTimer() {
 
 inline bool IsAnyAsking() {
   for (const auto& [mcv, session] : Sessions()) {
-    if (session.ask.id != 0) {
+    const bool isHoldingWidth =
+        session.findBarView && session.widenedBarWidth != 0;
+    if (session.ask.id != 0 || isHoldingWidth) {
       return true;
     }
   }
@@ -643,6 +812,9 @@ inline void Close(void* mcv) {
   }
   Reset(mcv, *session);
   assistant_chat::Cancel(mcv);
+  session->widenedBarWidth = 0;
+  session->stockBarWidth = 0;
+  session->findBarView = nullptr;
   StopTimerIfIdle();
   Log("[find] bar closed");
 }
@@ -723,8 +895,10 @@ inline void __fastcall h_find(void* findBarView, const edge::U16View* typed) {
   }
   void* mcv = nullptr;
   Session* session = SessionOfBar(findBarView, &mcv);
-  const find_text::Query query =
-      find_text::ParseQuery(TextOf(*typed), OptionOf(findBarView));
+  if (session) {
+    ApplyBarWidth(*session, OptionOf(findBarView) == find_text::Option::kAsk);
+  }
+  const find_text::Query query = QueryOf(findBarView, TextOf(*typed));
   const bool isOurs = session && query.mode != find_text::Mode::kText;
   if (!isOurs) {
     if (session) {
@@ -754,8 +928,7 @@ inline bool HandleNext(void* findBarView, bool isReverse) {
   void* mcv = nullptr;
   Session* session = SessionOfBar(findBarView, &mcv);
   const std::string typed = TextOf(edge::FindBarText(findBarView));
-  const find_text::Query query =
-      find_text::ParseQuery(typed, OptionOf(findBarView));
+  const find_text::Query query = QueryOf(findBarView, typed);
   const bool isOurs = session && query.mode != find_text::Mode::kText;
   if (!isOurs) {
     return false;
@@ -797,15 +970,86 @@ inline void __fastcall h_find_next(void* findBarView, bool isReverse) {
   }
 }
 
+// Type `text` into the bar's box as if it were typed there: the box is Edge's own
+// single-line text field, which has no way to take a line break, so a line break
+// goes in as the two characters \n (find_text.h). Posted to the window that has
+// the keyboard focus, which is the bar's; they replace a selection like typing.
+inline void TypeIntoBar(const std::string& text) {
+  HWND bar = GetFocus();
+  if (!bar) {
+    return;
+  }
+  for (const char16_t character : Utf16FromUtf8(text)) {
+    PostMessageW(bar, WM_CHAR, character, 1);
+  }
+}
+
+// The text on the clipboard as UTF-8 (empty when it holds none).
+inline std::string ClipboardText() {
+  std::string text;
+  if (!OpenClipboard(nullptr)) {
+    return text;
+  }
+  HANDLE data = GetClipboardData(CF_UNICODETEXT);
+  const auto* wide =
+      static_cast<const wchar_t*>(data ? GlobalLock(data) : nullptr);
+  if (wide) {
+    text = TextOf(edge::U16View{reinterpret_cast<const char16_t*>(wide),
+                                std::char_traits<wchar_t>::length(wide)});
+    GlobalUnlock(data);
+  }
+  CloseClipboard();
+  return text;
+}
+
+inline constexpr uint8_t kKeyV = 'V';
+inline constexpr uint8_t kKeyInsert = VK_INSERT;
+
+// With RegExp on, a line break goes into the box as \n: Shift+Enter (or
+// Ctrl+Enter) types one instead of stepping back, and a paste that holds line
+// breaks is typed with each as \n (Edge's own paste would drop or flatten
+// them). Returns whether the key was handled.
+inline bool HandleLineBreakKey(void* findBarView, const void* keyEvent) {
+  const uint8_t key = edge::PressedKeyCode(keyEvent);
+  const bool isRegExpOn = key != 0 && g_isEnabled &&
+                          OptionOf(findBarView) == find_text::Option::kRegExp;
+  if (!isRegExpOn) {
+    return false;
+  }
+  const bool isShiftDown = GetKeyState(VK_SHIFT) < 0;
+  const bool isCtrlDown = GetKeyState(VK_CONTROL) < 0;
+  const bool isNewlineKey = key == VK_RETURN && (isShiftDown || isCtrlDown);
+  if (isNewlineKey) {
+    TypeIntoBar(find_text::kEscapedNewline);
+    return true;
+  }
+  const bool isPasteKey =
+      (key == kKeyV && isCtrlDown) || (key == kKeyInsert && isShiftDown);
+  if (!isPasteKey) {
+    return false;
+  }
+  const std::string pasted = ClipboardText();
+  const bool isMultiline = pasted.find_first_of("\r\n") != std::string::npos;
+  if (!isMultiline) {
+    return false;
+  }
+  TypeIntoBar(find_text::EscapeLineBreaks(pasted).substr(
+      0, find_text::kMaxPatternChars));
+  return true;
+}
+
 // Enter in the text field, which Edge turns into a search of its own without
-// going through FindNext: Shift+Enter goes back.
+// going through FindNext: Shift+Enter goes back (with RegExp on it types a line
+// break instead, HandleLineBreakKey).
 inline bool __fastcall h_handle_key_event(void* controller, void* textfield,
                                           const void* keyEvent) {
+  void* findBarView = edge::FindBarViewOfKeyController(controller);
+  if (HandleLineBreakKey(findBarView, keyEvent)) {
+    return true;
+  }
   const bool isEnterPressed = g_isEnabled && edge::IsEnterPressed(keyEvent);
   const bool isShiftDown = GetKeyState(VK_SHIFT) < 0;
-  const bool isHandled =
-      isEnterPressed &&
-      HandleNext(edge::FindBarViewOfKeyController(controller), isShiftDown);
+  const bool isHandled = isEnterPressed && HandleNext(findBarView, isShiftDown);
   return isHandled || o_handle_key_event(controller, textfield, keyEvent);
 }
 
@@ -824,11 +1068,13 @@ inline void __fastcall h_toggle_options(void* findBarView, void* argument) {
 
 // One of the switches was clicked. Edge's three go on as Edge has them; ours
 // are ours alone: take the switch's new state, turn the other off, grey out
-// Edge's, and search the box again the way the switches now read it.
+// Edge's, show or hide the RegExp flags, and search the box again the way the
+// switches now read it. A flag switch only needs the search again.
 inline void __fastcall h_button_toggled(void* toggle) {
   const int toggleId = edge::FindToggleId(toggle);
   const bool isOurs = g_isEnabled && (toggleId == off::FINDTOGGLE_id_regexp ||
-                                      toggleId == off::FINDTOGGLE_id_ask);
+                                      toggleId == off::FINDTOGGLE_id_ask ||
+                                      IsFlagToggleId(toggleId));
   void* findBarView = isOurs ? edge::FindBarViewOfToggle(toggle) : nullptr;
   if (!findBarView) {
     o_button_toggled(toggle);
@@ -836,12 +1082,24 @@ inline void __fastcall h_button_toggled(void* toggle) {
   }
   // The switch has already moved by the time its callback runs.
   const bool isTurningOn = edge::FindToggleIsOn(toggle);
+  const find_flags::FlagInfo* flag = FlagOfToggleId(toggleId);
+  const bool isFlag = flag != nullptr;
   const int otherId = toggleId == off::FINDTOGGLE_id_regexp
                           ? off::FINDTOGGLE_id_ask
                           : off::FINDTOGGLE_id_regexp;
   void* other = edge::FindToggle(findBarView, otherId);
-  if (isTurningOn && other) {
+  if (isTurningOn && other && !isFlag) {
     edge::FindToggleSetOn(other, false);
+  }
+  find_flags::Flag excluded = find_flags::Flag::kIndices;
+  const bool isExcludingOther =
+      isFlag && isTurningOn && find_flags::HasExclusive(flag->flag, &excluded);
+  if (isExcludingOther) {
+    void* excludedToggle =
+        edge::FindToggle(findBarView, ToggleIdOfFlag(excluded));
+    if (excludedToggle) {
+      edge::FindToggleSetOn(excludedToggle, false);
+    }
   }
   SyncToggles(findBarView);
   const edge::U16View typed = edge::FindBarText(findBarView);
@@ -924,6 +1182,13 @@ inline bool Install() {
 // on a step.
 inline void Tick() {
   DropStale();
+  for (auto& [mcv, session] : Sessions()) {
+    const bool isBarOpen = session.findBarView && session.widenedBarWidth != 0;
+    if (isBarOpen) {
+      ApplyBarWidth(session,
+                    OptionOf(session.findBarView) == find_text::Option::kAsk);
+    }
+  }
   assistant_chat::Tick();
   StopTimerIfIdle();
 }
@@ -954,7 +1219,9 @@ inline void Apply(bool isEnabled) {
   DropStale();
   std::vector<void*> bars;
   for (const auto& [mcv, session] : Sessions()) {
-    bars.push_back(session.findBarView);
+    if (session.findBarView) {
+      bars.push_back(session.findBarView);
+    }
   }
   g_isEnabled = isEnabled;
   if (isTurningOff) {

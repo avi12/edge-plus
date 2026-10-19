@@ -1053,6 +1053,14 @@ inline constexpr int FINDTOGGLE_id_whole_word = 1;
 inline constexpr int FINDTOGGLE_id_diacritics = 2;
 inline constexpr int FINDTOGGLE_id_regexp = 3;
 inline constexpr int FINDTOGGLE_id_ask = 4;
+// The RegExp flag switches (find_flags.h), shown under RegExp while it is on.
+inline constexpr int FINDTOGGLE_id_flag_indices = 5;
+inline constexpr int FINDTOGGLE_id_flag_ignore_case = 6;
+inline constexpr int FINDTOGGLE_id_flag_multiline = 7;
+inline constexpr int FINDTOGGLE_id_flag_dot_all = 8;
+inline constexpr int FINDTOGGLE_id_flag_unicode = 9;
+inline constexpr int FINDTOGGLE_id_flag_unicode_sets = 10;
+inline constexpr int FINDTOGGLE_id_flag_sticky = 11;
 // ui::KeyEvent: its type (7 = key pressed) and its key code (0x0d = Enter).
 inline constexpr uintptr_t KEYEVENT_type = 0x0c;
 inline constexpr int32_t KEYEVENT_type_pressed = 7;
