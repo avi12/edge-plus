@@ -5,9 +5,7 @@
 // same codes. The original WndProc is restored on unload.
 #pragma once
 #include <windows.h>
-#include <algorithm>
 #include <cstring>
-#include <vector>
 #include "MinHook.h"
 #include "channel.h"
 #include "config.h"
@@ -158,31 +156,24 @@ inline BOOL CALLBACK BreakUpWindowSplits(HWND hwnd, LPARAM /*unused*/) {
   return TRUE;
 }
 
-// EnumWindows callback: ask the profile behind each of this process's browser
-// windows to compute its colors again (theme_follow.h), once per profile. The
-// vector of profiles already asked is at `lparam`.
-inline BOOL CALLBACK RefreshWindowThemeColors(HWND hwnd, LPARAM lparam) {
+// EnumWindows callback: have the followed pages open in each of this process's
+// browser windows (theme_follow.h) take up a change of the switch. The count of
+// pages refreshed so far is the int at `lparam`.
+inline BOOL CALLBACK RefreshWindowFollowedPages(HWND hwnd, LPARAM lparam) {
   if (!IsOurBrowserClassWindow(hwnd)) {
     return TRUE;
   }
   void* tsm = edge::TsmForWindow(hwnd);
-  void* profile = tsm ? edge::ProfileForTabStrip(tsm) : nullptr;
-  void* themeService =
-      profile ? edge::ThemeServiceForProfile(profile) : nullptr;
-  auto* asked = reinterpret_cast<std::vector<void*>*>(lparam);
-  const bool isNew = themeService && std::find(asked->begin(), asked->end(),
-                                               themeService) == asked->end();
-  if (isNew) {
-    asked->push_back(themeService);
-    edge::ThemeNotifyChanged(themeService);
+  if (tsm) {
+    *reinterpret_cast<int*>(lparam) += theme_follow::RefreshPages(tsm);
   }
   return TRUE;
 }
 
 inline void RefreshThemeColors() {
-  std::vector<void*> asked;
-  EnumWindows(RefreshWindowThemeColors, reinterpret_cast<LPARAM>(&asked));
-  Log("[theme-follow] %zu profile(s) recomputed their colors", asked.size());
+  int refreshed = 0;
+  EnumWindows(RefreshWindowFollowedPages, reinterpret_cast<LPARAM>(&refreshed));
+  Log("[theme-follow] %d open page(s) recomputed their colors", refreshed);
 }
 
 // Everything that must be undone on the UI thread before unload: first break
@@ -425,6 +416,10 @@ inline void CreateOrGrowByCommand(HWND hwnd, WPARAM wparam) {
 
 inline void RunCommand(HWND hwnd, WPARAM wparam) {
   // The config read from disk at load, now on the UI thread.
+  if (wparam == CodeOf(Command::kRedrawFollowedPages)) {
+    RefreshThemeColors();
+    return;
+  }
   if (wparam == CodeOf(Command::kReloadConfig)) {
     OnConfigChanged();
     return;

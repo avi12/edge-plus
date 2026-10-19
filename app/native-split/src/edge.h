@@ -1164,16 +1164,22 @@ inline theme_tone::OptionalColor ThemePaletteColor(void* themeService,
   return {isSet, color};
 }
 
-// Whether the profile's theme is an extension or colored theme (it has a pack).
-inline bool ThemeHasPack(void* themeService) {
-  return Field<void*>(themeService, off::THEMESERVICE_supplier) != nullptr;
+// Tell `webContents` its color provider changed: a WebUI page fetches its
+// colors.css again and the page's web preferences are computed again.
+inline void NotifyColorProviderChanged(void* webContents) {
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(rva::WebContentsImpl_OnColorProviderChanged))(
+      reinterpret_cast<uint8_t*>(webContents) +
+      off::WEBCONTENTS_color_observer);
 }
 
-// Tell the theme's observers it changed, so every color provider and page
-// preference is computed again (the call the Appearance setting ends in).
-inline void ThemeNotifyChanged(void* themeService) {
-  using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::ThemeService_NotifyThemeChanged))(themeService);
+// Reload the page in `webContents` as the reload button does (no repost
+// prompt).
+inline void ReloadPage(void* webContents) {
+  using Fn = void(__fastcall*)(void*, int32_t, bool);
+  reinterpret_cast<Fn>(At(rva::NavigationControllerImpl_Reload))(
+      reinterpret_cast<uint8_t*>(webContents) + off::WEBCONTENTS_controller,
+      off::RELOADTYPE_normal, false);
 }
 
 // --- web protocol handlers -------------------------------------------------------
@@ -1427,6 +1433,19 @@ inline std::string Utf16ToUtf8(U16View text) {
 inline std::string TabUrl(void* webContents) {
   using SpecFn = const void*(__fastcall*)(const void*);
   const void* url = LastCommittedUrl(webContents);
+  const void* spec =
+      url ? reinterpret_cast<SpecFn>(At(rva::GURL_spec))(url) : nullptr;
+  return spec ? StdStringText(spec) : std::string();
+}
+
+// The URL `webContents` shows (the pending one during a navigation), in UTF-8.
+inline std::string VisibleUrl(void* webContents) {
+  using UrlFn = const void*(__fastcall*)(void*);
+  void* const* vtable = *reinterpret_cast<void***>(webContents);
+  const void* url = reinterpret_cast<UrlFn>(
+      vtable[off::WEBCONTENTS_get_visible_url_slot / sizeof(void*)])(
+      webContents);
+  using SpecFn = const void*(__fastcall*)(const void*);
   const void* spec =
       url ? reinterpret_cast<SpecFn>(At(rva::GURL_spec))(url) : nullptr;
   return spec ? StdStringText(spec) : std::string();

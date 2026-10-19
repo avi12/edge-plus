@@ -466,25 +466,36 @@ inline constexpr uintptr_t ThemeServiceFactory_GetForProfile = 0xfcf172;
 inline constexpr uintptr_t WebContentsImpl_GetBrowserContext = 0x113cae0;
 
 // --- WebUI pages follow the theme (docs/re/webui-color-scheme.md) ---
-// bool ThemeService::BrowserUsesDarkColors(this): the one funnel every "is the
-// browser dark" question goes through (the color provider's mode, the web
-// preferences behind prefers-color-scheme of edge://settings and
-// edge://extensions via edge_themes::IsDarkModeForWeb). It answers from the
-// Appearance pref (kBrowserColorScheme) or, on "System default", from the OS;
-// a theme's own colors never reach it. The detour answers from the active
-// theme's palette instead (theme_follow.h). Takes the primary `this`.
-inline constexpr uintptr_t ThemeService_BrowserUsesDarkColors = 0x29f1a78;
+// Two pieces make a page light or dark, and Edge feeds neither from the theme:
+// the page's prefers-color-scheme (computed per WebContents) and the colors
+// the WebUI draws with (chrome://theme/colors.css, built from the contents'
+// color provider, whose mode is the OS's or the Appearance setting's).
+// void* EdgeComputePreferredColorScheme(out, const SiteInfo*, WebContents*):
+// the pair of answers behind one page's web preferences, called from
+// ChromeContentBrowserClient::OverrideWebPreferences (and its after-navigation
+// and need-update siblings); out->+0 is the preferred color scheme as blink
+// stores it (0 = dark, 1 = light), out->+4 the root scrollbar scheme (1 = dark).
+inline constexpr uintptr_t EdgeComputePreferredColorScheme = 0x548333b;
+// void WebContentsImpl::OnColorProviderChanged(this): `this` is the contents'
+// ColorProviderSourceObserver subobject (off::WEBCONTENTS_color_observer). It
+// tells the contents' observers, which makes a WebUI page fetch its colors.css
+// again, then recomputes the web preferences (prefers-color-scheme).
+inline constexpr uintptr_t WebContentsImpl_OnColorProviderChanged = 0x2f44c20;
+// void NavigationControllerImpl::Reload(this, ReloadType, bool
+// check_for_repost): the controller is embedded in the WebContentsImpl at
+// off::WEBCONTENTS_controller.
+inline constexpr uintptr_t NavigationControllerImpl_Reload = 0x78c1a80;
+// ColorProvider* WebContentsImpl::GetColorProvider(this): the provider the
+// WebUI's colors.css is generated from (ThemeSource::SendColorsCss reads it
+// through the contents' vtable). It asks the contents' color provider source,
+// the browser window, which builds its key through ThemeService below on every
+// call, so a detour on that key decides the mode for the one call.
+inline constexpr uintptr_t WebContentsImpl_GetColorProvider = 0x33c2dc0;
 // ColorProviderKey* ThemeService::GetColorProviderKey(this, ColorProviderKey*
-// out, const ColorProviderKey& nativeKey, Profile*): the key the browser's color
-// provider is built from, returned in `out`. Its mode starts as the OS's (the
-// native theme's key) and is replaced only when the Appearance pref says Light
-// or Dark; it never asks BrowserUsesDarkColors, and the page preference behind
-// prefers-color-scheme comes from this key's mode. Primary `this`.
+// out, const ColorProviderKey& nativeKey, Profile*): fills the key the browser's
+// color provider is built from and returns `out`. Its mode starts as the OS's
+// and is replaced only when the Appearance setting says Light or Dark.
 inline constexpr uintptr_t ThemeService_GetColorProviderKey = 0xfcf25c;
-// void ThemeService::NotifyThemeChanged(this): tell every observer the theme
-// changed, which rebuilds the color providers and refreshes each page's web
-// preferences; the same call SetBrowserColorScheme ends in. Primary `this`.
-inline constexpr uintptr_t ThemeService_NotifyThemeChanged = 0x319a610;
 // bool BrowserThemePack::GetColor(this, int id, SkColor* out): a theme
 // extension's color for `id`, false when the theme did not set it. Its colors
 // are a table of 8-byte {int id, SkColor} entries.
@@ -689,8 +700,22 @@ inline constexpr uintptr_t THEMESERVICE_supplier = 0x768;
 // (the ids of the manifest-key table beside "toolbar" and "frame").
 inline constexpr int THEMECOLOR_toolbar = 23;
 inline constexpr int THEMECOLOR_frame = 28;
+// WebContentsImpl::GetController is a bare `lea rax, [this + 0x280]`.
+inline constexpr uintptr_t WEBCONTENTS_controller = 0x280;
+// content::ReloadType::NORMAL.
+inline constexpr int32_t RELOADTYPE_normal = 1;
+// WebContentsImpl: the ColorProviderSourceObserver subobject.
+inline constexpr uintptr_t WEBCONTENTS_color_observer = 0x80;
+// WebContents: the virtual at +0x68 is GetVisibleURL, the URL the address bar
+// shows, which is the pending one while a navigation has not committed yet (the
+// last committed URL is still empty or the previous page's then). Edge's own
+// EdgeComputePreferredColorScheme asks it.
+inline constexpr uintptr_t WEBCONTENTS_get_visible_url_slot = 0x68;
 // ui::ColorProviderKey: its first field is the ColorMode (read first by
 // ColorProviderSource::GetColorMode), 0 = light, 1 = dark.
+// The pair EdgeComputePreferredColorScheme fills.
+inline constexpr uintptr_t PREFERREDSCHEME_color_scheme = 0x0;
+inline constexpr uintptr_t PREFERREDSCHEME_scrollbar_scheme = 0x4;
 inline constexpr uintptr_t COLORPROVIDERKEY_color_mode = 0x0;
 inline constexpr int32_t COLORMODE_light = 0;
 inline constexpr int32_t COLORMODE_dark = 1;
