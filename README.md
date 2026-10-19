@@ -17,6 +17,13 @@ or off, and Edge picks the change up the moment it is made — no restart, ever.
   restart. Add themes from a Chrome Web Store / Edge Add-ons link or a local
   `.crx`; Edge's own theming engine paints them (the injected DLL only picks and
   applies the right one).
+- **Settings and extensions pages follow the theme** — `edge://settings` and
+  `edge://extensions` take their light or dark from Windows or Edge's
+  Appearance setting, never from the theme, so a dark theme on a light Windows
+  leaves them white. With this on they follow the theme's own colors, live
+  (including Theming's swap); a default-theme profile still follows Edge's
+  Appearance setting. Web pages see the same light or dark
+  (`docs/re/webui-color-scheme.md`). Runs in the injected DLL.
 - **Hide the developer-mode prompt** — stops Edge asking to turn off
   developer-mode extensions at startup.
 - **Ask to handle links, like Chrome** — when a site such as Gmail offers to
@@ -78,7 +85,7 @@ always safe to leave on. The panel reads that build from `offsets.h` at compile
 time and compares it with the `msedge.dll` each Edge browser process actually
 loaded — at start and whenever a new browser process appears, which is how an
 update's restart shows up. On any other build it switches the split, the
-theming and the link-handler switch off (all call into `msedge.dll`; hiding the developer-mode prompt only
+theming, the link-handler, the find and the WebUI-theme switches off (all call into `msedge.dll`; hiding the developer-mode prompt only
 edits `Preferences` and stays on), says so, and never injects into that Edge.
 
 ## Develop
