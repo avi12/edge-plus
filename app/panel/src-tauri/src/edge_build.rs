@@ -53,13 +53,14 @@ pub fn pinned() -> FileVersion {
 #[must_use]
 pub fn depends_on_pinned_build(feature: Feature) -> bool {
     match feature {
-        // The split, theming, the link handlers and the find bar all run
-        // inside the injected DLL and call into msedge.dll by RVA, so a
-        // different build breaks them.
+        // The split, theming, the link handlers, the find bar and the WebUI
+        // theme colors all run inside the injected DLL and call into
+        // msedge.dll by RVA, so a different build breaks them.
         Feature::NativeSplit
         | Feature::Theming
         | Feature::ProtocolHandlers
-        | Feature::EnhancedFind => true,
+        | Feature::EnhancedFind
+        | Feature::WebUiFollowsTheme => true,
         Feature::QuietDevMode => false,
     }
 }
@@ -162,6 +163,7 @@ mod tests {
             quiet_dev_mode: true,
             protocol_handlers: true,
             enhanced_find: true,
+            web_ui_follows_theme: true,
         }
     }
 
@@ -179,6 +181,7 @@ mod tests {
         assert!(depends_on_pinned_build(Feature::Theming));
         assert!(depends_on_pinned_build(Feature::ProtocolHandlers));
         assert!(depends_on_pinned_build(Feature::EnhancedFind));
+        assert!(depends_on_pinned_build(Feature::WebUiFollowsTheme));
         assert!(!depends_on_pinned_build(Feature::QuietDevMode));
     }
 
@@ -199,7 +202,8 @@ mod tests {
                 Feature::NativeSplit,
                 Feature::Theming,
                 Feature::ProtocolHandlers,
-                Feature::EnhancedFind
+                Feature::EnhancedFind,
+                Feature::WebUiFollowsTheme
             ]
         );
     }
@@ -214,7 +218,8 @@ mod tests {
                 Feature::NativeSplit,
                 Feature::Theming,
                 Feature::ProtocolHandlers,
-                Feature::EnhancedFind
+                Feature::EnhancedFind,
+                Feature::WebUiFollowsTheme
             ]
         );
     }
@@ -229,6 +234,7 @@ mod tests {
             quiet_dev_mode: true,
             protocol_handlers: false,
             enhanced_find: false,
+            web_ui_follows_theme: false,
         };
         assert_eq!(
             blocked_features(only_theming, updated, pinned),

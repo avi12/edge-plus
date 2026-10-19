@@ -93,10 +93,11 @@ pub(crate) fn apply(settings: &Settings) {
             light_id: &settings.theming.light,
             dark_id: &settings.theming.dark,
             enhanced_find_active: features.enhanced_find,
+            web_ui_follows_theme_active: features.web_ui_follows_theme,
         },
     );
-    // `needs_dll` includes the enhanced find bar, like the split and theming
-    // do.
+    // `needs_dll` includes the enhanced find bar and the WebUI theme colors,
+    // like the split and theming do.
     if !features.needs_dll() {
         edge_native::signal_unload();
         return;
@@ -187,6 +188,13 @@ pub fn set_protocol_handlers(enabled: bool) -> Result<StateDto, String> {
 pub fn set_enhanced_find(enabled: bool) -> Result<StateDto, String> {
     let mut settings = Settings::load();
     settings.features.enhanced_find = enabled;
+    persist_and_apply(&settings)
+}
+
+#[tauri::command]
+pub fn set_web_ui_follows_theme(enabled: bool) -> Result<StateDto, String> {
+    let mut settings = Settings::load();
+    settings.features.web_ui_follows_theme = enabled;
     persist_and_apply(&settings)
 }
 

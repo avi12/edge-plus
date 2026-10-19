@@ -67,6 +67,7 @@ pub fn run() {
             commands::set_start_with_windows,
             commands::set_protocol_handlers,
             commands::set_enhanced_find,
+            commands::set_web_ui_follows_theme,
             commands::add_store_theme,
             commands::add_local_theme,
             commands::remove_theme,

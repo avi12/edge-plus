@@ -54,6 +54,9 @@ pub struct Features {
     /// Edge's own Ctrl+F bar also takes `/pattern/flags` (a `RegExp` search)
     /// and `? question` (ask Copilot); the DLL's `find.h`.
     pub enhanced_find: bool,
+    /// `edge://settings` and `edge://extensions` take the theme's light or dark
+    /// (the DLL's `theme_follow.h`).
+    pub web_ui_follows_theme: bool,
 }
 
 impl Default for Features {
@@ -64,6 +67,7 @@ impl Default for Features {
             quiet_dev_mode: false,
             protocol_handlers: false,
             enhanced_find: false,
+            web_ui_follows_theme: false,
         }
     }
 }
@@ -77,15 +81,17 @@ pub enum Feature {
     QuietDevMode,
     ProtocolHandlers,
     EnhancedFind,
+    WebUiFollowsTheme,
 }
 
 impl Feature {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::NativeSplit,
         Self::Theming,
         Self::QuietDevMode,
         Self::ProtocolHandlers,
         Self::EnhancedFind,
+        Self::WebUiFollowsTheme,
     ];
 }
 
@@ -98,6 +104,7 @@ impl Features {
             Feature::QuietDevMode => self.quiet_dev_mode,
             Feature::ProtocolHandlers => self.protocol_handlers,
             Feature::EnhancedFind => self.enhanced_find,
+            Feature::WebUiFollowsTheme => self.web_ui_follows_theme,
         }
     }
 
@@ -105,7 +112,11 @@ impl Features {
     /// must be loaded.
     #[must_use]
     pub fn needs_dll(self) -> bool {
-        self.native_split || self.theming || self.protocol_handlers || self.enhanced_find
+        self.native_split
+            || self.theming
+            || self.protocol_handlers
+            || self.enhanced_find
+            || self.web_ui_follows_theme
     }
 
     pub fn set(&mut self, feature: Feature, is_on: bool) {
@@ -115,6 +126,7 @@ impl Features {
             Feature::QuietDevMode => self.quiet_dev_mode = is_on,
             Feature::ProtocolHandlers => self.protocol_handlers = is_on,
             Feature::EnhancedFind => self.enhanced_find = is_on,
+            Feature::WebUiFollowsTheme => self.web_ui_follows_theme = is_on,
         }
     }
 }

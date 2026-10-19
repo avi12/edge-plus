@@ -14,7 +14,8 @@ use windows_sys::Win32::System::Threading::{OpenEventW, SetEvent, EVENT_MODIFY_S
 // Must match config::kIdCapacity in app/native-split/src/config.h.
 const ID_CAPACITY: usize = 64;
 // struct Wire's fields, in order: five u32s, the two ids, then a reserved u32
-// (once the chosen assistant; written as zero, never read) and the find switch.
+// (once the chosen assistant; written as zero, never read), the find switch
+// and the WebUI-follows-theme switch.
 const SPLIT_ACTIVE_OFFSET: usize = 0;
 const THEMING_ACTIVE_OFFSET: usize = 4;
 const PROTOCOL_HANDLERS_ACTIVE_OFFSET: usize = 8;
@@ -24,7 +25,8 @@ const LIGHT_ID_OFFSET: usize = 20;
 const DARK_ID_OFFSET: usize = LIGHT_ID_OFFSET + ID_CAPACITY;
 const RESERVED_OFFSET: usize = DARK_ID_OFFSET + ID_CAPACITY;
 const ENHANCED_FIND_ACTIVE_OFFSET: usize = RESERVED_OFFSET + 4;
-const WIRE_SIZE: usize = ENHANCED_FIND_ACTIVE_OFFSET + 4;
+const WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET: usize = ENHANCED_FIND_ACTIVE_OFFSET + 4;
+const WIRE_SIZE: usize = WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET + 4;
 // Must match kConfigEvent in app/native-split/src/dllmain.cpp.
 const CONFIG_EVENT: &str = r"Local\fixedge-config-changed";
 
@@ -43,6 +45,9 @@ pub struct DllConfig<'a> {
     pub dark_id: &'a str,
     /// Ctrl+F opens the enhanced find bar (`find.h`).
     pub enhanced_find_active: bool,
+    /// `edge://settings` and `edge://extensions` follow the theme's light or dark
+    /// (`theme_follow.h`).
+    pub web_ui_follows_theme_active: bool,
 }
 
 /// Write the desired state to the config file the DLL reads (atomically, so a
@@ -86,6 +91,11 @@ fn encode(config: &DllConfig) -> [u8; WIRE_SIZE] {
         ENHANCED_FIND_ACTIVE_OFFSET,
         config.enhanced_find_active,
     );
+    write_flag(
+        &mut wire,
+        WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET,
+        config.web_ui_follows_theme_active,
+    );
     wire
 }
 
@@ -125,9 +135,9 @@ mod tests {
     }
 
     #[test]
-    fn the_wire_is_config_h_s_156_bytes() {
-        // config.h static_asserts the same size: 7 u32 fields + 2 ids of 64.
-        assert_eq!(WIRE_SIZE, 156);
+    fn the_wire_is_config_h_s_160_bytes() {
+        // config.h static_asserts the same size: 8 u32 fields + 2 ids of 64.
+        assert_eq!(WIRE_SIZE, 160);
     }
 
     #[test]
@@ -139,6 +149,7 @@ mod tests {
             light_id: "abc",
             dark_id: "",
             enhanced_find_active: true,
+            web_ui_follows_theme_active: true,
         });
         assert_eq!(u32_at(&wire, 0), 0);
         assert_eq!(u32_at(&wire, 4), 1);
@@ -148,6 +159,8 @@ mod tests {
         assert_eq!(&wire[20..23], b"abc");
         assert_eq!(u32_at(&wire, RESERVED_OFFSET), 0);
         assert_eq!(u32_at(&wire, ENHANCED_FIND_ACTIVE_OFFSET), 1);
+        assert_eq!(u32_at(&wire, WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET), 1);
         assert_eq!(ENHANCED_FIND_ACTIVE_OFFSET, 152);
+        assert_eq!(WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET, 156);
     }
 }
