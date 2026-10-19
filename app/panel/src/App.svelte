@@ -45,30 +45,23 @@
 
   const startupDescription =
     "Opens Edge+ minimized when you sign in to Windows, so your settings apply without opening " +
-      "it. Launch Edge+ again to bring its window back. Also shown in Task Manager under Startup apps.";
+      "it. Launch Edge+ again to bring its window back.";
   const splitDescription =
-    "Grows Edge's own split past two panes, loaded straight into Edge. Add panes above, below, " +
-      "left or right; drag the dividers; Shift+Alt+arrow moves between panes. Turning it on injects " +
-      "the module, off removes it — no restart. Open Edge first.";
+    "Grows Edge's own split past two panes: add panes on any side, drag the dividers, move with " +
+      "Shift+Alt+arrow. Live, no restart. Open Edge first.";
   const themeDescription =
     "Use one theme when Windows is light and another when it is dark, switched live. Add themes " +
       "from the Chrome Web Store, Edge Add-ons or a local file.";
   const webUiDescription =
-    "Makes edge://settings and edge://extensions light or dark to match the theme Edge is " +
-      "showing, not Windows: they follow your theme's colors, so a dark theme gives dark pages " +
-      "even when Windows is light, and Theming's live swap changes them too. Only those two " +
-      "pages change: every other page, websites included, keeps what Edge decides, and a profile " +
-      "on Edge's own default theme keeps following Edge's Appearance setting. An open page " +
-      "reloads when this changes. Live, no restart. Open Edge first.";
+    "Makes edge://settings and edge://extensions light or dark to match your Edge theme, not " +
+      "Windows. Only those two pages change; websites are untouched. Live, no restart. Open Edge first.";
   const devModeDescription =
     "Stops Edge asking to turn off developer-mode extensions when it starts. Takes effect from " +
       "Edge's next start.";
   const handlersDescription =
-    "When a site such as Gmail offers to open a kind of link (email, calendar), Edge shows its " +
-      "handler icon in the address bar, as Chrome does. Closing that bubble or choosing \"Just this " +
-      "time\" no longer blocks the site for good; only Done on Ignore, or Block, does. Turning this " +
-      "on (or opening Edge with it on) lifts every block so far, so blocked sites can ask again. " +
-      "Live, no restart.";
+    "Like Chrome: when a site such as Gmail offers to open email or calendar links, closing the " +
+      "bubble no longer blocks it for good; only Ignore or Block does. Turning this on lifts " +
+      "earlier blocks. Live, no restart.";
 
   let appState = $state<AppState | null>(null);
   let isDraggingOver = $state(false);
