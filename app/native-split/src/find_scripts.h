@@ -287,14 +287,31 @@ inline std::string SearchScript(const find_text::Search& search) {
     var ranges = [];
     var isCapped = false;
     var found;
-    while ((found = regex.exec(map.text)) !== null) {
+    // g: every match, else only the first. y: the first match is found anywhere,
+    // then each next one must begin where the one before it ended. The scan runs
+    // as a global, non-sticky copy until the first match, so a missing g or y in
+    // the typed flags never makes exec() stand still.
+    var isEveryMatch = regex.global;
+    var isSticky = regex.sticky;
+    var scan = new RegExp(regex.source, regex.flags.replace("y", "").replace("g", "") + "g");
+    while ((found = scan.exec(map.text)) !== null) {
       if (found[0].length === 0) {
-        regex.lastIndex++;
+        if (scan === regex) {
+          break;
+        }
+        scan.lastIndex++;
         continue;
       }
       var range = fx.rangeFor(map, found.index, found.index + found[0].length);
       if (range) {
         ranges.push(range);
+      }
+      if (!isEveryMatch) {
+        break;
+      }
+      if (isSticky && scan !== regex) {
+        regex.lastIndex = found.index + found[0].length;
+        scan = regex;
       }
       if (ranges.length >= )JS";
   body += std::to_string(find_text::kMaxMatches);
