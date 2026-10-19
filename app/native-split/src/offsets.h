@@ -447,6 +447,19 @@ inline constexpr uintptr_t ExtensionRegistrar_Get = 0x2bf4380;
 // the extension from the disabled set to the enabled one. It CHECKs that the
 // extension is in the disabled set, so only call it for one found there.
 inline constexpr uintptr_t ExtensionRegistrar_EnableExtension = 0x29cde5e;
+// A theme once removed from Edge's extensions page is recorded in the profile's
+// "external uninstalls" and the external-extension loader never installs it
+// again, however often its registry entry is read. ExtensionPrefs::Get takes the
+// BrowserContext; ClearExternalExtensionUninstalled(this, const std::string& id)
+// drops the record. ExternalProviderManager::Get(BrowserContext*) reaches the
+// manager whose CheckForExternalUpdates(this) revisits every registered external
+// extension, now past the cleared record, and installs it.
+inline constexpr uintptr_t ExtensionPrefs_Get = 0x282aa16;
+inline constexpr uintptr_t ExtensionPrefs_ClearExternalExtensionUninstalled =
+    0x7e9a3f8;
+inline constexpr uintptr_t ExternalProviderManager_Get = 0x2bfdba8;
+inline constexpr uintptr_t ExternalProviderManager_CheckForExternalUpdates =
+    0x2bf306e;
 // void ThemeService::UseDefaultTheme(this): drop any extension theme. Used when
 // a mode has no theme assigned.
 inline constexpr uintptr_t ThemeService_UseDefaultTheme = 0x319a4d0;

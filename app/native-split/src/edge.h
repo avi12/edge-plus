@@ -1130,6 +1130,29 @@ inline void EnableDisabledExtension(void* profile, const char* themeId) {
       registrar, ThemeIdString(themeId));
 }
 
+// Ask Edge to install the external extension `themeId` again although the user
+// once removed it: forget the "externally uninstalled" record, then have the
+// external-extension loader revisit its registered extensions. The install
+// finishes later, on Edge's own threads.
+inline void ReinstallExternalExtension(void* profile, const char* themeId) {
+  using GetFn = void*(__fastcall*)(void*);
+  const void* const prefs =
+      reinterpret_cast<GetFn>(At(rva::ExtensionPrefs_Get))(profile);
+  if (prefs) {
+    using ClearFn = void(__fastcall*)(const void*, const void*);
+    reinterpret_cast<ClearFn>(
+        At(rva::ExtensionPrefs_ClearExternalExtensionUninstalled))(
+        prefs, ThemeIdString(themeId));
+  }
+  const void* const manager =
+      reinterpret_cast<GetFn>(At(rva::ExternalProviderManager_Get))(profile);
+  if (manager) {
+    using CheckFn = void(__fastcall*)(const void*);
+    reinterpret_cast<CheckFn>(
+        At(rva::ExternalProviderManager_CheckForExternalUpdates))(manager);
+  }
+}
+
 // Make `extension` the profile's active theme, live: DoSetTheme builds the theme
 // pack and (suppress=false) notifies, repainting the browser in place. Unlike
 // UseDefaultTheme, DoSetTheme takes the primary `this` (its large member offsets
