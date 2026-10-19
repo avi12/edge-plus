@@ -1,31 +1,35 @@
 # Why edge://settings and edge://extensions ignore the theme's light or dark
 
 Pinned to msedge.dll 155.0.4283.62. RVAs live in `src/offsets.h`; the calls in
-`src/edge.h`; the detours in `src/theme_follow.h`. PDB names below are from the
-public PDB.
+`src/edge.h`; the detours in `src/theme_follow.h`; the page test in
+`src/followed_pages.h`. PDB names below are from the public PDB.
 
-## What the pages follow today
+## What decides a page's light or dark
 
-A page's `prefers-color-scheme` (and so the WebUI's own dark mode, which is a
-`@media (prefers-color-scheme: dark)` block) comes from the **color mode of the
-browser's color provider key**, not from the theme's colors:
+Two separate things, and Edge feeds neither from the theme:
 
-```
-ThemeService::GetColorProviderKey(this, out, nativeKey, profile)
-  out = copy of nativeKey            // mode = Windows' light/dark
-  if GetBrowserColorScheme() != 0    // Edge's "Default theme" setting
-      out.color_mode = that setting  // (kBrowserColorScheme, 0 system / 1 light / 2 dark)
-WebContents color mode  ->  web preferences  ->  prefers-color-scheme
-```
+1. **`prefers-color-scheme`**, computed per WebContents. The web preferences are
+   filled in `ChromeContentBrowserClient::OverrideWebPreferences` (and its
+   after-navigation and need-update siblings), which call
+   `EdgeComputePreferredColorScheme(out, siteInfo, webContents)`. It writes two
+   dwords that become `WebPreferences + 0x380 / 0x384` (swapped by a `pshufd`):
+   `out+0` is blink's `PreferredColorScheme` (**0 = dark, 1 = light**), `out+4`
+   the root scrollbar scheme (1 = dark). For an ordinary page it derives them
+   from the contents' color provider (`IsDark` of one color) or the OS.
+2. **The colors a WebUI page draws with**: Edge injects design-system tokens and
+   `chrome://theme/colors.css` from the contents' color provider
+   (`WebContentsImpl::GetColorProvider`, asked by `ThemeSource::SendColorsCss`).
+   That provider belongs to the browser window and its key's mode comes from
+   `ThemeService::GetColorProviderKey`: the OS's mode, replaced only when the
+   Appearance setting (`kBrowserColorScheme`) says Light or Dark. The theme
+   extension's colors never reach it.
 
-`ThemeService::BrowserUsesDarkColors` (the question Edge's own views ask: icons,
-find bar, new tab page) takes the same two inputs. Neither reads the active theme
-extension. So a theme can paint the frame dark while the pages stay light.
+So a theme can paint the frame dark while the pages stay light.
 
 ## What was run (throwaway Edge, Windows in light mode)
 
-`matchMedia('(prefers-color-scheme: dark)').matches` on edge://settings, with no
-DLL feature:
+`matchMedia('(prefers-color-scheme: dark)').matches` on edge://settings, switch
+off:
 
 | Edge "Default theme" | theme extension | frame | settings page | follows the frame |
 |---|---|---|---|---|
@@ -35,54 +39,77 @@ DLL feature:
 | Dark | light theme | light | **dark** | **no** |
 | System | light theme | light | light | yes (by luck) |
 
-So the failing cases are exactly "a theme extension whose tone differs from the
-Windows / Appearance mode". The Theming feature's live swap (theme.h) hits the
-same hole: swapping a dark theme in on a light Windows leaves the pages light.
-(Windows dark mode with Appearance on System behaves like the Dark row; not
-re-run, since flipping Windows' mode would touch the real session.)
+The failing cases are "a theme extension whose tone differs from the Windows or
+Appearance mode". Theming's live swap hits the same hole. (Windows dark mode with
+Appearance on System behaves like the Dark row; not re-run, since flipping
+Windows' mode would touch the real session.)
 
-## The lever
+## The lever: per WebContents, only two pages
 
-Detour `GetColorProviderKey` and, after the original fills the key, overwrite
-`color_mode` (the key's first field) with the tone of the active theme. Detour
-`BrowserUsesDarkColors` the same way so Edge's own views agree. Both only act
-while the feature is on **and** the profile has a theme pack that sets the
-toolbar or frame color; a default-theme profile keeps Edge's answer, so Edge's
-own Appearance setting still rules there.
+A page is "followed" when the contents' visible URL (`WebContents` vtable +0x68,
+the pending URL during a navigation, which the last-committed URL is not) is
+`edge://settings` or `edge://extensions` (`followed_pages.h`). For those and only
+those, while the switch is on and the profile's theme is an extension or colored
+theme that sets a toolbar or frame color (`theme_tone.h`: toolbar first, luma
+below 128 is dark, as Chromium's `IsDark`; read through
+`BrowserThemePack::GetColor` on the supplier at `ThemeService + 0x768`, ids
+toolbar 23 and frame 28):
 
-- The tone is `theme_tone.h`: toolbar color if the theme set it, else the frame
-  color, luma < 128 is dark (Chromium's `color_utils::IsDark`). The colors come
-  from `BrowserThemePack::GetColor` on the supplier at `ThemeService + 0x768`
-  (`SwapThemeSupplier` writes it; `GetThemeSupplier` reads +0x760 on the base at
-  +8). Ids: toolbar 23, frame 28 (found from the manifest-key table beside the
-  strings "toolbar" and "frame"; confirmed live, a navy toolbar reads dark).
-- Turning the feature on or off, and every theme change, re-run the question:
-  `ThemeService::NotifyThemeChanged` (the call `SetBrowserColorScheme` ends in)
-  makes the color providers and each open page's preferences recompute. Pages
-  already open flip without a reload.
-- It rides the provider mode, so it is browser-wide for the profile, exactly as
-  Edge's own Appearance setting is: ordinary websites' `prefers-color-scheme`
-  follows the theme too. The page preference is computed per WebContents in
-  `EdgeComputePreferredColorScheme` (anonymous namespace, 0x548333b); narrowing to
-  edge:// pages only would mean detouring that function, which also feeds
-  Copilot/contextual pages. Not done.
+- **Detour `EdgeComputePreferredColorScheme`**: after the original, overwrite the
+  pair with the theme's tone. Every other contents keeps Edge's result.
+- **Detour `WebContentsImpl::GetColorProvider`**: for a followed page, ask the
+  original with a flag set that makes a detour on
+  `ThemeService::GetColorProviderKey` replace the key's first field (the color
+  mode, 0 light / 1 dark) for that one synchronous call. The window's own key is
+  untouched, so the browser's frame and every other page keep their provider.
+
+A profile on the default theme has no theme pack, so nothing is overridden and
+Edge's Appearance setting still rules.
+
+Taking up a change on pages that are already open:
+
+- The switch turning on or off, per window: for each followed tab,
+  `WebContentsImpl::OnColorProviderChanged` (the contents' prefs recompute) and a
+  normal reload. Edge's own Appearance setting changes an open extensions page's
+  media query but not the colors it loaded with (tried: `SetBrowserColorScheme`
+  from the DLL on an open page, frame turned dark, page stayed white), so without
+  the reload a page would be half dark.
+- A theme swap by Theming: `EdgeComputePreferredColorScheme` sees a followed page's
+  tone change and posts `kRedrawFollowedPages`, which does the same, at most once
+  in three seconds so a page that cannot take the tone is not reloaded forever.
 
 ## Dead ends
 
-- `BrowserUsesDarkColors` alone: detoured first; Edge's views followed, the pages
-  did not. `GetColorProviderKey` never calls it (it reads the pref inline).
-- Writing `kBrowserColorScheme` through `SetBrowserColorScheme`: native and
-  complete, but it rewrites the user's saved Appearance setting and would have to
-  be restored (and survives a crash). A detour is reverted by unloading.
-- Reading the supplier at +0x760 of the primary `this`: that offset is the
-  field as seen through the base at +8 (the real one is +0x768); the raw_ptr
-  check inside `GetColor` int3'd on the wrong object.
+- Overriding the window's color provider key (and `BrowserUsesDarkColors`)
+  globally. It made the pages dark, but a web page's `prefers-color-scheme` comes
+  from the same provider, so **every site went dark** too. Reverted.
+- Reading the supplier at +0x760 of the primary `this`: that offset is the field
+  as seen through the base at +8 (the real one is +0x768); the raw_ptr check in
+  `GetColorProviderKey`'s callee int3'd on the wrong object.
+- Building a provider for the other mode by hand (the contents' source's
+  `GetColorProviderKey` into a zeroed key, then `ColorProviderManager`): crashed
+  in `ColorProviderKey::operator=`; the forced-mode flag on the existing detour
+  replaces it.
+- Writing `kBrowserColorScheme` through `SetBrowserColorScheme`: native, but it
+  rewrites the user's saved Appearance setting, affects the whole browser, and
+  outlives a crash.
+- Setting only `out+4` of the preferred pair: no effect on `matchMedia`; `out+0`
+  is the one.
 
 ## Verified live
 
-Throwaway Edge, own `--user-data-dir` and `LOCALAPPDATA`, window captured with
-PrintWindow, `matchMedia` read over CDP: the table above flips as follows with
-the feature on: dark theme on System -> dark; light theme on Dark -> light;
-default theme on Dark -> unchanged (dark); light theme on System -> light;
-toggling the switch off and on flips open pages both ways; Theming's live swap
-light theme <-> dark theme flips open pages each time.
+Throwaway Edge (own `--user-data-dir` and `LOCALAPPDATA`, DLL injected, the
+config driven by window message so Avi's DLL events are never signalled),
+`matchMedia` and page backgrounds read over CDP, windows captured with
+PrintWindow:
+
+| case (Windows light) | settings / extensions | https://example.com | edge://history |
+|---|---|---|---|
+| dark theme, System, switch on | dark, dark colors | light (unchanged) | light (unchanged) |
+| light theme, Appearance Dark, switch on | light | **dark** (Edge's own Dark) | dark (Edge's) |
+| default theme, Appearance Dark, switch on | dark (Edge's) | dark (Edge's) | |
+| dark theme, switch toggled off/on with pages open | flips each time, colors too | unchanged | |
+| Theming swap dark theme to light theme and back, pages open | flips each time, colors too | unchanged | |
+
+Not exercised: Windows' own dark mode (would flip Avi's session), Edge's
+chrome-untrusted pages (left alone by construction).
