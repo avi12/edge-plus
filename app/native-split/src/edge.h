@@ -16,6 +16,7 @@
 #include "offsets.h"
 #include "geom.h"
 #include "log.h"
+#include "theme_tone.h"
 
 namespace fixedge::edge {
 
@@ -1146,6 +1147,33 @@ inline void ThemeUseDefault(void* themeService) {
   using Fn = void(__fastcall*)(void*);
   reinterpret_cast<Fn>(At(rva::ThemeService_UseDefaultTheme))(
       reinterpret_cast<uint8_t*>(themeService) + 0x10);
+}
+
+// A color the profile's active theme extension sets, read from its theme pack.
+// A default theme has no pack, and a theme leaves most colors unset.
+inline theme_tone::OptionalColor ThemePaletteColor(void* themeService,
+                                                   int colorId) {
+  const void* pack = Field<void*>(themeService, off::THEMESERVICE_supplier);
+  if (!pack) {
+    return {};
+  }
+  using Fn = bool(__fastcall*)(const void*, int, uint32_t*);
+  uint32_t color = 0;
+  const bool isSet = reinterpret_cast<Fn>(At(rva::BrowserThemePack_GetColor))(
+      pack, colorId, &color);
+  return {isSet, color};
+}
+
+// Whether the profile's theme is an extension or colored theme (it has a pack).
+inline bool ThemeHasPack(void* themeService) {
+  return Field<void*>(themeService, off::THEMESERVICE_supplier) != nullptr;
+}
+
+// Tell the theme's observers it changed, so every color provider and page
+// preference is computed again (the call the Appearance setting ends in).
+inline void ThemeNotifyChanged(void* themeService) {
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(rva::ThemeService_NotifyThemeChanged))(themeService);
 }
 
 // --- web protocol handlers -------------------------------------------------------

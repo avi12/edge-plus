@@ -5,7 +5,9 @@
 // same codes. The original WndProc is restored on unload.
 #pragma once
 #include <windows.h>
+#include <algorithm>
 #include <cstring>
+#include <vector>
 #include "MinHook.h"
 #include "channel.h"
 #include "config.h"
@@ -26,6 +28,7 @@
 #include "tabdrag.h"
 #include "tabrows.h"
 #include "theme.h"
+#include "theme_follow.h"
 #include "assistant.h"
 #include "find.h"
 
@@ -155,6 +158,33 @@ inline BOOL CALLBACK BreakUpWindowSplits(HWND hwnd, LPARAM /*unused*/) {
   return TRUE;
 }
 
+// EnumWindows callback: ask the profile behind each of this process's browser
+// windows to compute its colors again (theme_follow.h), once per profile. The
+// vector of profiles already asked is at `lparam`.
+inline BOOL CALLBACK RefreshWindowThemeColors(HWND hwnd, LPARAM lparam) {
+  if (!IsOurBrowserClassWindow(hwnd)) {
+    return TRUE;
+  }
+  void* tsm = edge::TsmForWindow(hwnd);
+  void* profile = tsm ? edge::ProfileForTabStrip(tsm) : nullptr;
+  void* themeService =
+      profile ? edge::ThemeServiceForProfile(profile) : nullptr;
+  auto* asked = reinterpret_cast<std::vector<void*>*>(lparam);
+  const bool isNew = themeService && std::find(asked->begin(), asked->end(),
+                                               themeService) == asked->end();
+  if (isNew) {
+    asked->push_back(themeService);
+    edge::ThemeNotifyChanged(themeService);
+  }
+  return TRUE;
+}
+
+inline void RefreshThemeColors() {
+  std::vector<void*> asked;
+  EnumWindows(RefreshWindowThemeColors, reinterpret_cast<LPARAM>(&asked));
+  Log("[theme-follow] %zu profile(s) recomputed their colors", asked.size());
+}
+
 // Everything that must be undone on the UI thread before unload: first break
 // every grown split back into standalone tabs (while the hooks still render the
 // collapse), then end the drag session, the preview window, the grips, the
@@ -162,6 +192,11 @@ inline BOOL CALLBACK BreakUpWindowSplits(HWND hwnd, LPARAM /*unused*/) {
 inline void Teardown(HWND hwnd) {
   EnumWindows(BreakUpWindowSplits, 0);
   find::Apply(false);
+  const bool wasFollowingTheme = theme_follow::g_isActive;
+  theme_follow::g_isActive = false;
+  if (wasFollowingTheme) {
+    RefreshThemeColors();
+  }
   drag::Cancel();
   tabdrag::Cancel();
   overlay::Remove();
@@ -257,6 +292,8 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     assistant::EnableAll();
     // Nor is the enhanced find: it follows its own switch.
     find::EnableAll();
+    // Nor are the WebUI pages' theme colors.
+    theme_follow::EnableAll();
   }
 }
 
@@ -297,6 +334,10 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
     }
   }
   theme::ApplyConfig(hwnd, wire);
+  const bool isFollowChanged = theme_follow::ApplyConfig(wire);
+  if (isFollowChanged) {
+    RefreshThemeColors();
+  }
   const bool isTurningHandlersOn = protocol_handlers::ApplyConfig(wire);
   if (isTurningHandlersOn) {
     size_t liftedCount = 0;

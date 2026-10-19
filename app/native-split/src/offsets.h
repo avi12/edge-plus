@@ -465,6 +465,31 @@ inline constexpr uintptr_t ThemeServiceFactory_GetForProfile = 0xfcf172;
 // behind any WebContents, our bridge from a pane to its ThemeService.
 inline constexpr uintptr_t WebContentsImpl_GetBrowserContext = 0x113cae0;
 
+// --- WebUI pages follow the theme (docs/re/webui-color-scheme.md) ---
+// bool ThemeService::BrowserUsesDarkColors(this): the one funnel every "is the
+// browser dark" question goes through (the color provider's mode, the web
+// preferences behind prefers-color-scheme of edge://settings and
+// edge://extensions via edge_themes::IsDarkModeForWeb). It answers from the
+// Appearance pref (kBrowserColorScheme) or, on "System default", from the OS;
+// a theme's own colors never reach it. The detour answers from the active
+// theme's palette instead (theme_follow.h). Takes the primary `this`.
+inline constexpr uintptr_t ThemeService_BrowserUsesDarkColors = 0x29f1a78;
+// ColorProviderKey* ThemeService::GetColorProviderKey(this, ColorProviderKey*
+// out, const ColorProviderKey& nativeKey, Profile*): the key the browser's color
+// provider is built from, returned in `out`. Its mode starts as the OS's (the
+// native theme's key) and is replaced only when the Appearance pref says Light
+// or Dark; it never asks BrowserUsesDarkColors, and the page preference behind
+// prefers-color-scheme comes from this key's mode. Primary `this`.
+inline constexpr uintptr_t ThemeService_GetColorProviderKey = 0xfcf25c;
+// void ThemeService::NotifyThemeChanged(this): tell every observer the theme
+// changed, which rebuilds the color providers and refreshes each page's web
+// preferences; the same call SetBrowserColorScheme ends in. Primary `this`.
+inline constexpr uintptr_t ThemeService_NotifyThemeChanged = 0x319a610;
+// bool BrowserThemePack::GetColor(this, int id, SkColor* out): a theme
+// extension's color for `id`, false when the theme did not set it. Its colors
+// are a table of 8-byte {int id, SkColor} entries.
+inline constexpr uintptr_t BrowserThemePack_GetColor = 0x87d5030;
+
 // The OS light/dark signal does NOT come through Edge. ui::NativeThemeObserver
 // is a base::CheckedObserver (the observer list uses CheckedObserverAdapter), so
 // a hand-rolled observer object would have to fake a weak-ptr factory. Instead
@@ -653,6 +678,22 @@ inline constexpr uintptr_t MCV_active_index = 0x420;
 inline constexpr uintptr_t MCV_browser_view = 0x350;
 // views::View* (relative to the View base)
 inline constexpr uintptr_t MCV_drop_target_view = 0x0b0;
+
+// --- ThemeService ---
+// The active theme's supplier, a scoped_refptr to a BrowserThemePack for an
+// extension or colored theme and null for the default theme. SwapThemeSupplier
+// (primary `this`) is what writes it; ThemeService::GetThemeSupplier reads the
+// same field as +0x760 because it is a method of the base at +8.
+inline constexpr uintptr_t THEMESERVICE_supplier = 0x768;
+// The BrowserThemePack color ids a theme sets from its manifest's "colors"
+// (the ids of the manifest-key table beside "toolbar" and "frame").
+inline constexpr int THEMECOLOR_toolbar = 23;
+inline constexpr int THEMECOLOR_frame = 28;
+// ui::ColorProviderKey: its first field is the ColorMode (read first by
+// ColorProviderSource::GetColorMode), 0 = light, 1 = dark.
+inline constexpr uintptr_t COLORPROVIDERKEY_color_mode = 0x0;
+inline constexpr int32_t COLORMODE_light = 0;
+inline constexpr int32_t COLORMODE_dark = 1;
 
 // --- BrowserView ---
 // MultiContentsView* within BrowserView

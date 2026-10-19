@@ -132,6 +132,8 @@ inline bool HookSitesLookSane() {
       edge155::rva::SplitTabMenuModel_ctor,
       edge155::rva::SplitTabMenuModel_ExecuteCommand,
       edge155::rva::ContentSettingRPHBubbleModel_CommitChanges,
+      edge155::rva::ThemeService_BrowserUsesDarkColors,
+      edge155::rva::ThemeService_GetColorProviderKey,
       edge155::rva::RegisterProtocolHandlerPermissionRequest_PermissionDecided,
   };
   for (const uintptr_t rva : sites) {

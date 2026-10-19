@@ -21,6 +21,7 @@
 #include "state.h"
 #include "assistant.h"
 #include "find.h"
+#include "theme_follow.h"
 
 namespace fixedge::hooks {
 
@@ -484,6 +485,8 @@ inline bool InstallAll() {
   assistant::Install();
   // The enhanced find rides Edge's own find bar, whatever the split does.
   find::Install();
+  // The WebUI pages' light or dark follows the theme, whatever the split does.
+  theme_follow::Install();
   control::Install();  // the add-pane control channel (UI-thread trigger)
   return true;
 }

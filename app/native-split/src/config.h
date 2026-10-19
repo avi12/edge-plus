@@ -28,21 +28,25 @@ struct Wire {
   // Appended after the ids, so a DLL built before each still reads the fields
   // above it and a file written before it still loads (as off).
   uint32_t reserved;  // once the chosen assistant; the panel writes 0, unread
-  uint32_t enhancedFindActive;  // 1 = Ctrl+F opens the enhanced find bar
+  uint32_t enhancedFindActive;       // 1 = Ctrl+F opens the enhanced find bar
+  uint32_t webUiFollowsThemeActive;  // 1 = settings and extensions pages follow
+                                     // the theme's light or dark
 };
 // protocol.rs writes exactly WIRE_SIZE bytes and LoadFromFile wants all of
 // them, so the struct must stay packed: five u32 fields, the two ids, then the
-// reserved field and the find switch (u32s).
-inline constexpr size_t kWireFieldCount = 7;
+// reserved field and the find and WebUI switches (u32s).
+inline constexpr size_t kWireFieldCount = 8;
 inline constexpr size_t kWireIdCount = 2;
 static_assert(sizeof(Wire) == kWireFieldCount * sizeof(uint32_t) +
                                   kWireIdCount * size_t{kIdCapacity},
               "Wire must stay packed as protocol.rs writes it");
 
-// The sizes of the files a panel wrote before `reserved` and before
-// `enhancedFindActive` existed.
+// The sizes of the files a panel wrote before `reserved`, before
+// `enhancedFindActive` and before `webUiFollowsThemeActive` existed.
 inline constexpr DWORD kLegacyWireSize = offsetof(Wire, reserved);
 inline constexpr DWORD kBeforeFindWireSize = offsetof(Wire, enhancedFindActive);
+inline constexpr DWORD kBeforeWebUiWireSize =
+    offsetof(Wire, webUiFollowsThemeActive);
 
 // The same bytes the panel also writes beside its settings, so a DLL injected
 // into an already-open Edge reads the current state at load. Live changes come
@@ -69,8 +73,8 @@ inline bool LoadFromFile(Wire* out) {
   DWORD read = 0;
   const bool isRead = ReadFile(file, out, sizeof(Wire), &read, nullptr);
   const bool isKnownSize =
-      isRead && (read == sizeof(Wire) || read == kBeforeFindWireSize ||
-                 read == kLegacyWireSize);
+      isRead && (read == sizeof(Wire) || read == kBeforeWebUiWireSize ||
+                 read == kBeforeFindWireSize || read == kLegacyWireSize);
   CloseHandle(file);
   return isKnownSize;
 }
