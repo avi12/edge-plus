@@ -8,16 +8,6 @@ const REGEXP_NAME = "RegExp";
 export const FIND_TITLE = `Enhanced find: ${REGEXP_NAME} and Ask ${ASSISTANT_NAME}`;
 
 export const FIND_DESCRIPTION =
-  `Edge's own Ctrl+F bar gets two more options, ${REGEXP_NAME} and Ask ${ASSISTANT_NAME}, next to Match case in its ` +
-  `options menu. With ${REGEXP_NAME} on, what you type is a pattern: every match on the page is highlighted and ` +
-  `counted in the bar's own n/m, and Enter or the arrows step through them. Under ${REGEXP_NAME} come the ` +
-  `JavaScript flags as switches, each with its letter (every match is always found; Multiline starts on, so it is ` +
-  `case sensitive until you switch on Ignore case, or start with (?i)); Unicode and Unicode sets exclude each other. ` +
-  `Shift+Enter types a line break (as \\n) into the box instead of stepping back, and a paste with line breaks ` +
-  `keeps them. With Ask ${ASSISTANT_NAME} on, the bar widens, and what you type is a question that you send ` +
-  `with Enter; ${ASSISTANT_NAME} names ` +
-  `the paragraphs of the page that answer it; they are highlighted. Either one greys out Match case and Whole ` +
-  `word, and turns the other off. Typing /pattern/i or "? your question" works as a shortcut with both off. ` +
-  `Anything else is Edge's normal find, and Edge pages and PDFs keep Edge's find. ` +
-  `${ASSISTANT_NAME} answers in its side panel, which opens with your question. The first time it asks you to ` +
-  `accept its notice; the question goes through once you have. Live, no restart. Open Edge first.`;
+  `Adds ${REGEXP_NAME} (with its flags) and Ask ${ASSISTANT_NAME} to the options of Edge's Ctrl+F bar. ` +
+  `${REGEXP_NAME} highlights every match; Ask sends your question to ${ASSISTANT_NAME}, which opens in its side panel. ` +
+  `Live, no restart. Open Edge first.`;
