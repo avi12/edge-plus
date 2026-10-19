@@ -227,6 +227,66 @@ own constructor:
   then. With no switch on the old shortcuts (`/pattern/flags`, `? question`) work
   as before. An empty box searches nothing. [unit: 12 checks; run: `(?i)pric` 1/6
   with "Pricing" and "pricing" marked, `pric` 1/4, a question 1/2]
+- **RegExp flags.** While RegExp is on, seven more switches, one per JavaScript
+  flag but g, show directly under it (ids 5..11, `find_flags.h`'s table, the ids in
+  `offsets.h`), each titled with its letter: Match indices (d),
+  Ignore case (i), Multiline (m), Dot matches newline (s), Unicode (u), Unicode
+  sets (v), Sticky (y). The titles are pushed in by two em spaces so the column
+  reads as a sub-group; with RegExp off they are hidden (`View::SetVisible`, then
+  the same relayout as adding a row). They are built by the same
+  `AddFindInPageOptionChildView` call, in the same hook, **before** the Ask row so
+  that they sit under RegExp (children append in call order). Nothing stores
+  them: `find::FlagsOn` reads each switch. A click only re-runs the search
+  (`h_button_toggled`). **Multiline is on when a bar is built**
+  (`find_flags::DefaultFlags`: a search has always had `^` and `$` at line
+  edges), so with nothing touched the behavior is the old one, case sensitive.
+  **g has no switch: every match is always found and marked**, so the merged
+  flags always carry it. The flags the page runs are `find_flags::Merge(typed flags,
+  switches)`, canonical order `dgimsuvy`: typed and switched flags are OR-ed,
+  each letter once, so `(?i)` and Ignore case agree. They apply only with the
+  RegExp switch on, never to the `/pattern/flags` shortcut (which still implies g
+  and m, and now also takes d, v and y). What each does here:
+  - **m** off: `^` and `$` stand for the start and end of the whole page text,
+    not of each line.
+  - **y**: the first match is found anywhere, then each next match must start
+    exactly where the one before it ended, so only a contiguous run from the first
+    match is marked (`o` on the test page: 1/5 plain, 1/1 sticky). (JavaScript's own sticky would require the
+    first match to start at index 0, which for a page search finds almost
+    nothing.)
+  - **d** asks for match indices: the page's `exec` has them, nothing shows them,
+    so it changes nothing visible.
+  - **u** and **v** exclude each other, as in JavaScript: turning one on turns the
+    other off (`h_button_toggled`). A pattern that the chosen mode refuses (`\-`
+    outside a class under `u`/`v`, a `v`-only class under `u`) comes back from
+    `new RegExp` as the "Bad RegExp" status with the page's own message, and the
+    bar keeps working; typing both `u` and `v` after the closing slash is refused
+    the same way.
+  y is searched through a global, non-sticky copy of the RegExp until the first
+  match, then the sticky one continues from its end.
+  [run: 1/6 -> with Ignore case; `^bar$` 1/1, with Multiline off 0/0; `foo.bar`
+  0/0, with Dot matches newline 1/1; `o` 1/5, Sticky 1/1; a `v`-only class "Bad
+  RegExp", 1/10 with Unicode sets, "Bad RegExp" again once Unicode replaces it]
+- **Line breaks in a RegExp.** The box is Edge's own single-line `views::Textfield`,
+  which holds no raw line break, and a page's text is one line per block with a
+  line break between blocks. So with RegExp on, **Shift+Enter** (or Ctrl+Enter)
+  types the two characters `\n` at the caret instead of stepping back (the
+  arrow button still does; with RegExp off Shift+Enter is Edge's own
+  previous-match), and **Ctrl+V** / Shift+Insert of text that holds CR or LF
+  types it with each break written `\n` (Edge's own paste would flatten it; a
+  paste without line breaks is left to Edge). A RegExp reads `\n` exactly as a
+  real line break. Both go in as posted `WM_CHAR`s to the focused bar window, from
+  the `HandleKeyEvent` hook (`find::HandleLineBreakKey`), so a selection is
+  replaced like typing. `find_text::EscapeLineBreaks` is the pure part [unit].
+  [run: `foo` Shift+Enter `bar` gave the box `foo\nbar`, matching across the
+  two blocks]
+- **Ask is wide.** Ask Copilot takes a whole question, so with Ask on the bar's
+  window is made twice Edge's width (at most the browser window less a margin,
+  and at most 1100 px), keeping its right edge (`find::ApplyBarWidth`,
+  `SetWindowPos` on the bar's own top-level window, found among the thread's
+  windows as the untitled one owned by the browser window). Edge lays the bar out
+  from its window, so the box, its flexible view, takes the new room. With Ask off
+  or RegExp chosen the width goes back. The Ask switch's title ends "(Enter)",
+  and the count label no longer carries "Enter to ask" (its tooltip still does).
 - **Switching the enhanced find off** hides ours and enables Edge's (the panel's
   switch goes through `find::Apply`). [infer: not run, it needs the panel's shared
   config event]
