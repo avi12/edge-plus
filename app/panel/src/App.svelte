@@ -32,6 +32,12 @@
       `<line x1="10" y1="7.5" x2="10" y2="12.5"/><line x1="7.8" y1="8.7" x2="12.2" y2="11.3"/>` +
       `<line x1="12.2" y1="8.7" x2="7.8" y2="11.3"/></svg>`;
 
+  // A page with a half-filled sun/moon disc.
+  const webUiIcon =
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
+      `<rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="8" x2="21" y2="8"/>` +
+      `<circle cx="12" cy="14" r="3"/><path d="M12 11 A3 3 0 0 0 12 17 Z" fill="currentColor" stroke="none"/></svg>`;
+
   // A power button.
   const startupIcon =
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
@@ -47,6 +53,12 @@
   const themeDescription =
     "Use one theme when Windows is light and another when it is dark, switched live. Add themes " +
       "from the Chrome Web Store, Edge Add-ons or a local file.";
+  const webUiDescription =
+    "Makes edge://settings and edge://extensions light or dark to match the theme Edge is " +
+      "showing, not Windows: they follow your theme's colors, so a dark theme gives dark pages " +
+      "even when Windows is light, and Theming's live swap changes them too. A profile on Edge's " +
+      "own default theme keeps following Edge's Appearance setting. Web pages see the same " +
+      "light or dark. Live, no restart. Open Edge first.";
   const devModeDescription =
     "Stops Edge asking to turn off developer-mode extensions when it starts. Takes effect from " +
       "Edge's next start.";
@@ -72,6 +84,9 @@
   );
   const isFindHeldOff = $derived(
     unsupported.has(Feature.EnhancedFind) && appState?.features.enhancedFind !== true
+  );
+  const isWebUiHeldOff = $derived(
+    unsupported.has(Feature.WebUiFollowsTheme) && appState?.features.webUiFollowsTheme !== true
   );
   // What a locked card says about why, on the card itself.
   function heldOffNote(isHeldOff: boolean): string {
@@ -186,6 +201,10 @@
     appState = await bridge.setEnhancedFind(value);
   }
 
+  async function onWebUiFollowsTheme(value: boolean): Promise<void> {
+    appState = await bridge.setWebUiFollowsTheme(value);
+  }
+
   async function onAddStore(url: string): Promise<void> {
     appState = await bridge.addStoreTheme(url);
   }
@@ -248,6 +267,16 @@
       {onSetMode}
       onToggle={onTheming}
       theming={appState.theming}
+    />
+
+    <FeatureCard
+      checked={appState.features.webUiFollowsTheme}
+      description={webUiDescription}
+      disabled={isWebUiHeldOff}
+      icon={webUiIcon}
+      note={heldOffNote(isWebUiHeldOff)}
+      onchange={onWebUiFollowsTheme}
+      title="Settings and extensions pages follow the theme"
     />
 
     <FeatureCard
