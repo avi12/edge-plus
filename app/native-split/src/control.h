@@ -529,6 +529,12 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
     theme::Repaint(hwnd);
     return 0;
   }
+  const bool isThemeInstallRetry =
+      message == WM_TIMER && wparam == theme::kInstallRetryTimerId;
+  if (isThemeInstallRetry) {
+    theme::RetryApply(hwnd);
+    return 0;
+  }
   const bool isOurHotKey = message == WM_HOTKEY && HasBinding(wparam);
   if (isOurHotKey) {
     RunHotKey(hwnd, static_cast<HotKey>(wparam));

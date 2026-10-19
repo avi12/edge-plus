@@ -78,6 +78,14 @@ inline void Repaint(void* hwnd) {
   PostMessageW(window, WM_THEMECHANGED, 0, 0);
 }
 
+// A theme Edge no longer has installed is asked for again (see Apply); the
+// install lands asynchronously, so the apply is retried on a one-shot timer a
+// few times, then given up.
+inline constexpr UINT kInstallRetryTimerId = 0xF1EF;
+inline constexpr UINT kInstallRetryDelayMs = 1500;
+inline constexpr int kMaxInstallRetries = 6;
+inline int g_installRetries = 0;
+
 // Apply the theme assigned to the given mode to the window's browser, live.
 inline void Apply(void* hwnd, bool isDark) {
   void* tsm = edge::TsmForWindow(hwnd);
@@ -98,10 +106,22 @@ inline void Apply(void* hwnd, bool isDark) {
   edge::ExtensionState state = edge::ExtensionState::kAbsent;
   void* extension = edge::ExtensionById(profile, wanted.value, &state);
   if (!extension) {
-    Log("[theme] %s theme %.*s not installed yet", isDark ? "dark" : "light",
-        static_cast<int>(wanted.length), wanted.value);
+    // Missing, not merely late: a theme the user once removed stays removed
+    // (Edge records it as externally uninstalled), so ask for it back.
+    edge::ReinstallExternalExtension(profile, wanted.value);
+    const bool canRetry = g_installRetries < kMaxInstallRetries;
+    if (canRetry) {
+      g_installRetries++;
+      SetTimer(static_cast<HWND>(hwnd), kInstallRetryTimerId,
+               kInstallRetryDelayMs, nullptr);
+    }
+    Log("[theme] %s theme %.*s not installed yet; asked Edge to install it "
+        "(try %d of %d)",
+        isDark ? "dark" : "light", static_cast<int>(wanted.length),
+        wanted.value, g_installRetries, kMaxInstallRetries);
     return;
   }
+  g_installRetries = 0;
   // A disabled theme never paints: Edge leaves a theme added from outside off
   // until the user accepts it, and switches the previous one off on each change.
   const bool isDisabled = state == edge::ExtensionState::kDisabled;
@@ -122,12 +142,19 @@ inline void ApplyForCurrentOsMode(void* hwnd) {
   }
 }
 
+// The install-retry timer fired: try the apply again.
+inline void RetryApply(void* hwnd) {
+  KillTimer(static_cast<HWND>(hwnd), kInstallRetryTimerId);
+  ApplyForCurrentOsMode(hwnd);
+}
+
 // Take the panel's latest theming choice and apply it right away. Turning the
 // feature off returns both modes to the default theme so nothing we set is left
 // behind.
 inline void ApplyConfig(void* hwnd, const config::Wire& wire) {
   g_lightTheme.Set(wire.lightId, wire.lightLength);
   g_darkTheme.Set(wire.darkId, wire.darkLength);
+  g_installRetries = 0;
   const bool wasActive = g_isActive;
   g_isActive = wire.themingActive != 0;
   if (g_isActive) {
