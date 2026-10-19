@@ -32,9 +32,8 @@ reasoned from disassembly, not run.
 | what a typed box means, RegExp shape check, match stepping, script answers | `find_text.h` | [unit] |
 | paragraph labels, prompts that fit a chat, reading its reply | `ask_text.h` | [unit] |
 | each assistant's name, page and selectors (one table) | `chat_target.h` | [unit] |
-| the scripts that drive a chat page, for any assistant | `chat_scripts.h` | [run] |
-| the per-window hidden chat, its steps | `assistant_chat.h` | [run] |
-| where the chat page sits when it needs the user | `find_layout.h` | [unit] |
+| the scripts that arm and read the side panel's chat | `chat_scripts.h` | [run] |
+| a question's steps: side panel, arm, read the answer | `assistant_chat.h` | [run] |
 | scripts run in the searched tab (isolated world) | `find_scripts.h` | [run] |
 | the hooks on Edge's find bar and the flow | `find.h` | [run] |
 | the bar's RVAs / offsets / wrappers | `offsets.h`, `edge.h` | [run] |
@@ -109,23 +108,52 @@ A RegExp is case sensitive unless it says `i` (as in JavaScript); the bar's own
 
 ## Asking the assistant
 
-Edge exposes no API to ask Copilot from outside. A web chat of our own
-(a hidden WebView in the window's profile) is driven like a person would:
+Edge exposes no API that returns Copilot's answer, but it does have the function
+the page's "Ask Copilot" menu runs, and Copilot's answer is in a page we can
+read. So a question takes the same path as a person's:
 
 1. The page script splits the page into one paragraph per block of text.
 2. `ask_text.h` drops short labels, cuts long paragraphs, and plans up to four
    prompts of about 6000 characters, each paragraph under a `[P12]` label. The
    prompt asks for labels only, most relevant first, `NONE` when nothing
    answers, plus one sentence.
-3. `chat_scripts.h` puts the prompt in the chat's message box and presses send;
-   `assistant_chat.h` waits for the answer to stop growing and hands it back.
-   The page and selectors it drives are `chat_target.h`'s.
-4. `ParseAnswer` reads labels **only if they were offered in that prompt**.
+3. `assistant_chat.h` calls `edge_copilot::utils::SendPageContextualPromptToChat`
+   (`0x93dc691`: `browser`, the text, unused, a title, a bool; `edge::SendPromptToSidePanel`).
+   It builds an `AskCopilotRequest` and dispatches it to the **side panel**, which
+   opens with the prompt as the user's message. (The first argument after the
+   browser is the text that appears as the user's message; passing the prompt
+   there, not in the title argument, is what shows it in the chat. Both strings
+   are libc++ long-form `std::string`s over our buffers, which the callee only
+   copies.) [run: the panel opened and its chat showed our whole prompt as "You
+   said"]
+4. The panel's WebContents is the one whose URL is `edge://discover-chat-v2/`,
+   found in `WebContentsImpl::GetAllWebContents` (`0x28282c6`; it fills a record
+   whose first word points at the WebContents pointers and whose second is their
+   count, not a begin/end vector). `CopilotSidePanelController::GetHostManagerForBrowser`
+   answers null for this "iframeless" panel, so the host manager route does not
+   work. The chat itself is an **iframe** of `copilot.microsoft.com` inside that
+   page, so scripts go to that frame: `WebContentsImpl::ForEachRenderFrameHost`
+   (`0x274b980`, given a `FunctionRef` of `{object, invoker}`) lists the frames,
+   `RenderFrameHostImpl::GetLastCommittedURL` (`0x113c6c0`) names them, and
+   `RunScriptInFrame` runs ours in the isolated world. [run]
+5. `chat_scripts.h` arms the frame (remembers how many answers it held and the
+   prompt), then reads it every 0.7 s until the answer stops growing, and
+   `assistant_chat.h` hands it back. `ParseAnswer` reads labels **only if they
+   were offered in that prompt**.
 
-When the assistant needs the person (no message box after 12 s, or a dialog),
-its page is shown at the top right of the page, under the bar
-(`find_layout::ChatRect`), the label says "Needs you", and the question goes
-through once they have dealt with it.
+With the panel's first-use notice ("Navigate the Web with Copilot ... Continue")
+showing, the composer is covered and the question waits behind it: the label says
+"Accept notice" (tooltip: accept it in the side panel and the question goes
+through), for up to two minutes, and the question is delivered by Edge as soon as
+the person clicks Continue. We never accept it for them. If the panel does not
+open within 20 s the status is "Failed: Copilot isn't ready". [run: "Accept
+notice" in the bar; with Continue clicked the prompt and its paragraphs were in
+the chat, followed by Copilot's own "your Copilot is migrating" notice for the
+throwaway's account, which parses as no answer]
+
+Limits of this path: the panel is found by URL among every WebContents of the
+process, so with two browser windows open it can be another window's; and a
+question sent while a conversation is open is appended to it.
 
 ### Verified, and not
 
@@ -150,7 +178,7 @@ through once they have dealt with it.
 - [run] `/pric/i` typed into the native bar: "1/6", the matches painted in the
   page; Enter stepped to 3/6; Esc cleared the highlights; `? what does it cost`
   showed "Enter to ask", then (Gemini, since removed) the answer's paragraphs painted and "1/3";
-  (Copilot) "Needs you" with its page at the top right.
+  (Copilot, side panel) "Accept notice" until the notice is accepted.
 - [run] Typing was posted `WM_CHAR`s to the bar's window and Enter a posted
   `WM_KEYDOWN`, not a physical keyboard. Ctrl+F was a posted `WM_KEYDOWN` with the
   throwaway's key state set (Edge opened its own bar).

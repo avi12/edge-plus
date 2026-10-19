@@ -19,5 +19,5 @@ export const FIND_DESCRIPTION =
   `the paragraphs of the page that answer it; they are highlighted. Either one greys out Match case and Whole ` +
   `word, and turns the other off. Typing /pattern/i or "? your question" works as a shortcut with both off. ` +
   `Anything else is Edge's normal find, and Edge pages and PDFs keep Edge's find. ` +
-  `${ASSISTANT_NAME} answers from its own web page in your Edge profile, so it may ask you to sign in or pass a ` +
-  `check once. Live, no restart. Open Edge first.`;
+  `${ASSISTANT_NAME} answers in its side panel, which opens with your question. The first time it asks you to ` +
+  `accept its notice; the question goes through once you have. Live, no restart. Open Edge first.`;
