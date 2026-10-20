@@ -353,7 +353,7 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
       // fill must read behind it as well as the rail does: the bright accent
       // behind dark text, a deep shade of it behind light text.
       const bool isTextDark = theme_tone::IsDark(textColor);
-      spine::g_isLabelCoverNeeded = !isTextDark;
+      tab_cover::g_isCoverNeeded = !isTextDark;
       const uint32_t fill =
           isTextDark ? kVTabFillBehindDarkText : kVTabFillBehindLightText;
       // The slot for an unfocused window dims into the rail, as Edge does its
@@ -366,7 +366,6 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
       *out = isDimmed ? theme_tone::Blend(fill, inactiveRail,
                                           kVTabInactiveRailPercent)
                       : fill;
-      spine::g_selectedFill = *out;
       return true;
     }
   }
