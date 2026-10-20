@@ -168,19 +168,30 @@ self-contained, its own `Program.Main`, Google C# style from `app/.editorconfig`
 It reads and writes the Tauri panel's `settings.json` unchanged, so either panel
 can run; the Tauri one stays until Avi switches.
 
-- **Layout**: `Platform/` (paths, settings, the actions the window calls),
+- **Host + swappable panel** (see `app/panel-winui/README.md`): `EdgePlus.csproj`
+  is a thin host (process, single instance, window, `App.xaml`, `Host/`);
+  `Panel/EdgePlus.Panel.csproj` is everything else, loaded into a collectible
+  load context and swapped live on rebuild in a dev run. In the panel: no
+  compiled XAML, no WinRT subclasses, CsWinRT's AOT optimizer off, JSON through
+  a source-generated context, and every thread / host subscription torn down in
+  `PanelView.Dispose` — each of those otherwise pins the old panel.
+- **Panel layout**: `Platform/` (paths, settings, the actions the window calls),
   `Dll/` (the config wire, its events, the embedded DLL, `DllSync`), `Edge/`
   (the pinned build, the Edge watcher, installed themes, the dev-mode waiter,
-  legacy cleanup), `Themes/`, `Setup/` (start at sign-in), `Ui/`, and `Native/`
-  — the **only** folder with a `[DllImport]` (the C# form of `unsafe_code =
-  "forbid"`; `tools/lint.ps1` enforces it).
+  legacy cleanup), `Themes/`, `Setup/` (start at sign-in), `Ui/`, and `Native/`.
+  A `Native/` folder (the panel's or the host's) is the **only** place with a
+  `[DllImport]` (the C# form of `unsafe_code = "forbid"`; `tools/lint.ps1`
+  enforces it).
 - **UI**: WinUI's own controls only — no CommunityToolkit, no UI library. Cards
-  are built in code (`FeatureCard`, `ThemingCard`) from App.xaml's styles, whose
-  colours are all `ThemeResource`. Every sentence is in `Ui/Wording.cs`; glyphs
-  are code points (dotnet format rewrites a `\u` escape into an invisible
-  character).
+  are built in code (`PanelView`, `FeatureCard`, `ThemingCard`) from App.xaml's
+  styles, whose colours are all `ThemeResource`. Every sentence is in
+  `Ui/Wording.cs`; glyphs are code points (dotnet format rewrites a `\u` escape
+  into an invisible character). Motion goes through `Ui/Motion.cs`, which
+  follows Windows' Animation effects switch live.
+- **The embedded split DLL is rebuilt whenever its sources are newer**: a stale
+  one, carried silently, once replaced Edge's current DLL at panel start.
 - **Shared values** come from the DLL's sources: `// @share Name` markers in
-  `app/native-split/src` become `Platform/Shared.g.cs`
+  `app/native-split/src` become `Panel/Platform/Shared.g.cs`
   (`tools/Export-SharedConstants.ps1`, run before every build). Put a marker on
   its own line above the declaration so the Tauri `build.rs` still parses it.
 - **C# naming** (any-stt's): `PascalCase` types, members and constants,
@@ -188,8 +199,9 @@ can run; the Tauri one stays until Avi switches.
   private statics, `is`/`has`/`can` booleans. The `if` and enum rules apply.
 - **Tests**: `test/` compiles the pure sources (no WinUI, no Win32) into a
   dependency-free console harness: `app\panel-winui\test\run.cmd`.
-- **Never run the full panel against Avi's Edge**: at start it injects the DLL
-  into every Edge browser process on the pinned build.
+- **Never run the full panel against Avi's Edge** unless asked: at start (and
+  on every live swap) it injects the DLL into every Edge browser process on the
+  pinned build, replacing a loaded DLL that differs from the one it carries.
 
 # Linting
 
