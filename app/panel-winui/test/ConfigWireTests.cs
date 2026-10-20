@@ -6,7 +6,7 @@ namespace EdgePlus;
 
 internal static class ConfigWireTests {
   public static void Run() {
-    Expect.Equal(164, ConfigWire.Size, "the wire is config.h's 164 bytes");
+    Expect.Equal(168, ConfigWire.Size, "the wire is config.h's 168 bytes");
     Expect.Equal(ConfigWire.SizeConfigHExpects, ConfigWire.Size,
                  "the layout matches config.h's own field counts");
 
@@ -18,7 +18,10 @@ internal static class ConfigWireTests {
         DarkId: "",
         IsEnhancedFindActive: true,
         IsWebUiFollowsThemeActive: true,
-        IsLivePreviewActive: true));
+        IsLivePreviewActive: true,
+        IsTabSpineActive: true));
+    Expect.Equal(164, ConfigWire.TabSpineActiveOffset, "the tab spine at 164");
+    Expect.Equal(1u, U32At(wire, 164), "tab spine on");
     Expect.Equal(0u, U32At(wire, 0), "split off at 0");
     Expect.Equal(1u, U32At(wire, 4), "theming on at 4");
     Expect.Equal(1u, U32At(wire, 8), "link handlers on at 8");
@@ -34,7 +37,7 @@ internal static class ConfigWireTests {
     Expect.Equal(1u, U32At(wire, 160), "live preview on");
 
     byte[] tooLong = ConfigWire.Encode(new DllConfig(
-        false, false, false, new string('x', 100), "", false, false, false));
+        false, false, false, new string('x', 100), "", false, false, false, false));
     Expect.Equal((uint)Shared.WireIdCapacity, U32At(tooLong, 12), "an id is cut to its field");
     Expect.Equal(0, tooLong[ConfigWire.DarkIdOffset], "a cut id does not spill into the next");
 

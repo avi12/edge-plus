@@ -22,6 +22,9 @@ internal enum Feature {
   // A hovered tab shows a live preview instead of a frozen snapshot
   // (live_preview.h).
   LivePreview,
+  // The selected vertical tab gets a square leading edge and the neon spine,
+  // while theming is on (spine.h).
+  TabSpine,
 }
 
 // Where a theme came from, so the installer knows how to add it to Edge.
@@ -36,9 +39,9 @@ internal enum ColorMode {
   Dark,
 }
 
-// The feature switches, with their defaults (split on, the rest off). A
-// settings file written when a removed switch existed still loads: an unknown
-// field is ignored.
+// The feature switches, with their defaults (the split and the tab spine on,
+// the rest off). A settings file written when a removed switch existed still
+// loads: an unknown field is ignored.
 internal sealed class Features {
   public bool NativeSplit { get; set; } = true;
   public bool Theming {
@@ -59,6 +62,8 @@ internal sealed class Features {
   public bool LivePreview {
     get; set;
   }
+  // On by default: it was part of the theming until it got a switch of its own.
+  public bool TabSpine { get; set; } = true;
 
   public bool IsOn(Feature feature) => feature switch {
     Feature.NativeSplit => NativeSplit,
@@ -68,6 +73,7 @@ internal sealed class Features {
     Feature.EnhancedFind => EnhancedFind,
     Feature.WebUiFollowsTheme => WebUiFollowsTheme,
     Feature.LivePreview => LivePreview,
+    Feature.TabSpine => TabSpine,
     _ => throw new ArgumentOutOfRangeException(nameof(feature)),
   };
 
@@ -94,6 +100,9 @@ internal sealed class Features {
       case Feature.LivePreview:
         LivePreview = isOn;
         break;
+      case Feature.TabSpine:
+        TabSpine = isOn;
+        break;
       default:
         throw new ArgumentOutOfRangeException(nameof(feature));
     }
@@ -104,7 +113,7 @@ internal sealed class Features {
   [JsonIgnore]
   public bool NeedsDll =>
       NativeSplit || Theming || ProtocolHandlers || EnhancedFind || WebUiFollowsTheme
-      || LivePreview;
+      || LivePreview || TabSpine;
 }
 
 // One theme the user added: an installed Edge theme extension by id.

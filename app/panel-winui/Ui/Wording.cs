@@ -82,6 +82,11 @@ internal static class Wording {
             "Edge's own tab capture running while the preview is open. Live, no restart. Open " +
             "Edge first.",
         0xE890),
+    Feature.TabSpine => new(
+        "Square selected tab with neon spine",
+        "Gives the selected vertical tab a straight leading edge with a neon magenta stripe (on " +
+            "the right when Edge runs right to left). Works with Theming on. Live, no restart.",
+        0xE7C3),
     Feature.QuietDevMode => new(
         "Hide the developer-mode prompt",
         "Stops Edge asking to turn off developer-mode extensions when it starts. Takes effect " +
@@ -105,6 +110,7 @@ internal static class Wording {
     Feature.EnhancedFind => "The enhanced find bar",
     Feature.WebUiFollowsTheme => "Settings and extensions pages following the theme",
     Feature.LivePreview => "Live tab preview on hover",
+    Feature.TabSpine => "The square selected tab with its neon spine",
     _ => throw new ArgumentOutOfRangeException(nameof(feature)),
   };
 

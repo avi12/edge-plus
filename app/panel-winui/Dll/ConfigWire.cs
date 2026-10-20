@@ -14,7 +14,8 @@ internal readonly record struct DllConfig(
     string DarkId,
     bool IsEnhancedFindActive,
     bool IsWebUiFollowsThemeActive,
-    bool IsLivePreviewActive) {
+    bool IsLivePreviewActive,
+    bool IsTabSpineActive) {
   public static DllConfig From(Settings settings) => new(
       IsSplitActive: settings.Features.NativeSplit,
       IsThemingActive: settings.Features.Theming,
@@ -23,13 +24,15 @@ internal readonly record struct DllConfig(
       DarkId: settings.Theming.Dark,
       IsEnhancedFindActive: settings.Features.EnhancedFind,
       IsWebUiFollowsThemeActive: settings.Features.WebUiFollowsTheme,
-      IsLivePreviewActive: settings.Features.LivePreview);
+      IsLivePreviewActive: settings.Features.LivePreview,
+      IsTabSpineActive: settings.Features.TabSpine);
 }
 
 // The bytes of the config file the DLL reads. The layout mirrors struct Wire in
 // app/native-split/src/config.h field for field: five u32s, the two ids, then a
 // reserved u32 (once the chosen assistant; written as zero, never read), the
-// find switch, the WebUI-follows-theme switch and the live-preview switch. Every
+// find switch, the WebUI-follows-theme switch, the live-preview switch and the
+// tab-spine switch. Every
 // u32 is little-endian, as the DLL reads it on x64.
 internal static class ConfigWire {
   private const int FieldBytes = sizeof(uint);
@@ -45,7 +48,8 @@ internal static class ConfigWire {
   public const int EnhancedFindActiveOffset = ReservedOffset + FieldBytes;
   public const int WebUiFollowsThemeActiveOffset = EnhancedFindActiveOffset + FieldBytes;
   public const int LivePreviewActiveOffset = WebUiFollowsThemeActiveOffset + FieldBytes;
-  public const int Size = LivePreviewActiveOffset + FieldBytes;
+  public const int TabSpineActiveOffset = LivePreviewActiveOffset + FieldBytes;
+  public const int Size = TabSpineActiveOffset + FieldBytes;
 
   // The size config.h static_asserts, from its own counts.
   public const int SizeConfigHExpects =
@@ -61,6 +65,7 @@ internal static class ConfigWire {
     WriteFlag(wire, EnhancedFindActiveOffset, config.IsEnhancedFindActive);
     WriteFlag(wire, WebUiFollowsThemeActiveOffset, config.IsWebUiFollowsThemeActive);
     WriteFlag(wire, LivePreviewActiveOffset, config.IsLivePreviewActive);
+    WriteFlag(wire, TabSpineActiveOffset, config.IsTabSpineActive);
     return wire;
   }
 

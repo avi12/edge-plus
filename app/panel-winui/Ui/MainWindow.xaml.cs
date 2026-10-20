@@ -30,8 +30,8 @@ public sealed partial class MainWindow : Window {
   // The plain switches, top to bottom; the theming card sits second and the
   // start-at-sign-in card last.
   private static readonly Feature[] s_switchCardsAfterTheming = [
-    Feature.WebUiFollowsTheme, Feature.EnhancedFind, Feature.LivePreview, Feature.QuietDevMode,
-    Feature.ProtocolHandlers,
+    Feature.WebUiFollowsTheme, Feature.TabSpine, Feature.EnhancedFind, Feature.LivePreview,
+    Feature.QuietDevMode, Feature.ProtocolHandlers,
   ];
 
   private readonly Dictionary<Feature, FeatureCard> _switchCards = [];

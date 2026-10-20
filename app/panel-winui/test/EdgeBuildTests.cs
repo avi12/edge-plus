@@ -10,7 +10,7 @@ internal static class EdgeBuildTests {
 
   private static readonly Feature[] s_dllFeatures = [
     Feature.NativeSplit, Feature.Theming, Feature.ProtocolHandlers, Feature.EnhancedFind,
-    Feature.WebUiFollowsTheme, Feature.LivePreview,
+    Feature.WebUiFollowsTheme, Feature.LivePreview, Feature.TabSpine,
   ];
 
   public static void Run() {
@@ -89,7 +89,12 @@ internal static class EdgeBuildTests {
   }
 
   private static void FeaturesAlreadyOffAreNotReported() {
-    var onlyTheming = new Features { NativeSplit = false, Theming = true, QuietDevMode = true };
+    var onlyTheming = new Features {
+      NativeSplit = false,
+      Theming = true,
+      QuietDevMode = true,
+      TabSpine = false,
+    };
     IReadOnlyList<Feature> blocked =
         EdgeBuild.Blocked(onlyTheming, Version("156.0.1.0"), s_pinned);
     Expect.That(blocked.SequenceEqual([Feature.Theming]), "only the switch that was on");

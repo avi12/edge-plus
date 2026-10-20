@@ -15,11 +15,13 @@ internal static class SettingsTests {
     TheSwitchesMapOneToOne();
   }
 
+  // The tab spine defaults on, as in the Tauri panel: it was part of the
+  // theming until it got a switch of its own.
   private static void DefaultsAreSplitOnTheRestOff() {
     var settings = new Settings();
     Expect.That(settings.Features.NativeSplit, "the split defaults on");
     foreach (Feature feature in Enum.GetValues<Feature>()) {
-      bool isExpectedOn = feature == Feature.NativeSplit;
+      bool isExpectedOn = feature is Feature.NativeSplit or Feature.TabSpine;
       Expect.Equal(isExpectedOn, settings.Features.IsOn(feature), $"default of {feature}");
     }
     Expect.That(settings.Features.NeedsDll, "the split alone needs the DLL");
@@ -113,7 +115,7 @@ internal static class SettingsTests {
 
   private static void TheSwitchesMapOneToOne() {
     foreach (Feature feature in Enum.GetValues<Feature>()) {
-      var features = new Features { NativeSplit = false };
+      var features = new Features { NativeSplit = false, TabSpine = false };
       features.Set(feature, true);
       foreach (Feature other in Enum.GetValues<Feature>()) {
         Expect.Equal(other == feature, features.IsOn(other), $"setting {feature} reads {other}");
