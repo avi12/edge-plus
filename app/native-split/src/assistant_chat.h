@@ -177,7 +177,8 @@ inline void OnArmed(void* mcv, unsigned long long token,
   }
   chat->isScriptRunning = false;
   const bool isArmed =
-      result.isString && result.text == chat_scripts::kArmedAnswer;
+      result.isString && result.text == chat_scripts::AnswerText(
+                                            chat_scripts::ScriptAnswer::kArmed);
   if (!isArmed) {
     return;
   }
@@ -200,7 +201,8 @@ inline void OnReplyAnswer(void* mcv, unsigned long long token,
   const ULONGLONG now = GetTickCount64();
   chat->nextTryAt = now + kStepMs;
   const bool isNeedingUser =
-      result.isString && result.text == chat_scripts::kUserAnswer;
+      result.isString && result.text == chat_scripts::AnswerText(
+                                            chat_scripts::ScriptAnswer::kUser);
   if (isNeedingUser) {
     // A dialog (a security check, a consent page) waits for the person in the
     // panel, which is open: do not count their time against the answer's.
@@ -222,7 +224,9 @@ inline void OnReplyAnswer(void* mcv, unsigned long long token,
   }
   chat->blockedSince = 0;
   const bool isReloaded =
-      result.isString && result.text == chat_scripts::kReloadedAnswer;
+      result.isString &&
+      result.text ==
+          chat_scripts::AnswerText(chat_scripts::ScriptAnswer::kReloaded);
   if (isReloaded) {
     const bool canSendAgain = chat->resendCount < kMaxResends;
     if (!canSendAgain) {
@@ -235,7 +239,8 @@ inline void OnReplyAnswer(void* mcv, unsigned long long token,
     return;
   }
   const bool isWaiting =
-      !result.isString || result.text == chat_scripts::kWaitAnswer;
+      !result.isString || result.text == chat_scripts::AnswerText(
+                                             chat_scripts::ScriptAnswer::kWait);
   if (isWaiting) {
     return;
   }
