@@ -8,6 +8,7 @@
 #include <cstring>
 #include "MinHook.h"
 #include "edge.h"
+#include "focus.h"
 #include "theme_tone.h"
 #include "panes.h"
 #include "geometry.h"
@@ -331,12 +332,6 @@ inline constexpr uint32_t kNeonRail = 0xff070a12;
 inline constexpr uint32_t kNeonIdleText = 0xff8fa7bd;
 // The full neon cyan; tab_cover.h repaints the title and icons in ink on it.
 inline constexpr uint32_t kVTabFillBehindLightText = 0xff00e5ff;
-// Whether the window the user is in belongs to this Edge process.
-inline bool IsEdgeForeground() {
-  DWORD foregroundProcess = 0;
-  GetWindowThreadProcessId(GetForegroundWindow(), &foregroundProcess);
-  return foregroundProcess == GetCurrentProcessId();
-}
 // How far an unfocused window pulls the selected fill toward its rail: enough to
 // read as quieter, not enough to vanish on a pale rail.
 inline constexpr uint32_t kVTabInactiveRailPercent = 30;
@@ -392,7 +387,7 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
       // The slot for an unfocused window dims into the rail, as Edge does its
       // own colours.
       uint32_t inactiveRail = 0;
-      const bool isInactive = !IsEdgeForeground();
+      const bool isInactive = !focus::IsEdgeForeground();
       const bool isDimmed =
           isInactive &&
           o_getcolor(pack, off::VTABCOLOR_background_inactive, &inactiveRail);
