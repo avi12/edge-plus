@@ -27,6 +27,9 @@ internal static class Motion {
     Apply(panel, transitions);
   }
 
+  // Let go of every registered panel, as the view is torn down.
+  public static void Forget() => s_panels.Clear();
+
   // Must run on the UI thread.
   public static void Refresh() {
     bool isOn = SystemAnimations.IsOn();

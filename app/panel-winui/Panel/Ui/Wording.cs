@@ -24,6 +24,8 @@ internal static class Wording {
   private const string RegExpName = "RegExp";
 
   public const string OpenEdgeHint = "Open Edge to apply changes.";
+  // The footer's "by Avi".
+  public const string By = "by";
   public const string DropHint = "Drop a theme folder, .zip or .crx to add it";
 
   // The theming card's own words.

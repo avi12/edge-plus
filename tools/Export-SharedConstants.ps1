@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Generates app\panel-winui\Platform\Shared.g.cs from the @share markers in the
+  Generates app\panel-winui\Panel\Platform\Shared.g.cs from the @share markers in the
   native split's C++ sources.
 
 .DESCRIPTION
@@ -40,8 +40,8 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $sourceRoot = Join-Path $repoRoot 'app\native-split\src'
-$outputPath = Join-Path $repoRoot 'app\panel-winui\Platform\Shared.g.cs'
-$outputName = 'app/panel-winui/Platform/Shared.g.cs'
+$outputPath = Join-Path $repoRoot 'app\panel-winui\Panel\Platform\Shared.g.cs'
+$outputName = 'app/panel-winui/Panel/Platform/Shared.g.cs'
 
 # The marker, and the two value shapes it can sit on.
 $markerPattern = '//\s*@share\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*$'

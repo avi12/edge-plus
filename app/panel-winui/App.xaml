@@ -10,9 +10,10 @@
 
             <!-- The panel's look: the Windows Settings card, hand-built from
                  WinUI's own theme brushes (no toolkit). Every colour is a
-                 ThemeResource, so light and dark follow Windows live. The cards
-                 are built in code (FeatureCard, ThemingCard) and take these by
-                 key. -->
+                 ThemeResource, so light and dark follow Windows live. The
+                 panel builds its content in code (Panel\Ui) and takes these by
+                 key (StyleKeys): they live here, in the host, because the
+                 panel is swapped live and carries no XAML of its own. -->
             <Style x:Key="FeatureCardStyle" TargetType="Border">
                 <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
                 <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
@@ -44,6 +45,14 @@
                 <Setter Property="CornerRadius" Value="{ThemeResource ControlCornerRadius}"/>
                 <Setter Property="Padding" Value="6,1,6,1"/>
                 <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+            <!-- Shown while a theme is dragged over the window. -->
+            <Style x:Key="DropVeilStyle" TargetType="Grid">
+                <Setter Property="Background" Value="{ThemeResource SolidBackgroundFillColorBaseBrush}"/>
+            </Style>
+            <Style x:Key="DropVeilFrameStyle" TargetType="Rectangle">
+                <Setter Property="Stroke" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
+                <Setter Property="StrokeThickness" Value="2"/>
             </Style>
             <Style x:Key="BadgeTextStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>

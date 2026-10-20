@@ -43,11 +43,6 @@ internal static class Paths {
   // again keeps its extension id.
   public static string ThemeKeys { get; } = Path.Combine(ThemesRoot, ThemeKeysFolderName);
 
-  // What was built INTO the app: the icon, the managed and WinUI runtime.
-  public static string ContentDir => AppContext.BaseDirectory;
-
-  public static string WindowIcon => Path.Combine(ContentDir, "Assets", "edgeplus.ico");
-
   // Written whole then swapped in, so a reader (the DLL, Edge, the other
   // panel) never sees half a file.
   public static void WriteAtomically(string path, byte[] contents) {

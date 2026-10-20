@@ -142,8 +142,8 @@ $panelRoot = 'app/panel-winui'
 $csharpRules = @(
     @{
         Pattern = '\[(DllImport|LibraryImport)\b'
-        Allowed = "^$panelRoot/Native/"
-        Message = 'Win32 calls live in app/panel-winui/Native/ only; move this [DllImport] there.'
+        Allowed = "^$panelRoot/(Panel/)?Native/"
+        Message = 'Win32 calls live in a Native/ folder only (the host''s or the panel''s); move this [DllImport] there.'
     }
     @{
         Pattern = 'for\s*\(\s*;\s*;\s*\)'
@@ -173,7 +173,7 @@ foreach ($file in $csharpFiles) {
 }
 
 # --- pass 5: the generated C# is current -----------------------------------
-# app\panel-winui\Platform\Shared.g.cs is produced from the @share markers in
+# app\panel-winui\Panel\Platform\Shared.g.cs is produced from the @share markers in
 # the DLL's sources, and the C# build regenerates it on every run — so a
 # checked-in copy that disagrees means a C++ value moved and the commit carries
 # a stale generated file. Skipped under -Staged, which lints a subset.
@@ -194,7 +194,12 @@ if (-not $Staged) {
 # the check into a FIX (any-stt hit exactly this).
 $csharpOk = $true
 if (-not $Staged) {
-    foreach ($project in @("$panelRoot/EdgePlus.csproj", "$panelRoot/test/EdgePlus.Tests.csproj")) {
+    $csharpProjects = @(
+        "$panelRoot/EdgePlus.csproj",
+        "$panelRoot/Panel/EdgePlus.Panel.csproj",
+        "$panelRoot/test/EdgePlus.Tests.csproj"
+    )
+    foreach ($project in $csharpProjects) {
         $projectPath = Join-Path $root $project
         Write-Host "[lint] dotnet format ($project)"
         foreach ($subcommand in @('whitespace', 'style')) {

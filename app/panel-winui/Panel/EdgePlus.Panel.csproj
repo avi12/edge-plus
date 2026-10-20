@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The panel itself: every feature, the settings, the Edge and DLL work, and the
+    window's content, built in C# (no XAML). The host exe (..\EdgePlus.csproj)
+    owns the process and the window and loads this assembly into a collectible
+    AssemblyLoadContext, so a rebuild of this project alone is swapped into the
+    running window (PanelLoader). Nothing here may subclass a WinRT type or
+    carry compiled XAML: those register with WinUI process-wide and would pin
+    the context so it never unloads.
+  -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>EdgePlus</RootNamespace>
+    <AssemblyName>edgeplus-panel</AssemblyName>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <!-- A plugin: its WinUI and BCL references resolve to the host's copies
+         (the default context), which is what lets WinRT objects cross. -->
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <NativeSplitDir>$(RepositoryRoot)app\native-split\</NativeSplitDir>
+    <SplitDll>$(NativeSplitDir)build\fixedge-split.dll</SplitDll>
+  </PropertyGroup>
+
+  <!--
+    The native split DLL, carried inside the panel as a resource and unpacked by
+    Payload.cs beside the settings, so the switch always injects the DLL that
+    matches this build. The DLL has its own build (build.cmd, MSVC + ninja);
+    like the Tauri panel's build.rs, this uses the already-built DLL and only
+    runs build.cmd when it is missing — then fails with a sentence naming the
+    file, rather than producing a panel that cannot do anything.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(SplitDll)" LogicalName="payload/fixedge-split.dll" />
+  </ItemGroup>
+  <Target Name="BuildMissingNativeSplit" BeforeTargets="BeforeBuild" Condition="!Exists('$(SplitDll)')">
+    <Exec Command="&quot;$(NativeSplitDir)build.cmd&quot;" WorkingDirectory="$(NativeSplitDir)" />
+  </Target>
+  <Target Name="VerifyNativeSplit" AfterTargets="BuildMissingNativeSplit" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('$(SplitDll)')"
+           Text="edgeplus carries fixedge-split.dll inside itself and cannot find it at $(SplitDll). Build it first: app\native-split\build.cmd" />
+  </Target>
+
+  <!--
+    Platform\Shared.g.cs — the values the panel shares with the DLL (event
+    names, the config file and its sizes, the pinned msedge.dll build),
+    regenerated from the @share markers in app\native-split\src before every
+    build so the two cannot drift. The file is checked in and tools\lint.ps1
+    fails when the committed copy is stale.
+  -->
+  <Target Name="ExportSharedConstants" BeforeTargets="BeforeBuild">
+    <Exec Command="pwsh -NoProfile -File &quot;$(RepositoryRoot)tools\Export-SharedConstants.ps1&quot;" />
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.*" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.*" />
+  </ItemGroup>
+</Project>

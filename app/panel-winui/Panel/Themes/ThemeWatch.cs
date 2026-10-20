@@ -26,17 +26,11 @@ internal sealed class ThemeWatch {
   // Raised on the watch thread.
   public event Action<ThemeRefresh>? Refreshed;
 
-  public void Start() {
-    var thread = new Thread(Run) { IsBackground = true, Name = "Theme watch" };
-    thread.Start();
-  }
+  private readonly PollThread _thread = new("Theme watch", s_pollInterval);
 
-  private void Run() {
-    while (true) {
-      Thread.Sleep(s_pollInterval);
-      Poll();
-    }
-  }
+  public void Start() => _thread.Start(Poll, Poll);
+
+  public void Stop() => _thread.Stop();
 
   private void Poll() {
     Settings settings = Settings.Load();

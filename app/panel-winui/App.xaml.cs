@@ -24,11 +24,6 @@ public partial class App : Application {
 
   protected override void OnLaunched(LaunchActivatedEventArgs args) {
     string[] commandLine = Environment.GetCommandLineArgs();
-    // Retire the old extension and native-messaging host if a version from
-    // before 2026-10-15 left them behind.
-    LegacyCleanup.Run();
-    // Unpack the split DLL this build carries before anything injects it.
-    Payload.Unpack();
     _window = new MainWindow();
     // A second launch redirected here (Program) brings this window back.
     AppInstance.GetCurrent().Activated += (_, _) =>

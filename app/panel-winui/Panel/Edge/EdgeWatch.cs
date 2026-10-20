@@ -22,10 +22,13 @@ internal sealed class EdgeWatch {
   // Tauri panel no change can be missed before the UI listens.
   public event Action<BuildChange>? BuildChanged;
 
-  public void Start() {
-    var thread = new Thread(Run) { IsBackground = true, Name = "Edge watch" };
-    thread.Start();
-  }
+  private readonly PollThread _thread = new("Edge watch", s_pollInterval);
+  // The browser processes seen on the last poll.
+  private HashSet<int> _known = [];
+
+  public void Start() => _thread.Start(Begin, Poll);
+
+  public void Stop() => _thread.Stop();
 
   // The msedge.dll build browser process `pid` loaded, or null when it cannot
   // be read.
@@ -77,19 +80,19 @@ internal sealed class EdgeWatch {
     }
   }
 
-  private void Run() {
+  private void Begin() {
     Check();
     DllSync.SyncOnStart();
-    var known = new HashSet<int>(EdgeProcesses.BrowserPids());
-    while (true) {
-      Thread.Sleep(s_pollInterval);
-      var current = new HashSet<int>(EdgeProcesses.BrowserPids());
-      bool hasNewProcess = !current.IsSubsetOf(known);
-      if (hasNewProcess) {
-        Check();
-      }
-      known = current;
+    _known = new HashSet<int>(EdgeProcesses.BrowserPids());
+  }
+
+  private void Poll() {
+    var current = new HashSet<int>(EdgeProcesses.BrowserPids());
+    bool hasNewProcess = !current.IsSubsetOf(_known);
+    if (hasNewProcess) {
+      Check();
     }
+    _known = current;
   }
 
   // A settings file that cannot be written is tried again on the next new

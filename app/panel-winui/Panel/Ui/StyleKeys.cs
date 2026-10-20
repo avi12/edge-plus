@@ -12,6 +12,8 @@ internal static class StyleKeys {
   public const string CardError = "CardErrorStyle";
   public const string Badge = "BadgeStyle";
   public const string BadgeText = "BadgeTextStyle";
+  public const string DropVeil = "DropVeilStyle";
+  public const string DropVeilFrame = "DropVeilFrameStyle";
   // WinUI's own.
   public const string AccentButton = "AccentButtonStyle";
 

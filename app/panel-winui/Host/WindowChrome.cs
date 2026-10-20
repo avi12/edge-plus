@@ -9,13 +9,17 @@ namespace EdgePlus;
 // Dressed the way any-stt's panel is, so the two tools read as one family:
 // acrylic, the content drawn into the title bar, the product name as the title.
 internal static class WindowChrome {
+  // Copied beside the exe by the build (EdgePlus.csproj's Content item).
+  private static readonly string s_icon =
+      Path.Combine(System.AppContext.BaseDirectory, "Assets", "edgeplus.ico");
+
   public static void Apply(Window window, UIElement titleBar) {
     window.SystemBackdrop = new DesktopAcrylicBackdrop();
     window.ExtendsContentIntoTitleBar = true;
     window.SetTitleBar(titleBar);
     window.Title = Product.Name;
-    if (File.Exists(Paths.WindowIcon)) {
-      window.AppWindow.SetIcon(Paths.WindowIcon);
+    if (File.Exists(s_icon)) {
+      window.AppWindow.SetIcon(s_icon);
     }
   }
 

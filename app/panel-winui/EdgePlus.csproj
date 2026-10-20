@@ -1,4 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The host: a thin, stable exe that owns the process, the single-instance
+    handling and the window (title bar, size, chrome), and loads the panel —
+    every feature and the window's content — from Panel\EdgePlus.Panel.csproj
+    into a collectible AssemblyLoadContext (Host\PanelLoader.cs). In a repo
+    checkout a rebuild of the panel alone is swapped into the running window;
+    the host itself changes rarely and needs a restart when it does.
+  -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
@@ -12,12 +20,6 @@
          decide, before WinUI is ever touched, whether this launch is the
          headless dev-mode waiter or the panel. -->
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-    <!-- The C# counterpart of the Tauri core's `unsafe_code = "forbid"`. Every
-         Win32 call is a [DllImport] in Native\, which needs no unsafe block;
-         tools\lint.ps1 fails a [DllImport] anywhere else. -->
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <ApplicationIcon>Assets\edgeplus.ico</ApplicationIcon>
     <!-- Unpackaged, self-contained, as any-stt is: a plain .exe with the
          runtime beside it, so it runs full-trust (and can inject) with nothing
@@ -29,23 +31,6 @@
          single exe embeds. -->
     <EnableMsixTooling>true</EnableMsixTooling>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-  </PropertyGroup>
-
-  <!--
-    The product's identity, written once. It becomes the exe's file properties
-    and the assembly attributes Product.cs reads back, so a rename or a version
-    bump is this block and nothing else.
-  -->
-  <PropertyGroup>
-    <Version>0.1.0</Version>
-    <Product>Edge+</Product>
-    <Description>Live feature switches for Microsoft Edge</Description>
-    <Company>Avi</Company>
-    <Authors>Avi</Authors>
-    <Copyright>© 2026 Avi</Copyright>
-    <!-- Keep AssemblyInformationalVersion equal to <Version>: the SDK appends
-         +<commit sha> by default, and Product.Version is what the footer shows. -->
-    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
   <!--
@@ -61,48 +46,45 @@
     <DebugType>embedded</DebugType>
   </PropertyGroup>
 
-  <!-- The unit tests are their own project (test\), compiled from the pure
-       sources here; the SDK's default glob would otherwise pull them in. -->
+  <!-- The panel and the tests are their own projects; the SDK's default glob
+       would otherwise pull their sources in. Product and Switches are the two
+       files both sides compile. -->
   <ItemGroup>
-    <Compile Remove="test\**" />
-    <None Remove="test\**" />
+    <Compile Remove="Panel\**;test\**" />
+    <None Remove="Panel\**;test\**" />
+    <Page Remove="Panel\**;test\**" />
+    <Compile Include="Panel\Platform\Product.cs" Link="Shared\Product.cs" />
+    <Compile Include="Panel\Platform\Switches.cs" Link="Shared\Switches.cs" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <RepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))</RepositoryRoot>
-    <NativeSplitDir>$(RepositoryRoot)app\native-split\</NativeSplitDir>
-    <SplitDll>$(NativeSplitDir)build\fixedge-split.dll</SplitDll>
-  </PropertyGroup>
-
   <!--
-    The native split DLL, carried inside the exe as a resource and unpacked by
-    Payload.cs beside the settings, so the switch always injects the DLL that
-    matches this build. The DLL has its own build (build.cmd, MSVC + ninja);
-    like the Tauri panel's build.rs, this uses the already-built DLL and only
-    runs build.cmd when it is missing — then fails with a sentence naming the
-    file, rather than producing a panel that cannot do anything.
+    The panel assembly, built first and carried inside the exe as a resource:
+    a published edgeplus.exe loads it from there. A build in the repo also
+    records where the panel project writes its output, so the host can watch it
+    and swap a rebuilt panel in live (PanelLoader). The host does not reference
+    the panel's types — only its entry point, by name — so nothing of the panel
+    is ever loaded into the default context, where it could not be unloaded.
   -->
   <ItemGroup>
-    <EmbeddedResource Include="$(SplitDll)" LogicalName="payload/fixedge-split.dll" />
+    <ProjectReference Include="Panel\EdgePlus.Panel.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
-  <Target Name="BuildMissingNativeSplit" BeforeTargets="BeforeBuild" Condition="!Exists('$(SplitDll)')">
-    <Exec Command="&quot;$(NativeSplitDir)build.cmd&quot;" WorkingDirectory="$(NativeSplitDir)" />
-  </Target>
-  <Target Name="VerifyNativeSplit" AfterTargets="BuildMissingNativeSplit" BeforeTargets="BeforeBuild">
-    <Error Condition="!Exists('$(SplitDll)')"
-           Text="edgeplus carries fixedge-split.dll inside itself and cannot find it at $(SplitDll). Build it first: app\native-split\build.cmd" />
-  </Target>
-
-  <!--
-    Platform\Shared.g.cs — the values the panel shares with the DLL (event
-    names, the config file and its sizes, the pinned msedge.dll build),
-    regenerated from the @share markers in app\native-split\src before every
-    build so the two cannot drift. The file is checked in (so the project opens
-    and builds in an IDE that has not run the script) and tools\lint.ps1 fails
-    when the committed copy is stale.
-  -->
-  <Target Name="ExportSharedConstants" BeforeTargets="BeforeBuild">
-    <Exec Command="pwsh -NoProfile -File &quot;$(RepositoryRoot)tools\Export-SharedConstants.ps1&quot;" />
+  <Target Name="CarryPanel" BeforeTargets="BeforeBuild">
+    <MSBuild Projects="Panel\EdgePlus.Panel.csproj" Targets="GetTargetPath"
+             Properties="Configuration=$(Configuration);Platform=$(Platform)">
+      <Output TaskParameter="TargetOutputs" ItemName="PanelAssembly" />
+    </MSBuild>
+    <ItemGroup>
+      <EmbeddedResource Include="@(PanelAssembly)" LogicalName="panel/edgeplus-panel.dll"
+                        WithCulture="false" Type="Non-Resx" />
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>PanelBuildOutput</_Parameter1>
+        <_Parameter2>@(PanelAssembly->'%(FullPath)')</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>RepositoryRoot</_Parameter1>
+        <_Parameter2>$(RepositoryRoot)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
   </Target>
 
   <ItemGroup>
@@ -124,6 +106,9 @@
       dotnet build app\panel-winui -t:Lint          the C++ and C# lint gate
       dotnet build app\panel-winui -t:Test          the panel's pure-logic tests
   -->
+  <PropertyGroup>
+    <NativeSplitDir>$(RepositoryRoot)app\native-split\</NativeSplitDir>
+  </PropertyGroup>
   <Target Name="BuildNative">
     <Exec Command="&quot;$(NativeSplitDir)build.cmd&quot;" WorkingDirectory="$(NativeSplitDir)" />
   </Target>
