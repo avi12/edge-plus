@@ -37,6 +37,9 @@ inline constexpr float kDashDip = 8.f;
 
 inline constexpr uint32_t kOpaque = 255;   // a colour channel at full strength
 inline constexpr WORD kBitsPerPixel = 32;  // BGRA
+inline constexpr int kAlphaShift = 24;
+inline constexpr int kRedShift = 16;
+inline constexpr int kGreenShift = 8;
 
 inline HWND g_window = nullptr;
 inline bool g_isShown = false;
@@ -53,7 +56,8 @@ inline uint32_t Pixel(COLORREF color, float alpha) {
   const auto red = GetRValue(color) * alphaByte / kOpaque;
   const auto green = GetGValue(color) * alphaByte / kOpaque;
   const auto blue = GetBValue(color) * alphaByte / kOpaque;
-  return (alphaByte << 24) | (red << 16) | (green << 8) | blue;
+  return (alphaByte << kAlphaShift) | (red << kRedShift) |
+         (green << kGreenShift) | blue;
 }
 
 inline float FillAlpha(Style style) {
