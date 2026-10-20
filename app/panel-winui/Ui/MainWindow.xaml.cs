@@ -86,12 +86,14 @@ public sealed partial class MainWindow : Window {
     _ = RunAsync(PanelActions.Load);
   }
 
-  // Launching Edge+ again brings the running panel back.
+  // Launching Edge+ again brings the running panel back, re-read: a window
+  // that was already active gets no new Activated to refresh it.
   public void BringBack() {
     if (AppWindow.Presenter is OverlappedPresenter presenter) {
       presenter.Restore();
     }
     Activate();
+    _ = RunAsync(PanelActions.Load);
   }
 
   public void Minimize() {
