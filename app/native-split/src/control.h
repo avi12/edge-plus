@@ -277,6 +277,8 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     MH_EnableHook(edge::At(edge155::rva::ThemeService_RemoveUnusedThemes));
     // Nor is the vertical-tab selected-tab recolour: it rides theming too.
     MH_EnableHook(edge::At(edge155::rva::BrowserThemePack_GetColor));
+    // Nor is the vertical-tab spine (selected-tab outline): theming too.
+    MH_EnableHook(edge::At(edge155::rva::ColorProvider_GetColor));
     // Nor are the link-handler detours (they pass through while that feature
     // is off).
     protocol_handlers::EnableHooks();

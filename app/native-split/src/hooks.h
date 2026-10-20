@@ -351,6 +351,34 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
   return o_getcolor(pack, colorId, out);
 }
 
+// ui::ColorProvider::GetColor: the magenta "spine" — the SELECTED vertical tab's
+// OUTLINE. Unlike the fill and text (theme-pack ids recoloured by h_getcolor), the
+// outline is a native ui::ColorId computed by a tab-strip colour mixer, so
+// BrowserThemePack::GetColor cannot reach it; it is read at paint here. While
+// theming is active we return a fixed magenta for just those two ids (active /
+// inactive window), giving the cyan selected tab a magenta accent edge; every
+// other id tail-calls the original, so no other surface changes. Read-time, so no
+// provider rebuild is needed, only a repaint (theme.h). The magenta matches the
+// cyberpunk theme's secondary neon (build_2077.py); the outline has no theme-
+// manifest slot to source it from, unlike the cyan fill. Like the pack hook this
+// rides theming, not the split, so control.h keeps it enabled while the split is
+// off. ColorProvider::GetColor is browser-wide and hot, so the g_isActive gate is
+// checked first and the whole detour is two int compares when it does not match.
+inline constexpr uint32_t kVTabSpineColor = 0xffff2bd6;  // opaque ARGB #FF2BD6
+using GetUiColor_t = uint32_t(__fastcall*)(void*, int);
+inline GetUiColor_t o_getuicolor = nullptr;
+inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
+  if (theme::g_isActive) {
+    const bool isSelectedVTabOutline =
+        colorId == off::VTABUICOLOR_outline_selected_active ||
+        colorId == off::VTABUICOLOR_outline_selected_inactive;
+    if (isSelectedVTabOutline) {
+      return kVTabSpineColor;
+    }
+  }
+  return o_getuicolor(provider, colorId);
+}
+
 template <class T>
 inline bool Install(uintptr_t rva, void* detour, T** original,
                     const char* name) {
@@ -492,6 +520,10 @@ inline bool InstallAll() {
   // theme::g_isActive, so it stays enabled when the split is toggled off.
   Install(rva::BrowserThemePack_GetColor, reinterpret_cast<void*>(h_getcolor),
           &o_getcolor, "BrowserThemePack::GetColor (vertical-tab recolour)");
+  // The selected-tab outline (the magenta spine). A native ui colour, not a pack
+  // id, so it needs its own read-side hook; also a theming hook, gated the same.
+  Install(rva::ColorProvider_GetColor, reinterpret_cast<void*>(h_getuicolor),
+          &o_getuicolor, "ui::ColorProvider::GetColor (vertical-tab spine)");
   // Asking to handle links: pass-through until the feature is switched on
   // (protocol_handlers.h).
   Install(rva::ContentSettingRPHBubbleModel_CommitChanges,

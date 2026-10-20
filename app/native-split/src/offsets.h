@@ -513,6 +513,13 @@ inline constexpr uintptr_t ThemeService_GetColorProviderKey = 0xfcf25c;
 // extension's color for `id`, false when the theme did not set it. Its colors
 // are a table of 8-byte {int id, SkColor} entries.
 inline constexpr uintptr_t BrowserThemePack_GetColor = 0x87d5030;
+// SkColor ui::ColorProvider::GetColor(this, ui::ColorId id): the browser-wide
+// colour read every view resolves an id through (a std::map lookup keyed on the
+// id, returning the mixer-computed SkColor). The vertical-tab SELECTED outline
+// (the "spine") is a native ui::ColorId computed by a tab-strip colour mixer --
+// NOT a theme-pack id, so BrowserThemePack::GetColor cannot reach it -- and is
+// read here at paint. Signature: SkColor __fastcall(void* this, int id).
+inline constexpr uintptr_t ColorProvider_GetColor = 0xffd9ce;
 
 // The OS light/dark signal does NOT come through Edge. ui::NativeThemeObserver
 // is a base::CheckedObserver (the observer list uses CheckedObserverAdapter), so
@@ -755,6 +762,13 @@ inline constexpr int VTABCOLOR_selected_background_inactive = 0x26;
 inline constexpr int VTABCOLOR_foreground = 0x29;  // idle text (+0x2a inactive)
 inline constexpr int VTABCOLOR_selected_foreground = 0x2b;  // selected text
 inline constexpr int VTABCOLOR_selected_foreground_inactive = 0x2c;
+// Native ui::ColorId values (ui::ColorProvider's id space, DISTINCT from the
+// BrowserThemePack colour-table ids above). The SELECTED vertical tab's OUTLINE
+// ("spine"), active- and inactive-window variants -- read through
+// ColorProvider::GetColor at paint, not from the theme pack. Verified from Edge's
+// colour-id name table (kColorEdgeVTabOutlineSelected{Active,Inactive}).
+inline constexpr int VTABUICOLOR_outline_selected_active = 0xc19;    // 3097
+inline constexpr int VTABUICOLOR_outline_selected_inactive = 0xc1a;  // 3098
 // WebContentsImpl::GetController is a bare `lea rax, [this + 0x280]`.
 inline constexpr uintptr_t WEBCONTENTS_controller = 0x280;
 // content::ReloadType::NORMAL.
