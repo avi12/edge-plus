@@ -330,21 +330,13 @@ pub fn remove_theme(id: String) -> Result<StateDto, String> {
 }
 
 #[tauri::command]
-pub fn set_mode_theme(mode: String, id: String) -> Result<StateDto, String> {
+pub fn set_mode_theme(mode: Mode, id: String) -> Result<StateDto, String> {
     let mut settings = Settings::load();
-    match parse_mode(&mode)? {
+    match mode {
         Mode::Light => settings.theming.light = id,
         Mode::Dark => settings.theming.dark = id,
     }
     persist_and_apply(&settings)
-}
-
-fn parse_mode(mode: &str) -> Result<Mode, String> {
-    match mode {
-        "light" => Ok(Mode::Light),
-        "dark" => Ok(Mode::Dark),
-        _ => Err(format!("unknown mode: {mode}")),
-    }
 }
 
 fn add_or_replace(theming: &mut Theming, entry: ThemeEntry) {

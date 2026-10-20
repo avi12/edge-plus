@@ -179,8 +179,10 @@ impl Settings {
     }
 }
 
-/// The two Windows appearance modes a theme can be assigned to.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// The two Windows appearance modes a theme can be assigned to; on the wire
+/// the UI sends them as `"light"` / `"dark"`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Mode {
     Light,
     Dark,
