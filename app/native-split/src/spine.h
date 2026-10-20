@@ -41,10 +41,7 @@ inline void EnsureWindow(HWND owner) {
   windowClass.hbrBackground = CreateSolidBrush(kColor);
   windowClass.lpszClassName = kWindowClass;
   RegisterClassExW(&windowClass);  // fails harmlessly if already registered
-  g_window =
-      CreateWindowExW(WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
-                      kWindowClass, L"", WS_POPUP, 0, 0, 0, 0, owner, nullptr,
-                      tab_cover::ThisModule(), nullptr);
+  g_window = tab_cover::CreateClickThroughPopup(owner, kWindowClass);
 }
 
 inline void Hide() {

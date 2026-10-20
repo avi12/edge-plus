@@ -120,6 +120,22 @@ inline HINSTANCE ThisModule() {
   return thisModule;
 }
 
+// An opaque popup over Edge that the pointer passes straight through. Without
+// WS_EX_LAYERED, WS_EX_TRANSPARENT does not pass hits on, so the popup took the
+// pointer: Edge saw it leave the tab, ended the hover, the cover went, the
+// pointer was back on the tab, and the hover flickered on and off.
+inline HWND CreateClickThroughPopup(HWND owner, const wchar_t* className) {
+  HWND popup = CreateWindowExW(
+      WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
+      className, L"", WS_POPUP, 0, 0, 0, 0, owner, nullptr, ThisModule(),
+      nullptr);
+  if (popup) {
+    constexpr BYTE kOpaque = 255;
+    SetLayeredWindowAttributes(popup, 0, kOpaque, LWA_ALPHA);
+  }
+  return popup;
+}
+
 inline void EnsureWindow(Cover* cover, HWND owner) {
   if (cover->window) {
     return;
@@ -129,9 +145,7 @@ inline void EnsureWindow(Cover* cover, HWND owner) {
   windowClass.hInstance = ThisModule();
   windowClass.lpszClassName = kWindowClass;
   RegisterClassExW(&windowClass);  // fails harmlessly if already registered
-  cover->window = CreateWindowExW(
-      WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW, kWindowClass,
-      L"", WS_POPUP, 0, 0, 0, 0, owner, nullptr, ThisModule(), nullptr);
+  cover->window = CreateClickThroughPopup(owner, kWindowClass);
   if (cover->window) {
     SetWindowLongPtrW(cover->window, GWLP_USERDATA,
                       reinterpret_cast<LONG_PTR>(cover));
