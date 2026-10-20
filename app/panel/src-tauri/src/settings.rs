@@ -60,6 +60,10 @@ pub struct Features {
     /// A hovered tab shows a live preview instead of a frozen snapshot (the DLL's
     /// `live_preview.h`).
     pub live_preview: bool,
+    /// The selected vertical tab gets a square leading edge and the neon spine,
+    /// while theming is on (the DLL's `spine.h`). On by default: it was part of
+    /// the theming until it got a switch of its own.
+    pub tab_spine: bool,
 }
 
 impl Default for Features {
@@ -72,6 +76,7 @@ impl Default for Features {
             enhanced_find: false,
             web_ui_follows_theme: false,
             live_preview: false,
+            tab_spine: true,
         }
     }
 }

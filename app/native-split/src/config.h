@@ -32,25 +32,29 @@ struct Wire {
   uint32_t webUiFollowsThemeActive;  // 1 = settings and extensions pages follow
                                      // the theme's light or dark
   uint32_t livePreviewActive;        // 1 = a hovered tab shows a live preview
+  uint32_t tabSpineActive;  // 1 = the selected tab gets a square leading edge
+                            // and the neon spine (with theming on)
 };
 // protocol.rs writes exactly WIRE_SIZE bytes and LoadFromFile wants all of
 // them, so the struct must stay packed: five u32 fields, the two ids, then the
-// reserved field and the find, WebUI and live-preview switches (u32s).
-inline constexpr size_t kWireFieldCount = 9;
+// reserved field and the find, WebUI, live-preview and tab-spine switches
+// (u32s).
+inline constexpr size_t kWireFieldCount = 10;
 inline constexpr size_t kWireIdCount = 2;
 static_assert(sizeof(Wire) == kWireFieldCount * sizeof(uint32_t) +
                                   kWireIdCount * size_t{kIdCapacity},
               "Wire must stay packed as protocol.rs writes it");
 
 // The sizes of the files a panel wrote before `reserved`, before
-// `enhancedFindActive`, before `webUiFollowsThemeActive` and before
-// `livePreviewActive` existed.
+// `enhancedFindActive`, before `webUiFollowsThemeActive`, before
+// `livePreviewActive` and before `tabSpineActive` existed.
 inline constexpr DWORD kLegacyWireSize = offsetof(Wire, reserved);
 inline constexpr DWORD kBeforeFindWireSize = offsetof(Wire, enhancedFindActive);
 inline constexpr DWORD kBeforeWebUiWireSize =
     offsetof(Wire, webUiFollowsThemeActive);
 inline constexpr DWORD kBeforeLivePreviewWireSize =
     offsetof(Wire, livePreviewActive);
+inline constexpr DWORD kBeforeTabSpineWireSize = offsetof(Wire, tabSpineActive);
 
 // The same bytes the panel also writes beside its settings, so a DLL injected
 // into an already-open Edge reads the current state at load. Live changes come
@@ -77,9 +81,10 @@ inline bool LoadFromFile(Wire* out) {
   DWORD read = 0;
   const bool isRead = ReadFile(file, out, sizeof(Wire), &read, nullptr);
   const bool isKnownSize =
-      isRead && (read == sizeof(Wire) || read == kBeforeLivePreviewWireSize ||
-                 read == kBeforeWebUiWireSize || read == kBeforeFindWireSize ||
-                 read == kLegacyWireSize);
+      isRead &&
+      (read == sizeof(Wire) || read == kBeforeTabSpineWireSize ||
+       read == kBeforeLivePreviewWireSize || read == kBeforeWebUiWireSize ||
+       read == kBeforeFindWireSize || read == kLegacyWireSize);
   CloseHandle(file);
   return isKnownSize;
 }

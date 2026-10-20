@@ -332,7 +332,9 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
     }
   }
   theme::ApplyConfig(hwnd, wire);
-  const bool isSpineWanted = theme::g_isActive;
+  // The spine has its own switch, and needs theming: the squared corners take
+  // the selected fill the theme's colour hook answers.
+  const bool isSpineWanted = theme::g_isActive && wire.tabSpineActive != 0;
   if (isSpineWanted && !spine::g_isActive) {
     spine::Start(hwnd);
   } else if (!isSpineWanted && spine::g_isActive) {

@@ -166,6 +166,7 @@ mod tests {
             enhanced_find: true,
             web_ui_follows_theme: true,
             live_preview: true,
+            tab_spine: true,
         }
     }
 
@@ -241,6 +242,7 @@ mod tests {
             enhanced_find: false,
             web_ui_follows_theme: false,
             live_preview: false,
+            tab_spine: false,
         };
         assert_eq!(
             blocked_features(only_theming, updated, pinned),

@@ -15,7 +15,8 @@ use windows_sys::Win32::System::Threading::{OpenEventW, SetEvent, EVENT_MODIFY_S
 const ID_CAPACITY: usize = 64;
 // struct Wire's fields, in order: five u32s, the two ids, then a reserved u32
 // (once the chosen assistant; written as zero, never read), the find switch,
-// the WebUI-follows-theme switch and the live-preview switch.
+// the WebUI-follows-theme switch, the live-preview switch and the tab-spine
+// switch.
 const SPLIT_ACTIVE_OFFSET: usize = 0;
 const THEMING_ACTIVE_OFFSET: usize = 4;
 const PROTOCOL_HANDLERS_ACTIVE_OFFSET: usize = 8;
@@ -27,7 +28,8 @@ const RESERVED_OFFSET: usize = DARK_ID_OFFSET + ID_CAPACITY;
 const ENHANCED_FIND_ACTIVE_OFFSET: usize = RESERVED_OFFSET + 4;
 const WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET: usize = ENHANCED_FIND_ACTIVE_OFFSET + 4;
 const LIVE_PREVIEW_ACTIVE_OFFSET: usize = WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET + 4;
-const WIRE_SIZE: usize = LIVE_PREVIEW_ACTIVE_OFFSET + 4;
+const TAB_SPINE_ACTIVE_OFFSET: usize = LIVE_PREVIEW_ACTIVE_OFFSET + 4;
+const WIRE_SIZE: usize = TAB_SPINE_ACTIVE_OFFSET + 4;
 // Must match kConfigEvent in app/native-split/src/dllmain.cpp.
 const CONFIG_EVENT: &str = r"Local\fixedge-config-changed";
 
@@ -52,6 +54,9 @@ pub struct DllConfig<'a> {
     /// A hovered tab shows a live preview instead of a frozen snapshot
     /// (`live_preview.h`).
     pub live_preview_active: bool,
+    /// The selected vertical tab gets a square leading edge and the neon spine,
+    /// while theming is on (`spine.h`).
+    pub tab_spine_active: bool,
 }
 
 /// Write the desired state to the config file the DLL reads (atomically, so a
@@ -105,6 +110,7 @@ fn encode(config: &DllConfig) -> [u8; WIRE_SIZE] {
         LIVE_PREVIEW_ACTIVE_OFFSET,
         config.live_preview_active,
     );
+    write_flag(&mut wire, TAB_SPINE_ACTIVE_OFFSET, config.tab_spine_active);
     wire
 }
 
@@ -144,9 +150,9 @@ mod tests {
     }
 
     #[test]
-    fn the_wire_is_config_h_s_164_bytes() {
-        // config.h static_asserts the same size: 9 u32 fields + 2 ids of 64.
-        assert_eq!(WIRE_SIZE, 164);
+    fn the_wire_is_config_h_s_168_bytes() {
+        // config.h static_asserts the same size: 10 u32 fields + 2 ids of 64.
+        assert_eq!(WIRE_SIZE, 168);
     }
 
     #[test]
@@ -160,6 +166,7 @@ mod tests {
             enhanced_find_active: true,
             web_ui_follows_theme_active: true,
             live_preview_active: true,
+            tab_spine_active: true,
         });
         assert_eq!(u32_at(&wire, 0), 0);
         assert_eq!(u32_at(&wire, 4), 1);
@@ -173,6 +180,8 @@ mod tests {
         assert_eq!(u32_at(&wire, LIVE_PREVIEW_ACTIVE_OFFSET), 1);
         assert_eq!(ENHANCED_FIND_ACTIVE_OFFSET, 152);
         assert_eq!(WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET, 156);
+        assert_eq!(u32_at(&wire, TAB_SPINE_ACTIVE_OFFSET), 1);
         assert_eq!(LIVE_PREVIEW_ACTIVE_OFFSET, 160);
+        assert_eq!(TAB_SPINE_ACTIVE_OFFSET, 164);
     }
 }

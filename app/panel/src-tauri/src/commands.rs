@@ -97,6 +97,7 @@ pub(crate) fn apply(settings: &Settings) {
             enhanced_find_active: features.enhanced_find,
             web_ui_follows_theme_active: features.web_ui_follows_theme,
             live_preview_active: features.live_preview,
+            tab_spine_active: features.tab_spine,
         },
     );
     // `needs_dll` includes the enhanced find bar and the WebUI theme colors,
