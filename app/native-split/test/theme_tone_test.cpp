@@ -50,6 +50,11 @@ void RunChecks() {
   Check(ToneOf(unset, lightFrame) == Tone::kLight,
         "no toolbar color: a light frame is light");
   Check(ToneOf(unset, unset) == Tone::kUnknown, "neither set: no verdict");
+  Check(Halfway(kBlack, kWhite) == 0xff7f7f7f,
+        "halfway black to white is grey");
+  Check(Halfway(kNavy, kNavy) == kNavy, "halfway to itself changes nothing");
+  Check(Halfway(0x8000ff00, kBlack) == 0xff007f00,
+        "halfway is opaque and per channel");
 }
 
 }  // namespace

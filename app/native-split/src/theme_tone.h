@@ -39,6 +39,18 @@ constexpr bool IsDark(Argb color) {
   return Luma(color) < kDarkLumaBelow;
 }
 
+// `from` moved halfway toward `to`, opaque: how a window that lost focus dims a
+// colour into its surroundings.
+inline constexpr int kBlueShift = 0;
+constexpr Argb Halfway(Argb from, Argb to) {
+  const auto mid = [&](int shift) {
+    const uint32_t fromChannel = (from >> shift) & kChannelMask;
+    const uint32_t toChannel = (to >> shift) & kChannelMask;
+    return ((fromChannel + toChannel) / 2) << shift;
+  };
+  return 0xff000000u | mid(kRedShift) | mid(kGreenShift) | mid(kBlueShift);
+}
+
 // What a theme's palette says about its own tone.
 enum class Tone {
   kUnknown,  // the theme colored neither the toolbar nor the frame
