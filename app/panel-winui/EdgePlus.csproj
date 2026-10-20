@@ -71,7 +71,27 @@
   <PropertyGroup>
     <RepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))</RepositoryRoot>
     <NativeSplitDir>$(RepositoryRoot)app\native-split\</NativeSplitDir>
+    <SplitDll>$(NativeSplitDir)build\fixedge-split.dll</SplitDll>
   </PropertyGroup>
+
+  <!--
+    The native split DLL, carried inside the exe as a resource and unpacked by
+    Payload.cs beside the settings, so the switch always injects the DLL that
+    matches this build. The DLL has its own build (build.cmd, MSVC + ninja);
+    like the Tauri panel's build.rs, this uses the already-built DLL and only
+    runs build.cmd when it is missing — then fails with a sentence naming the
+    file, rather than producing a panel that cannot do anything.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(SplitDll)" LogicalName="payload/fixedge-split.dll" />
+  </ItemGroup>
+  <Target Name="BuildMissingNativeSplit" BeforeTargets="BeforeBuild" Condition="!Exists('$(SplitDll)')">
+    <Exec Command="&quot;$(NativeSplitDir)build.cmd&quot;" WorkingDirectory="$(NativeSplitDir)" />
+  </Target>
+  <Target Name="VerifyNativeSplit" AfterTargets="BuildMissingNativeSplit" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('$(SplitDll)')"
+           Text="edgeplus carries fixedge-split.dll inside itself and cannot find it at $(SplitDll). Build it first: app\native-split\build.cmd" />
+  </Target>
 
   <!--
     Platform\Shared.g.cs — the values the panel shares with the DLL (event
