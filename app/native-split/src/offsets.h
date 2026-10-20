@@ -724,11 +724,11 @@ inline constexpr uintptr_t TabHoverCardController_OnCardClosing = 0xa62c3e0;
 
 // --- struct field offsets ---
 namespace off {
-// A tab row's first child is its title label. The label keeps its text in the
-// RenderText its pointer at Label_render_text names (found by a read-only scan of
-// the live object for the tab's title); RenderText_text is that std::u16string.
-inline constexpr uintptr_t Label_render_text = 0x2c0;
-inline constexpr uintptr_t RenderText_text = 0x148;
+// A tab row's first child is its title label, a views::Label. Label::GetText
+// (rva 0xfdcb72) reads the RenderText at Label_render_text and returns its
+// text_, the std::u16string at RenderText_text.
+inline constexpr uintptr_t Label_render_text = 0x398;
+inline constexpr uintptr_t RenderText_text = 0x18;
 
 // --- MultiContentsView : public views::View, public views::LayoutManagerBase ---
 // The View base is at +0; the LayoutManagerBase subobject is embedded at +0x340
