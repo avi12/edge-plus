@@ -35,5 +35,11 @@
     <Compile Include="..\Platform\Settings.cs" Link="Panel\Settings.cs" />
     <Compile Include="..\Platform\Shared.g.cs" Link="Panel\Shared.g.cs" />
     <Compile Include="..\Platform\Switches.cs" Link="Panel\Switches.cs" />
+    <Compile Include="..\Themes\Crx.cs" Link="Panel\Crx.cs" />
+    <Compile Include="..\Themes\ExtensionId.cs" Link="Panel\ExtensionId.cs" />
+    <Compile Include="..\Themes\Protobuf.cs" Link="Panel\Protobuf.cs" />
+    <Compile Include="..\Themes\StoreUrl.cs" Link="Panel\StoreUrl.cs" />
+    <Compile Include="..\Themes\ThemeManifest.cs" Link="Panel\ThemeManifest.cs" />
+    <Compile Include="..\Themes\ThemePacker.cs" Link="Panel\ThemePacker.cs" />
   </ItemGroup>
 </Project>

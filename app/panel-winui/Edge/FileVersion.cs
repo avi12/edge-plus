@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 
 namespace EdgePlus;
@@ -42,7 +43,8 @@ internal readonly record struct FileVersion(ushort Major, ushort Minor, ushort B
     }
     ushort[] numbers = new ushort[PartCount];
     for (int i = 0; i < PartCount; i++) {
-      bool isPart = ushort.TryParse(parts[i], out numbers[i]);
+      bool isPart = ushort.TryParse(parts[i], NumberStyles.None, CultureInfo.InvariantCulture,
+                                    out numbers[i]);
       if (!isPart) {
         return null;
       }
