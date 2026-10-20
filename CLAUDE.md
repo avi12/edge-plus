@@ -180,6 +180,9 @@ DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h}`).
   time or "the oldest msedge" (Avi's real Edge is running). Kill it the same way.
 - Iterate by hot-reload — signal `Local\fixedge-split-unload`, rebuild, re-inject
   into the same pid — not by relaunching Edge.
+- Inject timestamped copies (`fixedge-split-<ticks>.dll`, a loaded DLL can't be
+  overwritten) from `out/`, never from temp/scratchpad. Each new hash triggers a
+  Defender cloud scan; `out/` is the one folder Avi excluded from Defender.
 - Capture the test window with `PrintWindow`, never the screen.
 - The DLL's control channel (`fixedge.addpane`, codes in `src/control.h`) drives
   every pane action from a script, so changes can be verified without clicks.
