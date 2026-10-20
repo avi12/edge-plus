@@ -325,7 +325,7 @@ inline void __fastcall h_remove_unused_themes(void* themeService) {
 // the theme with the feature on repaints the rail at once. Like RemoveUnusedThemes
 // this rides theming, not the split, so control.h keeps it enabled while the split
 // is off (SetSplitHooks).
-inline constexpr uint32_t kVTabFillBehindDarkText = 0xff00e5ff;   // #00E5FF
+inline constexpr uint32_t kVTabFillBehindDarkText = 0xff96ffff;   // pale cyan
 inline constexpr uint32_t kVTabFillBehindLightText = 0xff00606c;  // deep cyan
 // Whether the window the user is in belongs to this Edge process.
 inline bool IsEdgeForeground() {
@@ -333,6 +333,9 @@ inline bool IsEdgeForeground() {
   GetWindowThreadProcessId(GetForegroundWindow(), &foregroundProcess);
   return foregroundProcess == GetCurrentProcessId();
 }
+// How far an unfocused window pulls the selected fill toward its rail: enough to
+// read as quieter, not enough to vanish on a pale rail.
+inline constexpr uint32_t kVTabInactiveRailPercent = 30;
 using GetColor_t = bool(__fastcall*)(void*, int, uint32_t*);
 inline GetColor_t o_getcolor = nullptr;
 inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
@@ -358,7 +361,9 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
       const bool isDimmed =
           isInactive &&
           o_getcolor(pack, off::VTABCOLOR_background_inactive, &inactiveRail);
-      *out = isDimmed ? theme_tone::Halfway(fill, inactiveRail) : fill;
+      *out = isDimmed ? theme_tone::Blend(fill, inactiveRail,
+                                          kVTabInactiveRailPercent)
+                      : fill;
       return true;
     }
   }
