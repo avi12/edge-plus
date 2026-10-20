@@ -513,6 +513,18 @@ inline constexpr uintptr_t ThemeService_GetColorProviderKey = 0xfcf25c;
 // extension's color for `id`, false when the theme did not set it. Its colors
 // are a table of 8-byte {int id, SkColor} entries.
 inline constexpr uintptr_t BrowserThemePack_GetColor = 0x87d5030;
+// SkColor ui::ColorProvider::GetColor(this, ui::ColorId id): the browser-wide
+// colour read every view resolves an id through. Signature:
+// SkColor __fastcall(void* this, int id).
+inline constexpr uintptr_t ColorProvider_GetColor = 0xffd9ce;
+// void EdgeTab::UpdateForegroundColors(this): recomputes a tab's title, close
+// and icon colours (through EdgeTabStyleViews::CalculateTargetColors and
+// TabStyle::GetTabForegroundColor) whenever its state, hover, theme or window
+// focus changes, and hands them to its views.
+inline constexpr uintptr_t EdgeTab_UpdateForegroundColors = 0x2a607a0;
+// bool Tab::IsActive(this): the tab is the strip's active one. EdgeTab's Tab
+// base is at +0, so an EdgeTab* passes as is.
+inline constexpr uintptr_t Tab_IsActive = 0x1047f30;
 // EdgeTabStyleViews::PaintInactiveTabBackground (rva 0x27d2448) +0x75: the return
 // address of its call to PaintTabBackground, on the stack whenever a tab other
 // than the active one paints its fill (a hovered one).
@@ -742,12 +754,6 @@ inline constexpr uintptr_t TabHoverCardController_OnCardClosing = 0xa62c3e0;
 
 // --- struct field offsets ---
 namespace off {
-// A tab row's first child is its title label, a views::Label. Label::GetText
-// (rva 0xfdcb72) reads the RenderText at Label_render_text and returns its
-// text_, the std::u16string at RenderText_text.
-inline constexpr uintptr_t Label_render_text = 0x398;
-inline constexpr uintptr_t RenderText_text = 0x18;
-
 // --- MultiContentsView : public views::View, public views::LayoutManagerBase ---
 // The View base is at +0; the LayoutManagerBase subobject is embedded at +0x340
 // (verified: CalculateProposedLayout's `this` is that subobject, and it recovers
@@ -802,6 +808,18 @@ inline constexpr int VTABCOLOR_selected_background_inactive = 0x26;
 inline constexpr int VTABCOLOR_foreground = 0x29;  // idle text (+0x2a inactive)
 inline constexpr int VTABCOLOR_selected_foreground = 0x2b;  // selected text
 inline constexpr int VTABCOLOR_selected_foreground_inactive = 0x2c;
+// Native ui::ColorIds (ColorProvider's id space, distinct from the pack ids
+// above). A tab's title and close colour: TabStyle::GetTabForegroundColor picks
+// one of four from a [state][window focus] table at rva 0x12631428; a vertical
+// tab always uses the active-state pair, so every title shares it.
+inline constexpr int UICOLOR_tab_foreground_first = 0xad6;
+inline constexpr int UICOLOR_tab_foreground_last = 0xad9;
+// The audio/alert icon of the ACTIVE tab: tabs::GetAlertIndicatorColor (rva
+// 0x2a613ea) indexes [alert kind][active][window focus] tables (rva 0x126354a0,
+// 0x126354e0); these are their active-tab entries. Seen live: a playing tab's
+// speaker is 0xbfe.
+inline constexpr int UICOLOR_active_tab_alert[] = {
+    0xaba, 0xabb, 0xabe, 0xabf, 0xab6, 0xab7, 0xc00, 0xc02, 0xbfe};
 // WebContentsImpl::GetController is a bare `lea rax, [this + 0x280]`.
 inline constexpr uintptr_t WEBCONTENTS_controller = 0x280;
 // content::ReloadType::NORMAL.

@@ -282,6 +282,9 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     MH_EnableHook(edge::At(edge155::rva::ThemeService_RemoveUnusedThemes));
     // Nor is the vertical-tab selected-tab recolour: it rides theming too.
     MH_EnableHook(edge::At(edge155::rva::BrowserThemePack_GetColor));
+    // Nor is the selected tab's ink: theming too.
+    MH_EnableHook(edge::At(edge155::rva::ColorProvider_GetColor));
+    MH_EnableHook(edge::At(edge155::rva::EdgeTab_UpdateForegroundColors));
     // Nor are the link-handler detours (they pass through while that feature
     // is off).
     protocol_handlers::EnableHooks();
@@ -571,15 +574,7 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   if (isColorSchemeChange) {
     channel::Post(CodeOf(Command::kApplyTheme));
   }
-  const LRESULT result =
-      CallWindowProcW(g_originalProc, hwnd, message, wparam, lparam);
-  // Edge repaints the selected fill for the new focus on its next frame; redo
-  // the cover now rather than on the next tick, so the two switch together.
-  const bool isFocusChange = message == WM_ACTIVATE && spine::g_isActive;
-  if (isFocusChange) {
-    spine::Tick(hwnd);
-  }
-  return result;
+  return CallWindowProcW(g_originalProc, hwnd, message, wparam, lparam);
 }
 
 // EnumWindows callback: claim the first visible, titled browser window of this

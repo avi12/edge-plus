@@ -330,13 +330,16 @@ inline constexpr uint32_t kVTabFillBehindDarkText = 0xff96ffff;  // pale cyan
 // The neon theme's chrome ground (rail and toolbar) and idle label colour.
 inline constexpr uint32_t kNeonRail = 0xff070a12;
 inline constexpr uint32_t kNeonIdleText = 0xff8fa7bd;
-// The full neon cyan; tab_cover.h repaints the title and icons in ink on it.
+// The full neon cyan, under the selected tab's ink title and icons.
 inline constexpr uint32_t kVTabFillBehindLightText = 0xff00e5ff;
 // How far an unfocused window pulls the selected fill toward its rail: enough to
 // read as quieter, not enough to vanish on a pale rail.
 inline constexpr uint32_t kVTabInactiveRailPercent = 30;
 // How much of the selected fill a hovered tab shows over the chrome ground.
 inline constexpr uint32_t kHoverFillPercent = 18;
+// Set from the theme's label colour on each selected-fill read: a light label
+// (the neon theme) means the selected tab's bright fill needs ink on it.
+inline bool g_isLabelLight = false;
 // The selected and the hovered tab both read the selected-fill id; only the
 // caller tells them apart. Edge paints a hovered tab as the active one, at the
 // hover's opacity, on a layer over its inactive fill (EdgeTabStyleViews::PaintTab),
@@ -381,22 +384,20 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
       // fill must read behind it as well as the rail does: the bright accent
       // behind dark text, a deep shade of it behind light text.
       const bool isTextDark = theme_tone::IsDark(textColor);
-      tab_cover::g_isCoverNeeded = !isTextDark;
+      g_isLabelLight = !isTextDark;
       const uint32_t fill =
           isTextDark ? kVTabFillBehindDarkText : kVTabFillBehindLightText;
-      // An unfocused window dims the fill into its rail, as Edge does its own
-      // colours. Both fills go to the tab cover, which must match whichever
-      // Edge paints the moment the focus moves.
+      // The slot for an unfocused window dims into the rail, as Edge does its
+      // own colours.
       uint32_t inactiveRail = 0;
-      const bool hasInactiveRail =
+      const bool isInactive = !focus::IsEdgeForeground();
+      const bool isDimmed =
+          isInactive &&
           o_getcolor(pack, off::VTABCOLOR_background_inactive, &inactiveRail);
-      const uint32_t unfocusedFill =
-          hasInactiveRail
+      const uint32_t selectedFill =
+          isDimmed
               ? theme_tone::Blend(fill, inactiveRail, kVTabInactiveRailPercent)
               : fill;
-      tab_cover::PublishSelectedFill(fill, unfocusedFill);
-      const uint32_t selectedFill =
-          focus::IsEdgeForeground() ? fill : unfocusedFill;
       // Edge paints a hovered tab with this same id; a hover is only a tint of
       // the fill over the chrome ground, as Edge's own themes keep it.
       uint32_t ground = kNeonRail;
@@ -411,8 +412,8 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
     }
     // Behind a light label (the neon theme) the chrome goes near-black (the
     // toolbar colour is the rail's too, and Edge derives the idle tab fills from
-    // it) and every label a dim steel; the bright tabs are inked over by
-    // tab_cover.h, so the label colour need not read on their fill.
+    // it) and every label a dim steel; the selected tab's own title and icons
+    // are inked (h_getuicolor), so the label colour need not read on its fill.
     const bool isNeonRecoloured = colorId == off::THEMECOLOR_toolbar ||
                                   colorId == off::THEMECOLOR_tab_text;
     const bool isNeonTheme =
@@ -426,6 +427,53 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
     }
   }
   return o_getcolor(pack, colorId, out);
+}
+
+// ui::ColorProvider::GetColor: the selected tab's title, close and audio icon in
+// ink on its bright fill. Every vertical tab's title shares one colour id, so
+// the title id is answered per tab: only while EdgeTab::UpdateForegroundColors
+// (h_update_foreground) computes the active tab's colours. The active tab's
+// alert icon has ids of its own. Read in the same pass that recolours the tab,
+// so ink and fill switch together when the selection or window focus moves.
+// GetColor is browser-wide and hot, so the cheap tests go first.
+inline constexpr uint32_t kSelectedTabInk = 0xff04121a;
+inline void* g_foregroundTab = nullptr;  // the tab whose colours are computed
+inline bool g_isForegroundTabActive = false;
+inline bool IsActiveTabAlert(int colorId) {
+  for (const int alertId : off::UICOLOR_active_tab_alert) {
+    if (colorId == alertId) {
+      return true;
+    }
+  }
+  return false;
+}
+using GetUiColor_t = uint32_t(__fastcall*)(void*, int);
+inline GetUiColor_t o_getuicolor = nullptr;
+inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
+  const bool isInkable = theme::g_isActive && g_isLabelLight;
+  if (isInkable) {
+    const bool isTabForeground = colorId >= off::UICOLOR_tab_foreground_first &&
+                                 colorId <= off::UICOLOR_tab_foreground_last;
+    const bool isActiveTabTitle = isTabForeground && g_isForegroundTabActive;
+    if (isActiveTabTitle || IsActiveTabAlert(colorId)) {
+      return kSelectedTabInk;
+    }
+  }
+  return o_getuicolor(provider, colorId);
+}
+
+using UpdateForeground_t = void(__fastcall*)(void*);
+inline UpdateForeground_t o_update_foreground = nullptr;
+inline void __fastcall h_update_foreground(void* tab) {
+  using IsActive_t = bool(__fastcall*)(void*);
+  void* const outerTab = g_foregroundTab;
+  const bool wasOuterActive = g_isForegroundTabActive;
+  g_foregroundTab = tab;
+  g_isForegroundTabActive =
+      reinterpret_cast<IsActive_t>(edge::At(rva::Tab_IsActive))(tab);
+  o_update_foreground(tab);
+  g_foregroundTab = outerTab;
+  g_isForegroundTabActive = wasOuterActive;
 }
 
 template <class T>
@@ -569,6 +617,11 @@ inline bool InstallAll() {
   // theme::g_isActive, so it stays enabled when the split is toggled off.
   Install(rva::BrowserThemePack_GetColor, reinterpret_cast<void*>(h_getcolor),
           &o_getcolor, "BrowserThemePack::GetColor (vertical-tab recolour)");
+  Install(rva::ColorProvider_GetColor, reinterpret_cast<void*>(h_getuicolor),
+          &o_getuicolor, "ui::ColorProvider::GetColor (selected-tab ink)");
+  Install(rva::EdgeTab_UpdateForegroundColors,
+          reinterpret_cast<void*>(h_update_foreground), &o_update_foreground,
+          "EdgeTab::UpdateForegroundColors (selected-tab ink)");
   // Asking to handle links: pass-through until the feature is switched on
   // (protocol_handlers.h).
   Install(rva::ContentSettingRPHBubbleModel_CommitChanges,

@@ -3,13 +3,11 @@
 // colour id paints a selected-tab outline, and hooking Edge's tab painting
 // crashed the browser, so the stripe lives in its own layered window, outside
 // Edge's views: a timer reads (never writes) the selected tab view's screen
-// bounds and moves the stripe to match. The same tick keeps the ink cover
-// (tab_cover.h) on the selected tab. UI thread only.
+// bounds and moves the stripe to match. UI thread only.
 #pragma once
 #include <windows.h>
 #include "edge.h"
 #include "geom.h"
-#include "tab_cover.h"
 #include "vtab_views.h"
 
 namespace fixedge::spine {
@@ -31,24 +29,41 @@ inline constexpr int kVerticalListTopDip = 48;
 inline HWND g_window = nullptr;
 inline bool g_isActive = false;
 
+inline HINSTANCE ThisModule() {
+  HMODULE thisModule = nullptr;
+  GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                         GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                     reinterpret_cast<LPCWSTR>(&ThisModule), &thisModule);
+  return thisModule;
+}
+
+// An opaque popup over Edge that the pointer passes straight through. Without
+// WS_EX_LAYERED, WS_EX_TRANSPARENT does not pass hits on, so the popup would
+// take the pointer: Edge would see it leave the tab and end the hover.
 inline void EnsureWindow(HWND owner) {
   if (g_window) {
     return;
   }
   WNDCLASSEXW windowClass{sizeof(windowClass)};
   windowClass.lpfnWndProc = DefWindowProcW;
-  windowClass.hInstance = tab_cover::ThisModule();
+  windowClass.hInstance = ThisModule();
   windowClass.hbrBackground = CreateSolidBrush(kColor);
   windowClass.lpszClassName = kWindowClass;
   RegisterClassExW(&windowClass);  // fails harmlessly if already registered
-  g_window = tab_cover::CreateClickThroughPopup(owner, kWindowClass);
+  g_window = CreateWindowExW(
+      WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
+      kWindowClass, L"", WS_POPUP, 0, 0, 0, 0, owner, nullptr, ThisModule(),
+      nullptr);
+  if (g_window) {
+    constexpr BYTE kOpaque = 255;
+    SetLayeredWindowAttributes(g_window, 0, kOpaque, LWA_ALPHA);
+  }
 }
 
 inline void Hide() {
   if (g_window) {
     ShowWindow(g_window, SW_HIDE);
   }
-  tab_cover::HideAll();
 }
 
 // One tick: put the stripe on the selected vertical tab, or hide it.
@@ -85,7 +100,6 @@ inline void Tick(HWND owner) {
                top + inset, static_cast<int>(kWidthDip * scale),
                static_cast<int>(bounds.height * scale) - 2 * inset,
                SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
-  tab_cover::UpdateSelected(owner, tab, scale);
 }
 
 inline void Start(HWND owner) {
@@ -93,7 +107,7 @@ inline void Start(HWND owner) {
   SetTimer(owner, kTimerId, kTickIntervalMs, nullptr);
 }
 
-// Stop ticking and drop the stripe and covers (before this DLL unloads).
+// Stop ticking and drop the stripe (before this DLL unloads).
 inline void Remove(HWND owner) {
   g_isActive = false;
   KillTimer(owner, kTimerId);
@@ -101,8 +115,7 @@ inline void Remove(HWND owner) {
     DestroyWindow(g_window);
     g_window = nullptr;
   }
-  tab_cover::Remove();
-  UnregisterClassW(kWindowClass, tab_cover::ThisModule());
+  UnregisterClassW(kWindowClass, ThisModule());
 }
 
 }  // namespace fixedge::spine
