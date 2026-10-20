@@ -327,12 +327,6 @@ inline void __fastcall h_remove_unused_themes(void* themeService) {
 // is off (SetSplitHooks).
 inline constexpr uint32_t kVTabFillBehindDarkText = 0xff00e5ff;   // #00E5FF
 inline constexpr uint32_t kVTabFillBehindLightText = 0xff00606c;  // deep cyan
-// Whether the window the user is in belongs to this Edge process.
-inline bool IsEdgeForeground() {
-  DWORD foregroundProcess = 0;
-  GetWindowThreadProcessId(GetForegroundWindow(), &foregroundProcess);
-  return foregroundProcess == GetCurrentProcessId();
-}
 using GetColor_t = bool(__fastcall*)(void*, int, uint32_t*);
 inline GetColor_t o_getcolor = nullptr;
 inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
@@ -351,12 +345,13 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
       const uint32_t fill = theme_tone::IsDark(textColor)
                                 ? kVTabFillBehindDarkText
                                 : kVTabFillBehindLightText;
-      // Edge reads this one slot for focused and unfocused windows alike, so a
-      // window that lost focus dims the fill into the rail itself, as Edge does
-      // its own colours.
+      // The slot for an unfocused window dims into the rail, as Edge does its
+      // own colours.
       uint32_t inactiveRail = 0;
+      const bool isInactive =
+          colorId == off::VTABCOLOR_selected_background_inactive;
       const bool isDimmed =
-          !IsEdgeForeground() &&
+          isInactive &&
           o_getcolor(pack, off::VTABCOLOR_background_inactive, &inactiveRail);
       *out = isDimmed ? theme_tone::Halfway(fill, inactiveRail) : fill;
       return true;
