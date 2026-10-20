@@ -127,8 +127,8 @@ inline void EnsureWindow(Cover* cover, HWND owner) {
   windowClass.lpszClassName = kWindowClass;
   RegisterClassExW(&windowClass);  // fails harmlessly if already registered
   cover->window = CreateWindowExW(
-      WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW, kWindowClass, L"",
-      WS_POPUP, 0, 0, 0, 0, owner, nullptr, ThisModule(), nullptr);
+      WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW, kWindowClass,
+      L"", WS_POPUP, 0, 0, 0, 0, owner, nullptr, ThisModule(), nullptr);
   if (cover->window) {
     SetWindowLongPtrW(cover->window, GWLP_USERDATA,
                       reinterpret_cast<LONG_PTR>(cover));
@@ -146,11 +146,10 @@ inline void EnsureFonts(float scale) {
       CreateFontW(titleHeight, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                   DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                   CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
-  g_glyphFont =
-      CreateFontW(-static_cast<int>(kGlyphFontDip * scale), 0, 0, 0, FW_NORMAL,
-                  FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
-                  CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH,
-                  L"Segoe MDL2 Assets");
+  g_glyphFont = CreateFontW(
+      -static_cast<int>(kGlyphFontDip * scale), 0, 0, 0, FW_NORMAL, FALSE,
+      FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+      CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe MDL2 Assets");
   g_fontHeight = titleHeight;
 }
 
@@ -176,9 +175,10 @@ inline size_t ReadTitle(void* label, wchar_t* out) {
 }
 
 inline bool IsBright(COLORREF color) {
-  const int luma = (GetRValue(color) * kLumaRed + GetGValue(color) * kLumaGreen +
-                    GetBValue(color) * kLumaBlue) /
-                   kLumaScale;
+  const int luma =
+      (GetRValue(color) * kLumaRed + GetGValue(color) * kLumaGreen +
+       GetBValue(color) * kLumaBlue) /
+      kLumaScale;
   return luma >= kBrightLuma;
 }
 
@@ -194,7 +194,8 @@ inline COLORREF SampleFill(const Rect& tab, float scale) {
 
 // A child view's screen bounds when it is shown, else an empty rect.
 inline Rect ShownChildBounds(void* tab, int childIndex) {
-  const bool isPresent = edge::ViewChildCount(tab) > static_cast<size_t>(childIndex);
+  const bool isPresent =
+      edge::ViewChildCount(tab) > static_cast<size_t>(childIndex);
   void* child = isPresent ? edge::ViewChildAt(tab, childIndex) : nullptr;
   const bool isShown = child && edge::ViewGetVisible(child);
   return isShown ? edge::ViewBoundsInScreen(child) : Rect{};
@@ -213,8 +214,10 @@ inline void Update(Cover* cover, HWND owner, void* tab, float scale) {
   const bool isFillBright = g_isCoverNeeded && IsBright(fill);
   const bool isLabelPresent = edge::ViewChildCount(tab) > kLabelChild;
   void* label = isLabelPresent ? edge::ViewChildAt(tab, kLabelChild) : nullptr;
-  const size_t length = label && isFillBright ? ReadTitle(label, cover->title) : 0;
-  const Rect labelBounds = length > 0 ? edge::ViewBoundsInScreen(label) : Rect{};
+  const size_t length =
+      label && isFillBright ? ReadTitle(label, cover->title) : 0;
+  const Rect labelBounds =
+      length > 0 ? edge::ViewBoundsInScreen(label) : Rect{};
   const bool isCoverable = labelBounds.width > 0 && labelBounds.height > 0;
   if (!isCoverable) {
     Hide(cover);
@@ -229,8 +232,7 @@ inline void Update(Cover* cover, HWND owner, void* tab, float scale) {
   // the tab shows them.
   const Rect indicator = ShownChildBounds(tab, kIndicatorChild);
   const Rect close = ShownChildBounds(tab, kCloseChild);
-  const bool hasIndicator =
-      indicator.width > 0 && indicator.x < labelBounds.x;
+  const bool hasIndicator = indicator.width > 0 && indicator.x < labelBounds.x;
   const bool hasClose =
       close.width > 0 && close.x >= labelBounds.x + labelBounds.width;
   const int left = hasIndicator ? indicator.x : labelBounds.x;
@@ -256,11 +258,13 @@ inline void UpdateAll(HWND owner, void* selectedTab, float scale) {
   Update(&g_selected, owner, selectedTab, scale);
   POINT pointer{};
   GetCursorPos(&pointer);
-  const bool isPointerInEdge = GetAncestor(WindowFromPoint(pointer), GA_ROOT) == owner;
-  void* hoveredTab = isPointerInEdge
-                         ? vtab_views::TabAtPoint(edge::McvForWindow(owner),
-                                                  pointer, scale)
-                         : nullptr;
+  // GA_ROOTOWNER: the pointer over one of our own covers still counts as Edge.
+  const bool isPointerInEdge =
+      GetAncestor(WindowFromPoint(pointer), GA_ROOTOWNER) == owner;
+  void* hoveredTab =
+      isPointerInEdge
+          ? vtab_views::TabAtPoint(edge::McvForWindow(owner), pointer, scale)
+          : nullptr;
   const bool isOtherTabHovered = hoveredTab && hoveredTab != selectedTab;
   if (isOtherTabHovered) {
     Update(&g_hovered, owner, hoveredTab, scale);
