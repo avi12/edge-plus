@@ -82,4 +82,25 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <!--
+    The repo's verbs, here because this csproj is the manifest a task runner
+    reads its list from (as any-stt's is). Each is the script it names and
+    nothing more:
+
+      dotnet build app\panel-winui -t:BuildNative   the C++ split DLL
+      dotnet build app\panel-winui -t:Lint          the C++ and C# lint gate
+      dotnet build app\panel-winui -t:Test          the panel's pure-logic tests
+  -->
+  <Target Name="BuildNative">
+    <Exec Command="&quot;$(NativeSplitDir)build.cmd&quot;" WorkingDirectory="$(NativeSplitDir)" />
+  </Target>
+
+  <Target Name="Lint">
+    <Exec Command="pwsh -NoProfile -File &quot;$(RepositoryRoot)tools\lint.ps1&quot;" />
+  </Target>
+
+  <Target Name="Test">
+    <Exec Command="&quot;$(MSBuildThisFileDirectory)test\run.cmd&quot;" />
+  </Target>
 </Project>

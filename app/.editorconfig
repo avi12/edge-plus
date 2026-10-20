@@ -5,7 +5,8 @@
 # names. Every rule below is a line of that guide, quoted where it is short
 # enough to quote — nothing here is a preference of this project's.
 #
-# Apply:  dotnet format app\panel\FixEdge.csproj  (and app\host\FixEdge.Host.csproj)
+# Apply:  pwsh tools\lint.ps1 -Fix  (dotnet format on app\panel-winui\EdgePlus.csproj
+#         and its test\EdgePlus.Tests.csproj)
 # Check:  tools\lint.ps1  (the C# pass runs --verify-no-changes)
 #
 # Scoped to app on purpose, with root = true: the tree above is C++,

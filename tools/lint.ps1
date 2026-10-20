@@ -3,15 +3,17 @@
 #
 #   pwsh tools/lint.ps1              check everything, non-zero exit on any finding
 #   pwsh tools/lint.ps1 -Fix         apply what can be applied (clang-format -i,
-#                                    clang-tidy --fix), then re-check
-#   pwsh tools/lint.ps1 -Staged      only C++ files staged for commit (what the
+#                                    clang-tidy --fix, dotnet format), then re-check
+#   pwsh tools/lint.ps1 -Staged      only files staged for commit (what the
 #                                    pre-commit hook runs)
 #   pwsh tools/lint.ps1 -InstallHook point git at .githooks so commits are gated
 #
-# Three passes (the panel has its own `pnpm --dir app/panel lint`):
+# Five passes (the Tauri panel has its own `pnpm --dir app/panel lint`):
 #   clang-format (.clang-format)   C++ layout    <- eslint @stylistic
 #   clang-tidy   (.clang-tidy)     correctness   <- oxlint categories.correctness
 #   $restrictedSyntax (below)      house rules   <- eslint no-restricted-syntax
+#   $csharpRules (below)           the same, for the WinUI panel's C#
+#   dotnet format (app\.editorconfig)  C# layout and style, Google C# style
 #
 # clang-tidy parses with clang-cl so it sees the SAME headers and defines the
 # MSVC build uses — the flags are read out of fixedge-split.buildscript, the one
@@ -127,13 +129,78 @@ if ($hasCppInScope) {
     }
 }
 
-# The panel (app\panel) has its own lint stack — `pnpm --dir app/panel lint`
-# (oxlint + eslint + stylelint + cargo clippy + fallow); this script lints the
-# C++ DLL only.
+# The Tauri panel (app\panel) has its own lint stack — `pnpm --dir app/panel
+# lint` (oxlint + eslint + stylelint + cargo clippy + fallow). The WinUI panel
+# (app\panel-winui) is linted here, as any-stt lints its C# app.
 
-if ($formatOk -and $tidyOk -and $syntaxOk) {
+# --- pass 4: C# house rules ------------------------------------------------
+# The C# counterpart of pass 3, and of the Tauri core's `unsafe_code =
+# "forbid"`: every Win32 call is a [DllImport] in Native\, so a [DllImport]
+# anywhere else is a Win32 call that escaped its one home.
+$panelRoot = 'app/panel-winui'
+$csharpRules = @(
+    @{
+        Pattern = '\[(DllImport|LibraryImport)\b'
+        Allowed = "^$panelRoot/Native/"
+        Message = 'Win32 calls live in app/panel-winui/Native/ only; move this [DllImport] there.'
+    }
+    @{
+        Pattern = 'for\s*\(\s*;\s*;\s*\)'
+        Message = 'Use `while (true)` for an infinite loop. `for (;;)` reads as a for loop someone forgot to finish writing.'
+    }
+)
+$csharpFiles = @(git -C $root ls-files "$panelRoot/*.cs")
+if ($Staged) {
+    $csharpFiles = @(git -C $root diff --cached --name-only --diff-filter=ACMR |
+        Where-Object { $_ -match "^$panelRoot/.*\.cs$" })
+}
+$csharpSyntaxOk = $true
+Write-Host "[lint] C# house rules ($($csharpRules.Count) rules, $($csharpFiles.Count) files)"
+foreach ($file in $csharpFiles) {
+    $lineNumber = 0
+    foreach ($line in [System.IO.File]::ReadAllLines((Join-Path $root $file))) {
+        $lineNumber++
+        $code = $line -replace '//.*$', ''
+        foreach ($rule in $csharpRules) {
+            $isAllowedHere = $rule.ContainsKey('Allowed') -and ($file -match $rule.Allowed)
+            if (($code -match $rule.Pattern) -and -not $isAllowedHere) {
+                $csharpSyntaxOk = $false
+                Write-Host "${file}:${lineNumber}: $($rule.Message)"
+            }
+        }
+    }
+}
+
+# --- pass 5: C# formatting and style ---------------------------------------
+# app\.editorconfig is the Google C# Style Guide the way .clang-format is the
+# Google C++ one, and dotnet format is what reads it. Skipped under -Staged:
+# dotnet format works on a project, not a file list, so it would judge unstaged
+# files too.
+#
+# The flag is written out twice rather than splatted in: a conditional array
+# unrolls to a bare string, and `@v` on a string drops it — which silently turns
+# the check into a FIX (any-stt hit exactly this).
+$csharpOk = $true
+if (-not $Staged) {
+    foreach ($project in @("$panelRoot/EdgePlus.csproj", "$panelRoot/test/EdgePlus.Tests.csproj")) {
+        $projectPath = Join-Path $root $project
+        Write-Host "[lint] dotnet format ($project)"
+        foreach ($subcommand in @('whitespace', 'style')) {
+            if ($Fix) {
+                & dotnet format $subcommand $projectPath
+            } else {
+                & dotnet format $subcommand $projectPath --verify-no-changes
+            }
+            if ($LASTEXITCODE -ne 0) {
+                $csharpOk = $false
+            }
+        }
+    }
+}
+
+if ($formatOk -and $tidyOk -and $syntaxOk -and $csharpSyntaxOk -and $csharpOk) {
     Write-Host "[lint] clean"
     exit 0
 }
-Write-Host "[lint] FAILED (format=$formatOk tidy=$tidyOk syntax=$syntaxOk)"
+Write-Host "[lint] FAILED (format=$formatOk tidy=$tidyOk syntax=$syntaxOk csharpRules=$csharpSyntaxOk csharp=$csharpOk)"
 exit 1

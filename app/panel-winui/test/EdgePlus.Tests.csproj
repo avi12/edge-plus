@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The panel's pure-logic tests: a plain console exe that compiles the panel's
+    pure sources straight from their folders and checks them, the way
+    app\native-split\test compiles the DLL's pure headers. No test framework,
+    for the same supply-chain reason the UI has no component library — the
+    harness is Program.cs, a page long.
+
+      app\panel-winui\test\run.cmd     (dotnet run on this project)
+
+    A file listed here must not touch WinUI or Win32: that is what makes it
+    pure, and what lets this project build without the Windows App SDK.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>EdgePlus</RootNamespace>
+    <AssemblyName>edgeplus-tests</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="*.cs" />
+  </ItemGroup>
+
+  <!-- The panel sources under test. -->
+  <ItemGroup>
+    <Compile Include="..\Platform\Switches.cs" Link="Panel\Switches.cs" />
+  </ItemGroup>
+</Project>
