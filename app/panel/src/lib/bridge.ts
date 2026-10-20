@@ -21,7 +21,8 @@ export enum Feature {
   ProtocolHandlers = "protocolHandlers",
   EnhancedFind = "enhancedFind",
   WebUiFollowsTheme = "webUiFollowsTheme",
-  LivePreview = "livePreview"
+  LivePreview = "livePreview",
+  TabSpine = "tabSpine"
 }
 
 /** A newly seen Edge build and what it switched off (often nothing); matches `BuildChange` in edge_build.rs. */
@@ -79,6 +80,7 @@ export interface Features {
   enhancedFind: boolean;
   webUiFollowsTheme: boolean;
   livePreview: boolean;
+  tabSpine: boolean;
 }
 
 export interface AppState {
@@ -116,6 +118,7 @@ enum Command {
   SetEnhancedFind = "set_enhanced_find",
   SetWebUiFollowsTheme = "set_web_ui_follows_theme",
   SetLivePreview = "set_live_preview",
+  SetTabSpine = "set_tab_spine",
   AddStoreTheme = "add_store_theme",
   AddLocalTheme = "add_local_theme",
   RemoveTheme = "remove_theme",
@@ -161,6 +164,10 @@ export function setWebUiFollowsTheme(enabled: boolean): Promise<AppState> {
 
 export function setLivePreview(enabled: boolean): Promise<AppState> {
   return invoke<AppState>(Command.SetLivePreview, { enabled });
+}
+
+export function setTabSpine(enabled: boolean): Promise<AppState> {
+  return invoke<AppState>(Command.SetTabSpine, { enabled });
 }
 
 export function addStoreTheme(url: string): Promise<AppState> {

@@ -92,10 +92,11 @@ pub enum Feature {
     EnhancedFind,
     WebUiFollowsTheme,
     LivePreview,
+    TabSpine,
 }
 
 impl Feature {
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::NativeSplit,
         Self::Theming,
         Self::QuietDevMode,
@@ -103,6 +104,7 @@ impl Feature {
         Self::EnhancedFind,
         Self::WebUiFollowsTheme,
         Self::LivePreview,
+        Self::TabSpine,
     ];
 }
 
@@ -117,6 +119,7 @@ impl Features {
             Feature::EnhancedFind => self.enhanced_find,
             Feature::WebUiFollowsTheme => self.web_ui_follows_theme,
             Feature::LivePreview => self.live_preview,
+            Feature::TabSpine => self.tab_spine,
         }
     }
 
@@ -141,6 +144,7 @@ impl Features {
             Feature::EnhancedFind => self.enhanced_find = is_on,
             Feature::WebUiFollowsTheme => self.web_ui_follows_theme = is_on,
             Feature::LivePreview => self.live_preview = is_on,
+            Feature::TabSpine => self.tab_spine = is_on,
         }
     }
 }

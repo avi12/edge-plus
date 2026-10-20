@@ -44,6 +44,12 @@
       `<rect x="3" y="5" width="18" height="14" rx="1.5"/>` +
       `<path d="M10 9.5 L15 12 L10 14.5 Z" fill="currentColor" stroke="none"/></svg>`;
 
+  // A tab with a square, striped leading edge: the selected tab's spine.
+  const tabSpineIcon =
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
+      `<path d="M4 7 H18.5 A2.5 2.5 0 0 1 21 9.5 V14.5 A2.5 2.5 0 0 1 18.5 17 H4 Z"/>` +
+      `<rect x="3" y="6.2" width="2.6" height="11.6" fill="currentColor" stroke="none"/></svg>`;
+
   // A power button.
   const startupIcon =
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
@@ -71,6 +77,9 @@
   const livePreviewDescription =
     "Hover a tab and its thumbnail plays live instead of a frozen snapshot, by keeping Edge's own " +
       "tab capture running while the preview is open. Live, no restart. Open Edge first.";
+  const tabSpineDescription =
+    "Gives the selected vertical tab a straight leading edge with a neon magenta stripe (on the " +
+      "right when Edge runs right to left). Works with Theming on. Live, no restart.";
 
   let appState = $state<AppState | null>(null);
   let isDraggingOver = $state(false);
@@ -93,6 +102,9 @@
   );
   const isLivePreviewHeldOff = $derived(
     unsupported.has(Feature.LivePreview) && appState?.features.livePreview !== true
+  );
+  const isTabSpineHeldOff = $derived(
+    unsupported.has(Feature.TabSpine) && appState?.features.tabSpine !== true
   );
   // What a locked card says about why, on the card itself.
   function heldOffNote(isHeldOff: boolean): string {
@@ -215,6 +227,10 @@
     appState = await bridge.setLivePreview(value);
   }
 
+  async function onTabSpine(value: boolean): Promise<void> {
+    appState = await bridge.setTabSpine(value);
+  }
+
   async function onAddStore(url: string): Promise<void> {
     appState = await bridge.addStoreTheme(url);
   }
@@ -287,6 +303,16 @@
       note={heldOffNote(isWebUiHeldOff)}
       onchange={onWebUiFollowsTheme}
       title="Settings and extensions pages follow the theme"
+    />
+
+    <FeatureCard
+      checked={appState.features.tabSpine}
+      description={tabSpineDescription}
+      disabled={isTabSpineHeldOff}
+      icon={tabSpineIcon}
+      note={heldOffNote(isTabSpineHeldOff)}
+      onchange={onTabSpine}
+      title="Square selected tab with neon spine"
     />
 
     <FeatureCard

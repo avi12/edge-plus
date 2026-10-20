@@ -210,6 +210,13 @@ pub fn set_live_preview(enabled: bool) -> Result<StateDto, String> {
 }
 
 #[tauri::command]
+pub fn set_tab_spine(enabled: bool) -> Result<StateDto, String> {
+    let mut settings = Settings::load();
+    settings.features.tab_spine = enabled;
+    persist_and_apply(&settings)
+}
+
+#[tauri::command]
 pub fn set_quiet_dev_mode(enabled: bool) -> Result<StateDto, String> {
     let mut settings = Settings::load();
     settings.features.quiet_dev_mode = enabled;

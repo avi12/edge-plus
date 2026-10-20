@@ -13,7 +13,8 @@ const featureNames: Record<Feature, string> = {
   [Feature.ProtocolHandlers]: "Asking to handle links",
   [Feature.EnhancedFind]: "The enhanced find bar",
   [Feature.WebUiFollowsTheme]: "Settings and extensions pages following the theme",
-  [Feature.LivePreview]: "Live tab preview on hover"
+  [Feature.LivePreview]: "Live tab preview on hover",
+  [Feature.TabSpine]: "The square selected tab with its neon spine"
 };
 
 function joinNames(features: Feature[]): string {

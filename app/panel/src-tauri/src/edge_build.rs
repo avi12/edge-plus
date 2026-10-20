@@ -61,7 +61,8 @@ pub fn depends_on_pinned_build(feature: Feature) -> bool {
         | Feature::ProtocolHandlers
         | Feature::EnhancedFind
         | Feature::WebUiFollowsTheme
-        | Feature::LivePreview => true,
+        | Feature::LivePreview
+        | Feature::TabSpine => true,
         Feature::QuietDevMode => false,
     }
 }
@@ -186,6 +187,7 @@ mod tests {
         assert!(depends_on_pinned_build(Feature::EnhancedFind));
         assert!(depends_on_pinned_build(Feature::WebUiFollowsTheme));
         assert!(depends_on_pinned_build(Feature::LivePreview));
+        assert!(depends_on_pinned_build(Feature::TabSpine));
         assert!(!depends_on_pinned_build(Feature::QuietDevMode));
     }
 
@@ -208,7 +210,8 @@ mod tests {
                 Feature::ProtocolHandlers,
                 Feature::EnhancedFind,
                 Feature::WebUiFollowsTheme,
-                Feature::LivePreview
+                Feature::LivePreview,
+                Feature::TabSpine
             ]
         );
     }
@@ -225,7 +228,8 @@ mod tests {
                 Feature::ProtocolHandlers,
                 Feature::EnhancedFind,
                 Feature::WebUiFollowsTheme,
-                Feature::LivePreview
+                Feature::LivePreview,
+                Feature::TabSpine
             ]
         );
     }
