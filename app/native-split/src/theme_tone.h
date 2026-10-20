@@ -11,12 +11,16 @@
 
 namespace fixedge::theme_tone {
 
-// A theme's color as Skia stores it: 0xAARRGGBB.
+// A theme's color as Skia stores it: 0xAARRGGBB (also a Windows BGRA pixel).
 using Argb = uint32_t;
 
+inline constexpr int kAlphaShift = 24;
 inline constexpr int kRedShift = 16;
 inline constexpr int kGreenShift = 8;
+inline constexpr int kBlueShift = 0;
 inline constexpr uint32_t kChannelMask = 0xff;
+// A channel at full strength (an opaque alpha).
+inline constexpr uint32_t kChannelMax = 0xff;
 
 // Chromium's color_utils::IsDark: a color is dark when its luma (the weighted
 // sum of its channels, out of 255) is below the middle. The weights are the
@@ -41,7 +45,6 @@ constexpr bool IsDark(Argb color) {
 
 // `from` moved `toPercent` percent of the way toward `to`, opaque: how a window
 // that lost focus dims a colour into its surroundings.
-inline constexpr int kBlueShift = 0;
 inline constexpr uint32_t kPercentScale = 100;
 constexpr Argb Blend(Argb from, Argb to, uint32_t toPercent) {
   const auto mix = [&](int shift) {

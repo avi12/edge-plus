@@ -8,6 +8,7 @@
 #include <windows.h>
 #include "edge.h"
 #include "geom.h"
+#include "theme_tone.h"
 #include "vtab_views.h"
 
 namespace fixedge::spine {
@@ -55,8 +56,7 @@ inline void EnsureWindow(HWND owner) {
       kWindowClass, L"", WS_POPUP, 0, 0, 0, 0, owner, nullptr, ThisModule(),
       nullptr);
   if (g_window) {
-    constexpr BYTE kOpaque = 255;
-    SetLayeredWindowAttributes(g_window, 0, kOpaque, LWA_ALPHA);
+    SetLayeredWindowAttributes(g_window, 0, theme_tone::kChannelMax, LWA_ALPHA);
   }
 }
 
