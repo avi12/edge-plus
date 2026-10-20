@@ -326,7 +326,10 @@ inline void __fastcall h_remove_unused_themes(void* themeService) {
 // this rides theming, not the split, so control.h keeps it enabled while the split
 // is off (SetSplitHooks).
 inline constexpr uint32_t kVTabFillBehindDarkText = 0xff96ffff;  // pale cyan
-// The full neon cyan; spine.h repaints the title (and audio icon) in ink on it.
+// The neon theme's chrome ground (rail and toolbar) and idle label colour.
+inline constexpr uint32_t kNeonRail = 0xff070a12;
+inline constexpr uint32_t kNeonIdleText = 0xff8fa7bd;
+// The full neon cyan; tab_cover.h repaints the title and icons in ink on it.
 inline constexpr uint32_t kVTabFillBehindLightText = 0xff00e5ff;
 // Whether the window the user is in belongs to this Edge process.
 inline bool IsEdgeForeground() {
@@ -366,6 +369,21 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
       *out = isDimmed ? theme_tone::Blend(fill, inactiveRail,
                                           kVTabInactiveRailPercent)
                       : fill;
+      return true;
+    }
+    // Behind a light label (the neon theme) the chrome goes near-black (the
+    // toolbar colour is the rail's too, and Edge derives the idle tab fills from
+    // it) and every label a dim steel; the bright tabs are inked over by
+    // tab_cover.h, so the label colour need not read on their fill.
+    const bool isNeonRecoloured = colorId == off::THEMECOLOR_toolbar ||
+                                  colorId == off::THEMECOLOR_tab_text;
+    const bool isNeonTheme =
+        isNeonRecoloured &&
+        o_getcolor(pack, off::THEMECOLOR_tab_text, &textColor) &&
+        !theme_tone::IsDark(textColor);
+    if (isNeonTheme) {
+      const bool isTabText = colorId == off::THEMECOLOR_tab_text;
+      *out = isTabText ? kNeonIdleText : kNeonRail;
       return true;
     }
   }
@@ -513,8 +531,6 @@ inline bool InstallAll() {
   // theme::g_isActive, so it stays enabled when the split is toggled off.
   Install(rva::BrowserThemePack_GetColor, reinterpret_cast<void*>(h_getcolor),
           &o_getcolor, "BrowserThemePack::GetColor (vertical-tab recolour)");
-  // The selected-tab outline (the magenta spine). A native ui colour, not a pack
-  // id, so it needs its own read-side hook; also a theming hook, gated the same.
   // Asking to handle links: pass-through until the feature is switched on
   // (protocol_handlers.h).
   Install(rva::ContentSettingRPHBubbleModel_CommitChanges,
