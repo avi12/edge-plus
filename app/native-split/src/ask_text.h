@@ -34,10 +34,6 @@ inline constexpr int kMaxLabelsPerReply = 5;
 
 inline constexpr char kNoneWord[] = "NONE";
 
-// The first field of every page script answer: it worked, or it failed.
-inline constexpr char kOkMarker[] = "ok";
-inline constexpr char kErrorMarker[] = "err";
-
 // --- the page's paragraphs -----------------------------------------------------------
 
 struct Paragraph {
@@ -56,29 +52,23 @@ struct PageParagraphs {
 // `err US message`. A paragraph is already one trimmed run of text.
 inline PageParagraphs ParsePageParagraphs(const std::string& raw) {
   PageParagraphs page;
-  const std::vector<std::string> fields = find_text::SplitFields(raw);
-  if (fields[0] == kErrorMarker) {
+  const std::vector<std::string> fields = web_text::SplitFields(raw);
+  if (fields[0] == web_text::kErrorTag) {
     page.error = fields.size() > 1 ? fields[1] : std::string();
     return page;
   }
   constexpr size_t kOkFieldCount = 3;
   const bool isComplete =
-      fields[0] == kOkMarker && fields.size() == kOkFieldCount;
+      fields[0] == web_text::kOkTag && fields.size() == kOkFieldCount;
   if (!isComplete) {
-    page.error = "The page gave an answer Edge could not read.";
+    page.error = web_text::kUnreadableAnswer;
     return page;
   }
   page.isOk = true;
   page.isCut = fields[1] == "1";
   const std::string& joined = fields[2];
-  size_t start = 0;
-  while (start <= joined.size() && !joined.empty()) {
-    size_t end = joined.find(kParagraphSeparator, start);
-    if (end == std::string::npos) {
-      end = joined.size();
-    }
-    page.texts.push_back(joined.substr(start, end - start));
-    start = end + 1;
+  if (!joined.empty()) {
+    page.texts = web_text::Split(joined, kParagraphSeparator);
   }
   return page;
 }
@@ -210,15 +200,15 @@ struct Reply {
 // The Copilot script answers `ok US reply text` or `err US message`.
 inline Reply ParseReply(const std::string& raw) {
   Reply reply;
-  const size_t separator = raw.find(find_text::kFieldSeparator);
+  const size_t separator = raw.find(web_text::kFieldSeparator);
   const std::string marker = raw.substr(0, separator);
   const std::string rest = separator == std::string::npos
                                ? std::string()
                                : raw.substr(separator + 1);
-  if (marker == kOkMarker) {
+  if (marker == web_text::kOkTag) {
     reply.isOk = true;
     reply.text = rest;
-  } else if (marker == kErrorMarker) {
+  } else if (marker == web_text::kErrorTag) {
     reply.error = rest;
   } else {
     reply.error = "The chat page gave an answer Edge could not read.";

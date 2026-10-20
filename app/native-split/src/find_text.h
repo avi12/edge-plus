@@ -179,12 +179,6 @@ inline std::string EscapeLineBreaks(const std::string& pasted) {
 inline constexpr size_t kMaxPatternChars = 500;
 inline constexpr int kMaxMatches = 5000;
 
-// Fields of a report, and its lines (the same separators the page scripts use).
-inline constexpr char kFieldSeparator = '\x1f';
-// The first field of every page answer: whether it worked.
-inline constexpr char kOkTag[] = "ok";
-inline constexpr char kErrorTag[] = "err";
-
 // --- which pages the bar can search ------------------------------------------------
 
 // Web pages and local files whose text is in the page. An Edge page (settings, a
@@ -366,22 +360,11 @@ struct SearchResult {
   std::string error;
 };
 
-inline std::vector<std::string> SplitFields(const std::string& raw) {
-  std::vector<std::string> fields;
-  size_t start = 0;
-  while (true) {
-    const size_t end = raw.find(kFieldSeparator, start);
-    if (end == std::string::npos) {
-      fields.push_back(raw.substr(start));
-      return fields;
-    }
-    fields.push_back(raw.substr(start, end - start));
-    start = end + 1;
-  }
-}
+// The most digits read as a count: any more could overflow an int.
+inline constexpr size_t kMaxCountDigits = 9;
 
 inline bool IsDigits(const std::string& text) {
-  if (text.empty() || text.size() > 9) {
+  if (text.empty() || text.size() > kMaxCountDigits) {
     return false;
   }
   for (const char character : text) {
@@ -394,18 +377,18 @@ inline bool IsDigits(const std::string& text) {
 
 inline SearchResult ParseSearchResult(const std::string& raw) {
   SearchResult result;
-  const std::vector<std::string> fields = SplitFields(raw);
-  const bool isError = fields[0] == kErrorTag;
+  const std::vector<std::string> fields = web_text::SplitFields(raw);
+  const bool isError = fields[0] == web_text::kErrorTag;
   if (isError) {
     result.error = fields.size() > 1 ? fields[1] : std::string();
     return result;
   }
   constexpr size_t kOkFieldCount = 4;
-  const bool isComplete = fields[0] == kOkTag &&
+  const bool isComplete = fields[0] == web_text::kOkTag &&
                           fields.size() == kOkFieldCount &&
                           IsDigits(fields[1]) && IsDigits(fields[3]);
   if (!isComplete) {
-    result.error = "The page gave an answer Edge could not read.";
+    result.error = web_text::kUnreadableAnswer;
     return result;
   }
   result.isOk = true;

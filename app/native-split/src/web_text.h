@@ -1,12 +1,13 @@
 // web_text.h — text helpers for pages and scripts. One concern, all of it pure
 // (no Edge, no Win32; unit-tested in test/web_text_test.cpp): cut a text on a
-// character boundary, say whether a URL is a web page whose text can be read, and
-// write a string as a JavaScript literal.
+// character boundary, say whether a URL is a web page whose text can be read,
+// write a string as a JavaScript literal, and split a page script's answer.
 #pragma once
 #include <cctype>
 #include <cstddef>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 namespace fixedge::web_text {
 
@@ -80,6 +81,35 @@ inline std::string JsStringLiteral(const std::string& utf8) {
   }
   literal += "\"";
   return literal;
+}
+
+// --- a page script's answer ------------------------------------------------------
+
+// Every page script answers `ok US field US ...` or `err US message`, US being
+// the field separator.
+inline constexpr char kFieldSeparator = '\x1f';
+inline constexpr char kOkTag[] = "ok";
+inline constexpr char kErrorTag[] = "err";
+inline constexpr char kUnreadableAnswer[] =
+    "The page gave an answer Edge could not read.";
+
+// `text` cut at every `separator`; an empty text is one empty piece.
+inline std::vector<std::string> Split(const std::string& text, char separator) {
+  std::vector<std::string> pieces;
+  size_t start = 0;
+  while (true) {
+    const size_t end = text.find(separator, start);
+    if (end == std::string::npos) {
+      pieces.push_back(text.substr(start));
+      return pieces;
+    }
+    pieces.push_back(text.substr(start, end - start));
+    start = end + 1;
+  }
+}
+
+inline std::vector<std::string> SplitFields(const std::string& answer) {
+  return Split(answer, kFieldSeparator);
 }
 
 }  // namespace fixedge::web_text
