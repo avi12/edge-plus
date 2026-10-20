@@ -205,11 +205,6 @@ inline void Teardown(HWND hwnd) {
   g_hasHotKeys = false;
 }
 
-inline bool IsKeyDown(int virtualKey) {
-  constexpr SHORT kDownBit = static_cast<SHORT>(0x8000);
-  return (GetKeyState(virtualKey) & kDownBit) != 0;
-}
-
 // --- the hot-keys ----------------------------------------------------------
 
 inline void CollapseByHotKey(HWND hwnd) {

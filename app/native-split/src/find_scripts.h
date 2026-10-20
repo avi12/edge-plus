@@ -18,8 +18,6 @@ inline constexpr int kMaxReadChars = 60000;
 inline constexpr int kMaxParagraphCarryChars = 1200;
 // How much of a page a search looks through.
 inline constexpr int kMaxSearchChars = 4000000;
-// The longest selection that prefills the bar.
-inline constexpr int kMaxSelectionChars = 200;
 
 // The highlight names the page's stylesheet is written for.
 inline constexpr char kMatchHighlight[] = "fixedge-find";
@@ -348,19 +346,6 @@ inline std::string GoToScript(int index) {
 // Take every highlight and the stylesheet back out of the page.
 inline constexpr char kClearScript[] =
     R"JS((function () { if (window.__fxFind) { window.__fxFind.clear(); } return "ok"; })())JS";
-
-// The page's selection, one line, for the bar to start from.
-inline std::string SelectionScript() {
-  return std::string(R"JS((function () {
-  try {
-    var text = String(window.getSelection ? window.getSelection() : "");
-    return text.replace(/\s+/g, " ").trim().slice(0, )JS") +
-         std::to_string(kMaxSelectionChars) + R"JS();
-  } catch (error) {
-    return "";
-  }
-})())JS";
-}
 
 // Read the page as paragraphs for Ask Copilot: one per block of text, in
 // reading order, remembered so ones Copilot names can be marked later. Answers

@@ -35,10 +35,6 @@ using namespace fixedge::edge155;
 // Whether the enhanced find is switched on; the panel pushes it (config.h).
 inline bool g_isEnabled = false;
 
-inline bool IsEnabled() {
-  return g_isEnabled;
-}
-
 inline constexpr UINT_PTR kTimerId = 0xF1EC;
 inline constexpr UINT kTickIntervalMs = 100;
 

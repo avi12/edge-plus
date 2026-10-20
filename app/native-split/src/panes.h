@@ -59,18 +59,4 @@ inline void EnsureControlButtons(void* mcv, int index) {
   Log("[grow] pane %d got its control buttons", index);
 }
 
-// Grow to exactly `targetPanes` containers (no-op if already at/above). Returns
-// the resulting count.
-inline size_t GrowToPanes(void* mcv, int targetPanes) {
-  size_t count = edge::McvCount(mcv);
-  while (static_cast<int>(count) < targetPanes) {
-    const bool isAdded = AddContainer(mcv);
-    if (!isAdded) {
-      break;
-    }
-    count = edge::McvCount(mcv);
-  }
-  return count;
-}
-
 }  // namespace fixedge::panes

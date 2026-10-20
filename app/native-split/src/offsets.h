@@ -14,20 +14,15 @@ inline constexpr int kVersionMajor = 155;
 inline constexpr int kVersionMinor = 0;
 inline constexpr int kVersionBuild = 4283;
 inline constexpr int kVersionRevision = 62;
-// TODO: the PE header's TimeDateStamp, as an extra guard (0 = not checked).
-inline constexpr uint32_t kTimeDateStamp = 0;
 // The preferred load address the PDB and the disassembly are written against.
 inline constexpr uintptr_t kImageBase = 0x180000000;
 
 // --- function RVAs (add to the msedge.dll base at runtime) ---
 namespace rva {
-inline constexpr uintptr_t MultiContentsView_ctor = 0x2d24796;
 // cap: index < 2
 inline constexpr uintptr_t MultiContentsView_SetWebContentsAtIndex = 0xc92c4e8;
 // the `2` in cmp index,2
 inline constexpr uintptr_t SetWebContentsAtIndex_guard_imm = 0xc92c4f2;
-// loops the vector
-inline constexpr uintptr_t MultiContentsView_ShowSplitView = 0xc92c5cc;
 // CHECK(index < 2)
 inline constexpr uintptr_t MultiContentsView_SetActiveIndex = 0xc92c94e;
 // loops the vector
@@ -36,13 +31,6 @@ inline constexpr uintptr_t MultiContentsView_UpdateContentsBorderAndOverlay =
 // 2 entries + 1 sep
 inline constexpr uintptr_t MultiContentsView_CalculateProposedLayout =
     0x2b6f360;
-// 2-element size array
-inline constexpr uintptr_t MultiContentsView_GetViewSizes = 0x2b6f800;
-inline constexpr uintptr_t MultiContentsView_CalculateSeparatorLayouts =
-    0x2b6f906;
-inline constexpr uintptr_t MultiContentsView_ClampToMinSize = 0x2b6f8c2;
-// already N-ready
-inline constexpr uintptr_t MultiContentsView_ExecuteOnEachVisible = 0x2bab654;
 // FocusableViewsMap* GetFocusableViewsMapFor(this, ContentsContainerView*):
 // a lookup in MCV+0x4c8, a flat_map with an entry per container Edge itself
 // built (two), so null for ours. Its one caller,
@@ -51,14 +39,10 @@ inline constexpr uintptr_t MultiContentsView_ExecuteOnEachVisible = 0x2bab654;
 inline constexpr uintptr_t MultiContentsView_GetFocusableViewsMapFor =
     0x2badad8;
 inline constexpr uintptr_t EdgeMultiContentsResizeArea_ctor = 0x2d260b0;
-inline constexpr uintptr_t ContentsContainerView_ctor = 0x2d26a32;
 inline constexpr uintptr_t EdgeContentsContainerView_ctor = 0x2d261b0;
-inline constexpr uintptr_t SplitWindowControllerImplV2_ctor = 0x31edb92;
-inline constexpr uintptr_t IsEdgeSplitWindowEnabled = 0x0feda5d;
-// The layout applier + the one append primitive the geometry uses. emplace_back
+// The one append primitive the geometry uses. emplace_back
 // grows the real std::vector<ChildLayout> with the real allocator, so calling it
 // is the only safe way to add pane/separator entries from the injected DLL.
-inline constexpr uintptr_t LayoutManagerBase_ApplyLayout = 0x100ca78;
 // std::vector<ChildLayout>::emplace_back<View*, bool, const gfx::Rect&>
 //   (rcx = &vector, rdx = View**, r8 = bool*, r9 = gfx::Rect*)
 inline constexpr uintptr_t ChildLayouts_emplace_back = 0x27a8fda;
@@ -73,8 +57,6 @@ inline constexpr uintptr_t View_SetVisible = 0x10483f0;
 inline constexpr uintptr_t View_GetVisible = 0x0fcc262;  // bool (this)
 // (&vec@+0x368, raw_ptr*)
 inline constexpr uintptr_t Containers_emplace_back = 0x2d25408;
-// (p) BackupRef, gated
-inline constexpr uintptr_t RawPtr_AcquireInternal = 0x0fc9ef0;
 // (this) mark layout dirty
 inline constexpr uintptr_t View_InvalidateLayout = 0x0feb7f0;
 // (this) relayout now
@@ -89,8 +71,6 @@ inline constexpr uintptr_t WebContents_WasShown = 0x2a17d30;
 inline constexpr uintptr_t TabStripModel_GetWebContentsAt = 0x105231e;
 
 // --- the feed pipeline (controller.md) ---
-// (BrowserView*) feeds panes
-inline constexpr uintptr_t BrowserView_ShowSplitView = 0xc930f1a;
 // void BrowserView::MaybeUpdateSplitView(this, WebContents* forContents): with
 // the contents no longer in a split, runs MultiContentsView::CloseSplitView
 // (clears pane 1, hides the resize area, moves content to container 0). The
@@ -111,8 +91,6 @@ inline constexpr uintptr_t SplitTabs_LogSplitViewCreatedUKM = 0xa23e294;
 inline constexpr uintptr_t SplitTabs_LogSplitViewUpdatedUKM = 0xa23e3e2;
 // (out base::Token*) random 16B id
 inline constexpr uintptr_t TokenCreateRandom = 0x1ed4ac0;
-// ({layout,ratio=0.5})
-inline constexpr uintptr_t SplitTabVisualData_ctor = 0x2d2521e;
 // create 2-pane (caps at 2)
 inline constexpr uintptr_t TabStripModel_AddToNewSplit = 0xa274686;
 // N-generic add worker
@@ -121,15 +99,12 @@ inline constexpr uintptr_t TabStripModel_AddToSplitImpl = 0xa274b90;
 inline constexpr uintptr_t TabStripModel_UpdateTabInSplit = 0xa273a2c;
 inline constexpr uintptr_t TabStripModel_RemoveSplitImpl = 0xa26ecca;
 inline constexpr uintptr_t GetTabsAndIndicesInSplit = 0xa26a7b0;
-inline constexpr uintptr_t GetSplitForTab = 0x2b91c94;
 // (tsm, &id)->SplitTabData*
 inline constexpr uintptr_t GetSplitData = 0xa268504;
 // (rootColl, int)->TabModel*
 inline constexpr uintptr_t GetTabAtIndexRecursive = 0x0febd12;
 // (rootColl, TabModel*)->int
 inline constexpr uintptr_t GetIndexOfTabRecursive = 0x0feb5e8;
-inline constexpr uintptr_t TabStripModel_GetActiveTab = 0x100c080;
-inline constexpr uintptr_t TabStripModel_InsertDetachedTabAt = 0xa268916;
 // (aura::Window*)->BrowserView*
 inline constexpr uintptr_t BrowserView_ForNativeWindow = 0x1038160;
 // (HWND)->aura::Window*
@@ -138,7 +113,6 @@ inline constexpr uintptr_t GetContentWindowForHWND = 0x26fd796;
 // --- the split's 3-dot menu (extension point for directional "add pane") ---
 inline constexpr uintptr_t SplitTabMenuModel_ctor = 0xa265cee;
 inline constexpr uintptr_t SplitTabMenuModel_ExecuteCommand = 0xa266590;
-inline constexpr uintptr_t SplitTabMenuModel_GetLabelForCommandId = 0xa266190;
 // (model, cmd_id, &u16string)
 inline constexpr uintptr_t SimpleMenuModel_AddItem = 0x10585d4;
 // diag: the ⋯ split menu
@@ -643,12 +617,6 @@ inline constexpr uintptr_t Copilot_IsConsumerLabelButtonWithDropdownEnabled =
 // for a button already built, and stores the new one in EDGETOOLBAR_chatButton.
 inline constexpr uintptr_t EdgeToolbarView_CreateDiscoverButtonIfNecessary =
     0x3221240;
-// views::WebView: (this, BrowserContext*); LoadInitialURL(this, const GURL&,
-// HttpsUpgradePolicy, base::Location* by value); the scalar deleting dtor
-// (this, 1).
-inline constexpr uintptr_t WebView_ctor = 0x2d27f6e;
-inline constexpr uintptr_t WebView_LoadInitialURL = 0xc3fe140;
-inline constexpr uintptr_t WebView_ScalarDeletingDtor = 0x34208b0;
 // --- running a script in a page, and reading a tab ---
 // RenderFrameHost* WebContentsImpl::GetPrimaryMainFrame(this).
 inline constexpr uintptr_t WebContentsImpl_GetPrimaryMainFrame = 0x113caf0;
@@ -1104,11 +1072,6 @@ inline constexpr uintptr_t RECT_h = 0xc;
 // split-button container).
 inline constexpr uintptr_t EDGETOOLBAR_discoverBase = 0x5a8;
 inline constexpr uintptr_t EDGETOOLBAR_chatButton = 0x5d0;
-// sizeof(views::WebView): every `new views::WebView` asks for 0x540.
-inline constexpr size_t WebView_size = 0x540;
-// sizeof(base::Location) {function, file, line, program counter}, which
-// LoadInitialURL takes by value (by address under the x64 ABI).
-inline constexpr size_t Location_size = 0x20;
 // libc++ std::u16string: a short string keeps its length in the last byte,
 // and its top bit marks the long form {data, size, capacity}.
 inline constexpr uintptr_t U16STRING_short_size = 0x17;

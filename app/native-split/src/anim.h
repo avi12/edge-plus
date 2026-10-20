@@ -215,12 +215,6 @@ inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
   Remember(contents, placed);
 }
 
-// Forget `mcv`'s flight, so the next layout starts a fresh one from where its
-// panes are on screen now (after a caller has moved them there itself).
-inline void Restart(void* mcv) {
-  Flights().erase(mcv);
-}
-
 // WM_TIMER: re-run the layout of every MCV in flight; the detour calls Apply.
 // The final pass lands exactly on the targets and ends the flight, after which
 // the timer stops. The MCVs are copied out first because Apply erases a landed

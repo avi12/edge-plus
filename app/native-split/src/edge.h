@@ -1387,37 +1387,6 @@ inline bool IsCopilotDropdownButton(void* view) {
   return false;
 }
 
-// A views::WebView for `browserContext` (its WebContents is created on first
-// load, in that profile's own storage), not yet parented.
-inline void* NewWebView(void* browserContext) {
-  void* webView = NewView(off::WebView_size);
-  using CtorFn = void*(__fastcall*)(void*, void*);
-  reinterpret_cast<CtorFn>(At(rva::WebView_ctor))(webView, browserContext);
-  return webView;
-}
-// Load `url` (UTF-8) in `webView`, creating its WebContents.
-inline void WebViewLoadUrl(void* webView, const char* url) {
-  const U8View urlView{url, std::strlen(url)};
-  alignas(16) uint8_t gurl[off::GURL_size] = {};
-  using GurlFn = void*(__fastcall*)(void*, const void*);
-  reinterpret_cast<GurlFn>(At(rva::GURL_ctor_string))(gurl, &urlView);
-  constexpr int kNoHttpsUpgradePolicy = 0;
-  // An empty base::Location: it only labels the WebContents creation.
-  alignas(8) uint8_t location[off::Location_size] = {};
-  using LoadFn = void(__fastcall*)(void*, const void*, int, void*);
-  reinterpret_cast<LoadFn>(At(rva::WebView_LoadInitialURL))(
-      webView, gurl, kNoHttpsUpgradePolicy, location);
-  using DtorFn = void(__fastcall*)(void*);
-  reinterpret_cast<DtorFn>(At(rva::GURL_dtor))(gurl);
-}
-// Destroy an unparented WebView and the WebContents it owns.
-inline void DeleteWebView(void* webView) {
-  constexpr int kDeleteSelf = 1;
-  using DtorFn = void*(__fastcall*)(void*, int);
-  reinterpret_cast<DtorFn>(At(rva::WebView_ScalarDeletingDtor))(webView,
-                                                                kDeleteSelf);
-}
-
 // --- Copilot's side panel ----------------------------------------------------
 
 // A libc++ std::string in its long form (pointer, size, capacity with the top
@@ -1462,11 +1431,6 @@ inline std::vector<void*> AllWebContents() {
 }
 
 // --- reading a tab, and running a script in a page ---------------------------
-
-// The WebContents a views::WebView shows (null before its first load).
-inline void* WebViewContents(void* webView) {
-  return Field<void*>(webView, off::CWV_web_contents);
-}
 
 // A libc++ std::string's characters (the same layout as the u16string above).
 inline std::string StdStringText(const void* string) {
