@@ -1,0 +1,85 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>EdgePlus</RootNamespace>
+    <AssemblyName>edgeplus</AssemblyName>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <!-- Suppress the Windows App SDK's generated entry point so Program.Main can
+         decide, before WinUI is ever touched, whether this launch is the
+         headless dev-mode waiter or the panel. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <!-- The C# counterpart of the Tauri core's `unsafe_code = "forbid"`. Every
+         Win32 call is a [DllImport] in Native\, which needs no unsafe block;
+         tools\lint.ps1 fails a [DllImport] anywhere else. -->
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <ApplicationIcon>Assets\edgeplus.ico</ApplicationIcon>
+    <!-- Unpackaged, self-contained, as any-stt is: a plain .exe with the
+         runtime beside it, so it runs full-trust (and can inject) with nothing
+         to pre-install. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <!-- Needed by PublishSingleFile below: it generates the resources.pri the
+         single exe embeds. -->
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <!--
+    The product's identity, written once. It becomes the exe's file properties
+    and the assembly attributes Product.cs reads back, so a rename or a version
+    bump is this block and nothing else.
+  -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Product>Edge+</Product>
+    <Description>Live feature switches for Microsoft Edge</Description>
+    <Company>Avi</Company>
+    <Authors>Avi</Authors>
+    <Copyright>© 2026 Avi</Copyright>
+    <!-- Keep AssemblyInformationalVersion equal to <Version>: the SDK appends
+         +<commit sha> by default, and Product.Version is what the footer shows. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <!--
+    What `dotnet publish` produces: one edgeplus.exe and nothing beside it.
+    Unpackaged + self-contained is what makes PublishSingleFile legal for WinUI
+    3. None of this touches `dotnet build`, which still emits the loose folder
+    the dev loop runs from.
+  -->
+  <PropertyGroup>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+  <!-- The unit tests are their own project (test\), compiled from the pure
+       sources here; the SDK's default glob would otherwise pull them in. -->
+  <ItemGroup>
+    <Compile Remove="test\**" />
+    <None Remove="test\**" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <RepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))</RepositoryRoot>
+    <NativeSplitDir>$(RepositoryRoot)app\native-split\</NativeSplitDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.*" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\edgeplus.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

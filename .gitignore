@@ -15,3 +15,5 @@ extension/.svelte-check/
 # Claude Code agent worktrees
 .claude/worktrees/
 __pycache__/
+app/panel-winui/test/bin/
+app/panel-winui/test/obj/
