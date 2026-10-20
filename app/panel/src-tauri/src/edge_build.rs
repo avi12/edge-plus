@@ -60,7 +60,8 @@ pub fn depends_on_pinned_build(feature: Feature) -> bool {
         | Feature::Theming
         | Feature::ProtocolHandlers
         | Feature::EnhancedFind
-        | Feature::WebUiFollowsTheme => true,
+        | Feature::WebUiFollowsTheme
+        | Feature::LivePreview => true,
         Feature::QuietDevMode => false,
     }
 }
@@ -164,6 +165,7 @@ mod tests {
             protocol_handlers: true,
             enhanced_find: true,
             web_ui_follows_theme: true,
+            live_preview: true,
         }
     }
 
@@ -182,6 +184,7 @@ mod tests {
         assert!(depends_on_pinned_build(Feature::ProtocolHandlers));
         assert!(depends_on_pinned_build(Feature::EnhancedFind));
         assert!(depends_on_pinned_build(Feature::WebUiFollowsTheme));
+        assert!(depends_on_pinned_build(Feature::LivePreview));
         assert!(!depends_on_pinned_build(Feature::QuietDevMode));
     }
 
@@ -203,7 +206,8 @@ mod tests {
                 Feature::Theming,
                 Feature::ProtocolHandlers,
                 Feature::EnhancedFind,
-                Feature::WebUiFollowsTheme
+                Feature::WebUiFollowsTheme,
+                Feature::LivePreview
             ]
         );
     }
@@ -219,7 +223,8 @@ mod tests {
                 Feature::Theming,
                 Feature::ProtocolHandlers,
                 Feature::EnhancedFind,
-                Feature::WebUiFollowsTheme
+                Feature::WebUiFollowsTheme,
+                Feature::LivePreview
             ]
         );
     }
@@ -235,6 +240,7 @@ mod tests {
             protocol_handlers: false,
             enhanced_find: false,
             web_ui_follows_theme: false,
+            live_preview: false,
         };
         assert_eq!(
             blocked_features(only_theming, updated, pinned),

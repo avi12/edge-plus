@@ -57,6 +57,9 @@ pub struct Features {
     /// `edge://settings` and `edge://extensions` take the theme's light or dark
     /// (the DLL's `theme_follow.h`).
     pub web_ui_follows_theme: bool,
+    /// A hovered tab shows a live preview instead of a frozen snapshot (the DLL's
+    /// `live_preview.h`).
+    pub live_preview: bool,
 }
 
 impl Default for Features {
@@ -68,6 +71,7 @@ impl Default for Features {
             protocol_handlers: false,
             enhanced_find: false,
             web_ui_follows_theme: false,
+            live_preview: false,
         }
     }
 }
@@ -82,16 +86,18 @@ pub enum Feature {
     ProtocolHandlers,
     EnhancedFind,
     WebUiFollowsTheme,
+    LivePreview,
 }
 
 impl Feature {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 7] = [
         Self::NativeSplit,
         Self::Theming,
         Self::QuietDevMode,
         Self::ProtocolHandlers,
         Self::EnhancedFind,
         Self::WebUiFollowsTheme,
+        Self::LivePreview,
     ];
 }
 
@@ -105,6 +111,7 @@ impl Features {
             Feature::ProtocolHandlers => self.protocol_handlers,
             Feature::EnhancedFind => self.enhanced_find,
             Feature::WebUiFollowsTheme => self.web_ui_follows_theme,
+            Feature::LivePreview => self.live_preview,
         }
     }
 
@@ -117,6 +124,7 @@ impl Features {
             || self.protocol_handlers
             || self.enhanced_find
             || self.web_ui_follows_theme
+            || self.live_preview
     }
 
     pub fn set(&mut self, feature: Feature, is_on: bool) {
@@ -127,6 +135,7 @@ impl Features {
             Feature::ProtocolHandlers => self.protocol_handlers = is_on,
             Feature::EnhancedFind => self.enhanced_find = is_on,
             Feature::WebUiFollowsTheme => self.web_ui_follows_theme = is_on,
+            Feature::LivePreview => self.live_preview = is_on,
         }
     }
 }

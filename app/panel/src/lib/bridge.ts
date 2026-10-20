@@ -20,7 +20,8 @@ export enum Feature {
   QuietDevMode = "quietDevMode",
   ProtocolHandlers = "protocolHandlers",
   EnhancedFind = "enhancedFind",
-  WebUiFollowsTheme = "webUiFollowsTheme"
+  WebUiFollowsTheme = "webUiFollowsTheme",
+  LivePreview = "livePreview"
 }
 
 /** A newly seen Edge build and what it switched off (often nothing); matches `BuildChange` in edge_build.rs. */
@@ -73,6 +74,7 @@ export interface Features {
   protocolHandlers: boolean;
   enhancedFind: boolean;
   webUiFollowsTheme: boolean;
+  livePreview: boolean;
 }
 
 export interface AppState {
@@ -129,6 +131,10 @@ export function setEnhancedFind(enabled: boolean): Promise<AppState> {
 
 export function setWebUiFollowsTheme(enabled: boolean): Promise<AppState> {
   return invoke<AppState>("set_web_ui_follows_theme", { enabled });
+}
+
+export function setLivePreview(enabled: boolean): Promise<AppState> {
+  return invoke<AppState>("set_live_preview", { enabled });
 }
 
 export function addStoreTheme(url: string): Promise<AppState> {

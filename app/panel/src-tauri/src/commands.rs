@@ -94,6 +94,7 @@ pub(crate) fn apply(settings: &Settings) {
             dark_id: &settings.theming.dark,
             enhanced_find_active: features.enhanced_find,
             web_ui_follows_theme_active: features.web_ui_follows_theme,
+            live_preview_active: features.live_preview,
         },
     );
     // `needs_dll` includes the enhanced find bar and the WebUI theme colors,
@@ -195,6 +196,13 @@ pub fn set_enhanced_find(enabled: bool) -> Result<StateDto, String> {
 pub fn set_web_ui_follows_theme(enabled: bool) -> Result<StateDto, String> {
     let mut settings = Settings::load();
     settings.features.web_ui_follows_theme = enabled;
+    persist_and_apply(&settings)
+}
+
+#[tauri::command]
+pub fn set_live_preview(enabled: bool) -> Result<StateDto, String> {
+    let mut settings = Settings::load();
+    settings.features.live_preview = enabled;
     persist_and_apply(&settings)
 }
 

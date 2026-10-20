@@ -38,6 +38,12 @@
       `<rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="8" x2="21" y2="8"/>` +
       `<circle cx="12" cy="14" r="3"/><path d="M12 11 A3 3 0 0 0 12 17 Z" fill="currentColor" stroke="none"/></svg>`;
 
+  // A thumbnail with a play triangle: a live preview.
+  const livePreviewIcon =
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
+      `<rect x="3" y="5" width="18" height="14" rx="1.5"/>` +
+      `<path d="M10 9.5 L15 12 L10 14.5 Z" fill="currentColor" stroke="none"/></svg>`;
+
   // A power button.
   const startupIcon =
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
@@ -62,6 +68,9 @@
     "Like Chrome: when a site such as Gmail offers to open email or calendar links, closing the " +
       "bubble no longer blocks it for good; only Ignore or Block does. Turning this on lifts " +
       "earlier blocks. Live, no restart.";
+  const livePreviewDescription =
+    "Hover a tab and its thumbnail plays live instead of a frozen snapshot, by keeping Edge's own " +
+      "tab capture running while the preview is open. Live, no restart. Open Edge first.";
 
   let appState = $state<AppState | null>(null);
   let isDraggingOver = $state(false);
@@ -81,6 +90,9 @@
   );
   const isWebUiHeldOff = $derived(
     unsupported.has(Feature.WebUiFollowsTheme) && appState?.features.webUiFollowsTheme !== true
+  );
+  const isLivePreviewHeldOff = $derived(
+    unsupported.has(Feature.LivePreview) && appState?.features.livePreview !== true
   );
   // What a locked card says about why, on the card itself.
   function heldOffNote(isHeldOff: boolean): string {
@@ -199,6 +211,10 @@
     appState = await bridge.setWebUiFollowsTheme(value);
   }
 
+  async function onLivePreview(value: boolean): Promise<void> {
+    appState = await bridge.setLivePreview(value);
+  }
+
   async function onAddStore(url: string): Promise<void> {
     appState = await bridge.addStoreTheme(url);
   }
@@ -281,6 +297,16 @@
       note={heldOffNote(isFindHeldOff)}
       onchange={onEnhancedFind}
       title={FIND_TITLE}
+    />
+
+    <FeatureCard
+      checked={appState.features.livePreview}
+      description={livePreviewDescription}
+      disabled={isLivePreviewHeldOff}
+      icon={livePreviewIcon}
+      note={heldOffNote(isLivePreviewHeldOff)}
+      onchange={onLivePreview}
+      title="Live tab preview on hover"
     />
 
     <FeatureCard
