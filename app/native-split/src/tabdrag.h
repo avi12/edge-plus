@@ -110,7 +110,8 @@ inline void PreviewDock(Point screenPoint) {
   void* mcv = edge::McvForWindow(channel::g_window);
   const int panes = mcv ? edge::McvActiveSplitPanes(mcv) : 0;
   const bool isOwnSplitShown =
-      panes >= 2 && edge::TsmForWindow(channel::g_window) == g_session.tsm;
+      panes >= split_data::kMinSplitMembers &&
+      edge::TsmForWindow(channel::g_window) == g_session.tsm;
   if (!isOwnSplitShown) {
     g_session.plan = {};
     overlay::Hide();
