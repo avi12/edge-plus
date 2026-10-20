@@ -1,7 +1,8 @@
 // web_text.h — text helpers for pages and scripts. One concern, all of it pure
 // (no Edge, no Win32; unit-tested in test/web_text_test.cpp): cut a text on a
 // character boundary, say whether a URL is a web page whose text can be read,
-// write a string as a JavaScript literal, and split a page script's answer.
+// write a string as a JavaScript literal, and write and split a page script's
+// answer.
 #pragma once
 #include <cctype>
 #include <cstddef>
@@ -110,6 +111,36 @@ inline std::vector<std::string> Split(const std::string& text, char separator) {
 
 inline std::vector<std::string> SplitFields(const std::string& answer) {
   return Split(answer, kFieldSeparator);
+}
+
+// The same answer written as page-script JavaScript, so a script never spells
+// the tags or the separator itself.
+
+// A JavaScript expression answering `ok`, then each of `fieldExpressions` (each
+// a JavaScript expression) after a separator.
+inline std::string JsOkAnswer(
+    const std::vector<std::string>& fieldExpressions = {}) {
+  if (fieldExpressions.empty()) {
+    return JsStringLiteral(kOkTag);
+  }
+  std::string fields = "[" + JsStringLiteral(kOkTag);
+  for (const std::string& field : fieldExpressions) {
+    fields += ", " + field;
+  }
+  return fields + "].join(" + JsStringLiteral(std::string(1, kFieldSeparator)) +
+         ")";
+}
+
+// A JavaScript expression answering `err` with the message the JavaScript
+// expression `messageExpression` gives.
+inline std::string JsErrorAnswerFrom(const std::string& messageExpression) {
+  return JsStringLiteral(std::string(kErrorTag) + kFieldSeparator) + " + " +
+         messageExpression;
+}
+
+// A JavaScript expression answering `err` with the fixed text `message`.
+inline std::string JsErrorAnswer(const std::string& message) {
+  return JsStringLiteral(std::string(kErrorTag) + kFieldSeparator + message);
 }
 
 }  // namespace fixedge::web_text
