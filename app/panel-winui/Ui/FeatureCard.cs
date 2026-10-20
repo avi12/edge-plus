@@ -15,6 +15,9 @@ internal sealed class FeatureCard {
   private const double IconSize = 20;
   private const double IconGap = 16;
   private const double BodyGap = 12;
+  // Between the words and the switch, as in Windows Settings: without it a
+  // description wraps only at the switch's own edge and runs under its knob.
+  private const double SwitchGap = 16;
 
   private readonly ToggleSwitch _toggle;
   private readonly TextBlock _note;
@@ -40,7 +43,10 @@ internal sealed class FeatureCard {
       Style = StyleKeys.Get(StyleKeys.CardNote),
       Visibility = Visibility.Collapsed,
     };
-    var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+    var text = new StackPanel {
+      VerticalAlignment = VerticalAlignment.Center,
+      Margin = new Thickness(0, 0, SwitchGap, 0),
+    };
     text.Children.Add(new TextBlock {
       Text = wording.Title,
       Style = StyleKeys.Get(StyleKeys.CardTitle),
