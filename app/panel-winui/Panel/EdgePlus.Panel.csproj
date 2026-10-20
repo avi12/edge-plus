@@ -31,18 +31,24 @@
   <!--
     The native split DLL, carried inside the panel as a resource and unpacked by
     Payload.cs beside the settings, so the switch always injects the DLL that
-    matches this build. The DLL has its own build (build.cmd, MSVC + ninja);
-    like the Tauri panel's build.rs, this uses the already-built DLL and only
-    runs build.cmd when it is missing — then fails with a sentence naming the
-    file, rather than producing a panel that cannot do anything.
+    matches this build. The DLL has its own build (build.cmd, MSVC + ninja),
+    run here whenever any of its sources is newer than the built DLL (or it is
+    missing) — not only when it is missing, as the Tauri build.rs does: a DLL
+    built before a source change was carried silently, and at start the panel
+    ejected Edge's current DLL for it (it read the config without the
+    tab-spine field, so the spine switch did nothing). Fails with a sentence
+    naming the file rather than producing a panel that cannot do anything.
   -->
   <ItemGroup>
     <EmbeddedResource Include="$(SplitDll)" LogicalName="payload/fixedge-split.dll" />
+    <NativeSplitSource Include="$(NativeSplitDir)src\**\*.h;$(NativeSplitDir)src\**\*.cpp" />
+    <NativeSplitSource Include="$(NativeSplitDir)fixedge-split.buildscript;$(NativeSplitDir)build.cmd" />
   </ItemGroup>
-  <Target Name="BuildMissingNativeSplit" BeforeTargets="BeforeBuild" Condition="!Exists('$(SplitDll)')">
+  <Target Name="BuildNativeSplit" BeforeTargets="BeforeBuild"
+          Inputs="@(NativeSplitSource)" Outputs="$(SplitDll)">
     <Exec Command="&quot;$(NativeSplitDir)build.cmd&quot;" WorkingDirectory="$(NativeSplitDir)" />
   </Target>
-  <Target Name="VerifyNativeSplit" AfterTargets="BuildMissingNativeSplit" BeforeTargets="BeforeBuild">
+  <Target Name="VerifyNativeSplit" AfterTargets="BuildNativeSplit" BeforeTargets="BeforeBuild">
     <Error Condition="!Exists('$(SplitDll)')"
            Text="edgeplus carries fixedge-split.dll inside itself and cannot find it at $(SplitDll). Build it first: app\native-split\build.cmd" />
   </Target>
