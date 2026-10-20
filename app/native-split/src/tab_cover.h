@@ -1,13 +1,15 @@
-// tab_cover.h — ink on a bright tab. One concern: every vertical tab label is
-// one theme text colour, so on a bright cyan fill (the selected tab, and the tab
-// under the pointer, which Edge fills the same) the light title, audio icon and
-// close icon would vanish. A click-through popup per such tab repaints them in
-// ink on the fill's own colour, sampled from the screen so it always matches
-// what Edge painted. Edge's views are only read. UI thread only.
+// tab_cover.h — ink on the selected tab. One concern: every vertical tab label
+// is one theme text colour, so on the selected tab's bright cyan fill the light
+// title, audio icon and close icon would vanish. A click-through popup repaints
+// them in ink on the fill the colour hook (hooks.h) answered for the current
+// focus, so it switches with Edge's own fill when the window gains or loses
+// focus. Edge's views are only read. UI thread only.
 #pragma once
 #include <windows.h>
 #include "edge.h"
+#include "focus.h"
 #include "geom.h"
+#include "theme_tone.h"
 #include "vtab_views.h"
 
 namespace fixedge::tab_cover {
@@ -28,21 +30,27 @@ inline constexpr int kCloseChild = 4;
 inline constexpr wchar_t kSpeakerGlyph[] = {0xE767, 0};
 inline constexpr wchar_t kCloseGlyph[] = {0xE711, 0};
 
-// A fill this bright (0-255 luma) is one the light label cannot be read on; the
-// rail and an idle hover are far darker, a dimmed (unfocused) cyan is just over.
-inline constexpr int kBrightLuma = 90;
-inline constexpr int kLumaRed = 299;
-inline constexpr int kLumaGreen = 587;
-inline constexpr int kLumaBlue = 114;
-inline constexpr int kLumaScale = 1000;
-// Where the fill is sampled: this many DIPs below a tab's top edge, mid-width,
-// clear of the covered children.
-inline constexpr int kSampleTopDip = 3;
-inline constexpr float kHalf = 0.5f;
-
-// Set by the colour hook (hooks.h): the theme's label colour is light, so a
-// bright fill needs a cover.
+// Set by the colour hook (hooks.h): the theme's label colour is light, so the
+// selected fill needs a cover; and the fill it answers for a focused and an
+// unfocused window (ARGB, 0 until Edge has first painted the selected tab).
 inline bool g_isCoverNeeded = false;
+inline uint32_t g_focusedFill = 0;
+inline uint32_t g_unfocusedFill = 0;
+
+inline void PublishSelectedFill(uint32_t focusedFill, uint32_t unfocusedFill) {
+  g_focusedFill = focusedFill;
+  g_unfocusedFill = unfocusedFill;
+}
+
+inline COLORREF ToColorRef(theme_tone::Argb color) {
+  using theme_tone::kBlueShift;
+  using theme_tone::kChannelMask;
+  using theme_tone::kGreenShift;
+  using theme_tone::kRedShift;
+  return RGB((color >> kRedShift) & kChannelMask,
+             (color >> kGreenShift) & kChannelMask,
+             (color >> kBlueShift) & kChannelMask);
+}
 
 // One cover popup and what it paints; offsets are pixels within the popup.
 struct Cover {
@@ -56,11 +64,7 @@ struct Cover {
   int closeWidth = 0;  // 0 = no close button
 };
 
-// Tabs bright at once: the selected one, the one under the pointer, and any left
-// mid-way through Edge's hover fade.
-inline constexpr size_t kMaxCovers = 8;
-inline constexpr size_t kMaxTabs = 128;
-inline Cover g_covers[kMaxCovers];
+inline Cover g_cover;
 inline HFONT g_titleFont = nullptr;
 inline HFONT g_glyphFont = nullptr;
 inline int g_fontHeight = 0;
@@ -191,24 +195,6 @@ inline size_t ReadTitle(void* label, wchar_t* out) {
   }
 }
 
-inline bool IsBright(COLORREF color) {
-  const int luma =
-      (GetRValue(color) * kLumaRed + GetGValue(color) * kLumaGreen +
-       GetBValue(color) * kLumaBlue) /
-      kLumaScale;
-  return luma >= kBrightLuma;
-}
-
-// What Edge painted at the top of `tab`, read back from the screen.
-inline COLORREF SampleFill(const Rect& tab, float scale) {
-  HDC screen = GetDC(nullptr);
-  const int sampleX = static_cast<int>((tab.x + tab.width * kHalf) * scale);
-  const int sampleY = static_cast<int>((tab.y + kSampleTopDip) * scale);
-  const COLORREF color = GetPixel(screen, sampleX, sampleY);
-  ReleaseDC(nullptr, screen);
-  return color;
-}
-
 // A child view's screen bounds when it is shown, else an empty rect.
 inline Rect ShownChildBounds(void* tab, int childIndex) {
   const bool isPresent =
@@ -273,42 +259,27 @@ inline bool Update(Cover* cover, HWND owner, void* tab, COLORREF fill,
   return true;
 }
 
-// Cover every tab whose fill is bright: Edge paints the selected tab, the hovered
-// one and one fading out of hover alike, and all three hide the light title.
-inline void UpdateAll(HWND owner, float scale) {
-  void* tabs[kMaxTabs];
-  const size_t tabCount =
-      vtab_views::AllTabs(edge::McvForWindow(owner), tabs, kMaxTabs);
-  size_t coverCount = 0;
-  for (size_t i = 0; i < tabCount && coverCount < kMaxCovers; i++) {
-    const Rect bounds = edge::ViewBoundsInScreen(tabs[i]);
-    const bool isCandidate = g_isCoverNeeded && IsShown(bounds);
-    const COLORREF fill = isCandidate ? SampleFill(bounds, scale) : 0;
-    const bool isCovered =
-        isCandidate && IsBright(fill) &&
-        Update(&g_covers[coverCount], owner, tabs[i], fill, scale);
-    if (isCovered) {
-      coverCount++;
-    }
+// Cover the selected tab on the fill Edge paints it with right now, or hide.
+inline void UpdateSelected(HWND owner, void* selectedTab, float scale) {
+  const uint32_t fill =
+      focus::IsEdgeForeground() ? g_focusedFill : g_unfocusedFill;
+  const bool isCoverable = g_isCoverNeeded && fill != 0;
+  if (!isCoverable) {
+    Hide(&g_cover);
+    return;
   }
-  for (size_t i = coverCount; i < kMaxCovers; i++) {
-    Hide(&g_covers[i]);
-  }
+  Update(&g_cover, owner, selectedTab, ToColorRef(fill), scale);
 }
 
 inline void HideAll() {
-  for (Cover& cover : g_covers) {
-    Hide(&cover);
-  }
+  Hide(&g_cover);
 }
 
-// Destroy the popups and fonts (before this DLL unloads).
+// Destroy the popup and fonts (before this DLL unloads).
 inline void Remove() {
-  for (Cover& cover : g_covers) {
-    if (cover.window) {
-      DestroyWindow(cover.window);
-      cover.window = nullptr;
-    }
+  if (g_cover.window) {
+    DestroyWindow(g_cover.window);
+    g_cover.window = nullptr;
   }
   DeleteObject(g_titleFont);
   DeleteObject(g_glyphFont);

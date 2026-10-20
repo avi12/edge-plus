@@ -384,17 +384,19 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
       tab_cover::g_isCoverNeeded = !isTextDark;
       const uint32_t fill =
           isTextDark ? kVTabFillBehindDarkText : kVTabFillBehindLightText;
-      // The slot for an unfocused window dims into the rail, as Edge does its
-      // own colours.
+      // An unfocused window dims the fill into its rail, as Edge does its own
+      // colours. Both fills go to the tab cover, which must match whichever
+      // Edge paints the moment the focus moves.
       uint32_t inactiveRail = 0;
-      const bool isInactive = !focus::IsEdgeForeground();
-      const bool isDimmed =
-          isInactive &&
+      const bool hasInactiveRail =
           o_getcolor(pack, off::VTABCOLOR_background_inactive, &inactiveRail);
-      const uint32_t selectedFill =
-          isDimmed
+      const uint32_t unfocusedFill =
+          hasInactiveRail
               ? theme_tone::Blend(fill, inactiveRail, kVTabInactiveRailPercent)
               : fill;
+      tab_cover::PublishSelectedFill(fill, unfocusedFill);
+      const uint32_t selectedFill =
+          focus::IsEdgeForeground() ? fill : unfocusedFill;
       // Edge paints a hovered tab with this same id; a hover is only a tint of
       // the fill over the chrome ground, as Edge's own themes keep it.
       uint32_t ground = kNeonRail;

@@ -571,7 +571,15 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   if (isColorSchemeChange) {
     channel::Post(CodeOf(Command::kApplyTheme));
   }
-  return CallWindowProcW(g_originalProc, hwnd, message, wparam, lparam);
+  const LRESULT result =
+      CallWindowProcW(g_originalProc, hwnd, message, wparam, lparam);
+  // Edge repaints the selected fill for the new focus on its next frame; redo
+  // the cover now rather than on the next tick, so the two switch together.
+  const bool isFocusChange = message == WM_ACTIVATE && spine::g_isActive;
+  if (isFocusChange) {
+    spine::Tick(hwnd);
+  }
+  return result;
 }
 
 // EnumWindows callback: claim the first visible, titled browser window of this

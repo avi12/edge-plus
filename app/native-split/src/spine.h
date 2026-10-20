@@ -3,8 +3,8 @@
 // colour id paints a selected-tab outline, and hooking Edge's tab painting
 // crashed the browser, so the stripe lives in its own layered window, outside
 // Edge's views: a timer reads (never writes) the selected tab view's screen
-// bounds and moves the stripe to match. The same tick keeps the ink covers
-// (tab_cover.h) on the bright tabs. UI thread only.
+// bounds and moves the stripe to match. The same tick keeps the ink cover
+// (tab_cover.h) on the selected tab. UI thread only.
 #pragma once
 #include <windows.h>
 #include "edge.h"
@@ -85,7 +85,7 @@ inline void Tick(HWND owner) {
                top + inset, static_cast<int>(kWidthDip * scale),
                static_cast<int>(bounds.height * scale) - 2 * inset,
                SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
-  tab_cover::UpdateAll(owner, scale);
+  tab_cover::UpdateSelected(owner, tab, scale);
 }
 
 inline void Start(HWND owner) {
