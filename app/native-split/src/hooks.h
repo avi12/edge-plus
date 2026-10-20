@@ -408,6 +408,9 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
       *out = isHoveredTab
                  ? theme_tone::Blend(ground, selectedFill, kHoverFillPercent)
                  : selectedFill;
+      // The squared corners (spine.h) take the undimmed fill: an unfocused
+      // window was seen to keep painting the selected tab at full strength.
+      spine::g_selectedFill = fill;
       return true;
     }
     // Behind a light label (the neon theme) the chrome goes near-black (the
