@@ -7,6 +7,47 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- The panel's look: the Windows Settings card, hand-built from
+                 WinUI's own theme brushes (no toolkit). Every colour is a
+                 ThemeResource, so light and dark follow Windows live. The cards
+                 are built in code (FeatureCard, ThemingCard) and take these by
+                 key. -->
+            <Style x:Key="FeatureCardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="{ThemeResource ControlCornerRadius}"/>
+                <Setter Property="Padding" Value="16,12,16,12"/>
+                <Setter Property="MinHeight" Value="68"/>
+            </Style>
+            <Style x:Key="CardTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyTextBlockStyle}">
+                <Setter Property="TextWrapping" Value="Wrap"/>
+            </Style>
+            <Style x:Key="CardDescriptionStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <Setter Property="TextWrapping" Value="Wrap"/>
+            </Style>
+            <!-- Why a switch is locked. -->
+            <Style x:Key="CardNoteStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCautionBrush}"/>
+                <Setter Property="TextWrapping" Value="Wrap"/>
+            </Style>
+            <!-- An action that failed, in the user's words. -->
+            <Style x:Key="CardErrorStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}"/>
+                <Setter Property="TextWrapping" Value="Wrap"/>
+            </Style>
+            <!-- A theme's small labels: Store, Local, In use, Installed in Edge. -->
+            <Style x:Key="BadgeStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}"/>
+                <Setter Property="CornerRadius" Value="{ThemeResource ControlCornerRadius}"/>
+                <Setter Property="Padding" Value="6,1,6,1"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+            <Style x:Key="BadgeTextStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

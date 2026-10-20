@@ -26,6 +26,25 @@ internal static class Wording {
   public const string OpenEdgeHint = "Open Edge to apply changes.";
   public const string DropHint = "Drop a theme folder, .zip or .crx to add it";
 
+  // The theming card's own words.
+  public const string StoreLinkPlaceholder = "Paste a Chrome Web Store or Edge Add-ons link";
+  public const string AddTheme = "Add";
+  public const string AddLocalTheme = "Or add a local theme";
+  public const string PickFile = "File…";
+  public const string PickFolder = "Folder…";
+  public const string PickFileFilterName = "Edge theme";
+  public const string WhenLight = "When Windows is light";
+  public const string WhenDark = "When Windows is dark";
+  public const string DefaultTheme = "Default theme";
+  public const string StoreBadge = "Store";
+  public const string LocalBadge = "Local";
+  public const string InUseBadge = "In use";
+  public const string InstalledInEdgeBadge = "Installed in Edge";
+  public const string NoThemes =
+      "No themes yet — paste a store link or add a local theme (.crx, .zip or folder).";
+
+  public static string RemoveTheme(string name) => $"Remove {name}";
+
   public static CardWording StartWithWindows {
     get;
   } = new(
