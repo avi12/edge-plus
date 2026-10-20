@@ -309,6 +309,48 @@ inline void __fastcall h_remove_unused_themes(void* themeService) {
   o_remove_unused_themes(themeService);
 }
 
+// BrowserThemePack::GetColor(this, id, SkColor* out): a theme extension's colour
+// for `id`, false when the theme left it unset. Edge derives the whole vertical-
+// tab strip from the toolbar colour (offsets.h VTABCOLOR_*), so the SELECTED
+// vertical tab is only ever a shade of the toolbar and a theme cannot give it a
+// colour of its own. While theming is active we fix exactly that one thing: the
+// selected tab's background becomes the theme's own accent (its active-tab text
+// colour) and its text the theme's toolbar colour, so the active vertical tab
+// reads as a solid accent chip with legible dark text — in whatever palette the
+// theme defines, with the rail and every other id left untouched. Every read
+// goes through o_getcolor (the original), never the hook, so it cannot recurse;
+// a theme that set no accent falls straight through to Edge's derived colour.
+// The colour mixer reads these ids when it builds the vertical-tab ColorProvider,
+// which DoSetTheme rebuilds (theme.h), so applying the theme with the feature on
+// repaints the rail at once. Like RemoveUnusedThemes this rides theming, not the
+// split, so control.h keeps it enabled while the split is off (SetSplitHooks).
+using GetColor_t = bool(__fastcall*)(void*, int, uint32_t*);
+inline GetColor_t o_getcolor = nullptr;
+inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
+  if (theme::g_isActive) {
+    const bool isSelectedTabBackground =
+        colorId == off::VTABCOLOR_selected_background ||
+        colorId == off::VTABCOLOR_selected_background_inactive;
+    if (isSelectedTabBackground) {
+      // The theme's own accent fills the selected tab; if it set none, fall
+      // through to Edge's toolbar-derived colour.
+      if (o_getcolor(pack, off::THEMECOLOR_tab_text, out)) {
+        return true;
+      }
+    }
+    const bool isSelectedTabForeground =
+        colorId == off::VTABCOLOR_selected_foreground ||
+        colorId == off::VTABCOLOR_selected_foreground_inactive;
+    if (isSelectedTabForeground) {
+      // Legible dark text/icons on that accent: the theme's toolbar colour.
+      if (o_getcolor(pack, off::THEMECOLOR_toolbar, out)) {
+        return true;
+      }
+    }
+  }
+  return o_getcolor(pack, colorId, out);
+}
+
 template <class T>
 inline bool Install(uintptr_t rva, void* detour, T** original,
                     const char* name) {
@@ -446,6 +488,10 @@ inline bool InstallAll() {
   Install(rva::ThemeService_RemoveUnusedThemes,
           reinterpret_cast<void*>(h_remove_unused_themes),
           &o_remove_unused_themes, "ThemeService::RemoveUnusedThemes");
+  // The vertical-tab selected-tab recolour. Also a theming hook, gated on
+  // theme::g_isActive, so it stays enabled when the split is toggled off.
+  Install(rva::BrowserThemePack_GetColor, reinterpret_cast<void*>(h_getcolor),
+          &o_getcolor, "BrowserThemePack::GetColor (vertical-tab recolour)");
   // Asking to handle links: pass-through until the feature is switched on
   // (protocol_handlers.h).
   Install(rva::ContentSettingRPHBubbleModel_CommitChanges,

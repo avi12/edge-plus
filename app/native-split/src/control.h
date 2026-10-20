@@ -275,6 +275,8 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     // both assigned themes stay installed for live switching while the split is
     // off but theming is still on. (MH_ALL_HOOKS turned it off above.)
     MH_EnableHook(edge::At(edge155::rva::ThemeService_RemoveUnusedThemes));
+    // Nor is the vertical-tab selected-tab recolour: it rides theming too.
+    MH_EnableHook(edge::At(edge155::rva::BrowserThemePack_GetColor));
     // Nor are the link-handler detours (they pass through while that feature
     // is off).
     protocol_handlers::EnableHooks();

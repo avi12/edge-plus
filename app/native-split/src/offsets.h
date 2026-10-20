@@ -733,8 +733,28 @@ inline constexpr uintptr_t THEMESERVICE_supplier = 0x768;
 // manifest-key -> id map is a {const char* key; int id} array in msedge.dll.
 // Edge keeps a SEPARATE *tints* table with its own enum (frame is 0x1c there),
 // so a tint id handed to GetColor always misses — do not cross the two.
-inline constexpr int THEMECOLOR_frame = 0x02;    // frame colour
-inline constexpr int THEMECOLOR_toolbar = 0x17;  // toolbar colour
+inline constexpr int THEMECOLOR_frame = 0x02;  // frame colour
+inline constexpr int THEMECOLOR_tab_text =
+    0x12;  // active-tab text (cyan accent)
+inline constexpr int THEMECOLOR_toolbar = 0x17;  // toolbar colour (dark ground)
+// Edge's vertical-tab strip colour ids. Edge has no manifest key for them:
+// BrowserThemePack::EdgeSetVTabAndRelatedColor (rva 0x87d42fe) DERIVES all of
+// them from the toolbar colour (it reads THEMECOLOR_toolbar/0x17, then stores a
+// contiguous run 0x23-0x2c) and GetColor reads them back when the colour mixer
+// builds the vertical-tab views' ColorProvider. That is why a theme can tint the
+// rail (it follows the toolbar) but cannot give the SELECTED tab its own colour -
+// every one is just a shade of the toolbar. The ten ids pair as active-window /
+// inactive-window; the DLL overrides only the selected tab so it adopts the
+// theme's own accent (docs/re/theming.md, hooks.h h_getcolor). Verified from the
+// store sequence in EdgeSetVTabAndRelatedColor.
+inline constexpr int VTABCOLOR_background = 0x23;  // rail bg (+0x24 inactive)
+inline constexpr int VTABCOLOR_background_alt =
+    0x27;  // idle fill (+0x28 inact.)
+inline constexpr int VTABCOLOR_selected_background = 0x25;  // selected tab bg
+inline constexpr int VTABCOLOR_selected_background_inactive = 0x26;
+inline constexpr int VTABCOLOR_foreground = 0x29;  // idle text (+0x2a inactive)
+inline constexpr int VTABCOLOR_selected_foreground = 0x2b;  // selected text
+inline constexpr int VTABCOLOR_selected_foreground_inactive = 0x2c;
 // WebContentsImpl::GetController is a bare `lea rax, [this + 0x280]`.
 inline constexpr uintptr_t WEBCONTENTS_controller = 0x280;
 // content::ReloadType::NORMAL.
