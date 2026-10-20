@@ -15,6 +15,14 @@
       <maxversiontested Id="10.0.26100.0"/>
     </application>
   </compatibility>
+  <!-- Common Controls 6, whose comctl32 exports SetWindowSubclass by name
+       (WindowSubclass); the system's default comctl32 is version 5. -->
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0"
+                        processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*"/>
+    </dependentAssembly>
+  </dependency>
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>
       <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>

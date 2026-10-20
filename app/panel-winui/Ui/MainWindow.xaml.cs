@@ -210,5 +210,7 @@ public sealed partial class MainWindow : Window {
       presenter.PreferredMaximumWidth = width;
       presenter.PreferredMinimumHeight = (int)Math.Round(MinimumHeight * scale);
     }
+    // The width is fixed, so offer no horizontal resize handle either.
+    _ = WindowSubclass.MakeVerticalResizeOnly(this);
   }
 }

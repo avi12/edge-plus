@@ -16,6 +16,7 @@ internal static class Program {
     ("dev-mode prompt", DevModePromptTests.Run),
     ("startup entry", StartupEntryTests.Run),
     ("wording", WordingTests.Run),
+    ("resize handles", ResizeHandlesTests.Run),
   ];
 
   private static int Main() {

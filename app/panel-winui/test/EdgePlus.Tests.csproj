@@ -36,6 +36,7 @@
     <Compile Include="..\Themes\InstalledThemes.cs" Link="Panel\InstalledThemes.cs" />
     <Compile Include="..\Platform\PanelState.cs" Link="Panel\PanelState.cs" />
     <Compile Include="..\Platform\Paths.cs" Link="Panel\Paths.cs" />
+    <Compile Include="..\Ui\ResizeHandles.cs" Link="Panel\ResizeHandles.cs" />
     <Compile Include="..\Ui\Wording.cs" Link="Panel\Wording.cs" />
     <Compile Include="..\Platform\Settings.cs" Link="Panel\Settings.cs" />
     <Compile Include="..\Platform\Shared.g.cs" Link="Panel\Shared.g.cs" />
