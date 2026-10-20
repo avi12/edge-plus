@@ -3,13 +3,17 @@
 // the selected tab's row (the left one, the right one in a right-to-left UI;
 // tab_edge.h places them): the stripe the full height of the row, and a square
 // of the selected fill over each of the pill's rounded corners on that side, so
-// the edge reads straight with the spine flush on it. No ui colour id paints a
-// selected-tab outline, and hooking Edge's tab painting crashed the browser, so
-// these live in their own layered windows, outside Edge's views: a timer reads
-// (never writes) the selected tab view's screen bounds and moves the popups to
-// match. UI thread only.
+// the edge reads straight with the spine flush on it. Every browser window gets
+// its own set, owned by it, so it rides that window's z-order and dies with it.
+// No ui colour id paints a selected-tab outline, and hooking Edge's tab painting
+// crashed the browser, so these live in their own layered windows, outside
+// Edge's views: a timer reads (never writes) each window's selected tab view's
+// screen bounds and moves that window's popups to match. Which windows are
+// browser windows is control.h's call (TickWindow is its per-window step). UI
+// thread only.
 #pragma once
 #include <windows.h>
+#include <vector>
 #include "edge.h"
 #include "geom.h"
 #include "log.h"
@@ -40,15 +44,21 @@ inline theme_tone::Argb g_selectedFill = 0;
 // is in the title bar, so tabs above this are not ours to mark.
 inline constexpr int kVerticalListTopDip = 48;
 
-// The stripe and the two corner squares: plain solid popups, each a class
-// brush and nothing else, the one kind of popup proven to show over Edge.
-inline HWND g_window = nullptr;
-inline HWND g_topCorner = nullptr;
-inline HWND g_bottomCorner = nullptr;
+// One browser window's stripe and two corner squares: plain solid popups, each
+// a class brush and nothing else, the one kind of popup proven to show over
+// Edge. Owned by `browser`, so Windows destroys them when it closes.
+struct WindowSet {
+  HWND browser = nullptr;
+  HWND stripe = nullptr;
+  HWND topCorner = nullptr;
+  HWND bottomCorner = nullptr;
+  tab_edge::Side side = tab_edge::Side::kLeft;
+};
+
+inline std::vector<WindowSet> g_sets;
 inline bool g_isActive = false;
+// The fill the shared corner class brush holds (0 until the hook answers one).
 inline theme_tone::Argb g_paintedFill = 0;
-// The tab edge the pieces go on, from Edge's UI direction (Start).
-inline tab_edge::Side g_side = tab_edge::Side::kLeft;
 
 inline COLORREF ColorRefOf(theme_tone::Argb color) {
   return RGB((color >> theme_tone::kRedShift) & theme_tone::kChannelMask,
@@ -85,32 +95,44 @@ inline HWND CreatePopup(HWND owner, const wchar_t* className, COLORREF color) {
   return popup;
 }
 
-inline void EnsureWindows(HWND owner) {
-  if (!g_window) {
-    g_window = CreatePopup(owner, kWindowClass, kColor);
+// The set of `browser`, made on first use. Edge settles its UI direction at
+// startup, so each window's side is asked once, when its set is made.
+inline WindowSet& SetFor(HWND browser) {
+  for (WindowSet& set : g_sets) {
+    if (set.browser == browser) {
+      return set;
+    }
   }
-  if (!g_topCorner) {
-    g_topCorner = CreatePopup(owner, kCornerClass, ColorRefOf(g_paintedFill));
-  }
-  if (!g_bottomCorner) {
-    g_bottomCorner =
-        CreatePopup(owner, kCornerClass, ColorRefOf(g_paintedFill));
-  }
+  WindowSet set;
+  set.browser = browser;
+  set.side = tab_edge::LeadingSide(edge::IsUiRightToLeft());
+  set.stripe = CreatePopup(browser, kWindowClass, kColor);
+  set.topCorner = CreatePopup(browser, kCornerClass, ColorRefOf(g_paintedFill));
+  set.bottomCorner =
+      CreatePopup(browser, kCornerClass, ColorRefOf(g_paintedFill));
+  Log("[spine] window %p gets a spine, %s edge", browser,
+      set.side == tab_edge::Side::kRight ? "right" : "left");
+  g_sets.push_back(set);
+  return g_sets.back();
 }
 
-// Repaint the corners in the selected fill once it has changed.
+// Repaint every corner in the selected fill once it has changed. The corners
+// share one class, so one brush swap recolours them all.
 inline void FollowFill() {
   const bool hasFillChanged = g_paintedFill != g_selectedFill;
-  if (!hasFillChanged || !g_topCorner) {
+  if (!hasFillChanged || g_sets.empty()) {
     return;
   }
   g_paintedFill = g_selectedFill;
   HBRUSH brush = CreateSolidBrush(ColorRefOf(g_paintedFill));
-  const LONG_PTR oldBrush = SetClassLongPtrW(g_topCorner, GCLP_HBRBACKGROUND,
-                                             reinterpret_cast<LONG_PTR>(brush));
+  const LONG_PTR oldBrush =
+      SetClassLongPtrW(g_sets.front().topCorner, GCLP_HBRBACKGROUND,
+                       reinterpret_cast<LONG_PTR>(brush));
   DeleteObject(reinterpret_cast<HBRUSH>(oldBrush));
-  InvalidateRect(g_topCorner, nullptr, TRUE);
-  InvalidateRect(g_bottomCorner, nullptr, TRUE);
+  for (const WindowSet& set : g_sets) {
+    InvalidateRect(set.topCorner, nullptr, TRUE);
+    InvalidateRect(set.bottomCorner, nullptr, TRUE);
+  }
   Log("[spine] corners filled %08x", g_paintedFill);
 }
 
@@ -121,81 +143,96 @@ inline void Place(HWND popup, const Rect& rect) {
   }
 }
 
-inline void Hide() {
-  for (HWND popup : {g_window, g_topCorner, g_bottomCorner}) {
+inline void Hide(const WindowSet& set) {
+  for (HWND popup : {set.stripe, set.topCorner, set.bottomCorner}) {
     if (popup) {
       ShowWindow(popup, SW_HIDE);
     }
   }
 }
 
-// One tick: square the selected vertical tab's left edge and put the stripe on
-// it, or hide them.
-inline void Tick(HWND owner) {
-  void* tsm = edge::TsmForWindow(owner);
-  const bool isWindowShown = IsWindowVisible(owner) && !IsIconic(owner);
-  void* anyView = edge::McvForWindow(owner);
+inline void Destroy(const WindowSet& set) {
+  for (HWND popup : {set.stripe, set.topCorner, set.bottomCorner}) {
+    if (popup) {
+      DestroyWindow(popup);
+    }
+  }
+}
+
+// The start of a tick: drop the sets of browser windows that have closed
+// (Windows already destroyed their owned popups).
+inline void BeginTick() {
+  std::erase_if(g_sets, [](const WindowSet& set) {
+    return !IsWindow(set.browser);
+  });
+}
+
+// One browser window's step of a tick: square its selected vertical tab's
+// leading edge and put the stripe on it, or hide them.
+inline void TickWindow(HWND browser) {
+  void* tsm = edge::TsmForWindow(browser);
+  const bool isWindowShown = IsWindowVisible(browser) && !IsIconic(browser);
+  void* anyView = edge::McvForWindow(browser);
   void* tab = tsm && anyView && isWindowShown
                   ? vtab_views::SelectedTab(tsm, anyView)
                   : nullptr;
-  if (!tab) {
-    Hide();
-    return;
-  }
   const float scale =
-      static_cast<float>(GetDpiForWindow(owner)) / USER_DEFAULT_SCREEN_DPI;
+      static_cast<float>(GetDpiForWindow(browser)) / USER_DEFAULT_SCREEN_DPI;
   RECT windowRect{};
-  GetWindowRect(owner, &windowRect);
-  const Rect bounds = edge::ViewBoundsInScreen(tab);
+  GetWindowRect(browser, &windowRect);
+  const Rect bounds = tab ? edge::ViewBoundsInScreen(tab) : Rect{};
   const int top = static_cast<int>(static_cast<float>(bounds.y) * scale);
   const bool isInVerticalList =
       top - windowRect.top > static_cast<int>(kVerticalListTopDip * scale);
   const bool isVisibleRow = bounds.width > 0 && bounds.height > 0;
-  if (!isInVerticalList || !isVisibleRow) {
-    Hide();
+  const bool isMarkable = tab && isInVerticalList && isVisibleRow;
+  if (!isMarkable) {
+    for (const WindowSet& set : g_sets) {
+      if (set.browser == browser) {
+        Hide(set);
+      }
+    }
     return;
   }
-  EnsureWindows(owner);
+  const WindowSet& set = SetFor(browser);
   FollowFill();
   const Rect row{static_cast<int>(static_cast<float>(bounds.x) * scale), top,
                  static_cast<int>(static_cast<float>(bounds.width) * scale),
                  static_cast<int>(static_cast<float>(bounds.height) * scale)};
   const tab_edge::Pieces pieces =
-      tab_edge::PiecesFor(row, g_side, static_cast<int>(kWidthDip * scale),
+      tab_edge::PiecesFor(row, set.side, static_cast<int>(kWidthDip * scale),
                           static_cast<int>(kCornerDip * scale));
-  Place(g_window, pieces.stripe);
+  Place(set.stripe, pieces.stripe);
   // Until the colour hook has answered a fill, the corners stay hidden rather
   // than show a square of the wrong colour.
   const bool isFillKnown = g_paintedFill != 0;
   if (!isFillKnown) {
     return;
   }
-  Place(g_topCorner, pieces.topCorner);
-  Place(g_bottomCorner, pieces.bottomCorner);
+  Place(set.topCorner, pieces.topCorner);
+  Place(set.bottomCorner, pieces.bottomCorner);
 }
 
-inline void Start(HWND owner) {
+// Start ticking on `timerWindow` (the DLL's own browser window, control.h).
+inline void Start(HWND timerWindow) {
   g_isActive = true;
-  // Edge settles its UI direction at startup, so it is asked once.
-  g_side = tab_edge::LeadingSide(edge::IsUiRightToLeft());
-  Log("[spine] on, %s edge",
-      g_side == tab_edge::Side::kRight ? "right" : "left");
-  SetTimer(owner, kTimerId, kTickIntervalMs, nullptr);
+  Log("[spine] on");
+  SetTimer(timerWindow, kTimerId, kTickIntervalMs, nullptr);
 }
 
-// Stop ticking and drop the stripe (before this DLL unloads).
-inline void Remove(HWND owner) {
+// Stop ticking and drop every window's popups (switched off, or before this DLL
+// unloads).
+inline void Remove(HWND timerWindow) {
   g_isActive = false;
-  KillTimer(owner, kTimerId);
-  for (HWND* popup : {&g_window, &g_topCorner, &g_bottomCorner}) {
-    if (*popup) {
-      DestroyWindow(*popup);
-      *popup = nullptr;
-    }
+  KillTimer(timerWindow, kTimerId);
+  for (const WindowSet& set : g_sets) {
+    Destroy(set);
   }
+  g_sets.clear();
   UnregisterClassW(kWindowClass, ThisModule());
   UnregisterClassW(kCornerClass, ThisModule());
   g_paintedFill = 0;
+  Log("[spine] off");
 }
 
 }  // namespace fixedge::spine

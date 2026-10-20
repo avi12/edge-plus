@@ -172,6 +172,23 @@ inline BOOL CALLBACK RefreshWindowFollowedPages(HWND hwnd, LPARAM lparam) {
   return TRUE;
 }
 
+// EnumWindows callback: one spine tick (spine.h) for each of this process's
+// browser windows, so every window marks its own selected tab.
+inline BOOL CALLBACK TickWindowSpine(HWND hwnd, LPARAM /*unused*/) {
+  if (!IsOurBrowserClassWindow(hwnd)) {
+    return TRUE;
+  }
+  if (edge::TsmForWindow(hwnd)) {
+    spine::TickWindow(hwnd);
+  }
+  return TRUE;
+}
+
+inline void TickSpines() {
+  spine::BeginTick();
+  EnumWindows(TickWindowSpine, 0);
+}
+
 inline void RefreshThemeColors() {
   int refreshed = 0;
   EnumWindows(RefreshWindowFollowedPages, reinterpret_cast<LPARAM>(&refreshed));
@@ -541,7 +558,7 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   }
   const bool isSpineTick = message == WM_TIMER && wparam == spine::kTimerId;
   if (isSpineTick) {
-    spine::Tick(hwnd);
+    TickSpines();
     return 0;
   }
   const bool isThemeRepaint =
