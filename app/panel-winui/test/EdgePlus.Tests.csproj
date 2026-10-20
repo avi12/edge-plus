@@ -47,6 +47,7 @@
     <Compile Include="..\Panel\Themes\Protobuf.cs" Link="Panel\Protobuf.cs" />
     <Compile Include="..\Panel\Themes\StoreUrl.cs" Link="Panel\StoreUrl.cs" />
     <Compile Include="..\Panel\Themes\ThemeManifest.cs" Link="Panel\ThemeManifest.cs" />
+    <Compile Include="..\Panel\Themes\ThemeOrder.cs" Link="Panel\ThemeOrder.cs" />
     <Compile Include="..\Panel\Themes\ThemePacker.cs" Link="Panel\ThemePacker.cs" />
     <Compile Include="..\Panel\Ui\KeyedList.cs" Link="Panel\KeyedList.cs" />
     <Compile Include="..\Panel\Ui\Wording.cs" Link="Panel\Wording.cs" />

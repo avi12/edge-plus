@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -55,6 +56,10 @@ internal static class ThemeLibrary {
     ExternalExtensions.Uninstall(id);
     Change(theming => theming.Remove(id));
   }
+
+  // Put the library in the order `ids` gives; the pickers follow it.
+  public static void Reorder(IReadOnlyList<string> ids) =>
+      Change(theming => theming.Reorder(ids));
 
   public static void Assign(ColorMode mode, string id) =>
       Change(theming => theming.Assign(mode, id));

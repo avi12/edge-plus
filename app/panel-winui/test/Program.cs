@@ -19,6 +19,7 @@ internal static class Program {
     ("resize handles", ResizeHandlesTests.Run),
     ("keyed list", KeyedListTests.Run),
     ("panel source", PanelSourceTests.Run),
+    ("theme order", ThemeOrderTests.Run),
   ];
 
   private static int Main() {

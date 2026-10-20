@@ -36,6 +36,21 @@ internal static class KeyedListTests {
     KeyedList.Sync(items, ["b", "a"], item => item.Key, Create);
     Expect.Equal(madeBefore, made, "an unchanged list makes nothing");
 
+    var moves = new List<(int From, int To)>();
+    void Move(int from, int to) {
+      moves.Add((from, to));
+      Item moving = items[from];
+      items.RemoveAt(from);
+      items.Insert(to, moving);
+    }
+    KeyedList.Sync(items, ["a", "b"], item => item.Key, Create, Move);
+    Expect.That(Keys(items) == "a,b", "a move callback reorders too");
+    Expect.That(moves.SequenceEqual([(1, 0)]), "as one move, from 1 to 0");
+    madeBefore = made;
+    KeyedList.Sync(items, ["c", "a", "b"], item => item.Key, Create, Move);
+    Expect.That(Keys(items) == "c,a,b" && made == madeBefore + 1,
+                "a new key is still created, not moved");
+
     KeyedList.Sync(items, [], item => item.Key, Create);
     Expect.Equal(0, items.Count, "everything gone empties the list");
   }

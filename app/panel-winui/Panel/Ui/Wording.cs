@@ -47,6 +47,10 @@ internal static class Wording {
 
   public static string RemoveTheme(string name) => $"Remove {name}";
 
+  public const string ThemeListName = "Your themes";
+  public const string ReorderHelp =
+      "Drag a theme, or press Alt+Up or Alt+Down, to move it in this list and in the pickers.";
+
   public static CardWording StartWithWindows {
     get;
   } = new(

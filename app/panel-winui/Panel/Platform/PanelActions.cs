@@ -57,6 +57,11 @@ internal static class PanelActions {
     return Load();
   }
 
+  public static PanelState ReorderThemes(IReadOnlyList<string> ids) {
+    ThemeLibrary.Reorder(ids);
+    return Load();
+  }
+
   public static PanelState AssignTheme(ColorMode mode, string id) {
     ThemeLibrary.Assign(mode, id);
     return Load();

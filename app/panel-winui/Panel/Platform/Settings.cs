@@ -157,6 +157,9 @@ internal sealed class Theming {
     }
   }
 
+  // Put the themes in the order `ids` gives (ThemeOrder.Ordered).
+  public void Reorder(IReadOnlyList<string> ids) => Themes = ThemeOrder.Ordered(Themes, ids);
+
   // Drop a theme, and any assignment to it falls back to the default theme.
   public void Remove(string id) {
     Themes.RemoveAll(theme => theme.Id == id);

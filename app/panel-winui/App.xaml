@@ -46,6 +46,14 @@
                 <Setter Property="Padding" Value="6,1,6,1"/>
                 <Setter Property="VerticalAlignment" Value="Center"/>
             </Style>
+            <!-- A row of the reorderable theme list: the row draws its own
+                 padding, so it lines up with Edge's own themes listed under it. -->
+            <Style x:Key="ThemeListItemStyle" TargetType="ListViewItem"
+                   BasedOn="{StaticResource DefaultListViewItemStyle}">
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="MinHeight" Value="36"/>
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            </Style>
             <!-- Shown while a theme is dragged over the window. -->
             <Style x:Key="DropVeilStyle" TargetType="Grid">
                 <Setter Property="Background" Value="{ThemeResource SolidBackgroundFillColorBaseBrush}"/>

@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Markup;
 using Windows.System;
 
 namespace EdgePlus;
@@ -27,6 +30,19 @@ internal sealed class ThemingCard {
   private const double DimmedOpacity = 0.5;
   private const int RemoveGlyph = 0xE711;
   private const double RemoveGlyphSize = 12;
+  // Segoe Fluent's gripper: the row is draggable.
+  private const int GripGlyph = 0xE76F;
+  private const double GripGlyphSize = 12;
+  private const double GripWidth = 16;
+  // Inside a row, so the list's rows and Edge's rows line up.
+  private const double RowInset = 4;
+  // Each list item is a slot the row is put into. Parsed at run time, not
+  // compiled XAML, so nothing of it registers with WinUI for the life of the
+  // process (the panel is swapped live).
+  private const string RowSlotTemplate =
+      "<DataTemplate xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\">" +
+      "<ContentControl IsTabStop=\"False\" HorizontalContentAlignment=\"Stretch\" " +
+      "HorizontalAlignment=\"Stretch\"/></DataTemplate>";
 
   // Runs a panel action off the UI thread and renders the state it returns;
   // returns why it failed, or null.
@@ -46,7 +62,24 @@ internal sealed class ThemingCard {
   };
   private readonly ComboBox _lightPicker = new() { MinWidth = PickerMinWidth };
   private readonly ComboBox _darkPicker = new() { MinWidth = PickerMinWidth };
-  private readonly StackPanel _themeList = new() { Spacing = RowSpacing / 2 };
+  // The panel's own themes, in the library's order, which the user can drag or
+  // key into a new one; then Edge's own themes, which are not the panel's to
+  // order.
+  private readonly ListView _ownThemes = new() {
+    SelectionMode = ListViewSelectionMode.Single,
+    CanReorderItems = true,
+    CanDragItems = true,
+    AllowDrop = true,
+    ItemContainerStyle = StyleKeys.Get(StyleKeys.ThemeListItem),
+  };
+  // The list's items are the rows' keys, not the rows: ListView's built-in
+  // reorder only commits a dragged move to a list of plain items (with
+  // UIElements as items the lifted row came back on drop). Each container shown
+  // gets a freshly built row (OnOwnRowContainerChanging), so a row is never
+  // moved between recycled containers.
+  private readonly ObservableCollection<string> _ownKeys = [];
+  private Dictionary<string, Func<FrameworkElement>> _ownRowFactories = [];
+  private readonly StackPanel _edgeThemes = new() { Spacing = RowSpacing / 2 };
   // Set while the pickers are refilled, so a refill is not taken for a choice.
   private bool _isUpdating;
 
@@ -77,11 +110,24 @@ internal sealed class ThemingCard {
     _body.Children.Add(_error);
     _body.Children.Add(PickerRow(Wording.WhenLight, _lightPicker));
     _body.Children.Add(PickerRow(Wording.WhenDark, _darkPicker));
-    _body.Children.Add(_themeList);
+    _ownThemes.ItemTemplate = (DataTemplate)XamlReader.Load(RowSlotTemplate);
+    _ownThemes.ItemsSource = _ownKeys;
+    _ownThemes.ContainerContentChanging += OnOwnRowContainerChanging;
+    AutomationProperties.SetName(_ownThemes, Wording.ThemeListName);
+    AutomationProperties.SetHelpText(_ownThemes, Wording.ReorderHelp);
+    _ownThemes.DragItemsCompleted += (_, _) =>
+        _ = RunAsync(() => PanelActions.ReorderThemes(CurrentOrder()));
+    // Preview: the list's items take arrow keys for moving focus before a
+    // bubbling KeyDown would see them.
+    _ownThemes.PreviewKeyDown += OnThemeListKeyDown;
+    _body.Children.Add(_ownThemes);
+    _body.Children.Add(_edgeThemes);
     _card.SetBody(_body);
     // A theme added or removed slides in or out, and the rows after it move to
-    // make room; the card grows or shrinks with it.
-    Motion.Animate(_themeList, Motion.AddDelete);
+    // make room (as they do while one is dragged); the card grows or shrinks
+    // with it.
+    Motion.AnimateItems(_ownThemes, Motion.ListItems);
+    Motion.Animate(_edgeThemes, Motion.AddDelete);
     Motion.Animate(_body, Motion.Reposition);
   }
 
@@ -102,43 +148,112 @@ internal sealed class ThemingCard {
 
     // Each row keyed by everything it shows, so a row that changed is replaced
     // and one that did not is left alone (and does not re-animate).
-    var rows = new Dictionary<string, Func<FrameworkElement>>(StringComparer.Ordinal);
-    var order = new List<string>();
-    void Want(string key, Func<FrameworkElement> create) {
-      order.Add(key);
-      rows[key] = create;
-    }
+    var own = new RowSet();
     foreach (ThemeEntry theme in state.Theming.Themes) {
       string badge = theme.Source == ThemeSource.Store ? Wording.StoreBadge : Wording.LocalBadge;
-      Want(RowKey(theme.Id, theme.Name, [badge], isRemovable: true),
-           () => ThemeRow(theme.Id, theme.Name, [badge], isRemovable: true));
+      own.Want(RowKey(theme.Id, theme.Name, [badge]),
+               () => ThemeRow(theme.Id, theme.Name, [badge], isOwn: true));
     }
+    var edge = new RowSet();
     foreach (InstalledTheme theme in state.EdgeThemes) {
       string[] badges = theme.IsActive
           ? [Wording.InUseBadge, Wording.InstalledInEdgeBadge]
           : [Wording.InstalledInEdgeBadge];
-      Want(RowKey(theme.Id, theme.Name, badges, isRemovable: false),
-           () => ThemeRow(theme.Id, theme.Name, badges, isRemovable: false));
+      edge.Want(RowKey(theme.Id, theme.Name, badges),
+                () => ThemeRow(theme.Id, theme.Name, badges, isOwn: false));
     }
-    bool hasNoThemes = order.Count == 0;
+    bool hasNoThemes = own.Order.Count == 0 && edge.Order.Count == 0;
     if (hasNoThemes) {
-      Want(EmptyRowKey, () => new TextBlock {
+      edge.Want(EmptyRowKey, () => new TextBlock {
         Text = Wording.NoThemes,
         Style = StyleKeys.Get(StyleKeys.CardDescription),
       });
     }
-    KeyedList.Sync(_themeList.Children, order, child => (string)((FrameworkElement)child).Tag,
-                   key => {
-                     FrameworkElement row = rows[key]();
-                     row.Tag = key;
-                     return row;
-                   });
+    _ownRowFactories = own.Factories;
+    KeyedList.Sync(_ownKeys, own.Order, key => key, key => key, _ownKeys.Move);
+    edge.SyncInto(_edgeThemes.Children);
+    _ownThemes.Visibility = own.Order.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
   }
 
   private const string EmptyRowKey = "empty";
+  private const char RowKeySeparator = '\n';
 
-  private static string RowKey(string id, string name, string[] badges, bool isRemovable) =>
-      string.Join('\n', [id, name, string.Join(',', badges), isRemovable.ToString()]);
+  // A row's key starts with its theme's id.
+  private static string RowKey(string id, string name, string[] badges) =>
+      string.Join(RowKeySeparator, [id, name, string.Join(',', badges)]);
+
+  private static string IdOf(string rowKey) => rowKey.Split(RowKeySeparator)[0];
+
+  private static string NameOf(string rowKey) => rowKey.Split(RowKeySeparator)[1];
+
+  // The panel's themes in the order the list shows them now.
+  private List<string> CurrentOrder() => _ownKeys.Select(IdOf).ToList();
+
+  // A container being shown for a key gets a freshly built row for it, in the
+  // slot its template made. Setting the container's own Content instead does
+  // not hold: the list writes the item over it (or, told the content is
+  // handled, leaves it hidden).
+  private void OnOwnRowContainerChanging(ListViewBase sender,
+                                         ContainerContentChangingEventArgs args) {
+    bool hasRow = !args.InRecycleQueue && args.Item is string key
+        && _ownRowFactories.ContainsKey(key);
+    if (!hasRow || args.ItemContainer.ContentTemplateRoot is not ContentControl slot) {
+      return;
+    }
+    string rowKey = (string)args.Item;
+    slot.Content = _ownRowFactories[rowKey]();
+    // A screen reader names the item by its theme, not by its key.
+    AutomationProperties.SetName(args.ItemContainer, NameOf(rowKey));
+  }
+
+  // Alt+Up / Alt+Down moves the selected theme one place, for whoever does
+  // not drag; focus stays on it.
+  private void OnThemeListKeyDown(object sender, KeyRoutedEventArgs e) {
+    bool isMoveKey = e.Key == VirtualKey.Up || e.Key == VirtualKey.Down;
+    bool isMove = isMoveKey && e.KeyStatus.IsMenuKeyDown;
+    if (!isMove || _ownThemes.SelectedItem is not string rowKey) {
+      return;
+    }
+    e.Handled = true;
+    string id = IdOf(rowKey);
+    int offset = e.Key == VirtualKey.Up ? -1 : 1;
+    IReadOnlyList<string> order = ThemeOrder.Moved(CurrentOrder(), id, offset);
+    _ = MoveKeepingFocusAsync(order, id);
+  }
+
+  private async Task MoveKeepingFocusAsync(IReadOnlyList<string> order, string id) {
+    await RunAsync(() => PanelActions.ReorderThemes(order));
+    string? moved = _ownKeys.FirstOrDefault(key => IdOf(key) == id);
+    if (moved is null) {
+      return;
+    }
+    _ownThemes.SelectedItem = moved;
+    if (_ownThemes.ContainerFromItem(moved) is ListViewItem container) {
+      container.Focus(FocusState.Keyboard);
+    }
+  }
+
+  // The rows one list should show, in order, each made only if missing.
+  private sealed class RowSet {
+    private readonly Dictionary<string, Func<FrameworkElement>> _create =
+        new(StringComparer.Ordinal);
+
+    public List<string> Order { get; } = [];
+
+    public Dictionary<string, Func<FrameworkElement>> Factories => _create;
+
+    public void Want(string key, Func<FrameworkElement> create) {
+      Order.Add(key);
+      _create[key] = create;
+    }
+
+    public void SyncInto(IList<UIElement> rows) =>
+        KeyedList.Sync(rows, Order, row => (string)((FrameworkElement)row).Tag, key => {
+          FrameworkElement row = _create[key]();
+          row.Tag = key;
+          return row;
+        });
+  }
 
   private Grid StoreRow() {
     var row = new Grid { ColumnSpacing = ColumnGap };
@@ -176,17 +291,31 @@ internal sealed class ThemingCard {
     return row;
   }
 
-  private Grid ThemeRow(string id, string name, string[] badges, bool isRemovable) {
-    var row = new Grid { ColumnSpacing = ColumnGap };
+  // One theme: a drag grip (the panel's own themes only; Edge's keep the space
+  // so every row lines up), the name, its badges and, for the panel's own,
+  // the remove button.
+  private Grid ThemeRow(string id, string name, string[] badges, bool isOwn) {
+    var row = new Grid { ColumnSpacing = ColumnGap, Padding = new Thickness(RowInset, 0, RowInset, 0) };
+    row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(GripWidth) });
     row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
     row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
     row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-    row.Children.Add(new TextBlock {
+    AutomationProperties.SetName(row, name);
+    var grip = new FontIcon {
+      Glyph = char.ConvertFromUtf32(GripGlyph),
+      FontSize = GripGlyphSize,
+      Opacity = isOwn ? 1 : 0,
+    };
+    row.Children.Add(grip);
+    var title = new TextBlock {
       Text = name,
       Style = StyleKeys.Get(StyleKeys.CardTitle),
       VerticalAlignment = VerticalAlignment.Center,
       TextTrimming = TextTrimming.CharacterEllipsis,
-    });
+    };
+    Grid.SetColumn(title, 1);
+    row.Children.Add(title);
+    bool isRemovable = isOwn;
     var badgeList = new StackPanel { Orientation = Orientation.Horizontal, Spacing = ColumnGap / 2 };
     foreach (string badge in badges) {
       badgeList.Children.Add(new Border {
@@ -194,7 +323,7 @@ internal sealed class ThemingCard {
         Child = new TextBlock { Text = badge, Style = StyleKeys.Get(StyleKeys.BadgeText) },
       });
     }
-    Grid.SetColumn(badgeList, 1);
+    Grid.SetColumn(badgeList, 2);
     row.Children.Add(badgeList);
 
     // Edge's own themes keep the column, so every row's badges line up.
@@ -208,7 +337,7 @@ internal sealed class ThemingCard {
     };
     AutomationProperties.SetName(remove, Wording.RemoveTheme(name));
     remove.Click += (_, _) => _ = RunAsync(() => PanelActions.RemoveTheme(id));
-    Grid.SetColumn(remove, 2);
+    Grid.SetColumn(remove, 3);
     row.Children.Add(remove);
     return row;
   }

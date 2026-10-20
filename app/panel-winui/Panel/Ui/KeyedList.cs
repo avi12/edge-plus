@@ -9,8 +9,13 @@ namespace EdgePlus;
 // then plays for exactly the rows that came or went, instead of for every row a
 // clear-and-refill would recreate.
 internal static class KeyedList {
+  // `move(from, to)`, when given, moves an existing item in one step (an
+  // ObservableCollection's Move, which a list animates as a reposition rather
+  // than as a removal and an addition); without it a move is a remove then an
+  // insert.
   public static void Sync<T>(IList<T> items, IReadOnlyList<string> wantedKeys,
-                             Func<T, string> keyOf, Func<string, T> create) {
+                             Func<T, string> keyOf, Func<string, T> create,
+                             Action<int, int>? move = null) {
     var wanted = new HashSet<string>(wantedKeys, StringComparer.Ordinal);
     for (int i = items.Count - 1; i >= 0; i--) {
       if (!wanted.Contains(keyOf(items[i]))) {
@@ -23,6 +28,10 @@ internal static class KeyedList {
         continue;
       }
       int existing = IndexOf(items, keyOf, wantedKeys[i], start: i + 1);
+      if (existing >= 0 && move is not null) {
+        move(existing, i);
+        continue;
+      }
       T item;
       if (existing >= 0) {
         item = items[existing];
