@@ -14,6 +14,13 @@ internal static class Program {
 
   [STAThread]
   private static void Main(string[] args) {
+    // Armed with this switch the panel is its own dev-mode waiter: it waits for
+    // Edge to exit, snoozes the prompt and quits, never showing a window.
+    if (Switches.IsPresent(args, Switches.DevModeWaiter)) {
+      DevModePrompt.WaitForEdgeExitThenSnooze(EdgeUserData.Default);
+      return;
+    }
+
     if (IsRedirectedToRunningPanel()) {
       return;
     }

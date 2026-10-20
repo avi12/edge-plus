@@ -13,6 +13,7 @@ internal static class Program {
     ("edge build", EdgeBuildTests.Run),
     ("theme packing", ThemePackTests.Run),
     ("installed themes", InstalledThemesTests.Run),
+    ("dev-mode prompt", DevModePromptTests.Run),
   ];
 
   private static int Main() {

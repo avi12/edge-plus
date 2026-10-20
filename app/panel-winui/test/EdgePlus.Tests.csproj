@@ -30,6 +30,7 @@
   <ItemGroup>
     <Compile Include="..\Dll\ConfigWire.cs" Link="Panel\ConfigWire.cs" />
     <Compile Include="..\Edge\EdgeBuild.cs" Link="Panel\EdgeBuild.cs" />
+    <Compile Include="..\Edge\DevModePrompt.cs" Link="Panel\DevModePrompt.cs" />
     <Compile Include="..\Edge\EdgeUserData.cs" Link="Panel\EdgeUserData.cs" />
     <Compile Include="..\Edge\FileVersion.cs" Link="Panel\FileVersion.cs" />
     <Compile Include="..\Themes\InstalledThemes.cs" Link="Panel\InstalledThemes.cs" />
