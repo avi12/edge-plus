@@ -729,10 +729,12 @@ inline constexpr uintptr_t MCV_drop_target_view = 0x0b0;
 // (primary `this`) is what writes it; ThemeService::GetThemeSupplier reads the
 // same field as +0x760 because it is a method of the base at +8.
 inline constexpr uintptr_t THEMESERVICE_supplier = 0x768;
-// The BrowserThemePack color ids a theme sets from its manifest's "colors"
-// (the ids of the manifest-key table beside "toolbar" and "frame").
-inline constexpr int THEMECOLOR_toolbar = 23;
-inline constexpr int THEMECOLOR_frame = 28;
+// BrowserThemePack colour-table ids: the id space GetColor is keyed on. The
+// manifest-key -> id map is a {const char* key; int id} array in msedge.dll.
+// Edge keeps a SEPARATE *tints* table with its own enum (frame is 0x1c there),
+// so a tint id handed to GetColor always misses — do not cross the two.
+inline constexpr int THEMECOLOR_frame = 0x02;    // frame colour
+inline constexpr int THEMECOLOR_toolbar = 0x17;  // toolbar colour
 // WebContentsImpl::GetController is a bare `lea rax, [this + 0x280]`.
 inline constexpr uintptr_t WEBCONTENTS_controller = 0x280;
 // content::ReloadType::NORMAL.
