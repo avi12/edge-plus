@@ -325,10 +325,9 @@ inline void __fastcall h_remove_unused_themes(void* themeService) {
 // the theme with the feature on repaints the rail at once. Like RemoveUnusedThemes
 // this rides theming, not the split, so control.h keeps it enabled while the split
 // is off (SetSplitHooks).
-inline constexpr uint32_t kVTabFillBehindDarkText = 0xff96ffff;   // pale cyan
-inline constexpr uint32_t kVTabFillBehindLightText = 0xff00606c;  // deep cyan
-// Behind light text, once spine.h covers the title in ink: the full neon cyan.
-inline constexpr uint32_t kVTabFillWithCoveredLabel = 0xff00e5ff;
+inline constexpr uint32_t kVTabFillBehindDarkText = 0xff96ffff;  // pale cyan
+// The full neon cyan; spine.h repaints the title (and audio icon) in ink on it.
+inline constexpr uint32_t kVTabFillBehindLightText = 0xff00e5ff;
 // Whether the window the user is in belongs to this Edge process.
 inline bool IsEdgeForeground() {
   DWORD foregroundProcess = 0;
@@ -355,11 +354,8 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
       // behind dark text, a deep shade of it behind light text.
       const bool isTextDark = theme_tone::IsDark(textColor);
       spine::g_isLabelCoverNeeded = !isTextDark;
-      uint32_t fill = kVTabFillBehindDarkText;
-      if (!isTextDark) {
-        fill = spine::g_isLabelCovered ? kVTabFillWithCoveredLabel
-                                       : kVTabFillBehindLightText;
-      }
+      const uint32_t fill =
+          isTextDark ? kVTabFillBehindDarkText : kVTabFillBehindLightText;
       // The slot for an unfocused window dims into the rail, as Edge does its
       // own colours.
       uint32_t inactiveRail = 0;

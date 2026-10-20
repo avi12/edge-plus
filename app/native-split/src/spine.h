@@ -36,7 +36,7 @@ inline bool g_isActive = false;
 // colour, so on a bright cyan fill the light label would vanish; a second popup
 // over the label repaints the title in ink on the fill's own colour. The colour
 // hook (hooks.h) publishes the fill it answered and whether the label is light
-// (needs the cover); it only answers the bright fill once the cover is shown.
+// (needs the cover).
 inline constexpr wchar_t kLabelClass[] = L"FixEdgeTabLabel";
 inline constexpr COLORREF kLabelInk = RGB(0x04, 0x12, 0x1A);
 inline constexpr int kLabelFontDip = 13;
@@ -46,11 +46,20 @@ inline constexpr int kArgbGreenShift = 8;
 inline constexpr uint32_t kByteMask = 0xff;
 inline uint32_t g_selectedFill = 0;  // ARGB, as the hook last answered
 inline bool g_isLabelCoverNeeded = false;
-inline bool g_isLabelCovered = false;
 inline HWND g_labelWindow = nullptr;
 inline HFONT g_labelFont = nullptr;
 inline int g_labelFontHeight = 0;
 inline wchar_t g_labelText[kTitleCapacity] = {};
+// The tab's audio indicator (a speaker glyph Edge paints in the light label
+// colour) is covered and redrawn too: its width in pixels at the cover's left
+// (0 = none), and where the title starts after it.
+inline constexpr int kIndicatorChild = 2;
+inline constexpr wchar_t kSpeakerGlyph[] = {0xE767,
+                                            0};  // Segoe MDL2 Assets: Volume
+inline constexpr int kIndicatorGlyphDip = 14;
+inline int g_indicatorWidth = 0;
+inline int g_titleOffset = 0;
+inline HFONT g_iconFont = nullptr;
 
 inline COLORREF FillColorRef() {
   return RGB((g_selectedFill >> kArgbRedShift) & kByteMask,
@@ -73,7 +82,18 @@ inline LRESULT CALLBACK LabelProc(HWND hwnd, UINT message, WPARAM wparam,
   HGDIOBJ oldFont = SelectObject(context, g_labelFont);
   SetBkMode(context, TRANSPARENT);
   SetTextColor(context, kLabelInk);
-  DrawTextW(context, g_labelText, -1, &client,
+  const bool hasIndicator = g_indicatorWidth > 0;
+  if (hasIndicator) {
+    RECT glyphRect = client;
+    glyphRect.right = g_indicatorWidth;
+    SelectObject(context, g_iconFont);
+    DrawTextW(context, kSpeakerGlyph, -1, &glyphRect,
+              DT_SINGLELINE | DT_VCENTER | DT_CENTER | DT_NOPREFIX);
+    SelectObject(context, g_labelFont);
+  }
+  RECT titleRect = client;
+  titleRect.left = g_titleOffset;
+  DrawTextW(context, g_labelText, -1, &titleRect,
             DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX | DT_END_ELLIPSIS);
   SelectObject(context, oldFont);
   EndPaint(hwnd, &paint);
@@ -165,7 +185,6 @@ inline void EnsureWindow(HWND owner) {
 }
 
 inline void HideLabelCover() {
-  g_isLabelCovered = false;
   if (g_labelWindow) {
     ShowWindow(g_labelWindow, SW_HIDE);
   }
@@ -212,19 +231,39 @@ inline void CoverLabel(HWND owner, void* tab, float scale) {
   const int fontHeight = -static_cast<int>(kLabelFontDip * scale);
   if (fontHeight != g_labelFontHeight || !g_labelFont) {
     DeleteObject(g_labelFont);
+    DeleteObject(g_iconFont);
     g_labelFont =
         CreateFontW(fontHeight, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                     DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                     CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+    g_iconFont =
+        CreateFontW(-static_cast<int>(kIndicatorGlyphDip * scale), 0, 0, 0,
+                    FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+                    OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                    DEFAULT_PITCH, L"Segoe MDL2 Assets");
     g_labelFontHeight = fontHeight;
   }
-  SetWindowPos(g_labelWindow, nullptr, static_cast<int>(bounds.x * scale),
+  // The cover starts at the audio indicator when the tab shows one.
+  const bool isIndicatorChildPresent =
+      edge::ViewChildCount(tab) > kIndicatorChild;
+  void* indicator = isIndicatorChildPresent
+                        ? edge::ViewChildAt(tab, kIndicatorChild)
+                        : nullptr;
+  const bool isIndicatorShown = indicator && edge::ViewGetVisible(indicator);
+  const Rect indicatorBounds =
+      isIndicatorShown ? edge::ViewBoundsInScreen(indicator) : Rect{};
+  const bool hasIndicator = isIndicatorShown && indicatorBounds.width > 0 &&
+                            indicatorBounds.x < bounds.x;
+  const int left = hasIndicator ? indicatorBounds.x : bounds.x;
+  g_indicatorWidth =
+      hasIndicator ? static_cast<int>(indicatorBounds.width * scale) : 0;
+  g_titleOffset = static_cast<int>((bounds.x - left) * scale);
+  SetWindowPos(g_labelWindow, nullptr, static_cast<int>(left * scale),
                static_cast<int>(bounds.y * scale),
-               static_cast<int>(bounds.width * scale),
+               static_cast<int>((bounds.x + bounds.width - left) * scale),
                static_cast<int>(bounds.height * scale),
                SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
   InvalidateRect(g_labelWindow, nullptr, TRUE);
-  g_isLabelCovered = true;
 }
 
 // One tick: put the stripe on the selected vertical tab, or hide it.
@@ -272,7 +311,6 @@ inline void Start(HWND owner) {
 inline void Remove(HWND owner) {
   g_isActive = false;
   KillTimer(owner, kTimerId);
-  g_isLabelCovered = false;
   if (g_window) {
     DestroyWindow(g_window);
     g_window = nullptr;
@@ -283,6 +321,8 @@ inline void Remove(HWND owner) {
   }
   DeleteObject(g_labelFont);
   g_labelFont = nullptr;
+  DeleteObject(g_iconFont);
+  g_iconFont = nullptr;
   UnregisterClassW(kWindowClass, ThisModule());
   UnregisterClassW(kLabelClass, ThisModule());
 }
