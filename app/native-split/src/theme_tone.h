@@ -39,16 +39,20 @@ constexpr bool IsDark(Argb color) {
   return Luma(color) < kDarkLumaBelow;
 }
 
-// `from` moved halfway toward `to`, opaque: how a window that lost focus dims a
-// colour into its surroundings.
+// `from` moved `toPercent` percent of the way toward `to`, opaque: how a window
+// that lost focus dims a colour into its surroundings.
 inline constexpr int kBlueShift = 0;
-constexpr Argb Halfway(Argb from, Argb to) {
-  const auto mid = [&](int shift) {
+inline constexpr uint32_t kPercentScale = 100;
+constexpr Argb Blend(Argb from, Argb to, uint32_t toPercent) {
+  const auto mix = [&](int shift) {
     const uint32_t fromChannel = (from >> shift) & kChannelMask;
     const uint32_t toChannel = (to >> shift) & kChannelMask;
-    return ((fromChannel + toChannel) / 2) << shift;
+    return ((fromChannel * (kPercentScale - toPercent) +
+             toChannel * toPercent) /
+            kPercentScale)
+           << shift;
   };
-  return 0xff000000u | mid(kRedShift) | mid(kGreenShift) | mid(kBlueShift);
+  return 0xff000000u | mix(kRedShift) | mix(kGreenShift) | mix(kBlueShift);
 }
 
 // What a theme's palette says about its own tone.
