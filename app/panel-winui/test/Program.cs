@@ -12,6 +12,7 @@ internal static class Program {
     ("config wire", ConfigWireTests.Run),
     ("edge build", EdgeBuildTests.Run),
     ("theme packing", ThemePackTests.Run),
+    ("installed themes", InstalledThemesTests.Run),
   ];
 
   private static int Main() {
