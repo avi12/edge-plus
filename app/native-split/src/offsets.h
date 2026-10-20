@@ -765,7 +765,9 @@ inline constexpr int THEMECOLOR_toolbar = 0x17;  // toolbar colour (dark ground)
 // inactive-window; the DLL overrides only the selected tab so it adopts the
 // theme's own accent (docs/re/theming.md, hooks.h h_getcolor). Verified from the
 // store sequence in EdgeSetVTabAndRelatedColor.
-inline constexpr int VTABCOLOR_background = 0x23;  // rail bg (+0x24 inactive)
+inline constexpr int VTABCOLOR_background = 0x23;  // rail bg
+inline constexpr int VTABCOLOR_background_inactive =
+    0x24;  // rail, unfocused window
 inline constexpr int VTABCOLOR_background_alt =
     0x27;  // idle fill (+0x28 inact.)
 inline constexpr int VTABCOLOR_selected_background = 0x25;  // selected tab bg
