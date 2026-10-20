@@ -34,6 +34,10 @@ inline constexpr int kMaxLabelsPerReply = 5;
 
 inline constexpr char kNoneWord[] = "NONE";
 
+// The first field of every page script answer: it worked, or it failed.
+inline constexpr char kOkMarker[] = "ok";
+inline constexpr char kErrorMarker[] = "err";
+
 // --- the page's paragraphs -----------------------------------------------------------
 
 struct Paragraph {
@@ -53,12 +57,13 @@ struct PageParagraphs {
 inline PageParagraphs ParsePageParagraphs(const std::string& raw) {
   PageParagraphs page;
   const std::vector<std::string> fields = find_text::SplitFields(raw);
-  if (fields[0] == "err") {
+  if (fields[0] == kErrorMarker) {
     page.error = fields.size() > 1 ? fields[1] : std::string();
     return page;
   }
   constexpr size_t kOkFieldCount = 3;
-  const bool isComplete = fields[0] == "ok" && fields.size() == kOkFieldCount;
+  const bool isComplete =
+      fields[0] == kOkMarker && fields.size() == kOkFieldCount;
   if (!isComplete) {
     page.error = "The page gave an answer Edge could not read.";
     return page;
@@ -210,10 +215,10 @@ inline Reply ParseReply(const std::string& raw) {
   const std::string rest = separator == std::string::npos
                                ? std::string()
                                : raw.substr(separator + 1);
-  if (marker == "ok") {
+  if (marker == kOkMarker) {
     reply.isOk = true;
     reply.text = rest;
-  } else if (marker == "err") {
+  } else if (marker == kErrorMarker) {
     reply.error = rest;
   } else {
     reply.error = "The chat page gave an answer Edge could not read.";
