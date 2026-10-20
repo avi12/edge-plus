@@ -181,6 +181,9 @@ inline constexpr int kMaxMatches = 5000;
 
 // Fields of a report, and its lines (the same separators the page scripts use).
 inline constexpr char kFieldSeparator = '\x1f';
+// The first field of every page answer: whether it worked.
+inline constexpr char kOkTag[] = "ok";
+inline constexpr char kErrorTag[] = "err";
 
 // --- which pages the bar can search ------------------------------------------------
 
@@ -392,13 +395,14 @@ inline bool IsDigits(const std::string& text) {
 inline SearchResult ParseSearchResult(const std::string& raw) {
   SearchResult result;
   const std::vector<std::string> fields = SplitFields(raw);
-  const bool isError = fields[0] == "err";
+  const bool isError = fields[0] == kErrorTag;
   if (isError) {
     result.error = fields.size() > 1 ? fields[1] : std::string();
     return result;
   }
   constexpr size_t kOkFieldCount = 4;
-  const bool isComplete = fields[0] == "ok" && fields.size() == kOkFieldCount &&
+  const bool isComplete = fields[0] == kOkTag &&
+                          fields.size() == kOkFieldCount &&
                           IsDigits(fields[1]) && IsDigits(fields[3]);
   if (!isComplete) {
     result.error = "The page gave an answer Edge could not read.";
