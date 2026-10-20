@@ -44,7 +44,11 @@ export enum LocalThemeKind {
   Folder = "folder"
 }
 
-export type ThemeSource = "store" | "local";
+/** Where a theme came from; the values match `ThemeSource` in settings.rs. */
+export enum ThemeSource {
+  Store = "store",
+  Local = "local"
+}
 
 export interface ThemeEntry {
   id: string;
@@ -94,7 +98,11 @@ export interface AppState {
   unsupported: Feature[];
 }
 
-export type Mode = "light" | "dark";
+/** The Windows colour mode a theme is picked for; the values match `Mode` in settings.rs. */
+export enum Mode {
+  Light = "light",
+  Dark = "dark"
+}
 
 /** Every Tauri command the core exposes; the values match the handler names in commands.rs. */
 enum Command {

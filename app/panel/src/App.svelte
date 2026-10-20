@@ -2,9 +2,9 @@
   import FeatureCard from "@/components/FeatureCard.svelte";
   import ThemingCard from "@/components/ThemingCard.svelte";
   import { FIND_DESCRIPTION, FIND_TITLE } from "@/lib/assistantNames";
-  import type { AppState, Mode } from "@/lib/bridge";
+  import type { AppState } from "@/lib/bridge";
   import * as bridge from "@/lib/bridge";
-  import { Feature, LocalThemeKind } from "@/lib/bridge";
+  import { Feature, LocalThemeKind, Mode } from "@/lib/bridge";
   import { describeHeldOff, describeUnsupported, describeUpdate } from "@/lib/edgeBuild";
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWebview } from "@tauri-apps/api/webview";

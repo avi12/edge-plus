@@ -6,8 +6,8 @@
   import TextInput from "@/components/TextInput.svelte";
   import ThemeList from "@/components/ThemeList.svelte";
   import type { ThemeRow } from "@/components/ThemeList.svelte";
-  import { LocalThemeKind } from "@/lib/bridge";
-  import type { EdgeTheme, Mode, ThemeSource, Theming } from "@/lib/bridge";
+  import { LocalThemeKind, Mode, ThemeSource } from "@/lib/bridge";
+  import type { EdgeTheme, Theming } from "@/lib/bridge";
 
   interface Props {
     description: string;
@@ -78,11 +78,15 @@
   ]);
 
   function sourceLabel(source: ThemeSource): string {
-    if (source === "local") {
+    if (source === ThemeSource.Store) {
+      return "Store";
+    }
+
+    if (source === ThemeSource.Local) {
       return "Local";
     }
 
-    return "Store";
+    return "";
   }
 
   async function run(action: () => Promise<void>): Promise<void> {
@@ -163,7 +167,7 @@
       <span class="assign-label">When Windows is light</span>
       <Select
         label="Light-mode theme"
-        onchange={id => setMode("light", id)}
+        onchange={id => setMode(Mode.Light, id)}
         {options}
         value={theming.light}
       />
@@ -172,7 +176,7 @@
       <span class="assign-label">When Windows is dark</span>
       <Select
         label="Dark-mode theme"
-        onchange={id => setMode("dark", id)}
+        onchange={id => setMode(Mode.Dark, id)}
         {options}
         value={theming.dark}
       />
