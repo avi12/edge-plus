@@ -314,17 +314,17 @@ inline void __fastcall h_remove_unused_themes(void* themeService) {
 // for `id`, false when the theme left it unset. Edge derives the whole vertical-
 // tab strip from the toolbar colour (offsets.h VTABCOLOR_*), so the SELECTED
 // vertical tab is only ever a shade of the toolbar and a theme cannot give it a
-// colour of its own. While theming is active we fix exactly that one thing: the
-// selected tab's background becomes the theme's own accent (its active-tab text
-// colour) and its text the theme's toolbar colour, so the active vertical tab
-// reads as a solid accent chip with legible dark text — in whatever palette the
-// theme defines, with the rail and every other id left untouched. Every read
-// goes through o_getcolor (the original), never the hook, so it cannot recurse;
-// a theme that set no accent falls straight through to Edge's derived colour.
-// The colour mixer reads these ids when it builds the vertical-tab ColorProvider,
-// which DoSetTheme rebuilds (theme.h), so applying the theme with the feature on
-// repaints the rail at once. Like RemoveUnusedThemes this rides theming, not the
-// split, so control.h keeps it enabled while the split is off (SetSplitHooks).
+// colour of its own. While theming is active we fill the selected tab with the
+// theme's own accent (its active-tab text colour), so it reads as a solid accent
+// chip in whatever palette the theme defines, with the rail and every other id
+// left untouched. (Its label is a native ui colour, not a pack id, recoloured in
+// h_getuicolor; its outline too.) Reads go through o_getcolor (the original),
+// never the hook, so it cannot recurse; a theme that set no accent falls straight
+// through to Edge's derived colour. The colour mixer reads this id when it builds
+// the vertical-tab ColorProvider, which DoSetTheme rebuilds (theme.h), so applying
+// the theme with the feature on repaints the rail at once. Like RemoveUnusedThemes
+// this rides theming, not the split, so control.h keeps it enabled while the split
+// is off (SetSplitHooks).
 using GetColor_t = bool(__fastcall*)(void*, int, uint32_t*);
 inline GetColor_t o_getcolor = nullptr;
 inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
@@ -339,32 +339,25 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
         return true;
       }
     }
-    const bool isSelectedTabForeground =
-        colorId == off::VTABCOLOR_selected_foreground ||
-        colorId == off::VTABCOLOR_selected_foreground_inactive;
-    if (isSelectedTabForeground) {
-      // Legible dark text/icons on that accent: the theme's toolbar colour.
-      if (o_getcolor(pack, off::THEMECOLOR_toolbar, out)) {
-        return true;
-      }
-    }
   }
   return o_getcolor(pack, colorId, out);
 }
 
-// ui::ColorProvider::GetColor: the magenta "spine" — the SELECTED vertical tab's
-// OUTLINE. Unlike the fill and text (theme-pack ids recoloured by h_getcolor), the
-// outline is a native ui::ColorId computed by a tab-strip colour mixer, so
-// BrowserThemePack::GetColor cannot reach it; it is read at paint here. While
-// theming is active we return a fixed magenta for just those two ids (active /
-// inactive window), giving the cyan selected tab a magenta accent edge; every
-// other id tail-calls the original, so no other surface changes. Read-time, so no
-// provider rebuild is needed, only a repaint (theme.h). The magenta matches the
-// cyberpunk theme's secondary neon (build_2077.py); the outline has no theme-
-// manifest slot to source it from, unlike the cyan fill. Like the pack hook this
-// rides theming, not the split, so control.h keeps it enabled while the split is
-// off. ColorProvider::GetColor is browser-wide and hot, so the g_isActive gate is
-// checked first and the whole detour is two int compares when it does not match.
+// ui::ColorProvider::GetColor: the native vertical-tab colours a theme pack cannot
+// reach. Two live here, both computed by a tab-strip colour mixer and read at
+// paint (not theme-pack ids, so h_getcolor cannot touch them):
+//   - the SELECTED tab's OUTLINE (the magenta "spine"), active/inactive window;
+//   - the SELECTED tab's label text (kColorEdgeVTabForegroundActive), which Edge
+//     contrast-picks against the old dark background and so leaves light and
+//     unreadable once the fill becomes the accent.
+// While theming is active we return a fixed magenta for the outline and the
+// theme's ground (cached at apply, theme.h) for the label, so the cyan selected
+// tab gets a magenta edge and dark readable text; every other id, and the idle
+// tabs' own text, tail-calls the original untouched. Read-time, so only a repaint
+// is needed (theme.h). The magenta matches the cyberpunk theme's secondary neon
+// (build_2077.py); the outline has no theme-manifest slot to source it from. Like
+// the pack hook this rides theming, not the split, so control.h keeps it enabled
+// while the split is off. GetColor is browser-wide and hot, so g_isActive first.
 inline constexpr uint32_t kVTabSpineColor = 0xffff2bd6;  // opaque ARGB #FF2BD6
 using GetUiColor_t = uint32_t(__fastcall*)(void*, int);
 inline GetUiColor_t o_getuicolor = nullptr;
@@ -375,6 +368,13 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
         colorId == off::VTABUICOLOR_outline_selected_inactive;
     if (isSelectedVTabOutline) {
       return kVTabSpineColor;
+    }
+    // The selected tab's label: the theme ground (cached at apply) so it reads on
+    // the accent fill. Only when a theme set it; else Edge's own colour.
+    const bool isSelectedVTabText =
+        colorId == off::VTABUICOLOR_foreground_selected;
+    if (isSelectedVTabText && theme::g_vtabSelectedTextColor != 0) {
+      return theme::g_vtabSelectedTextColor;
     }
   }
   return o_getuicolor(provider, colorId);
