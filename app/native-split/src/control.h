@@ -184,7 +184,14 @@ inline BOOL CALLBACK TickWindowSpine(HWND hwnd, LPARAM /*unused*/) {
   return TRUE;
 }
 
-inline void TickSpines() {
+// The spine's timer callback (a thread timer, spine::Start): tick every browser
+// window. Runs on the UI thread that started it.
+inline void CALLBACK TickSpines(HWND /*unused*/, UINT /*unused*/,
+                                UINT_PTR /*unused*/, DWORD /*unused*/) {
+  if (spine::g_isStopRequested) {
+    spine::Remove();
+    return;
+  }
   spine::BeginTick();
   EnumWindows(TickWindowSpine, 0);
 }
@@ -212,7 +219,7 @@ inline void Teardown(HWND hwnd) {
   drag::Cancel();
   tabdrag::Cancel();
   overlay::Remove();
-  spine::Remove(hwnd);
+  spine::Remove();
   grip::RemoveAll();
   dividers::RemoveAll();
   anim::Remove();
@@ -353,9 +360,9 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
   // the selected fill the theme's colour hook answers.
   const bool isSpineWanted = theme::g_isActive && wire.tabSpineActive != 0;
   if (isSpineWanted && !spine::g_isActive) {
-    spine::Start(hwnd);
+    spine::Start(TickSpines);
   } else if (!isSpineWanted && spine::g_isActive) {
-    spine::Remove(hwnd);
+    spine::Remove();
   }
   const bool isFollowChanged = theme_follow::ApplyConfig(wire);
   if (isFollowChanged) {
@@ -556,11 +563,6 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
     repaint::NudgeAll();
     return 0;
   }
-  const bool isSpineTick = message == WM_TIMER && wparam == spine::kTimerId;
-  if (isSpineTick) {
-    TickSpines();
-    return 0;
-  }
   const bool isThemeRepaint =
       message == WM_TIMER && wparam == theme::kRepaintTimerId;
   if (isThemeRepaint) {
@@ -647,6 +649,17 @@ inline void Remove() {
                         SMTO_BLOCK, kTeardownTimeoutMs, nullptr);
     SetWindowLongPtrW(hwnd, GWLP_WNDPROC,
                       reinterpret_cast<LONG_PTR>(g_originalProc));
+  }
+  // The spine's thread timer runs this DLL's code; when the teardown could not
+  // stop it (the window above has closed), have its next tick stop it.
+  if (spine::g_isTimerRunning) {
+    spine::g_isStopRequested = true;
+    const ULONGLONG deadline = GetTickCount64() + kTeardownTimeoutMs;
+    while (spine::g_isTimerRunning && GetTickCount64() < deadline) {
+      Sleep(spine::kTickIntervalMs);
+    }
+    Log("[spine] timer stopped by its own tick: %s",
+        spine::g_isTimerRunning ? "no" : "yes");
   }
   g_hasHotKeys = false;
   channel::g_window = nullptr;

@@ -13,6 +13,7 @@
 // thread only.
 #pragma once
 #include <windows.h>
+#include <atomic>
 #include <vector>
 #include "edge.h"
 #include "geom.h"
@@ -25,7 +26,6 @@ namespace fixedge::spine {
 
 inline constexpr wchar_t kWindowClass[] = L"FixEdgeTabSpine";
 inline constexpr wchar_t kCornerClass[] = L"FixEdgeTabCorner";
-inline constexpr UINT_PTR kTimerId = 0xF1F0;
 inline constexpr UINT kTickIntervalMs = 50;
 
 // The stripe: 7 DIPs wide, the neon magenta of the Cyberpunk theme.
@@ -57,6 +57,14 @@ struct WindowSet {
 
 inline std::vector<WindowSet> g_sets;
 inline bool g_isActive = false;
+// The thread timer Start set (0 while off).
+inline UINT_PTR g_timerId = 0;
+// A thread timer outlives every window, so it must be stopped before this DLL
+// unloads. The teardown normally does that on the UI thread; when it cannot run
+// (the window the DLL attached to has closed), the unload thread asks the next
+// tick to stop the timer itself and waits for it (control.h Remove).
+inline std::atomic<bool> g_isStopRequested{false};
+inline std::atomic<bool> g_isTimerRunning{false};
 // The fill the shared corner class brush holds (0 until the hook answers one).
 inline theme_tone::Argb g_paintedFill = 0;
 
@@ -213,18 +221,26 @@ inline void TickWindow(HWND browser) {
   Place(set.bottomCorner, pieces.bottomCorner);
 }
 
-// Start ticking on `timerWindow` (the DLL's own browser window, control.h).
-inline void Start(HWND timerWindow) {
+// Start calling `onTick` every tick. A thread timer, not one on a window: the
+// browser window the DLL attached to can close while others stay open, and a
+// window timer would die with it. Call on the UI thread; `onTick` runs there.
+inline void Start(TIMERPROC onTick) {
   g_isActive = true;
-  Log("[spine] on");
-  SetTimer(timerWindow, kTimerId, kTickIntervalMs, nullptr);
+  g_timerId = SetTimer(nullptr, 0, kTickIntervalMs, onTick);
+  g_isTimerRunning = g_timerId != 0;
+  Log("[spine] on (thread timer %llu)",
+      static_cast<unsigned long long>(g_timerId));
 }
 
 // Stop ticking and drop every window's popups (switched off, or before this DLL
-// unloads).
-inline void Remove(HWND timerWindow) {
+// unloads). On the UI thread that started the timer.
+inline void Remove() {
   g_isActive = false;
-  KillTimer(timerWindow, kTimerId);
+  if (g_timerId != 0) {
+    KillTimer(nullptr, g_timerId);
+    g_timerId = 0;
+  }
+  g_isTimerRunning = false;
   for (const WindowSet& set : g_sets) {
     Destroy(set);
   }
