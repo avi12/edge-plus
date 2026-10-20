@@ -335,18 +335,17 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
     if (isSelectedTabBackground) {
       // The theme's own accent fills the selected tab; if it set none, fall
       // through to Edge's toolbar-derived colour.
-      if (o_getcolor(pack, off::THEMECOLOR_tab_text, out)) {
+      if (o_getcolor(pack, off::THEMECOLOR_toolbar_button_icon, out)) {
         return true;
       }
     }
-    // The selected tab's own text ids are derived from the old background, so
-    // they stay light on the accent (dark theme) or dark on the ink (light
-    // theme): give them the theme's toolbar ground, which the accent reads on.
-    const bool isSelectedTabForeground =
-        colorId == off::VTABCOLOR_selected_foreground ||
-        colorId == off::VTABCOLOR_selected_foreground_inactive;
-    if (isSelectedTabForeground &&
-        o_getcolor(pack, off::THEMECOLOR_toolbar, out)) {
+    // Edge paints the selected tab's label in the theme's active-tab text colour,
+    // which a theme sets to its accent, so it would vanish on the accent fill.
+    // Hand that colour the toolbar ground instead; the accent reaches the fill
+    // through the toolbar icon colour above. (Horizontal tabs, which this
+    // would also dim, are not what this theme is built for.)
+    const bool isActiveTabText = colorId == off::THEMECOLOR_tab_text;
+    if (isActiveTabText && o_getcolor(pack, off::THEMECOLOR_toolbar, out)) {
       return true;
     }
   }

@@ -762,6 +762,7 @@ inline constexpr uintptr_t THEMESERVICE_supplier = 0x768;
 inline constexpr int THEMECOLOR_frame = 0x02;  // frame colour
 inline constexpr int THEMECOLOR_tab_text =
     0x12;  // active-tab text (cyan accent)
+inline constexpr int THEMECOLOR_toolbar_button_icon = 0x18;  // accent icons
 inline constexpr int THEMECOLOR_toolbar = 0x17;  // toolbar colour (dark ground)
 // Edge's vertical-tab strip colour ids. Edge has no manifest key for them:
 // BrowserThemePack::EdgeSetVTabAndRelatedColor (rva 0x87d42fe) DERIVES all of
