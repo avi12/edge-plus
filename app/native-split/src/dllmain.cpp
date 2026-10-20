@@ -30,6 +30,13 @@ constexpr wchar_t kUnloadEvent[] = L"Local\\fixedge-split-unload";
 // per OS mode). Auto-reset: each change wakes the wait once.
 constexpr wchar_t kConfigEvent[] = L"Local\\fixedge-config-changed";
 
+// The events the main loop waits on, in the order of its handle array.
+enum class WaitedEvent : size_t {
+  kUnload,
+  kConfig
+};
+constexpr DWORD kWaitedEventCount = 2;
+
 // msedge.dll may still be loading when Init runs: poll for it this many times,
 // this far apart, before giving up.
 constexpr int kModuleWaitAttempts = 100;
@@ -78,10 +85,14 @@ DWORD WINAPI Init(LPVOID) {
   }
   Log("[init] hooks installed; directional-add menu armed");
 
-  const HANDLE events[2] = {g_unloadEvent, g_configEvent};
+  HANDLE const const events[kWaitedEventCount] = {};
+  events[static_cast<size_t>(WaitedEvent::kUnload)] = g_unloadEvent;
+  events[static_cast<size_t>(WaitedEvent::kConfig)] = g_configEvent;
   while (true) {
-    const DWORD which = WaitForMultipleObjects(2, events, FALSE, INFINITE);
-    const bool isConfigChange = which == WAIT_OBJECT_0 + 1;
+    const DWORD which =
+        WaitForMultipleObjects(kWaitedEventCount, events, FALSE, INFINITE);
+    const bool isConfigChange =
+        which == WAIT_OBJECT_0 + static_cast<DWORD>(WaitedEvent::kConfig);
     if (isConfigChange) {
       control::OnConfigChanged();
       continue;
