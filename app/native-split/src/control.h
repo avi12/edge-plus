@@ -11,6 +11,7 @@
 #include "config.h"
 #include "edge.h"
 #include "geometry.h"
+#include "spine.h"
 #include "split_ops.h"
 #include "split_data.h"
 #include "state.h"
@@ -194,6 +195,7 @@ inline void Teardown(HWND hwnd) {
   drag::Cancel();
   tabdrag::Cancel();
   overlay::Remove();
+  spine::Remove(hwnd);
   grip::RemoveAll();
   dividers::RemoveAll();
   anim::Remove();
@@ -332,6 +334,12 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
     }
   }
   theme::ApplyConfig(hwnd, wire);
+  const bool isSpineWanted = theme::g_isActive;
+  if (isSpineWanted && !spine::g_isActive) {
+    spine::Start(hwnd);
+  } else if (!isSpineWanted && spine::g_isActive) {
+    spine::Remove(hwnd);
+  }
   const bool isFollowChanged = theme_follow::ApplyConfig(wire);
   if (isFollowChanged) {
     RefreshThemeColors();
@@ -529,6 +537,11 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   if (isRenderNudge) {
     split_ops::SyncPanesToMembers(edge::McvForWindow(hwnd));
     repaint::NudgeAll();
+    return 0;
+  }
+  const bool isSpineTick = message == WM_TIMER && wparam == spine::kTimerId;
+  if (isSpineTick) {
+    spine::Tick(hwnd);
     return 0;
   }
   const bool isThemeRepaint =

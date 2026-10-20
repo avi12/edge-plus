@@ -587,6 +587,10 @@ inline constexpr uintptr_t CopilotButton_vftables[] = {
     0x113634e0, 0x11363500, 0x11363520, 0x11363540, 0x11363580, 0x113635d0,
     0x113635e8, 0x11363600, 0x11363630, 0x113636e0, 0x11363700, 0x11363740,
     0x11363758, 0x11363770, 0x113637a0, 0x113637b8, 0x115b6220, 0x1173fd10};
+
+// The vftable of a tab row in the vertical tab list (found by tabrows::Dump: one
+// per tab, children of the list's container, in the model's order).
+inline constexpr uintptr_t VerticalTab_vftable = 0x1166fd70;
 // EdgeCopilotDropdownMenuButton: the chevron beside the chat pill (a sibling in
 // EdgeCopilotToolbarSplitButtonContainer). Its constructor sets both its tooltip
 // and its accessible name from the formatted string "$1 menu"; the vftables
