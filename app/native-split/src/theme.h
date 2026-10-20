@@ -44,7 +44,6 @@ inline bool g_isActive = false;
 // was designed to read on — the theme's toolbar colour — cached here on each apply
 // because the native colour hook (ui::ColorProvider::GetColor) has no theme pack
 // in hand. 0 = unset, so the hook falls through to Edge's own colour.
-inline uint32_t g_vtabSelectedTextColor = 0;
 
 // Windows is in dark mode when this value is 0 (apps use the light theme when
 // it is 1 or absent).
@@ -105,7 +104,6 @@ inline void Apply(void* hwnd, bool isDark) {
   const ThemeId& wanted = isDark ? g_darkTheme : g_lightTheme;
   if (wanted.IsEmpty()) {
     edge::ThemeUseDefault(themeService);
-    g_vtabSelectedTextColor = 0;
     ScheduleRepaint(hwnd);
     Log("[theme] %s -> default theme", isDark ? "dark" : "light");
     return;
@@ -136,12 +134,6 @@ inline void Apply(void* hwnd, bool isDark) {
     edge::EnableDisabledExtension(profile, wanted.value);
   }
   edge::ThemeSetFromExtension(themeService, extension);
-  // Cache the ground colour for the selected vertical tab's text (hooks.h
-  // h_getuicolor): the theme's toolbar, which its accent tab_text was built to
-  // read on, so the accent-filled selected tab gets contrasting text.
-  const theme_tone::OptionalColor ground =
-      edge::ThemePaletteColor(themeService, edge155::off::THEMECOLOR_toolbar);
-  g_vtabSelectedTextColor = ground.isSet ? (ground.color | 0xff000000u) : 0;
   ScheduleRepaint(hwnd);
   Log("[theme] %s -> %.*s applied (was %s)", isDark ? "dark" : "light",
       static_cast<int>(wanted.length), wanted.value,

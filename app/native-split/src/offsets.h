@@ -762,7 +762,6 @@ inline constexpr uintptr_t THEMESERVICE_supplier = 0x768;
 inline constexpr int THEMECOLOR_frame = 0x02;  // frame colour
 inline constexpr int THEMECOLOR_tab_text =
     0x12;  // active-tab text (cyan accent)
-inline constexpr int THEMECOLOR_toolbar_button_icon = 0x18;  // accent icons
 inline constexpr int THEMECOLOR_toolbar = 0x17;  // toolbar colour (dark ground)
 // Edge's vertical-tab strip colour ids. Edge has no manifest key for them:
 // BrowserThemePack::EdgeSetVTabAndRelatedColor (rva 0x87d42fe) DERIVES all of
@@ -789,13 +788,6 @@ inline constexpr int VTABCOLOR_selected_foreground_inactive = 0x2c;
 // colour-id name table (kColorEdgeVTabOutlineSelected{Active,Inactive}).
 inline constexpr int VTABUICOLOR_outline_selected_active = 0xc19;    // 3097
 inline constexpr int VTABUICOLOR_outline_selected_inactive = 0xc1a;  // 3098
-// kColorEdgeVTabForegroundActive: the SELECTED tab's label text + monochrome
-// glyphs. Edge contrast-picks it against the (toolbar-derived) selected
-// background, so once the hook repaints that background with the accent it stays
-// light and unreadable; h_getuicolor returns the theme's ground colour instead.
-// The idle tabs' text (kColorEdgeVTabForegroundInactive 0xc33) is a separate id,
-// left untouched so it keeps reading on the rail.
-inline constexpr int VTABUICOLOR_foreground_selected = 0xc32;  // 3122
 // WebContentsImpl::GetController is a bare `lea rax, [this + 0x280]`.
 inline constexpr uintptr_t WEBCONTENTS_controller = 0x280;
 // content::ReloadType::NORMAL.
