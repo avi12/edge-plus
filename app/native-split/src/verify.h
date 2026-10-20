@@ -136,6 +136,10 @@ inline bool HookSitesLookSane() {
       edge155::rva::WebContentsImpl_GetColorProvider,
       edge155::rva::ThemeService_GetColorProviderKey,
       edge155::rva::RegisterProtocolHandlerPermissionRequest_PermissionDecided,
+      // The vertical-tab colour hooks, read on every paint.
+      edge155::rva::BrowserThemePack_GetColor,
+      edge155::rva::ColorProvider_GetColor,
+      edge155::rva::EdgeTab_UpdateForegroundColors,
   };
   for (const uintptr_t rva : sites) {
     if (!LooksLikeCode(rva)) {
