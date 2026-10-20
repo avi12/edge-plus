@@ -42,6 +42,9 @@ inline Rect SplitArea(void* mcv) {
   return Rect{0, 0, bounds.width, bounds.height};
 }
 
+// The bytes a ProposedLayout occupies (its constructor only zeroes these).
+inline constexpr size_t kProposedLayoutBytes = 0x20;
+
 // Build the out ProposedLayout for `mcv` across a `width`x`height` content box,
 // showing exactly `panes` of the MCV's containers (the live split's member
 // count; 1 when collapsed). The container vector only grows, so any container
@@ -50,8 +53,7 @@ inline Rect SplitArea(void* mcv) {
 // unless `snap` (a window resize). Returns `out`.
 inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
                        bool snap) {
-  // The ProposedLayout ctor only zeroes these 0x20 bytes.
-  std::memset(out, 0, 0x20);
+  std::memset(out, 0, kProposedLayoutBytes);
   edge::Field<int32_t>(out, off::PL_host_size + 0) = width;
   edge::Field<int32_t>(out, off::PL_host_size + 4) = height;
 

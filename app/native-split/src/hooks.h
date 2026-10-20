@@ -529,7 +529,8 @@ inline bool InstallAll() {
   // toggle-off) would otherwise hit a CHECK as soon as Edge touches pane 3+.
   const uint8_t previousGuard =
       edge::PatchByte(rva::SetWebContentsAtIndex_guard_imm, kLiftedIndexCap);
-  Log("[patch] SetWebContentsAtIndex guard %u -> 0xff", previousGuard);
+  Log("[patch] SetWebContentsAtIndex guard %u -> 0x%x", previousGuard,
+      kLiftedIndexCap);
   uint8_t previousBytes[kCheckJumpLength] = {};
   // The a11y label's int3 at index >= 2.
   edge::PatchNop(rva::SplitA11yLabel_paneidx_jne, kCheckJumpLength,
