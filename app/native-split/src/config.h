@@ -1,9 +1,11 @@
 // config.h — the panel's live configuration of this DLL. One concern: the wire
 // struct the panel writes to the config file and control.h applies, so its
 // layout is written once here and mirrored field-for-field in
-// app/panel/src-tauri/edge-native/src/protocol.rs. The panel owns which
-// features are on and which theme to use for each OS mode; the DLL obeys live,
-// with no restart.
+// app/panel/src-tauri/edge-native/src/protocol.rs and
+// app/panel-winui/Dll/ConfigWire.cs (the @share markers hand the sizes and the
+// file to the WinUI panel; tools/Export-SharedConstants.ps1). The panel owns
+// which features are on and which theme to use for each OS mode; the DLL obeys
+// live, with no restart.
 #pragma once
 #include <windows.h>
 #include <cstddef>
@@ -13,6 +15,7 @@
 namespace fixedge::config {
 
 // Room for an extension id (32 chars) with slack; never spelled as a bare number.
+// @share WireIdCapacity
 inline constexpr uint32_t kIdCapacity = 64;
 
 // The whole desired state, sent whenever the user changes a switch or a theme
@@ -43,7 +46,9 @@ struct Wire {
 // them, so the struct must stay packed: five u32 fields, the two ids, then the
 // reserved field, the find, WebUI, live-preview and tab-spine switches, and the
 // reading-theme switch and its two themes (u32s).
+// @share WireFieldCount
 inline constexpr size_t kWireFieldCount = 13;
+// @share WireIdCount
 inline constexpr size_t kWireIdCount = 2;
 static_assert(sizeof(Wire) == kWireFieldCount * sizeof(uint32_t) +
                                   kWireIdCount * size_t{kIdCapacity},
@@ -66,6 +71,7 @@ inline constexpr DWORD kBeforeReadingThemeWireSize =
 // The same bytes the panel also writes beside its settings, so a DLL injected
 // into an already-open Edge reads the current state at load. Live changes come
 // the same way: the panel rewrites the file and signals kConfigEvent.
+// @share ConfigFileRelativePath
 inline constexpr char kFileRelativePath[] = "\\FixEdge\\fixedge-config.bin";
 
 [[nodiscard]] inline bool LoadFromFile(Wire* out) {

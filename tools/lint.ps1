@@ -8,11 +8,12 @@
 #                                    pre-commit hook runs)
 #   pwsh tools/lint.ps1 -InstallHook point git at .githooks so commits are gated
 #
-# Five passes (the Tauri panel has its own `pnpm --dir app/panel lint`):
+# Six passes (the Tauri panel has its own `pnpm --dir app/panel lint`):
 #   clang-format (.clang-format)   C++ layout    <- eslint @stylistic
 #   clang-tidy   (.clang-tidy)     correctness   <- oxlint categories.correctness
 #   $restrictedSyntax (below)      house rules   <- eslint no-restricted-syntax
 #   $csharpRules (below)           the same, for the WinUI panel's C#
+#   Export-SharedConstants -Check  the generated C# matches the C++ it reads
 #   dotnet format (app\.editorconfig)  C# layout and style, Google C# style
 #
 # clang-tidy parses with clang-cl so it sees the SAME headers and defines the
@@ -171,7 +172,18 @@ foreach ($file in $csharpFiles) {
     }
 }
 
-# --- pass 5: C# formatting and style ---------------------------------------
+# --- pass 5: the generated C# is current -----------------------------------
+# app\panel-winui\Platform\Shared.g.cs is produced from the @share markers in
+# the DLL's sources, and the C# build regenerates it on every run — so a
+# checked-in copy that disagrees means a C++ value moved and the commit carries
+# a stale generated file. Skipped under -Staged, which lints a subset.
+$sharedOk = $true
+if (-not $Staged) {
+    & pwsh -NoProfile -File (Join-Path $PSScriptRoot 'Export-SharedConstants.ps1') -Check
+    $sharedOk = $LASTEXITCODE -eq 0
+}
+
+# --- pass 6: C# formatting and style ---------------------------------------
 # app\.editorconfig is the Google C# Style Guide the way .clang-format is the
 # Google C++ one, and dotnet format is what reads it. Skipped under -Staged:
 # dotnet format works on a project, not a file list, so it would judge unstaged
@@ -198,9 +210,9 @@ if (-not $Staged) {
     }
 }
 
-if ($formatOk -and $tidyOk -and $syntaxOk -and $csharpSyntaxOk -and $csharpOk) {
+if ($formatOk -and $tidyOk -and $syntaxOk -and $csharpSyntaxOk -and $sharedOk -and $csharpOk) {
     Write-Host "[lint] clean"
     exit 0
 }
-Write-Host "[lint] FAILED (format=$formatOk tidy=$tidyOk syntax=$syntaxOk csharpRules=$csharpSyntaxOk csharp=$csharpOk)"
+Write-Host "[lint] FAILED (format=$formatOk tidy=$tidyOk syntax=$syntaxOk csharpRules=$csharpSyntaxOk shared=$sharedOk csharp=$csharpOk)"
 exit 1

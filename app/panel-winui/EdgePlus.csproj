@@ -73,6 +73,18 @@
     <NativeSplitDir>$(RepositoryRoot)app\native-split\</NativeSplitDir>
   </PropertyGroup>
 
+  <!--
+    Platform\Shared.g.cs — the values the panel shares with the DLL (event
+    names, the config file and its sizes, the pinned msedge.dll build),
+    regenerated from the @share markers in app\native-split\src before every
+    build so the two cannot drift. The file is checked in (so the project opens
+    and builds in an IDE that has not run the script) and tools\lint.ps1 fails
+    when the committed copy is stale.
+  -->
+  <Target Name="ExportSharedConstants" BeforeTargets="BeforeBuild">
+    <Exec Command="pwsh -NoProfile -File &quot;$(RepositoryRoot)tools\Export-SharedConstants.ps1&quot;" />
+  </Target>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.*" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.*" />

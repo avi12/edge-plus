@@ -24,11 +24,13 @@ constinit HANDLE g_configEvent = nullptr;
 
 // The companion app toggles the feature off by signalling this; we then remove
 // the hooks and drop out of Edge without a restart.
+// @share UnloadEvent
 constexpr wchar_t kUnloadEvent[] = L"Local\\fixedge-split-unload";
 
 // The companion app signals this after it rewrites the config file, so we
 // re-read it and apply the new state live (which features are on, which theme
 // per OS mode). Auto-reset: each change wakes the wait once.
+// @share ConfigEvent
 constexpr wchar_t kConfigEvent[] = L"Local\\fixedge-config-changed";
 
 // The events the main loop waits on, in the order of its handle array.

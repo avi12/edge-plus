@@ -9,10 +9,17 @@ namespace fixedge::edge155 {
 
 // The build these offsets belong to (the module's file version,
 // major.minor.build.revision). verify.h refuses to hook anything else.
+// The @share markers hand the build to the WinUI panel, which holds the DLL
+// back from any other (tools/Export-SharedConstants.ps1).
+// @share EdgeModule
 inline constexpr wchar_t kModule[] = L"msedge.dll";
+// @share EdgeVersionMajor
 inline constexpr int kVersionMajor = 155;
+// @share EdgeVersionMinor
 inline constexpr int kVersionMinor = 0;
+// @share EdgeVersionBuild
 inline constexpr int kVersionBuild = 4283;
+// @share EdgeVersionRevision
 inline constexpr int kVersionRevision = 62;
 // The preferred load address the PDB and the disassembly are written against.
 inline constexpr uintptr_t kImageBase = 0x180000000;
