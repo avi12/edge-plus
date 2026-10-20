@@ -22,8 +22,8 @@ inline constexpr wchar_t kCornerClass[] = L"FixEdgeTabCorner";
 inline constexpr UINT_PTR kTimerId = 0xF1F0;
 inline constexpr UINT kTickIntervalMs = 50;
 
-// The stripe: 3 DIPs wide, the neon magenta of the Cyberpunk theme.
-inline constexpr int kWidthDip = 3;
+// The stripe: 5 DIPs wide, the neon magenta of the Cyberpunk theme.
+inline constexpr int kWidthDip = 5;
 inline constexpr COLORREF kColor = RGB(0xFF, 0x2B, 0xD6);
 // The square filled in at each left corner of the pill: Edge rounds a vertical
 // tab by 7 DIPs, and the favicon starts 8 DIPs in, so 8 covers the curve and
