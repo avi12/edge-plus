@@ -15,7 +15,7 @@ using namespace fixedge::edge155;
 
 inline constexpr wchar_t kWindowClass[] = L"FixEdgeTabSpine";
 inline constexpr UINT_PTR kTimerId = 0xF1F0;
-inline constexpr UINT kTickIntervalMs = 100;
+inline constexpr UINT kTickIntervalMs = 50;
 
 // The stripe: 3 DIPs wide, the neon magenta of the Cyberpunk theme.
 inline constexpr int kWidthDip = 3;
@@ -31,6 +31,75 @@ inline constexpr int kMaxDepth = 64;
 
 inline HWND g_window = nullptr;
 inline bool g_isActive = false;
+
+// The selected tab's title in black. Every vertical tab label is one theme text
+// colour, so on a bright cyan fill the light label would vanish; a second popup
+// over the label repaints the title in ink on the fill's own colour. The colour
+// hook (hooks.h) publishes the fill it answered and whether the label is light
+// (needs the cover); it only answers the bright fill once the cover is shown.
+inline constexpr wchar_t kLabelClass[] = L"FixEdgeTabLabel";
+inline constexpr COLORREF kLabelInk = RGB(0x04, 0x12, 0x1A);
+inline constexpr int kLabelFontDip = 13;
+inline constexpr size_t kTitleCapacity = 256;
+inline constexpr int kArgbRedShift = 16;
+inline constexpr int kArgbGreenShift = 8;
+inline constexpr uint32_t kByteMask = 0xff;
+inline uint32_t g_selectedFill = 0;  // ARGB, as the hook last answered
+inline bool g_isLabelCoverNeeded = false;
+inline bool g_isLabelCovered = false;
+inline HWND g_labelWindow = nullptr;
+inline HFONT g_labelFont = nullptr;
+inline int g_labelFontHeight = 0;
+inline wchar_t g_labelText[kTitleCapacity] = {};
+
+inline COLORREF FillColorRef() {
+  return RGB((g_selectedFill >> kArgbRedShift) & kByteMask,
+             (g_selectedFill >> kArgbGreenShift) & kByteMask,
+             g_selectedFill & kByteMask);
+}
+
+inline LRESULT CALLBACK LabelProc(HWND hwnd, UINT message, WPARAM wparam,
+                                  LPARAM lparam) {
+  if (message != WM_PAINT) {
+    return DefWindowProcW(hwnd, message, wparam, lparam);
+  }
+  PAINTSTRUCT paint{};
+  HDC context = BeginPaint(hwnd, &paint);
+  RECT client{};
+  GetClientRect(hwnd, &client);
+  HBRUSH fill = CreateSolidBrush(FillColorRef());
+  FillRect(context, &client, fill);
+  DeleteObject(fill);
+  HGDIOBJ oldFont = SelectObject(context, g_labelFont);
+  SetBkMode(context, TRANSPARENT);
+  SetTextColor(context, kLabelInk);
+  DrawTextW(context, g_labelText, -1, &client,
+            DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX | DT_END_ELLIPSIS);
+  SelectObject(context, oldFont);
+  EndPaint(hwnd, &paint);
+  return 0;
+}
+
+// The label's title, copied out of its RenderText; 0 when it can't be read.
+inline size_t ReadTitle(void* label, wchar_t* out) {
+  __try {
+    const auto* renderText = *reinterpret_cast<const uint8_t* const*>(
+        static_cast<const uint8_t*>(label) + off::Label_render_text);
+    if (!renderText) {
+      return 0;
+    }
+    const auto text = edge::U16StringView(renderText + off::RenderText_text);
+    const size_t length =
+        text.length < kTitleCapacity - 1 ? text.length : kTitleCapacity - 1;
+    for (size_t i = 0; i < length; i++) {
+      out[i] = static_cast<wchar_t>(text.data[i]);
+    }
+    out[length] = 0;
+    return length;
+  } __except (EXCEPTION_EXECUTE_HANDLER) {
+    return 0;
+  }
+}
 
 // Tab rows found so far in the walk, in tree order.
 struct TabSearch {
@@ -61,8 +130,9 @@ inline void FindTab(void* view, int depth, TabSearch* search) {
 // The selected tab's row view, or null when it can't be told.
 inline void* SelectedTabView(void* tsm, void* anyView) {
   void* activeTab = edge::ActiveTab(tsm);
-  const int index =
-      activeTab ? edge::GetIndexOfTabRecursive(edge::RootCollection(tsm), activeTab) : -1;
+  const int index = activeTab ? edge::GetIndexOfTabRecursive(
+                                    edge::RootCollection(tsm), activeTab)
+                              : -1;
   if (index < 0) {
     return nullptr;
   }
@@ -94,10 +164,67 @@ inline void EnsureWindow(HWND owner) {
       L"", WS_POPUP, 0, 0, 0, 0, owner, nullptr, ThisModule(), nullptr);
 }
 
+inline void HideLabelCover() {
+  g_isLabelCovered = false;
+  if (g_labelWindow) {
+    ShowWindow(g_labelWindow, SW_HIDE);
+  }
+}
+
 inline void Hide() {
   if (g_window) {
     ShowWindow(g_window, SW_HIDE);
   }
+  HideLabelCover();
+}
+
+inline void EnsureLabelWindow(HWND owner) {
+  if (g_labelWindow) {
+    return;
+  }
+  WNDCLASSEXW windowClass{sizeof(windowClass)};
+  windowClass.lpfnWndProc = LabelProc;
+  windowClass.hInstance = ThisModule();
+  windowClass.lpszClassName = kLabelClass;
+  RegisterClassExW(&windowClass);  // fails harmlessly if already registered
+  g_labelWindow = CreateWindowExW(
+      WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW, kLabelClass, L"",
+      WS_POPUP, 0, 0, 0, 0, owner, nullptr, ThisModule(), nullptr);
+}
+
+// Repaint the selected tab's title in ink over its (light) label, when the fill
+// behind it is bright enough that the light label would not read.
+inline void CoverLabel(HWND owner, void* tab, float scale) {
+  const bool isLabelPresent = edge::ViewChildCount(tab) > 0;
+  void* label = isLabelPresent ? edge::ViewChildAt(tab, 0) : nullptr;
+  const size_t length = label ? ReadTitle(label, g_labelText) : 0;
+  const Rect bounds = label ? edge::ViewBoundsInScreen(label) : Rect{};
+  const bool isCoverable = g_isLabelCoverNeeded && length > 0 &&
+                           bounds.width > 0 && bounds.height > 0;
+  if (!isCoverable) {
+    HideLabelCover();
+    return;
+  }
+  EnsureLabelWindow(owner);
+  if (!g_labelWindow) {
+    return;
+  }
+  const int fontHeight = -static_cast<int>(kLabelFontDip * scale);
+  if (fontHeight != g_labelFontHeight || !g_labelFont) {
+    DeleteObject(g_labelFont);
+    g_labelFont =
+        CreateFontW(fontHeight, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                    DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                    CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+    g_labelFontHeight = fontHeight;
+  }
+  SetWindowPos(g_labelWindow, nullptr, static_cast<int>(bounds.x * scale),
+               static_cast<int>(bounds.y * scale),
+               static_cast<int>(bounds.width * scale),
+               static_cast<int>(bounds.height * scale),
+               SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+  InvalidateRect(g_labelWindow, nullptr, TRUE);
+  g_isLabelCovered = true;
 }
 
 // One tick: put the stripe on the selected vertical tab, or hide it.
@@ -105,7 +232,8 @@ inline void Tick(HWND owner) {
   void* tsm = edge::TsmForWindow(owner);
   const bool isWindowShown = IsWindowVisible(owner) && !IsIconic(owner);
   void* anyView = edge::McvForWindow(owner);
-  void* tab = tsm && anyView && isWindowShown ? SelectedTabView(tsm, anyView) : nullptr;
+  void* tab =
+      tsm && anyView && isWindowShown ? SelectedTabView(tsm, anyView) : nullptr;
   if (!tab) {
     Hide();
     return;
@@ -128,10 +256,11 @@ inline void Tick(HWND owner) {
     return;
   }
   const int inset = static_cast<int>(kCornerInsetDip * scale);
-  SetWindowPos(g_window, nullptr, static_cast<int>(bounds.x * scale), top + inset,
-               static_cast<int>(kWidthDip * scale),
+  SetWindowPos(g_window, nullptr, static_cast<int>(bounds.x * scale),
+               top + inset, static_cast<int>(kWidthDip * scale),
                static_cast<int>(bounds.height * scale) - 2 * inset,
                SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+  CoverLabel(owner, tab, scale);
 }
 
 inline void Start(HWND owner) {
@@ -143,11 +272,19 @@ inline void Start(HWND owner) {
 inline void Remove(HWND owner) {
   g_isActive = false;
   KillTimer(owner, kTimerId);
+  g_isLabelCovered = false;
   if (g_window) {
     DestroyWindow(g_window);
     g_window = nullptr;
   }
+  if (g_labelWindow) {
+    DestroyWindow(g_labelWindow);
+    g_labelWindow = nullptr;
+  }
+  DeleteObject(g_labelFont);
+  g_labelFont = nullptr;
   UnregisterClassW(kWindowClass, ThisModule());
+  UnregisterClassW(kLabelClass, ThisModule());
 }
 
 }  // namespace fixedge::spine
