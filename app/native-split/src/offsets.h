@@ -705,6 +705,25 @@ inline constexpr uintptr_t EdgeToggleButton_SetIsOn = 0xb1f5c44;
 inline constexpr uintptr_t View_SetEnabled = 0x1070896;
 // void views::Label::SetText(this, const std::u16string_view*).
 inline constexpr uintptr_t Label_SetText = 0x1058090;
+
+// --- live tab hover preview (docs/re/live-preview.md) ---
+// A hovered tab's card already shows a frame from Edge's own continuous tab
+// capturer (BackgroundThumbnailVideoCapturer), and the card repaints every frame
+// it receives; it looks frozen only because Edge stops the capturer after one
+// good frame. Keeping the capturer alive while a hover card is open turns the
+// still into live video, reusing Edge's pipeline (live_preview.h).
+// void ThumbnailTabHelper::TabStateTracker::StopCapture(this): the driver's
+// end-of-capture-session call (-> BackgroundThumbnailVideoCapturer::Stop). Not
+// per-frame, idempotent; suppressing it keeps the already-running capturer going.
+inline constexpr uintptr_t ThumbnailTabHelper_TabStateTracker_StopCapture =
+    0x2b06e90;
+// void TabHoverCardThumbnailObserver::Observe(this, ThumbnailImage*): a hover
+// card's thumbnail subscription begins (once per hover / tab retarget) — the
+// moment a preview is on screen and frames are wanted.
+inline constexpr uintptr_t TabHoverCardThumbnailObserver_Observe = 0x8f5dd84;
+// void TabHoverCardController::OnCardClosing(this): the hover card's definitive
+// teardown (once per close).
+inline constexpr uintptr_t TabHoverCardController_OnCardClosing = 0xa62c3e0;
 }  // namespace rva
 
 // --- struct field offsets ---

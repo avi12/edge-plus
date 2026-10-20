@@ -22,6 +22,7 @@
 #include "assistant.h"
 #include "find.h"
 #include "theme_follow.h"
+#include "live_preview.h"
 
 namespace fixedge::hooks {
 
@@ -565,6 +566,8 @@ inline bool InstallAll() {
   find::Install();
   // The WebUI pages' light or dark follows the theme, whatever the split does.
   theme_follow::Install();
+  // A hovered tab shows a live preview, whatever the split does.
+  live_preview::Install();
   control::Install();  // the add-pane control channel (UI-thread trigger)
   return true;
 }

@@ -27,6 +27,7 @@
 #include "tabrows.h"
 #include "theme.h"
 #include "theme_follow.h"
+#include "live_preview.h"
 #include "assistant.h"
 #include "find.h"
 
@@ -188,6 +189,8 @@ inline void Teardown(HWND hwnd) {
   if (wasFollowingTheme) {
     RefreshThemeColors();
   }
+  live_preview::g_isActive = false;
+  live_preview::g_isCardOpen = false;
   drag::Cancel();
   tabdrag::Cancel();
   overlay::Remove();
@@ -289,6 +292,8 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     find::EnableAll();
     // Nor are the WebUI pages' theme colors.
     theme_follow::EnableAll();
+    // Nor is the live tab preview.
+    live_preview::EnableAll();
   }
 }
 
@@ -333,6 +338,7 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
   if (isFollowChanged) {
     RefreshThemeColors();
   }
+  live_preview::ApplyConfig(wire);
   const bool isTurningHandlersOn = protocol_handlers::ApplyConfig(wire);
   if (isTurningHandlersOn) {
     size_t liftedCount = 0;
