@@ -1,6 +1,6 @@
 // vtab_views.h — finding tab rows in the vertical tab list. One concern: walk the
-// browser's view tree (read-only) for the tab row views, by position in the
-// model's order or by the screen point they cover. UI thread only.
+// browser's view tree (read-only) for the tab row views: all of them, or the one
+// at a model index. UI thread only.
 #pragma once
 #include <windows.h>
 #include "edge.h"
@@ -11,28 +11,13 @@ using namespace fixedge::edge155;
 
 inline constexpr int kMaxDepth = 64;
 
-// What a walk looks for: the tab at a model index, or the tab covering a point
-// (screen pixels, `scale` px per DIP). Tab rows are numbered in tree order.
+// What a walk looks for: the tab at a model index. Tab rows are numbered in tree
+// order.
 struct Search {
   int wantedIndex = -1;
-  bool isLookingForPoint = false;
-  POINT point{};
-  float scale = 1.f;
   int seen = 0;
   void* found = nullptr;
 };
-
-inline bool Covers(void* tab, const Search& search) {
-  const Rect bounds = edge::ViewBoundsInScreen(tab);
-  const float left = static_cast<float>(bounds.x) * search.scale;
-  const float top = static_cast<float>(bounds.y) * search.scale;
-  const float right = left + static_cast<float>(bounds.width) * search.scale;
-  const float bottom = top + static_cast<float>(bounds.height) * search.scale;
-  return static_cast<float>(search.point.x) >= left &&
-         static_cast<float>(search.point.x) < right &&
-         static_cast<float>(search.point.y) >= top &&
-         static_cast<float>(search.point.y) < bottom;
-}
 
 inline void Walk(void* view, int depth, Search* search) {
   const bool isDone = search->found || depth > kMaxDepth;
@@ -41,10 +26,7 @@ inline void Walk(void* view, int depth, Search* search) {
   }
   const bool isTab = edge::VtableRva(view) == rva::VerticalTab_vftable;
   if (isTab) {
-    const bool isWanted = search->isLookingForPoint
-                              ? Covers(view, *search)
-                              : search->seen == search->wantedIndex;
-    if (isWanted) {
+    if (search->seen == search->wantedIndex) {
       search->found = view;
     }
     search->seen++;
@@ -54,6 +36,30 @@ inline void Walk(void* view, int depth, Search* search) {
   for (size_t i = 0; i < count; i++) {
     Walk(edge::ViewChildAt(view, i), depth + 1, search);
   }
+}
+
+// Every tab row, in tree order, up to `capacity` of them.
+inline void Collect(void* view, int depth, void** out, size_t capacity,
+                    size_t* count) {
+  const bool isDone = *count >= capacity || depth > kMaxDepth;
+  if (isDone) {
+    return;
+  }
+  const bool isTab = edge::VtableRva(view) == rva::VerticalTab_vftable;
+  if (isTab) {
+    out[(*count)++] = view;
+    return;
+  }
+  const size_t childCount = edge::ViewChildCount(view);
+  for (size_t i = 0; i < childCount; i++) {
+    Collect(edge::ViewChildAt(view, i), depth + 1, out, capacity, count);
+  }
+}
+
+inline size_t AllTabs(void* anyView, void** out, size_t capacity) {
+  size_t count = 0;
+  Collect(edge::ViewRoot(anyView), 0, out, capacity, &count);
+  return count;
 }
 
 // The selected tab's row view, or null when it can't be told.
@@ -67,16 +73,6 @@ inline void* SelectedTab(void* tsm, void* anyView) {
   }
   Search search;
   search.wantedIndex = index;
-  Walk(edge::ViewRoot(anyView), 0, &search);
-  return search.found;
-}
-
-// The tab row under the screen point `point`, or null.
-inline void* TabAtPoint(void* anyView, POINT point, float scale) {
-  Search search;
-  search.isLookingForPoint = true;
-  search.point = point;
-  search.scale = scale;
   Walk(edge::ViewRoot(anyView), 0, &search);
   return search.found;
 }

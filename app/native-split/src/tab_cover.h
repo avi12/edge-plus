@@ -40,8 +40,8 @@ inline constexpr int kLumaScale = 1000;
 inline constexpr int kSampleTopDip = 3;
 inline constexpr float kHalf = 0.5f;
 
-// Set by the colour hook (hooks.h): the theme's label colour is light, so the
-// selected fill is the bright one and covers are needed.
+// Set by the colour hook (hooks.h): the theme's label colour is light, so a
+// bright fill needs a cover.
 inline bool g_isCoverNeeded = false;
 
 // One cover popup and what it paints; offsets are pixels within the popup.
@@ -56,8 +56,11 @@ struct Cover {
   int closeWidth = 0;  // 0 = no close button
 };
 
-inline Cover g_selected;
-inline Cover g_hovered;
+// Tabs bright at once: the selected one, the one under the pointer, and any left
+// mid-way through Edge's hover fade.
+inline constexpr size_t kMaxCovers = 8;
+inline constexpr size_t kMaxTabs = 128;
+inline Cover g_covers[kMaxCovers];
 inline HFONT g_titleFont = nullptr;
 inline HFONT g_glyphFont = nullptr;
 inline int g_fontHeight = 0;
@@ -207,25 +210,27 @@ inline void Hide(Cover* cover) {
   }
 }
 
-// Cover `tab`'s title and icons in ink when its fill is bright; hide otherwise.
-inline void Update(Cover* cover, HWND owner, void* tab, float scale) {
-  const Rect tabBounds = edge::ViewBoundsInScreen(tab);
-  const COLORREF fill = SampleFill(tabBounds, scale);
-  const bool isFillBright = g_isCoverNeeded && IsBright(fill);
+// Whether a view has any size on screen (a tab scrolled out of the list has none).
+inline bool IsShown(const Rect& bounds) {
+  return bounds.width > 0 && bounds.height > 0;
+}
+
+// Cover `tab`'s title and icons in ink on `fill`; false when it can't be done
+// (the title can't be read), leaving the cover hidden.
+inline bool Update(Cover* cover, HWND owner, void* tab, COLORREF fill,
+                   float scale) {
   const bool isLabelPresent = edge::ViewChildCount(tab) > kLabelChild;
   void* label = isLabelPresent ? edge::ViewChildAt(tab, kLabelChild) : nullptr;
-  const size_t length =
-      label && isFillBright ? ReadTitle(label, cover->title) : 0;
+  const size_t length = label ? ReadTitle(label, cover->title) : 0;
   const Rect labelBounds =
       length > 0 ? edge::ViewBoundsInScreen(label) : Rect{};
-  const bool isCoverable = labelBounds.width > 0 && labelBounds.height > 0;
-  if (!isCoverable) {
+  if (!IsShown(labelBounds)) {
     Hide(cover);
-    return;
+    return false;
   }
   EnsureWindow(cover, owner);
   if (!cover->window) {
-    return;
+    return false;
   }
   EnsureFonts(scale);
   // The cover starts at the audio indicator and ends at the close button, when
@@ -251,39 +256,44 @@ inline void Update(Cover* cover, HWND owner, void* tab, float scale) {
                static_cast<int>(labelBounds.height * scale),
                SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
   InvalidateRect(cover->window, nullptr, TRUE);
+  return true;
 }
 
-// Cover the selected tab, and the tab under the pointer when that is another.
-inline void UpdateAll(HWND owner, void* selectedTab, float scale) {
-  Update(&g_selected, owner, selectedTab, scale);
-  POINT pointer{};
-  GetCursorPos(&pointer);
-  // GA_ROOTOWNER: the pointer over one of our own covers still counts as Edge.
-  const bool isPointerInEdge =
-      GetAncestor(WindowFromPoint(pointer), GA_ROOTOWNER) == owner;
-  void* hoveredTab =
-      isPointerInEdge
-          ? vtab_views::TabAtPoint(edge::McvForWindow(owner), pointer, scale)
-          : nullptr;
-  const bool isOtherTabHovered = hoveredTab && hoveredTab != selectedTab;
-  if (isOtherTabHovered) {
-    Update(&g_hovered, owner, hoveredTab, scale);
-  } else {
-    Hide(&g_hovered);
+// Cover every tab whose fill is bright: Edge paints the selected tab, the hovered
+// one and one fading out of hover alike, and all three hide the light title.
+inline void UpdateAll(HWND owner, float scale) {
+  void* tabs[kMaxTabs];
+  const size_t tabCount =
+      vtab_views::AllTabs(edge::McvForWindow(owner), tabs, kMaxTabs);
+  size_t coverCount = 0;
+  for (size_t i = 0; i < tabCount && coverCount < kMaxCovers; i++) {
+    const Rect bounds = edge::ViewBoundsInScreen(tabs[i]);
+    const bool isCandidate = g_isCoverNeeded && IsShown(bounds);
+    const COLORREF fill = isCandidate ? SampleFill(bounds, scale) : 0;
+    const bool isCovered =
+        isCandidate && IsBright(fill) &&
+        Update(&g_covers[coverCount], owner, tabs[i], fill, scale);
+    if (isCovered) {
+      coverCount++;
+    }
+  }
+  for (size_t i = coverCount; i < kMaxCovers; i++) {
+    Hide(&g_covers[i]);
   }
 }
 
 inline void HideAll() {
-  Hide(&g_selected);
-  Hide(&g_hovered);
+  for (Cover& cover : g_covers) {
+    Hide(&cover);
+  }
 }
 
 // Destroy the popups and fonts (before this DLL unloads).
 inline void Remove() {
-  for (Cover* cover : {&g_selected, &g_hovered}) {
-    if (cover->window) {
-      DestroyWindow(cover->window);
-      cover->window = nullptr;
+  for (Cover& cover : g_covers) {
+    if (cover.window) {
+      DestroyWindow(cover.window);
+      cover.window = nullptr;
     }
   }
   DeleteObject(g_titleFont);

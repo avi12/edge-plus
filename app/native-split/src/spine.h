@@ -88,7 +88,7 @@ inline void Tick(HWND owner) {
                top + inset, static_cast<int>(kWidthDip * scale),
                static_cast<int>(bounds.height * scale) - 2 * inset,
                SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
-  tab_cover::UpdateAll(owner, tab, scale);
+  tab_cover::UpdateAll(owner, scale);
 }
 
 inline void Start(HWND owner) {
