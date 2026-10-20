@@ -1080,6 +1080,12 @@ inline void* ProfileForTabStrip(void* tsm) {
 }
 
 // The per-profile ThemeService (one serves the whole profile).
+// Whether Edge lays its UI out right to left (base::i18n::IsRTL).
+inline bool IsUiRightToLeft() {
+  using Fn = bool(__fastcall*)();
+  return reinterpret_cast<Fn>(At(edge155::rva::base_i18n_IsRTL))();
+}
+
 inline void* ThemeServiceForProfile(void* profile) {
   using Fn = void*(__fastcall*)(void*);
   return reinterpret_cast<Fn>(

@@ -718,6 +718,11 @@ inline constexpr uintptr_t TabHoverCardThumbnailObserver_Observe = 0x8f5dd84;
 // void TabHoverCardController::OnCardClosing(this): the hover card's definitive
 // teardown (once per close).
 inline constexpr uintptr_t TabHoverCardController_OnCardClosing = 0xa62c3e0;
+// bool base::i18n::IsRTL(): Edge's UI runs right to left (its locale, or the
+// --force-ui-direction switch). A bare `jmp` to ICUIsRTL, which asks
+// GetForcedTextDirection and then the default ICU locale; Views mirrors every
+// tab by it.
+inline constexpr uintptr_t base_i18n_IsRTL = 0xfd20a0;
 }  // namespace rva
 
 // --- struct field offsets ---
