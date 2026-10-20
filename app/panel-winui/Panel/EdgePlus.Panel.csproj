@@ -21,6 +21,15 @@
     <!-- A plugin: its WinUI and BCL references resolve to the host's copies
          (the default context), which is what lets WinRT objects cross. -->
     <EnableDynamicLoading>true</EnableDynamicLoading>
+    <!-- CsWinRT's AOT optimizer emits a [ModuleInitializer] that registers
+         this assembly's vtable and class-name lookups in WinRT.Runtime's
+         process-wide lists (ComWrappersSupport.RegisterType...Lookup). Those
+         lists live in the host's context and never let go, so with it on no
+         panel context ever unloaded (found with dotnet-dump gcroot: the old
+         LoaderAllocator rooted by Object._comWrappersLock). The panel creates
+         no WinRT wrappers for its own types — only WinUI's delegates — so it
+         loses nothing. -->
+    <CsWinRTAotOptimizerEnabled>false</CsWinRTAotOptimizerEnabled>
   </PropertyGroup>
 
   <PropertyGroup>

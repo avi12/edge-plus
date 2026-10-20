@@ -27,9 +27,13 @@ internal enum Feature {
   TabSpine,
 }
 
-// Where a theme came from, so the installer knows how to add it to Edge.
+// Where a theme came from, so the installer knows how to add it to Edge. Stored
+// lower-case, as the Tauri panel's settings.rs writes it.
+[JsonConverter(typeof(JsonStringEnumConverter<ThemeSource>))]
 internal enum ThemeSource {
+  [JsonStringEnumMemberName("store")]
   Store,
+  [JsonStringEnumMemberName("local")]
   Local,
 }
 
@@ -171,11 +175,6 @@ internal sealed class Theming {
 // read each other's file. Only this file is the panel's own; every other file
 // is a contract with Edge or the DLL.
 internal sealed class Settings {
-  private static readonly JsonSerializerOptions s_json = new() {
-    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    WriteIndented = true,
-    Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-  };
 
   // Every load-change-save-apply sequence holds this, so the UI's actions and
   // the background watchers (EdgeWatch, ThemeWatch) never interleave on the
@@ -207,7 +206,7 @@ internal sealed class Settings {
   public static Settings Parse(string text) {
     Settings? parsed;
     try {
-      parsed = JsonSerializer.Deserialize<Settings>(text, s_json);
+      parsed = JsonSerializer.Deserialize(text, SettingsJson.Default.Settings);
     } catch (JsonException) {
       return new Settings();
     }
@@ -223,9 +222,18 @@ internal sealed class Settings {
     return parsed;
   }
 
-  public string ToJson() => JsonSerializer.Serialize(this, s_json);
+  public string ToJson() => JsonSerializer.Serialize(this, SettingsJson.Default.Settings);
 
   public void Save() => Save(Paths.Settings);
 
   public void Save(string path) => Paths.WriteAtomically(path, ToJson());
 }
+
+// The settings file's serializer, generated at build time rather than built by
+// reflection at run time: System.Text.Json's reflection path keeps a
+// process-wide cache of the members it emitted accessors for, which would hold
+// this assembly and stop the host unloading it on a live swap.
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+                             WriteIndented = true)]
+[JsonSerializable(typeof(Settings))]
+internal sealed partial class SettingsJson : JsonSerializerContext;
