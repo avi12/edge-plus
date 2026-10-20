@@ -85,9 +85,8 @@ DWORD WINAPI Init(LPVOID) {
   }
   Log("[init] hooks installed; directional-add menu armed");
 
-  HANDLE const const events[kWaitedEventCount] = {};
-  events[static_cast<size_t>(WaitedEvent::kUnload)] = g_unloadEvent;
-  events[static_cast<size_t>(WaitedEvent::kConfig)] = g_configEvent;
+  // In WaitedEvent order.
+  const HANDLE events[kWaitedEventCount] = {g_unloadEvent, g_configEvent};
   while (true) {
     const DWORD which =
         WaitForMultipleObjects(kWaitedEventCount, events, FALSE, INFINITE);
