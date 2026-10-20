@@ -57,7 +57,13 @@ inline constexpr int kIndicatorChild = 2;
 inline constexpr wchar_t kSpeakerGlyph[] = {0xE767,
                                             0};  // Segoe MDL2 Assets: Volume
 inline constexpr int kIndicatorGlyphDip = 14;
+inline constexpr int kCloseChild = 4;
+inline constexpr wchar_t kCloseGlyph[] = {0xE711,
+                                          0};  // Segoe MDL2 Assets: Cancel
 inline int g_indicatorWidth = 0;
+inline int g_closeOffset = 0;  // the close button's left in the cover, px
+inline int g_closeWidth = 0;   // 0 = no close button
+inline int g_titleRight = 0;   // where the title stops, px
 inline int g_titleOffset = 0;
 inline HFONT g_iconFont = nullptr;
 
@@ -83,16 +89,25 @@ inline LRESULT CALLBACK LabelProc(HWND hwnd, UINT message, WPARAM wparam,
   SetBkMode(context, TRANSPARENT);
   SetTextColor(context, kLabelInk);
   const bool hasIndicator = g_indicatorWidth > 0;
+  const bool hasClose = g_closeWidth > 0;
+  SelectObject(context, g_iconFont);
   if (hasIndicator) {
     RECT glyphRect = client;
     glyphRect.right = g_indicatorWidth;
-    SelectObject(context, g_iconFont);
     DrawTextW(context, kSpeakerGlyph, -1, &glyphRect,
               DT_SINGLELINE | DT_VCENTER | DT_CENTER | DT_NOPREFIX);
-    SelectObject(context, g_labelFont);
   }
+  if (hasClose) {
+    RECT glyphRect = client;
+    glyphRect.left = g_closeOffset;
+    glyphRect.right = g_closeOffset + g_closeWidth;
+    DrawTextW(context, kCloseGlyph, -1, &glyphRect,
+              DT_SINGLELINE | DT_VCENTER | DT_CENTER | DT_NOPREFIX);
+  }
+  SelectObject(context, g_labelFont);
   RECT titleRect = client;
   titleRect.left = g_titleOffset;
+  titleRect.right = g_titleRight;
   DrawTextW(context, g_labelText, -1, &titleRect,
             DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX | DT_END_ELLIPSIS);
   SelectObject(context, oldFont);
@@ -254,13 +269,27 @@ inline void CoverLabel(HWND owner, void* tab, float scale) {
       isIndicatorShown ? edge::ViewBoundsInScreen(indicator) : Rect{};
   const bool hasIndicator = isIndicatorShown && indicatorBounds.width > 0 &&
                             indicatorBounds.x < bounds.x;
+  // ...and ends at the close button when it shows.
+  const bool isCloseChildPresent = edge::ViewChildCount(tab) > kCloseChild;
+  void* close =
+      isCloseChildPresent ? edge::ViewChildAt(tab, kCloseChild) : nullptr;
+  const bool isCloseShown = close && edge::ViewGetVisible(close);
+  const Rect closeBounds =
+      isCloseShown ? edge::ViewBoundsInScreen(close) : Rect{};
+  const bool hasClose = isCloseShown && closeBounds.width > 0 &&
+                        closeBounds.x >= bounds.x + bounds.width;
   const int left = hasIndicator ? indicatorBounds.x : bounds.x;
+  const int right =
+      hasClose ? closeBounds.x + closeBounds.width : bounds.x + bounds.width;
+  g_closeWidth = hasClose ? static_cast<int>(closeBounds.width * scale) : 0;
+  g_closeOffset = static_cast<int>((closeBounds.x - left) * scale);
+  g_titleRight = static_cast<int>((bounds.x + bounds.width - left) * scale);
   g_indicatorWidth =
       hasIndicator ? static_cast<int>(indicatorBounds.width * scale) : 0;
   g_titleOffset = static_cast<int>((bounds.x - left) * scale);
   SetWindowPos(g_labelWindow, nullptr, static_cast<int>(left * scale),
                static_cast<int>(bounds.y * scale),
-               static_cast<int>((bounds.x + bounds.width - left) * scale),
+               static_cast<int>((right - left) * scale),
                static_cast<int>(bounds.height * scale),
                SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
   InvalidateRect(g_labelWindow, nullptr, TRUE);
