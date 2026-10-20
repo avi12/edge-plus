@@ -339,6 +339,16 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
         return true;
       }
     }
+    // The selected tab's own text ids are derived from the old background, so
+    // they stay light on the accent (dark theme) or dark on the ink (light
+    // theme): give them the theme's toolbar ground, which the accent reads on.
+    const bool isSelectedTabForeground =
+        colorId == off::VTABCOLOR_selected_foreground ||
+        colorId == off::VTABCOLOR_selected_foreground_inactive;
+    if (isSelectedTabForeground &&
+        o_getcolor(pack, off::THEMECOLOR_toolbar, out)) {
+      return true;
+    }
   }
   return o_getcolor(pack, colorId, out);
 }
