@@ -22,15 +22,12 @@
 
 namespace fixedge::pane_menu {
 
-using namespace fixedge::edge155;
-using off::ControlMenuCommand;
-
 // Edge's items a split of three or more leaves out.
-inline constexpr ControlMenuCommand kGrownSplitRepeats[] = {
-    ControlMenuCommand::kSeparate,
-    ControlMenuCommand::kSwitchSides,
-    ControlMenuCommand::kSwitchToVertical,
-    ControlMenuCommand::kSwitchToHorizontal,
+inline constexpr edge155::off::ControlMenuCommand kGrownSplitRepeats[] = {
+    edge155::off::ControlMenuCommand::kSeparate,
+    edge155::off::ControlMenuCommand::kSwitchSides,
+    edge155::off::ControlMenuCommand::kSwitchToVertical,
+    edge155::off::ControlMenuCommand::kSwitchToHorizontal,
 };
 
 // Whether `mcv` (null when unknown) shows a split of three or more panes.
@@ -41,14 +38,15 @@ inline bool IsGrownSplit(void* mcv) {
 // Whether the menu leaves Edge's item `command` out.
 inline bool IsLeftOut(int command, bool isGrownSplit) {
   const bool isFeedback =
-      command == static_cast<int>(ControlMenuCommand::kSendFeedback);
+      command ==
+      static_cast<int>(edge155::off::ControlMenuCommand::kSendFeedback);
   if (isFeedback) {
     return true;
   }
   if (!isGrownSplit) {
     return false;
   }
-  for (const ControlMenuCommand repeat : kGrownSplitRepeats) {
+  for (const edge155::off::ControlMenuCommand repeat : kGrownSplitRepeats) {
     const bool isRepeat = command == static_cast<int>(repeat);
     if (isRepeat) {
       return true;
@@ -82,7 +80,8 @@ inline void FitItems(void* model, void* mcv) {
       continue;
     }
     const bool isLinkMode =
-        command == static_cast<int>(ControlMenuCommand::kLinkMode);
+        command ==
+        static_cast<int>(edge155::off::ControlMenuCommand::kLinkMode);
     if (isLinkMode) {
       edge::MenuSetLabel(model, index, LinkModeLabel());
     }
@@ -94,8 +93,9 @@ inline void FitItems(void* model, void* mcv) {
 // and returns whether it did; else Edge runs it.
 inline bool RunItem(int command, void* mcv, int pane) {
   const bool isCopyOfMenuPane =
-      command == static_cast<int>(ControlMenuCommand::kOpenInNewTab) && mcv &&
-      pane != kNoLeaf;
+      command ==
+          static_cast<int>(edge155::off::ControlMenuCommand::kOpenInNewTab) &&
+      mcv && pane != kNoLeaf;
   if (!isCopyOfMenuPane) {
     return false;
   }

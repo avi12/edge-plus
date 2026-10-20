@@ -14,8 +14,6 @@
 
 namespace fixedge::split_data {
 
-using namespace fixedge::edge155;
-
 // Edge's CreateSplit rejects a member vector of size 1, so a split is at least
 // two tabs.
 inline constexpr int kMinSplitMembers = 2;
@@ -132,7 +130,8 @@ inline SplitSettings ReadSettings(void* tsm, void* splitToken) {
   // SplitTabData+8 is the live visual: keep its orientation and ratio.
   std::memcpy(settings.visual, reinterpret_cast<uint8_t*>(splitData) + 8,
               sizeof(settings.visual));
-  settings.isLinkMode = edge::Field<bool>(splitData, off::SPLITDATA_link_mode);
+  settings.isLinkMode =
+      edge::Field<bool>(splitData, edge155::off::SPLITDATA_link_mode);
   return settings;
 }
 
@@ -140,7 +139,7 @@ inline SplitSettings ReadSettings(void* tsm, void* splitToken) {
 inline void RestoreLinkMode(void* tsm, void* newSplitToken,
                             const SplitSettings& settings) {
   if (void* splitData = edge::GetSplitData(tsm, newSplitToken)) {
-    edge::Field<bool>(splitData, off::SPLITDATA_link_mode) =
+    edge::Field<bool>(splitData, edge155::off::SPLITDATA_link_mode) =
         settings.isLinkMode;
   }
 }
@@ -151,7 +150,8 @@ inline bool IsLinkModeOn(void* tsm, void* splitTab) {
   edge::TabGetSplit(splitTab, &split);
   void* splitData =
       split.hasValue ? edge::GetSplitData(tsm, split.token) : nullptr;
-  return splitData && edge::Field<bool>(splitData, off::SPLITDATA_link_mode);
+  return splitData &&
+         edge::Field<bool>(splitData, edge155::off::SPLITDATA_link_mode);
 }
 
 // How many members the split `tab` belongs to has (0 if it is in none).

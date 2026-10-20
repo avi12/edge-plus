@@ -20,8 +20,6 @@
 
 namespace fixedge::live_preview {
 
-using namespace fixedge::edge155;
-
 // The feature switch, and whether a hover card is on screen right now, so the
 // capturer is held open only while one is. Observe sets it, OnCardClosing clears
 // it — a bool, not a counter, because Observe fires again when a hover retargets
@@ -69,23 +67,27 @@ inline bool EnableSite(uintptr_t site) {
 }
 
 inline bool EnableAll() {
-  return EnableSite(rva::ThumbnailTabHelper_TabStateTracker_StopCapture) &&
-         EnableSite(rva::TabHoverCardThumbnailObserver_Observe) &&
-         EnableSite(rva::TabHoverCardController_OnCardClosing);
+  return EnableSite(
+             edge155::rva::ThumbnailTabHelper_TabStateTracker_StopCapture) &&
+         EnableSite(edge155::rva::TabHoverCardThumbnailObserver_Observe) &&
+         EnableSite(edge155::rva::TabHoverCardController_OnCardClosing);
 }
 
 inline bool Install() {
   const bool isHooked =
       MH_CreateHook(
-          edge::At(rva::ThumbnailTabHelper_TabStateTracker_StopCapture),
+          edge::At(
+              edge155::rva::ThumbnailTabHelper_TabStateTracker_StopCapture),
           reinterpret_cast<void*>(h_stop_capture),
           reinterpret_cast<void**>(&o_stop_capture)) == MH_OK &&
-      MH_CreateHook(edge::At(rva::TabHoverCardThumbnailObserver_Observe),
-                    reinterpret_cast<void*>(h_observe),
-                    reinterpret_cast<void**>(&o_observe)) == MH_OK &&
-      MH_CreateHook(edge::At(rva::TabHoverCardController_OnCardClosing),
-                    reinterpret_cast<void*>(h_on_card_closing),
-                    reinterpret_cast<void**>(&o_on_card_closing)) == MH_OK;
+      MH_CreateHook(
+          edge::At(edge155::rva::TabHoverCardThumbnailObserver_Observe),
+          reinterpret_cast<void*>(h_observe),
+          reinterpret_cast<void**>(&o_observe)) == MH_OK &&
+      MH_CreateHook(
+          edge::At(edge155::rva::TabHoverCardController_OnCardClosing),
+          reinterpret_cast<void*>(h_on_card_closing),
+          reinterpret_cast<void**>(&o_on_card_closing)) == MH_OK;
   if (!isHooked) {
     Log("[err] live-preview hooks failed");
     return false;

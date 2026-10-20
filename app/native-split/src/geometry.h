@@ -13,8 +13,6 @@
 
 namespace fixedge::geometry {
 
-using namespace fixedge::edge155;  // off::, rva::
-
 // The split's orientation as a tree axis (SplitTabLayout: 0 is one axis, any
 // other value the other).
 inline Axis SplitAxis(void* mcv) {
@@ -54,8 +52,8 @@ inline constexpr size_t kProposedLayoutBytes = 0x20;
 inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
                        bool snap) {
   std::memset(out, 0, kProposedLayoutBytes);
-  edge::Field<int32_t>(out, off::PL_host_size + 0) = width;
-  edge::Field<int32_t>(out, off::PL_host_size + 4) = height;
+  edge::Field<int32_t>(out, edge155::off::PL_host_size + 0) = width;
+  edge::Field<int32_t>(out, edge155::off::PL_host_size + 4) = height;
 
   const int count = static_cast<int>(edge::McvCount(mcv));
   // At least one pane, and never more than there are containers.
@@ -76,7 +74,8 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
   }
   anim::Apply(mcv, placed, snap);  // targets -> this frame's rects
 
-  void* childLayouts = reinterpret_cast<uint8_t*>(out) + off::PL_child_layouts;
+  void* childLayouts =
+      reinterpret_cast<uint8_t*>(out) + edge155::off::PL_child_layouts;
   void** containers = edge::McvContainers(mcv);
   for (const LeafRect& leafRect : placed) {
     void* container = containers[leafRect.leaf];

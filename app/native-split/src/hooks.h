@@ -28,8 +28,6 @@
 
 namespace fixedge::hooks {
 
-using namespace fixedge::edge155;
-
 // Each 2-pane CHECK that InstallAll NOPs is a `jcc rel32` (0F 8x + a 4-byte
 // offset; see offsets.h).
 inline constexpr size_t kCheckJumpLength = 6;
@@ -118,10 +116,10 @@ inline void __fastcall h_set_active(void* mcv, int index) {
     Log("[active] ignored SetActiveIndex(%d) of %d", index, count);
     return;
   }
-  edge::Field<int32_t>(mcv, off::MCV_active_index) = index;
+  edge::Field<int32_t>(mcv, edge155::off::MCV_active_index) = index;
   for (int i = 0; i < count; i++) {
     edge::Field<uint8_t>(edge::ContainerWebView(edge::McvContainerAt(mcv, i)),
-                         off::CWV_primary_flag) = i == index ? 1 : 0;
+                         edge155::off::CWV_primary_flag) = i == index ? 1 : 0;
   }
   edge::McvUpdateBorders(mcv);
   Log("[active] pane %d of %d", index, count);
@@ -138,7 +136,7 @@ inline void* __fastcall h_focus_map(void* mcv, void* container) {
   if (focusMap) {
     return focusMap;
   }
-  alignas(8) static uint8_t emptyMap[off::FocusableViewsMap_size] = {};
+  alignas(8) static uint8_t emptyMap[edge155::off::FocusableViewsMap_size] = {};
   return emptyMap;
 }
 
@@ -353,11 +351,13 @@ inline bool IsReadForHover() {
   const USHORT count =
       CaptureStackBackTrace(0, kPaintStackDepth, frames, nullptr);
   const void* hoverCallers[] = {
-      edge::At(rva::EdgeTabStyleViews_PaintTab_hover_layer_return),
-      edge::At(rva::EdgeTabStyleViews_CalculateTargetColors_active_return),
-      edge::At(rva::EdgeTabStyleViews_CalculateTargetColors_inactive_return),
+      edge::At(edge155::rva::EdgeTabStyleViews_PaintTab_hover_layer_return),
       edge::At(
-          rva::
+          edge155::rva::EdgeTabStyleViews_CalculateTargetColors_active_return),
+      edge::At(edge155::rva::
+                   EdgeTabStyleViews_CalculateTargetColors_inactive_return),
+      edge::At(
+          edge155::rva::
               EdgeTabStyleViews_PaintInactiveTabBackground_PaintTabBackground_return)};
   for (USHORT i = 0; i < count; i++) {
     for (const void* caller : hoverCallers) {
@@ -373,12 +373,12 @@ inline GetColor_t o_getcolor = nullptr;
 inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
   if (theme::g_isActive) {
     const bool isSelectedTabBackground =
-        colorId == off::VTABCOLOR_selected_background ||
-        colorId == off::VTABCOLOR_selected_background_inactive;
+        colorId == edge155::off::VTABCOLOR_selected_background ||
+        colorId == edge155::off::VTABCOLOR_selected_background_inactive;
     uint32_t textColor = 0;
     const bool isTextSet =
         isSelectedTabBackground &&
-        o_getcolor(pack, off::THEMECOLOR_tab_text, &textColor);
+        o_getcolor(pack, edge155::off::THEMECOLOR_tab_text, &textColor);
     if (isTextSet) {
       // Every vertical tab's label is the one theme text colour, so the selected
       // fill must read behind it as well as the rail does: the bright accent
@@ -393,7 +393,8 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
       const bool isInactive = !focus::IsEdgeForeground();
       const bool isDimmed =
           isInactive &&
-          o_getcolor(pack, off::VTABCOLOR_background_inactive, &inactiveRail);
+          o_getcolor(pack, edge155::off::VTABCOLOR_background_inactive,
+                     &inactiveRail);
       const uint32_t selectedFill =
           isDimmed
               ? theme_tone::Blend(fill, inactiveRail, kVTabInactiveRailPercent)
@@ -402,7 +403,8 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
       // the fill over the chrome ground, as Edge's own themes keep it.
       uint32_t ground = kNeonRail;
       const bool isGroundRead =
-          isTextDark && o_getcolor(pack, off::THEMECOLOR_toolbar, &ground);
+          isTextDark &&
+          o_getcolor(pack, edge155::off::THEMECOLOR_toolbar, &ground);
       const bool isHoveredTab =
           IsReadForHover() && (!isTextDark || isGroundRead);
       *out = isHoveredTab
@@ -417,14 +419,14 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
     // toolbar colour is the rail's too, and Edge derives the idle tab fills from
     // it) and every label a dim steel; the selected tab's own title and icons
     // are inked (h_getuicolor), so the label colour need not read on its fill.
-    const bool isNeonRecoloured = colorId == off::THEMECOLOR_toolbar ||
-                                  colorId == off::THEMECOLOR_tab_text;
+    const bool isNeonRecoloured = colorId == edge155::off::THEMECOLOR_toolbar ||
+                                  colorId == edge155::off::THEMECOLOR_tab_text;
     const bool isNeonTheme =
         isNeonRecoloured &&
-        o_getcolor(pack, off::THEMECOLOR_tab_text, &textColor) &&
+        o_getcolor(pack, edge155::off::THEMECOLOR_tab_text, &textColor) &&
         !theme_tone::IsDark(textColor);
     if (isNeonTheme) {
-      const bool isTabText = colorId == off::THEMECOLOR_tab_text;
+      const bool isTabText = colorId == edge155::off::THEMECOLOR_tab_text;
       *out = isTabText ? kNeonIdleText : kNeonRail;
       return true;
     }
@@ -443,7 +445,7 @@ inline constexpr uint32_t kSelectedTabInk = 0xff04121a;
 inline void* g_foregroundTab = nullptr;  // the tab whose colours are computed
 inline bool g_isForegroundTabActive = false;
 inline bool IsActiveTabAlert(int colorId) {
-  for (const int alertId : off::UICOLOR_active_tab_alert) {
+  for (const int alertId : edge155::off::UICOLOR_active_tab_alert) {
     if (colorId == alertId) {
       return true;
     }
@@ -455,8 +457,9 @@ inline GetUiColor_t o_getuicolor = nullptr;
 inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
   const bool isInkable = theme::g_isActive && g_isLabelLight;
   if (isInkable) {
-    const bool isTabForeground = colorId >= off::UICOLOR_tab_foreground_first &&
-                                 colorId <= off::UICOLOR_tab_foreground_last;
+    const bool isTabForeground =
+        colorId >= edge155::off::UICOLOR_tab_foreground_first &&
+        colorId <= edge155::off::UICOLOR_tab_foreground_last;
     const bool isActiveTabTitle = isTabForeground && g_isForegroundTabActive;
     if (isActiveTabTitle || IsActiveTabAlert(colorId)) {
       return kSelectedTabInk;
@@ -473,7 +476,7 @@ inline void __fastcall h_update_foreground(void* tab) {
   const bool wasOuterActive = g_isForegroundTabActive;
   g_foregroundTab = tab;
   g_isForegroundTabActive =
-      reinterpret_cast<IsActive_t>(edge::At(rva::Tab_IsActive))(tab);
+      reinterpret_cast<IsActive_t>(edge::At(edge155::rva::Tab_IsActive))(tab);
   o_update_foreground(tab);
   g_foregroundTab = outerTab;
   g_isForegroundTabActive = wasOuterActive;
@@ -500,163 +503,171 @@ inline bool InstallAll() {
     Log("[err] MH_Initialize failed");
     return false;
   }
-  Install(rva::MultiContentsView_SetWebContentsAtIndex,
+  Install(edge155::rva::MultiContentsView_SetWebContentsAtIndex,
           reinterpret_cast<void*>(h_setwc), &o_setwc, "SetWebContentsAtIndex");
-  Install(rva::MultiContentsView_CalculateProposedLayout,
+  Install(edge155::rva::MultiContentsView_CalculateProposedLayout,
           reinterpret_cast<void*>(h_calc), &o_calc, "CalculateProposedLayout");
-  Install(rva::SplitTabs_LogSplitViewCreatedUKM,
+  Install(edge155::rva::SplitTabs_LogSplitViewCreatedUKM,
           reinterpret_cast<void*>(h_split_created_ukm), &o_split_created_ukm,
           "split_tabs::LogSplitViewCreatedUKM");
-  Install(rva::SplitTabs_LogSplitViewUpdatedUKM,
+  Install(edge155::rva::SplitTabs_LogSplitViewUpdatedUKM,
           reinterpret_cast<void*>(h_split_updated_ukm), &o_split_updated_ukm,
           "split_tabs::LogSplitViewUpdatedUKM");
-  Install(rva::MultiContentsView_GetFocusableViewsMapFor,
+  Install(edge155::rva::MultiContentsView_GetFocusableViewsMapFor,
           reinterpret_cast<void*>(h_focus_map), &o_focus_map,
           "MultiContentsView::GetFocusableViewsMapFor");
-  Install(rva::MultiContentsView_SetActiveIndex,
+  Install(edge155::rva::MultiContentsView_SetActiveIndex,
           reinterpret_cast<void*>(h_set_active), &o_set_active,
           "SetActiveIndex");
-  Install(rva::ResizeArea2D_OnMousePressed,
+  Install(edge155::rva::ResizeArea2D_OnMousePressed,
           reinterpret_cast<void*>(h_divider_pressed), &o_divider_pressed,
           "EdgeTwoDimensionalResizeArea::OnMousePressed");
-  Install(rva::ResizeArea2D_OnMouseDragged,
+  Install(edge155::rva::ResizeArea2D_OnMouseDragged,
           reinterpret_cast<void*>(h_divider_dragged), &o_divider_dragged,
           "EdgeTwoDimensionalResizeArea::OnMouseDragged");
-  Install(rva::ResizeArea2D_OnMouseReleased,
+  Install(edge155::rva::ResizeArea2D_OnMouseReleased,
           reinterpret_cast<void*>(h_divider_released), &o_divider_released,
           "EdgeTwoDimensionalResizeArea::OnMouseReleased");
-  Install(rva::ResizeArea2D_OnMouseCaptureLost,
+  Install(edge155::rva::ResizeArea2D_OnMouseCaptureLost,
           reinterpret_cast<void*>(h_divider_capture_lost),
           &o_divider_capture_lost,
           "EdgeTwoDimensionalResizeArea::OnMouseCaptureLost");
-  Install(rva::SplitWindowControlMenu_BuildMenuModel,
+  Install(edge155::rva::SplitWindowControlMenu_BuildMenuModel,
           reinterpret_cast<void*>(menu::h_build), &menu::o_build,
           "SplitWindowControlMenu::BuildMenuModel");
-  Install(rva::BrowserWebContentsDelegate_ShouldOverrideNewWindowCreation,
-          reinterpret_cast<void*>(links::h_should_override),
-          &links::o_should_override,
-          "BrowserWebContentsDelegate::ShouldOverrideNewWindowCreation");
-  Install(rva::BrowserWebContentsDelegate_AddNewContents,
+  Install(
+      edge155::rva::BrowserWebContentsDelegate_ShouldOverrideNewWindowCreation,
+      reinterpret_cast<void*>(links::h_should_override),
+      &links::o_should_override,
+      "BrowserWebContentsDelegate::ShouldOverrideNewWindowCreation");
+  Install(edge155::rva::BrowserWebContentsDelegate_AddNewContents,
           reinterpret_cast<void*>(links::h_add_new_contents),
           &links::o_add_new_contents,
           "BrowserWebContentsDelegate::AddNewContents");
-  Install(rva::SplitWindowControllerV2_UpdateLinkedModeState,
+  Install(edge155::rva::SplitWindowControllerV2_UpdateLinkedModeState,
           reinterpret_cast<void*>(links::h_update_linked_mode),
           &links::o_update_linked_mode,
           "SplitWindowControllerImplV2::UpdateLinkedModeState");
-  Install(rva::SplitWindowLinkModeThrottle_MaybeCreate,
+  Install(edge155::rva::SplitWindowLinkModeThrottle_MaybeCreate,
           reinterpret_cast<void*>(links::h_link_throttle),
           &links::o_link_throttle,
           "SplitWindowLinkModeNavigationThrottle::MaybeCreateThrottleFor");
-  Install(rva::SplitWindowControllerV2_OpenTabInCurrentSplitWindow,
+  Install(edge155::rva::SplitWindowControllerV2_OpenTabInCurrentSplitWindow,
           reinterpret_cast<void*>(offer::h_open_tab), &offer::o_open_tab,
           "SplitWindowControllerImplV2::OpenTabInCurrentSplitWindow");
-  Install(rva::SplitWindowStartingUIHandler_GetTabs,
+  Install(edge155::rva::SplitWindowStartingUIHandler_GetTabs,
           reinterpret_cast<void*>(offer::h_get_tabs), &offer::o_get_tabs,
           "SplitWindowStartingUIHandler::GetTabs");
-  Install(rva::SplitWindowController_IsSplitWindowWebContents,
+  Install(edge155::rva::SplitWindowController_IsSplitWindowWebContents,
           reinterpret_cast<void*>(offer::h_is_split_contents),
           &offer::o_is_split_contents,
           "SplitWindowController::IsSplitWindowWebContents");
-  Install(rva::StartingPageLeftSplitTask_RunOnce,
+  Install(edge155::rva::StartingPageLeftSplitTask_RunOnce,
           reinterpret_cast<void*>(offer::h_page_left_split),
           &offer::o_page_left_split,
           "OnSplitTabRemoved's starting page task (RunOnce)");
-  Install(rva::SplitWindowStartingUIHandler_CloseSplitWindow,
+  Install(edge155::rva::SplitWindowStartingUIHandler_CloseSplitWindow,
           reinterpret_cast<void*>(offer::h_close_page), &offer::o_close_page,
           "SplitWindowStartingUIHandler::CloseSplitWindow");
-  Install(rva::TabDragController_ContinueDragging,
+  Install(edge155::rva::TabDragController_ContinueDragging,
           reinterpret_cast<void*>(tabdrag::h_continue_dragging),
           &tabdrag::o_continue_dragging, "TabDragController::ContinueDragging");
-  Install(rva::TabDragController_EndDrag,
+  Install(edge155::rva::TabDragController_EndDrag,
           reinterpret_cast<void*>(tabdrag::h_end_drag), &tabdrag::o_end_drag,
           "TabDragController::EndDrag");
-  Install(rva::EventTracker_OnEvent,
+  Install(edge155::rva::EventTracker_OnEvent,
           reinterpret_cast<void*>(tabdrag::h_tracker_event),
           &tabdrag::o_tracker_event, "EventTracker::OnEvent");
-  Install(rva::MenuItemView_CalculateProposedLayout,
+  Install(edge155::rva::MenuItemView_CalculateProposedLayout,
           reinterpret_cast<void*>(menu::h_row_layout), &menu::o_row_layout,
           "MenuItemView::CalculateProposedLayout");
-  Install(rva::SplitWindowControlMenu_PopulateMenu,
+  Install(edge155::rva::SplitWindowControlMenu_PopulateMenu,
           reinterpret_cast<void*>(menu::h_populate), &menu::o_populate,
           "SplitWindowControlMenu::PopulateMenu");
-  Install(rva::SplitWindowControlMenu_ShouldExecuteWithoutClosing,
+  Install(edge155::rva::SplitWindowControlMenu_ShouldExecuteWithoutClosing,
           reinterpret_cast<void*>(menu::h_should_execute),
           &menu::o_should_execute,
           "SplitWindowControlMenu::ShouldExecuteCommandWithoutClosingMenu");
-  Install(rva::SplitWindowControlMenu_ExecuteCommand,
+  Install(edge155::rva::SplitWindowControlMenu_ExecuteCommand,
           reinterpret_cast<void*>(menu::h_control_exec), &menu::o_control_exec,
           "SplitWindowControlMenu::ExecuteCommand");
-  Install(rva::ControlButtons_ToggleContextMenu,
+  Install(edge155::rva::ControlButtons_ToggleContextMenu,
           reinterpret_cast<void*>(menu::h_toggle), &menu::o_toggle,
           "ControlButtons::ToggleContextMenu");
-  Install(rva::ControlButtons_HandleButtonClick,
+  Install(edge155::rva::ControlButtons_HandleButtonClick,
           reinterpret_cast<void*>(h_button_click), &o_button_click,
           "ControlButtons::HandleButtonClick");
-  Install(rva::Button_OnMousePressed, reinterpret_cast<void*>(h_pressed),
-          &o_pressed, "Button::OnMousePressed");
-  Install(rva::Button_OnMouseDragged, reinterpret_cast<void*>(h_dragged),
-          &o_dragged, "Button::OnMouseDragged");
-  Install(rva::Button_OnMouseReleased, reinterpret_cast<void*>(h_released),
-          &o_released, "Button::OnMouseReleased");
-  Install(rva::Button_OnMouseCaptureLost,
+  Install(edge155::rva::Button_OnMousePressed,
+          reinterpret_cast<void*>(h_pressed), &o_pressed,
+          "Button::OnMousePressed");
+  Install(edge155::rva::Button_OnMouseDragged,
+          reinterpret_cast<void*>(h_dragged), &o_dragged,
+          "Button::OnMouseDragged");
+  Install(edge155::rva::Button_OnMouseReleased,
+          reinterpret_cast<void*>(h_released), &o_released,
+          "Button::OnMouseReleased");
+  Install(edge155::rva::Button_OnMouseCaptureLost,
           reinterpret_cast<void*>(h_capture_lost), &o_capture_lost,
           "Button::OnMouseCaptureLost");
-  Install(rva::SplitWindowController_DoAction,
+  Install(edge155::rva::SplitWindowController_DoAction,
           reinterpret_cast<void*>(collapse::h_do_action),
           &collapse::o_do_action, "DoActionToSplitWindow");
-  Install(rva::SplitTabMenuModel_ctor, reinterpret_cast<void*>(menu::h_ctor),
-          &menu::o_ctor, "SplitTabMenuModel::ctor");
-  Install(rva::SplitTabMenuModel_ExecuteCommand,
+  Install(edge155::rva::SplitTabMenuModel_ctor,
+          reinterpret_cast<void*>(menu::h_ctor), &menu::o_ctor,
+          "SplitTabMenuModel::ctor");
+  Install(edge155::rva::SplitTabMenuModel_ExecuteCommand,
           reinterpret_cast<void*>(menu::h_exec), &menu::o_exec,
           "SplitTabMenuModel::ExecuteCommand");
-  Install(rva::WebUISplitTabsControl_HandleContextMenu,
+  Install(edge155::rva::WebUISplitTabsControl_HandleContextMenu,
           reinterpret_cast<void*>(menu::h_handle_ctx), &menu::o_handle_ctx,
           "WebUISplitTabsControl::HandleContextMenu");
-  Install(rva::ThemeService_RemoveUnusedThemes,
+  Install(edge155::rva::ThemeService_RemoveUnusedThemes,
           reinterpret_cast<void*>(h_remove_unused_themes),
           &o_remove_unused_themes, "ThemeService::RemoveUnusedThemes");
   // The vertical-tab selected-tab recolour. Also a theming hook, gated on
   // theme::g_isActive, so it stays enabled when the split is toggled off.
-  Install(rva::BrowserThemePack_GetColor, reinterpret_cast<void*>(h_getcolor),
-          &o_getcolor, "BrowserThemePack::GetColor (vertical-tab recolour)");
-  Install(rva::ColorProvider_GetColor, reinterpret_cast<void*>(h_getuicolor),
-          &o_getuicolor, "ui::ColorProvider::GetColor (selected-tab ink)");
-  Install(rva::EdgeTab_UpdateForegroundColors,
+  Install(edge155::rva::BrowserThemePack_GetColor,
+          reinterpret_cast<void*>(h_getcolor), &o_getcolor,
+          "BrowserThemePack::GetColor (vertical-tab recolour)");
+  Install(edge155::rva::ColorProvider_GetColor,
+          reinterpret_cast<void*>(h_getuicolor), &o_getuicolor,
+          "ui::ColorProvider::GetColor (selected-tab ink)");
+  Install(edge155::rva::EdgeTab_UpdateForegroundColors,
           reinterpret_cast<void*>(h_update_foreground), &o_update_foreground,
           "EdgeTab::UpdateForegroundColors (selected-tab ink)");
   // Asking to handle links: pass-through until the feature is switched on
   // (protocol_handlers.h).
-  Install(rva::ContentSettingRPHBubbleModel_CommitChanges,
+  Install(edge155::rva::ContentSettingRPHBubbleModel_CommitChanges,
           reinterpret_cast<void*>(protocol_handlers::h_commit_changes),
           &protocol_handlers::o_commit_changes,
           "ContentSettingRPHBubbleModel::CommitChanges");
-  Install(rva::RegisterProtocolHandlerPermissionRequest_PermissionDecided,
-          reinterpret_cast<void*>(protocol_handlers::h_permission_decided),
-          &protocol_handlers::o_permission_decided,
-          "RegisterProtocolHandlerPermissionRequest::PermissionDecided");
+  Install(
+      edge155::rva::RegisterProtocolHandlerPermissionRequest_PermissionDecided,
+      reinterpret_cast<void*>(protocol_handlers::h_permission_decided),
+      &protocol_handlers::o_permission_decided,
+      "RegisterProtocolHandlerPermissionRequest::PermissionDecided");
   // Safety patches: turn Edge's 2-pane CHECKs into fallbacks. They stay for the
   // life of the process (never restored on unload): they point at nothing of
   // ours, and a split still grown past two when this DLL unloads (hot-reload or
   // toggle-off) would otherwise hit a CHECK as soon as Edge touches pane 3+.
-  const uint8_t previousGuard =
-      edge::PatchByte(rva::SetWebContentsAtIndex_guard_imm, kLiftedIndexCap);
+  const uint8_t previousGuard = edge::PatchByte(
+      edge155::rva::SetWebContentsAtIndex_guard_imm, kLiftedIndexCap);
   Log("[patch] SetWebContentsAtIndex guard %u -> 0x%x", previousGuard,
       kLiftedIndexCap);
   uint8_t previousBytes[kCheckJumpLength] = {};
   // The a11y label's int3 at index >= 2.
-  edge::PatchNop(rva::SplitA11yLabel_paneidx_jne, kCheckJumpLength,
+  edge::PatchNop(edge155::rva::SplitA11yLabel_paneidx_jne, kCheckJumpLength,
                  previousBytes);
   Log("[patch] a11y pane-index check NOPed (was 0x%02x 0x%02x)",
       previousBytes[0], previousBytes[1]);
   // SetActiveIndex's int3 at index >= 2.
-  edge::PatchNop(rva::SetActiveIndex_index_jae, kCheckJumpLength,
+  edge::PatchNop(edge155::rva::SetActiveIndex_index_jae, kCheckJumpLength,
                  previousBytes);
   Log("[patch] SetActiveIndex index check NOPed (was 0x%02x 0x%02x)",
       previousBytes[0], previousBytes[1]);
   // The tab list piles a split bigger than a pair onto one slot; give each of
   // its tabs a slot of its own (tabrows.h).
-  Install(rva::TabStripLayoutHelper_CalculateIdealBounds,
+  Install(edge155::rva::TabStripLayoutHelper_CalculateIdealBounds,
           reinterpret_cast<void*>(tabrows::h_calculate_ideal_bounds),
           &tabrows::o_calculate_ideal_bounds,
           "TabStripLayoutHelper::CalculateIdealBounds");

@@ -12,8 +12,6 @@
 
 namespace fixedge::grip {
 
-using namespace fixedge::edge155;
-
 // A grip button, and the split it belongs to.
 struct Grip {
   void* button = nullptr;
@@ -42,7 +40,7 @@ inline void EnsureGrips(void* mcv) {
       continue;
     }
     void* button = edge::ControlButtonsAddButton(
-        bar, off::ControlButtons_more_string_id, icons::Grip(),
+        bar, edge155::off::ControlButtons_more_string_id, icons::Grip(),
         /*clickable=*/false);
     edge::ViewReorderChild(bar, button, 0);  // first: grip, ⋯, X
     edge::ViewSetTooltip(button, kTooltip);

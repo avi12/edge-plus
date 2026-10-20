@@ -12,8 +12,6 @@
 
 namespace fixedge::repaint {
 
-using namespace fixedge::edge155;
-
 inline constexpr UINT_PTR kTimerId = 0xF1EF;
 // After the pane transition has landed (it runs motion::kDurationMs).
 inline constexpr UINT kSettleMarginMs = 120;

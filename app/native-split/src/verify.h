@@ -18,7 +18,7 @@ inline constexpr wchar_t kFixedFileInfoBlock[] = L"\\";
 // True only if the running msedge.dll is exactly the build offsets.h names.
 inline bool BuildMatches() {
   wchar_t path[MAX_PATH];
-  HMODULE module = GetModuleHandleW(edge::kModule);
+  HMODULE module = GetModuleHandleW(edge155::kModule);
   const bool hasModulePath =
       module != nullptr && GetModuleFileNameW(module, path, MAX_PATH) != 0;
   if (!hasModulePath) {
@@ -49,10 +49,11 @@ inline bool BuildMatches() {
   const int build = HIWORD(info->dwFileVersionLS);
   const int revision = LOWORD(info->dwFileVersionLS);
   Log("[verify] msedge.dll %d.%d.%d.%d (expected %d.%d.%d.%d)", major, minor,
-      build, revision, edge::kVersionMajor, edge::kVersionMinor,
-      edge::kVersionBuild, edge::kVersionRevision);
-  return major == edge::kVersionMajor && minor == edge::kVersionMinor &&
-         build == edge::kVersionBuild && revision == edge::kVersionRevision;
+      build, revision, edge155::kVersionMajor, edge155::kVersionMinor,
+      edge155::kVersionBuild, edge155::kVersionRevision);
+  return major == edge155::kVersionMajor && minor == edge155::kVersionMinor &&
+         build == edge155::kVersionBuild &&
+         revision == edge155::kVersionRevision;
 }
 
 // A hooked function should begin with a plausible x64 prologue byte and sit inside

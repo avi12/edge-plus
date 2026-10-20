@@ -15,8 +15,6 @@
 
 namespace fixedge::tabrows {
 
-using namespace fixedge::edge155;
-
 // A tab row pairs only exactly two members; anything bigger is shown unpaired.
 inline constexpr int kPairedMembers = 2;
 

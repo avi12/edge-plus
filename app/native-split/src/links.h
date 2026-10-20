@@ -17,8 +17,6 @@
 
 namespace fixedge::links {
 
-using namespace fixedge::edge155;
-
 // The toggle's label, saying what it does now (Edge's says "Open left links to
 // the right"); pane_menu.h puts it on the ⋯ menu.
 inline constexpr char kToggleLabel[] = "Open new-tab links in a new pane";
@@ -32,8 +30,8 @@ enum class LinkTarget : uint8_t {
 
 // A link opening a foreground tab (Edge's split variant included).
 inline bool IsForegroundTab(int disposition) {
-  return disposition == off::DISPOSITION_new_foreground_tab ||
-         disposition == off::DISPOSITION_split_foreground_tab;
+  return disposition == edge155::off::DISPOSITION_new_foreground_tab ||
+         disposition == edge155::off::DISPOSITION_split_foreground_tab;
 }
 
 // A plain new-tab link: clicked (a user gesture), for a foreground tab, and
@@ -79,14 +77,14 @@ inline bool __fastcall h_should_override(void* delegate, void* source,
                                          bool argument5, void* params) {
   const bool isNewTabLink =
       params && IsForegroundTab(disposition) &&
-      edge::Field<bool>(params, off::NEWWINDOW_opener_suppressed);
+      edge::Field<bool>(params, edge155::off::NEWWINDOW_opener_suppressed);
   const LinkTarget target =
       isNewTabLink ? LinkTargetFor(source) : LinkTarget::kEdge;
   switch (target) {
     case LinkTarget::kSamePane:
       Log("[links] new-tab link: opened in its own pane");
-      edge::NavigateTo(
-          source, static_cast<uint8_t*>(params) + off::NEWWINDOW_target_url);
+      edge::NavigateTo(source, static_cast<uint8_t*>(params) +
+                                   edge155::off::NEWWINDOW_target_url);
       return true;
     case LinkTarget::kNewPaneRight:
       return false;
@@ -118,9 +116,10 @@ inline void* __fastcall h_add_new_contents(
                               wasBlocked);
   }
   g_newPaneLink = NewPaneLink{source, contents};
-  void* result = o_add_new_contents(delegate, source, newContents, targetUrl,
-                                    off::DISPOSITION_new_background_tab,
-                                    windowFeatures, hasUserGesture, wasBlocked);
+  void* result =
+      o_add_new_contents(delegate, source, newContents, targetUrl,
+                         edge155::off::DISPOSITION_new_background_tab,
+                         windowFeatures, hasUserGesture, wasBlocked);
   channel::Post(channel::CodeOf(channel::Command::kLinkPane));
   return result;
 }

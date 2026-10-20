@@ -21,8 +21,6 @@
 
 namespace fixedge::tabdrag {
 
-using namespace fixedge::edge155;
-
 // The Alt mode of the current tab drag.
 struct Session {
   bool isAltMode = false;
@@ -194,8 +192,8 @@ using EndDrag_t = void(__fastcall*)(void*, int);
 inline EndDrag_t o_end_drag = nullptr;
 inline void __fastcall h_end_drag(void* controller, int reason) {
   const bool isDropping = g_session.isAltMode &&
-                          reason == off::TABDRAG_end_complete && IsAltHeld() &&
-                          g_session.splitContents &&
+                          reason == edge155::off::TABDRAG_end_complete &&
+                          IsAltHeld() && g_session.splitContents &&
                           g_session.plan.zone != dock::Zone::kNone;
   if (isDropping) {
     g_drop = Drop{g_session.tsm, g_session.mcv, g_session.draggedContents,
@@ -216,8 +214,8 @@ using TrackerEvent_t = void(__fastcall*)(void*, void*);
 inline TrackerEvent_t o_tracker_event = nullptr;
 inline void __fastcall h_tracker_event(void* tracker, void* event) {
   const int type = edge::EventType(event);
-  const bool isKeyEvent = type == off::EVENT_type_key_pressed ||
-                          type == off::EVENT_type_key_released;
+  const bool isKeyEvent = type == edge155::off::EVENT_type_key_pressed ||
+                          type == edge155::off::EVENT_type_key_released;
   const bool isAltKeyEvent = isKeyEvent && IsAltKey(edge::KeyEventCode(event));
   if (isAltKeyEvent) {
     // Replay the pointer's last move so the mode switches now, not on the next

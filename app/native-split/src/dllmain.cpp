@@ -55,18 +55,18 @@ void ReleaseEvents() {
 DWORD WINAPI Init(LPVOID) {
   HMODULE edgeModule = nullptr;
   for (int i = 0; i < kModuleWaitAttempts && !edgeModule; i++) {
-    edgeModule = GetModuleHandleW(edge::kModule);
+    edgeModule = GetModuleHandleW(edge155::kModule);
     if (!edgeModule) {
       Sleep(kModuleWaitStepMilliseconds);
     }
   }
   if (!edgeModule) {
-    Log("[err] %ls not found", edge::kModule);
+    Log("[err] %ls not found", edge155::kModule);
     ReleaseEvents();
     return 0;
   }
   edge::Bind(edgeModule);
-  Log("[init] fixedge-split loaded. %ls base=%p", edge::kModule,
+  Log("[init] fixedge-split loaded. %ls base=%p", edge155::kModule,
       reinterpret_cast<void*>(edge::g_base));
 
   // Fail safe: the offsets are specific to one Edge build. Refuse to hook anything

@@ -7,8 +7,6 @@
 
 namespace fixedge::vtab_views {
 
-using namespace fixedge::edge155;
-
 inline constexpr int kMaxDepth = 64;
 
 // What a walk looks for: the tab at a model index. Tab rows are numbered in tree
@@ -24,7 +22,7 @@ inline void Walk(void* view, int depth, Search* search) {
   if (isDone) {
     return;
   }
-  const bool isTab = edge::VtableRva(view) == rva::VerticalTab_vftable;
+  const bool isTab = edge::VtableRva(view) == edge155::rva::VerticalTab_vftable;
   if (isTab) {
     if (search->seen == search->wantedIndex) {
       search->found = view;

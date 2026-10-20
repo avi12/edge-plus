@@ -21,8 +21,6 @@
 
 namespace fixedge::menu {
 
-using namespace fixedge::edge155;
-
 enum class MenuCommand : int {
   kAddUp = 0x6ac,
   kAddDown = 0x6ad,
@@ -172,7 +170,7 @@ inline void* __fastcall h_build(void* menu) {
   }
   edge::MenuAddSeparator(model);
   edge::MenuAddItemWithIcon(model, kAddPaneRowCommand, &g_rowLabel,
-                            edge::At(rva::Icon_SplitScene));
+                            edge::At(edge155::rva::Icon_SplitScene));
   return model;
 }
 

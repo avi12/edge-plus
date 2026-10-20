@@ -30,8 +30,6 @@
 
 namespace fixedge::find {
 
-using namespace fixedge::edge155;
-
 // Whether the enhanced find is switched on; the panel pushes it (config.h).
 inline bool g_isEnabled = false;
 
@@ -210,8 +208,9 @@ inline find_text::Option OptionOf(void* findBarView) {
   if (!g_isEnabled) {
     return find_text::Option::kNone;
   }
-  void* regExp = edge::FindToggle(findBarView, off::FINDTOGGLE_id_regexp);
-  void* ask = edge::FindToggle(findBarView, off::FINDTOGGLE_id_ask);
+  void* regExp =
+      edge::FindToggle(findBarView, edge155::off::FINDTOGGLE_id_regexp);
+  void* ask = edge::FindToggle(findBarView, edge155::off::FINDTOGGLE_id_ask);
   if (regExp && edge::FindToggleIsOn(regExp)) {
     return find_text::Option::kRegExp;
   }
@@ -234,21 +233,21 @@ inline void* EnsureToggle(void* findBarView, int toggleId, bool* isAdded) {
 inline int ToggleIdOfFlag(find_flags::Flag flag) {
   switch (flag) {
     case find_flags::Flag::kIndices:
-      return off::FINDTOGGLE_id_flag_indices;
+      return edge155::off::FINDTOGGLE_id_flag_indices;
     case find_flags::Flag::kIgnoreCase:
-      return off::FINDTOGGLE_id_flag_ignore_case;
+      return edge155::off::FINDTOGGLE_id_flag_ignore_case;
     case find_flags::Flag::kMultiline:
-      return off::FINDTOGGLE_id_flag_multiline;
+      return edge155::off::FINDTOGGLE_id_flag_multiline;
     case find_flags::Flag::kDotAll:
-      return off::FINDTOGGLE_id_flag_dot_all;
+      return edge155::off::FINDTOGGLE_id_flag_dot_all;
     case find_flags::Flag::kUnicode:
-      return off::FINDTOGGLE_id_flag_unicode;
+      return edge155::off::FINDTOGGLE_id_flag_unicode;
     case find_flags::Flag::kUnicodeSets:
-      return off::FINDTOGGLE_id_flag_unicode_sets;
+      return edge155::off::FINDTOGGLE_id_flag_unicode_sets;
     case find_flags::Flag::kSticky:
-      return off::FINDTOGGLE_id_flag_sticky;
+      return edge155::off::FINDTOGGLE_id_flag_sticky;
   }
-  return off::FINDTOGGLE_id_flag_indices;
+  return edge155::off::FINDTOGGLE_id_flag_indices;
 }
 
 // The flag a toggle id stands for, or null when it is not a flag switch.
@@ -298,7 +297,8 @@ inline find_text::Query QueryOf(void* findBarView, const std::string& typed) {
 // switched off ours are hidden and Edge's are back.
 inline void SyncToggles(void* findBarView) {
   bool isAdded = false;
-  void* regExp = EnsureToggle(findBarView, off::FINDTOGGLE_id_regexp, &isAdded);
+  void* regExp =
+      EnsureToggle(findBarView, edge155::off::FINDTOGGLE_id_regexp, &isAdded);
   // The flag switches are built right after RegExp so they sit under it.
   const bool isRegExpOn = regExp && edge::FindToggleIsOn(regExp);
   const bool isShowingFlags = g_isEnabled && isRegExpOn;
@@ -321,7 +321,8 @@ inline void SyncToggles(void* findBarView) {
         edge::ViewGetVisible(flagToggle) != isShowingFlags;
     edge::SetViewVisible(flagToggle, isShowingFlags);
   }
-  void* ask = EnsureToggle(findBarView, off::FINDTOGGLE_id_ask, &isAdded);
+  void* ask =
+      EnsureToggle(findBarView, edge155::off::FINDTOGGLE_id_ask, &isAdded);
   if (regExp) {
     const std::u16string title = Utf16FromUtf8(find_text::kRegExpName);
     edge::FindToggleSetTitle(regExp, Utf16Of(title));
@@ -334,9 +335,9 @@ inline void SyncToggles(void* findBarView) {
     edge::SetViewVisible(ask, g_isEnabled);
   }
   const bool isEdgeLocked = OptionOf(findBarView) != find_text::Option::kNone;
-  const int edgeIds[] = {off::FINDTOGGLE_id_match_case,
-                         off::FINDTOGGLE_id_whole_word,
-                         off::FINDTOGGLE_id_diacritics};
+  const int edgeIds[] = {edge155::off::FINDTOGGLE_id_match_case,
+                         edge155::off::FINDTOGGLE_id_whole_word,
+                         edge155::off::FINDTOGGLE_id_diacritics};
   for (const int toggleId : edgeIds) {
     void* toggle = edge::FindToggle(findBarView, toggleId);
     if (toggle) {
@@ -1069,9 +1070,10 @@ inline void __fastcall h_toggle_options(void* findBarView, void* argument) {
 // switches now read it. A flag switch only needs the search again.
 inline void __fastcall h_button_toggled(void* toggle) {
   const int toggleId = edge::FindToggleId(toggle);
-  const bool isOurs = g_isEnabled && (toggleId == off::FINDTOGGLE_id_regexp ||
-                                      toggleId == off::FINDTOGGLE_id_ask ||
-                                      IsFlagToggleId(toggleId));
+  const bool isOurs =
+      g_isEnabled &&
+      (toggleId == edge155::off::FINDTOGGLE_id_regexp ||
+       toggleId == edge155::off::FINDTOGGLE_id_ask || IsFlagToggleId(toggleId));
   void* findBarView = isOurs ? edge::FindBarViewOfToggle(toggle) : nullptr;
   if (!findBarView) {
     o_button_toggled(toggle);
@@ -1081,9 +1083,9 @@ inline void __fastcall h_button_toggled(void* toggle) {
   const bool isTurningOn = edge::FindToggleIsOn(toggle);
   const find_flags::FlagInfo* flag = FlagOfToggleId(toggleId);
   const bool isFlag = flag != nullptr;
-  const int otherId = toggleId == off::FINDTOGGLE_id_regexp
-                          ? off::FINDTOGGLE_id_ask
-                          : off::FINDTOGGLE_id_regexp;
+  const int otherId = toggleId == edge155::off::FINDTOGGLE_id_regexp
+                          ? edge155::off::FINDTOGGLE_id_ask
+                          : edge155::off::FINDTOGGLE_id_regexp;
   void* other = edge::FindToggle(findBarView, otherId);
   if (isTurningOn && other && !isFlag) {
     edge::FindToggleSetOn(other, false);
@@ -1126,23 +1128,23 @@ struct HookSite {
 
 inline std::vector<HookSite> HookSites() {
   return {
-      {rva::FindBarView_Find, reinterpret_cast<void*>(h_find),
+      {edge155::rva::FindBarView_Find, reinterpret_cast<void*>(h_find),
        reinterpret_cast<void**>(&o_find)},
-      {rva::FindBarView_FindNext, reinterpret_cast<void*>(h_find_next),
+      {edge155::rva::FindBarView_FindNext, reinterpret_cast<void*>(h_find_next),
        reinterpret_cast<void**>(&o_find_next)},
-      {rva::FindBarView_HandleKeyEvent,
+      {edge155::rva::FindBarView_HandleKeyEvent,
        reinterpret_cast<void*>(h_handle_key_event),
        reinterpret_cast<void**>(&o_handle_key_event)},
-      {rva::FindBarController_EndFindSession,
+      {edge155::rva::FindBarController_EndFindSession,
        reinterpret_cast<void*>(h_end_find_session),
        reinterpret_cast<void**>(&o_end_find_session)},
-      {rva::FindBarView_EdgeMaybeAddFindOptionsView,
+      {edge155::rva::FindBarView_EdgeMaybeAddFindOptionsView,
        reinterpret_cast<void*>(h_add_options_view),
        reinterpret_cast<void**>(&o_add_options_view)},
-      {rva::FindBarView_EdgeToggleFindOptions,
+      {edge155::rva::FindBarView_EdgeToggleFindOptions,
        reinterpret_cast<void*>(h_toggle_options),
        reinterpret_cast<void**>(&o_toggle_options)},
-      {rva::FindInPageOptionToggleView_OnButtonToggled,
+      {edge155::rva::FindInPageOptionToggleView_OnButtonToggled,
        reinterpret_cast<void*>(h_button_toggled),
        reinterpret_cast<void**>(&o_button_toggled)},
   };

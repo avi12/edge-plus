@@ -13,8 +13,6 @@
 
 namespace fixedge::assistant {
 
-using namespace fixedge::edge155;
-
 // The assistant's name, for every place the UI mentions it (the enhanced
 // find's "Ask <name>"); the table is chat_target.h's.
 inline const char* Name() {
@@ -73,14 +71,15 @@ inline void EnsureChevron(void* mcv) {
 
 inline bool EnableAll() {
   const MH_STATUS status = MH_EnableHook(
-      edge::At(rva::Copilot_IsConsumerLabelButtonWithDropdownEnabled));
+      edge::At(edge155::rva::Copilot_IsConsumerLabelButtonWithDropdownEnabled));
   return status == MH_OK || status == MH_ERROR_ENABLED;
 }
 
 inline bool Install() {
   const bool isHooked =
       MH_CreateHook(
-          edge::At(rva::Copilot_IsConsumerLabelButtonWithDropdownEnabled),
+          edge::At(
+              edge155::rva::Copilot_IsConsumerLabelButtonWithDropdownEnabled),
           reinterpret_cast<void*>(h_dropdown_enabled),
           reinterpret_cast<void**>(&o_dropdown_enabled)) == MH_OK;
   if (!isHooked) {

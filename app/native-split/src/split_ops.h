@@ -15,8 +15,6 @@
 
 namespace fixedge::split_ops {
 
-using namespace fixedge::edge155;
-
 // The pane (container index) showing `webContents`, or kNoLeaf.
 inline int LeafShowing(void* mcv, const void* webContents) {
   const int count = static_cast<int>(edge::McvCount(mcv));

@@ -17,8 +17,6 @@
 
 namespace fixedge::offer {
 
-using namespace fixedge::edge155;
-
 // UpdateTabInSplit's flag as OpenTabInCurrentSplitWindow passes it: the picked
 // tab takes the member's place and the member's tab closes.
 inline constexpr int kReplaceMemberFlag = 0;
@@ -58,8 +56,8 @@ inline bool IsInGrownSplit(void* tsm, void* tab) {
 using OpenTab_t = void(__fastcall*)(void*, void*);
 inline OpenTab_t o_open_tab = nullptr;
 inline void __fastcall h_open_tab(void* controller, void* chosenContents) {
-  void* tsm =
-      edge::Field<void*>(controller, off::SPLITCONTROLLER_tab_strip_model);
+  void* tsm = edge::Field<void*>(controller,
+                                 edge155::off::SPLITCONTROLLER_tab_strip_model);
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
   const bool isGrownSplitOffer =
       active && IsInGrownSplit(tsm, active) &&

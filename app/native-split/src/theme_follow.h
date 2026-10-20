@@ -21,8 +21,6 @@
 
 namespace fixedge::theme_follow {
 
-using namespace fixedge::edge155;
-
 inline bool g_isActive = false;
 
 // The tone a followed page was last computed in, and when a redraw was last
@@ -60,8 +58,8 @@ inline theme_tone::Tone ToneForPage(void* webContents) {
     return theme_tone::Tone::kUnknown;
   }
   return theme_tone::ToneOf(
-      edge::ThemePaletteColor(themeService, off::THEMECOLOR_toolbar),
-      edge::ThemePaletteColor(themeService, off::THEMECOLOR_frame));
+      edge::ThemePaletteColor(themeService, edge155::off::THEMECOLOR_toolbar),
+      edge::ThemePaletteColor(themeService, edge155::off::THEMECOLOR_frame));
 }
 
 // EdgeComputePreferredColorScheme: the page's prefers-color-scheme (and root
@@ -77,7 +75,8 @@ inline void* __fastcall h_preferred(void* out, const void* siteInfo,
     return result;
   }
   const bool isDark = tone == theme_tone::Tone::kDark;
-  const int32_t mode = isDark ? off::COLORMODE_dark : off::COLORMODE_light;
+  const int32_t mode =
+      isDark ? edge155::off::COLORMODE_dark : edge155::off::COLORMODE_light;
   const bool isToneChanged =
       g_lastPreferredMode != kNoModeYet && g_lastPreferredMode != mode;
   g_lastPreferredMode = mode;
@@ -89,8 +88,9 @@ inline void* __fastcall h_preferred(void* out, const void* siteInfo,
   }
   // Blink's PreferredColorScheme is 0 for dark and 1 for light; the scrollbar
   // scheme is the other way round.
-  edge::Field<int32_t>(out, off::PREFERREDSCHEME_color_scheme) = isDark ? 0 : 1;
-  edge::Field<int32_t>(out, off::PREFERREDSCHEME_scrollbar_scheme) =
+  edge::Field<int32_t>(out, edge155::off::PREFERREDSCHEME_color_scheme) =
+      isDark ? 0 : 1;
+  edge::Field<int32_t>(out, edge155::off::PREFERREDSCHEME_scrollbar_scheme) =
       isDark ? 1 : 0;
   return result;
 }
@@ -105,7 +105,7 @@ inline void* __fastcall h_provider_key(void* themeService, void* key,
   void* result = o_provider_key(themeService, key, nativeKey, profile);
   const bool isForced = g_forcedColorMode != kNoForcedMode;
   if (isForced) {
-    edge::Field<int32_t>(result, off::COLORPROVIDERKEY_color_mode) =
+    edge::Field<int32_t>(result, edge155::off::COLORPROVIDERKEY_color_mode) =
         g_forcedColorMode;
   }
   return result;
@@ -123,7 +123,8 @@ inline const void* __fastcall h_contents_provider(void* webContents) {
     return o_contents_provider(webContents);
   }
   const bool isDark = tone == theme_tone::Tone::kDark;
-  g_forcedColorMode = isDark ? off::COLORMODE_dark : off::COLORMODE_light;
+  g_forcedColorMode =
+      isDark ? edge155::off::COLORMODE_dark : edge155::off::COLORMODE_light;
   const void* provider = o_contents_provider(webContents);
   g_forcedColorMode = kNoForcedMode;
   return provider;
@@ -159,20 +160,20 @@ inline bool EnableSite(uintptr_t site) {
 }
 
 inline bool EnableAll() {
-  return EnableSite(rva::EdgeComputePreferredColorScheme) &&
-         EnableSite(rva::WebContentsImpl_GetColorProvider) &&
-         EnableSite(rva::ThemeService_GetColorProviderKey);
+  return EnableSite(edge155::rva::EdgeComputePreferredColorScheme) &&
+         EnableSite(edge155::rva::WebContentsImpl_GetColorProvider) &&
+         EnableSite(edge155::rva::ThemeService_GetColorProviderKey);
 }
 
 inline bool Install() {
   const bool isHooked =
-      MH_CreateHook(edge::At(rva::EdgeComputePreferredColorScheme),
+      MH_CreateHook(edge::At(edge155::rva::EdgeComputePreferredColorScheme),
                     reinterpret_cast<void*>(h_preferred),
                     reinterpret_cast<void**>(&o_preferred)) == MH_OK &&
-      MH_CreateHook(edge::At(rva::WebContentsImpl_GetColorProvider),
+      MH_CreateHook(edge::At(edge155::rva::WebContentsImpl_GetColorProvider),
                     reinterpret_cast<void*>(h_contents_provider),
                     reinterpret_cast<void**>(&o_contents_provider)) == MH_OK &&
-      MH_CreateHook(edge::At(rva::ThemeService_GetColorProviderKey),
+      MH_CreateHook(edge::At(edge155::rva::ThemeService_GetColorProviderKey),
                     reinterpret_cast<void*>(h_provider_key),
                     reinterpret_cast<void**>(&o_provider_key)) == MH_OK;
   if (!isHooked) {
