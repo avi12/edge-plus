@@ -445,7 +445,7 @@ inline void ClearTarget(void* mcv, Session& session) {
   const bool isClearable =
       IsTabAlive(mcv, session.target) && edge::IsPageLive(session.target);
   if (isClearable) {
-    edge::RunScript(session.target, find_scripts::kClearScript, nullptr);
+    edge::RunScript(session.target, find_scripts::ClearScript(), nullptr);
   }
   session.target = nullptr;
   session.count = 0;
@@ -527,7 +527,7 @@ inline void OnWentTo(void* mcv, void* view, unsigned long long seq, int index,
   if (!isCurrentSearch) {
     return;
   }
-  const bool isMoved = result.isString && result.text == "ok";
+  const bool isMoved = result.isString && result.text == web_text::kOkTag;
   if (isMoved) {
     session->current = index;
     ShowCount(*session);

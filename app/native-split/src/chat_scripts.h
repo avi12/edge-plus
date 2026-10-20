@@ -81,7 +81,9 @@ inline std::string ReplyScript(const Target& target) {
   script += R"JS(";
   }
   if (state.failure) {
-    return "err\x1f" + state.failure;
+    return )JS";
+  script += web_text::JsErrorAnswerFrom("state.failure");
+  script += R"JS(;
   }
   var dialog = document.querySelector()JS";
   script += web_text::JsStringLiteral(target.dialogSelectors);
@@ -134,7 +136,9 @@ inline std::string ReplyScript(const Target& target) {
   script += AnswerText(ScriptAnswer::kWait);
   script += R"JS(";
   }
-  return "ok\x1f" + text;
+  return )JS";
+  script += web_text::JsOkAnswer({"text"});
+  script += R"JS(;
 })())JS";
   return script;
 }
