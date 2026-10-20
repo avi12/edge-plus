@@ -15,6 +15,7 @@ internal static class Program {
     ("installed themes", InstalledThemesTests.Run),
     ("dev-mode prompt", DevModePromptTests.Run),
     ("startup entry", StartupEntryTests.Run),
+    ("wording", WordingTests.Run),
   ];
 
   private static int Main() {
