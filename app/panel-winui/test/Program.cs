@@ -8,6 +8,7 @@ namespace EdgePlus;
 internal static class Program {
   private static readonly (string Name, Action Run)[] s_suites = [
     ("switches", SwitchesTests.Run),
+    ("settings", SettingsTests.Run),
   ];
 
   private static int Main() {
