@@ -118,16 +118,46 @@ internal sealed class PanelLoader {
     if (!PanelSource.IsNewBuild(_loadedBytes, candidate)) {
       return;
     }
+    byte[] previous = _loadedBytes;
     WeakReference oldContext = Unmount();
-    Mount(candidate);
+    // A build that fails to mount must not take the window with it: the
+    // previous panel goes back, and the next build is tried as usual.
+    if (!TryMount(candidate)) {
+      Unmount();
+      _ = TryMount(previous);
+      return;
+    }
     WatchUnload(oldContext);
   }
 
   private void Mount(byte[] assembly) {
-    _context = LoadCopy(assembly);
-    _loadedBytes = assembly;
-    MethodInfo mount = _context.EntryMethod(MountMethod);
-    _mounted = (IDisposable)mount.Invoke(null, [_window, _slot, _settingChanged, _broughtBack])!;
+    if (!TryMount(assembly)) {
+      Swapped?.Invoke($"The panel failed to load; see {Path.Combine(s_copiesDirectory, LogName)}");
+    }
+  }
+
+  // Mount a panel build; false (and the reason in the log and the title bar)
+  // when it throws.
+  private bool TryMount(byte[] assembly) {
+    try {
+      _context = LoadCopy(assembly);
+      _loadedBytes = assembly;
+      MethodInfo mount = _context.EntryMethod(MountMethod);
+      _mounted = (IDisposable)mount.Invoke(null, [_window, _slot, _settingChanged, _broughtBack])!;
+      return true;
+    } catch (TargetInvocationException error) {
+      ReportMountFailure(error.InnerException ?? error);
+      return false;
+    } catch (Exception error) when (error is BadImageFormatException or IOException
+                                        or InvalidOperationException) {
+      ReportMountFailure(error);
+      return false;
+    }
+  }
+
+  private void ReportMountFailure(Exception error) {
+    Log($"mount failed: {error}");
+    Swapped?.Invoke($"This panel build failed to load: {error.GetType().Name}: {error.Message}");
   }
 
   // Tear the panel down and drop every reference into it, then unload its
