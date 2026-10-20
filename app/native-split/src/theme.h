@@ -100,8 +100,7 @@ inline void ScheduleInstallRetry() {
 
 // Apply the theme assigned to the given mode to the window's browser, live.
 inline void Apply(void* hwnd, bool isDark) {
-  void* tsm = edge::TsmForWindow(hwnd);
-  void* profile = tsm ? edge::ProfileForTabStrip(tsm) : nullptr;
+  void* profile = edge::ProfileForTabStrip(edge::TsmForWindow(hwnd));
   void* themeService =
       profile ? edge::ThemeServiceForProfile(profile) : nullptr;
   if (!themeService) {
@@ -170,15 +169,13 @@ inline void ApplyConfig(void* hwnd, const config::Wire& wire) {
     return;
   }
   // Just switched off: drop back to the default theme once.
-  if (wasActive) {
-    Log("[theme] disabled; reverting to default theme");
-    void* tsm = edge::TsmForWindow(hwnd);
-    void* profile = tsm ? edge::ProfileForTabStrip(tsm) : nullptr;
-    void* themeService =
-        profile ? edge::ThemeServiceForProfile(profile) : nullptr;
-    if (themeService) {
-      edge::ThemeUseDefault(themeService);
-    }
+  if (!wasActive) {
+    return;
+  }
+  Log("[theme] disabled; reverting to default theme");
+  void* themeService = edge::ThemeServiceForWindow(hwnd);
+  if (themeService) {
+    edge::ThemeUseDefault(themeService);
   }
 }
 

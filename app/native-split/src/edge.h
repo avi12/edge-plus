@@ -1059,6 +1059,12 @@ inline void* ThemeServiceForProfile(void* profile) {
       profile);
 }
 
+// The ThemeService of the profile behind a browser window, or null.
+inline void* ThemeServiceForWindow(void* hwnd) {
+  void* profile = ProfileForTabStrip(TsmForWindow(hwnd));
+  return profile ? ThemeServiceForProfile(profile) : nullptr;
+}
+
 // A libc++ std::string holding a theme id, to pass by const-ref. One reused
 // DLL-lifetime buffer: we clear it in place (keeps any heap buffer) and append
 // the id, so we never pair an operator delete ourselves and the one small

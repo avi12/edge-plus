@@ -636,14 +636,15 @@ inline bool MovePaneToRootEdge(Node& root, int moving, Direction direction) {
   if (isRootAlongAxis) {
     const size_t edgeIndex = isLeadingEdge ? 0 : root.children.size() - 1;
     for (size_t i = 0; i < root.children.size(); i++) {
-      if (IsLeafFor(root.children[i], moving)) {
-        const bool isAlreadyAtEdge = i == edgeIndex;
-        if (isAlreadyAtEdge) {
-          return false;
-        }
-        MoveChild(root, i, isLeadingEdge ? 0 : root.children.size());
-        return true;
+      if (!IsLeafFor(root.children[i], moving)) {
+        continue;
       }
+      const bool isAlreadyAtEdge = i == edgeIndex;
+      if (isAlreadyAtEdge) {
+        return false;
+      }
+      MoveChild(root, i, isLeadingEdge ? 0 : root.children.size());
+      return true;
     }
   }
   // Detaching can collapse the root into a leaf, or into a split along the

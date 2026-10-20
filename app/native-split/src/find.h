@@ -307,19 +307,19 @@ inline void SyncToggles(void* findBarView) {
     const int flagToggleId = ToggleIdOfFlag(info.flag);
     const bool isNewToggle = !edge::FindToggle(findBarView, flagToggleId);
     void* flagToggle = EnsureToggle(findBarView, flagToggleId, &isAdded);
-    const bool isStartingOn =
-        flagToggle && isNewToggle && find_flags::IsDefaultOn(info.flag);
+    if (!flagToggle) {
+      continue;
+    }
+    const bool isStartingOn = isNewToggle && find_flags::IsDefaultOn(info.flag);
     if (isStartingOn) {
       edge::FindToggleSetOn(flagToggle, true);
     }
-    if (flagToggle) {
-      const std::u16string title = Utf16FromUtf8(find_flags::SwitchTitle(info));
-      edge::FindToggleSetTitle(flagToggle, Utf16Of(title));
-      isFlagVisibilityChanged =
-          isFlagVisibilityChanged ||
-          edge::ViewGetVisible(flagToggle) != isShowingFlags;
-      edge::SetViewVisible(flagToggle, isShowingFlags);
-    }
+    const std::u16string title = Utf16FromUtf8(find_flags::SwitchTitle(info));
+    edge::FindToggleSetTitle(flagToggle, Utf16Of(title));
+    isFlagVisibilityChanged =
+        isFlagVisibilityChanged ||
+        edge::ViewGetVisible(flagToggle) != isShowingFlags;
+    edge::SetViewVisible(flagToggle, isShowingFlags);
   }
   void* ask = EnsureToggle(findBarView, off::FINDTOGGLE_id_ask, &isAdded);
   if (regExp) {
