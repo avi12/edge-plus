@@ -513,6 +513,24 @@ inline constexpr uintptr_t ThemeService_GetColorProviderKey = 0xfcf25c;
 // extension's color for `id`, false when the theme did not set it. Its colors
 // are a table of 8-byte {int id, SkColor} entries.
 inline constexpr uintptr_t BrowserThemePack_GetColor = 0x87d5030;
+// EdgeTabStyleViews::PaintInactiveTabBackground (rva 0x27d2448) +0x75: the return
+// address of its call to PaintTabBackground, on the stack whenever a tab other
+// than the active one paints its fill (a hovered one).
+inline constexpr uintptr_t
+    EdgeTabStyleViews_PaintInactiveTabBackground_PaintTabBackground_return =
+        0x27d24bd;
+// EdgeTabStyleViews::CalculateTargetColors (rva 0x28a9190) +0xbd / +0xcf: the
+// return addresses of its two EdgeGetTabBackgroundColor calls (the active and
+// the inactive fill), which it blends into a tab's hover target.
+inline constexpr uintptr_t
+    EdgeTabStyleViews_CalculateTargetColors_active_return = 0x28a924d;
+inline constexpr uintptr_t
+    EdgeTabStyleViews_CalculateTargetColors_inactive_return = 0x28a925f;
+// EdgeTabStyleViews::PaintTab's cold part: after a SaveLayerAlpha at the tab's
+// hover (throb) value it paints the tab as active (PaintTabBackground, active =
+// true); 0x4716481 is that call's return address.
+inline constexpr uintptr_t EdgeTabStyleViews_PaintTab_hover_layer_return =
+    0x4716481;
 // The OS light/dark signal does NOT come through Edge. ui::NativeThemeObserver
 // is a base::CheckedObserver (the observer list uses CheckedObserverAdapter), so
 // a hand-rolled observer object would have to fake a weak-ptr factory. Instead

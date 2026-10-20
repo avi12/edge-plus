@@ -340,6 +340,36 @@ inline bool IsEdgeForeground() {
 // How far an unfocused window pulls the selected fill toward its rail: enough to
 // read as quieter, not enough to vanish on a pale rail.
 inline constexpr uint32_t kVTabInactiveRailPercent = 30;
+// How much of the selected fill a hovered tab shows over the chrome ground.
+inline constexpr uint32_t kHoverFillPercent = 18;
+// The selected and the hovered tab both read the selected-fill id; only the
+// caller tells them apart. Edge paints a hovered tab as the active one, at the
+// hover's opacity, on a layer over its inactive fill (EdgeTabStyleViews::PaintTab),
+// and a custom theme's selected fill stands for every tab state, so the hover
+// came out the full selected colour. The return addresses of that hover-layer
+// paint, of the inactive fill (PaintInactiveTabBackground) and of the hover
+// target (CalculateTargetColors) on the stack of the pack read mark a hover read.
+inline constexpr ULONG kPaintStackDepth = 8;
+inline bool IsReadForHover() {
+  void* frames[kPaintStackDepth] = {};
+  const USHORT count =
+      CaptureStackBackTrace(0, kPaintStackDepth, frames, nullptr);
+  const void* hoverCallers[] = {
+      edge::At(rva::EdgeTabStyleViews_PaintTab_hover_layer_return),
+      edge::At(rva::EdgeTabStyleViews_CalculateTargetColors_active_return),
+      edge::At(rva::EdgeTabStyleViews_CalculateTargetColors_inactive_return),
+      edge::At(
+          rva::
+              EdgeTabStyleViews_PaintInactiveTabBackground_PaintTabBackground_return)};
+  for (USHORT i = 0; i < count; i++) {
+    for (const void* caller : hoverCallers) {
+      if (frames[i] == caller) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 using GetColor_t = bool(__fastcall*)(void*, int, uint32_t*);
 inline GetColor_t o_getcolor = nullptr;
 inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
@@ -366,9 +396,20 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
       const bool isDimmed =
           isInactive &&
           o_getcolor(pack, off::VTABCOLOR_background_inactive, &inactiveRail);
-      *out = isDimmed ? theme_tone::Blend(fill, inactiveRail,
-                                          kVTabInactiveRailPercent)
-                      : fill;
+      const uint32_t selectedFill =
+          isDimmed
+              ? theme_tone::Blend(fill, inactiveRail, kVTabInactiveRailPercent)
+              : fill;
+      // Edge paints a hovered tab with this same id; a hover is only a tint of
+      // the fill over the chrome ground, as Edge's own themes keep it.
+      uint32_t ground = kNeonRail;
+      const bool isGroundRead =
+          isTextDark && o_getcolor(pack, off::THEMECOLOR_toolbar, &ground);
+      const bool isHoveredTab =
+          IsReadForHover() && (!isTextDark || isGroundRead);
+      *out = isHoveredTab
+                 ? theme_tone::Blend(ground, selectedFill, kHoverFillPercent)
+                 : selectedFill;
       return true;
     }
     // Behind a light label (the neon theme) the chrome goes near-black (the
