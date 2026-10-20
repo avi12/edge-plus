@@ -10,6 +10,7 @@ internal static class Program {
     ("switches", SwitchesTests.Run),
     ("settings", SettingsTests.Run),
     ("config wire", ConfigWireTests.Run),
+    ("edge build", EdgeBuildTests.Run),
   ];
 
   private static int Main() {

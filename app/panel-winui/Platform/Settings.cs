@@ -168,6 +168,11 @@ internal sealed class Settings {
     Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
   };
 
+  // Every load-change-save-apply sequence holds this, so the UI's actions and
+  // the background watchers (EdgeWatch, ThemeWatch) never interleave on the
+  // file or on the DLL.
+  public static object Gate { get; } = new();
+
   public Features Features { get; set; } = new();
   public Theming Theming { get; set; } = new();
   // The msedge.dll build last seen running, so a different one is recognized
