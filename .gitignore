@@ -14,3 +14,4 @@ extension/.svelte-check/
 
 # Claude Code agent worktrees
 .claude/worktrees/
+__pycache__/
