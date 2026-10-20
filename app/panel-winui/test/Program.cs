@@ -17,6 +17,7 @@ internal static class Program {
     ("startup entry", StartupEntryTests.Run),
     ("wording", WordingTests.Run),
     ("resize handles", ResizeHandlesTests.Run),
+    ("keyed list", KeyedListTests.Run),
   ];
 
   private static int Main() {

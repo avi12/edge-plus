@@ -61,6 +61,10 @@ public sealed partial class MainWindow : Window {
     _startupCard.Toggled += isOn => _ = RunAndReportAsync(
         () => PanelActions.SetStartWithWindows(isOn));
     CardList.Children.Add(_startupCard.View);
+    // The cards under the theming card glide as its list grows or shrinks.
+    Motion.Animate(CardList, Motion.Reposition);
+    // Turning Windows' "Animation effects" off or on applies at once.
+    WindowSubclass.SettingChanged += Motion.Refresh;
 
     // Coming back to the panel picks up themes installed in Edge meanwhile.
     Activated += (_, e) => {
@@ -210,7 +214,8 @@ public sealed partial class MainWindow : Window {
       presenter.PreferredMaximumWidth = width;
       presenter.PreferredMinimumHeight = (int)Math.Round(MinimumHeight * scale);
     }
-    // The width is fixed, so offer no horizontal resize handle either.
-    _ = WindowSubclass.MakeVerticalResizeOnly(this);
+    // The width is fixed, so offer no horizontal resize handle either (and
+    // hear about Windows setting changes).
+    _ = WindowSubclass.Attach(this);
   }
 }

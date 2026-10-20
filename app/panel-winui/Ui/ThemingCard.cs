@@ -79,6 +79,10 @@ internal sealed class ThemingCard {
     _body.Children.Add(PickerRow(Wording.WhenDark, _darkPicker));
     _body.Children.Add(_themeList);
     _card.SetBody(_body);
+    // A theme added or removed slides in or out, and the rows after it move to
+    // make room; the card grows or shrinks with it.
+    Motion.Animate(_themeList, Motion.AddDelete);
+    Motion.Animate(_body, Motion.Reposition);
   }
 
   public FrameworkElement View => _card.View;
@@ -96,25 +100,45 @@ internal sealed class ThemingCard {
     Fill(_darkPicker, options, state.Theming.Dark);
     _isUpdating = false;
 
-    _themeList.Children.Clear();
+    // Each row keyed by everything it shows, so a row that changed is replaced
+    // and one that did not is left alone (and does not re-animate).
+    var rows = new Dictionary<string, Func<FrameworkElement>>(StringComparer.Ordinal);
+    var order = new List<string>();
+    void Want(string key, Func<FrameworkElement> create) {
+      order.Add(key);
+      rows[key] = create;
+    }
     foreach (ThemeEntry theme in state.Theming.Themes) {
       string badge = theme.Source == ThemeSource.Store ? Wording.StoreBadge : Wording.LocalBadge;
-      _themeList.Children.Add(ThemeRow(theme.Id, theme.Name, [badge], isRemovable: true));
+      Want(RowKey(theme.Id, theme.Name, [badge], isRemovable: true),
+           () => ThemeRow(theme.Id, theme.Name, [badge], isRemovable: true));
     }
     foreach (InstalledTheme theme in state.EdgeThemes) {
       string[] badges = theme.IsActive
           ? [Wording.InUseBadge, Wording.InstalledInEdgeBadge]
           : [Wording.InstalledInEdgeBadge];
-      _themeList.Children.Add(ThemeRow(theme.Id, theme.Name, badges, isRemovable: false));
+      Want(RowKey(theme.Id, theme.Name, badges, isRemovable: false),
+           () => ThemeRow(theme.Id, theme.Name, badges, isRemovable: false));
     }
-    bool hasNoThemes = _themeList.Children.Count == 0;
+    bool hasNoThemes = order.Count == 0;
     if (hasNoThemes) {
-      _themeList.Children.Add(new TextBlock {
+      Want(EmptyRowKey, () => new TextBlock {
         Text = Wording.NoThemes,
         Style = StyleKeys.Get(StyleKeys.CardDescription),
       });
     }
+    KeyedList.Sync(_themeList.Children, order, child => (string)((FrameworkElement)child).Tag,
+                   key => {
+                     FrameworkElement row = rows[key]();
+                     row.Tag = key;
+                     return row;
+                   });
   }
+
+  private const string EmptyRowKey = "empty";
+
+  private static string RowKey(string id, string name, string[] badges, bool isRemovable) =>
+      string.Join('\n', [id, name, string.Join(',', badges), isRemovable.ToString()]);
 
   private Grid StoreRow() {
     var row = new Grid { ColumnSpacing = ColumnGap };
