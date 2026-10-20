@@ -24,9 +24,11 @@ const REAPPLY_DELAYS: [std::time::Duration; 3] = [
 const UNLOAD_POLLS: u32 = 40;
 const UNLOAD_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(100);
 const SPLIT_MODULE: &str = "fixedge-split.dll";
-// DETACHED_PROCESS | CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB: the dev-mode
-// waiter must outlive the panel window and Edge's job object.
-const DETACHED_FLAGS: u32 = 0x0000_0008 | 0x0800_0000 | 0x0100_0000;
+const DETACHED_PROCESS: u32 = 0x0000_0008;
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
+// The dev-mode waiter must outlive the panel window and Edge's job object.
+const DETACHED_FLAGS: u32 = DETACHED_PROCESS | CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB;
 
 /// The whole state the UI renders.
 #[derive(Serialize)]
