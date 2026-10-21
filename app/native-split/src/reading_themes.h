@@ -29,8 +29,9 @@ enum class ReadingTheme : int32_t {
 };
 
 struct ThemeInfo {
-  ReadingTheme theme;
-  const char* name;  // learning_tools' themeName, as Edge's theme table has it
+  ReadingTheme theme = ReadingTheme::kSepia;
+  // learning_tools' themeName, as Edge's theme table has it.
+  const char* name = "";
 };
 
 inline constexpr std::array<ThemeInfo, 12> kThemes = {{
@@ -51,7 +52,8 @@ inline constexpr std::array<ThemeInfo, 12> kThemes = {{
 // The theme a number from the wire names, or false when it is not one of the
 // twelve (anything else is ignored). Looked up, never cast, so no other number
 // ever becomes a ReadingTheme.
-constexpr bool ThemeOf(int32_t value, ReadingTheme* theme) {
+[[nodiscard]] constexpr bool ThemeOf(int32_t value,
+                                     ReadingTheme* theme) noexcept {
   for (const ThemeInfo& info : kThemes) {
     if (static_cast<int32_t>(info.theme) == value) {
       *theme = info.theme;
@@ -61,15 +63,16 @@ constexpr bool ThemeOf(int32_t value, ReadingTheme* theme) {
   return false;
 }
 
-constexpr bool IsOffered(int32_t value) {
+[[nodiscard]] constexpr bool IsOffered(int32_t value) noexcept {
   ReadingTheme ignored = ReadingTheme::kSepia;
   return ThemeOf(value, &ignored);
 }
 
 // The theme a Windows mode asks for, or false when the choice for it is not one
 // of the twelve.
-constexpr bool ThemeForMode(bool isDark, int32_t lightChoice,
-                            int32_t darkChoice, ReadingTheme* theme) {
+[[nodiscard]] constexpr bool ThemeForMode(bool isDark, int32_t lightChoice,
+                                          int32_t darkChoice,
+                                          ReadingTheme* theme) noexcept {
   return ThemeOf(isDark ? darkChoice : lightChoice, theme);
 }
 

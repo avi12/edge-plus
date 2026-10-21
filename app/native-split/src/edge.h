@@ -1116,8 +1116,9 @@ inline void SetReadingTheme(void* browserContext, int32_t theme) {
   // An empty libc++ std::string (short, length 0): the callee owns and frees it,
   // and frees nothing for a short one.
   struct EmptyString {
-    uint64_t words[3];
+    uint64_t words[3] = {};
   };
+  static_assert(sizeof(EmptyString) == 24, "a libc++ std::string is 24 bytes");
   EmptyString noSource{};
   using SetFn = void(__fastcall*)(const void*, int32_t, EmptyString*);
   reinterpret_cast<SetFn>(At(edge155::rva::DistilledPagePrefs_SetTheme))(
