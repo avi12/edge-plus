@@ -26,28 +26,6 @@ export enum Feature {
   ReadingTheme = "readingTheme"
 }
 
-/** A reading mode page theme, in the grid's order; the values match `ReadingTheme` in settings.rs. */
-export enum ReadingTheme {
-  Sepia = "sepia",
-  Light = "light",
-  Grey = "grey",
-  Blue = "blue",
-  Yellow = "yellow",
-  Green = "green",
-  Lavender = "lavender",
-  LightBlue = "lightBlue",
-  SkyBlue = "skyBlue",
-  LightGreen = "lightGreen",
-  Black = "black",
-  DarkGrey = "darkGrey"
-}
-
-/** The reading mode theme for each Windows mode; matches `ReadingMode` in settings.rs. */
-export interface ReadingMode {
-  light: ReadingTheme;
-  dark: ReadingTheme;
-}
-
 /** A newly seen Edge build and what it switched off (often nothing); matches `BuildChange` in edge_build.rs. */
 export interface EdgeUpdate {
   edgeBuild: string;
@@ -110,7 +88,6 @@ export interface Features {
 export interface AppState {
   features: Features;
   theming: Theming;
-  readingMode: ReadingMode;
   /** Themes installed in Edge that the panel did not add. */
   edgeThemes: EdgeTheme[];
   edgeRunning: boolean;
@@ -145,7 +122,6 @@ enum Command {
   SetLivePreview = "set_live_preview",
   SetTabSpine = "set_tab_spine",
   SetReadingTheme = "set_reading_theme",
-  SetReadingModeTheme = "set_reading_mode_theme",
   AddStoreTheme = "add_store_theme",
   AddLocalTheme = "add_local_theme",
   RemoveTheme = "remove_theme",
@@ -199,13 +175,6 @@ export function setTabSpine(enabled: boolean): Promise<AppState> {
 
 export function setReadingTheme(enabled: boolean): Promise<AppState> {
   return invoke<AppState>(Command.SetReadingTheme, { enabled });
-}
-
-export function setReadingModeTheme(mode: Mode, theme: ReadingTheme): Promise<AppState> {
-  return invoke<AppState>(Command.SetReadingModeTheme, {
-    mode,
-    theme
-  });
 }
 
 export function addStoreTheme(url: string): Promise<AppState> {

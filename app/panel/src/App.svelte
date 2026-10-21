@@ -1,9 +1,8 @@
 <script lang="ts">
   import FeatureCard from "@/components/FeatureCard.svelte";
-  import ReadingModeCard from "@/components/ReadingModeCard.svelte";
   import ThemingCard from "@/components/ThemingCard.svelte";
   import { FIND_DESCRIPTION, FIND_TITLE } from "@/lib/assistantNames";
-  import type { AppState, ReadingTheme } from "@/lib/bridge";
+  import type { AppState } from "@/lib/bridge";
   import * as bridge from "@/lib/bridge";
   import { Feature, LocalThemeKind, Mode } from "@/lib/bridge";
   import { describeHeldOff, describeUnsupported, describeUpdate } from "@/lib/edgeBuild";
@@ -88,8 +87,9 @@
     "Gives the selected vertical tab a straight leading edge with a neon magenta stripe (on the " +
       "right when Edge runs right to left). Works with Theming on. Live, no restart.";
   const readingModeDescription =
-    "Reading mode uses one page theme while Windows is light and another while it is dark, set " +
-      "as Windows switches and kept for every page you open in reading mode. Live, no restart.";
+    "Reading mode uses one page theme while Windows is light and another while it is dark, " +
+      "switched as Windows switches. Pick both in reading mode: Appearance settings, Themes, " +
+      "then Light mode or Dark mode. Live, no restart.";
 
   let appState = $state<AppState | null>(null);
   let isDraggingOver = $state(false);
@@ -248,10 +248,6 @@
     appState = await bridge.setReadingTheme(value);
   }
 
-  async function onSetReadingMode(mode: Mode, theme: ReadingTheme): Promise<void> {
-    appState = await bridge.setReadingModeTheme(mode, theme);
-  }
-
   async function onAddStore(url: string): Promise<void> {
     appState = await bridge.addStoreTheme(url);
   }
@@ -336,15 +332,14 @@
       title="Square selected tab with neon spine"
     />
 
-    <ReadingModeCard
+    <FeatureCard
+      checked={appState.features.readingTheme}
       description={readingModeDescription}
       disabled={isReadingThemeHeldOff}
-      enabled={appState.features.readingTheme}
       icon={readingModeIcon}
       note={heldOffNote(isReadingThemeHeldOff)}
-      onSetMode={onSetReadingMode}
-      onToggle={onReadingTheme}
-      readingMode={appState.readingMode}
+      onchange={onReadingTheme}
+      title="Reading mode follows Windows light and dark"
     />
 
     <FeatureCard

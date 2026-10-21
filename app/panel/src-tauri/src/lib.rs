@@ -71,7 +71,6 @@ pub fn run() {
             commands::set_live_preview,
             commands::set_tab_spine,
             commands::set_reading_theme,
-            commands::set_reading_mode_theme,
             commands::add_store_theme,
             commands::add_local_theme,
             commands::remove_theme,
