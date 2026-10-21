@@ -8,15 +8,16 @@
 #include <cstddef>
 #include <cstdio>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace fixedge::web_text {
 
 // Cut `text` to at most `maxBytes` without splitting a UTF-8 character.
-[[nodiscard]] inline std::string TruncateUtf8(const std::string& text,
+[[nodiscard]] inline std::string TruncateUtf8(std::string_view text,
                                               size_t maxBytes) {
   if (text.size() <= maxBytes) {
-    return text;
+    return std::string(text);
   }
   size_t end = maxBytes;
   constexpr unsigned char kContinuationMask = 0xC0;
@@ -25,12 +26,12 @@ namespace fixedge::web_text {
                      kContinuationMask) == kContinuationBits) {
     end--;
   }
-  return text.substr(0, end);
+  return std::string(text.substr(0, end));
 }
 
-[[nodiscard]] inline bool StartsWithIgnoreCase(const std::string& text,
-                                               const char* prefix) {
-  for (size_t i = 0; prefix[i] != '\0'; i++) {
+[[nodiscard]] inline bool StartsWithIgnoreCase(std::string_view text,
+                                               std::string_view prefix) {
+  for (size_t i = 0; i < prefix.size(); i++) {
     const bool isMatch =
         i < text.size() &&
         std::tolower(static_cast<unsigned char>(text[i])) == prefix[i];
@@ -43,14 +44,14 @@ namespace fixedge::web_text {
 
 // Web pages and local files; never an edge:// page, an extension, a new tab or a
 // blank page.
-[[nodiscard]] inline bool IsWebPageUrl(const std::string& url) {
+[[nodiscard]] inline bool IsWebPageUrl(std::string_view url) {
   return StartsWithIgnoreCase(url, "http://") ||
          StartsWithIgnoreCase(url, "https://") ||
          StartsWithIgnoreCase(url, "file://");
 }
 
 // `utf8` as a double-quoted JavaScript string literal.
-[[nodiscard]] inline std::string JsStringLiteral(const std::string& utf8) {
+[[nodiscard]] inline std::string JsStringLiteral(std::string_view utf8) {
   std::string literal = "\"";
   for (const char character : utf8) {
     const unsigned char byte = static_cast<unsigned char>(character);
@@ -97,23 +98,23 @@ inline constexpr char kUnreadableAnswer[] =
     "The page gave an answer Edge could not read.";
 
 // `text` cut at every `separator`; an empty text is one empty piece.
-[[nodiscard]] inline std::vector<std::string> Split(const std::string& text,
+[[nodiscard]] inline std::vector<std::string> Split(std::string_view text,
                                                     char separator) {
   std::vector<std::string> pieces;
   size_t start = 0;
   while (true) {
     const size_t end = text.find(separator, start);
-    if (end == std::string::npos) {
-      pieces.push_back(text.substr(start));
+    if (end == std::string_view::npos) {
+      pieces.emplace_back(text.substr(start));
       return pieces;
     }
-    pieces.push_back(text.substr(start, end - start));
+    pieces.emplace_back(text.substr(start, end - start));
     start = end + 1;
   }
 }
 
 [[nodiscard]] inline std::vector<std::string> SplitFields(
-    const std::string& answer) {
+    std::string_view answer) {
   return Split(answer, kFieldSeparator);
 }
 
@@ -138,14 +139,18 @@ inline constexpr char kUnreadableAnswer[] =
 // A JavaScript expression answering `err` with the message the JavaScript
 // expression `messageExpression` gives.
 [[nodiscard]] inline std::string JsErrorAnswerFrom(
-    const std::string& messageExpression) {
-  return JsStringLiteral(std::string(kErrorTag) + kFieldSeparator) + " + " +
-         messageExpression;
+    std::string_view messageExpression) {
+  std::string answer =
+      JsStringLiteral(std::string(kErrorTag) + kFieldSeparator) + " + ";
+  answer += messageExpression;
+  return answer;
 }
 
 // A JavaScript expression answering `err` with the fixed text `message`.
-[[nodiscard]] inline std::string JsErrorAnswer(const std::string& message) {
-  return JsStringLiteral(std::string(kErrorTag) + kFieldSeparator + message);
+[[nodiscard]] inline std::string JsErrorAnswer(std::string_view message) {
+  std::string answer = std::string(kErrorTag) + kFieldSeparator;
+  answer += message;
+  return JsStringLiteral(answer);
 }
 
 }  // namespace fixedge::web_text

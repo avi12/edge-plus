@@ -9,6 +9,7 @@
 #include <cctype>
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <vector>
 #include "find_text.h"
 #include "web_text.h"
@@ -50,8 +51,7 @@ struct PageParagraphs {
 
 // The page script answers `ok US isCut(0|1) US paragraph RS paragraph ...` or
 // `err US message`. A paragraph is already one trimmed run of text.
-[[nodiscard]] inline PageParagraphs ParsePageParagraphs(
-    const std::string& raw) {
+[[nodiscard]] inline PageParagraphs ParsePageParagraphs(std::string_view raw) {
   PageParagraphs page;
   const std::vector<std::string> fields = web_text::SplitFields(raw);
   if (fields[0] == web_text::kErrorTag) {
@@ -74,7 +74,7 @@ struct PageParagraphs {
   return page;
 }
 
-[[nodiscard]] inline std::string Trim(const std::string& text) {
+[[nodiscard]] inline std::string Trim(std::string_view text) {
   size_t start = 0;
   size_t end = text.size();
   while (start < end && std::isspace(static_cast<unsigned char>(text[start]))) {
@@ -84,12 +84,12 @@ struct PageParagraphs {
          std::isspace(static_cast<unsigned char>(text[end - 1]))) {
     end--;
   }
-  return text.substr(start, end - start);
+  return std::string(text.substr(start, end - start));
 }
 
 // Squeeze every run of whitespace (a newline inside a paragraph included) to
 // one space, so a label and its text stay on one line of the prompt.
-[[nodiscard]] inline std::string Flatten(const std::string& text) {
+[[nodiscard]] inline std::string Flatten(std::string_view text) {
   std::string flat;
   bool isPendingSpace = false;
   for (const char character : text) {
@@ -145,11 +145,11 @@ struct Plan {
   bool isCut = false;  // paragraphs were left out: more than kMaxChunks fit
 };
 
-[[nodiscard]] inline std::string PromptHead(const std::string& question) {
+[[nodiscard]] inline std::string PromptHead(std::string_view question) {
   return "I am searching a web page. Below are paragraphs from it, each "
          "starting with its label in square brackets.\n"
          "Question: \"" +
-         question +
+         std::string(question) +
          "\"\nReply with the labels of the paragraphs that answer the "
          "question, "
          "most relevant first, separated by commas, like: P3, P7. Use at "
@@ -160,8 +160,7 @@ struct Plan {
 }
 
 [[nodiscard]] inline Plan PlanQuestion(
-    const std::string& typedQuestion,
-    const std::vector<Paragraph>& paragraphs) {
+    std::string_view typedQuestion, const std::vector<Paragraph>& paragraphs) {
   const std::string question =
       Flatten(web_text::TruncateUtf8(typedQuestion, kMaxQuestionChars));
   const std::string head = PromptHead(question);
@@ -201,13 +200,13 @@ struct Reply {
 };
 
 // The Copilot script answers `ok US reply text` or `err US message`.
-[[nodiscard]] inline Reply ParseReply(const std::string& raw) {
+[[nodiscard]] inline Reply ParseReply(std::string_view raw) {
   Reply reply;
   const size_t separator = raw.find(web_text::kFieldSeparator);
-  const std::string marker = raw.substr(0, separator);
-  const std::string rest = separator == std::string::npos
-                               ? std::string()
-                               : raw.substr(separator + 1);
+  const std::string_view marker = raw.substr(0, separator);
+  const std::string_view rest = separator == std::string_view::npos
+                                    ? std::string_view()
+                                    : raw.substr(separator + 1);
   if (marker == web_text::kOkTag) {
     reply.isOk = true;
     reply.text = rest;
@@ -232,7 +231,7 @@ struct Answer {
 // The paragraph number of a label such as "P12" at `start`, or -1: a P (either
 // case) not glued to a word before it, then digits not glued to a word after.
 // `end` is where the label stops.
-[[nodiscard]] inline int LabelAt(const std::string& text, size_t start,
+[[nodiscard]] inline int LabelAt(std::string_view text, size_t start,
                                  size_t* end) {
   const bool isP =
       start < text.size() && (text[start] == 'P' || text[start] == 'p');
@@ -268,7 +267,8 @@ struct Answer {
 }
 
 [[nodiscard]] inline bool IsLabelPunctuation(char character) {
-  return std::string("[]().,;:-* \t").find(character) != std::string::npos;
+  return std::string_view("[]().,;:-* \t").find(character) !=
+         std::string_view::npos;
 }
 
 // The first sentence of `text`, cut at a line end or at a full stop followed by
@@ -277,9 +277,9 @@ struct Answer {
 // not known).
 inline constexpr size_t kMaxNoteChars = 200;
 
-[[nodiscard]] inline std::string FirstSentence(const std::string& text) {
+[[nodiscard]] inline std::string FirstSentence(std::string_view text) {
   size_t end = text.find('\n');
-  if (end == std::string::npos) {
+  if (end == std::string_view::npos) {
     end = text.size();
   }
   for (size_t i = 0; i + 1 < end; i++) {
@@ -298,7 +298,7 @@ inline constexpr size_t kMaxNoteChars = 200;
 
 // What Copilot said after (or instead of) its labels: its first sentence
 // without the leading labels.
-[[nodiscard]] inline std::string NoteOf(const std::string& reply) {
+[[nodiscard]] inline std::string NoteOf(std::string_view reply) {
   const std::string text = Trim(reply);
   size_t cursor = 0;
   while (cursor < text.size()) {
@@ -316,7 +316,7 @@ inline constexpr size_t kMaxNoteChars = 200;
 
 // Read Copilot's reply to one prompt. Only labels among `offered` count; a label
 // it invented, or from another prompt, is ignored.
-[[nodiscard]] inline Answer ParseAnswer(const std::string& reply,
+[[nodiscard]] inline Answer ParseAnswer(std::string_view reply,
                                         const std::vector<int>& offered) {
   Answer answer;
   for (size_t i = 0; i < reply.size(); i++) {

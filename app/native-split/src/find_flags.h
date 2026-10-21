@@ -21,6 +21,7 @@
 #include <array>
 #include <cstddef>
 #include <string>
+#include <string_view>
 
 namespace fixedge::find_flags {
 
@@ -119,11 +120,11 @@ inline void SetOn(FlagSet* set, Flag flag, bool isOn) {
 // once, in canonical order. Typed letters that are not flags are dropped (the typed form has
 // already refused them). A typed u next to a switched-on v (or the reverse) is
 // kept as it is: the page's RegExp refuses the pair and the bar says so.
-[[nodiscard]] inline std::string Merge(const std::string& typedFlags,
+[[nodiscard]] inline std::string Merge(std::string_view typedFlags,
                                        const FlagSet& set) {
   std::string merged;
   for (const FlagInfo& info : kFlags) {
-    const bool isTyped = typedFlags.find(info.letter) != std::string::npos;
+    const bool isTyped = typedFlags.find(info.letter) != std::string_view::npos;
     if (isTyped || IsOn(set, info.flag)) {
       merged.push_back(info.letter);
     }
