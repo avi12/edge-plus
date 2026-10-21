@@ -33,6 +33,8 @@
     <Compile Include="..\Panel\Dll\ConfigWire.cs" Link="Panel\ConfigWire.cs" />
     <Compile Include="..\Panel\Edge\DevModePrompt.cs" Link="Panel\DevModePrompt.cs" />
     <Compile Include="..\Panel\Edge\EdgeBuild.cs" Link="Panel\EdgeBuild.cs" />
+    <Compile Include="..\Panel\Edge\EdgeInstall.cs" Link="Panel\EdgeInstall.cs" />
+    <Compile Include="..\Panel\Edge\EdgeSupport.cs" Link="Panel\EdgeSupport.cs" />
     <Compile Include="..\Panel\Edge\EdgeUserData.cs" Link="Panel\EdgeUserData.cs" />
     <Compile Include="..\Panel\Edge\FileVersion.cs" Link="Panel\FileVersion.cs" />
     <Compile Include="..\Panel\Platform\PanelState.cs" Link="Panel\PanelState.cs" />
