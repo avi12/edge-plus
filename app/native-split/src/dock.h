@@ -56,8 +56,9 @@ struct Plan {
   Rect preview;  // the dragged pane's rect in `result`
 };
 
-[[nodiscard]] inline int DistanceToEdge(const Rect& rect, const Point& point,
-                                        Direction edge) {
+[[nodiscard]] inline constexpr int DistanceToEdge(const Rect& rect,
+                                                  const Point& point,
+                                                  Direction edge) {
   switch (edge) {
     case Direction::kLeft:
       return point.x - rect.x;
@@ -71,7 +72,8 @@ struct Plan {
 }
 
 // The outer band's depth for edge `edge` of `layout`.
-[[nodiscard]] inline int RootBand(const Rect& layout, Direction edge) {
+[[nodiscard]] inline constexpr int RootBand(const Rect& layout,
+                                            Direction edge) {
   const bool isVerticalEdge =
       edge == Direction::kLeft || edge == Direction::kRight;
   const int extent = isVerticalEdge ? layout.width : layout.height;
@@ -83,7 +85,8 @@ struct Plan {
 // Whether a pane-relative position (`paneX`, `paneY` in 0..1) is still within
 // the hold band of edge `edge`, so a zone already showing does not flip at the
 // diagonal.
-[[nodiscard]] inline bool HoldsEdge(Direction edge, float paneX, float paneY) {
+[[nodiscard]] inline constexpr bool HoldsEdge(Direction edge, float paneX,
+                                              float paneY) {
   switch (edge) {
     case Direction::kLeft:
       return paneX < kEdgeHold;
@@ -97,7 +100,8 @@ struct Plan {
 }
 
 // The nearest edge by the pane's diagonals (FlexLayout): no dead corners.
-[[nodiscard]] inline Direction DiagonalEdge(float paneX, float paneY) {
+[[nodiscard]] inline constexpr Direction DiagonalEdge(float paneX,
+                                                      float paneY) {
   const bool isBelowMainDiagonal = paneY >= paneX;        // the "\" diagonal
   const bool isBelowAntiDiagonal = paneY >= 1.f - paneX;  // the "/" diagonal
   if (isBelowMainDiagonal) {

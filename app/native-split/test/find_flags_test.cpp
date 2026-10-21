@@ -20,6 +20,9 @@ void Check(bool ok, const char* what) {
   }
 }
 
+// The flag set is constexpr: a bar's first switches hold at compile time.
+static_assert(IsDefaultOn(Flag::kMultiline) && !IsDefaultOn(Flag::kSticky));
+
 void CheckTable() {
   std::string letters;
   for (const FlagInfo& info : kFlags) {

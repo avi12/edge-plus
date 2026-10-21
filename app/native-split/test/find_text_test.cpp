@@ -20,6 +20,11 @@ void Check(bool ok, const char* what) {
   }
 }
 
+// Stepping and the flag check are constexpr: they hold at compile time.
+static_assert(StepMatch(kNoMatch, 3, Step::kNext) == 0);
+static_assert(StepMatch(0, 3, Step::kPrevious) == 2);
+static_assert(AreRegExpFlags("gim") && !AreRegExpFlags("gg"));
+
 // The fields joined by the field separator (a hex escape would swallow the
 // digit after it).
 std::string Fields(std::initializer_list<std::string> fields) {

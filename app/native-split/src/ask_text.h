@@ -257,7 +257,8 @@ struct Answer {
   return number;
 }
 
-[[nodiscard]] inline bool Contains(std::span<const int> numbers, int number) {
+[[nodiscard]] inline constexpr bool Contains(std::span<const int> numbers,
+                                             int number) {
   for (const int candidate : numbers) {
     if (candidate == number) {
       return true;
@@ -266,7 +267,7 @@ struct Answer {
   return false;
 }
 
-[[nodiscard]] inline bool IsLabelPunctuation(char character) {
+[[nodiscard]] inline constexpr bool IsLabelPunctuation(char character) {
   return std::string_view("[]().,;:-* \t").find(character) !=
          std::string_view::npos;
 }

@@ -73,7 +73,7 @@ inline constinit std::atomic<bool> g_isTimerRunning{false};
 // The fill the shared corner class brush holds (0 until the hook answers one).
 inline constinit theme_tone::Argb g_paintedFill = 0;
 
-inline COLORREF ColorRefOf(theme_tone::Argb color) {
+inline constexpr COLORREF ColorRefOf(theme_tone::Argb color) {
   return RGB((color >> theme_tone::kRedShift) & theme_tone::kChannelMask,
              (color >> theme_tone::kGreenShift) & theme_tone::kChannelMask,
              (color >> theme_tone::kBlueShift) & theme_tone::kChannelMask);

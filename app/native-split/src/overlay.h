@@ -60,7 +60,7 @@ inline uint32_t Pixel(COLORREF color, float alpha) {
          (blue << theme_tone::kBlueShift);
 }
 
-inline float FillAlpha(Style style) {
+inline constexpr float FillAlpha(Style style) {
   switch (style) {
     case Style::kRoot:
       return kRootFillAlpha;

@@ -22,6 +22,10 @@ void Check(bool ok, const char* what) {
   }
 }
 
+// The edge geometry is constexpr: the diagonals hold at compile time.
+static_assert(DiagonalEdge(0.1f, 0.5f) == Direction::kLeft);
+static_assert(DiagonalEdge(0.5f, 0.9f) == Direction::kDown);
+
 bool HasBounds(const Rect& rect, int x, int y, int width, int height) {
   return rect.x == x && rect.y == y && rect.width == width &&
          rect.height == height;

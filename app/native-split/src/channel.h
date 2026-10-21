@@ -69,12 +69,13 @@ static_assert(CodeOf(Command::kMenuArrowBase) + kDirectionCount <=
 }
 
 // Whether `wparam` is one of the `count` codes that start at `base`.
-[[nodiscard]] inline bool IsInRange(WPARAM wparam, Command base, WPARAM count) {
+[[nodiscard]] inline constexpr bool IsInRange(WPARAM wparam, Command base,
+                                              WPARAM count) {
   return wparam >= CodeOf(base) && wparam < CodeOf(base) + count;
 }
 
 // The operand of a ranged code (its offset from `base`).
-[[nodiscard]] inline int OperandOf(WPARAM wparam, Command base) {
+[[nodiscard]] inline constexpr int OperandOf(WPARAM wparam, Command base) {
   return static_cast<int>(wparam) - static_cast<int>(CodeOf(base));
 }
 

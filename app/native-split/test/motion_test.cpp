@@ -21,6 +21,10 @@ void Check(bool ok, const char* what) {
   }
 }
 
+// The curve is constexpr: its ends hold at compile time.
+static_assert(Ease(0.0) == 0.0 && Ease(1.0) == 1.0);
+static_assert(Same(Rect{1, 2, 3, 4}, Rect{1, 2, 3, 4}));
+
 // How many evenly spaced points the easing curve is sampled at, and how far a
 // sample may dip below the previous one before it counts as non-monotonic.
 constexpr int kEaseSamples = 100;

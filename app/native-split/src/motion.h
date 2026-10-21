@@ -22,8 +22,9 @@ inline constexpr int kBisectionSteps = 40;
 // One axis of a CSS-style cubic bezier running from 0 to 1, with its two
 // control points at `firstControl` and `secondControl` on that axis, evaluated
 // at curve parameter `curveTime`.
-[[nodiscard]] inline double Bezier(double curveTime, double firstControl,
-                                   double secondControl) {
+[[nodiscard]] inline constexpr double Bezier(double curveTime,
+                                             double firstControl,
+                                             double secondControl) {
   const double remaining = 1.0 - curveTime;
   return 3 * remaining * remaining * curveTime * firstControl +
          3 * remaining * curveTime * curveTime * secondControl +
@@ -32,7 +33,7 @@ inline constexpr int kBisectionSteps = 40;
 
 // Progress (0..1 linear time) -> eased progress. Solves x(t) = progress by
 // bisection (monotonic for x control points in [0,1]), then returns y(t).
-[[nodiscard]] inline double Ease(double progress) {
+[[nodiscard]] inline constexpr double Ease(double progress) {
   if (progress <= 0.0) {
     return 0.0;
   }
@@ -54,7 +55,8 @@ inline constexpr int kBisectionSteps = 40;
   return Bezier(curveTime, kY1, kY2);
 }
 
-[[nodiscard]] inline bool Same(const Rect& first, const Rect& second) {
+[[nodiscard]] inline constexpr bool Same(const Rect& first,
+                                         const Rect& second) {
   return first.x == second.x && first.y == second.y &&
          first.width == second.width && first.height == second.height;
 }

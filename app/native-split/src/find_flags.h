@@ -58,7 +58,7 @@ struct FlagSet {
   unsigned bits = 0;
 };
 
-[[nodiscard]] inline unsigned BitOf(Flag flag) {
+[[nodiscard]] inline constexpr unsigned BitOf(Flag flag) {
   return 1u << static_cast<unsigned>(flag);
 }
 
@@ -67,20 +67,20 @@ inline constexpr char kAlwaysOnFlag = 'g';
 
 // What a bar starts with: ^ and $ are line edges (m), exactly as the search
 // behaved before there were switches.
-[[nodiscard]] inline FlagSet DefaultFlags() {
+[[nodiscard]] inline constexpr FlagSet DefaultFlags() {
   return FlagSet{BitOf(Flag::kMultiline)};
 }
 
-[[nodiscard]] inline bool IsDefaultOn(Flag flag) {
+[[nodiscard]] inline constexpr bool IsDefaultOn(Flag flag) {
   return (DefaultFlags().bits & BitOf(flag)) != 0;
 }
 
-[[nodiscard]] inline bool IsOn(const FlagSet& set, Flag flag) {
+[[nodiscard]] inline constexpr bool IsOn(const FlagSet& set, Flag flag) {
   return (set.bits & BitOf(flag)) != 0;
 }
 
 // The flag that cannot be on together with `flag` (u and v), if there is one.
-[[nodiscard]] inline bool HasExclusive(Flag flag, Flag* other) {
+[[nodiscard]] inline constexpr bool HasExclusive(Flag flag, Flag* other) {
   if (flag == Flag::kUnicode) {
     *other = Flag::kUnicodeSets;
     return true;
@@ -93,7 +93,7 @@ inline constexpr char kAlwaysOnFlag = 'g';
 }
 
 // Turn a flag on or off; turning one on turns off the one it excludes.
-inline void SetOn(FlagSet* set, Flag flag, bool isOn) {
+inline constexpr void SetOn(FlagSet* set, Flag flag, bool isOn) {
   if (!isOn) {
     set->bits &= ~BitOf(flag);
     return;

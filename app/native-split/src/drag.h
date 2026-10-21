@@ -68,7 +68,7 @@ inline Rect SplitToScreen(void* mcv, const Rect& rect) {
               screenBottomRight.y - screenTopLeft.y};
 }
 
-inline overlay::Style StyleOf(dock::Zone zone) {
+inline constexpr overlay::Style StyleOf(dock::Zone zone) {
   switch (zone) {
     case dock::Zone::kRootEdge:
       return overlay::Style::kRoot;
