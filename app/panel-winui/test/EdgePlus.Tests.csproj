@@ -52,6 +52,7 @@
     <Compile Include="..\Panel\Themes\ThemeOrder.cs" Link="Panel\ThemeOrder.cs" />
     <Compile Include="..\Panel\Themes\ThemePacker.cs" Link="Panel\ThemePacker.cs" />
     <Compile Include="..\Panel\Ui\KeyedList.cs" Link="Panel\KeyedList.cs" />
+    <Compile Include="..\Panel\Ui\PanelLayout.cs" Link="Panel\PanelLayout.cs" />
     <Compile Include="..\Panel\Ui\Wording.cs" Link="Panel\Wording.cs" />
   </ItemGroup>
 </Project>

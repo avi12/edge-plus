@@ -17,6 +17,8 @@ internal static class StyleKeys {
   public const string DropVeilFrame = "DropVeilFrameStyle";
   // WinUI's own.
   public const string AccentButton = "AccentButtonStyle";
+  // The header over a group of cards, as Windows Settings sets it.
+  public const string SectionHeader = "BodyStrongTextBlockStyle";
 
   public static Style Get(string key) => (Style)Application.Current.Resources[key];
 }

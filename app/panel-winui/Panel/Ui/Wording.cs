@@ -24,6 +24,18 @@ internal static class Wording {
   private const string RegExpName = "RegExp";
 
   public const string OpenEdgeHint = "Open Edge to apply changes.";
+
+  // A section's header (PanelLayout).
+  public static string SectionName(Section section) => section switch {
+    Section.TabsAndWindows => "Tabs and windows",
+    Section.LookAndThemes => "Look and themes",
+    Section.Browsing => "Browsing",
+    Section.EdgePlusItself => "Edge+ itself",
+    _ => throw new ArgumentOutOfRangeException(nameof(section)),
+  };
+
+  // What a card that needs another feature says while that one is off.
+  public static string NeedsFeature(Feature needed) => $"Turn on {For(needed).Title} to use this.";
   // The footer's "by Avi".
   public const string By = "by";
   public const string DropHint = "Drop a theme folder, .zip or .crx to add it";
