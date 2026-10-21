@@ -10,7 +10,7 @@ internal static class Switches {
   public const string Background = "--background";
 
   // Re-run headless as the dev-mode waiter (DevModePrompt), never showing a
-  // window. Same switch the Tauri panel uses, so either panel's waiter is one.
+  // window.
   public const string DevModeWaiter = "--quiet-dev-mode-after-exit";
 
   public static bool IsPresent(string[] commandLine, string name) =>

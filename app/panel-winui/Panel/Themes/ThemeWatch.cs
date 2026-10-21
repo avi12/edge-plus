@@ -16,7 +16,7 @@ internal sealed record ThemeRefresh(string Id, string? Error);
 // is on. When one settles (the same new fingerprint on two polls in a row, so a
 // save that writes several files is taken once) the theme is re-checked and
 // re-installed (ThemeLibrary.RefreshLocal); a broken edit is reported and the
-// theme Edge is showing is left alone. The Tauri panel's watch.rs.
+// theme Edge is showing is left alone.
 internal sealed class ThemeWatch {
   private static readonly TimeSpan s_pollInterval = TimeSpan.FromSeconds(1);
 

@@ -16,8 +16,7 @@ internal enum HitTest {
 // The panel's width is fixed, so its side borders and corners must not offer a
 // horizontal resize cursor either. Windows picks that cursor from the
 // WM_NCHITTEST answer, which WindowSubclass rewrites with this: side borders
-// become plain border, corners become the top / bottom edges. The Tauri
-// panel's edge-native window.rs.
+// become plain border, corners become the top / bottom edges.
 internal static class ResizeHandles {
   public static int VerticalOnly(int hit) => (HitTest)hit switch {
     HitTest.Left or HitTest.Right => (int)HitTest.Border,

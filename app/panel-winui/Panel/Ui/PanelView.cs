@@ -12,10 +12,10 @@ using Windows.Storage.Pickers;
 
 namespace EdgePlus;
 
-// The window's content: a card per feature, in the Tauri panel's order, the
-// notices above them and the footer under them. It renders whatever
+// The window's content: a card per feature, grouped into titled sections
+// (PanelLayout), the notices above them and the footer under them. It renders whatever
 // PanelState the last action returned and never touches settings, Edge or the
-// DLL itself (PanelActions does). The Tauri panel's App.svelte.
+// DLL itself (PanelActions does).
 //
 // Built in C#, not XAML, and composed from WinUI's controls rather than
 // subclassing them: this assembly is swapped live in a collectible load
@@ -34,18 +34,18 @@ internal sealed class PanelView : IDisposable {
   private static readonly DoubleCollection s_veilDashes = [4, 3];
   private static readonly TimeSpan s_veilFade = TimeSpan.FromMilliseconds(120);
 
-  // The cards after the theming card, top to bottom (the Tauri panel's order);
-  // reading mode has a card of its own, the rest are plain switches, and the
-  // start-at-sign-in card comes last.
-  private static readonly Feature[] s_cardsAfterTheming = [
-    Feature.WebUiFollowsTheme, Feature.TabSpine, Feature.ReadingTheme, Feature.EnhancedFind,
-    Feature.LivePreview, Feature.QuietDevMode, Feature.ProtocolHandlers,
-  ];
+  // Between one section's last card and the next section's header.
+  private const double SectionSpacing = 20;
+  // A section header's gap to its first card, and its inset to line up with
+  // the cards' text, as Windows Settings sets them.
+  private static readonly Thickness s_sectionHeaderMargin = new(4, 0, 0, 4);
+  // How far a card that needs another sits in from that one.
+  private const double DependentIndent = 28;
 
   private readonly Window _window;
   private readonly ContentControl _slot;
   private readonly Grid _root = new() { AllowDrop = true };
-  private readonly StackPanel _cardList = new() { Spacing = CardSpacing };
+  private readonly StackPanel _sectionList = new() { Spacing = SectionSpacing };
   private readonly TextBlock _openEdgeHint;
   private readonly InfoBar _buildNotice = new() {
     IsClosable = false,
@@ -58,15 +58,10 @@ internal sealed class PanelView : IDisposable {
   private readonly Grid _dropVeil;
   private readonly Dictionary<Feature, FeatureCard> _switchCards = [];
   private readonly ThemingCard _themingCard;
-  private readonly ReadingModeCard _readingModeCard;
   private readonly FeatureCard _startupCard = new(Wording.StartWithWindows);
-  private readonly EdgeWatch _edgeWatch = new();
-  private readonly ThemeWatch _themeWatch = new();
+  private readonly BackgroundService? _service;
   private readonly List<IDisposable> _hostSubscriptions = [];
   private PanelState? _state;
-  // What the last Edge update switched off; replaces the standing held-off
-  // sentence it would only repeat.
-  private string _updateNotice = "";
   private bool _isDisposed;
 
   public PanelView(Window window, ContentControl slot, IObservable<EventArgs> settingChanged,
@@ -80,21 +75,14 @@ internal sealed class PanelView : IDisposable {
       Visibility = Visibility.Collapsed,
     };
     _themingCard = new ThemingCard(RunAsync, PickLocalThemeAsync);
-    _readingModeCard = new ReadingModeCard(RunAsync);
-    AddSwitchCard(Feature.NativeSplit);
-    _cardList.Children.Add(_themingCard.View);
-    foreach (Feature feature in s_cardsAfterTheming) {
-      if (feature == Feature.ReadingTheme) {
-        _cardList.Children.Add(_readingModeCard.View);
-      } else {
-        AddSwitchCard(feature);
-      }
-    }
     _startupCard.Toggled += isOn => _ = RunAndReportAsync(
         () => PanelActions.SetStartWithWindows(isOn));
-    _cardList.Children.Add(_startupCard.View);
-    // The cards under the theming card glide as its list grows or shrinks.
-    Motion.Animate(_cardList, Motion.Reposition);
+    foreach ((Section section, CardSlot[] cards) in PanelLayout.Sections) {
+      _sectionList.Children.Add(SectionView(section, cards));
+    }
+    // The cards and sections under the theming card glide as its list grows
+    // or shrinks.
+    Motion.Animate(_sectionList, Motion.Reposition);
 
     var page = new StackPanel {
       Padding = new Thickness(ContentPadding, CardSpacing, ContentPadding, ContentPadding),
@@ -103,7 +91,7 @@ internal sealed class PanelView : IDisposable {
     page.Children.Add(_openEdgeHint);
     page.Children.Add(_buildNotice);
     page.Children.Add(_actionNotice);
-    page.Children.Add(_cardList);
+    page.Children.Add(_sectionList);
     page.Children.Add(Footer());
     _root.Children.Add(new ScrollViewer {
       Content = page,
@@ -123,21 +111,23 @@ internal sealed class PanelView : IDisposable {
     _hostSubscriptions.Add(broughtBack.Subscribe(new Observer(Refresh)));
     // Coming back to the panel picks up themes installed in Edge meanwhile.
     _window.Activated += OnActivated;
-    // Edge came up on a build not seen before; features that depend on the old
-    // msedge.dll may have been switched off.
-    _edgeWatch.BuildChanged += change => OnUiThread(() => {
-      _updateNotice = Wording.DescribeUpdate(change);
-      Refresh();
-    });
-    // A local theme edited on disk was re-checked and re-installed (or refused).
-    _themeWatch.Refreshed += refresh => OnUiThread(() => ShowActionNotice(refresh.Error ?? ""));
-    _edgeWatch.Start();
-    _themeWatch.Start();
+    // The watchers run in the background service, window or not; the window
+    // listens while it is open (and the service then raises no toast).
+    _service = BackgroundService.Current;
+    if (_service is not null) {
+      _service.IsWindowOpen = true;
+      // Edge came up on a build not seen before; features that depend on the
+      // old msedge.dll may be paused now, or back.
+      _service.BuildChanged += OnBuildChanged;
+      // A local theme edited on disk was re-checked and re-installed (or refused).
+      _service.ThemeRefreshed += OnThemeRefreshed;
+    }
     Refresh();
   }
 
-  // Undo every tie to the host's window and stop every thread, so nothing of
-  // this assembly is left referenced once the host unloads it.
+  // Undo every tie to the host's window and to the background service, so
+  // nothing of this view is left referenced once the window closes or the host
+  // unloads the panel.
   public void Dispose() {
     if (_isDisposed) {
       return;
@@ -147,11 +137,19 @@ internal sealed class PanelView : IDisposable {
     foreach (IDisposable subscription in _hostSubscriptions) {
       subscription.Dispose();
     }
-    _edgeWatch.Stop();
-    _themeWatch.Stop();
+    if (_service is not null) {
+      _service.BuildChanged -= OnBuildChanged;
+      _service.ThemeRefreshed -= OnThemeRefreshed;
+      _service.IsWindowOpen = false;
+    }
     Motion.Forget();
     _slot.Content = null;
   }
+
+  private void OnBuildChanged(BuildChange change) => OnUiThread(Refresh);
+
+  private void OnThemeRefreshed(ThemeRefresh refresh) =>
+      OnUiThread(() => ShowActionNotice(refresh.Error ?? ""));
 
   private void Refresh() => _ = RunAsync(PanelActions.Load);
 
@@ -169,11 +167,36 @@ internal sealed class PanelView : IDisposable {
         }
       });
 
-  private void AddSwitchCard(Feature feature) {
+  // A section: its header over its cards (PanelLayout), as in Windows Settings.
+  private StackPanel SectionView(Section section, CardSlot[] cards) {
+    var stack = new StackPanel { Spacing = CardSpacing };
+    stack.Children.Add(new TextBlock {
+      Text = Wording.SectionName(section),
+      Style = StyleKeys.Get(StyleKeys.SectionHeader),
+      Margin = s_sectionHeaderMargin,
+    });
+    foreach (CardSlot slot in cards) {
+      FrameworkElement view = CardView(slot);
+      if (slot.Needs is not null) {
+        view.Margin = new Thickness(DependentIndent, 0, 0, 0);
+      }
+      stack.Children.Add(view);
+    }
+    Motion.Animate(stack, Motion.Reposition);
+    return stack;
+  }
+
+  private FrameworkElement CardView(CardSlot slot) {
+    if (slot.Feature is not Feature feature) {
+      return _startupCard.View;
+    }
+    if (feature == Feature.Theming) {
+      return _themingCard.View;
+    }
     var card = new FeatureCard(Wording.For(feature));
     card.Toggled += isOn => _ = RunAndReportAsync(() => PanelActions.SetFeature(feature, isOn));
     _switchCards[feature] = card;
-    _cardList.Children.Add(card.View);
+    return card.View;
   }
 
   // Run a panel action off the UI thread (an injection can wait on Edge) and
@@ -206,26 +229,34 @@ internal sealed class PanelView : IDisposable {
   private void Render(PanelState state) {
     _state = state;
     _openEdgeHint.Visibility = state.IsEdgeRunning ? Visibility.Collapsed : Visibility.Visible;
-    string buildNotice = _updateNotice.Length > 0
-        ? _updateNotice
-        : Wording.DescribeUnsupported(state);
+    // The features this Edge build pauses, together; each card also says it.
+    string buildNotice = state.EdgeBuild is FileVersion edge
+        ? Wording.DescribePaused(edge, state.SupportedEdgeBuild, state.Paused)
+        : "";
     _buildNotice.Message = buildNotice;
     _buildNotice.IsOpen = buildNotice.Length > 0;
 
-    foreach ((Feature feature, FeatureCard card) in _switchCards) {
-      bool isHeldOff = state.IsHeldOff(feature);
-      card.Update(state.Features.IsOn(feature), isHeldOff, HeldOffNote(state, isHeldOff));
+    // A paused switch shows the user's choice (on), locked, with why; so does
+    // one whose needed feature is off.
+    foreach (CardSlot slot in PanelLayout.AllCards()) {
+      if (slot.Feature is not Feature feature) {
+        continue;
+      }
+      // The theming card renders itself below.
+      if (!_switchCards.TryGetValue(feature, out FeatureCard? card)) {
+        continue;
+      }
+      string note = Wording.DescribeFeature(state, feature);
+      bool isNeededOff = slot.Needs is Feature needed && !state.Features.IsOn(needed);
+      if (note.Length == 0 && isNeededOff) {
+        note = Wording.NeedsFeature(slot.Needs!.Value);
+      }
+      card.Update(state.Features.IsOn(feature), state.IsLocked(feature) || isNeededOff, note);
     }
-    bool isThemingHeldOff = state.IsHeldOff(Feature.Theming);
-    _themingCard.Update(state, isThemingHeldOff, HeldOffNote(state, isThemingHeldOff));
-    bool isReadingHeldOff = state.IsHeldOff(Feature.ReadingTheme);
-    _readingModeCard.Update(state, isReadingHeldOff, HeldOffNote(state, isReadingHeldOff));
+    _themingCard.Update(state, state.IsLocked(Feature.Theming),
+                        Wording.DescribeFeature(state, Feature.Theming));
     _startupCard.Update(state.IsStartWithWindows, isLocked: false, note: "");
   }
-
-  // What a locked card says about why, on the card itself.
-  private static string HeldOffNote(PanelState state, bool isHeldOff) =>
-      isHeldOff ? Wording.DescribeHeldOff(state) : "";
 
   private void ShowActionNotice(string message) {
     _actionNotice.Message = message;

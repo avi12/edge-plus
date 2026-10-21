@@ -16,14 +16,43 @@ public static class PanelEntry {
   public static IDisposable Mount(Window window, ContentControl slot,
                                   IObservable<EventArgs> settingChanged,
                                   IObservable<EventArgs> broughtBack) {
-    // Retire the old extension and native-messaging host if a version from
-    // before 2026-10-15 left them behind, and unpack the split DLL this build
-    // carries before anything injects it. Both are idempotent, so a live swap
-    // runs them again harmlessly.
-    LegacyCleanup.Run();
-    Payload.Unpack();
     return new PanelView(window, slot, settingChanged, broughtBack);
   }
+
+  // Start what runs with or without a window (BackgroundService: the Edge and
+  // theme watchers, the toast). Disposing the result stops it, so the host can
+  // unload this assembly.
+  public static IDisposable StartBackground() {
+    // Retire the old extension and native-messaging host if a version from
+    // before 2026-10-15 left them behind, and unpack the split DLL this build
+    // carries before the watcher can inject it. Both are idempotent, so a live
+    // swap runs them again harmlessly.
+    LegacyCleanup.Run();
+    Payload.Unpack();
+    MigrateStartupEntry();
+    return BackgroundService.Start();
+  }
+
+  // A sign-in entry the retired Tauri panel left now starts this panel as
+  // the windowless listener, so the Edge update watch runs from sign-in.
+  private static void MigrateStartupEntry() {
+    if (Environment.ProcessPath is not string executable) {
+      return;
+    }
+    try {
+      if (StartupEntry.MigrateFromTauri(StartupKeys.User, StartupEntry.Name, executable)) {
+        PanelLog.Write($"start at sign-in moved from the Tauri panel to {executable}");
+      }
+    } catch (Exception error) when (error is UnauthorizedAccessException or System.Security.SecurityException
+                                        or System.IO.IOException) {
+      PanelLog.Write("start at sign-in could not be moved from the Tauri panel", error);
+    }
+  }
+
+  // Whether the process stays when its window closes: while Edge+ starts with
+  // Windows it is the always-on listener for Edge updates.
+  public static bool IsResident() =>
+      StartupEntry.IsEnabled(StartupKeys.User, StartupEntry.Name);
 
   // The headless launch (Switches.DevModeWaiter): wait for Edge to exit, snooze
   // its developer-mode prompt, return.

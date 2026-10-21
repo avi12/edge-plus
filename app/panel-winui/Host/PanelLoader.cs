@@ -9,11 +9,17 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace EdgePlus;
 
-// Loads the panel (Panel\EdgePlus.Panel.csproj) into the host's window, and in
-// a dev run swaps each rebuild of it in live — the panel's version of the
-// split DLL's hot reload: tear the old panel down, unload its context, load a
-// fresh timestamped copy, mount it from the current settings. The window, the
-// process and the single-instance handling stay the host's throughout.
+// Loads the panel (Panel\EdgePlus.Panel.csproj) for the life of the process,
+// shows it in a window when there is one, and in a dev run swaps each rebuild
+// in live — the panel's version of the split DLL's hot reload: tear the old
+// panel down, unload its context, load a fresh timestamped copy, start it again
+// from the current settings. The window, the process and the single-instance
+// handling stay the host's throughout.
+//
+// The panel runs without a window too: its background service (the Edge and
+// theme watchers, the toast) is started at load, so a boot launch with no
+// window is the always-on listener, and a window, when shown, is mounted on the
+// same running panel.
 //
 // The panel lives in a collectible AssemblyLoadContext that resolves nothing
 // itself: every WinUI, WinRT and framework reference falls through to the
@@ -24,7 +30,9 @@ namespace EdgePlus;
 internal sealed class PanelLoader {
   private const string ResourceName = "panel/edgeplus-panel.dll";
   private const string EntryTypeName = "EdgePlus.PanelEntry";
+  private const string StartMethod = "StartBackground";
   private const string MountMethod = "Mount";
+  private const string ResidentMethod = "IsResident";
   private const string WaiterMethod = "RunDevModeWaiter";
   private const string PanelBuildOutputKey = "PanelBuildOutput";
   private const string RepositoryRootKey = "RepositoryRoot";
@@ -39,23 +47,19 @@ internal sealed class PanelLoader {
   private static readonly string s_copiesDirectory =
       Path.Combine(Path.GetTempPath(), "edgeplus-panel");
 
-  private readonly Window _window;
-  private readonly ContentControl _slot;
-  private readonly HostSignal _settingChanged;
-  private readonly HostSignal _broughtBack;
+  private readonly DispatcherQueue _dispatcher;
   private readonly DispatcherQueueTimer _settle;
   private FileSystemWatcher? _watcher;
   private PanelContext? _context;
-  private IDisposable? _mounted;
+  private IDisposable? _service;
   private byte[] _loadedBytes = [];
+  // The window the panel is shown in, while there is one.
+  private WindowView? _view;
+  private IDisposable? _mounted;
 
-  public PanelLoader(Window window, ContentControl slot, HostSignal settingChanged,
-                     HostSignal broughtBack) {
-    _window = window;
-    _slot = slot;
-    _settingChanged = settingChanged;
-    _broughtBack = broughtBack;
-    _settle = window.DispatcherQueue.CreateTimer();
+  public PanelLoader(DispatcherQueue dispatcher) {
+    _dispatcher = dispatcher;
+    _settle = dispatcher.CreateTimer();
     _settle.Interval = s_settleDelay;
     _settle.IsRepeating = false;
     _settle.Tick += (_, _) => SwapIfNewBuild();
@@ -74,12 +78,44 @@ internal sealed class PanelLoader {
     }
   }
 
-  // Mount the panel, and in a dev run start watching its build output.
+  // Load the panel and start its background service, and in a dev run start
+  // watching its build output.
   public void Start() {
     RemoveOldCopies();
-    Mount(ReadCurrentBuild());
+    if (!TryLoad(ReadCurrentBuild())) {
+      Swapped?.Invoke($"The panel failed to load; the reason is in {LogName}.");
+    }
     if (DevBuildOutput is string output) {
       Watch(output);
+    }
+  }
+
+  // Show the panel in `window`'s slot.
+  public void Show(Window window, ContentControl slot, HostSignal settingChanged,
+                   HostSignal broughtBack) {
+    _view = new WindowView(window, slot, settingChanged, broughtBack);
+    _ = TryMount();
+  }
+
+  // The window is closing: take the panel out of it; the panel keeps running.
+  public void Hide() {
+    _mounted?.Dispose();
+    _mounted = null;
+    if (_view is not null) {
+      _view.Slot.Content = null;
+    }
+    _view = null;
+  }
+
+  // Whether the process stays when its window closes: the panel decides (it
+  // does while Edge+ starts with Windows, so the listener keeps listening).
+  public bool IsResident() {
+    try {
+      return _context is not null
+             && _context.EntryMethod(ResidentMethod).Invoke(null, null) is true;
+    } catch (TargetInvocationException error) {
+      Log($"resident check failed: {error.InnerException ?? error}");
+      return false;
     }
   }
 
@@ -96,7 +132,7 @@ internal sealed class PanelLoader {
     // Each event restarts the settle timer, so a build's burst of writes
     // becomes one swap once it has finished.
     void OnChange(object sender, FileSystemEventArgs e) =>
-        _window.DispatcherQueue.TryEnqueue(() => {
+        _dispatcher.TryEnqueue(() => {
           _settle.Stop();
           _settle.Start();
         });
@@ -119,55 +155,69 @@ internal sealed class PanelLoader {
       return;
     }
     byte[] previous = _loadedBytes;
-    WeakReference oldContext = Unmount();
-    // A build that fails to mount must not take the window with it: the
+    WeakReference oldContext = Unload();
+    // A build that fails to load must not take the window with it: the
     // previous panel goes back, and the next build is tried as usual.
-    if (!TryMount(candidate)) {
-      Unmount();
-      _ = TryMount(previous);
+    if (!TryLoad(candidate) || !TryMount()) {
+      Unload();
+      _ = TryLoad(previous);
+      _ = TryMount();
       return;
     }
     WatchUnload(oldContext);
   }
 
-  private void Mount(byte[] assembly) {
-    if (!TryMount(assembly)) {
-      Swapped?.Invoke($"The panel failed to load; see {Path.Combine(s_copiesDirectory, LogName)}");
+  // Load a panel build and start its background service; false (and the
+  // reason in the log and the title bar) when it throws.
+  private bool TryLoad(byte[] assembly) =>
+      TryRun(() => {
+        _context = LoadCopy(assembly);
+        _loadedBytes = assembly;
+        _service = (IDisposable)_context.EntryMethod(StartMethod).Invoke(null, null)!;
+      });
+
+  // Mount the loaded panel in the window, when there is one.
+  private bool TryMount() {
+    if (_view is null || _context is null) {
+      return true;
     }
+    WindowView view = _view;
+    return TryRun(() => _mounted = (IDisposable)_context.EntryMethod(MountMethod).Invoke(
+        null, [view.Window, view.Slot, view.SettingChanged, view.BroughtBack])!);
   }
 
-  // Mount a panel build; false (and the reason in the log and the title bar)
-  // when it throws.
-  private bool TryMount(byte[] assembly) {
+  private bool TryRun(Action action) {
     try {
-      _context = LoadCopy(assembly);
-      _loadedBytes = assembly;
-      MethodInfo mount = _context.EntryMethod(MountMethod);
-      _mounted = (IDisposable)mount.Invoke(null, [_window, _slot, _settingChanged, _broughtBack])!;
+      action();
       return true;
     } catch (TargetInvocationException error) {
-      ReportMountFailure(error.InnerException ?? error);
+      ReportFailure(error.InnerException ?? error);
       return false;
     } catch (Exception error) when (error is BadImageFormatException or IOException
                                         or InvalidOperationException) {
-      ReportMountFailure(error);
+      ReportFailure(error);
       return false;
     }
   }
 
-  private void ReportMountFailure(Exception error) {
-    Log($"mount failed: {error}");
+  private void ReportFailure(Exception error) {
+    Log($"load failed: {error}");
     Swapped?.Invoke($"This panel build failed to load; the reason is in {LogName}.");
   }
 
-  // Tear the panel down and drop every reference into it, then unload its
-  // context. Returns a weak reference to watch it go: unloading only begins
-  // here, and completes when nothing reaches the context any more.
+  // Tear the panel down (its window view, then its service) and drop every
+  // reference into it, then unload its context. Returns a weak reference to
+  // watch it go: unloading only begins here, and completes when nothing reaches
+  // the context any more.
   [MethodImpl(MethodImplOptions.NoInlining)]
-  private WeakReference Unmount() {
+  private WeakReference Unload() {
     _mounted?.Dispose();
     _mounted = null;
-    _slot.Content = null;
+    if (_view is not null) {
+      _view.Slot.Content = null;
+    }
+    _service?.Dispose();
+    _service = null;
     var weak = new WeakReference(_context);
     _context?.Unload();
     _context = null;
@@ -178,7 +228,7 @@ internal sealed class PanelLoader {
   // the copies nothing holds any more.
   private void WatchUnload(WeakReference oldContext) {
     int polls = 0;
-    DispatcherQueueTimer timer = _window.DispatcherQueue.CreateTimer();
+    DispatcherQueueTimer timer = _dispatcher.CreateTimer();
     timer.Interval = s_unloadPoll;
     timer.Tick += (_, _) => {
       polls++;
@@ -199,6 +249,10 @@ internal sealed class PanelLoader {
     };
     timer.Start();
   }
+
+  // The window the panel is shown in, and the host's signals for it.
+  private sealed record WindowView(Window Window, ContentControl Slot, HostSignal SettingChanged,
+                                   HostSignal BroughtBack);
 
   // The panel this run should load: the dev build output in a dev run (newer
   // than anything carried), else the copy carried inside the exe.
@@ -262,6 +316,7 @@ internal sealed class PanelLoader {
 
   private static void Log(string line) {
     try {
+      Directory.CreateDirectory(s_copiesDirectory);
       File.AppendAllText(Path.Combine(s_copiesDirectory, LogName),
                          $"{DateTime.Now:O} {line}{Environment.NewLine}");
     } catch (IOException) {

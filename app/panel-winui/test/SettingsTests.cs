@@ -7,41 +7,31 @@ internal static class SettingsTests {
   public static void Run() {
     DefaultsAreSplitOnTheRestOff();
     AFileFromTheGeminiDaysStillLoads();
-    TheTauriPanelsFileLoads();
-    WritesTheTauriShape();
+    AnExistingFileLoads();
+    WritesTheExistingShape();
     RoundTripsThroughAFile();
     BrokenOrNullSectionsFallBack();
     RemovingAThemeClearsItsAssignments();
     TheSwitchesMapOneToOne();
-    ReadingModeReadsAndWritesTheTauriShape();
+    ReadingModeIsOnlyItsSwitch();
   }
 
-  private static void ReadingModeReadsAndWritesTheTauriShape() {
-    var defaults = new Settings();
-    Expect.That(!defaults.Features.ReadingTheme, "reading mode is off by default");
-    Expect.Equal(ReadingTheme.Sepia, defaults.ReadingMode.Light, "Sepia for light by default");
-    Expect.Equal(ReadingTheme.Black, defaults.ReadingMode.Dark, "Black for dark by default");
-
+  // The reading themes are picked in reading mode itself now; a file that
+  // still carries the old "readingMode" object loads, and it is not written.
+  private static void ReadingModeIsOnlyItsSwitch() {
+    Expect.That(!new Settings().Features.ReadingTheme, "reading mode is off by default");
     Settings loaded = Settings.Parse(
         """{"features":{"readingTheme":true},"readingMode":{"light":"skyBlue","dark":"darkGrey"}}""");
-    Expect.That(loaded.Features.ReadingTheme, "the reading theme switch is read");
-    Expect.Equal(ReadingTheme.SkyBlue, loaded.ReadingMode.Light, "camelCase names are read");
-    Expect.Equal(ReadingTheme.DarkGrey, loaded.ReadingMode.Dark, "camelCase names are read");
-
-    Settings older = Settings.Parse("""{"features":{"nativeSplit":true}}""");
-    Expect.Equal(ReadingTheme.Black, older.ReadingMode.Dark,
-                 "a file from before reading mode loads with its defaults");
-
-    loaded.ReadingMode.Assign(ColorMode.Light, ReadingTheme.LightGreen);
+    Expect.That(loaded.Features.ReadingTheme, "the switch is read beside an old readingMode");
     string json = loaded.ToJson();
-    foreach (string piece in new[] { "\"readingMode\"", "\"light\": \"lightGreen\"",
-                                     "\"dark\": \"darkGrey\"", "\"readingTheme\": true" }) {
-      Expect.That(json.Contains(piece, StringComparison.Ordinal), $"the file has {piece}");
-    }
+    Expect.That(json.Contains("\"readingTheme\": true", StringComparison.Ordinal),
+                "the switch is written");
+    Expect.That(!json.Contains("readingMode", StringComparison.Ordinal),
+                "the old readingMode object is not written");
   }
 
-  // The tab spine defaults on, as in the Tauri panel: it was part of the
-  // theming until it got a switch of its own.
+  // The tab spine defaults on: it was part of the theming until it got a
+  // switch of its own.
   private static void DefaultsAreSplitOnTheRestOff() {
     var settings = new Settings();
     Expect.That(settings.Features.NativeSplit, "the split defaults on");
@@ -61,7 +51,9 @@ internal static class SettingsTests {
     Expect.Equal("", settings.Theming.Light, "a missing theming section is empty");
   }
 
-  private static void TheTauriPanelsFileLoads() {
+  // A file as installs already have it (the earlier Tauri panel wrote the
+  // same shape), so existing settings carry over.
+  private static void AnExistingFileLoads() {
     const string text = """
         {
           "features": { "nativeSplit": true, "theming": true, "quietDevMode": false,
@@ -86,7 +78,7 @@ internal static class SettingsTests {
     Expect.Equal("155.0.4283.62", settings.LastEdgeBuild, "the last build is read");
   }
 
-  private static void WritesTheTauriShape() {
+  private static void WritesTheExistingShape() {
     var settings = new Settings();
     settings.Theming.AddOrReplace(new ThemeEntry {
       Id = "abc",

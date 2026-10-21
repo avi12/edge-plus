@@ -14,8 +14,7 @@ internal sealed record InstalledTheme(string Id, string Name, bool IsActive);
 // The themes Edge already has installed (from Edge Add-ons or the Chrome Web
 // Store), read straight from its profiles on disk, read-only. A theme is an
 // extension whose manifest has a "theme" key; the DLL applies it by id exactly
-// like one the panel installed, so nothing here writes anything. The Tauri
-// panel's installed_themes.rs.
+// like one the panel installed, so nothing here writes anything.
 internal static class InstalledThemes {
   private const string MessagePrefix = "__MSG_";
   private const string MessageSuffix = "__";

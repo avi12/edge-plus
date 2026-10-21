@@ -41,11 +41,46 @@ internal static class ThemePackTests {
     Expect.Equal(ThemeStore.Edge, edge?.Store, "microsoft's host is Edge Add-ons");
     Expect.Equal("Night", edge?.Name, "one word is capitalized");
 
-    Expect.Equal("A" + Id[1..], StoreUrl.Parse($"https://example.com/{Id}")?.Name,
-                 "with no slug the id is the name, titled like a slug");
-    Expect.That(StoreUrl.Parse($"ftp://x/{Id}") is null, "only http(s) links");
+    Expect.That(StoreUrl.Parse($"ftp://chromewebstore.google.com/detail/x/{Id}") is null,
+                "only http(s) links");
     Expect.That(StoreUrl.Parse("https://chromewebstore.google.com/detail/x/short") is null,
                 "a link with no id");
+    StoreLinksAreTheRealStoresOnly();
+  }
+
+  private static void StoreLinksAreTheRealStoresOnly() {
+    (string Url, ThemeStore Store, string? Name)[] accepted = [
+      ($"https://chromewebstore.google.com/detail/{Id}", ThemeStore.Chrome, null),
+      ($"https://chrome.google.com/webstore/detail/dusk/{Id}", ThemeStore.Chrome, "Dusk"),
+      ($"https://chrome.google.com/webstore/detail/{Id}?hl=en", ThemeStore.Chrome, null),
+      ($"https://microsoftedge.microsoft.com/addons/detail/{Id}", ThemeStore.Edge, null),
+      ($"http://www.chromewebstore.google.com/detail/dusk/{Id}/", ThemeStore.Chrome, "Dusk"),
+      ($"HTTPS://ChromeWebStore.Google.com/detail/dusk/{Id}#top", ThemeStore.Chrome, "Dusk"),
+      ($"chromewebstore.google.com/detail/dusk/{Id}", ThemeStore.Chrome, "Dusk"),
+      ($"https://chromewebstore.google.com/detail/dusk/{Id}/reviews", ThemeStore.Chrome, "Dusk"),
+    ];
+    foreach ((string url, ThemeStore store, string? name) in accepted) {
+      ParsedStoreTheme? parsed = StoreUrl.Parse(url);
+      Expect.That(parsed is not null && parsed.Id == Id, $"{url} parses");
+      Expect.Equal(store, parsed!.Store, $"{url} is the {store} store");
+      Expect.Equal(name, parsed.Name, $"{url} names {name ?? "nothing"}, never \"Detail\"");
+    }
+    string[] refused = [
+      $"https://example.com/{Id}",
+      $"https://example.com/detail/dusk/{Id}",
+      $"https://chromewebstore.google.com.evil.example/detail/dusk/{Id}",
+      $"https://notmicrosoftedge.microsoft.com/addons/detail/dusk/{Id}",
+      $"https://microsoftedge.microsoft.com/detail/dusk/{Id}",
+      $"https://chrome.google.com/detail/dusk/{Id}",
+      "https://chromewebstore.google.com/detail/dusk",
+      "",
+    ];
+    foreach (string url in refused) {
+      Expect.That(StoreUrl.Parse(url) is null, $"\"{url}\" is not a store link");
+    }
+    Expect.That(Wording.NotAStoreLink.Contains("Chrome Web Store", StringComparison.Ordinal)
+                    && Wording.NotAStoreLink.Contains("Edge Add-ons", StringComparison.Ordinal),
+                "the refusal names both stores");
   }
 
   private static void NotACrxIsRefused() {

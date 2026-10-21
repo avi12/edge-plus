@@ -13,9 +13,8 @@ namespace EdgePlus;
 // Edge rewrites Preferences from memory while it runs, so the edit only sticks
 // once Edge has fully exited — which is exactly when the prompt is next
 // checked. The panel re-runs itself headless with a switch to do the waiting
-// (Program), so the wait survives the panel window closing. The Tauri panel's
-// devmode.rs; the mutex name is shared with it, so there is one waiter at a
-// time across both panels.
+// (Program), so the wait survives the panel window closing. A named mutex
+// keeps it to one waiter at a time.
 internal static class DevModePrompt {
   private const string WaiterMutex = @"Local\fix-edge.dev-mode-prompt";
   private const string LockfileName = "lockfile";

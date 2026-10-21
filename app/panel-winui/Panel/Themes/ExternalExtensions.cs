@@ -7,8 +7,7 @@ namespace EdgePlus;
 // A theme is added without touching Edge's ABI: an entry under Edge's own
 // per-user external-extensions key, and Edge's loader installs it. A store
 // theme points at the store's update URL (Edge installs it as a trusted theme,
-// no developer mode); a local theme points at a .crx on disk. The Tauri
-// panel's edge-native registry.rs.
+// no developer mode); a local theme points at a .crx on disk.
 internal static class ExternalExtensions {
   private const string ExtensionsKey = @"Software\Microsoft\Edge\Extensions";
   private const string ChromeStoreUpdateUrl = "https://clients2.google.com/service/update2/crx";

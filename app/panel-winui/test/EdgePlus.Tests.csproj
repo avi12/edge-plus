@@ -33,11 +33,12 @@
     <Compile Include="..\Panel\Dll\ConfigWire.cs" Link="Panel\ConfigWire.cs" />
     <Compile Include="..\Panel\Edge\DevModePrompt.cs" Link="Panel\DevModePrompt.cs" />
     <Compile Include="..\Panel\Edge\EdgeBuild.cs" Link="Panel\EdgeBuild.cs" />
+    <Compile Include="..\Panel\Edge\EdgeInstall.cs" Link="Panel\EdgeInstall.cs" />
+    <Compile Include="..\Panel\Edge\EdgeSupport.cs" Link="Panel\EdgeSupport.cs" />
     <Compile Include="..\Panel\Edge\EdgeUserData.cs" Link="Panel\EdgeUserData.cs" />
     <Compile Include="..\Panel\Edge\FileVersion.cs" Link="Panel\FileVersion.cs" />
     <Compile Include="..\Panel\Platform\PanelState.cs" Link="Panel\PanelState.cs" />
     <Compile Include="..\Panel\Platform\Paths.cs" Link="Panel\Paths.cs" />
-    <Compile Include="..\Panel\Platform\ReadingThemes.g.cs" Link="Panel\ReadingThemes.g.cs" />
     <Compile Include="..\Panel\Platform\Settings.cs" Link="Panel\Settings.cs" />
     <Compile Include="..\Panel\Platform\Shared.g.cs" Link="Panel\Shared.g.cs" />
     <Compile Include="..\Panel\Platform\Switches.cs" Link="Panel\Switches.cs" />
@@ -51,6 +52,7 @@
     <Compile Include="..\Panel\Themes\ThemeOrder.cs" Link="Panel\ThemeOrder.cs" />
     <Compile Include="..\Panel\Themes\ThemePacker.cs" Link="Panel\ThemePacker.cs" />
     <Compile Include="..\Panel\Ui\KeyedList.cs" Link="Panel\KeyedList.cs" />
+    <Compile Include="..\Panel\Ui\PanelLayout.cs" Link="Panel\PanelLayout.cs" />
     <Compile Include="..\Panel\Ui\Wording.cs" Link="Panel\Wording.cs" />
   </ItemGroup>
 </Project>

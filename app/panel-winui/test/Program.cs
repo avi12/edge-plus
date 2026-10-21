@@ -20,6 +20,8 @@ internal static class Program {
     ("keyed list", KeyedListTests.Run),
     ("panel source", PanelSourceTests.Run),
     ("theme order", ThemeOrderTests.Run),
+    ("edge support", EdgeSupportTests.Run),
+    ("panel layout", PanelLayoutTests.Run),
   ];
 
   private static int Main() {

@@ -1,14 +1,20 @@
 // reading_themes.h — the reading mode's page themes. One concern, all of it pure
 // (no Edge, no Win32; unit-tested in test/reading_themes_test.cpp): the twelve
 // swatches Edge's reading mode offers under Appearance settings > Themes, their
-// pref values, their names, and which one a Windows light or dark mode asks for.
+// pref values, their names, the theme picked for each Windows mode, and that
+// choice's file and page-answer forms.
 //
 // The values are Edge's own: the reading_view.theme pref and dom_distiller::Theme
 // index learning_tools.dll's theme table ("0":"Sepia" ... "22":"DarkGrey", 23
 // entries); the grid shows these twelve of them (docs/re/reading-mode-theme.md).
 #pragma once
 #include <array>
+#include <charconv>
+#include <cstddef>
 #include <cstdint>
+#include <span>
+#include <string_view>
+#include <system_error>
 
 namespace fixedge::reading_themes {
 
@@ -68,12 +74,83 @@ inline constexpr std::array<ThemeInfo, 12> kThemes = {{
   return ThemeOf(value, &ignored);
 }
 
-// The theme a Windows mode asks for, or false when the choice for it is not one
-// of the twelve.
-[[nodiscard]] constexpr bool ThemeForMode(bool isDark, int32_t lightChoice,
-                                          int32_t darkChoice,
-                                          ReadingTheme* theme) noexcept {
-  return ThemeOf(isDark ? darkChoice : lightChoice, theme);
+// The theme picked for each Windows mode, in reading mode's own Appearance
+// settings (reading_mode.h keeps them in a file of their own).
+struct Choices {
+  ReadingTheme light = ReadingTheme::kSepia;
+  ReadingTheme dark = ReadingTheme::kBlack;
+  bool operator==(const Choices&) const = default;
+};
+
+[[nodiscard]] constexpr ReadingTheme ForMode(const Choices& choices,
+                                             bool isDark) noexcept {
+  return isDark ? choices.dark : choices.light;
+}
+
+// The file: the light theme's number, then the dark one's, each a
+// little-endian int32.
+inline constexpr size_t kChoicesFileSize = 8;
+inline constexpr int kByteBits = 8;
+inline constexpr uint32_t kByteMask = 0xff;
+
+[[nodiscard]] constexpr std::array<uint8_t, kChoicesFileSize> BytesOf(
+    const Choices& choices) noexcept {
+  std::array<uint8_t, kChoicesFileSize> bytes{};
+  const std::array<ReadingTheme, 2> sides = {choices.light, choices.dark};
+  for (size_t side = 0; side < sides.size(); side++) {
+    const auto value = static_cast<uint32_t>(sides[side]);
+    for (size_t i = 0; i < sizeof(uint32_t); i++) {
+      bytes[side * sizeof(uint32_t) + i] =
+          static_cast<uint8_t>((value >> (i * kByteBits)) & kByteMask);
+    }
+  }
+  return bytes;
+}
+
+// The choices a file holds; a file of another size, or a number that is not
+// one of the twelve, leaves that side at its default.
+[[nodiscard]] constexpr Choices ChoicesFromBytes(
+    std::span<const uint8_t> bytes) noexcept {
+  Choices choices;
+  if (bytes.size() != kChoicesFileSize) {
+    return choices;
+  }
+  const auto valueAt = [&](size_t offset) {
+    uint32_t value = 0;
+    for (size_t i = 0; i < sizeof(uint32_t); i++) {
+      value |= static_cast<uint32_t>(bytes[offset + i]) << (i * kByteBits);
+    }
+    return static_cast<int32_t>(value);
+  };
+  ReadingTheme theme = ReadingTheme::kSepia;
+  if (ThemeOf(valueAt(0), &theme)) {
+    choices.light = theme;
+  }
+  if (ThemeOf(valueAt(sizeof(uint32_t)), &theme)) {
+    choices.dark = theme;
+  }
+  return choices;
+}
+
+// The choices the page answered as two numbers in text; false unless both are
+// among the twelve.
+[[nodiscard]] inline bool ChoicesFromFields(std::string_view light,
+                                            std::string_view dark,
+                                            Choices* choices) noexcept {
+  const auto themeIn = [](std::string_view text, ReadingTheme* theme) {
+    int32_t value = 0;
+    const auto [end, error] =
+        std::from_chars(text.data(), text.data() + text.size(), value);
+    const bool isNumber =
+        error == std::errc() && end == text.data() + text.size();
+    return isNumber && ThemeOf(value, theme);
+  };
+  Choices parsed;
+  if (!themeIn(light, &parsed.light) || !themeIn(dark, &parsed.dark)) {
+    return false;
+  }
+  *choices = parsed;
+  return true;
 }
 
 }  // namespace fixedge::reading_themes

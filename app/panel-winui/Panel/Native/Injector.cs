@@ -10,8 +10,7 @@ namespace EdgePlus;
 //
 // Turning a feature on injects the DLL with the classic LoadLibraryW-on-a-
 // remote-thread move; turning everything off is not done here but by the DLL
-// itself, on its unload event (DllChannel). The Tauri panel's edge-native
-// inject.rs, as is.
+// itself, on its unload event (DllChannel).
 internal static class Injector {
   private const uint LoadLibraryTimeoutMilliseconds = 10_000;
   // A DLL that unloaded itself but was re-injected meanwhile can hold several

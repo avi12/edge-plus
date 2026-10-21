@@ -37,13 +37,37 @@ void RunChecks() {
         "only the grid's twelve are offered (Rose, 7, is in Edge's table but "
         "not the grid)");
 
-  ReadingTheme theme = ReadingTheme::kLight;
-  Check(ThemeForMode(true, 0, 3, &theme) && theme == ReadingTheme::kBlack,
+  const Choices defaults;
+  Check(ForMode(defaults, false) == ReadingTheme::kSepia &&
+            ForMode(defaults, true) == ReadingTheme::kBlack,
+        "Sepia for light and Black for dark until something is picked");
+  const Choices picked{ReadingTheme::kLavender, ReadingTheme::kDarkGrey};
+  Check(ForMode(picked, true) == ReadingTheme::kDarkGrey,
         "dark Windows takes the dark choice");
-  Check(ThemeForMode(false, 0, 3, &theme) && theme == ReadingTheme::kSepia,
-        "light Windows takes the light choice");
-  Check(!ThemeForMode(true, 0, 7, &theme),
-        "a choice that is not offered applies nothing");
+
+  const auto bytes = BytesOf(picked);
+  Check(bytes[0] == 18 && bytes[4] == 22 && bytes[1] == 0,
+        "the file is two little-endian numbers, light first");
+  Check(ChoicesFromBytes(bytes) == picked, "a file reads back as written");
+  const uint8_t shortFile[3] = {18, 0, 0};
+  Check(ChoicesFromBytes(shortFile) == defaults,
+        "a file of another size reads as the defaults");
+  const uint8_t badDark[8] = {18, 0, 0, 0, 7, 0, 0, 0};
+  const Choices halfRead = ChoicesFromBytes(badDark);
+  Check(halfRead.light == ReadingTheme::kLavender &&
+            halfRead.dark == ReadingTheme::kBlack,
+        "a side that is not one of the twelve keeps its default");
+
+  Choices answered;
+  Check(ChoicesFromFields("16", "3", &answered) &&
+            answered.light == ReadingTheme::kSkyBlue &&
+            answered.dark == ReadingTheme::kBlack,
+        "the page's two numbers are read");
+  Check(!ChoicesFromFields("16", "7", &answered) &&
+            !ChoicesFromFields("x", "3", &answered) &&
+            !ChoicesFromFields("16 ", "3", &answered) &&
+            answered.light == ReadingTheme::kSkyBlue,
+        "an answer that is not two of the twelve changes nothing");
 }
 
 }  // namespace

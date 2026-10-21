@@ -74,18 +74,17 @@ internal static class EdgeBuildTests {
   }
 
   private static void ThePinnedBuildBlocksNothing() {
-    Expect.Equal(0, EdgeBuild.Blocked(AllOn(), s_pinned, s_pinned).Count, "nothing blocked");
-    Expect.Equal(0, EdgeBuild.Unsupported(s_pinned, s_pinned).Count, "nothing unsupported");
+    Expect.Equal(0, EdgeSupport.Paused(AllOn(), s_pinned, s_pinned).Count, "nothing paused");
   }
 
   private static void AnUpdateBlocksTheDllFeaturesOnly() {
-    IReadOnlyList<Feature> blocked = EdgeBuild.Blocked(AllOn(), Version("155.0.4300.2"), s_pinned);
-    Expect.That(blocked.SequenceEqual(s_dllFeatures), "an update blocks the DLL features");
+    IReadOnlyList<Feature> paused = EdgeSupport.Paused(AllOn(), Version("155.0.4300.2"), s_pinned);
+    Expect.That(paused.SequenceEqual(s_dllFeatures), "an update pauses the DLL features");
   }
 
   private static void ADowngradeIsAMismatchToo() {
-    IReadOnlyList<Feature> unsupported = EdgeBuild.Unsupported(Version("154.0.4100.1"), s_pinned);
-    Expect.That(unsupported.SequenceEqual(s_dllFeatures), "a downgrade unsupports them too");
+    IReadOnlyList<Feature> paused = EdgeSupport.Paused(AllOn(), Version("154.0.4100.1"), s_pinned);
+    Expect.That(paused.SequenceEqual(s_dllFeatures), "a downgrade pauses them too");
   }
 
   private static void FeaturesAlreadyOffAreNotReported() {
@@ -95,9 +94,9 @@ internal static class EdgeBuildTests {
       QuietDevMode = true,
       TabSpine = false,
     };
-    IReadOnlyList<Feature> blocked =
-        EdgeBuild.Blocked(onlyTheming, Version("156.0.1.0"), s_pinned);
-    Expect.That(blocked.SequenceEqual([Feature.Theming]), "only the switch that was on");
+    IReadOnlyList<Feature> paused =
+        EdgeSupport.Paused(onlyTheming, Version("156.0.1.0"), s_pinned);
+    Expect.That(paused.SequenceEqual([Feature.Theming]), "only the switch that was on");
   }
 
   private static void AMismatchedProcessDecidesTheRunningBuild() {

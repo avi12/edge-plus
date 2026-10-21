@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+using System.Linq;
 using Microsoft.Win32;
 
 namespace EdgePlus;
@@ -19,17 +22,19 @@ internal readonly record struct StartupKeys(string Run, string Approved) {
 // read from it, never remembered elsewhere. Task Manager's "Startup apps"
 // switch does not touch the Run value; it writes a flag under the sibling
 // StartupApproved\Run key, so that flag is honoured too. The entry's name is
-// the Tauri panel's, so the two panels share one entry. The Tauri panel's
-// startup.rs and edge-native startup.rs.
+// the one the retired Tauri panel used, so its entry is this one, and
+// MigrateFromTauri points it at this panel.
 internal static class StartupEntry {
   // As Task Manager's "Startup apps" lists it.
   public const string Name = "Edge+";
   // Bit 0 of the first byte of a StartupApproved value is set when Task
   // Manager has turned the entry off (0x02 / 0x06 on, 0x03 / 0x07 off).
   private const byte ApprovedDisabledBit = 1;
+  // The retired Tauri panel's executables, from source and installed.
+  private static readonly string[] s_tauriLaunchers = ["fix-edge-panel.exe", "Edge+.exe"];
 
   // What Windows runs at sign-in: the quoted panel path, then the switch that
-  // starts it minimized.
+  // starts it as the windowless listener.
   public static string RunCommand(string executable) => $"\"{executable}\" {Switches.Background}";
 
   public static bool IsDisabledFlag(byte[]? approved) =>
@@ -53,6 +58,39 @@ internal static class StartupEntry {
       run.SetValue(name, command);
     }
     DeleteValue(keys.Approved, name);
+  }
+
+  // Point an entry the retired Tauri panel left at `executable` instead,
+  // keeping Task Manager's on/off flag as the user set it. Any other entry,
+  // or none, is left alone. Returns whether it rewrote the entry.
+  public static bool MigrateFromTauri(StartupKeys keys, string name, string executable) {
+    using RegistryKey? run = Registry.CurrentUser.OpenSubKey(keys.Run, writable: true);
+    if (run?.GetValue(name) is not string command) {
+      return false;
+    }
+    if (!IsTauriCommand(command)) {
+      return false;
+    }
+    run.SetValue(name, RunCommand(executable));
+    return true;
+  }
+
+  // Whether a Run command launches the retired Tauri panel: its source build
+  // (fix-edge-panel.exe) or its installed copy (Edge+.exe).
+  public static bool IsTauriCommand(string command) {
+    string launcher = Path.GetFileName(LauncherOf(command));
+    return s_tauriLaunchers.Contains(launcher, StringComparer.OrdinalIgnoreCase);
+  }
+
+  // The program a command line runs: its quoted first part, or its first word.
+  private static string LauncherOf(string command) {
+    string trimmed = command.Trim();
+    if (trimmed.StartsWith('"')) {
+      int closingQuote = trimmed.IndexOf('"', 1);
+      return closingQuote < 0 ? trimmed[1..] : trimmed[1..closingQuote];
+    }
+    int space = trimmed.IndexOf(' ');
+    return space < 0 ? trimmed : trimmed[..space];
   }
 
   public static void Disable(StartupKeys keys, string name) {

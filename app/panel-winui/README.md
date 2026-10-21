@@ -1,19 +1,62 @@
-# The WinUI panel
+# The panel
 
-Edge+'s panel as WinUI 3 / C#, modelled on `avi/any-stt`'s app. It reads and
-writes the Tauri panel's `settings.json` unchanged, so either panel can run.
+Edge+'s panel, WinUI 3 / C#, modelled on `avi/any-stt`'s app. It keeps the
+user's choices in `%LOCALAPPDATA%\FixEdge\settings.json`, in the same place and
+shape the earlier Tauri panel used, so an existing install carries over; on its
+first start it also moves that panel's start-at-sign-in entry to itself.
 
 ## Two projects: a host and a swappable panel
 
 | | what it is | changes need |
 |---|---|---|
-| `EdgePlus.csproj` (host) | the exe: process, single instance, window, title bar, `App.xaml` styles, `PanelLoader` | a restart |
+| `EdgePlus.csproj` (host) | the exe: process, single instance, the window on demand, title bar, `App.xaml` styles, toast registration, `PanelLoader` | a restart |
 | `Panel/EdgePlus.Panel.csproj` (panel) | every feature, the settings, Edge and the DLL, and the window's content (built in C#) | **nothing**: swapped in live |
 
 The host loads the panel into a collectible `AssemblyLoadContext` from a
 timestamped copy in `%TEMP%\edgeplus-panel\` (never the build output, which
 stays free for the next build). Only the panel resolves in that context; WinUI,
 CsWinRT and the framework fall through to the host's, so WinUI objects cross.
+
+## One process, window or not
+
+There is one Edge+ process per user (`Program`, `AppInstance`), and it runs
+the panel for its whole life. The panel's `BackgroundService` owns the Edge and
+theme watchers; the window, while open, only listens to it.
+
+- A **boot launch** (`--background`, the start-with-Windows entry) opens no
+  window. It is the always-on listener, trimmed to about 19 MB of working set
+  (`ProcessTrim`).
+- Launching Edge+ again, or clicking its toast, opens the window on that same
+  process.
+- Closing the window keeps the listener while Edge+ starts with Windows
+  (`PanelEntry.IsResident`), and ends the process otherwise.
+
+## When Edge updates
+
+The split DLL runs only on the exact `msedge.dll` build in `offsets.h`.
+`verify.h` refuses any other build, because every hook site is an address in
+that one build. So support is decided **per whole build**: on any other build,
+every DLL feature is paused. `EdgeSupport` is the one place that decides this.
+
+- **Seeing it.** `EdgeWatch` checks the build at start, whenever a new Edge
+  browser process appears (a cheap 2 s process-list poll), and when the install
+  folder's `msedge.exe` changes (a file watch, no polling). The build it reads
+  is the one Edge is running, else the installed one.
+- **Pausing.** The user's on/off choice is never rewritten. `DllSync` sends the
+  DLL the *effective* features, with paused ones off, so nothing is injected on
+  that build. A paused card keeps its switch on but locked, and says "Edge
+  updated to 156.0.x. Split into any grid is paused until Edge+ supports this
+  version." Once Edge+ supports the build again, the choice applies by itself.
+- **Telling.** If no window is open, one Windows toast
+  (`AppNotification`) lists the paused features, once per build. The build it
+  last reported is kept in `%LOCALAPPDATA%\FixEdge\paused-toast-build.txt`.
+
+**Simulating an update** without touching Edge: point
+`EDGEPLUS_SIMULATE_EDGE_DIR` at a folder that holds a fake `msedge.exe` with
+the version you want (any exe with that file version works). Then launch the
+panel. In a simulation, only that folder decides the build. Nothing is
+injected, `settings.json` and the DLL config are not written, and the toast's
+once-per-build record stays in memory.
 
 ## The dev loop
 
@@ -52,8 +95,9 @@ gcroot` on a running host:
   registers the assembly's lookups globally.
 - **System.Text.Json through a source-generated context** (`SettingsJson`), not
   reflection, whose accessor cache is process-wide.
-- **Every thread stops and every host subscription is disposed** in
-  `PanelView.Dispose` (`PollThread`, `HostSignal`).
+- **Every thread stops and every host subscription is disposed**:
+  `PanelView.Dispose` drops the window's ties, and the background service's
+  `Dispose` stops the watchers (`PollThread`, `HostSignal`).
 
 ## Why this, not .NET Hot Reload
 

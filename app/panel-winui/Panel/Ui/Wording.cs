@@ -13,8 +13,7 @@ internal sealed record CardWording(string Title, string Description, int GlyphCo
 }
 
 // Every sentence the window shows, in one place: each card's wording, and what
-// the panel says when Edge runs a build the split DLL was not made for. The
-// Tauri panel's App.svelte constants, assistantNames.ts and edgeBuild.ts.
+// the panel says when Edge runs a build the split DLL was not made for.
 internal static class Wording {
   // The browser assistant's name; the DLL has its own copy (chat_target.h),
   // which must match.
@@ -24,11 +23,25 @@ internal static class Wording {
   private const string RegExpName = "RegExp";
 
   public const string OpenEdgeHint = "Open Edge to apply changes.";
+
+  // A section's header (PanelLayout).
+  public static string SectionName(Section section) => section switch {
+    Section.TabsAndWindows => "Tabs and windows",
+    Section.LookAndThemes => "Look and themes",
+    Section.Browsing => "Browsing",
+    Section.EdgePlusItself => "Edge+ itself",
+    _ => throw new ArgumentOutOfRangeException(nameof(section)),
+  };
+
+  // What a card that needs another feature says while that one is off.
+  public static string NeedsFeature(Feature needed) => $"Turn on {For(needed).Title} to use this.";
   // The footer's "by Avi".
   public const string By = "by";
   public const string DropHint = "Drop a theme folder, .zip or .crx to add it";
 
   // The theming card's own words.
+  public const string NotAStoreLink =
+      "That is not a theme link from the Chrome Web Store or Edge Add-ons.";
   public const string StoreLinkPlaceholder = "Paste a Chrome Web Store or Edge Add-ons link";
   public const string AddTheme = "Add";
   public const string AddLocalTheme = "Or add a local theme";
@@ -47,28 +60,6 @@ internal static class Wording {
 
   public static string RemoveTheme(string name) => $"Remove {name}";
 
-  // A reading mode picker's name for a screen reader.
-  public static string ReadingPickerName(ColorMode mode) =>
-      mode == ColorMode.Light
-          ? "Reading mode theme when Windows is light"
-          : "Reading mode theme when Windows is dark";
-
-  // A reading theme as the user reads it: Edge's name, its words spaced out
-  // ("LightBlue" -> "Light blue").
-  public static string ReadingThemeLabel(ReadingTheme theme) {
-    string name = ReadingThemes.EdgeName(theme);
-    var label = new System.Text.StringBuilder();
-    for (int i = 0; i < name.Length; i++) {
-      bool isNewWord = i > 0 && char.IsUpper(name[i]);
-      if (isNewWord) {
-        label.Append(' ').Append(char.ToLowerInvariant(name[i]));
-      } else {
-        label.Append(name[i]);
-      }
-    }
-    return label.ToString();
-  }
-
   // What a failure says. The details go to the panel's log (PanelLog), never
   // into the window.
   public const string ActionFailed =
@@ -85,8 +76,9 @@ internal static class Wording {
     get;
   } = new(
       "Start Edge+ when Windows starts",
-      "Opens Edge+ minimized when you sign in to Windows, so your settings apply without " +
-          "opening it. Launch Edge+ again to bring its window back.",
+      "Runs Edge+ in the background, with no window, from when you sign in to Windows: your " +
+          "settings apply and an Edge update that needs a newer Edge+ is caught. Launch Edge+ " +
+          "to open its window.",
       0xE7E8);
 
   public static CardWording For(Feature feature) => feature switch {
@@ -126,8 +118,8 @@ internal static class Wording {
     Feature.ReadingTheme => new(
         "Reading mode follows Windows light and dark",
         "Reading mode uses one page theme while Windows is light and another while it is dark, " +
-            "set as Windows switches and kept for every page you open in reading mode. Live, no " +
-            "restart.",
+            "switched as Windows switches. Pick both in reading mode: Appearance settings, " +
+            "Themes, then Light mode or Dark mode. Live, no restart.",
         0xE736),
     Feature.QuietDevMode => new(
         "Hide the developer-mode prompt",
@@ -143,49 +135,43 @@ internal static class Wording {
     _ => throw new ArgumentOutOfRangeException(nameof(feature)),
   };
 
-  // How a feature is named inside a sentence.
-  public static string NameInSentence(Feature feature) => feature switch {
-    Feature.NativeSplit => "Split view",
-    Feature.Theming => "Theming",
-    Feature.QuietDevMode => "Hiding the developer-mode prompt",
-    Feature.ProtocolHandlers => "Asking to handle links",
-    Feature.EnhancedFind => "The enhanced find bar",
-    Feature.WebUiFollowsTheme => "Settings and extensions pages following the theme",
-    Feature.LivePreview => "Live tab preview on hover",
-    Feature.TabSpine => "The square selected tab with its neon spine",
-    Feature.ReadingTheme => "Reading mode following Windows light and dark",
-    _ => throw new ArgumentOutOfRangeException(nameof(feature)),
-  };
+  // How a build other than the supported one is introduced: newer is an
+  // update, older a version Edge+ does not know.
+  public static string EdgeLead(FileVersion edge, FileVersion supported) =>
+      edge > supported ? $"Edge updated to {edge}." : $"Edge is on version {edge}.";
 
-  // What an Edge update switched off, as one sentence; empty when it switched
-  // nothing off.
-  public static string DescribeUpdate(BuildChange change) {
-    if (change.Disabled.Count == 0) {
+  // What one card says about its feature on this build; empty when the build
+  // holds nothing back. "Edge updated to 156.0.1.0. Split into any grid is
+  // paused until Edge+ supports this version."
+  public static string DescribeFeature(PanelState state, Feature feature) {
+    FeatureState featureState = state.StateOf(feature);
+    bool isHeld = featureState is FeatureState.Paused or FeatureState.Unavailable;
+    if (!isHeld || state.EdgeBuild is not FileVersion edge) {
       return "";
     }
-    bool isUpdate = change.PreviousBuild is not null && change.PreviousBuild != change.EdgeBuild;
-    string lead = isUpdate
-        ? $"Edge updated to {change.EdgeBuild}"
-        : $"Edge {change.EdgeBuild} is running";
-    return $"{lead}; turned off {JoinNames(change.Disabled)} — Edge+ supports Edge " +
-           $"{change.SupportedBuild}.";
+    string verb = featureState == FeatureState.Paused ? "paused" : "unavailable";
+    return $"{EdgeLead(edge, state.SupportedEdgeBuild)} {For(feature).Title} is {verb} until " +
+           "Edge+ supports this version.";
   }
 
-  // Why one card's switch is locked, shown on the card itself.
-  public static string DescribeHeldOff(PanelState state) =>
-      $"Unavailable on Edge {state.EdgeBuild?.ToString() ?? "this version"} — Edge+ supports " +
-      $"Edge {state.SupportedEdgeBuild}.";
-
-  // Which features the running Edge holds off, as one sentence; empty when it
-  // holds none.
-  public static string DescribeUnsupported(PanelState state) {
-    if (state.Unsupported.Count == 0) {
+  // The features a build pauses, as one sentence; empty when it pauses none.
+  // The panel's notice and the toast's body.
+  public static string DescribePaused(FileVersion edge, FileVersion supported,
+                                      IReadOnlyList<Feature> paused) {
+    if (paused.Count == 0) {
       return "";
     }
-    return $"{JoinNames(state.Unsupported)} need Edge {state.SupportedEdgeBuild}; this is Edge " +
-           $"{state.EdgeBuild?.ToString() ?? "unknown"}.";
+    return $"{EdgeLead(edge, supported)} Paused until Edge+ supports this version: " +
+           $"{JoinTitles(paused)}.";
   }
 
-  private static string JoinNames(IEnumerable<Feature> features) =>
-      string.Join(" and ", features.Select(NameInSentence));
+  // The toast's title.
+  public const string PausedToastTitle = "Edge+ paused features for this Edge version";
+
+  // By card title, apart by semicolons: some titles carry commas of their own
+  // ("Ask to handle links, like Chrome").
+  private const string TitleSeparator = "; ";
+
+  private static string JoinTitles(IReadOnlyList<Feature> features) =>
+      string.Join(TitleSeparator, features.Select(feature => For(feature).Title));
 }

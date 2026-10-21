@@ -65,13 +65,70 @@ and Lavender for light, injecting the DLL turned the open view `ms-theme-lavende
 and wrote `"theme": 18` to the profile; changing the light choice to Black then
 turned it `ms-theme-black` live]
 
+## The Appearance flyout (where the two choices are made)
+
+Reading mode's toolbar is not browser UI: it is the page's own
+`<reader-mode-bar>` element, whose **open** shadow root holds a Fluent web
+component toolbar (`fluent-button#settings-button` opens the settings menu,
+`fluent-menu-item.appearance-menu-item` its Appearance settings). The flyout is
+an `<appearance-pane>` with its own open shadow root: Font, Font size, Column
+width, then `.themes-container` ("Themes" in a `.title-font`, then
+`.color-theme-section`). The grid is a `fluent-radio-group` (aria-label "Color
+theme", `value` = the current theme number) of twelve `fluent-field`s, each a
+`label.color-label` (`.color-button-container` > `.color-button`, plus a
+`.checked-indicator` with a check SVG on the selected one) and a
+`fluent-radio` whose `value` is Edge's theme number and whose `title` is the
+swatch's name ("Sepia", "Light", "Grey", "Blue", "Yellow", "Green", "Lavender",
+"Light blue", "Sky blue", "Light green", "Black", "Dark grey"). The flyout is
+styled with Fluent tokens (`--smtc-*` custom properties: foreground, background,
+stroke, corner, focus stroke, caption font sizes) and Segoe UI Variable. [run]
+
+**Adding UI there.** The page's CSP (`script-src 'self'`) keeps out any script
+of the page's own kind, but the DLL's page scripts run in its isolated world
+(`RenderFrameHostImpl::ExecuteJavaScriptInIsolatedWorld`, world 11, as the find
+and chat scripts do), which that CSP does not govern; the DOM, the open shadow
+roots included, is shared, so the isolated world can insert elements into the
+flyout and listen to its events, and `style-src 'unsafe-inline'` lets it add a
+`<style>` to the pane's shadow root. The page's own globals
+(`readingViewController`) stay out of reach, which is why the theme is still set
+through `DistilledPagePrefs::SetTheme`. [run: the switch below was added by the
+DLL; the page's main world never saw its state object]
+
+`reading_scripts.h` (run by `reading_mode.h` every 400 ms in every live
+`read://` page while the switch is on):
+
+- When the flyout is shown it adds, under "Themes", a `role="radiogroup"`
+  ("Themes for") of two `role="radio"` buttons, **Light mode** and **Dark mode**,
+  in the flyout's own tokens (caption size, subtle-selected ground, neutral
+  stroke, the Fluent focus outline), keyboard-operable (Tab, arrows). It opens on
+  the side Windows is in.
+- On Windows' own side the grid is the page's: a pick switches and saves the page
+  theme as before and is also noted. On the other side a pick is caught in the
+  capture phase (click and keyboard) before it reaches the radios, so the page
+  keeps its theme; the page's checkmark is hidden and a clone of it marks that
+  side's choice.
+- Each visit answers `ok`, or `ok US light US dark` after a pick. The DLL keeps
+  the pair in `%LOCALAPPDATA%\FixEdge\reading-themes.bin` (two little-endian
+  int32s, light first; `reading_themes::ChoicesFromBytes`), and sets the theme at
+  once when the current mode's choice changed.
+- Switched off (or on unload), `RemoveScript` takes the switch, its style and its
+  marks out, and the grid's listeners let every pick through, so the flyout is
+  exactly Edge's own.
+
+[run, throwaway: Lavender picked on the light side switched the page and saved
+18; Dark grey picked on the dark side left the page Lavender and saved 22; after
+closing and reopening the flyout the switch opened on Light mode with Lavender
+checked and showed Dark grey on Dark mode; with the page set to Yellow by hand,
+the DLL's apply (`kApplyTheme`) returned it to Lavender; switched off, the switch,
+its style and its marks were gone]
+
 ## When
 
-With the panel's switch on (`config.h`'s `readingThemeActive`, then the light and
-dark values), the theme for the current Windows mode is set when the config
-arrives and on every light/dark flip, on the signal theming already uses
+With the panel's switch on (`config.h`'s `readingThemeActive`; the two themes
+are no longer on the wire), the theme for the current Windows mode is set when
+the switch comes on, on every light/dark flip, on the signal theming already uses
 (`WM_SETTINGCHANGE "ImmersiveColorSet"` -> `kApplyTheme` -> `control.h`'s
-`ApplyForCurrentOsMode`), in the profile behind each browser window. A theme the
-person picks in the flyout stands until the next flip or config change.
-[run: the config path; the flip path is the existing one, not run here since the
-OS mode was not flipped]
+`ApplyForCurrentOsMode`), in the profile behind each browser window, and when the
+person picks a new theme for the current mode in the flyout. [run: the switch,
+the pick and `kApplyTheme`; the flip itself is the existing path, not run since
+the OS mode was not flipped]

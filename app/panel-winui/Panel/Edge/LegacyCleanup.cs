@@ -7,8 +7,7 @@ namespace EdgePlus;
 // Removes what versions before 2026-10-15 installed for the extension-based
 // architecture: the loaded extension folder, the native-messaging host exe and
 // its manifest, the status file, and Edge's registry pointer to the host.
-// Best-effort and idempotent — a fresh install simply finds nothing. Carried
-// from the first WinUI panel's LegacyCleanup.cs (the Tauri panel dropped it).
+// Best-effort and idempotent — a fresh install simply finds nothing.
 internal static class LegacyCleanup {
   private const string HostName = "com.avi.fix_edge";
   private const string EdgeHostsKey = @"Software\Microsoft\Edge\NativeMessagingHosts\";

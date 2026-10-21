@@ -4,8 +4,7 @@ using System.Collections.Generic;
 namespace EdgePlus;
 
 // Everything the window can ask for, each returning the state to render next.
-// The Tauri panel's commands.rs: the UI never touches settings, Edge or the DLL
-// itself. Each can block (an injection waits for Edge), so the window calls
+// The UI never touches settings, Edge or the DLL itself. Each can block (an injection waits for Edge), so the window calls
 // them off the UI thread.
 internal static class PanelActions {
   public static PanelState Load() => Read(Settings.Load());
@@ -57,17 +56,6 @@ internal static class PanelActions {
     return Load();
   }
 
-  // The reading mode page theme for one Windows mode.
-  public static PanelState SetReadingTheme(ColorMode mode, ReadingTheme theme) {
-    lock (Settings.Gate) {
-      Settings settings = Settings.Load();
-      settings.ReadingMode.Assign(mode, theme);
-      settings.Save();
-      DllSync.Apply(settings);
-      return Read(settings);
-    }
-  }
-
   public static PanelState ReorderThemes(IReadOnlyList<string> ids) {
     ThemeLibrary.Reorder(ids);
     return Load();
@@ -85,20 +73,14 @@ internal static class PanelActions {
   }
 
   private static PanelState Read(Settings settings) {
-    FileVersion? running = EdgeWatch.RunningBuild();
-    IReadOnlyList<Feature> unsupported = running is FileVersion build
-        ? EdgeBuild.Unsupported(build, EdgeBuild.Pinned)
-        : [];
     return new PanelState(
         Features: settings.Features,
         Theming: settings.Theming,
-        ReadingMode: settings.ReadingMode,
         EdgeThemes: ThemeLibrary.EdgeThemesNotIn(settings.Theming),
         IsEdgeRunning: EdgeProcesses.BrowserPids().Length > 0,
         IsStartWithWindows: StartupEntry.IsEnabled(StartupKeys.User, StartupEntry.Name),
         IsSplitLoaded: DllChannel.IsLoaded(),
-        EdgeBuild: running,
-        SupportedEdgeBuild: EdgeBuild.Pinned,
-        Unsupported: unsupported);
+        EdgeBuild: EdgeWatch.CurrentBuild(),
+        SupportedEdgeBuild: EdgeBuild.Pinned);
   }
 }

@@ -18,9 +18,9 @@ internal sealed record PackedTheme(string Id, string Version, byte[] Crx);
 // wrapped in a CRX3 header. The key is kept per source path, so adding the same
 // theme again keeps its extension id.
 //
-// The key file holds Windows CNG's RSAPRIVATEBLOB, the format the Tauri panel's
-// pack.rs writes into the same folder, so a theme either panel packed keeps its
-// id when the other packs it again.
+// The key file holds Windows CNG's RSAPRIVATEBLOB, the format the earlier Tauri
+// panel wrote into the same folder, so a theme it packed keeps its id when this
+// panel packs it again; keep the format and the file names.
 internal static class ThemePacker {
   private const int KeyBits = 2048;
   private const int CrxIdBytes = 16;
@@ -64,8 +64,7 @@ internal static class ThemePacker {
       [.. Crx.SignedDataPrefix, .. LittleEndian((uint)signedHeaderData.Length),
        .. signedHeaderData, .. zip];
 
-  // The key's file name: a hash of the lower-cased source path, as pack.rs
-  // names it.
+  // The key's file name: a hash of the lower-cased source path.
   public static string KeyFileName(string source) {
     byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(source.ToLowerInvariant()));
     ulong prefix = BinaryPrimitives.ReadUInt64BigEndian(hash.AsSpan(0, KeyFileNameBytes));

@@ -10,7 +10,7 @@ namespace EdgePlus;
 // the panel fills. The panel itself — every card and notice — is loaded and,
 // in a dev run, swapped live by PanelLoader; nothing of it is compiled in here.
 public sealed partial class MainWindow : Window {
-  // In device-independent pixels, the Tauri window's sizes: the width is fixed
+  // In device-independent pixels: the width is fixed
   // and only the height is the user's.
   private const int WindowWidth = 560;
   private const int WindowHeight = 640;
@@ -25,7 +25,9 @@ public sealed partial class MainWindow : Window {
   private readonly PanelLoader _loader;
   private readonly DispatcherQueueTimer _statusTimer;
 
-  public MainWindow() {
+  // `loader` is the process's running panel; the window shows it while open
+  // and hands it back when it closes (the panel keeps running).
+  internal MainWindow(PanelLoader loader) {
     InitializeComponent();
     WindowChrome.Apply(this, AppTitleBar);
     FixWidth();
@@ -37,9 +39,15 @@ public sealed partial class MainWindow : Window {
     _statusTimer.IsRepeating = false;
     _statusTimer.Tick += (_, _) => SwapStatus.Opacity = StatusHidden;
 
-    _loader = new PanelLoader(this, PanelSlot, _settingChanged, _broughtBack);
+    _loader = loader;
     _loader.Swapped += ShowSwapStatus;
-    _loader.Start();
+    _loader.Show(this, PanelSlot, _settingChanged, _broughtBack);
+    Closed += (_, _) => {
+      _loader.Swapped -= ShowSwapStatus;
+      WindowSubclass.SettingChanged -= _settingChanged.Raise;
+      _statusTimer.Stop();
+      _loader.Hide();
+    };
   }
 
   // Launching Edge+ again brings the running panel back, and the panel re-reads.
@@ -49,12 +57,6 @@ public sealed partial class MainWindow : Window {
     }
     Activate();
     _broughtBack.Raise();
-  }
-
-  public void Minimize() {
-    if (AppWindow.Presenter is OverlappedPresenter presenter) {
-      presenter.Minimize();
-    }
   }
 
   // The swap, said for a few seconds in the title bar.

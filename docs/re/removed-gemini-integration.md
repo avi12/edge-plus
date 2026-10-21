@@ -306,7 +306,8 @@ The implementation is the design above, built into the existing injected DLL
   (`CopilotButton_vftables`); on unload the button is restored and the panel
   removed before the hooks come off. The reskin is independent of the split,
   so turning the split off does not un-reskin the button.
-- **Panel** (`app/panel/`): a `Browser assistant` card (`AssistantCard.svelte`,
+- **Panel** (the Tauri panel of the time, `app/panel/` at `4ee5113`; since
+  replaced by the WinUI panel): a `Browser assistant` card (`AssistantCard.svelte`,
   a `Select` of Copilot / Gemini) → `set_assistant` → `settings.features.assistant`
   → the config wire's assistant field (`protocol.rs`, mirroring `config.h`).
   The DLL stays loaded while Gemini is selected, and `edge_build.rs` registers

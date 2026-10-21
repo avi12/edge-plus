@@ -12,11 +12,9 @@ internal sealed class ThemeException(string message) : Exception(message);
 // What the user does with themes: add one from a store link or a local folder,
 // .zip or .crx, remove one, and pick one per Windows mode. Each change is
 // installed through Edge's own loader (ExternalExtensions), persisted, and
-// pushed to the running Edge (DllSync), so switching needs no restart. The
-// Tauri panel's theme commands.
+// pushed to the running Edge (DllSync), so switching needs no restart.
 internal static class ThemeLibrary {
   private const string CrxExtension = ".crx";
-  private const string NotAStoreLink = "That is not a Chrome Web Store or Edge Add-ons theme link.";
   private const string IdentityChanged = "The theme's identity changed; add it again.";
   // Edge installs a re-installed local theme a moment later; the DLL is asked to
   // re-apply the active theme once that has landed.
@@ -26,11 +24,12 @@ internal static class ThemeLibrary {
   ];
 
   public static void AddStore(string url) {
-    ParsedStoreTheme parsed = StoreUrl.Parse(url) ?? throw new ThemeException(NotAStoreLink);
+    ParsedStoreTheme parsed =
+        StoreUrl.Parse(url) ?? throw new ThemeException(Wording.NotAStoreLink);
     ExternalExtensions.InstallStore(parsed.Id, parsed.Store);
     Change(theming => theming.AddOrReplace(new ThemeEntry {
       Id = parsed.Id,
-      Name = parsed.Name,
+      Name = parsed.Name ?? InstalledName(parsed.Id) ?? parsed.Id,
       Source = ThemeSource.Store,
       Origin = url.Trim(),
     }));
@@ -123,6 +122,11 @@ internal static class ThemeLibrary {
 
   // The themes Edge has installed that the panel did not add (the panel's own
   // are installed in Edge too; each is listed once).
+  // The name Edge shows for theme `id` (its manifest's), when Edge already has
+  // it installed: a store link without a slug names nothing itself.
+  private static string? InstalledName(string id) =>
+      InstalledThemes.Scan(EdgeUserData.Default).FirstOrDefault(theme => theme.Id == id)?.Name;
+
   public static InstalledTheme[] EdgeThemesNotIn(Theming theming) =>
       InstalledThemes.Scan(EdgeUserData.Default)
           .Where(theme => !theming.Themes.Any(own => own.Id == theme.Id))

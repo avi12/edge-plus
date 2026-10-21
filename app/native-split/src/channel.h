@@ -96,6 +96,7 @@ enum class WindowTimer : UINT_PTR {
   kAnimationFrame = 0xF1ED,  // anim.h: a pane transition's next frame
   kThemeRepaint = 0xF1EE,    // theme.h: the frame redraw after a theme swap
   kRenderNudge = 0xF1EF,     // repaint.h: the settled panes' paint nudge
+  kReadingPoll = 0xF1F1,     // reading_mode.h: the visit to the reading views
 };
 
 [[nodiscard]] inline constexpr UINT_PTR TimerIdOf(WindowTimer timer) noexcept {

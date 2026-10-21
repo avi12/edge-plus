@@ -1,59 +1,177 @@
 // reading_mode.h — reading mode's page theme follows Windows light and dark. One
-// concern: with the panel's switch on, set the reading mode theme the panel
-// picked for the current Windows mode, through dom_distiller's own setter
+// concern: with the panel's switch on, the theme picked for each Windows mode
+// (in reading mode's own Appearance settings, through the switch
+// reading_scripts.h adds there) is kept in a file of the DLL's own, and the one
+// for the current mode is set through dom_distiller's own setter
 // (edge::SetReadingTheme), which persists it for every later reading view and
-// switches the open ones live (docs/re/reading-mode-theme.md). It runs when the
-// config arrives and on each Windows light/dark flip, on the same signal theming
-// uses (control.h's kApplyTheme); which browser windows (profiles) to set is
-// control.h's walk. UI thread only.
+// switches the open ones live (docs/re/reading-mode-theme.md). It is set when the
+// switch comes on, on each Windows light/dark flip (control.h's kApplyTheme,
+// whose walk over the browser windows calls ApplyTo), and when the person picks
+// a new theme for the current mode. While on, a window timer runs the page
+// script in every reading view: it adds the switch when the flyout shows and
+// answers the picks. UI thread only.
 #pragma once
-#include <cstdint>
+#include <windows.h>
+#include <string>
+#include <vector>
+#include "channel.h"
 #include "config.h"
 #include "edge.h"
+#include "handles.h"
 #include "log.h"
+#include "reading_scripts.h"
 #include "reading_themes.h"
 #include "theme.h"
+#include "web_text.h"
 
 namespace fixedge::reading_mode {
 
-inline constinit bool g_isActive = false;
-inline constinit int32_t g_lightTheme =
-    static_cast<int32_t>(reading_themes::ReadingTheme::kSepia);
-inline constinit int32_t g_darkTheme =
-    static_cast<int32_t>(reading_themes::ReadingTheme::kBlack);
+// The two choices' one home, beside the config file.
+inline constexpr char kChoicesRelativePath[] = "\\FixEdge\\reading-themes.bin";
+// A reading view's URL (read://<site>/?url=...).
+inline constexpr char kReadingViewPrefix[] = "read://";
+// How often open reading views are visited: often enough that the switch is in
+// the flyout as it opens.
+inline constexpr UINT kPollIntervalMs = 400;
 
-// Take the panel's choice; true when the theme should be applied now (switched
-// on, or a choice changed while on).
-[[nodiscard]] inline bool ApplyConfig(const config::Wire& wire) {
-  const bool wasActive = g_isActive;
-  const int32_t oldLight = g_lightTheme;
-  const int32_t oldDark = g_darkTheme;
-  g_isActive = wire.readingThemeActive != 0;
-  g_lightTheme = static_cast<int32_t>(wire.readingThemeLight);
-  g_darkTheme = static_cast<int32_t>(wire.readingThemeDark);
-  if (wasActive != g_isActive) {
-    Log("[reading] follows Windows %s (light %d, dark %d)",
-        g_isActive ? "on" : "off", g_lightTheme, g_darkTheme);
+inline constinit bool g_isActive = false;
+inline constinit reading_themes::Choices g_choices{};
+
+[[nodiscard]] inline reading_themes::Choices LoadChoices() {
+  const std::string path = config::LocalAppDataPath(kChoicesRelativePath);
+  const handles::UniqueHandle file{
+      path.empty()
+          ? INVALID_HANDLE_VALUE
+          : CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
+                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)};
+  std::array<uint8_t, reading_themes::kChoicesFileSize> bytes{};
+  DWORD read = 0;
+  const bool isRead =
+      file && ReadFile(file.Get(), bytes.data(),
+                       static_cast<DWORD>(bytes.size()), &read, nullptr);
+  return isRead ? reading_themes::ChoicesFromBytes(std::span(bytes).first(read))
+                : reading_themes::Choices{};
+}
+
+inline void SaveChoices(const reading_themes::Choices& choices) {
+  const std::string path = config::LocalAppDataPath(kChoicesRelativePath);
+  const handles::UniqueHandle file{
+      path.empty()
+          ? INVALID_HANDLE_VALUE
+          : CreateFileA(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+                        FILE_ATTRIBUTE_NORMAL, nullptr)};
+  if (!file) {
+    Log("[reading] could not save the choices");
+    return;
   }
-  const bool isChoiceChanged =
-      oldLight != g_lightTheme || oldDark != g_darkTheme;
-  return g_isActive && (!wasActive || isChoiceChanged);
+  const auto bytes = reading_themes::BytesOf(choices);
+  DWORD written = 0;
+  WriteFile(file.Get(), bytes.data(), static_cast<DWORD>(bytes.size()),
+            &written, nullptr);
+}
+
+// The open reading views whose page can run a script.
+[[nodiscard]] inline std::vector<void*> ReadingViews() {
+  std::vector<void*> views;
+  for (void* contents : edge::AllWebContents()) {
+    const bool isReadingView =
+        edge::IsPageLive(contents) &&
+        edge::TabUrl(contents).starts_with(kReadingViewPrefix);
+    if (isReadingView) {
+      views.push_back(contents);
+    }
+  }
+  return views;
 }
 
 // Set the theme for the current Windows mode in the profile behind
-// `browserContext` (a no-op while off or for a choice that is not offered).
+// `browserContext` (a no-op while off).
 inline void ApplyTo(void* browserContext) {
-  reading_themes::ReadingTheme theme = reading_themes::ReadingTheme::kSepia;
-  const bool isDark = theme::IsOsDarkMode();
-  const bool hasTheme =
-      g_isActive && browserContext &&
-      reading_themes::ThemeForMode(isDark, g_lightTheme, g_darkTheme, &theme);
-  if (!hasTheme) {
+  if (!g_isActive || !browserContext) {
     return;
   }
+  const bool isDark = theme::IsOsDarkMode();
+  const reading_themes::ReadingTheme theme =
+      reading_themes::ForMode(g_choices, isDark);
   edge::SetReadingTheme(browserContext, static_cast<int32_t>(theme));
   Log("[reading] %s -> theme %d", isDark ? "dark" : "light",
       static_cast<int32_t>(theme));
+}
+
+// A reading view answered the poll: take a new pick, keep it, and set it at
+// once when it is the current mode's.
+inline void OnAnswer(void* browserContext, const edge::ScriptResult& result) {
+  if (!g_isActive || !result.isString) {
+    return;
+  }
+  const std::vector<std::string> fields = web_text::SplitFields(result.text);
+  constexpr size_t kPickFieldCount = 3;  // ok, light, dark
+  const bool isPick =
+      fields.size() == kPickFieldCount && fields[0] == web_text::kOkTag;
+  reading_themes::Choices picked;
+  const bool isValid = isPick && reading_themes::ChoicesFromFields(
+                                     fields[1], fields[2], &picked);
+  if (!isValid || picked == g_choices) {
+    return;
+  }
+  const bool isDark = theme::IsOsDarkMode();
+  const bool isCurrentModeChanged = reading_themes::ForMode(picked, isDark) !=
+                                    reading_themes::ForMode(g_choices, isDark);
+  g_choices = picked;
+  SaveChoices(picked);
+  Log("[reading] picked light %d, dark %d", static_cast<int32_t>(picked.light),
+      static_cast<int32_t>(picked.dark));
+  if (isCurrentModeChanged) {
+    ApplyTo(browserContext);
+  }
+}
+
+// The timer's tick (control.h): visit every open reading view.
+inline void Poll() {
+  if (!g_isActive) {
+    return;
+  }
+  const std::string script =
+      reading_scripts::DecorateScript(theme::IsOsDarkMode(), g_choices);
+  for (void* contents : ReadingViews()) {
+    void* browserContext = edge::BrowserContextOf(contents);
+    edge::RunScript(contents, script,
+                    [browserContext](const edge::ScriptResult& result) {
+                      OnAnswer(browserContext, result);
+                    });
+  }
+}
+
+inline void StartPolling(HWND window) {
+  SetTimer(window, channel::TimerIdOf(channel::WindowTimer::kReadingPoll),
+           kPollIntervalMs, nullptr);
+}
+
+// Stop visiting the reading views and take the switch out of every one, so the
+// flyout is exactly Edge's own again.
+inline void Stop(HWND window) {
+  KillTimer(window, channel::TimerIdOf(channel::WindowTimer::kReadingPoll));
+  const std::string script = reading_scripts::RemoveScript();
+  for (void* contents : ReadingViews()) {
+    edge::RunScript(contents, script, nullptr);
+  }
+}
+
+// Take the panel's switch; true when it has just come on (control.h then sets
+// the theme in every window and starts the polling).
+[[nodiscard]] inline bool ApplyConfig(const config::Wire& wire) {
+  const bool wasActive = g_isActive;
+  g_isActive = wire.readingThemeActive != 0;
+  const bool isTurningOn = !wasActive && g_isActive;
+  if (isTurningOn) {
+    g_choices = LoadChoices();
+  }
+  if (wasActive != g_isActive) {
+    Log("[reading] follows Windows %s (light %d, dark %d)",
+        g_isActive ? "on" : "off", static_cast<int32_t>(g_choices.light),
+        static_cast<int32_t>(g_choices.dark));
+  }
+  return isTurningOn;
 }
 
 }  // namespace fixedge::reading_mode
