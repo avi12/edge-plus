@@ -42,8 +42,8 @@
     Payload.cs beside the settings, so the switch always injects the DLL that
     matches this build. The DLL has its own build (build.cmd, MSVC + ninja),
     run here whenever any of its sources is newer than the built DLL (or it is
-    missing) — not only when it is missing, as the Tauri build.rs does: a DLL
-    built before a source change was carried silently, and at start the panel
+    missing), not only when it is missing: a DLL built before a source change
+    was once carried silently, and at start the panel
     ejected Edge's current DLL for it (it read the config without the
     tab-spine field, so the spine switch did nothing). Fails with a sentence
     naming the file rather than producing a panel that cannot do anything.

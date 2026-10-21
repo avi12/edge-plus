@@ -8,7 +8,7 @@
 #                                    pre-commit hook runs)
 #   pwsh tools/lint.ps1 -InstallHook point git at .githooks so commits are gated
 #
-# Six passes (the Tauri panel has its own `pnpm --dir app/panel lint`):
+# Six passes, over the DLL's C++ and the panel's C#:
 #   clang-format (.clang-format)   C++ layout    <- eslint @stylistic
 #   clang-tidy   (.clang-tidy)     correctness   <- oxlint categories.correctness
 #   $restrictedSyntax (below)      house rules   <- eslint no-restricted-syntax
@@ -130,14 +130,12 @@ if ($hasCppInScope) {
     }
 }
 
-# The Tauri panel (app\panel) has its own lint stack — `pnpm --dir app/panel
-# lint` (oxlint + eslint + stylelint + cargo clippy + fallow). The WinUI panel
-# (app\panel-winui) is linted here, as any-stt lints its C# app.
+# The panel (app\panel-winui) is linted here too, as any-stt lints its C# app.
 
 # --- pass 4: C# house rules ------------------------------------------------
-# The C# counterpart of pass 3, and of the Tauri core's `unsafe_code =
-# "forbid"`: every Win32 call is a [DllImport] in Native\, so a [DllImport]
-# anywhere else is a Win32 call that escaped its one home.
+# The C# counterpart of pass 3, and C#'s form of forbidding `unsafe`: every
+# Win32 call is a [DllImport] in Native\, so a [DllImport] anywhere else is a
+# Win32 call that escaped its one home.
 $panelRoot = 'app/panel-winui'
 $csharpRules = @(
     @{

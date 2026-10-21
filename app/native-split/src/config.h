@@ -1,9 +1,8 @@
 // config.h — the panel's live configuration of this DLL. One concern: the wire
 // struct the panel writes to the config file and control.h applies, so its
 // layout is written once here and mirrored field-for-field in
-// app/panel/src-tauri/edge-native/src/protocol.rs and
-// app/panel-winui/Dll/ConfigWire.cs (the @share markers hand the sizes and the
-// file to the WinUI panel; tools/Export-SharedConstants.ps1). The panel owns
+// app/panel-winui/Panel/Dll/ConfigWire.cs (the @share markers hand the sizes
+// and the file to the panel; tools/Export-SharedConstants.ps1). The panel owns
 // which features are on and which theme to use for each OS mode; the DLL obeys
 // live, with no restart.
 #pragma once

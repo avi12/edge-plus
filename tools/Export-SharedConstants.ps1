@@ -19,8 +19,7 @@
   the value is the first string literal on it (an L"" prefix is ignored), or
   the first `= <integer>;`. A marker on a line of its own takes the statement
   under it instead — its string literals joined, or else its integer — which
-  keeps the declaration line itself exactly as other readers of the header
-  (the Tauri panel's build.rs) parse it.
+  keeps the declaration line itself free of the marker.
 
   Run by the csproj before every C# build, so the generated file cannot go
   stale, and by tools\lint.ps1 with -Check, so a committed copy that disagrees
