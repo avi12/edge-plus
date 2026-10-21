@@ -38,8 +38,46 @@
 #   cert-dcl50-cpp — Log() is a printf-style variadic on purpose.
 #   bugprone-unchecked-string-to-number-conversion, misc-no-recursion
 #       (the layout tree is recursive by nature), the rest as in any-stt.
+#
+# ---- C++ best practices, held once applied ----------------------------------
+# Each practice below was applied to the whole tree, and its check is an error
+# from then on, so a regression fails the gate instead of waiting for review:
+#   no C casts                  -> cppcoreguidelines-pro-type-cstyle-cast,
+#                                  google-readability-casting
+#   nullptr, never NULL or 0    -> modernize-use-nullptr
+#   override on every override  -> modernize-use-override
+#   default member initializers -> modernize-use-default-member-init,
+#                                  cppcoreguidelines-prefer-member-initializer
+#   explicit converting ctors   -> google-explicit-constructor
+#   `using`, `= default/delete` -> modernize-use-using, modernize-use-equals-*
+#   C++ headers, bool literals  -> modernize-deprecated-headers,
+#                                  modernize-use-bool-literals,
+#                                  modernize-redundant-void-arg
+#   no dynamic throw() specs    -> modernize-use-noexcept
+#   virtual dtors, no slicing   -> cppcoreguidelines-virtual-class-destructor,
+#                                  cppcoreguidelines-slicing
+#   const member functions      -> readability-make-member-function-const,
+#                                  readability-non-const-parameter
 Checks: >
   -*,
+  cppcoreguidelines-pro-type-cstyle-cast,
+  cppcoreguidelines-prefer-member-initializer,
+  cppcoreguidelines-slicing,
+  cppcoreguidelines-virtual-class-destructor,
+  google-explicit-constructor,
+  google-readability-casting,
+  modernize-deprecated-headers,
+  modernize-redundant-void-arg,
+  modernize-use-bool-literals,
+  modernize-use-default-member-init,
+  modernize-use-equals-default,
+  modernize-use-equals-delete,
+  modernize-use-noexcept,
+  modernize-use-nullptr,
+  modernize-use-override,
+  modernize-use-using,
+  readability-make-member-function-const,
+  readability-non-const-parameter,
   bugprone-*,
   cert-*,
   clang-analyzer-*,
