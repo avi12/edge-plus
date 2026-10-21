@@ -450,7 +450,7 @@ inline void EnsureGripsByCommand(HWND hwnd) {
 
 inline void ShowBarByCommand(HWND hwnd, int pane) {
   void* mcv = edge::McvForWindow(hwnd);
-  const bool hasPane = mcv && pane < static_cast<int>(edge::McvCount(mcv));
+  const bool hasPane = mcv && std::cmp_less(pane, edge::McvCount(mcv));
   if (hasPane) {
     void* webContents =
         edge::ContainerWebContents(edge::McvContainerAt(mcv, pane));

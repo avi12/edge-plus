@@ -79,6 +79,8 @@
 #                                  performance-*); noexcept on the pure,
 #                                  non-allocating helpers is by hand
 #   starts_with / ends_with     -> modernize-use-starts-ends-with
+#   signed vs unsigned compares -> modernize-use-integer-sign-comparison
+#                                  (std::cmp_less and friends)
 #   one declaration a statement -> readability-isolate-declaration
 #   empty(), not size() > 0     -> readability-container-size-empty
 #   no silent narrowing         -> bugprone-narrowing-conversions (on, from
@@ -103,6 +105,7 @@ Checks: >
   modernize-redundant-void-arg,
   modernize-use-bool-literals,
   modernize-use-default-member-init,
+  modernize-use-integer-sign-comparison,
   modernize-use-equals-default,
   modernize-use-equals-delete,
   modernize-use-nodiscard,

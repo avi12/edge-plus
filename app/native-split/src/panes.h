@@ -2,6 +2,7 @@
 // 2-container MultiContentsView into an N-container one by replaying the ctor's
 // own per-pane block (docs/re/ctor.md). UI thread only.
 #pragma once
+#include <utility>
 #include "edge.h"
 
 namespace fixedge::panes {
@@ -38,7 +39,7 @@ inline bool AddContainer(void* mcv) {
 // once each.
 inline void EnsureControlButtons(void* mcv, int index) {
   const bool isGrownPane =
-      index >= kFirstGrownPane && index < static_cast<int>(edge::McvCount(mcv));
+      index >= kFirstGrownPane && std::cmp_less(index, edge::McvCount(mcv));
   if (!isGrownPane) {
     return;
   }
