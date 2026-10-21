@@ -1079,6 +1079,35 @@ inline void* ProfileForTabStrip(void* tsm) {
   return webContents ? BrowserContextOf(webContents) : nullptr;
 }
 
+// Set the reading mode's page theme of the profile behind `browserContext`
+// (dom_distiller's pref, `theme` its number): persisted, and every open reading
+// view of the profile switches to it.
+inline void SetReadingTheme(void* browserContext, int32_t theme) {
+  using GetFn = void*(__fastcall*)(void*);
+  void* keyed = reinterpret_cast<GetFn>(
+      At(edge155::rva::DomDistillerServiceFactory_GetForBrowserContext))(
+      browserContext);
+  if (!keyed) {
+    return;
+  }
+  void* service =
+      static_cast<uint8_t*>(keyed) + edge155::off::DOMDISTILLERKEYED_service;
+  const void* prefs = Field<void*>(
+      service, edge155::off::DOMDISTILLERSERVICE_distilled_page_prefs);
+  if (!prefs) {
+    return;
+  }
+  // An empty libc++ std::string (short, length 0): the callee owns and frees it,
+  // and frees nothing for a short one.
+  struct EmptyString {
+    uint64_t words[3];
+  };
+  EmptyString noSource{};
+  using SetFn = void(__fastcall*)(const void*, int32_t, EmptyString*);
+  reinterpret_cast<SetFn>(At(edge155::rva::DistilledPagePrefs_SetTheme))(
+      prefs, theme, &noSource);
+}
+
 // The per-profile ThemeService (one serves the whole profile).
 // Whether Edge lays its UI out right to left (base::i18n::IsRTL).
 inline bool IsUiRightToLeft() {

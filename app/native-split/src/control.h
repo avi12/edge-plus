@@ -29,6 +29,7 @@
 #include "theme.h"
 #include "theme_follow.h"
 #include "live_preview.h"
+#include "reading_mode.h"
 #include "assistant.h"
 #include "find.h"
 
@@ -194,6 +195,28 @@ inline void CALLBACK TickSpines(HWND /*unused*/, UINT /*unused*/,
   }
   spine::BeginTick();
   EnumWindows(TickWindowSpine, 0);
+}
+
+// EnumWindows callback: set the reading mode theme (reading_mode.h) in the
+// profile behind each of this process's browser windows.
+inline BOOL CALLBACK ApplyWindowReadingTheme(HWND hwnd, LPARAM /*unused*/) {
+  if (!IsOurBrowserClassWindow(hwnd)) {
+    return TRUE;
+  }
+  void* tsm = edge::TsmForWindow(hwnd);
+  if (tsm) {
+    reading_mode::ApplyTo(edge::ProfileForTabStrip(tsm));
+  }
+  return TRUE;
+}
+
+// Everything that follows Windows light and dark, on its flip: the browser
+// theme and the reading mode's page theme.
+inline void ApplyForCurrentOsMode(HWND hwnd) {
+  theme::ApplyForCurrentOsMode(hwnd);
+  if (reading_mode::g_isActive) {
+    EnumWindows(ApplyWindowReadingTheme, 0);
+  }
 }
 
 inline void RefreshThemeColors() {
@@ -369,6 +392,10 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
     RefreshThemeColors();
   }
   live_preview::ApplyConfig(wire);
+  const bool isReadingThemeDue = reading_mode::ApplyConfig(wire);
+  if (isReadingThemeDue) {
+    EnumWindows(ApplyWindowReadingTheme, 0);
+  }
   const bool isTurningHandlersOn = protocol_handlers::ApplyConfig(wire);
   if (isTurningHandlersOn) {
     size_t liftedCount = 0;
@@ -474,7 +501,7 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
   // theming apply and the unload teardown run; every split command is ignored.
   if (!SplitActive()) {
     if (wparam == CodeOf(Command::kApplyTheme)) {
-      theme::ApplyForCurrentOsMode(hwnd);
+      ApplyForCurrentOsMode(hwnd);
     } else if (wparam == CodeOf(Command::kTeardown)) {
       Teardown(hwnd);
     }
@@ -516,7 +543,7 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
       offer::CloseOfferPane();
       return;
     case Command::kApplyTheme:
-      theme::ApplyForCurrentOsMode(hwnd);
+      ApplyForCurrentOsMode(hwnd);
       return;
     default:
       break;

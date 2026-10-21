@@ -452,6 +452,19 @@ inline constexpr uintptr_t ThemeServiceFactory_GetForProfile = 0xfcf172;
 // behind any WebContents, our bridge from a pane to its ThemeService.
 inline constexpr uintptr_t WebContentsImpl_GetBrowserContext = 0x113cae0;
 
+// --- reading mode's page theme (docs/re/reading-mode-theme.md) ---
+// DomDistillerContextKeyedService* DomDistillerServiceFactory::
+// GetForBrowserContext(content::BrowserContext*): the profile's distiller
+// service (its DomDistillerService base at DOMDISTILLERKEYED_service).
+inline constexpr uintptr_t DomDistillerServiceFactory_GetForBrowserContext =
+    0x2e52da0;
+// void DistilledPagePrefs::SetTheme(this, dom_distiller::Theme, std::string
+// source): writes the reading_view.theme pref and posts NotifyOnChangeTheme, so
+// every open reading view runs readingViewController.setPreferences({theme}).
+// `source` (the viewer that asked, which is skipped) is passed by value and the
+// callee frees it; an empty one notifies every viewer.
+inline constexpr uintptr_t DistilledPagePrefs_SetTheme = 0xbf84f80;
+
 // --- WebUI pages follow the theme (docs/re/webui-color-scheme.md) ---
 // Two pieces make a page light or dark, and Edge feeds neither from the theme:
 // the page's prefers-color-scheme (computed per WebContents) and the colors
@@ -1121,6 +1134,11 @@ inline constexpr uintptr_t FINDBARLABEL_set_text_vtable_offset = 0x3a8;
 // views::Label: its text context and text style (Label::GetTextContext and
 // GetTextStyle are bare reads of these), which pick its font and colour id.
 inline constexpr uintptr_t LABEL_text_context = 0x388;
+// DomDistillerContextKeyedService: its DomDistillerService base, and that
+// service's DistilledPagePrefs* (ChromeDomDistillerClient::GetDistilledPagePrefs
+// does exactly this: +8, then the field at +0x20).
+inline constexpr uintptr_t DOMDISTILLERKEYED_service = 0x8;
+inline constexpr uintptr_t DOMDISTILLERSERVICE_distilled_page_prefs = 0x20;
 inline constexpr uintptr_t LABEL_text_style = 0x38c;
 // views::Label: the colour asked for by SetEnabledColor, a
 // std::optional<ui::ColorVariant> (the variant's 8 bytes, then the engaged

@@ -34,12 +34,15 @@ struct Wire {
   uint32_t livePreviewActive;        // 1 = a hovered tab shows a live preview
   uint32_t tabSpineActive;  // 1 = the selected tab gets a square leading edge
                             // and the neon spine (with theming on)
+  uint32_t readingThemeActive;  // 1 = reading mode follows Windows light/dark
+  uint32_t readingThemeLight;   // reading_themes::ReadingTheme for light
+  uint32_t readingThemeDark;    // reading_themes::ReadingTheme for dark
 };
 // protocol.rs writes exactly WIRE_SIZE bytes and LoadFromFile wants all of
 // them, so the struct must stay packed: five u32 fields, the two ids, then the
-// reserved field and the find, WebUI, live-preview and tab-spine switches
-// (u32s).
-inline constexpr size_t kWireFieldCount = 10;
+// reserved field, the find, WebUI, live-preview and tab-spine switches, and the
+// reading-theme switch and its two themes (u32s).
+inline constexpr size_t kWireFieldCount = 13;
 inline constexpr size_t kWireIdCount = 2;
 static_assert(sizeof(Wire) == kWireFieldCount * sizeof(uint32_t) +
                                   kWireIdCount * size_t{kIdCapacity},
@@ -47,7 +50,8 @@ static_assert(sizeof(Wire) == kWireFieldCount * sizeof(uint32_t) +
 
 // The sizes of the files a panel wrote before `reserved`, before
 // `enhancedFindActive`, before `webUiFollowsThemeActive`, before
-// `livePreviewActive` and before `tabSpineActive` existed.
+// `livePreviewActive`, before `tabSpineActive` and before `readingThemeActive`
+// existed.
 inline constexpr DWORD kLegacyWireSize = offsetof(Wire, reserved);
 inline constexpr DWORD kBeforeFindWireSize = offsetof(Wire, enhancedFindActive);
 inline constexpr DWORD kBeforeWebUiWireSize =
@@ -55,6 +59,8 @@ inline constexpr DWORD kBeforeWebUiWireSize =
 inline constexpr DWORD kBeforeLivePreviewWireSize =
     offsetof(Wire, livePreviewActive);
 inline constexpr DWORD kBeforeTabSpineWireSize = offsetof(Wire, tabSpineActive);
+inline constexpr DWORD kBeforeReadingThemeWireSize =
+    offsetof(Wire, readingThemeActive);
 
 // The same bytes the panel also writes beside its settings, so a DLL injected
 // into an already-open Edge reads the current state at load. Live changes come
@@ -82,9 +88,10 @@ inline bool LoadFromFile(Wire* out) {
   const bool isRead = ReadFile(file, out, sizeof(Wire), &read, nullptr);
   const bool isKnownSize =
       isRead &&
-      (read == sizeof(Wire) || read == kBeforeTabSpineWireSize ||
-       read == kBeforeLivePreviewWireSize || read == kBeforeWebUiWireSize ||
-       read == kBeforeFindWireSize || read == kLegacyWireSize);
+      (read == sizeof(Wire) || read == kBeforeReadingThemeWireSize ||
+       read == kBeforeTabSpineWireSize || read == kBeforeLivePreviewWireSize ||
+       read == kBeforeWebUiWireSize || read == kBeforeFindWireSize ||
+       read == kLegacyWireSize);
   CloseHandle(file);
   return isKnownSize;
 }
