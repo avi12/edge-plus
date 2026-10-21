@@ -176,11 +176,10 @@ internal static class Wording {
   // The toast's title.
   public const string PausedToastTitle = "Edge+ paused features for this Edge version";
 
-  // "A", "A and B", "A, B and C", by card title.
-  private static string JoinTitles(IReadOnlyList<Feature> features) {
-    string[] titles = features.Select(feature => For(feature).Title).ToArray();
-    return titles.Length <= 1
-        ? string.Join("", titles)
-        : $"{string.Join(", ", titles[..^1])} and {titles[^1]}";
-  }
+  // By card title, apart by semicolons: some titles carry commas of their own
+  // ("Ask to handle links, like Chrome").
+  private const string TitleSeparator = "; ";
+
+  private static string JoinTitles(IReadOnlyList<Feature> features) =>
+      string.Join(TitleSeparator, features.Select(feature => For(feature).Title));
 }

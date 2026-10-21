@@ -50,7 +50,7 @@ internal static class WordingTests {
                  "an older build is not called an update");
 
     Expect.Equal("Edge updated to 156.0.1.0. Paused until Edge+ supports this version: Split " +
-                     "into any grid and Theme by Windows light and dark.",
+                     "into any grid; Theme by Windows light and dark.",
                  Wording.DescribePaused(s_updated, s_supported, updated.Paused),
                  "the summary names each paused feature by its card");
     Expect.Equal("", Wording.DescribePaused(s_updated, s_supported, []), "nothing paused");
