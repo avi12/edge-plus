@@ -315,8 +315,8 @@ inline void __fastcall h_remove_unused_themes(void* themeService) {
 // tab strip from the toolbar colour (offsets.h VTABCOLOR_*), so the SELECTED
 // vertical tab is only ever a shade of the toolbar and a theme cannot give it a
 // colour of its own. While theming is active we fill the selected tab with the
-// theme's own accent (a shade chosen to read behind the label colour), so it
-// reads as a solid accent chip, with the rail and every other id left
+// neon cyan accent, so it reads as a solid accent chip, with the rail and every
+// other id left
 // untouched. Reads go through o_getcolor (the original),
 // never the hook, so it cannot recurse; a theme that set no accent falls straight
 // through to Edge's derived colour. The colour mixer reads this id when it builds
@@ -324,12 +324,14 @@ inline void __fastcall h_remove_unused_themes(void* themeService) {
 // the theme with the feature on repaints the rail at once. Like RemoveUnusedThemes
 // this rides theming, not the split, so control.h keeps it enabled while the split
 // is off (SetSplitHooks).
-inline constexpr uint32_t kVTabFillBehindDarkText = 0xff96ffff;  // pale cyan
 // The neon theme's chrome ground (rail and toolbar) and idle label colour.
 inline constexpr uint32_t kNeonRail = 0xff070a12;
 inline constexpr uint32_t kNeonIdleText = 0xff8fa7bd;
-// The full neon cyan, under the selected tab's ink title and icons.
-inline constexpr uint32_t kVTabFillBehindLightText = 0xff00e5ff;
+// The full neon cyan of the selected tab, behind either label tone: a dark label
+// reads on it as it is (ink on cyan, 11.6:1), and behind a light label (the neon
+// theme) the selected tab's title and icons are inked (h_getuicolor). A paler
+// cyan behind dark text all but vanished on a light concrete rail (about 1.1:1).
+inline constexpr uint32_t kVTabSelectedFill = 0xff00e5ff;
 // How far an unfocused window pulls the selected fill toward its rail: enough to
 // read as quieter, not enough to vanish on a pale rail.
 inline constexpr uint32_t kVTabInactiveRailPercent = 30;
@@ -380,13 +382,11 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
         isSelectedTabBackground &&
         o_getcolor(pack, edge155::off::THEMECOLOR_tab_text, &textColor);
     if (isTextSet) {
-      // Every vertical tab's label is the one theme text colour, so the selected
-      // fill must read behind it as well as the rail does: the bright accent
-      // behind dark text, a deep shade of it behind light text.
+      // Every vertical tab's label is the one theme text colour: behind a light
+      // one the selected tab's title is inked.
       const bool isTextDark = theme_tone::IsDark(textColor);
       g_isLabelLight = !isTextDark;
-      const uint32_t fill =
-          isTextDark ? kVTabFillBehindDarkText : kVTabFillBehindLightText;
+      const uint32_t fill = kVTabSelectedFill;
       // The slot for an unfocused window dims into the rail, as Edge does its
       // own colours.
       uint32_t inactiveRail = 0;
