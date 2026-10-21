@@ -416,6 +416,9 @@ inline void SyncDecorations(void* findBarView) {
     return;
   }
   lastShown = shown;
+  Log("[find] slashes %s, flag switches on \"%s\"",
+      isShowing ? shown.c_str() : "hidden",
+      find_flags::Letters(FlagsOn(findBarView)).c_str());
   if (isShowing) {
     edge::LabelSetText(decorations.prefix,
                        Utf16Of(Utf16FromUtf8(literal.prefix)));
@@ -643,6 +646,7 @@ inline void RunSearch(void* mcv, Session& session,
     ClearTarget(mcv, session);
   }
   session.target = contents;
+  Log("[find] RegExp search with flags \"%s\"", query.flags.c_str());
   const unsigned long long seq = ++session.searchSeq;
   void* view = session.findBarView;
   const bool isRunning =
