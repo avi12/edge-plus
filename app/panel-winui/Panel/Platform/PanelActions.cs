@@ -57,17 +57,6 @@ internal static class PanelActions {
     return Load();
   }
 
-  // The reading mode page theme for one Windows mode.
-  public static PanelState SetReadingTheme(ColorMode mode, ReadingTheme theme) {
-    lock (Settings.Gate) {
-      Settings settings = Settings.Load();
-      settings.ReadingMode.Assign(mode, theme);
-      settings.Save();
-      DllSync.Apply(settings);
-      return Read(settings);
-    }
-  }
-
   public static PanelState ReorderThemes(IReadOnlyList<string> ids) {
     ThemeLibrary.Reorder(ids);
     return Load();
@@ -88,7 +77,6 @@ internal static class PanelActions {
     return new PanelState(
         Features: settings.Features,
         Theming: settings.Theming,
-        ReadingMode: settings.ReadingMode,
         EdgeThemes: ThemeLibrary.EdgeThemesNotIn(settings.Theming),
         IsEdgeRunning: EdgeProcesses.BrowserPids().Length > 0,
         IsStartWithWindows: StartupEntry.IsEnabled(StartupKeys.User, StartupEntry.Name),

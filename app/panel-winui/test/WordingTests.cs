@@ -14,17 +14,9 @@ internal static class WordingTests {
     }
     Expect.Equal("Enhanced find: RegExp and Ask Copilot", Wording.For(Feature.EnhancedFind).Title,
                  "the find title names the assistant");
-    Expect.Equal("Light blue", Wording.ReadingThemeLabel(ReadingTheme.LightBlue),
-                 "Edge's LightBlue reads as Light blue");
-    Expect.Equal("Dark grey", Wording.ReadingThemeLabel(ReadingTheme.DarkGrey),
-                 "Edge's DarkGrey reads as Dark grey");
-    Expect.Equal("Sepia", Wording.ReadingThemeLabel(ReadingTheme.Sepia), "one word stays");
-    Expect.Equal(12, ReadingThemes.Grid.Length, "the grid has twelve themes");
-    Expect.That(ReadingThemes.Grid[0] == ReadingTheme.Sepia
-                    && ReadingThemes.Grid[5] == ReadingTheme.Green
-                    && ReadingThemes.Grid[6] == ReadingTheme.Lavender
-                    && ReadingThemes.Grid[11] == ReadingTheme.DarkGrey,
-                "in Edge's grid order: Sepia..Green, then Lavender..DarkGrey");
+    Expect.That(Wording.For(Feature.ReadingTheme).Description.Contains(
+                    "Appearance settings", StringComparison.Ordinal),
+                "the reading card says where its themes are picked");
 
     var choice = new Features {
       NativeSplit = true,
@@ -57,6 +49,6 @@ internal static class WordingTests {
   }
 
   private static PanelState State(Features choice, FileVersion? edge) =>
-      new(choice, new Theming(), new ReadingMode(), [], IsEdgeRunning: edge is not null,
+      new(choice, new Theming(), [], IsEdgeRunning: edge is not null,
           IsStartWithWindows: false, IsSplitLoaded: false, edge, s_supported);
 }

@@ -7,7 +7,6 @@ namespace EdgePlus;
 internal sealed record PanelState(
     Features Features,
     Theming Theming,
-    ReadingMode ReadingMode,
     // Themes Edge already has installed that the panel did not add; applied by
     // id like the panel's own.
     IReadOnlyList<InstalledTheme> EdgeThemes,

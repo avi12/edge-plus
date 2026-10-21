@@ -13,31 +13,21 @@ internal static class SettingsTests {
     BrokenOrNullSectionsFallBack();
     RemovingAThemeClearsItsAssignments();
     TheSwitchesMapOneToOne();
-    ReadingModeReadsAndWritesTheTauriShape();
+    ReadingModeIsOnlyItsSwitch();
   }
 
-  private static void ReadingModeReadsAndWritesTheTauriShape() {
-    var defaults = new Settings();
-    Expect.That(!defaults.Features.ReadingTheme, "reading mode is off by default");
-    Expect.Equal(ReadingTheme.Sepia, defaults.ReadingMode.Light, "Sepia for light by default");
-    Expect.Equal(ReadingTheme.Black, defaults.ReadingMode.Dark, "Black for dark by default");
-
+  // The reading themes are picked in reading mode itself now; a file that
+  // still carries the old "readingMode" object loads, and it is not written.
+  private static void ReadingModeIsOnlyItsSwitch() {
+    Expect.That(!new Settings().Features.ReadingTheme, "reading mode is off by default");
     Settings loaded = Settings.Parse(
         """{"features":{"readingTheme":true},"readingMode":{"light":"skyBlue","dark":"darkGrey"}}""");
-    Expect.That(loaded.Features.ReadingTheme, "the reading theme switch is read");
-    Expect.Equal(ReadingTheme.SkyBlue, loaded.ReadingMode.Light, "camelCase names are read");
-    Expect.Equal(ReadingTheme.DarkGrey, loaded.ReadingMode.Dark, "camelCase names are read");
-
-    Settings older = Settings.Parse("""{"features":{"nativeSplit":true}}""");
-    Expect.Equal(ReadingTheme.Black, older.ReadingMode.Dark,
-                 "a file from before reading mode loads with its defaults");
-
-    loaded.ReadingMode.Assign(ColorMode.Light, ReadingTheme.LightGreen);
+    Expect.That(loaded.Features.ReadingTheme, "the switch is read beside an old readingMode");
     string json = loaded.ToJson();
-    foreach (string piece in new[] { "\"readingMode\"", "\"light\": \"lightGreen\"",
-                                     "\"dark\": \"darkGrey\"", "\"readingTheme\": true" }) {
-      Expect.That(json.Contains(piece, StringComparison.Ordinal), $"the file has {piece}");
-    }
+    Expect.That(json.Contains("\"readingTheme\": true", StringComparison.Ordinal),
+                "the switch is written");
+    Expect.That(!json.Contains("readingMode", StringComparison.Ordinal),
+                "the old readingMode object is not written");
   }
 
   // The tab spine defaults on, as in the Tauri panel: it was part of the

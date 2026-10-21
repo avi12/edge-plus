@@ -25,8 +25,8 @@ internal enum Feature {
   // The selected vertical tab gets a square leading edge and the neon spine,
   // while theming is on (spine.h).
   TabSpine,
-  // Reading mode's page theme follows Windows light and dark (reading_mode.h),
-  // with the two themes in Settings.ReadingMode.
+  // Reading mode's page theme follows Windows light and dark (reading_mode.h);
+  // the two themes are picked in reading mode itself and kept by the DLL.
   ReadingTheme,
 }
 
@@ -130,24 +130,6 @@ internal sealed class Features {
       || LivePreview || TabSpine || ReadingTheme;
 }
 
-// Reading mode's page theme for each Windows mode, used while the reading-theme
-// switch is on. Stored as "readingMode": {"light": "sepia", "dark": "black"},
-// the Tauri panel's shape.
-internal sealed class ReadingMode {
-  public ReadingTheme Light { get; set; } = EdgePlus.ReadingTheme.Sepia;
-  public ReadingTheme Dark { get; set; } = EdgePlus.ReadingTheme.Black;
-
-  public ReadingTheme ThemeFor(ColorMode mode) => mode == ColorMode.Light ? Light : Dark;
-
-  public void Assign(ColorMode mode, ReadingTheme theme) {
-    if (mode == ColorMode.Light) {
-      Light = theme;
-    } else {
-      Dark = theme;
-    }
-  }
-}
-
 // One theme the user added: an installed Edge theme extension by id.
 internal sealed class ThemeEntry {
   public string Id { get; init; } = "";
@@ -214,7 +196,6 @@ internal sealed class Settings {
 
   public Features Features { get; set; } = new();
   public Theming Theming { get; set; } = new();
-  public ReadingMode ReadingMode { get; set; } = new();
   // The msedge.dll build last seen running, so a different one is recognized
   // as an Edge update.
   public string? LastEdgeBuild {
@@ -248,7 +229,6 @@ internal sealed class Settings {
     // An explicit null in the file is a missing section, not a crash later.
     parsed.Features ??= new Features();
     parsed.Theming ??= new Theming();
-    parsed.ReadingMode ??= new ReadingMode();
     parsed.Theming.Themes ??= [];
     parsed.Theming.Light ??= "";
     parsed.Theming.Dark ??= "";

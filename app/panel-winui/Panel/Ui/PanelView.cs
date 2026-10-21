@@ -58,7 +58,6 @@ internal sealed class PanelView : IDisposable {
   private readonly Grid _dropVeil;
   private readonly Dictionary<Feature, FeatureCard> _switchCards = [];
   private readonly ThemingCard _themingCard;
-  private readonly ReadingModeCard _readingModeCard;
   private readonly FeatureCard _startupCard = new(Wording.StartWithWindows);
   private readonly BackgroundService? _service;
   private readonly List<IDisposable> _hostSubscriptions = [];
@@ -76,15 +75,10 @@ internal sealed class PanelView : IDisposable {
       Visibility = Visibility.Collapsed,
     };
     _themingCard = new ThemingCard(RunAsync, PickLocalThemeAsync);
-    _readingModeCard = new ReadingModeCard(RunAsync);
     AddSwitchCard(Feature.NativeSplit);
     _cardList.Children.Add(_themingCard.View);
     foreach (Feature feature in s_cardsAfterTheming) {
-      if (feature == Feature.ReadingTheme) {
-        _cardList.Children.Add(_readingModeCard.View);
-      } else {
-        AddSwitchCard(feature);
-      }
+      AddSwitchCard(feature);
     }
     _startupCard.Toggled += isOn => _ = RunAndReportAsync(
         () => PanelActions.SetStartWithWindows(isOn));
@@ -226,8 +220,6 @@ internal sealed class PanelView : IDisposable {
     }
     _themingCard.Update(state, state.IsLocked(Feature.Theming),
                         Wording.DescribeFeature(state, Feature.Theming));
-    _readingModeCard.Update(state, state.IsLocked(Feature.ReadingTheme),
-                            Wording.DescribeFeature(state, Feature.ReadingTheme));
     _startupCard.Update(state.IsStartWithWindows, isLocked: false, note: "");
   }
 

@@ -13,7 +13,6 @@ internal static class StyleKeys {
   public const string Badge = "BadgeStyle";
   public const string BadgeText = "BadgeTextStyle";
   public const string ThemeListItem = "ThemeListItemStyle";
-  public const string Swatch = "SwatchStyle";
   public const string DropVeil = "DropVeilStyle";
   public const string DropVeilFrame = "DropVeilFrameStyle";
   // WinUI's own.

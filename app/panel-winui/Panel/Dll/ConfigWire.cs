@@ -16,9 +16,7 @@ internal readonly record struct DllConfig(
     bool IsWebUiFollowsThemeActive,
     bool IsLivePreviewActive,
     bool IsTabSpineActive,
-    bool IsReadingThemeActive,
-    ReadingTheme ReadingThemeLight,
-    ReadingTheme ReadingThemeDark) {
+    bool IsReadingThemeActive) {
   public static DllConfig From(Settings settings) => From(settings, settings.Features);
 
   // With the switches as they apply on the current Edge build (a paused
@@ -33,18 +31,16 @@ internal readonly record struct DllConfig(
       IsWebUiFollowsThemeActive: features.WebUiFollowsTheme,
       IsLivePreviewActive: features.LivePreview,
       IsTabSpineActive: features.TabSpine,
-      IsReadingThemeActive: features.ReadingTheme,
-      ReadingThemeLight: settings.ReadingMode.Light,
-      ReadingThemeDark: settings.ReadingMode.Dark);
+      IsReadingThemeActive: features.ReadingTheme);
 }
 
 // The bytes of the config file the DLL reads. The layout mirrors struct Wire in
 // app/native-split/src/config.h field for field: five u32s, the two ids, then a
 // reserved u32 (once the chosen assistant; written as zero, never read), the
 // find switch, the WebUI-follows-theme switch, the live-preview switch, the
-// tab-spine switch, and the reading-theme switch with its light and dark themes
-// (Edge's own numbers, ReadingTheme's values). Every u32 is little-endian, as
-// the DLL reads it on x64.
+// tab-spine switch, and the reading-theme switch (its light and dark themes are
+// picked in reading mode itself and kept by the DLL). Every u32 is
+// little-endian, as the DLL reads it on x64.
 internal static class ConfigWire {
   private const int FieldBytes = sizeof(uint);
 
@@ -61,9 +57,7 @@ internal static class ConfigWire {
   public const int LivePreviewActiveOffset = WebUiFollowsThemeActiveOffset + FieldBytes;
   public const int TabSpineActiveOffset = LivePreviewActiveOffset + FieldBytes;
   public const int ReadingThemeActiveOffset = TabSpineActiveOffset + FieldBytes;
-  public const int ReadingThemeLightOffset = ReadingThemeActiveOffset + FieldBytes;
-  public const int ReadingThemeDarkOffset = ReadingThemeLightOffset + FieldBytes;
-  public const int Size = ReadingThemeDarkOffset + FieldBytes;
+  public const int Size = ReadingThemeActiveOffset + FieldBytes;
 
   // The size config.h static_asserts, from its own counts.
   public const int SizeConfigHExpects =
@@ -81,13 +75,8 @@ internal static class ConfigWire {
     WriteFlag(wire, LivePreviewActiveOffset, config.IsLivePreviewActive);
     WriteFlag(wire, TabSpineActiveOffset, config.IsTabSpineActive);
     WriteFlag(wire, ReadingThemeActiveOffset, config.IsReadingThemeActive);
-    WriteU32(wire, ReadingThemeLightOffset, (uint)config.ReadingThemeLight);
-    WriteU32(wire, ReadingThemeDarkOffset, (uint)config.ReadingThemeDark);
     return wire;
   }
-
-  private static void WriteU32(byte[] wire, int offset, uint value) =>
-      BinaryPrimitives.WriteUInt32LittleEndian(wire.AsSpan(offset), value);
 
   private static void WriteFlag(byte[] wire, int offset, bool isOn) =>
       BinaryPrimitives.WriteUInt32LittleEndian(wire.AsSpan(offset), isOn ? 1u : 0u);

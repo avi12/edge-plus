@@ -47,28 +47,6 @@ internal static class Wording {
 
   public static string RemoveTheme(string name) => $"Remove {name}";
 
-  // A reading mode picker's name for a screen reader.
-  public static string ReadingPickerName(ColorMode mode) =>
-      mode == ColorMode.Light
-          ? "Reading mode theme when Windows is light"
-          : "Reading mode theme when Windows is dark";
-
-  // A reading theme as the user reads it: Edge's name, its words spaced out
-  // ("LightBlue" -> "Light blue").
-  public static string ReadingThemeLabel(ReadingTheme theme) {
-    string name = ReadingThemes.EdgeName(theme);
-    var label = new System.Text.StringBuilder();
-    for (int i = 0; i < name.Length; i++) {
-      bool isNewWord = i > 0 && char.IsUpper(name[i]);
-      if (isNewWord) {
-        label.Append(' ').Append(char.ToLowerInvariant(name[i]));
-      } else {
-        label.Append(name[i]);
-      }
-    }
-    return label.ToString();
-  }
-
   // What a failure says. The details go to the panel's log (PanelLog), never
   // into the window.
   public const string ActionFailed =
@@ -126,8 +104,8 @@ internal static class Wording {
     Feature.ReadingTheme => new(
         "Reading mode follows Windows light and dark",
         "Reading mode uses one page theme while Windows is light and another while it is dark, " +
-            "set as Windows switches and kept for every page you open in reading mode. Live, no " +
-            "restart.",
+            "switched as Windows switches. Pick both in reading mode: Appearance settings, " +
+            "Themes, then Light mode or Dark mode. Live, no restart.",
         0xE736),
     Feature.QuietDevMode => new(
         "Hide the developer-mode prompt",

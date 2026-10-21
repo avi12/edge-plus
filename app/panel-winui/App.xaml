@@ -54,16 +54,6 @@
                 <Setter Property="MinHeight" Value="36"/>
                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             </Style>
-            <!-- A reading theme's colour chip in a picker: the fill is the
-                 theme's own; the ring keeps a light chip visible on a light
-                 surface and a dark one on dark. -->
-            <Style x:Key="SwatchStyle" TargetType="Ellipse">
-                <Setter Property="Width" Value="14"/>
-                <Setter Property="Height" Value="14"/>
-                <Setter Property="Stroke" Value="{ThemeResource ControlStrongStrokeColorDefaultBrush}"/>
-                <Setter Property="StrokeThickness" Value="1"/>
-                <Setter Property="VerticalAlignment" Value="Center"/>
-            </Style>
             <!-- Shown while a theme is dragged over the window. -->
             <Style x:Key="DropVeilStyle" TargetType="Grid">
                 <Setter Property="Background" Value="{ThemeResource SolidBackgroundFillColorBaseBrush}"/>
