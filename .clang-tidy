@@ -76,6 +76,7 @@
 #     mirrors too: an initializer is not layout)
 #   the rule of five            -> cppcoreguidelines-special-member-functions
 #   starts_with / ends_with     -> modernize-use-starts-ends-with
+#   one declaration a statement -> readability-isolate-declaration
 #   no silent narrowing         -> bugprone-narrowing-conversions (on, from
 #                                  bugprone-*: an int that becomes a float, or
 #                                  an unsigned that becomes signed, is cast)
@@ -108,6 +109,7 @@ Checks: >
   modernize-use-using,
   readability-make-member-function-const,
   readability-non-const-parameter,
+  readability-isolate-declaration,
   readability-qualified-auto,
   bugprone-*,
   cert-*,

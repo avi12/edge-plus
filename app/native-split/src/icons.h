@@ -136,7 +136,10 @@ inline const VectorIcon* QuarterTurn(const VectorIcon* source,
   const auto* elements = static_cast<const PathElement*>(representation.path);
   const bool isLeft = direction == Direction::kLeft;
   float canvas = 0.f;
-  float currentX = 0.f, currentY = 0.f, startX = 0.f, startY = 0.f;
+  float currentX = 0.f;
+  float currentY = 0.f;
+  float startX = 0.f;
+  float startY = 0.f;
   std::vector<PathElement> out;
   auto appendPoint = [&](int command, float x, float y) {
     out.push_back(CommandElement(command));
@@ -184,7 +187,8 @@ inline const VectorIcon* QuarterTurn(const VectorIcon* source,
         const float deltaY = ArgumentOf(arguments[1]);
         currentX += deltaX;
         currentY += deltaY;
-        float turnedX = 0.f, turnedY = 0.f;
+        float turnedX = 0.f;
+        float turnedY = 0.f;
         turnedDelta(deltaX, deltaY, &turnedX, &turnedY);
         out.push_back(elements[i]);
         out.push_back(ArgumentElement(turnedX));
@@ -196,7 +200,8 @@ inline const VectorIcon* QuarterTurn(const VectorIcon* source,
         const float deltaY = ArgumentOf(arguments[6]);
         currentX += deltaX;
         currentY += deltaY;
-        float turnedX = 0.f, turnedY = 0.f;
+        float turnedX = 0.f;
+        float turnedY = 0.f;
         turnedDelta(deltaX, deltaY, &turnedX, &turnedY);
         out.push_back(elements[i]);
         out.insert(out.end(), arguments, arguments + 5);  // radii and flags
