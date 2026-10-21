@@ -1,18 +1,19 @@
 // spine.h — the selected vertical tab's square leading edge and its magenta
-// spine. One concern: thin click-through popups laid over the leading edge of
+// spine. One concern: thin click-through pieces laid over the leading edge of
 // the selected tab's row (the left one, the right one in a right-to-left UI;
 // tab_edge.h places them): the stripe the full height of the row, and a square
 // of the selected fill over each of the pill's rounded corners on that side, so
 // the edge reads straight with the spine flush on it. Every browser window gets
-// its own set, owned by it, so it rides that window's z-order and dies with it.
+// its own set, children of it, so they show in a capture of it and die with it.
 // No ui colour id paints a selected-tab outline, and hooking Edge's tab painting
 // crashed the browser, so these live in their own layered windows, outside
 // Edge's views: a timer reads (never writes) each window's selected tab view's
-// screen bounds and moves that window's popups to match. Which windows are
+// screen bounds and moves that window's pieces to match. Which windows are
 // browser windows is control.h's call (TickWindow is its per-window step). UI
 // thread only.
 #pragma once
 #include <windows.h>
+#include <algorithm>
 #include <atomic>
 #include <vector>
 #include "edge.h"
@@ -48,9 +49,10 @@ inline constinit theme_tone::Argb g_selectedFill = 0;
 // is in the title bar, so tabs above this are not ours to mark.
 inline constexpr int kVerticalListTopDip = 48;
 
-// One browser window's stripe and two corner squares: plain solid popups, each
-// a class brush and nothing else, the one kind of popup proven to show over
-// Edge. Owned by `browser`, so Windows destroys them when it closes.
+// One browser window's stripe and two corner squares: plain solid windows, each
+// a class brush and nothing else (a piece cut to shape and painted by hand was
+// once reported to leave no spine on screen). Children of `browser`, so Windows
+// destroys them when it closes.
 struct WindowSet {
   HWND browser = nullptr;
   HWND stripe = nullptr;
@@ -94,11 +96,16 @@ inline HINSTANCE ThisModule() {
   return thisModule;
 }
 
-// An opaque popup over Edge, painted in its class brush, that the pointer
-// passes straight through. Without WS_EX_LAYERED, WS_EX_TRANSPARENT does not
-// pass hits on, so the popup would take the pointer: Edge would see it leave
-// the tab and end the hover.
-inline HWND CreatePopup(HWND owner, const wchar_t* className, COLORREF color) {
+// An opaque piece over Edge, painted in its class brush, that the pointer
+// passes straight through. It is a child of the browser window, not an owned
+// popup: a capture of the Edge window alone (a Discord window share) takes its
+// children but no other top-level window. The browser window has no
+// redirection bitmap (WS_EX_NOREDIRECTIONBITMAP), so only a layered child gets a
+// surface of its own to show in, as Edge's own "Intermediate D3D Window" child
+// does. Disabled, it takes no input: the pointer goes to the browser window, so
+// Edge never sees it leave the tab and end the hover.
+inline HWND CreatePiece(HWND browser, const wchar_t* className,
+                        COLORREF color) {
   handles::UniqueBrush brush{CreateSolidBrush(color)};
   WNDCLASSEXW windowClass{sizeof(windowClass)};
   windowClass.lpfnWndProc = DefWindowProcW;
@@ -112,14 +119,14 @@ inline HWND CreatePopup(HWND owner, const wchar_t* className, COLORREF color) {
   if (isRegistered) {
     brush.Release();
   }
-  HWND popup = CreateWindowExW(
-      WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
-      className, L"", WS_POPUP, 0, 0, 0, 0, owner, nullptr, ThisModule(),
-      nullptr);
-  if (popup) {
-    SetLayeredWindowAttributes(popup, 0, theme_tone::kChannelMax, LWA_ALPHA);
+  HWND piece =
+      CreateWindowExW(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE,
+                      className, L"", WS_CHILD | WS_DISABLED | WS_CLIPSIBLINGS,
+                      0, 0, 0, 0, browser, nullptr, ThisModule(), nullptr);
+  if (piece) {
+    SetLayeredWindowAttributes(piece, 0, theme_tone::kChannelMax, LWA_ALPHA);
   }
-  return popup;
+  return piece;
 }
 
 // The stripe colour for `browser`'s theme: its tone, read as theme_follow reads
@@ -132,7 +139,7 @@ inline theme_tone::Argb StripeColorOf(HWND browser) {
 
 inline HWND CreateStripe(HWND browser, theme_tone::Argb color) {
   const bool isLightColor = color == tab_edge::kStripeOnLight;
-  return CreatePopup(browser,
+  return CreatePiece(browser,
                      isLightColor ? kStripeClassOnLight : kStripeClassOnDark,
                      ColorRefOf(color));
 }
@@ -159,9 +166,9 @@ inline WindowSet& SetFor(HWND browser, theme_tone::Argb stripeColor) {
   set.side = tab_edge::LeadingSide(edge::IsUiRightToLeft());
   set.stripeColor = stripeColor;
   set.stripe = CreateStripe(browser, stripeColor);
-  set.topCorner = CreatePopup(browser, kCornerClass, ColorRefOf(g_paintedFill));
+  set.topCorner = CreatePiece(browser, kCornerClass, ColorRefOf(g_paintedFill));
   set.bottomCorner =
-      CreatePopup(browser, kCornerClass, ColorRefOf(g_paintedFill));
+      CreatePiece(browser, kCornerClass, ColorRefOf(g_paintedFill));
   Log("[spine] window %p gets a spine, %s edge, stripe %08x", browser,
       set.side == tab_edge::Side::kRight ? "right" : "left", stripeColor);
   g_sets.push_back(set);
@@ -209,17 +216,25 @@ inline void NoteTabDrag(bool isTabDragRunning) {
   }
 }
 
-inline void Place(HWND popup, const Rect& rect) {
-  if (popup) {
-    SetWindowPos(popup, nullptr, rect.x, rect.y, rect.width, rect.height,
-                 SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+// Put `piece` over `screenRect`, above Edge's own children (its D3D surface).
+// MapWindowPoints maps both corners, so a mirrored window maps right too.
+inline void Place(HWND browser, HWND piece, const Rect& screenRect) {
+  if (!piece) {
+    return;
   }
+  POINT corners[2] = {
+      {screenRect.x, screenRect.y},
+      {screenRect.x + screenRect.width, screenRect.y + screenRect.height}};
+  MapWindowPoints(nullptr, browser, corners, 2);
+  const int left = std::min(corners[0].x, corners[1].x);
+  SetWindowPos(piece, HWND_TOP, left, corners[0].y, screenRect.width,
+               screenRect.height, SWP_NOACTIVATE | SWP_SHOWWINDOW);
 }
 
 inline void Hide(const WindowSet& set) {
-  for (HWND popup : {set.stripe, set.topCorner, set.bottomCorner}) {
-    if (popup) {
-      ShowWindow(popup, SW_HIDE);
+  for (HWND piece : {set.stripe, set.topCorner, set.bottomCorner}) {
+    if (piece) {
+      ShowWindow(piece, SW_HIDE);
     }
   }
 }
@@ -233,15 +248,15 @@ inline void HideFor(HWND browser) {
 }
 
 inline void Destroy(const WindowSet& set) {
-  for (HWND popup : {set.stripe, set.topCorner, set.bottomCorner}) {
-    if (popup) {
-      DestroyWindow(popup);
+  for (HWND piece : {set.stripe, set.topCorner, set.bottomCorner}) {
+    if (piece) {
+      DestroyWindow(piece);
     }
   }
 }
 
 // The start of a tick: drop the sets of browser windows that have closed
-// (Windows already destroyed their owned popups).
+// (Windows already destroyed their child pieces).
 inline void BeginTick() {
   std::erase_if(g_sets, [](const WindowSet& set) {
     return !IsWindow(set.browser);
@@ -307,15 +322,15 @@ inline void TickWindow(HWND browser, void* draggedTab) {
   const tab_edge::Pieces pieces = tab_edge::PiecesFor(
       markedRow, set.side, static_cast<int>(kWidthDip * scale),
       static_cast<int>(kCornerDip * scale));
-  Place(set.stripe, pieces.stripe);
+  Place(browser, set.stripe, pieces.stripe);
   // Until the colour hook has answered a fill, the corners stay hidden rather
   // than show a square of the wrong colour.
   const bool isFillKnown = g_paintedFill != 0;
   if (!isFillKnown) {
     return;
   }
-  Place(set.topCorner, pieces.topCorner);
-  Place(set.bottomCorner, pieces.bottomCorner);
+  Place(browser, set.topCorner, pieces.topCorner);
+  Place(browser, set.bottomCorner, pieces.bottomCorner);
 }
 
 // Start calling `onTick` every tick. A thread timer, not one on a window: the
@@ -329,7 +344,7 @@ inline void Start(TIMERPROC onTick) {
       static_cast<unsigned long long>(g_timerId));
 }
 
-// Stop ticking and drop every window's popups (switched off, or before this DLL
+// Stop ticking and drop every window's pieces (switched off, or before this DLL
 // unloads). On the UI thread that started the timer.
 inline void Remove() {
   g_isActive = false;
