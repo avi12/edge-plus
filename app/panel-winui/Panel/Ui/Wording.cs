@@ -41,6 +41,8 @@ internal static class Wording {
   public const string DropHint = "Drop a theme folder, .zip or .crx to add it";
 
   // The theming card's own words.
+  public const string NotAStoreLink =
+      "That is not a theme link from the Chrome Web Store or Edge Add-ons.";
   public const string StoreLinkPlaceholder = "Paste a Chrome Web Store or Edge Add-ons link";
   public const string AddTheme = "Add";
   public const string AddLocalTheme = "Or add a local theme";

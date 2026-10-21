@@ -73,6 +73,15 @@ fn state_of(settings: &Settings) -> StateDto {
     }
 }
 
+// The name Edge shows for theme `id` (its manifest's), when Edge has it
+// installed.
+fn installed_name(id: &str) -> Option<String> {
+    installed_themes::scan(&edge_native::default_user_data())
+        .into_iter()
+        .find(|theme| theme.id == id)
+        .map(|theme| theme.name)
+}
+
 // The panel's own themes are installed in Edge too; list each only once.
 fn edge_themes_not_in(theming: &Theming) -> Vec<InstalledTheme> {
     installed_themes::scan(&edge_native::default_user_data())
@@ -252,15 +261,20 @@ pub fn set_start_with_windows(enabled: bool) -> Result<StateDto, String> {
 
 #[tauri::command]
 pub fn add_store_theme(url: String) -> Result<StateDto, String> {
-    let parsed = store_url::parse(&url)
-        .ok_or_else(|| "That is not a Chrome Web Store or Edge Add-ons theme link.".to_owned())?;
+    let parsed = store_url::parse(&url).ok_or_else(|| store_url::NOT_A_STORE_LINK.to_owned())?;
     edge_native::install_store(&parsed.id, parsed.store).map_err(|error| error.to_string())?;
+    // A link without a slug names nothing: Edge's name for it if Edge already
+    // has it installed, else its id.
+    let name = parsed
+        .name
+        .or_else(|| installed_name(&parsed.id))
+        .unwrap_or_else(|| parsed.id.clone());
     let mut settings = Settings::load();
     add_or_replace(
         &mut settings.theming,
         ThemeEntry {
             id: parsed.id,
-            name: parsed.name,
+            name,
             source: ThemeSource::Store,
             origin: url,
         },
