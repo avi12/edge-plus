@@ -20,13 +20,3 @@
     <Switch {checked} {disabled} label={title} {onchange} />
   </CardHeader>
 </section>
-
-<style>
-  .card {
-    padding: var(--space-l);
-    border: 1px solid var(--stroke-2);
-    border-radius: 8px;
-    background: var(--bg-card);
-    box-shadow: var(--shadow-card);
-  }
-</style>

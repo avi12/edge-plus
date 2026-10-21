@@ -141,7 +141,7 @@
     />
   </CardHeader>
 
-  <div class="panel" class:dimmed={!enabled}>
+  <div class="card-panel" class:dimmed={!enabled}>
     <div class="add">
       <div class="add-row">
         <TextInput
@@ -187,25 +187,6 @@
 </section>
 
 <style>
-  .card {
-    padding: var(--space-l);
-    border: 1px solid var(--stroke-2);
-    border-radius: 8px;
-    background: var(--bg-card);
-    box-shadow: var(--shadow-card);
-  }
-
-  .panel {
-    margin-top: var(--space-l);
-    padding-top: var(--space-l);
-    border-top: 1px solid var(--stroke-2);
-    transition: opacity 140ms ease;
-  }
-
-  .panel.dimmed {
-    opacity: 50%;
-  }
-
   .add {
     display: flex;
     flex-direction: column;
