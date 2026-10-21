@@ -1,8 +1,10 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
+using Microsoft.Windows.AppNotifications;
 
 namespace EdgePlus;
 
@@ -37,6 +39,7 @@ public partial class App : Application {
 
   protected override void OnLaunched(LaunchActivatedEventArgs args) {
     DispatcherQueue dispatcher = DispatcherQueue.GetForCurrentThread();
+    RegisterForToasts(dispatcher);
     _loader = new PanelLoader(dispatcher);
     _loader.Start();
     // A second launch redirected here (Program) shows the window.
@@ -56,6 +59,20 @@ public partial class App : Application {
     _window = new MainWindow(_loader!);
     _window.Closed += OnWindowClosed;
     _window.Activate();
+  }
+
+  // The panel's toast (PausedToast) needs the process registered; clicking it
+  // opens the window. A toast clicked while no Edge+ runs starts a new one,
+  // which opens its window as any plain launch does. The handler is attached
+  // before Register, as the Windows App SDK requires.
+  private void RegisterForToasts(DispatcherQueue dispatcher) {
+    try {
+      AppNotificationManager.Default.NotificationInvoked +=
+          (_, _) => dispatcher.TryEnqueue(ShowWindow);
+      AppNotificationManager.Default.Register();
+    } catch (COMException) {
+      // No toasts on this system; the cards still say what is paused.
+    }
   }
 
   private void OnWindowClosed(object sender, WindowEventArgs args) {

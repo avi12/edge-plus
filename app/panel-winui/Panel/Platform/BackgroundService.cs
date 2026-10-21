@@ -6,7 +6,8 @@ namespace EdgePlus;
 // process: watch Edge for a new build (EdgeWatch) and local themes for edits
 // (ThemeWatch). A window, when open, listens to it rather than running watchers
 // of its own, so there is one watcher of each, and a boot launch with no window
-// is still the listener.
+// is still the listener. When a new build pauses features while no window is
+// open, the user is told once by toast (PausedToast).
 internal sealed class BackgroundService : IDisposable {
   private readonly EdgeWatch _edgeWatch = new();
   private readonly ThemeWatch _themeWatch = new();
@@ -48,5 +49,10 @@ internal sealed class BackgroundService : IDisposable {
     }
   }
 
-  private void OnBuildChanged(BuildChange change) => BuildChanged?.Invoke(change);
+  private void OnBuildChanged(BuildChange change) {
+    if (!IsWindowOpen) {
+      PausedToast.ShowOncePerBuild(change);
+    }
+    BuildChanged?.Invoke(change);
+  }
 }

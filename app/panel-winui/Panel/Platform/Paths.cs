@@ -16,6 +16,7 @@ internal static class Paths {
   private const string ThemesFolderName = "themes";
   private const string ThemeKeysFolderName = "keys";
   private const string TemporarySuffix = ".tmp";
+  private const string PausedToastFileName = "paused-toast-build.txt";
 
   // %LOCALAPPDATA%\FixEdge\fixedge-config.bin: the desired state the DLL reads
   // at load and on every change.
@@ -35,6 +36,10 @@ internal static class Paths {
   public static string SplitDll { get; } = Path.Combine(DataRoot, SplitDllFileName);
 
   public static string SplitDllName => SplitDllFileName;
+
+  // The Edge build the paused-features toast last spoke of, so it is raised
+  // once per build.
+  public static string PausedToastBuild { get; } = Path.Combine(DataRoot, PausedToastFileName);
 
   // Local theme .crx files are copied here to install by path.
   public static string ThemesRoot { get; } = Path.Combine(DataRoot, ThemesFolderName);
