@@ -21,7 +21,7 @@
 
 namespace fixedge::theme_follow {
 
-inline bool g_isActive = false;
+inline constinit bool g_isActive = false;
 
 // The tone a followed page was last computed in, and when a redraw was last
 // asked for: a theme swap changes the tone a page should have, but the page
@@ -30,14 +30,14 @@ inline bool g_isActive = false;
 // that cannot take the tone is not reloaded forever.
 inline constexpr ULONGLONG kRedrawCooldownMs = 3000;
 inline constexpr int32_t kNoModeYet = -1;
-inline int32_t g_lastPreferredMode = kNoModeYet;
-inline ULONGLONG g_lastRedrawAskedAt = 0;
+inline constinit int32_t g_lastPreferredMode = kNoModeYet;
+inline constinit ULONGLONG g_lastRedrawAskedAt = 0;
 
 // The color mode the provider key must carry for the one synchronous
 // GetColorProvider call that is building a followed page's colors, or
 // kNoForcedMode.
 inline constexpr int32_t kNoForcedMode = -1;
-inline int32_t g_forcedColorMode = kNoForcedMode;
+inline constinit int32_t g_forcedColorMode = kNoForcedMode;
 
 // The tone the active theme gives the page in `webContents`, when the feature is
 // on, the page is one of the two, and the theme (an extension or colored theme)
@@ -63,7 +63,7 @@ inline theme_tone::Tone ToneForPage(void* webContents) {
 // EdgeComputePreferredColorScheme: the page's prefers-color-scheme (and root
 // scrollbar scheme), as Edge computed them, unless the page follows the theme.
 using Preferred_t = void*(__fastcall*)(void*, const void*, void*);
-inline Preferred_t o_preferred = nullptr;
+inline constinit Preferred_t o_preferred = nullptr;
 
 inline void* __fastcall h_preferred(void* out, const void* siteInfo,
                                     void* webContents) {
@@ -96,7 +96,7 @@ inline void* __fastcall h_preferred(void* out, const void* siteInfo,
 // ThemeService::GetColorProviderKey: Edge's key, with the mode replaced while
 // a followed page's provider is being asked for.
 using ProviderKey_t = void*(__fastcall*)(void*, void*, const void*, void*);
-inline ProviderKey_t o_provider_key = nullptr;
+inline constinit ProviderKey_t o_provider_key = nullptr;
 
 inline void* __fastcall h_provider_key(void* themeService, void* key,
                                        const void* nativeKey, void* profile) {
@@ -113,7 +113,7 @@ inline void* __fastcall h_provider_key(void* themeService, void* key,
 // built from. A followed page gets the one for the theme's tone, by asking for
 // it with the key's mode forced for the duration of the call.
 using WebContentsProvider_t = const void*(__fastcall*)(void*);
-inline WebContentsProvider_t o_contents_provider = nullptr;
+inline constinit WebContentsProvider_t o_contents_provider = nullptr;
 
 inline const void* __fastcall h_contents_provider(void* webContents) {
   const theme_tone::Tone tone = ToneForPage(webContents);

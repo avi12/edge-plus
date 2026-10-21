@@ -103,6 +103,11 @@ if ($hasCppInScope) {
             Pattern = 'for\s*\(\s*;\s*;\s*\)'
             Message = 'Use `while (true)` for an infinite loop. `for (;;)` reads as a for loop someone forgot to finish writing.'
         }
+        @{
+            # A g_ global or an o_ hook original, declared without constinit.
+            Pattern = '^inline\s+(?!constexpr\b|constinit\b)[\w:<>, ]+[*&]?\s+[go]_\w+\s*(\[[^\]]*\])?\s*(=|\{|;)'
+            Message = 'Declare a mutable global `inline constinit`: a dynamic initializer would run in DllMain under the loader lock, in an order the linker picks.'
+        }
     )
 
     Write-Host "[lint] restricted syntax ($($restrictedSyntax.Count) rules)"

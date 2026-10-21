@@ -37,9 +37,9 @@ struct ThemeId {
 };
 
 // The themes assigned to each OS mode, and whether the feature is switched on.
-inline ThemeId g_lightTheme;
-inline ThemeId g_darkTheme;
-inline bool g_isActive = false;
+inline constinit ThemeId g_lightTheme;
+inline constinit ThemeId g_darkTheme;
+inline constinit bool g_isActive = false;
 
 // Windows is in dark mode when this value is 0 (apps use the light theme when
 // it is 1 or absent).
@@ -84,7 +84,7 @@ inline void Repaint(void* hwnd) {
 // few times, then given up.
 inline constexpr UINT kInstallRetryDelayMs = 1500;
 inline constexpr int kMaxInstallRetries = 6;
-inline int g_installRetries = 0;
+inline constinit int g_installRetries = 0;
 
 // A thread timer, not a window one: a fresh launch was seen to lose the window
 // timer, leaving the dark theme uninstalled until the next config change. The

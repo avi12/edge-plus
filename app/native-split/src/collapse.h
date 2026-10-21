@@ -16,7 +16,7 @@ namespace fixedge::collapse {
 // DoActionToSplitWindow(controller, WebContents*, int action): `action` is an
 // edge155::off::SplitAction.
 using DoAction_t = void*(__fastcall*)(void*, void*, int);
-inline DoAction_t o_do_action = nullptr;
+inline constinit DoAction_t o_do_action = nullptr;
 
 inline void* __fastcall h_do_action(void* controller, void* webContents,
                                     int action) {

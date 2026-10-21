@@ -16,13 +16,13 @@ inline std::map<void*, Node>& Trees() {
 // The MultiContentsView of the split most recently laid out — the target for a
 // directional-add command (the menu doesn't carry the MCV; the active split
 // does). Set by the layout detour, read by the menu action.
-inline void* g_activeMcv = nullptr;
+inline constinit void* g_activeMcv = nullptr;
 
 // Whether the split feature is switched on. The DLL can be loaded for theming
 // alone, so every user-facing split action checks this first; the panel pushes
 // it (config.h). Defaults on: a DLL loaded before the panel's first config, or
 // for the split alone, behaves as it always has.
-inline bool g_splitActive = true;
+inline constinit bool g_splitActive = true;
 
 inline bool SplitActive() {
   return g_splitActive;

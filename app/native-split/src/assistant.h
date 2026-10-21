@@ -25,7 +25,7 @@ inline const char* Name() {
 // Takes effect for each toolbar built after the DLL loads (a new window);
 // EnsureChevron rebuilds the ones already open.
 using DropdownEnabled_t = bool(__fastcall*)(bool);
-inline DropdownEnabled_t o_dropdown_enabled = nullptr;
+inline constinit DropdownEnabled_t o_dropdown_enabled = nullptr;
 
 inline bool __fastcall h_dropdown_enabled(bool /*isChecked*/) {
   return true;

@@ -160,7 +160,7 @@ inline void SpreadPiledSplits(void* helper, void* result) {
 // fills `out` with every slot's ideal bounds and returns it. Fix them up before
 // the helper stores them or sizes the container from them.
 using CalculateIdealBounds_t = void*(__fastcall*)(void*, void*, uint64_t);
-inline CalculateIdealBounds_t o_calculate_ideal_bounds = nullptr;
+inline constinit CalculateIdealBounds_t o_calculate_ideal_bounds = nullptr;
 inline void* __fastcall h_calculate_ideal_bounds(void* helper, void* out,
                                                  uint64_t availableWidth) {
   void* result = o_calculate_ideal_bounds(helper, out, availableWidth);

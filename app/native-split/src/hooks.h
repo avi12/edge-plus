@@ -39,7 +39,7 @@ using edge::kLiftedIndexCap;
 // safety patches below). A normal 2-pane split only sees index 0/1, so it is
 // unaffected.
 using SetWc_t = void*(__fastcall*)(void*, void*, uint32_t);
-inline SetWc_t o_setwc = nullptr;
+inline constinit SetWc_t o_setwc = nullptr;
 inline void* __fastcall h_setwc(void* mcv, void* webContents, uint32_t index) {
   const bool shouldBuildContainers = index >= edge::McvCount(mcv);
   if (shouldBuildContainers) {
@@ -74,7 +74,7 @@ inline void* __fastcall h_setwc(void* mcv, void* webContents, uint32_t index) {
 // has@0xc}. Records the active split's MCV (so a menu command knows what to
 // grow) and tiles N panes once the split has grown past two.
 using Calc_t = void*(__fastcall*)(void*, void*, void*);
-inline Calc_t o_calc = nullptr;
+inline constinit Calc_t o_calc = nullptr;
 inline void* __fastcall h_calc(void* self, void* out, void* sizeBounds) {
   void* mcv = edge::McvFromLayoutBase(self);
   g_activeMcv = mcv;
@@ -101,7 +101,7 @@ inline void* __fastcall h_calc(void* self, void* out, void* sizeBounds) {
 // pane primary and every other pane not, then refresh the borders. A stock split
 // runs the original.
 using SetActive_t = void(__fastcall*)(void*, int);
-inline SetActive_t o_set_active = nullptr;
+inline constinit SetActive_t o_set_active = nullptr;
 inline void __fastcall h_set_active(void* mcv, int index) {
   const int count = static_cast<int>(edge::McvCount(mcv));
   const bool isStockSplit = count <= 2;
@@ -130,7 +130,7 @@ inline void __fastcall h_set_active(void* mcv, int index) {
 // switching to a tab whose pane is ours crashed in the caller. Our panes get
 // an empty map instead: no stored focus to restore there.
 using FocusMap_t = void*(__fastcall*)(void*, void*);
-inline FocusMap_t o_focus_map = nullptr;
+inline constinit FocusMap_t o_focus_map = nullptr;
 inline void* __fastcall h_focus_map(void* mcv, void* container) {
   void* focusMap = o_focus_map(mcv, container);
   if (focusMap) {
@@ -145,8 +145,8 @@ inline void* __fastcall h_focus_map(void* mcv, void* container) {
 // pane of three navigating). A metric is not worth a crash: any other split
 // skips them.
 using SplitUkm_t = void(__fastcall*)(void*, void*);
-inline SplitUkm_t o_split_created_ukm = nullptr;
-inline SplitUkm_t o_split_updated_ukm = nullptr;
+inline constinit SplitUkm_t o_split_created_ukm = nullptr;
+inline constinit SplitUkm_t o_split_updated_ukm = nullptr;
 inline bool IsTwoTabSplit(void* tsm, void* splitId) {
   return edge::SplitMembers(tsm, splitId).Count() == 2;
 }
@@ -168,10 +168,10 @@ inline void __fastcall h_split_updated_ukm(void* tsm, void* splitId) {
 using ButtonPressed_t = bool(__fastcall*)(void*, const void*);
 using ButtonReleased_t = void(__fastcall*)(void*, const void*);
 using ButtonCaptureLost_t = void(__fastcall*)(void*);
-inline ButtonPressed_t o_pressed = nullptr;
-inline ButtonPressed_t o_dragged = nullptr;
-inline ButtonReleased_t o_released = nullptr;
-inline ButtonCaptureLost_t o_capture_lost = nullptr;
+inline constinit ButtonPressed_t o_pressed = nullptr;
+inline constinit ButtonPressed_t o_dragged = nullptr;
+inline constinit ButtonReleased_t o_released = nullptr;
+inline constinit ButtonCaptureLost_t o_capture_lost = nullptr;
 
 // views::EdgeTwoDimensionalResizeArea's mouse handlers: Edge's own divider
 // class, shared by its two-pane handle and our per-seam dividers (dividers.h).
@@ -180,10 +180,10 @@ inline ButtonCaptureLost_t o_capture_lost = nullptr;
 using DividerEvent_t = bool(__fastcall*)(void*, const void*);
 using DividerReleased_t = void(__fastcall*)(void*, const void*);
 using DividerCaptureLost_t = void(__fastcall*)(void*);
-inline DividerEvent_t o_divider_pressed = nullptr;
-inline DividerEvent_t o_divider_dragged = nullptr;
-inline DividerReleased_t o_divider_released = nullptr;
-inline DividerCaptureLost_t o_divider_capture_lost = nullptr;
+inline constinit DividerEvent_t o_divider_pressed = nullptr;
+inline constinit DividerEvent_t o_divider_dragged = nullptr;
+inline constinit DividerReleased_t o_divider_released = nullptr;
+inline constinit DividerCaptureLost_t o_divider_capture_lost = nullptr;
 
 inline bool __fastcall h_divider_pressed(void* view, const void* event) {
   void* mcv = nullptr;
@@ -280,7 +280,7 @@ inline void __fastcall h_capture_lost(void* button) {
 // closes exactly its own pane instead (split_ops::ClosePane). Every other click,
 // and a two-pane split, runs the original.
 using ButtonClick_t = void(__fastcall*)(void*, void*);
-inline ButtonClick_t o_button_click = nullptr;
+inline constinit ButtonClick_t o_button_click = nullptr;
 inline void __fastcall h_button_click(void* bar, void* button) {
   const bool isCloseButton = button == edge::ControlButtonsCloseButton(bar);
   void* mcv = nullptr;
@@ -302,7 +302,7 @@ inline void __fastcall h_button_click(void* bar, void* button) {
 // hook: it stays enabled whenever theming is on, even with the split switched off
 // (control.h re-enables it after disabling the split hooks).
 using RemoveUnusedThemes_t = void(__fastcall*)(void*);
-inline RemoveUnusedThemes_t o_remove_unused_themes = nullptr;
+inline constinit RemoveUnusedThemes_t o_remove_unused_themes = nullptr;
 inline void __fastcall h_remove_unused_themes(void* themeService) {
   if (theme::g_isActive) {
     return;
@@ -339,7 +339,7 @@ inline constexpr uint32_t kVTabInactiveRailPercent = 30;
 inline constexpr uint32_t kHoverFillPercent = 18;
 // Set from the theme's label colour on each selected-fill read: a light label
 // (the neon theme) means the selected tab's bright fill needs ink on it.
-inline bool g_isLabelLight = false;
+inline constinit bool g_isLabelLight = false;
 // The selected and the hovered tab both read the selected-fill id; only the
 // caller tells them apart. Edge paints a hovered tab as the active one, at the
 // hover's opacity, on a layer over its inactive fill (EdgeTabStyleViews::PaintTab),
@@ -371,7 +371,7 @@ inline bool IsReadForHover() {
   return false;
 }
 using GetColor_t = bool(__fastcall*)(void*, int, uint32_t*);
-inline GetColor_t o_getcolor = nullptr;
+inline constinit GetColor_t o_getcolor = nullptr;
 inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
   if (theme::g_isActive) {
     const bool isSelectedTabBackground =
@@ -442,8 +442,9 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
 // so ink and fill switch together when the selection or window focus moves.
 // GetColor is browser-wide and hot, so the cheap tests go first.
 inline constexpr uint32_t kSelectedTabInk = 0xff04121a;
-inline void* g_foregroundTab = nullptr;  // the tab whose colours are computed
-inline bool g_isForegroundTabActive = false;
+// The tab whose colours are being computed.
+inline constinit void* g_foregroundTab = nullptr;
+inline constinit bool g_isForegroundTabActive = false;
 inline bool IsActiveTabAlert(int colorId) {
   for (const int alertId : edge155::off::UICOLOR_active_tab_alert) {
     if (colorId == alertId) {
@@ -453,7 +454,7 @@ inline bool IsActiveTabAlert(int colorId) {
   return false;
 }
 using GetUiColor_t = uint32_t(__fastcall*)(void*, int);
-inline GetUiColor_t o_getuicolor = nullptr;
+inline constinit GetUiColor_t o_getuicolor = nullptr;
 inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
   const bool isInkable = theme::g_isActive && g_isLabelLight;
   if (isInkable) {
@@ -469,7 +470,7 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
 }
 
 using UpdateForeground_t = void(__fastcall*)(void*);
-inline UpdateForeground_t o_update_foreground = nullptr;
+inline constinit UpdateForeground_t o_update_foreground = nullptr;
 inline void __fastcall h_update_foreground(void* tab) {
   using IsActive_t = bool(__fastcall*)(void*);
   void* const outerTab = g_foregroundTab;

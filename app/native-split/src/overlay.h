@@ -39,14 +39,14 @@ inline constexpr float kDashDip = 8.f;
 
 inline constexpr WORD kBitsPerPixel = 32;  // BGRA
 
-inline HWND g_window = nullptr;
-inline bool g_isShown = false;
-inline Style g_style = Style::kPane;
-inline float g_scale = 1.f;
-inline Rect g_from;
-inline Rect g_to;
-inline Rect g_current;  // the rect painted now
-inline ULONGLONG g_moveStart = 0;
+inline constinit HWND g_window = nullptr;
+inline constinit bool g_isShown = false;
+inline constinit Style g_style = Style::kPane;
+inline constinit float g_scale = 1.f;
+inline constinit Rect g_from;
+inline constinit Rect g_to;
+inline constinit Rect g_current;  // the rect painted now
+inline constinit ULONGLONG g_moveStart = 0;
 
 // Premultiplied BGRA pixel of `color` at `alpha` (0..1).
 inline uint32_t Pixel(COLORREF color, float alpha) {

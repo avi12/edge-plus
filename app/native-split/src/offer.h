@@ -54,7 +54,7 @@ inline bool IsInGrownSplit(void* tsm, void* tab) {
 // page's pick, for the active split. In a grown split the picked tab replaces
 // the active member, the starting page the user picked in.
 using OpenTab_t = void(__fastcall*)(void*, void*);
-inline OpenTab_t o_open_tab = nullptr;
+inline constinit OpenTab_t o_open_tab = nullptr;
 inline void __fastcall h_open_tab(void* controller, void* chosenContents) {
   void* tsm = edge::Field<void*>(controller,
                                  edge155::off::SPLITCONTROLLER_tab_strip_model);
@@ -88,7 +88,7 @@ struct Listing {
   void* tsm = nullptr;
   void* pageTab = nullptr;
 };
-inline Listing g_listing;
+inline constinit Listing g_listing;
 
 // Whether a grown split's starting page leaves `tab` out of its list: a tab
 // in any split cannot take the page's pane, save the split's first member,
@@ -108,7 +108,7 @@ inline bool IsLeftOutOfOffer(const Listing& listing, void* tab) {
 // SplitWindowStartingUIHandler::GetTabs: the page's tab list. Edge leaves out
 // every tab IsSplitWindowWebContents (below) claims.
 using GetTabs_t = void(__fastcall*)(void*, void*);
-inline GetTabs_t o_get_tabs = nullptr;
+inline constinit GetTabs_t o_get_tabs = nullptr;
 inline void __fastcall h_get_tabs(void* handler, void* callback) {
   void* tsm = edge::TsmForWindow(channel::g_window);
   void* page = edge::StartingPageOf(handler);
@@ -122,7 +122,7 @@ inline void __fastcall h_get_tabs(void* handler, void* callback) {
 // belongs to Edge's older split. While a grown split's page lists its tabs, it
 // also claims the tabs that page leaves out.
 using IsSplitContents_t = bool(__fastcall*)(void*);
-inline IsSplitContents_t o_is_split_contents = nullptr;
+inline constinit IsSplitContents_t o_is_split_contents = nullptr;
 inline bool __fastcall h_is_split_contents(void* webContents) {
   void* tab = g_listing.pageTab ? edge::TabShowing(g_listing.tsm, webContents)
                                 : nullptr;
@@ -138,7 +138,7 @@ inline bool __fastcall h_is_split_contents(void* webContents) {
 // split and re-adds its tabs at once, so a page back in a split by the time the
 // task runs stays the tab offer. The task then only drops its reference.
 using PageLeftSplit_t = void(__fastcall*)(void*);
-inline PageLeftSplit_t o_page_left_split = nullptr;
+inline constinit PageLeftSplit_t o_page_left_split = nullptr;
 inline void __fastcall h_page_left_split(void* bindState) {
   void* page = edge::BoundWeakTarget(bindState);
   void* pageTab =
@@ -155,12 +155,12 @@ inline void __fastcall h_page_left_split(void* bindState) {
 
 // A grown split's starting page whose X was clicked, waiting for its pane to
 // close (channel kCloseOfferPane) once the page's own call has returned.
-inline void* g_closingPage = nullptr;
+inline constinit void* g_closingPage = nullptr;
 
 // SplitWindowStartingUIHandler::CloseSplitWindow: the starting page's X. In a
 // grown split it closes the page's own pane.
 using ClosePage_t = void(__fastcall*)(void*);
-inline ClosePage_t o_close_page = nullptr;
+inline constinit ClosePage_t o_close_page = nullptr;
 inline void __fastcall h_close_page(void* handler) {
   void* tsm = edge::TsmForWindow(channel::g_window);
   void* page = edge::StartingPageOf(handler);

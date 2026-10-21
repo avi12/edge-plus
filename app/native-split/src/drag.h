@@ -28,7 +28,7 @@ struct Session {
   Point pressedAt{};  // window DIPs
   dock::Plan plan;    // what releasing now would do
 };
-inline Session g_session;
+inline constinit Session g_session;
 
 inline bool IsActive() {
   return g_session.isPressed || g_session.isDragging;

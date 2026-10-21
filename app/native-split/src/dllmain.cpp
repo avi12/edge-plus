@@ -18,9 +18,9 @@ using namespace fixedge;
 
 namespace {
 
-HMODULE g_self = nullptr;
-HANDLE g_unloadEvent = nullptr;
-HANDLE g_configEvent = nullptr;
+constinit HMODULE g_self = nullptr;
+constinit HANDLE g_unloadEvent = nullptr;
+constinit HANDLE g_configEvent = nullptr;
 
 // The companion app toggles the feature off by signalling this; we then remove
 // the hooks and drop out of Edge without a restart.

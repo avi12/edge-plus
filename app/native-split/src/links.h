@@ -59,7 +59,7 @@ struct NewPaneLink {
   void* source = nullptr;       // the pane's WebContents
   void* newContents = nullptr;  // the new tab's
 };
-inline NewPaneLink g_newPaneLink;
+inline constinit NewPaneLink g_newPaneLink;
 
 // --- the detours -------------------------------------------------------------
 
@@ -71,7 +71,7 @@ inline NewPaneLink g_newPaneLink;
 // tab, which AddNewContents below turns into a pane.
 using ShouldOverride_t = bool(__fastcall*)(void*, void*, void*, int, bool,
                                            void*);
-inline ShouldOverride_t o_should_override = nullptr;
+inline constinit ShouldOverride_t o_should_override = nullptr;
 inline bool __fastcall h_should_override(void* delegate, void* source,
                                          void* opener, int disposition,
                                          bool argument5, void* params) {
@@ -99,7 +99,7 @@ inline bool __fastcall h_should_override(void* delegate, void* source,
 // the split), and becomes a pane once Edge is done adding it.
 using AddNewContents_t = void*(__fastcall*)(void*, void*, void**, const void*,
                                             int, const void*, bool, bool*);
-inline AddNewContents_t o_add_new_contents = nullptr;
+inline constinit AddNewContents_t o_add_new_contents = nullptr;
 inline void* __fastcall h_add_new_contents(
     void* delegate, void* source, void** newContents, const void* targetUrl,
     int disposition, const void* windowFeatures, bool hasUserGesture,
@@ -127,7 +127,7 @@ inline void* __fastcall h_add_new_contents(
 // SplitWindowLinkModeNavigationThrottle::MaybeCreateThrottleFor: never made, so
 // Edge no longer sends the first pane's same-tab links to the last pane.
 using LinkThrottle_t = void**(__fastcall*)(void**, void*);
-inline LinkThrottle_t o_link_throttle = nullptr;
+inline constinit LinkThrottle_t o_link_throttle = nullptr;
 inline void** __fastcall h_link_throttle(void** outThrottle,
                                          void* /*navigation*/) {
   *outThrottle = nullptr;
@@ -138,7 +138,7 @@ inline void** __fastcall h_link_throttle(void** outThrottle,
 // means what this header says, read from the split when a link is clicked, so
 // Edge's two-pane wiring of it is skipped.
 using UpdateLinkedMode_t = void(__fastcall*)(void*, bool);
-inline UpdateLinkedMode_t o_update_linked_mode = nullptr;
+inline constinit UpdateLinkedMode_t o_update_linked_mode = nullptr;
 inline void __fastcall h_update_linked_mode(void* /*controller*/,
                                             bool /*isOn*/) {
 }

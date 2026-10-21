@@ -9,8 +9,8 @@
 
 namespace fixedge::channel {
 
-inline HWND g_window = nullptr;  // the subclassed browser window
-inline UINT g_message = 0;       // the registered kMessageName
+inline constinit HWND g_window = nullptr;  // the subclassed browser window
+inline constinit UINT g_message = 0;       // the registered kMessageName
 
 inline constexpr wchar_t kMessageName[] = L"fixedge.addpane";
 

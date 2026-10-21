@@ -57,8 +57,8 @@ inline bool IsLeftOut(int command, bool isGrownSplit) {
 
 // The link toggle's label, built once into a static u16string (a short
 // permanent allocation), the way menu.h builds its own labels.
-inline edge::U16String g_linkModeLabel;
-inline bool g_hasLinkModeLabel = false;
+inline constinit edge::U16String g_linkModeLabel;
+inline constinit bool g_hasLinkModeLabel = false;
 inline const edge::U16String* LinkModeLabel() {
   if (!g_hasLinkModeLabel) {
     edge::Utf8ToUtf16(&g_linkModeLabel, links::kToggleLabel);

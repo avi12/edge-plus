@@ -117,7 +117,7 @@ struct Drag {
   Node startTree;   // the total distance dragged
   Point pressedAt;  // window DIPs
 };
-inline Drag g_drag;
+inline constinit Drag g_drag;
 
 inline void Begin(void* mcv, const Seam& seam, Node startTree,
                   Point pressedAt) {

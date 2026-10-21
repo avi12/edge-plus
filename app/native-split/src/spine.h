@@ -42,7 +42,7 @@ inline constexpr int kCornerDip = 8;
 
 // The selected tab's fill as the colour hook publishes it (hooks.h h_getcolor),
 // so the corner squares match the pill Edge paints.
-inline theme_tone::Argb g_selectedFill = 0;
+inline constinit theme_tone::Argb g_selectedFill = 0;
 
 // A vertical tab sits well below the window's top edge; a horizontal tab strip
 // is in the title bar, so tabs above this are not ours to mark.
@@ -60,18 +60,18 @@ struct WindowSet {
   theme_tone::Argb stripeColor = 0;
 };
 
-inline std::vector<WindowSet> g_sets;
-inline bool g_isActive = false;
+inline constinit std::vector<WindowSet> g_sets;
+inline constinit bool g_isActive = false;
 // The thread timer Start set (0 while off).
-inline UINT_PTR g_timerId = 0;
+inline constinit UINT_PTR g_timerId = 0;
 // A thread timer outlives every window, so it must be stopped before this DLL
 // unloads. The teardown normally does that on the UI thread; when it cannot run
 // (the window the DLL attached to has closed), the unload thread asks the next
 // tick to stop the timer itself and waits for it (control.h Remove).
-inline std::atomic<bool> g_isStopRequested{false};
-inline std::atomic<bool> g_isTimerRunning{false};
+inline constinit std::atomic<bool> g_isStopRequested{false};
+inline constinit std::atomic<bool> g_isTimerRunning{false};
 // The fill the shared corner class brush holds (0 until the hook answers one).
-inline theme_tone::Argb g_paintedFill = 0;
+inline constinit theme_tone::Argb g_paintedFill = 0;
 
 inline COLORREF ColorRefOf(theme_tone::Argb color) {
   return RGB((color >> theme_tone::kRedShift) & theme_tone::kChannelMask,

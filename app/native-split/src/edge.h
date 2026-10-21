@@ -23,7 +23,8 @@
 
 namespace fixedge::edge {
 
-inline uintptr_t g_base = 0;  // msedge.dll load address, set once by Bind()
+// msedge.dll's load address, set once by Bind().
+inline constinit uintptr_t g_base = 0;
 
 inline bool Bind(HMODULE module) {
   g_base = reinterpret_cast<uintptr_t>(module);
@@ -1619,7 +1620,7 @@ struct ScriptCallbackState {
 };
 // Callbacks Edge still holds. DLL unload waits for this to reach zero: a reply
 // that arrived after the DLL was freed would jump into unmapped code.
-inline std::atomic<int> g_liveScriptCallbacks{0};
+inline constinit std::atomic<int> g_liveScriptCallbacks{0};
 
 inline void __fastcall InvokeScriptCallback(void* bindState, void* value) {
   auto* state = static_cast<ScriptCallbackState*>(bindState);

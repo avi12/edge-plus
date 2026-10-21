@@ -40,8 +40,8 @@ using channel::Command;
 using channel::IsInRange;
 using channel::OperandOf;
 
-inline WNDPROC g_originalProc = nullptr;
-inline bool g_hasHotKeys = false;
+inline constinit WNDPROC g_originalProc = nullptr;
+inline constinit bool g_hasHotKeys = false;
 
 inline constexpr wchar_t kBrowserWindowClass[] = L"Chrome_WidgetWin_1";
 inline constexpr int kClassNameLength = 64;
@@ -411,8 +411,8 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
 // The config read from disk at Install, applied on the UI thread via a posted
 // kApplyConfig (ApplyConfig touches Edge views, so it must not run on the Init
 // thread that does the subclassing).
-inline config::Wire g_pendingConfig = {};
-inline bool g_hasPendingConfig = false;
+inline constinit config::Wire g_pendingConfig = {};
+inline constinit bool g_hasPendingConfig = false;
 
 // The app signalled a config change (dllmain's waiter thread calls this): re-read
 // the file and apply it on the UI thread. Posting to our own subclassed window

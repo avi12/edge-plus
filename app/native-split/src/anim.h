@@ -28,8 +28,10 @@ struct HostSize {
   int height = 0;
 };
 
-inline bool g_isEnabled = false;  // SPI_GETCLIENTAREAANIMATION, read at Install
-inline HWND g_hwnd = nullptr;     // the window whose timer drives the frames
+// SPI_GETCLIENTAREAANIMATION, read at Install.
+inline constinit bool g_isEnabled = false;
+// The window whose timer drives the frames.
+inline constinit HWND g_hwnd = nullptr;
 inline constexpr UINT_PTR kTimerId = 0xF1ED;
 inline constexpr UINT kFrameMs = 15;
 
@@ -38,7 +40,7 @@ inline constexpr UINT kFrameMs = 15;
 // frame while it grows in, which left it blank until the growth finished. The
 // next flight's new panes appear in place; the flag clears when that flight is
 // planned.
-inline bool g_isNextEntryInPlace = false;
+inline constinit bool g_isNextEntryInPlace = false;
 
 inline std::map<void*, Flight>& Flights() {
   static std::map<void*, Flight> flights;

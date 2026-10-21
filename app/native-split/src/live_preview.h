@@ -24,15 +24,15 @@ namespace fixedge::live_preview {
 // capturer is held open only while one is. Observe sets it, OnCardClosing clears
 // it — a bool, not a counter, because Observe fires again when a hover retargets
 // to another tab and only ever one hover card is open at a time.
-inline bool g_isActive = false;
-inline bool g_isCardOpen = false;
+inline constinit bool g_isActive = false;
+inline constinit bool g_isCardOpen = false;
 
 // ThumbnailTabHelper::TabStateTracker::StopCapture: Edge's "end this capture
 // session" call. While a hover card is open we return without stopping, so the
 // capturer keeps delivering frames and the card goes live; otherwise Edge stops
 // as usual. Not a per-frame call, so this runs rarely.
 using StopCapture_t = void(__fastcall*)(void*);
-inline StopCapture_t o_stop_capture = nullptr;
+inline constinit StopCapture_t o_stop_capture = nullptr;
 inline void __fastcall h_stop_capture(void* tracker) {
   const bool isHoldingForPreview = g_isActive && g_isCardOpen;
   if (isHoldingForPreview) {
@@ -44,7 +44,7 @@ inline void __fastcall h_stop_capture(void* tracker) {
 // TabHoverCardThumbnailObserver::Observe: a hover card's live thumbnail
 // subscription begins, i.e. a preview is on screen and frames are wanted.
 using Observe_t = void(__fastcall*)(void*, void*);
-inline Observe_t o_observe = nullptr;
+inline constinit Observe_t o_observe = nullptr;
 inline void __fastcall h_observe(void* observer, void* thumbnailImage) {
   g_isCardOpen = true;
   o_observe(observer, thumbnailImage);
@@ -53,7 +53,7 @@ inline void __fastcall h_observe(void* observer, void* thumbnailImage) {
 // TabHoverCardController::OnCardClosing: the hover card is gone, so stop holding
 // the capturer open; Edge's next StopCapture then winds it down normally.
 using OnCardClosing_t = void(__fastcall*)(void*);
-inline OnCardClosing_t o_on_card_closing = nullptr;
+inline constinit OnCardClosing_t o_on_card_closing = nullptr;
 inline void __fastcall h_on_card_closing(void* controller) {
   g_isCardOpen = false;
   o_on_card_closing(controller);

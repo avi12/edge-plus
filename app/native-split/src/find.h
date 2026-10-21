@@ -32,7 +32,7 @@
 namespace fixedge::find {
 
 // Whether the enhanced find is switched on; the panel pushes it (config.h).
-inline bool g_isEnabled = false;
+inline constinit bool g_isEnabled = false;
 
 inline constexpr UINT_PTR kTimerId = 0xF1EC;
 inline constexpr UINT kTickIntervalMs = 100;
@@ -493,7 +493,7 @@ inline void SyncTogglesNow(void* findBarView) {
 // SyncTogglesNow, once at a time: building a switch makes Edge set its state
 // (h_active_contents_changed), which syncs again; that inner call is dropped,
 // the outer one finishes the job.
-inline bool g_isSyncingToggles = false;
+inline constinit bool g_isSyncingToggles = false;
 inline void SyncToggles(void* findBarView) {
   if (g_isSyncingToggles) {
     return;
@@ -1023,18 +1023,18 @@ using Find_t = void(__fastcall*)(void*, const edge::U16View*);
 using FindNext_t = void(__fastcall*)(void*, bool);
 using HandleKeyEvent_t = bool(__fastcall*)(void*, void*, const void*);
 using EndFindSession_t = void(__fastcall*)(void*, int, int);
-inline Find_t o_find = nullptr;
-inline FindNext_t o_find_next = nullptr;
-inline HandleKeyEvent_t o_handle_key_event = nullptr;
-inline EndFindSession_t o_end_find_session = nullptr;
+inline constinit Find_t o_find = nullptr;
+inline constinit FindNext_t o_find_next = nullptr;
+inline constinit HandleKeyEvent_t o_handle_key_event = nullptr;
+inline constinit EndFindSession_t o_end_find_session = nullptr;
 using AddOptionsView_t = void(__fastcall*)(void*, bool);
 using ToggleOptions_t = void(__fastcall*)(void*, void*);
 using ButtonToggled_t = void(__fastcall*)(void*);
-inline AddOptionsView_t o_add_options_view = nullptr;
-inline ToggleOptions_t o_toggle_options = nullptr;
-inline ButtonToggled_t o_button_toggled = nullptr;
+inline constinit AddOptionsView_t o_add_options_view = nullptr;
+inline constinit ToggleOptions_t o_toggle_options = nullptr;
+inline constinit ButtonToggled_t o_button_toggled = nullptr;
 using ActiveContentsChanged_t = void(__fastcall*)(void*);
-inline ActiveContentsChanged_t o_active_contents_changed = nullptr;
+inline constinit ActiveContentsChanged_t o_active_contents_changed = nullptr;
 
 // The text changed. Plain text is Edge's search. A RegExp is searched by us (and
 // Edge's own marks and count are cleared first, by asking it to find nothing); a
