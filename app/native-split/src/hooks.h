@@ -497,7 +497,7 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   return true;
 }
 
-inline bool InstallAll() {
+[[nodiscard]] inline bool InstallAll() {
   const bool isInitialized = MH_Initialize() == MH_OK;
   if (!isInitialized) {
     Log("[err] MH_Initialize failed");

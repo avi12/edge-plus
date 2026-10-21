@@ -31,7 +31,7 @@ inline constexpr int kBlueWeight = 114;
 inline constexpr int kWeightScale = 1000;
 inline constexpr int kDarkLumaBelow = 128;
 
-constexpr int Luma(Argb color) {
+[[nodiscard]] constexpr int Luma(Argb color) {
   const int red = static_cast<int>((color >> kRedShift) & kChannelMask);
   const int green = static_cast<int>((color >> kGreenShift) & kChannelMask);
   const int blue = static_cast<int>(color & kChannelMask);
@@ -39,14 +39,14 @@ constexpr int Luma(Argb color) {
          kWeightScale;
 }
 
-constexpr bool IsDark(Argb color) {
+[[nodiscard]] constexpr bool IsDark(Argb color) {
   return Luma(color) < kDarkLumaBelow;
 }
 
 // `from` moved `toPercent` percent of the way toward `to`, opaque: how a window
 // that lost focus dims a colour into its surroundings.
 inline constexpr uint32_t kPercentScale = 100;
-constexpr Argb Blend(Argb from, Argb to, uint32_t toPercent) {
+[[nodiscard]] constexpr Argb Blend(Argb from, Argb to, uint32_t toPercent) {
   const auto mix = [&](int shift) {
     const uint32_t fromChannel = (from >> shift) & kChannelMask;
     const uint32_t toChannel = (to >> shift) & kChannelMask;
@@ -71,7 +71,8 @@ struct OptionalColor {
   Argb color = 0;
 };
 
-constexpr Tone ToneOf(OptionalColor toolbar, OptionalColor frame) {
+[[nodiscard]] constexpr Tone ToneOf(OptionalColor toolbar,
+                                    OptionalColor frame) {
   if (toolbar.isSet) {
     return IsDark(toolbar.color) ? Tone::kDark : Tone::kLight;
   }

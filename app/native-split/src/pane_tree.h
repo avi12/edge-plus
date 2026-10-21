@@ -55,15 +55,15 @@ struct SpanShare {
 };
 
 // The length an unpinned pane of `weight` gets: its ratio of the free span.
-inline float FreeLength(const SpanShare& share, float weight) {
+[[nodiscard]] inline float FreeLength(const SpanShare& share, float weight) {
   return static_cast<float>(share.freeSpan) * (weight / share.freeWeight);
 }
 
 // Water-fill: pin to `minLength` only the panes whose proportional length
 // would fall below it; the rest keep their exact ratio of what the pinned ones
 // leave. Each round can push another pane under, so it repeats until none is.
-inline SpanShare WaterFill(const std::vector<float>& weights, int span,
-                           int minLength) {
+[[nodiscard]] inline SpanShare WaterFill(const std::vector<float>& weights,
+                                         int span, int minLength) {
   const size_t count = weights.size();
   SpanShare share;
   share.isPinned.assign(count, false);
@@ -104,8 +104,8 @@ inline SpanShare WaterFill(const std::vector<float>& weights, int span,
 // lengths come from `bounds`, the same tree re-laid in a resized window reflows
 // proportionally — resize handling is intrinsic, not a special case.
 // The rect of each child of split `node` inside `bounds`, `gap` px apart.
-inline std::vector<Rect> ChildRects(const Node& node, const Rect& bounds,
-                                    int gap) {
+[[nodiscard]] inline std::vector<Rect> ChildRects(const Node& node,
+                                                  const Rect& bounds, int gap) {
   std::vector<Rect> rects;
   const int childCount = static_cast<int>(node.children.size());
   if (node.isLeaf || childCount == 0) {
@@ -164,7 +164,7 @@ inline void LayoutTree(const Node& node, const Rect& bounds, int gap,
   }
 }
 
-inline Node MakeLeaf(int leaf) {
+[[nodiscard]] inline Node MakeLeaf(int leaf) {
   Node node;
   node.isLeaf = true;
   node.leaf = leaf;
@@ -173,7 +173,7 @@ inline Node MakeLeaf(int leaf) {
 
 // A flat equal split of `count` leaves along `axis` — the proven behaviour and
 // the fallback until the UI reshapes the tree.
-inline Node FlatTree(int count, Axis axis) {
+[[nodiscard]] inline Node FlatTree(int count, Axis axis) {
   Node root;
   root.isLeaf = false;
   root.axis = axis;
@@ -196,12 +196,12 @@ enum class Direction : uint8_t {
   kRight
 };
 
-inline Axis AxisOf(Direction direction) {
+[[nodiscard]] inline Axis AxisOf(Direction direction) {
   const bool isVertical =
       direction == Direction::kUp || direction == Direction::kDown;
   return isVertical ? Axis::kVertical : Axis::kHorizontal;
 }
-inline bool IsBefore(Direction direction) {
+[[nodiscard]] inline bool IsBefore(Direction direction) {
   return direction == Direction::kUp || direction == Direction::kLeft;
 }
 
@@ -215,17 +215,17 @@ inline bool IsBefore(Direction direction) {
 // tolerance only absorbs layout rounding.
 inline constexpr int kFocusEdgeTolerance = 1;
 
-inline int RectRight(const Rect& rect) {
+[[nodiscard]] inline int RectRight(const Rect& rect) {
   return rect.x + rect.width;
 }
-inline int RectBottom(const Rect& rect) {
+[[nodiscard]] inline int RectBottom(const Rect& rect) {
   return rect.y + rect.height;
 }
 
 // How far `candidate` lies past `from` in `direction`; negative when it does
 // not lie that way.
-inline int DirectionalGap(const Rect& from, const Rect& candidate,
-                          Direction direction) {
+[[nodiscard]] inline int DirectionalGap(const Rect& from, const Rect& candidate,
+                                        Direction direction) {
   switch (direction) {
     case Direction::kLeft:
       return from.x - RectRight(candidate);
@@ -240,8 +240,9 @@ inline int DirectionalGap(const Rect& from, const Rect& candidate,
 
 // How much of the two panes' shared side faces each other (their overlap on the
 // cross axis); <= 0 when they do not face at all.
-inline int DirectionalOverlap(const Rect& from, const Rect& candidate,
-                              Direction direction) {
+[[nodiscard]] inline int DirectionalOverlap(const Rect& from,
+                                            const Rect& candidate,
+                                            Direction direction) {
   const bool isHorizontal =
       direction == Direction::kLeft || direction == Direction::kRight;
   if (isHorizontal) {
@@ -254,8 +255,8 @@ inline int DirectionalOverlap(const Rect& from, const Rect& candidate,
 
 // The leaf on `direction`'s side of `fromLeaf` among `leaves`, or kNoLeaf if
 // there is none.
-inline int DirectionalNeighbour(const std::vector<LeafRect>& leaves,
-                                int fromLeaf, Direction direction) {
+[[nodiscard]] inline int DirectionalNeighbour(
+    const std::vector<LeafRect>& leaves, int fromLeaf, Direction direction) {
   const Rect* from = nullptr;
   for (const LeafRect& leafRect : leaves) {
     if (leafRect.leaf == fromLeaf) {
@@ -318,7 +319,7 @@ inline void FixWeights(Node& node) {
     weight *= scale;
   }
 }
-inline bool AllEqual(const std::vector<float>& weights) {
+[[nodiscard]] inline bool AllEqual(const std::vector<float>& weights) {
   float lowest = weights[0];
   float highest = weights[0];
   for (const float weight : weights) {
@@ -327,7 +328,7 @@ inline bool AllEqual(const std::vector<float>& weights) {
   }
   return highest - lowest <= kEqualWeightTolerance * highest;
 }
-inline float Mean(const std::vector<float>& weights) {
+[[nodiscard]] inline float Mean(const std::vector<float>& weights) {
   float sum = 0.f;
   for (const float weight : weights) {
     sum += weight;
@@ -385,7 +386,7 @@ inline void Normalize(Node& node) {
 
 // --- lookup -------------------------------------------------------------------
 
-inline bool IsLeafFor(const Node& node, int leaf) {
+[[nodiscard]] inline bool IsLeafFor(const Node& node, int leaf) {
   return node.isLeaf && node.leaf == leaf;
 }
 
@@ -396,7 +397,7 @@ struct Slot {
   size_t index = 0;
   bool isFound = false;
 };
-inline Slot FindSlot(Node& node, int leaf) {
+[[nodiscard]] inline Slot FindSlot(Node& node, int leaf) {
   for (size_t i = 0; i < node.children.size(); i++) {
     Node& child = node.children[i];
     if (IsLeafFor(child, leaf)) {
@@ -411,7 +412,7 @@ inline Slot FindSlot(Node& node, int leaf) {
   }
   return {};
 }
-inline bool Contains(const Node& node, int leaf) {
+[[nodiscard]] inline bool Contains(const Node& node, int leaf) {
   if (node.isLeaf) {
     return node.leaf == leaf;
   }
@@ -422,7 +423,7 @@ inline bool Contains(const Node& node, int leaf) {
   }
   return false;
 }
-inline Node MakeSplit(Axis axis, Node first, Node second) {
+[[nodiscard]] inline Node MakeSplit(Axis axis, Node first, Node second) {
   Node split;
   split.isLeaf = false;
   split.axis = axis;
@@ -708,7 +709,7 @@ inline bool SwapAxisIn(const Node& node, int leaf, Axis& out) {
 // The axis of the split a leaf belongs to — i.e. which way its swap toggle faces
 // (vertical parent → top/bottom swap, horizontal → left/right). Returns
 // kHorizontal if not found.
-inline Axis SwapAxisOf(const Node& root, int leaf) {
+[[nodiscard]] inline Axis SwapAxisOf(const Node& root, int leaf) {
   Axis axis = Axis::kHorizontal;
   SwapAxisIn(root, leaf, axis);
   return axis;
@@ -754,7 +755,7 @@ inline void CollectLeaves(const Node& node, std::vector<int>& out) {
 }
 
 // How many panes `node` tiles. Pure.
-inline int LeafCount(const Node& node) {
+[[nodiscard]] inline int LeafCount(const Node& node) {
   if (node.isLeaf) {
     return 1;
   }
@@ -815,14 +816,15 @@ inline void CollectSeams(const Node& node, const Rect& bounds, int gap,
 
 // Every seam of `root` laid out in `bounds` with `gap` px between its panes
 // (LayoutTree's gap): a tree of N panes has N - 1.
-inline std::vector<Seam> Seams(const Node& root, const Rect& bounds, int gap) {
+[[nodiscard]] inline std::vector<Seam> Seams(const Node& root,
+                                             const Rect& bounds, int gap) {
   std::vector<Seam> seams;
   std::vector<int> path;
   CollectSeams(root, bounds, gap, path, seams);
   return seams;
 }
 
-inline Node* NodeAt(Node& root, const std::vector<int>& path) {
+[[nodiscard]] inline Node* NodeAt(Node& root, const std::vector<int>& path) {
   Node* node = &root;
   for (const int childIndex : path) {
     const bool hasChild =

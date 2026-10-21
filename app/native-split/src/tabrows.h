@@ -40,10 +40,10 @@ struct BoundsList {
   Rect* rects = nullptr;
   size_t count = 0;
 
-  void* TabAt(size_t index) const {
+  [[nodiscard]] void* TabAt(size_t index) const {
     return edge::TabLayoutSlotTab(helper, index);
   }
-  Rect& RectAt(size_t index) const {
+  [[nodiscard]] Rect& RectAt(size_t index) const {
     return rects[index];
   }
 };

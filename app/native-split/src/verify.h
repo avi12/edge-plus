@@ -16,7 +16,7 @@ namespace fixedge::verify {
 inline constexpr wchar_t kFixedFileInfoBlock[] = L"\\";
 
 // True only if the running msedge.dll is exactly the build offsets.h names.
-inline bool BuildMatches() {
+[[nodiscard]] inline bool BuildMatches() {
   wchar_t path[MAX_PATH];
   HMODULE module = GetModuleHandleW(edge155::kModule);
   const bool hasModulePath =
@@ -58,7 +58,7 @@ inline bool BuildMatches() {
 
 // A hooked function should begin with a plausible x64 prologue byte and sit inside
 // the module image — a cheap guard against a stale RVA landing on data/padding.
-inline bool LooksLikeCode(uintptr_t rva) {
+[[nodiscard]] inline bool LooksLikeCode(uintptr_t rva) {
   const uint8_t firstByte = *reinterpret_cast<uint8_t*>(edge::At(rva));
   switch (firstByte) {
     // REX prefixes
@@ -83,7 +83,8 @@ inline bool LooksLikeCode(uintptr_t rva) {
 }
 
 // True when the bytes at `rva` are exactly `expected`.
-inline bool BytesAre(uintptr_t rva, const uint8_t* expected, size_t length) {
+[[nodiscard]] inline bool BytesAre(uintptr_t rva, const uint8_t* expected,
+                                   size_t length) {
   const auto* actual = reinterpret_cast<const uint8_t*>(edge::At(rva));
   for (size_t i = 0; i < length; i++) {
     if (actual[i] != expected[i]) {
@@ -99,7 +100,7 @@ inline bool BytesAre(uintptr_t rva, const uint8_t* expected, size_t length) {
 // `jne` (0F 85) / `jae` (0F 83). The patches stay in the process after this DLL
 // unloads (hooks.h), so a DLL loaded again (hot-reload) finds them already made:
 // the lifted cap, or the NOPs, count as holding the instruction too.
-inline bool PatchSitesHoldTheirInstructions() {
+[[nodiscard]] inline bool PatchSitesHoldTheirInstructions() {
   constexpr uint8_t kIndexCapImmediate[] = {0x02};
   constexpr uint8_t kLiftedCapImmediate[] = {edge::kLiftedIndexCap};
   constexpr uint8_t kJneRel32[] = {0x0f, 0x85};
@@ -125,7 +126,7 @@ inline bool PatchSitesHoldTheirInstructions() {
 
 // The critical hook sites (a subset of what hooks.h installs). If any fails, we
 // do not install.
-inline bool HookSitesLookSane() {
+[[nodiscard]] inline bool HookSitesLookSane() {
   const uintptr_t sites[] = {
       edge155::rva::MultiContentsView_SetWebContentsAtIndex,
       edge155::rva::MultiContentsView_CalculateProposedLayout,
@@ -164,7 +165,7 @@ inline bool HookSitesLookSane() {
 }
 
 // The one gate Init calls before touching anything.
-inline bool Ok() {
+[[nodiscard]] inline bool Ok() {
   return BuildMatches() && HookSitesLookSane();
 }
 

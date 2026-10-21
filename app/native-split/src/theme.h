@@ -24,7 +24,7 @@ struct ThemeId {
   char value[config::kIdCapacity] = {};
   size_t length = 0;
 
-  bool IsEmpty() const {
+  [[nodiscard]] bool IsEmpty() const {
     return length == 0;
   }
 

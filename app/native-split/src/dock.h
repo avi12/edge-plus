@@ -56,8 +56,8 @@ struct Plan {
   Rect preview;  // the dragged pane's rect in `result`
 };
 
-inline int DistanceToEdge(const Rect& rect, const Point& point,
-                          Direction edge) {
+[[nodiscard]] inline int DistanceToEdge(const Rect& rect, const Point& point,
+                                        Direction edge) {
   switch (edge) {
     case Direction::kLeft:
       return point.x - rect.x;
@@ -71,7 +71,7 @@ inline int DistanceToEdge(const Rect& rect, const Point& point,
 }
 
 // The outer band's depth for edge `edge` of `layout`.
-inline int RootBand(const Rect& layout, Direction edge) {
+[[nodiscard]] inline int RootBand(const Rect& layout, Direction edge) {
   const bool isVerticalEdge =
       edge == Direction::kLeft || edge == Direction::kRight;
   const int extent = isVerticalEdge ? layout.width : layout.height;
@@ -83,7 +83,7 @@ inline int RootBand(const Rect& layout, Direction edge) {
 // Whether a pane-relative position (`paneX`, `paneY` in 0..1) is still within
 // the hold band of edge `edge`, so a zone already showing does not flip at the
 // diagonal.
-inline bool HoldsEdge(Direction edge, float paneX, float paneY) {
+[[nodiscard]] inline bool HoldsEdge(Direction edge, float paneX, float paneY) {
   switch (edge) {
     case Direction::kLeft:
       return paneX < kEdgeHold;
@@ -97,7 +97,7 @@ inline bool HoldsEdge(Direction edge, float paneX, float paneY) {
 }
 
 // The nearest edge by the pane's diagonals (FlexLayout): no dead corners.
-inline Direction DiagonalEdge(float paneX, float paneY) {
+[[nodiscard]] inline Direction DiagonalEdge(float paneX, float paneY) {
   const bool isBelowMainDiagonal = paneY >= paneX;        // the "\" diagonal
   const bool isBelowAntiDiagonal = paneY >= 1.f - paneX;  // the "/" diagonal
   if (isBelowMainDiagonal) {
@@ -131,8 +131,9 @@ inline bool ApplyDrop(Node& tree, int pane, Source source, Zone zone,
 }
 
 // Finish a plan: apply the edit to a copy; a no-op yields kNone.
-inline Plan Finish(const Node& tree, const Rect& layout, int pane,
-                   Source source, Zone zone, int target, Direction direction) {
+[[nodiscard]] inline Plan Finish(const Node& tree, const Rect& layout, int pane,
+                                 Source source, Zone zone, int target,
+                                 Direction direction) {
   Plan plan;
   plan.result = tree;
   const bool isChanged =
@@ -157,7 +158,8 @@ inline Plan Finish(const Node& tree, const Rect& layout, int pane,
 // Releasing `pane` outside the split takes it out as a tab of its own. The
 // tree is unchanged here (the split's data model does the removal); the
 // preview is where the pane sits now.
-inline Plan DetachPlan(const Node& tree, const Rect& layout, int pane) {
+[[nodiscard]] inline Plan DetachPlan(const Node& tree, const Rect& layout,
+                                     int pane) {
   Plan plan;
   plan.zone = Zone::kDetach;
   plan.target = pane;
@@ -175,8 +177,8 @@ inline Plan DetachPlan(const Node& tree, const Rect& layout, int pane) {
 
 // The outer-band edge `point` is in, if any: the edge already shown holds a
 // little longer than it took to enter, otherwise the nearest edge in its band.
-inline bool FindRootEdge(const Rect& layout, Point point, const Plan& shown,
-                         Direction& rootEdge) {
+[[nodiscard]] inline bool FindRootEdge(const Rect& layout, Point point,
+                                       const Plan& shown, Direction& rootEdge) {
   const bool isHoldingRootEdge =
       shown.zone == Zone::kRootEdge &&
       DistanceToEdge(layout, point, shown.direction) <=
@@ -204,9 +206,10 @@ inline bool FindRootEdge(const Rect& layout, Point point, const Plan& shown,
 
 // The plan for a pointer inside `leafRect`: its centre swaps (a moving pane
 // only), its edges dock beside it; the dragged pane itself offers nothing.
-inline Plan ResolvePaneDrop(const Node& tree, const Rect& layout, Point point,
-                            int pane, Source source, const Plan& shown,
-                            const LeafRect& leafRect) {
+[[nodiscard]] inline Plan ResolvePaneDrop(const Node& tree, const Rect& layout,
+                                          Point point, int pane, Source source,
+                                          const Plan& shown,
+                                          const LeafRect& leafRect) {
   const Rect& paneRect = leafRect.rect;
   const bool canDropOnPane = leafRect.leaf != pane && !Empty(paneRect);
   if (!canDropOnPane) {
@@ -243,8 +246,9 @@ inline Plan ResolvePaneDrop(const Node& tree, const Rect& layout, Point point,
 // its edges dock beside it; the gap between two panes keeps what is shown. So
 // near a pane's bottom edge docks below that pane, and dragging on, deep
 // toward the split's bottom, spans the whole bottom.
-inline Plan ResolveDrop(const Node& tree, const Rect& layout, Point point,
-                        int pane, Source source, const Plan& shown) {
+[[nodiscard]] inline Plan ResolveDrop(const Node& tree, const Rect& layout,
+                                      Point point, int pane, Source source,
+                                      const Plan& shown) {
   if (Empty(layout)) {
     return {};
   }
@@ -290,14 +294,15 @@ inline Plan ResolveDrop(const Node& tree, const Rect& layout, Point point,
 }
 
 // Dragging the split's own pane `moving` (its grip).
-inline Plan Resolve(const Node& tree, const Rect& layout, Point point,
-                    int moving, const Plan& shown) {
+[[nodiscard]] inline Plan Resolve(const Node& tree, const Rect& layout,
+                                  Point point, int moving, const Plan& shown) {
   return ResolveDrop(tree, layout, point, moving, Source::kMoving, shown);
 }
 
 // Dragging a new pane `incoming` (a tab) in: it joins the tree as that leaf.
-inline Plan ResolveIncoming(const Node& tree, const Rect& layout, Point point,
-                            int incoming, const Plan& shown) {
+[[nodiscard]] inline Plan ResolveIncoming(const Node& tree, const Rect& layout,
+                                          Point point, int incoming,
+                                          const Plan& shown) {
   return ResolveDrop(tree, layout, point, incoming, Source::kIncoming, shown);
 }
 

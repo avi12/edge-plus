@@ -1000,11 +1000,11 @@ struct SplitMembers {
   SplitMembers(SplitMembers&&) = delete;
   SplitMembers& operator=(SplitMembers&&) = delete;
 
-  int Count() const {
+  [[nodiscard]] int Count() const {
     return list.data ? static_cast<int>(list.size) : 0;
   }
   // Member `i`'s tab model (0 <= i < Count()).
-  void* TabAt(int i) const {
+  [[nodiscard]] void* TabAt(int i) const {
     return Field<void*>(
         list.data + static_cast<size_t>(i) * edge155::off::SPLITMEMBER_size, 0);
   }
@@ -1639,7 +1639,7 @@ inline void __fastcall DestroyScriptCallback(const void* bindState) {
 }
 
 // Whether every script callback has been destroyed within `timeoutMs`.
-inline bool WaitForScriptCallbacks(DWORD timeoutMs) {
+[[nodiscard]] inline bool WaitForScriptCallbacks(DWORD timeoutMs) {
   constexpr DWORD kStepMs = 20;
   for (DWORD waited = 0; waited < timeoutMs; waited += kStepMs) {
     if (g_liveScriptCallbacks == 0) {

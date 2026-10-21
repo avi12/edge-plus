@@ -57,7 +57,7 @@ struct FlagSet {
   unsigned bits = 0;
 };
 
-inline unsigned BitOf(Flag flag) {
+[[nodiscard]] inline unsigned BitOf(Flag flag) {
   return 1u << static_cast<unsigned>(flag);
 }
 
@@ -66,20 +66,20 @@ inline constexpr char kAlwaysOnFlag = 'g';
 
 // What a bar starts with: ^ and $ are line edges (m), exactly as the search
 // behaved before there were switches.
-inline FlagSet DefaultFlags() {
+[[nodiscard]] inline FlagSet DefaultFlags() {
   return FlagSet{BitOf(Flag::kMultiline)};
 }
 
-inline bool IsDefaultOn(Flag flag) {
+[[nodiscard]] inline bool IsDefaultOn(Flag flag) {
   return (DefaultFlags().bits & BitOf(flag)) != 0;
 }
 
-inline bool IsOn(const FlagSet& set, Flag flag) {
+[[nodiscard]] inline bool IsOn(const FlagSet& set, Flag flag) {
   return (set.bits & BitOf(flag)) != 0;
 }
 
 // The flag that cannot be on together with `flag` (u and v), if there is one.
-inline bool HasExclusive(Flag flag, Flag* other) {
+[[nodiscard]] inline bool HasExclusive(Flag flag, Flag* other) {
   if (flag == Flag::kUnicode) {
     *other = Flag::kUnicodeSets;
     return true;
@@ -105,7 +105,7 @@ inline void SetOn(FlagSet* set, Flag flag, bool isOn) {
 }
 
 // The switches that are on as flag letters, canonical order.
-inline std::string Letters(const FlagSet& set) {
+[[nodiscard]] inline std::string Letters(const FlagSet& set) {
   std::string letters;
   for (const FlagInfo& info : kFlags) {
     if (IsOn(set, info.flag)) {
@@ -119,7 +119,8 @@ inline std::string Letters(const FlagSet& set) {
 // once, in canonical order. Typed letters that are not flags are dropped (the typed form has
 // already refused them). A typed u next to a switched-on v (or the reverse) is
 // kept as it is: the page's RegExp refuses the pair and the bar says so.
-inline std::string Merge(const std::string& typedFlags, const FlagSet& set) {
+[[nodiscard]] inline std::string Merge(const std::string& typedFlags,
+                                       const FlagSet& set) {
   std::string merged;
   for (const FlagInfo& info : kFlags) {
     const bool isTyped = typedFlags.find(info.letter) != std::string::npos;
@@ -137,7 +138,7 @@ inline std::string Merge(const std::string& typedFlags, const FlagSet& set) {
 // em spaces so the column shows the nesting, and ends with the flag's letter.
 inline constexpr char kSubGroupIndent[] = "\xE2\x80\x83\xE2\x80\x83";
 
-inline std::string SwitchTitle(const FlagInfo& info) {
+[[nodiscard]] inline std::string SwitchTitle(const FlagInfo& info) {
   return std::string(kSubGroupIndent) + info.title + " (" + info.letter + ")";
 }
 

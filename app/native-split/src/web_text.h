@@ -13,7 +13,8 @@
 namespace fixedge::web_text {
 
 // Cut `text` to at most `maxBytes` without splitting a UTF-8 character.
-inline std::string TruncateUtf8(const std::string& text, size_t maxBytes) {
+[[nodiscard]] inline std::string TruncateUtf8(const std::string& text,
+                                              size_t maxBytes) {
   if (text.size() <= maxBytes) {
     return text;
   }
@@ -27,7 +28,8 @@ inline std::string TruncateUtf8(const std::string& text, size_t maxBytes) {
   return text.substr(0, end);
 }
 
-inline bool StartsWithIgnoreCase(const std::string& text, const char* prefix) {
+[[nodiscard]] inline bool StartsWithIgnoreCase(const std::string& text,
+                                               const char* prefix) {
   for (size_t i = 0; prefix[i] != '\0'; i++) {
     const bool isMatch =
         i < text.size() &&
@@ -41,14 +43,14 @@ inline bool StartsWithIgnoreCase(const std::string& text, const char* prefix) {
 
 // Web pages and local files; never an edge:// page, an extension, a new tab or a
 // blank page.
-inline bool IsWebPageUrl(const std::string& url) {
+[[nodiscard]] inline bool IsWebPageUrl(const std::string& url) {
   return StartsWithIgnoreCase(url, "http://") ||
          StartsWithIgnoreCase(url, "https://") ||
          StartsWithIgnoreCase(url, "file://");
 }
 
 // `utf8` as a double-quoted JavaScript string literal.
-inline std::string JsStringLiteral(const std::string& utf8) {
+[[nodiscard]] inline std::string JsStringLiteral(const std::string& utf8) {
   std::string literal = "\"";
   for (const char character : utf8) {
     const unsigned char byte = static_cast<unsigned char>(character);
@@ -95,7 +97,8 @@ inline constexpr char kUnreadableAnswer[] =
     "The page gave an answer Edge could not read.";
 
 // `text` cut at every `separator`; an empty text is one empty piece.
-inline std::vector<std::string> Split(const std::string& text, char separator) {
+[[nodiscard]] inline std::vector<std::string> Split(const std::string& text,
+                                                    char separator) {
   std::vector<std::string> pieces;
   size_t start = 0;
   while (true) {
@@ -109,7 +112,8 @@ inline std::vector<std::string> Split(const std::string& text, char separator) {
   }
 }
 
-inline std::vector<std::string> SplitFields(const std::string& answer) {
+[[nodiscard]] inline std::vector<std::string> SplitFields(
+    const std::string& answer) {
   return Split(answer, kFieldSeparator);
 }
 
@@ -118,7 +122,7 @@ inline std::vector<std::string> SplitFields(const std::string& answer) {
 
 // A JavaScript expression answering `ok`, then each of `fieldExpressions` (each
 // a JavaScript expression) after a separator.
-inline std::string JsOkAnswer(
+[[nodiscard]] inline std::string JsOkAnswer(
     const std::vector<std::string>& fieldExpressions = {}) {
   if (fieldExpressions.empty()) {
     return JsStringLiteral(kOkTag);
@@ -133,13 +137,14 @@ inline std::string JsOkAnswer(
 
 // A JavaScript expression answering `err` with the message the JavaScript
 // expression `messageExpression` gives.
-inline std::string JsErrorAnswerFrom(const std::string& messageExpression) {
+[[nodiscard]] inline std::string JsErrorAnswerFrom(
+    const std::string& messageExpression) {
   return JsStringLiteral(std::string(kErrorTag) + kFieldSeparator) + " + " +
          messageExpression;
 }
 
 // A JavaScript expression answering `err` with the fixed text `message`.
-inline std::string JsErrorAnswer(const std::string& message) {
+[[nodiscard]] inline std::string JsErrorAnswer(const std::string& message) {
   return JsStringLiteral(std::string(kErrorTag) + kFieldSeparator + message);
 }
 

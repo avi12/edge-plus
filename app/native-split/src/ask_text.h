@@ -50,7 +50,8 @@ struct PageParagraphs {
 
 // The page script answers `ok US isCut(0|1) US paragraph RS paragraph ...` or
 // `err US message`. A paragraph is already one trimmed run of text.
-inline PageParagraphs ParsePageParagraphs(const std::string& raw) {
+[[nodiscard]] inline PageParagraphs ParsePageParagraphs(
+    const std::string& raw) {
   PageParagraphs page;
   const std::vector<std::string> fields = web_text::SplitFields(raw);
   if (fields[0] == web_text::kErrorTag) {
@@ -73,7 +74,7 @@ inline PageParagraphs ParsePageParagraphs(const std::string& raw) {
   return page;
 }
 
-inline std::string Trim(const std::string& text) {
+[[nodiscard]] inline std::string Trim(const std::string& text) {
   size_t start = 0;
   size_t end = text.size();
   while (start < end && std::isspace(static_cast<unsigned char>(text[start]))) {
@@ -88,7 +89,7 @@ inline std::string Trim(const std::string& text) {
 
 // Squeeze every run of whitespace (a newline inside a paragraph included) to
 // one space, so a label and its text stay on one line of the prompt.
-inline std::string Flatten(const std::string& text) {
+[[nodiscard]] inline std::string Flatten(const std::string& text) {
   std::string flat;
   bool isPendingSpace = false;
   for (const char character : text) {
@@ -107,7 +108,8 @@ inline std::string Flatten(const std::string& text) {
 
 // The paragraphs worth asking about, each cut to what it may cost and keeping
 // its place in the page's list.
-inline std::vector<Paragraph> Prepare(const std::vector<std::string>& texts) {
+[[nodiscard]] inline std::vector<Paragraph> Prepare(
+    const std::vector<std::string>& texts) {
   std::vector<Paragraph> kept;
   for (size_t i = 0; i < texts.size(); i++) {
     std::string flat = Flatten(texts[i]);
@@ -127,7 +129,7 @@ inline std::vector<Paragraph> Prepare(const std::vector<std::string>& texts) {
 // A paragraph's label as the prompt shows it. In square brackets so it still
 // stands out when the chat's message box drops the line breaks between
 // paragraphs (Copilot's editor does with plain text).
-inline std::string LabelOf(int index) {
+[[nodiscard]] inline std::string LabelOf(int index) {
   return "[P" + std::to_string(index) + "]";
 }
 
@@ -143,7 +145,7 @@ struct Plan {
   bool isCut = false;  // paragraphs were left out: more than kMaxChunks fit
 };
 
-inline std::string PromptHead(const std::string& question) {
+[[nodiscard]] inline std::string PromptHead(const std::string& question) {
   return "I am searching a web page. Below are paragraphs from it, each "
          "starting with its label in square brackets.\n"
          "Question: \"" +
@@ -157,8 +159,9 @@ inline std::string PromptHead(const std::string& question) {
          ". After the labels, add one short sentence on what you found.\n\n";
 }
 
-inline Plan PlanQuestion(const std::string& typedQuestion,
-                         const std::vector<Paragraph>& paragraphs) {
+[[nodiscard]] inline Plan PlanQuestion(
+    const std::string& typedQuestion,
+    const std::vector<Paragraph>& paragraphs) {
   const std::string question =
       Flatten(web_text::TruncateUtf8(typedQuestion, kMaxQuestionChars));
   const std::string head = PromptHead(question);
@@ -198,7 +201,7 @@ struct Reply {
 };
 
 // The Copilot script answers `ok US reply text` or `err US message`.
-inline Reply ParseReply(const std::string& raw) {
+[[nodiscard]] inline Reply ParseReply(const std::string& raw) {
   Reply reply;
   const size_t separator = raw.find(web_text::kFieldSeparator);
   const std::string marker = raw.substr(0, separator);
@@ -222,14 +225,15 @@ struct Answer {
   std::string note;          // its sentence on what it found
 };
 
-inline bool IsWordChar(char character) {
+[[nodiscard]] inline bool IsWordChar(char character) {
   return std::isalnum(static_cast<unsigned char>(character)) != 0;
 }
 
 // The paragraph number of a label such as "P12" at `start`, or -1: a P (either
 // case) not glued to a word before it, then digits not glued to a word after.
 // `end` is where the label stops.
-inline int LabelAt(const std::string& text, size_t start, size_t* end) {
+[[nodiscard]] inline int LabelAt(const std::string& text, size_t start,
+                                 size_t* end) {
   const bool isP =
       start < text.size() && (text[start] == 'P' || text[start] == 'p');
   const bool isWordStart = start == 0 || !IsWordChar(text[start - 1]);
@@ -253,7 +257,8 @@ inline int LabelAt(const std::string& text, size_t start, size_t* end) {
   return number;
 }
 
-inline bool Contains(const std::vector<int>& numbers, int number) {
+[[nodiscard]] inline bool Contains(const std::vector<int>& numbers,
+                                   int number) {
   for (const int candidate : numbers) {
     if (candidate == number) {
       return true;
@@ -262,7 +267,7 @@ inline bool Contains(const std::vector<int>& numbers, int number) {
   return false;
 }
 
-inline bool IsLabelPunctuation(char character) {
+[[nodiscard]] inline bool IsLabelPunctuation(char character) {
   return std::string("[]().,;:-* \t").find(character) != std::string::npos;
 }
 
@@ -272,7 +277,7 @@ inline bool IsLabelPunctuation(char character) {
 // not known).
 inline constexpr size_t kMaxNoteChars = 200;
 
-inline std::string FirstSentence(const std::string& text) {
+[[nodiscard]] inline std::string FirstSentence(const std::string& text) {
   size_t end = text.find('\n');
   if (end == std::string::npos) {
     end = text.size();
@@ -293,7 +298,7 @@ inline std::string FirstSentence(const std::string& text) {
 
 // What Copilot said after (or instead of) its labels: its first sentence
 // without the leading labels.
-inline std::string NoteOf(const std::string& reply) {
+[[nodiscard]] inline std::string NoteOf(const std::string& reply) {
   const std::string text = Trim(reply);
   size_t cursor = 0;
   while (cursor < text.size()) {
@@ -311,8 +316,8 @@ inline std::string NoteOf(const std::string& reply) {
 
 // Read Copilot's reply to one prompt. Only labels among `offered` count; a label
 // it invented, or from another prompt, is ignored.
-inline Answer ParseAnswer(const std::string& reply,
-                          const std::vector<int>& offered) {
+[[nodiscard]] inline Answer ParseAnswer(const std::string& reply,
+                                        const std::vector<int>& offered) {
   Answer answer;
   for (size_t i = 0; i < reply.size(); i++) {
     size_t end = 0;
@@ -364,7 +369,7 @@ inline void SortAscending(std::vector<int>* indices) {
 }
 
 // The paragraph numbers as the highlight script takes them: "3,7,12".
-inline std::string IndexList(const std::vector<int>& indices) {
+[[nodiscard]] inline std::string IndexList(const std::vector<int>& indices) {
   std::string list;
   for (size_t i = 0; i < indices.size(); i++) {
     list += (i == 0 ? "" : ",") + std::to_string(indices[i]);

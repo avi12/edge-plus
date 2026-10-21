@@ -68,7 +68,7 @@ inline constexpr DWORD kBeforeReadingThemeWireSize =
 // the same way: the panel rewrites the file and signals kConfigEvent.
 inline constexpr char kFileRelativePath[] = "\\FixEdge\\fixedge-config.bin";
 
-inline bool LoadFromFile(Wire* out) {
+[[nodiscard]] inline bool LoadFromFile(Wire* out) {
   char localAppData[MAX_PATH] = {};
   const DWORD length =
       GetEnvironmentVariableA("LOCALAPPDATA", localAppData, MAX_PATH);

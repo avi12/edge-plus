@@ -47,7 +47,7 @@ inline constexpr WPARAM kDirectionCount =
     static_cast<WPARAM>(Direction::kRight) + 1;
 inline constexpr WPARAM kShowBarPaneLimit = 16;
 
-inline constexpr WPARAM CodeOf(Command command) {
+[[nodiscard]] inline constexpr WPARAM CodeOf(Command command) {
   return static_cast<WPARAM>(command);
 }
 
@@ -63,17 +63,18 @@ static_assert(CodeOf(Command::kMenuArrowBase) + kDirectionCount <=
               "the menu-arrow range overlaps the next code");
 
 // The code for `direction` in a range of one code per direction.
-inline constexpr WPARAM CodeOf(Command base, Direction direction) {
+[[nodiscard]] inline constexpr WPARAM CodeOf(Command base,
+                                             Direction direction) {
   return CodeOf(base) + static_cast<WPARAM>(direction);
 }
 
 // Whether `wparam` is one of the `count` codes that start at `base`.
-inline bool IsInRange(WPARAM wparam, Command base, WPARAM count) {
+[[nodiscard]] inline bool IsInRange(WPARAM wparam, Command base, WPARAM count) {
   return wparam >= CodeOf(base) && wparam < CodeOf(base) + count;
 }
 
 // The operand of a ranged code (its offset from `base`).
-inline int OperandOf(WPARAM wparam, Command base) {
+[[nodiscard]] inline int OperandOf(WPARAM wparam, Command base) {
   return static_cast<int>(wparam) - static_cast<int>(CodeOf(base));
 }
 
