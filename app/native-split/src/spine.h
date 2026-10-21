@@ -24,13 +24,16 @@
 
 namespace fixedge::spine {
 
-inline constexpr wchar_t kWindowClass[] = L"FixEdgeTabSpine";
+// A stripe's class carries its colour as its brush, so there is one class per
+// stripe colour (tab_edge::StripeColorFor) and a window whose theme changes tone
+// gets a stripe of the other class.
+inline constexpr wchar_t kStripeClassOnDark[] = L"FixEdgeTabSpine";
+inline constexpr wchar_t kStripeClassOnLight[] = L"FixEdgeTabSpineLight";
 inline constexpr wchar_t kCornerClass[] = L"FixEdgeTabCorner";
 inline constexpr UINT kTickIntervalMs = 50;
 
-// The stripe: 7 DIPs wide, the neon magenta of the Cyberpunk theme.
+// The stripe: 7 DIPs wide.
 inline constexpr int kWidthDip = 7;
-inline constexpr COLORREF kColor = RGB(0xFF, 0x2B, 0xD6);
 // How far across and down the pieces cover each leading corner of the pill:
 // Edge rounds a vertical tab by 7 DIPs, and the favicon starts 8 DIPs in, so 8
 // covers the curve and its anti-aliased rim without reaching the icon.
@@ -53,6 +56,7 @@ struct WindowSet {
   HWND topCorner = nullptr;
   HWND bottomCorner = nullptr;
   tab_edge::Side side = tab_edge::Side::kLeft;
+  theme_tone::Argb stripeColor = 0;
 };
 
 inline std::vector<WindowSet> g_sets;
@@ -103,23 +107,48 @@ inline HWND CreatePopup(HWND owner, const wchar_t* className, COLORREF color) {
   return popup;
 }
 
-// The set of `browser`, made on first use. Edge settles its UI direction at
-// startup, so each window's side is asked once, when its set is made.
-inline WindowSet& SetFor(HWND browser) {
+// The stripe colour for `browser`'s theme: its tone, read as theme_follow reads
+// it (edge::ThemeTone), chooses it.
+inline theme_tone::Argb StripeColorOf(HWND browser) {
+  void* themeService = edge::ThemeServiceForWindow(browser);
+  return tab_edge::StripeColorFor(themeService ? edge::ThemeTone(themeService)
+                                               : theme_tone::Tone::kUnknown);
+}
+
+inline HWND CreateStripe(HWND browser, theme_tone::Argb color) {
+  const bool isLightColor = color == tab_edge::kStripeOnLight;
+  return CreatePopup(browser,
+                     isLightColor ? kStripeClassOnLight : kStripeClassOnDark,
+                     ColorRefOf(color));
+}
+
+// The set of `browser` in `stripeColor`, made on first use, its stripe remade
+// when the theme's tone has changed the colour. Edge settles its UI direction
+// at startup, so each window's side is asked once, when its set is made.
+inline WindowSet& SetFor(HWND browser, theme_tone::Argb stripeColor) {
   for (WindowSet& set : g_sets) {
-    if (set.browser == browser) {
-      return set;
+    if (set.browser != browser) {
+      continue;
     }
+    const bool isRecoloured = set.stripeColor != stripeColor;
+    if (isRecoloured) {
+      DestroyWindow(set.stripe);
+      set.stripe = CreateStripe(browser, stripeColor);
+      set.stripeColor = stripeColor;
+      Log("[spine] window %p stripe now %08x", browser, stripeColor);
+    }
+    return set;
   }
   WindowSet set;
   set.browser = browser;
   set.side = tab_edge::LeadingSide(edge::IsUiRightToLeft());
-  set.stripe = CreatePopup(browser, kWindowClass, kColor);
+  set.stripeColor = stripeColor;
+  set.stripe = CreateStripe(browser, stripeColor);
   set.topCorner = CreatePopup(browser, kCornerClass, ColorRefOf(g_paintedFill));
   set.bottomCorner =
       CreatePopup(browser, kCornerClass, ColorRefOf(g_paintedFill));
-  Log("[spine] window %p gets a spine, %s edge", browser,
-      set.side == tab_edge::Side::kRight ? "right" : "left");
+  Log("[spine] window %p gets a spine, %s edge, stripe %08x", browser,
+      set.side == tab_edge::Side::kRight ? "right" : "left", stripeColor);
   g_sets.push_back(set);
   return g_sets.back();
 }
@@ -202,7 +231,7 @@ inline void TickWindow(HWND browser) {
     }
     return;
   }
-  const WindowSet& set = SetFor(browser);
+  const WindowSet& set = SetFor(browser, StripeColorOf(browser));
   FollowFill();
   const Rect row{static_cast<int>(static_cast<float>(bounds.x) * scale), top,
                  static_cast<int>(static_cast<float>(bounds.width) * scale),
@@ -245,7 +274,8 @@ inline void Remove() {
     Destroy(set);
   }
   g_sets.clear();
-  UnregisterClassW(kWindowClass, ThisModule());
+  UnregisterClassW(kStripeClassOnDark, ThisModule());
+  UnregisterClassW(kStripeClassOnLight, ThisModule());
   UnregisterClassW(kCornerClass, ThisModule());
   g_paintedFill = 0;
   Log("[spine] off");

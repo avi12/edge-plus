@@ -49,6 +49,16 @@ void RunChecks() {
   Check(thin.topCorner == Rect{236, 121, 5, 8} &&
             thin.topCorner.x + thin.topCorner.width == thin.stripe.x,
         "a thinner stripe leaves a wider square, flush against it");
+  Check(StripeColorFor(theme_tone::Tone::kDark) == 0xffff2bd6,
+        "a dark theme keeps the neon magenta");
+  Check(StripeColorFor(theme_tone::Tone::kLight) == 0xffc8008f,
+        "a light theme gets the deep magenta");
+  Check(StripeColorFor(theme_tone::Tone::kUnknown) ==
+            StripeColorFor(theme_tone::Tone::kDark),
+        "a theme of no known tone keeps the neon");
+  Check(StripeColorFor(theme_tone::ToneOf({true, 0xffd5e4f0}, {})) ==
+            kStripeOnLight,
+        "the light Cyberpunk theme's concrete toolbar reads as light");
   Check(left.stripe.width == right.stripe.width &&
             left.topCorner.height == right.topCorner.height,
         "both sides draw the same pieces, mirrored");

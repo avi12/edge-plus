@@ -57,9 +57,7 @@ inline theme_tone::Tone ToneForPage(void* webContents) {
   if (!themeService) {
     return theme_tone::Tone::kUnknown;
   }
-  return theme_tone::ToneOf(
-      edge::ThemePaletteColor(themeService, edge155::off::THEMECOLOR_toolbar),
-      edge::ThemePaletteColor(themeService, edge155::off::THEMECOLOR_frame));
+  return edge::ThemeTone(themeService);
 }
 
 // EdgeComputePreferredColorScheme: the page's prefers-color-scheme (and root

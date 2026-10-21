@@ -1230,6 +1230,14 @@ inline theme_tone::OptionalColor ThemePaletteColor(void* themeService,
   return {isSet, color};
 }
 
+// Whether the active theme of `themeService` is light or dark, read off the
+// colours it paints the toolbar and frame with (theme_tone::ToneOf).
+inline theme_tone::Tone ThemeTone(void* themeService) {
+  return theme_tone::ToneOf(
+      ThemePaletteColor(themeService, edge155::off::THEMECOLOR_toolbar),
+      ThemePaletteColor(themeService, edge155::off::THEMECOLOR_frame));
+}
+
 // Tell `webContents` its color provider changed: a WebUI page fetches its
 // colors.css again and the page's web preferences are computed again.
 inline void NotifyColorProviderChanged(void* webContents) {

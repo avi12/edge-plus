@@ -2,12 +2,23 @@
 // One concern: the pure geometry of the pieces spine.h lays over the tab's
 // leading edge (the left one, the right one when Edge's UI runs right to left):
 // the stripe the full height of the row, and a square of the selected fill over
-// each of the pill's two rounded corners on that side, just inside the stripe.
-// No Edge, no Win32.
+// each of the pill's two rounded corners on that side, just inside the stripe;
+// and the stripe's colour for the theme's tone. No Edge, no Win32.
 #pragma once
 #include "geom.h"
+#include "theme_tone.h"
 
 namespace fixedge::tab_edge {
+
+// The stripe's neon magenta on a dark rail, and a deep magenta on a light one,
+// where the neon would read at only 2.5:1.
+inline constexpr theme_tone::Argb kStripeOnDark = 0xffff2bd6;
+inline constexpr theme_tone::Argb kStripeOnLight = 0xffc8008f;
+
+// A theme that says nothing of its tone gets the neon, as before there were two.
+constexpr theme_tone::Argb StripeColorFor(theme_tone::Tone tone) {
+  return tone == theme_tone::Tone::kLight ? kStripeOnLight : kStripeOnDark;
+}
 
 // The side of the tab the spine marks: its leading edge, where the favicon is.
 enum class Side {
