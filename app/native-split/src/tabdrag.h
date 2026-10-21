@@ -52,11 +52,6 @@ struct LastMove {
 };
 inline constinit LastMove g_lastMove;
 
-// A tab drag is running from its first pointer move to its end.
-inline bool IsTabDragRunning() {
-  return g_lastMove.controller != nullptr;
-}
-
 // The view of the tab being dragged in `tsm`'s strip, which follows the
 // pointer, or null when no single-tab drag runs in that strip.
 inline void* DraggedTabViewIn(void* tsm) {
@@ -177,8 +172,9 @@ inline void Cancel() {
   g_drop.reset();
 }
 
-// The spine's own timer is too slow for a fast drag, so each pointer move
-// re-places it on the dragged tab as soon as Edge has moved the tab.
+// The spine's timer is too slow to catch a drag's start and end, so the spine
+// is moved onto the dragged tab on a pointer move, and off it when the drag
+// ends, rather than up to a tick later.
 inline void FollowSpine() {
   void* tsm =
       spine::g_isActive ? edge::TsmForWindow(channel::g_window) : nullptr;
@@ -238,6 +234,7 @@ inline void __fastcall h_end_drag(void* controller, int reason) {
   g_session = Session{};
   g_lastMove = LastMove{};
   o_end_drag(controller, reason);
+  FollowSpine();
   if (isDropping) {
     channel::Post(channel::CodeOf(channel::Command::kTabDrop));
   }

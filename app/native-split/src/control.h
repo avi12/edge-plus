@@ -178,8 +178,8 @@ inline BOOL CALLBACK RefreshWindowFollowedPages(HWND hwnd, LPARAM lparam) {
 }
 
 // EnumWindows callback: one spine tick (spine.h) for each of this process's
-// browser windows, so every window marks its own selected tab. While a tab is
-// dragged the spine rides it; after the drop it waits for the tab to settle.
+// browser windows, so every window marks its own selected tab, or the tab being
+// dragged; a drag's own moves and its end tick the window too (tabdrag.h).
 inline BOOL CALLBACK TickWindowSpine(HWND hwnd, LPARAM /*unused*/) {
   if (!IsOurBrowserClassWindow(hwnd)) {
     return TRUE;
@@ -200,7 +200,6 @@ inline void CALLBACK TickSpines(HWND /*unused*/, UINT /*unused*/,
     return;
   }
   spine::BeginTick();
-  spine::NoteTabDrag(tabdrag::IsTabDragRunning());
   EnumWindows(TickWindowSpine, 0);
 }
 
