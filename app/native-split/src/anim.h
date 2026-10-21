@@ -11,6 +11,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include "channel.h"
 #include "edge.h"
 #include "motion.h"
 #include "pane_tree.h"
@@ -32,7 +33,8 @@ struct HostSize {
 inline constinit bool g_isEnabled = false;
 // The window whose timer drives the frames.
 inline constinit HWND g_hwnd = nullptr;
-inline constexpr UINT_PTR kTimerId = 0xF1ED;
+inline constexpr UINT_PTR kTimerId =
+    channel::TimerIdOf(channel::WindowTimer::kAnimationFrame);
 inline constexpr UINT kFrameMs = 15;
 
 // Set before a pane is added that must paint at once (a tab dropped in): its

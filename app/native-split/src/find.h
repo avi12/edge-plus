@@ -34,7 +34,8 @@ namespace fixedge::find {
 // Whether the enhanced find is switched on; the panel pushes it (config.h).
 inline constinit bool g_isEnabled = false;
 
-inline constexpr UINT_PTR kTimerId = 0xF1EC;
+inline constexpr UINT_PTR kTimerId =
+    channel::TimerIdOf(channel::WindowTimer::kFindPoll);
 inline constexpr UINT kTickIntervalMs = 100;
 
 // --- what the bar says ---------------------------------------------------------------------------

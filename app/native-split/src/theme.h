@@ -63,7 +63,8 @@ inline bool IsOsDarkMode() {
 // the same one the OS light/dark flip sends — so a switch driven by that flip
 // refreshes fully, and a switch pushed from the panel refreshes the frame at
 // once and the rest on the next interaction.
-inline constexpr UINT kRepaintTimerId = 0xF1EE;
+inline constexpr UINT_PTR kRepaintTimerId =
+    channel::TimerIdOf(channel::WindowTimer::kThemeRepaint);
 inline constexpr UINT kRepaintDelayMs = 180;
 
 inline void ScheduleRepaint(void* hwnd) {

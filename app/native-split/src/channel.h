@@ -88,4 +88,18 @@ inline void Post(WPARAM code) {
   }
 }
 
+// The WM_TIMER ids set on the subclassed browser window, each dispatched by
+// control.h's window procedure to the module that set it. One closed set, so
+// no two modules can pick the same id.
+enum class WindowTimer : UINT_PTR {
+  kFindPoll = 0xF1EC,        // find.h: the find bar's poll
+  kAnimationFrame = 0xF1ED,  // anim.h: a pane transition's next frame
+  kThemeRepaint = 0xF1EE,    // theme.h: the frame redraw after a theme swap
+  kRenderNudge = 0xF1EF,     // repaint.h: the settled panes' paint nudge
+};
+
+[[nodiscard]] inline constexpr UINT_PTR TimerIdOf(WindowTimer timer) noexcept {
+  return static_cast<UINT_PTR>(timer);
+}
+
 }  // namespace fixedge::channel
