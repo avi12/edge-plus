@@ -222,13 +222,29 @@ inline void Place(HWND browser, HWND piece, const Rect& screenRect) {
   if (!piece) {
     return;
   }
+  // The tick runs 20 times a second and the piece rarely moves; touching a
+  // layered child on every tick makes the compositor redraw it, which flickers.
+  RECT current{};
+  GetWindowRect(piece, &current);
+  const bool isPlaced = IsWindowVisible(piece) &&
+                        current.left == screenRect.x &&
+                        current.top == screenRect.y &&
+                        current.right - current.left == screenRect.width &&
+                        current.bottom - current.top == screenRect.height;
+  if (isPlaced) {
+    return;
+  }
   POINT corners[2] = {
       {screenRect.x, screenRect.y},
       {screenRect.x + screenRect.width, screenRect.y + screenRect.height}};
   MapWindowPoints(nullptr, browser, corners, 2);
   const int left = std::min(corners[0].x, corners[1].x);
+  // Raised only when it first shows: re-raising it on every move of a dragged
+  // tab makes the compositor reorder it each time, which flickers.
+  const bool isShown = IsWindowVisible(piece);
   SetWindowPos(piece, HWND_TOP, left, corners[0].y, screenRect.width,
-               screenRect.height, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+               screenRect.height,
+               SWP_NOACTIVATE | SWP_SHOWWINDOW | (isShown ? SWP_NOZORDER : 0));
 }
 
 inline void Hide(const WindowSet& set) {
