@@ -58,8 +58,16 @@
 #                                  cppcoreguidelines-slicing
 #   const member functions      -> readability-make-member-function-const,
 #                                  readability-non-const-parameter
+#   no raw new/delete or malloc -> cppcoreguidelines-owning-memory,
+#                                  cppcoreguidelines-no-malloc,
+#                                  modernize-make-unique
+#     (Win32 handles have owners in handles.h for the same reason; no check
+#     can see a CloseHandle a path forgot, so that one stays a review concern.)
 Checks: >
   -*,
+  cppcoreguidelines-no-malloc,
+  cppcoreguidelines-owning-memory,
+  modernize-make-unique,
   cppcoreguidelines-pro-type-cstyle-cast,
   cppcoreguidelines-prefer-member-initializer,
   cppcoreguidelines-slicing,

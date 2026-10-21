@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 #include <utility>
@@ -1620,8 +1621,11 @@ inline void __fastcall InvokeScriptCallback(void* bindState, void* value) {
   }
   state->done(result);
 }
+// Edge hands back the state RunScriptInFrame released to it: own it again, and
+// let the owner free it.
 inline void __fastcall DestroyScriptCallback(const void* bindState) {
-  delete static_cast<const ScriptCallbackState*>(bindState);
+  const std::unique_ptr<const ScriptCallbackState> state{
+      static_cast<const ScriptCallbackState*>(bindState)};
   g_liveScriptCallbacks--;
 }
 
@@ -1658,14 +1662,16 @@ inline bool RunScriptInFrame(const void* frame, const std::string& utf8Script,
   }
   const void* callbackSlot = nullptr;
   if (done) {
-    auto* state = new ScriptCallbackState{};
+    auto state = std::make_unique<ScriptCallbackState>();
     using BaseCtor = void*(__fastcall*)(void*, void*, void*);
     reinterpret_cast<BaseCtor>(At(edge155::rva::BindStateBase_ctor))(
-        state, reinterpret_cast<void*>(InvokeScriptCallback),
+        state.get(), reinterpret_cast<void*>(InvokeScriptCallback),
         reinterpret_cast<void*>(DestroyScriptCallback));
     state->done = std::move(done);
     g_liveScriptCallbacks++;
-    callbackSlot = state;
+    // Edge owns the callback from here, and frees it through
+    // DestroyScriptCallback exactly once, run or not.
+    callbackSlot = state.release();
   }
   U16String script{};
   const U8View scriptView{utf8Script.data(), utf8Script.size()};
