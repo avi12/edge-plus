@@ -15,8 +15,8 @@ use windows_sys::Win32::System::Threading::{OpenEventW, SetEvent, EVENT_MODIFY_S
 const ID_CAPACITY: usize = 64;
 // struct Wire's fields, in order: five u32s, the two ids, then a reserved u32
 // (once the chosen assistant; written as zero, never read), the find switch,
-// the WebUI-follows-theme switch, the live-preview switch and the tab-spine
-// switch.
+// the WebUI-follows-theme switch, the live-preview switch, the tab-spine switch,
+// and the reading-theme switch with its light and dark themes (Edge's numbers).
 const SPLIT_ACTIVE_OFFSET: usize = 0;
 const THEMING_ACTIVE_OFFSET: usize = 4;
 const PROTOCOL_HANDLERS_ACTIVE_OFFSET: usize = 8;
@@ -29,7 +29,10 @@ const ENHANCED_FIND_ACTIVE_OFFSET: usize = RESERVED_OFFSET + 4;
 const WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET: usize = ENHANCED_FIND_ACTIVE_OFFSET + 4;
 const LIVE_PREVIEW_ACTIVE_OFFSET: usize = WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET + 4;
 const TAB_SPINE_ACTIVE_OFFSET: usize = LIVE_PREVIEW_ACTIVE_OFFSET + 4;
-const WIRE_SIZE: usize = TAB_SPINE_ACTIVE_OFFSET + 4;
+const READING_THEME_ACTIVE_OFFSET: usize = TAB_SPINE_ACTIVE_OFFSET + 4;
+const READING_THEME_LIGHT_OFFSET: usize = READING_THEME_ACTIVE_OFFSET + 4;
+const READING_THEME_DARK_OFFSET: usize = READING_THEME_LIGHT_OFFSET + 4;
+const WIRE_SIZE: usize = READING_THEME_DARK_OFFSET + 4;
 // Must match kConfigEvent in app/native-split/src/dllmain.cpp.
 const CONFIG_EVENT: &str = r"Local\fixedge-config-changed";
 
@@ -57,6 +60,12 @@ pub struct DllConfig<'a> {
     /// The selected vertical tab gets a square leading edge and the neon spine,
     /// while theming is on (`spine.h`).
     pub tab_spine_active: bool,
+    /// Reading mode's page theme follows Windows light and dark
+    /// (`reading_mode.h`), with these two themes (Edge's `reading_view.theme`
+    /// numbers).
+    pub reading_theme_active: bool,
+    pub reading_theme_light: u32,
+    pub reading_theme_dark: u32,
 }
 
 /// Write the desired state to the config file the DLL reads (atomically, so a
@@ -111,11 +120,30 @@ fn encode(config: &DllConfig) -> [u8; WIRE_SIZE] {
         config.live_preview_active,
     );
     write_flag(&mut wire, TAB_SPINE_ACTIVE_OFFSET, config.tab_spine_active);
+    write_flag(
+        &mut wire,
+        READING_THEME_ACTIVE_OFFSET,
+        config.reading_theme_active,
+    );
+    write_u32(
+        &mut wire,
+        READING_THEME_LIGHT_OFFSET,
+        config.reading_theme_light,
+    );
+    write_u32(
+        &mut wire,
+        READING_THEME_DARK_OFFSET,
+        config.reading_theme_dark,
+    );
     wire
 }
 
+fn write_u32(wire: &mut [u8], offset: usize, value: u32) {
+    wire[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+}
+
 fn write_flag(wire: &mut [u8], offset: usize, is_on: bool) {
-    wire[offset..offset + 4].copy_from_slice(&u32::from(is_on).to_le_bytes());
+    write_u32(wire, offset, u32::from(is_on));
 }
 
 fn write_id(wire: &mut [u8], length_offset: usize, id_offset: usize, id: &str) {
@@ -150,9 +178,9 @@ mod tests {
     }
 
     #[test]
-    fn the_wire_is_config_h_s_168_bytes() {
-        // config.h static_asserts the same size: 10 u32 fields + 2 ids of 64.
-        assert_eq!(WIRE_SIZE, 168);
+    fn the_wire_is_config_h_s_180_bytes() {
+        // config.h static_asserts the same size: 13 u32 fields + 2 ids of 64.
+        assert_eq!(WIRE_SIZE, 180);
     }
 
     #[test]
@@ -167,6 +195,9 @@ mod tests {
             web_ui_follows_theme_active: true,
             live_preview_active: true,
             tab_spine_active: true,
+            reading_theme_active: true,
+            reading_theme_light: 18,
+            reading_theme_dark: 22,
         });
         assert_eq!(u32_at(&wire, 0), 0);
         assert_eq!(u32_at(&wire, 4), 1);
@@ -182,6 +213,12 @@ mod tests {
         assert_eq!(WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET, 156);
         assert_eq!(u32_at(&wire, TAB_SPINE_ACTIVE_OFFSET), 1);
         assert_eq!(LIVE_PREVIEW_ACTIVE_OFFSET, 160);
+        assert_eq!(u32_at(&wire, READING_THEME_ACTIVE_OFFSET), 1);
+        assert_eq!(u32_at(&wire, READING_THEME_LIGHT_OFFSET), 18);
+        assert_eq!(u32_at(&wire, READING_THEME_DARK_OFFSET), 22);
+        assert_eq!(READING_THEME_ACTIVE_OFFSET, 168);
+        assert_eq!(READING_THEME_LIGHT_OFFSET, 172);
+        assert_eq!(READING_THEME_DARK_OFFSET, 176);
         assert_eq!(TAB_SPINE_ACTIVE_OFFSET, 164);
     }
 }

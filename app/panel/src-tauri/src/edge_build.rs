@@ -62,7 +62,8 @@ pub fn depends_on_pinned_build(feature: Feature) -> bool {
         | Feature::EnhancedFind
         | Feature::WebUiFollowsTheme
         | Feature::LivePreview
-        | Feature::TabSpine => true,
+        | Feature::TabSpine
+        | Feature::ReadingTheme => true,
         Feature::QuietDevMode => false,
     }
 }
@@ -168,6 +169,7 @@ mod tests {
             web_ui_follows_theme: true,
             live_preview: true,
             tab_spine: true,
+            reading_theme: true,
         }
     }
 
@@ -188,6 +190,7 @@ mod tests {
         assert!(depends_on_pinned_build(Feature::WebUiFollowsTheme));
         assert!(depends_on_pinned_build(Feature::LivePreview));
         assert!(depends_on_pinned_build(Feature::TabSpine));
+        assert!(depends_on_pinned_build(Feature::ReadingTheme));
         assert!(!depends_on_pinned_build(Feature::QuietDevMode));
     }
 
@@ -211,7 +214,8 @@ mod tests {
                 Feature::EnhancedFind,
                 Feature::WebUiFollowsTheme,
                 Feature::LivePreview,
-                Feature::TabSpine
+                Feature::TabSpine,
+                Feature::ReadingTheme
             ]
         );
     }
@@ -229,7 +233,8 @@ mod tests {
                 Feature::EnhancedFind,
                 Feature::WebUiFollowsTheme,
                 Feature::LivePreview,
-                Feature::TabSpine
+                Feature::TabSpine,
+                Feature::ReadingTheme
             ]
         );
     }
@@ -247,6 +252,7 @@ mod tests {
             web_ui_follows_theme: false,
             live_preview: false,
             tab_spine: false,
+            reading_theme: false,
         };
         assert_eq!(
             blocked_features(only_theming, updated, pinned),

@@ -64,6 +64,9 @@ pub struct Features {
     /// while theming is on (the DLL's `spine.h`). On by default: it was part of
     /// the theming until it got a switch of its own.
     pub tab_spine: bool,
+    /// Reading mode's page theme follows Windows light and dark (the DLL's
+    /// `reading_mode.h`), with the themes in [`ReadingMode`].
+    pub reading_theme: bool,
 }
 
 impl Default for Features {
@@ -77,6 +80,65 @@ impl Default for Features {
             web_ui_follows_theme: false,
             live_preview: false,
             tab_spine: true,
+            reading_theme: false,
+        }
+    }
+}
+
+/// One of the twelve page themes of reading mode's Appearance settings > Themes
+/// grid, in the grid's order. Must match the DLL's `reading_themes.h`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ReadingTheme {
+    Sepia,
+    Light,
+    Grey,
+    Blue,
+    Yellow,
+    Green,
+    Lavender,
+    LightBlue,
+    SkyBlue,
+    LightGreen,
+    Black,
+    DarkGrey,
+}
+
+impl ReadingTheme {
+    /// Edge's own number for the theme (its `reading_view.theme` pref), which
+    /// is what the DLL is sent.
+    #[must_use]
+    pub fn wire_value(self) -> u32 {
+        match self {
+            Self::Sepia => 0,
+            Self::Light => 1,
+            Self::Grey => 2,
+            Self::Black => 3,
+            Self::Green => 4,
+            Self::Blue => 5,
+            Self::Yellow => 6,
+            Self::LightGreen => 12,
+            Self::SkyBlue => 16,
+            Self::LightBlue => 17,
+            Self::Lavender => 18,
+            Self::DarkGrey => 22,
+        }
+    }
+}
+
+/// The reading mode theme for each Windows mode.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ReadingMode {
+    pub light: ReadingTheme,
+    pub dark: ReadingTheme,
+}
+
+impl Default for ReadingMode {
+    fn default() -> Self {
+        Self {
+            light: ReadingTheme::Sepia,
+            dark: ReadingTheme::Black,
         }
     }
 }
@@ -93,10 +155,11 @@ pub enum Feature {
     WebUiFollowsTheme,
     LivePreview,
     TabSpine,
+    ReadingTheme,
 }
 
 impl Feature {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::NativeSplit,
         Self::Theming,
         Self::QuietDevMode,
@@ -105,6 +168,7 @@ impl Feature {
         Self::WebUiFollowsTheme,
         Self::LivePreview,
         Self::TabSpine,
+        Self::ReadingTheme,
     ];
 }
 
@@ -120,6 +184,7 @@ impl Features {
             Feature::WebUiFollowsTheme => self.web_ui_follows_theme,
             Feature::LivePreview => self.live_preview,
             Feature::TabSpine => self.tab_spine,
+            Feature::ReadingTheme => self.reading_theme,
         }
     }
 
@@ -133,6 +198,7 @@ impl Features {
             || self.enhanced_find
             || self.web_ui_follows_theme
             || self.live_preview
+            || self.reading_theme
     }
 
     pub fn set(&mut self, feature: Feature, is_on: bool) {
@@ -145,6 +211,7 @@ impl Features {
             Feature::WebUiFollowsTheme => self.web_ui_follows_theme = is_on,
             Feature::LivePreview => self.live_preview = is_on,
             Feature::TabSpine => self.tab_spine = is_on,
+            Feature::ReadingTheme => self.reading_theme = is_on,
         }
     }
 }
@@ -155,6 +222,8 @@ impl Features {
 pub struct Settings {
     pub features: Features,
     pub theming: Theming,
+    #[serde(rename = "readingMode")]
+    pub reading_mode: ReadingMode,
     /// The `msedge.dll` build last seen running, so a different one is
     /// recognized as an Edge update.
     #[serde(rename = "lastEdgeBuild")]
@@ -200,6 +269,22 @@ pub enum Mode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reading_themes_send_edge_s_own_numbers() {
+        // reading_themes.h in the DLL holds the same numbers.
+        assert_eq!(ReadingTheme::Sepia.wire_value(), 0);
+        assert_eq!(ReadingTheme::Black.wire_value(), 3);
+        assert_eq!(ReadingTheme::Lavender.wire_value(), 18);
+        assert_eq!(ReadingTheme::DarkGrey.wire_value(), 22);
+        let defaults = ReadingMode::default();
+        assert_eq!(defaults.light, ReadingTheme::Sepia);
+        assert_eq!(defaults.dark, ReadingTheme::Black);
+        let text = r#"{"readingMode":{"light":"skyBlue","dark":"darkGrey"}}"#;
+        let settings: Settings = serde_json::from_str(text).expect("loads");
+        assert_eq!(settings.reading_mode.light, ReadingTheme::SkyBlue);
+        assert!(!settings.features.reading_theme);
+    }
 
     #[test]
     fn a_settings_file_from_the_gemini_days_still_loads() {
