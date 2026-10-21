@@ -1,26 +1,25 @@
-// spine.h — the selected vertical tab's square leading edge and its magenta
-// spine. One concern: three plain views of Edge's own, children of the tab's
-// view along its leading edge (the left one, the right one in a right-to-left
-// UI; tab_edge.h places them): the stripe the full height of the row, and a
-// square of the selected fill over each of the pill's rounded corners on that
-// side, so the edge reads straight with the spine flush on it. As children they
-// are painted and moved by Edge with the tab, in the same frame: pieces in
-// windows of their own trailed a moving tab by a frame and flickered. No ui
-// colour id paints a selected-tab outline, and hooking Edge's tab painting
-// crashed the browser, so nothing here hooks painting: a timer finds each
-// window's selected tab view and moves the pieces onto it when it changes. The
-// pieces own nothing of ours (a view, a solid background), so they outlive this
-// DLL harmlessly. Which windows are browser windows is control.h's call
+// spine.h — the selected vertical tab's magenta spine. One concern: a plain view
+// of Edge's own, a child of the tab's view along its leading edge (the left one,
+// the right one in a right-to-left UI; tab_edge.h places it): a stripe the full
+// height of the row. As a child it is painted and moved by Edge with the tab, in
+// the same frame: a stripe in a window of its own trailed a moving tab by a
+// frame and flickered. The tab's straight leading edge is tab_shape.h's, so the
+// stripe's outer corners are square and the tab's own fill is never painted
+// over. No ui colour id paints a selected-tab outline, and hooking Edge's tab
+// painting crashed the browser, so nothing here hooks painting: a timer finds
+// each window's selected tab view and moves the stripe onto it when it changes.
+// The stripe owns nothing of ours (a view, a solid background), so it outlives
+// this DLL harmlessly. Which windows are browser windows is control.h's call
 // (TickWindow is its per-window step). UI thread only.
 #pragma once
 #include <windows.h>
-#include <array>
 #include <atomic>
 #include <vector>
 #include "edge.h"
 #include "geom.h"
 #include "log.h"
 #include "tab_edge.h"
+#include "tab_shape.h"
 #include "theme_tone.h"
 #include "vtab_views.h"
 
@@ -30,14 +29,6 @@ inline constexpr UINT kTickIntervalMs = 50;
 
 // The stripe: 7 DIPs wide.
 inline constexpr int kWidthDip = 7;
-// How far across and down the pieces cover each leading corner of the pill:
-// Edge rounds a vertical tab by 7 DIPs, and the favicon starts 8 DIPs in, so 8
-// covers the curve and its anti-aliased rim without reaching the icon.
-inline constexpr int kCornerDip = 8;
-
-// The selected tab's fill as the colour hook publishes it (hooks.h h_getcolor),
-// so the corner squares match the pill Edge paints.
-inline constinit theme_tone::Argb g_selectedFill = 0;
 
 // A vertical tab sits well below the window's top edge; a horizontal tab strip
 // is in the title bar, so tabs above this are not ours to mark.
@@ -49,25 +40,18 @@ inline constexpr int kVerticalListTopDip = 48;
 // row is back there, or this long has passed.
 inline constexpr ULONGLONG kSettleTimeoutMs = 1500;
 
-// The pieces of one set, in the order they are made and added.
-enum class Piece {
-  kStripe,
-  kTopCorner,
-  kBottomCorner,
-  kCount,
-};
-inline constexpr size_t kPieceCount = static_cast<size_t>(Piece::kCount);
-
 // One browser window's spine.
 struct WindowSet {
   HWND browser = nullptr;
   tab_edge::Side side = tab_edge::Side::kLeft;
-  // Null until first made. While `host` is set they are its children (it owns
-  // them and frees them if it dies first); otherwise they are ours to free.
-  std::array<void*, kPieceCount> pieces{};
-  void* host = nullptr;  // the tab view they are on; never read, only compared
-  theme_tone::Argb stripeColor = 0;  // what the pieces were last painted in
-  theme_tone::Argb cornerColor = 0;
+  // Null until first made. While `host` is set it is the host's child (the host
+  // owns it and frees it if it dies first); otherwise it is ours to free.
+  void* stripe = nullptr;
+  void* host = nullptr;  // the tab view it is on; never read, only compared
+  // Whether the tabs have been repainted since their outline last changed
+  // (tab_shape.h), so they show the straight edge or give it back.
+  bool isShapeShown = false;
+  theme_tone::Argb stripeColor = 0;  // what the stripe was last painted in
   // Where the spine was, for a drop's settle (screen DIPs, a tab's top).
   bool isDragging = false;
   int lastTabY = 0;
@@ -112,99 +96,66 @@ inline WindowSet& SetFor(HWND browser) {
   return g_sets.back();
 }
 
-inline void MakePieces(WindowSet& set) {
-  for (void*& piece : set.pieces) {
-    piece = edge::NewPlainView();
-    edge::MakeViewDecorative(piece);
-  }
-  set.stripeColor = 0;
-  set.cornerColor = 0;
-}
-
-// Take the pieces off the tab that holds them; they stay ours. A holder that
-// has been destroyed took them along, so they are forgotten. The tree is
-// searched for them rather than `host` asked, since `host` may be freed.
+// Take the stripe off the tab that holds it; it stays ours. A tab that has
+// been destroyed took it along, so it is forgotten. The tree is searched for
+// the stripe rather than `host` asked, since `host` may be freed.
 inline void Detach(WindowSet& set, void* anyView, void* draggedTab) {
   if (!set.host) {
     return;
   }
-  void* stripe = set.pieces[static_cast<size_t>(Piece::kStripe)];
-  void* holder = vtab_views::ParentHolding(edge::ViewRoot(anyView), stripe);
+  void* holder = vtab_views::ParentHolding(edge::ViewRoot(anyView), set.stripe);
   if (!holder && draggedTab) {
-    holder = vtab_views::ParentHolding(edge::ViewRoot(draggedTab), stripe);
+    holder = vtab_views::ParentHolding(edge::ViewRoot(draggedTab), set.stripe);
   }
   set.host = nullptr;
   if (!holder) {
-    set.pieces = {};
+    set.stripe = nullptr;
     return;
   }
-  for (void* piece : set.pieces) {
-    edge::ViewRemoveChild(holder, piece);
-  }
+  edge::ViewRemoveChild(holder, set.stripe);
 }
 
-// Put the pieces on `target`, unless they are on it already.
-inline void Attach(WindowSet& set, void* anyView, void* draggedTab,
-                   void* target) {
-  const bool isOnTarget =
-      set.host == target &&
-      vtab_views::HoldsChild(target,
-                             set.pieces[static_cast<size_t>(Piece::kStripe)]);
-  if (isOnTarget) {
+// Put the stripe on `tab`, unless it is on it already.
+inline void Attach(WindowSet& set, void* anyView, void* draggedTab, void* tab) {
+  const bool isOnTab =
+      set.host == tab && vtab_views::HoldsChild(tab, set.stripe);
+  if (isOnTab) {
     return;
   }
   Detach(set, anyView, draggedTab);
-  if (!set.pieces[static_cast<size_t>(Piece::kStripe)]) {
-    MakePieces(set);
+  if (!set.stripe) {
+    set.stripe = edge::NewPlainView();
+    edge::MakeViewDecorative(set.stripe);
+    set.stripeColor = 0;
   }
-  for (void* piece : set.pieces) {
-    edge::AddChildViewAt(target, piece, edge::ViewChildCount(target));
-  }
-  set.host = target;
+  edge::AddChildViewAt(tab, set.stripe, edge::ViewChildCount(tab));
+  set.host = tab;
 }
 
-// Size and colour the pieces for `target`, in its own coordinates. Until the
-// colour hook has answered a fill, the corners stay hidden rather than show a
-// square of the wrong colour.
-inline void Lay(WindowSet& set, void* target, theme_tone::Argb stripeColor) {
-  const Rect bounds = edge::ViewBounds(target);
-  const tab_edge::Pieces layout = tab_edge::PiecesFor(
-      Rect{0, 0, bounds.width, bounds.height}, set.side, kWidthDip, kCornerDip);
-  void* stripe = set.pieces[static_cast<size_t>(Piece::kStripe)];
-  void* topCorner = set.pieces[static_cast<size_t>(Piece::kTopCorner)];
-  void* bottomCorner = set.pieces[static_cast<size_t>(Piece::kBottomCorner)];
-  edge::SetViewBounds(stripe, layout.stripe);
-  edge::SetViewBounds(topCorner, layout.topCorner);
-  edge::SetViewBounds(bottomCorner, layout.bottomCorner);
+// Size and colour the stripe for `tab`, in its own coordinates.
+inline void Lay(WindowSet& set, void* tab, theme_tone::Argb stripeColor) {
+  const Rect bounds = edge::ViewBounds(tab);
+  edge::SetViewBounds(
+      set.stripe, tab_edge::StripeFor(Rect{0, 0, bounds.width, bounds.height},
+                                      set.side, kWidthDip));
   if (set.stripeColor != stripeColor) {
-    edge::SetViewSolidBackground(stripe, stripeColor);
+    edge::SetViewSolidBackground(set.stripe, stripeColor);
     set.stripeColor = stripeColor;
   }
-  const bool isFillKnown = g_selectedFill != 0;
-  const bool isFillChanged = isFillKnown && set.cornerColor != g_selectedFill;
-  if (isFillChanged) {
-    edge::SetViewSolidBackground(topCorner, g_selectedFill);
-    edge::SetViewSolidBackground(bottomCorner, g_selectedFill);
-    set.cornerColor = g_selectedFill;
-  }
-  edge::SetViewVisible(stripe, true);
-  edge::SetViewVisible(topCorner, isFillKnown);
-  edge::SetViewVisible(bottomCorner, isFillKnown);
+  edge::SetViewVisible(set.stripe, true);
 }
 
-// Free the pieces of a set that is going away; they must be off any tab.
+// Free the stripe of a set that is going away; it must be off any tab.
 inline void Free(WindowSet& set) {
-  for (void*& piece : set.pieces) {
-    if (piece) {
-      edge::DeleteView(piece);
-      piece = nullptr;
-    }
+  if (set.stripe) {
+    edge::DeleteView(set.stripe);
+    set.stripe = nullptr;
   }
 }
 
 // The start of a tick: drop the sets of browser windows that have closed. A
-// window that closed took the pieces on its tabs along; pieces off any tab
-// are still ours.
+// window that closed took the stripe on its tab along; a stripe off any tab is
+// still ours.
 inline void BeginTick() {
   std::erase_if(g_sets, [](WindowSet& set) {
     const bool isClosed = !IsWindow(set.browser);
@@ -246,6 +197,10 @@ inline void TickWindow(HWND browser, void* draggedTab) {
     return;
   }
   WindowSet& set = SetFor(browser);
+  if (!set.isShapeShown) {
+    vtab_views::RepaintTabRows(edge::ViewRoot(anyView));
+    set.isShapeShown = true;
+  }
   const bool hasDragEnded = set.isDragging && !draggedTab;
   set.isDragging = draggedTab != nullptr;
   if (hasDragEnded) {
@@ -277,6 +232,7 @@ inline void TickWindow(HWND browser, void* draggedTab) {
 // window timer would die with it. Call on the UI thread; `onTick` runs there.
 inline void Start(TIMERPROC onTick) {
   g_isActive = true;
+  tab_shape::g_isSquared = true;
   g_timerId = SetTimer(nullptr, 0, kTickIntervalMs, onTick);
   g_isTimerRunning = g_timerId != 0;
   Log("[spine] on (thread timer %llu)",
@@ -287,6 +243,7 @@ inline void Start(TIMERPROC onTick) {
 // this DLL unloads). On the UI thread that started the timer.
 inline void Remove() {
   g_isActive = false;
+  tab_shape::g_isSquared = false;
   if (g_timerId != 0) {
     KillTimer(nullptr, g_timerId);
     g_timerId = 0;

@@ -120,4 +120,27 @@ inline void* ParentHolding(void* view, void* child, int depth = 0) {
   return nullptr;
 }
 
+// Queue a repaint of every vertical tab row under `view`, and of the split row
+// that holds it: a tab only asks for its outline when it paints, so a change of
+// outline (tab_shape.h) shows at the next paint, which may be a long way off.
+inline void RepaintTabRows(void* view, int depth = 0) {
+  if (depth > kMaxDepth) {
+    return;
+  }
+  if (IsTabRow(view)) {
+    edge::SchedulePaint(view);
+    void* row = edge::ViewParent(view);
+    const bool isSplitRow =
+        row && edge::VtableRva(row) == edge155::rva::SplitTabView_vftable;
+    if (isSplitRow) {
+      edge::SchedulePaint(row);
+    }
+    return;
+  }
+  const size_t count = edge::ViewChildCount(view);
+  for (size_t i = 0; i < count; i++) {
+    RepaintTabRows(edge::ViewChildAt(view, i), depth + 1);
+  }
+}
+
 }  // namespace fixedge::vtab_views

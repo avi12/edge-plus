@@ -18,6 +18,7 @@
 #include "protocol_handlers.h"
 #include "dividers.h"
 #include "tabrows.h"
+#include "tab_shape.h"
 #include "drag.h"
 #include "grip.h"
 #include "state.h"
@@ -415,9 +416,6 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
       *out = isHoveredTab
                  ? theme_tone::Blend(ground, selectedFill, kHoverFillPercent)
                  : selectedFill;
-      // The squared corners (spine.h) take the undimmed fill: an unfocused
-      // window was seen to keep painting the selected tab at full strength.
-      spine::g_selectedFill = fill;
       return true;
     }
     // Behind a light label (the neon theme) the chrome goes near-black (the
@@ -575,6 +573,15 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   Install(edge155::rva::SplitWindowStartingUIHandler_CloseSplitWindow,
           reinterpret_cast<void*>(offer::h_close_page), &offer::o_close_page,
           "SplitWindowStartingUIHandler::CloseSplitWindow");
+  Install(edge155::rva::EdgeTabStyleViews_GetPath,
+          reinterpret_cast<void*>(tab_shape::h_get_path),
+          &tab_shape::o_get_path, "EdgeTabStyleViews::GetPath");
+  Install(edge155::rva::SkRRect_setRectXY,
+          reinterpret_cast<void*>(tab_shape::h_set_rect_xy),
+          &tab_shape::o_set_rect_xy, "SkRRect::setRectXY");
+  Install(edge155::rva::Canvas_DrawRoundRect,
+          reinterpret_cast<void*>(tab_shape::h_draw_round_rect),
+          &tab_shape::o_draw_round_rect, "gfx::Canvas::DrawRoundRect");
   Install(edge155::rva::TabDragController_ContinueDragging,
           reinterpret_cast<void*>(tabdrag::h_continue_dragging),
           &tabdrag::o_continue_dragging, "TabDragController::ContinueDragging");

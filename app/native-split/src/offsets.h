@@ -66,6 +66,8 @@ inline constexpr uintptr_t View_GetVisible = 0x0fcc262;  // bool (this)
 inline constexpr uintptr_t Containers_emplace_back = 0x2d25408;
 // (this) mark layout dirty
 inline constexpr uintptr_t View_InvalidateLayout = 0x0feb7f0;
+// (view): queue a repaint of the whole view.
+inline constexpr uintptr_t View_SchedulePaint = 0xff7ea0;
 // (this) relayout now
 inline constexpr uintptr_t View_LayoutImmediately = 0x100cc50;
 
@@ -223,6 +225,33 @@ inline constexpr uintptr_t ColorVariant_ctor = 0x109d690;
 inline constexpr uintptr_t SimpleMenuModel_AddItemWithIcon = 0x2bb3890;
 // views::View::View(this): a plain view (no layout manager).
 inline constexpr uintptr_t View_ctor = 0x105a54a;
+// The outline of every tab, vertical ones included, in which it draws its fill,
+// hover and press: SkPath EdgeTabStyleViews::GetPath(this, SkPath* out, int
+// pathType, float scale, const int* isUnscaled). A vertical tab's is one rounded
+// rectangle, built by the SkRRect::setRectXY call whose return address is
+// EdgeTabStyleViews_GetPath_setRectXY_return, so the tab's shape is decided there.
+inline constexpr uintptr_t EdgeTabStyleViews_GetPath = 0x27d3710;
+inline constexpr uintptr_t EdgeTabStyleViews_GetPath_setRectXY_return =
+    0x27d3dea;
+// SkRRect::setRectXY(this, const SkRect*, float rx, float ry): zeroes the rest
+// of `this` itself when the rect is valid; one radius on every corner.
+inline constexpr uintptr_t SkRRect_setRectXY = 0x1012760;
+// The vftable (offset 0) of SplitTabView, the view that holds a split's member
+// tabs side by side in one row of the vertical list and paints their shared
+// rounded group fill in its OnPaint.
+inline constexpr uintptr_t SplitTabView_vftable = 0x1166d270;
+// The return address of SplitTabView::OnPaint's call to Canvas::DrawRoundRect
+// (rva 0x991d2f0 +0x1cf): the call that paints the group's rounded fill.
+inline constexpr uintptr_t SplitTabView_OnPaint_DrawRoundRect_return =
+    0x991d4bf;
+// void gfx::Canvas::DrawRoundRect(this, const gfx::Rect*, int radius,
+// const cc::PaintFlags*), a rounded rectangle of one radius on every corner.
+inline constexpr uintptr_t Canvas_DrawRoundRect = 0x53da050;
+// void gfx::Canvas::DrawRect(this, const gfx::Rect*, const cc::PaintFlags*).
+inline constexpr uintptr_t Canvas_DrawRect = 0x27d2f44;
+// SkRRect::setRectRadii(this, const SkRect*, const SkVector radii[4]): the
+// radii run upper-left, upper-right, lower-right, lower-left.
+inline constexpr uintptr_t SkRRect_setRectRadii = 0x2cee20;
 // (view, std::unique_ptr<views::Background>*): takes the background out of *it.
 inline constexpr uintptr_t View_SetBackground = 0x109d6dc;
 // std::unique_ptr<Background>* views::CreateSolidBackground(out, ColorVariant):
@@ -914,6 +943,11 @@ inline constexpr size_t ControlButtons_button_size = 0x640;
 // sizeof(views::View): its subclasses' own fields start here (ControlButtons
 // @+0x338 its BrowserView, EdgeMultiContentsResizeArea @+0x338 its press point).
 inline constexpr size_t View_size = 0x338;
+// The tab a style serves: a pointer to the Tab base of the EdgeTab, whose views::
+// View subobject (the tab view, a VerticalTab for a row of the vertical list)
+// starts EDGETAB_view_offset further on.
+inline constexpr uintptr_t STYLEVIEWS_tab = 0x10;
+inline constexpr uintptr_t EDGETAB_view_offset = 0x18;
 // The deleting destructor in a view's vtable: (view, 1) destroys and frees it
 // (views::View::AddChildView deletes a view it cannot add through this slot).
 inline constexpr uintptr_t VIEW_vtbl_DeletingDestructor = 0x48;
