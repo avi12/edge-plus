@@ -147,6 +147,23 @@ inline Query ParseQuery(const std::string& typed, Option option) {
   return query;
 }
 
+// What the box shows around its text while the RegExp switch is on, as in a
+// JavaScript literal: a slash before the pattern, and after it a slash and the
+// flags the search really runs with (the typed (?i) and the flag switches,
+// merged as the search merges them). Shown beside the text, never part of it.
+struct LiteralDecoration {
+  std::string prefix;
+  std::string suffix;
+};
+
+inline LiteralDecoration RegExpDecoration(const std::string& typed,
+                                          const find_flags::FlagSet& switches) {
+  const Query query = ParseQuery(typed, Option::kRegExp);
+  const std::string slash(1, kRegExpDelimiter);
+  return LiteralDecoration{slash,
+                           slash + find_flags::Merge(query.flags, switches)};
+}
+
 // The box is a single line, so a line break in a RegExp is typed (Shift+Enter) or
 // pasted as the two characters \n, which a RegExp reads as a line break exactly
 // as a real one.

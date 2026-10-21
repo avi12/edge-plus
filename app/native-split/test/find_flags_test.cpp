@@ -112,6 +112,25 @@ void CheckScriptFlags() {
   Check(ScriptFlags("gm") == "gm", "g and m typed are not doubled");
 }
 
+void CheckDecoration() {
+  using fixedge::find_text::RegExpDecoration;
+  Check(RegExpDecoration("pric", DefaultFlags()).prefix == "/",
+        "the pattern opens with a slash");
+  Check(RegExpDecoration("pric", DefaultFlags()).suffix == "/gm",
+        "an untouched bar closes with the default flags");
+  Check(RegExpDecoration("(?i)pric", DefaultFlags()).suffix == "/gim",
+        "a typed (?i) shows as i");
+  FlagSet ignoreCaseOnly;
+  SetOn(&ignoreCaseOnly, Flag::kIgnoreCase, true);
+  Check(RegExpDecoration("", ignoreCaseOnly).suffix == "/gi",
+        "the switches alone, with Multiline off, even for an empty box");
+  FlagSet sticky = DefaultFlags();
+  SetOn(&sticky, Flag::kSticky, true);
+  SetOn(&sticky, Flag::kIndices, true);
+  Check(RegExpDecoration("a/b", sticky).suffix == "/dgmy",
+        "canonical order, and a slash in the pattern changes nothing");
+}
+
 }  // namespace
 
 int main() {
@@ -122,6 +141,7 @@ int main() {
     CheckExclusive();
     CheckMerge();
     CheckScriptFlags();
+    CheckDecoration();
   } catch (...) {
     return 1;
   }
