@@ -170,7 +170,7 @@ inline void FollowFill() {
   }
   g_paintedFill = g_selectedFill;
   HBRUSH brush = CreateSolidBrush(ColorRefOf(g_paintedFill));
-  const LONG_PTR oldBrush =
+  const ULONG_PTR oldBrush =
       SetClassLongPtrW(g_sets.front().topCorner, GCLP_HBRBACKGROUND,
                        reinterpret_cast<LONG_PTR>(brush));
   DeleteObject(reinterpret_cast<HBRUSH>(oldBrush));

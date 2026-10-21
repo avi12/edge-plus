@@ -63,6 +63,9 @@
 #                                  modernize-make-unique
 #     (Win32 handles have owners in handles.h for the same reason; no check
 #     can see a CloseHandle a path forgot, so that one stays a review concern.)
+#   no silent narrowing         -> bugprone-narrowing-conversions (on, from
+#                                  bugprone-*: an int that becomes a float, or
+#                                  an unsigned that becomes signed, is cast)
 Checks: >
   -*,
   cppcoreguidelines-no-malloc,
@@ -109,7 +112,6 @@ Checks: >
   readability-function-cognitive-complexity,
   -bugprone-easily-swappable-parameters,
   -bugprone-multi-level-implicit-pointer-conversion,
-  -bugprone-narrowing-conversions,
   -bugprone-reserved-identifier,
   -bugprone-unchecked-string-to-number-conversion,
   -cert-dcl37-c,
