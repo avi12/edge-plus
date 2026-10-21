@@ -73,7 +73,7 @@ void CheckPatternShape() {
   Check(CheckRegex(std::string(kMaxPatternChars + 1, 'a')) ==
             PatternProblem::kTooLong,
         "too long");
-  Check(std::string(ProblemText(PatternProblem::kNestedRepeat)).size() > 0,
+  Check(!std::string(ProblemText(PatternProblem::kNestedRepeat)).empty(),
         "a problem has words");
 }
 
