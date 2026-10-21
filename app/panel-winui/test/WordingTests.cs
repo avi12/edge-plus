@@ -15,6 +15,17 @@ internal static class WordingTests {
     }
     Expect.Equal("Enhanced find: RegExp and Ask Copilot", Wording.For(Feature.EnhancedFind).Title,
                  "the find title names the assistant");
+    Expect.Equal("Light blue", Wording.ReadingThemeLabel(ReadingTheme.LightBlue),
+                 "Edge's LightBlue reads as Light blue");
+    Expect.Equal("Dark grey", Wording.ReadingThemeLabel(ReadingTheme.DarkGrey),
+                 "Edge's DarkGrey reads as Dark grey");
+    Expect.Equal("Sepia", Wording.ReadingThemeLabel(ReadingTheme.Sepia), "one word stays");
+    Expect.Equal(12, ReadingThemes.Grid.Length, "the grid has twelve themes");
+    Expect.That(ReadingThemes.Grid[0] == ReadingTheme.Sepia
+                    && ReadingThemes.Grid[5] == ReadingTheme.Green
+                    && ReadingThemes.Grid[6] == ReadingTheme.Lavender
+                    && ReadingThemes.Grid[11] == ReadingTheme.DarkGrey,
+                "in Edge's grid order: Sepia..Green, then Lavender..DarkGrey");
 
     var nothingOff = new BuildChange(s_running, null, s_supported, []);
     Expect.Equal("", Wording.DescribeUpdate(nothingOff), "a change that turned nothing off");
@@ -39,6 +50,7 @@ internal static class WordingTests {
   }
 
   private static PanelState State(FileVersion? running, Feature[] unsupported) =>
-      new(new Features(), new Theming(), [], IsEdgeRunning: running is not null,
+      new(new Features(), new Theming(), new ReadingMode(), [],
+          IsEdgeRunning: running is not null,
           IsStartWithWindows: false, IsSplitLoaded: false, running, s_supported, unsupported);
 }

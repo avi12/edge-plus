@@ -37,6 +37,7 @@
     <Compile Include="..\Panel\Edge\FileVersion.cs" Link="Panel\FileVersion.cs" />
     <Compile Include="..\Panel\Platform\PanelState.cs" Link="Panel\PanelState.cs" />
     <Compile Include="..\Panel\Platform\Paths.cs" Link="Panel\Paths.cs" />
+    <Compile Include="..\Panel\Platform\ReadingThemes.g.cs" Link="Panel\ReadingThemes.g.cs" />
     <Compile Include="..\Panel\Platform\Settings.cs" Link="Panel\Settings.cs" />
     <Compile Include="..\Panel\Platform\Shared.g.cs" Link="Panel\Shared.g.cs" />
     <Compile Include="..\Panel\Platform\Switches.cs" Link="Panel\Switches.cs" />

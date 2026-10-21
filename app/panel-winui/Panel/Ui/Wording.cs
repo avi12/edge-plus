@@ -47,6 +47,24 @@ internal static class Wording {
 
   public static string RemoveTheme(string name) => $"Remove {name}";
 
+  public static string ReadingPickerName(string when) => $"Reading mode theme {when}";
+
+  // A reading theme as the user reads it: Edge's name, its words spaced out
+  // ("LightBlue" -> "Light blue").
+  public static string ReadingThemeLabel(ReadingTheme theme) {
+    string name = ReadingThemes.EdgeName(theme);
+    var label = new System.Text.StringBuilder();
+    for (int i = 0; i < name.Length; i++) {
+      bool isNewWord = i > 0 && char.IsUpper(name[i]);
+      if (isNewWord) {
+        label.Append(' ').Append(char.ToLowerInvariant(name[i]));
+      } else {
+        label.Append(name[i]);
+      }
+    }
+    return label.ToString();
+  }
+
   // What a failure says. The details go to the panel's log (PanelLog), never
   // into the window.
   public const string ActionFailed =
@@ -101,6 +119,12 @@ internal static class Wording {
         "Gives the selected vertical tab a straight leading edge with a neon magenta stripe (on " +
             "the right when Edge runs right to left). Works with Theming on. Live, no restart.",
         0xE7C3),
+    Feature.ReadingTheme => new(
+        "Reading mode follows Windows light and dark",
+        "Reading mode uses one page theme while Windows is light and another while it is dark, " +
+            "set as Windows switches and kept for every page you open in reading mode. Live, no " +
+            "restart.",
+        0xE736),
     Feature.QuietDevMode => new(
         "Hide the developer-mode prompt",
         "Stops Edge asking to turn off developer-mode extensions when it starts. Takes effect " +
@@ -125,6 +149,7 @@ internal static class Wording {
     Feature.WebUiFollowsTheme => "Settings and extensions pages following the theme",
     Feature.LivePreview => "Live tab preview on hover",
     Feature.TabSpine => "The square selected tab with its neon spine",
+    Feature.ReadingTheme => "Reading mode following Windows light and dark",
     _ => throw new ArgumentOutOfRangeException(nameof(feature)),
   };
 

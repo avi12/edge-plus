@@ -13,6 +13,31 @@ internal static class SettingsTests {
     BrokenOrNullSectionsFallBack();
     RemovingAThemeClearsItsAssignments();
     TheSwitchesMapOneToOne();
+    ReadingModeReadsAndWritesTheTauriShape();
+  }
+
+  private static void ReadingModeReadsAndWritesTheTauriShape() {
+    var defaults = new Settings();
+    Expect.That(!defaults.Features.ReadingTheme, "reading mode is off by default");
+    Expect.Equal(ReadingTheme.Sepia, defaults.ReadingMode.Light, "Sepia for light by default");
+    Expect.Equal(ReadingTheme.Black, defaults.ReadingMode.Dark, "Black for dark by default");
+
+    Settings loaded = Settings.Parse(
+        """{"features":{"readingTheme":true},"readingMode":{"light":"skyBlue","dark":"darkGrey"}}""");
+    Expect.That(loaded.Features.ReadingTheme, "the reading theme switch is read");
+    Expect.Equal(ReadingTheme.SkyBlue, loaded.ReadingMode.Light, "camelCase names are read");
+    Expect.Equal(ReadingTheme.DarkGrey, loaded.ReadingMode.Dark, "camelCase names are read");
+
+    Settings older = Settings.Parse("""{"features":{"nativeSplit":true}}""");
+    Expect.Equal(ReadingTheme.Black, older.ReadingMode.Dark,
+                 "a file from before reading mode loads with its defaults");
+
+    loaded.ReadingMode.Assign(ColorMode.Light, ReadingTheme.LightGreen);
+    string json = loaded.ToJson();
+    foreach (string piece in new[] { "\"readingMode\"", "\"light\": \"lightGreen\"",
+                                     "\"dark\": \"darkGrey\"", "\"readingTheme\": true" }) {
+      Expect.That(json.Contains(piece, StringComparison.Ordinal), $"the file has {piece}");
+    }
   }
 
   // The tab spine defaults on, as in the Tauri panel: it was part of the

@@ -25,6 +25,9 @@ internal enum Feature {
   // The selected vertical tab gets a square leading edge and the neon spine,
   // while theming is on (spine.h).
   TabSpine,
+  // Reading mode's page theme follows Windows light and dark (reading_mode.h),
+  // with the two themes in Settings.ReadingMode.
+  ReadingTheme,
 }
 
 // Where a theme came from, so the installer knows how to add it to Edge. Stored
@@ -68,6 +71,9 @@ internal sealed class Features {
   }
   // On by default: it was part of the theming until it got a switch of its own.
   public bool TabSpine { get; set; } = true;
+  public bool ReadingTheme {
+    get; set;
+  }
 
   public bool IsOn(Feature feature) => feature switch {
     Feature.NativeSplit => NativeSplit,
@@ -78,6 +84,7 @@ internal sealed class Features {
     Feature.WebUiFollowsTheme => WebUiFollowsTheme,
     Feature.LivePreview => LivePreview,
     Feature.TabSpine => TabSpine,
+    Feature.ReadingTheme => ReadingTheme,
     _ => throw new ArgumentOutOfRangeException(nameof(feature)),
   };
 
@@ -107,6 +114,9 @@ internal sealed class Features {
       case Feature.TabSpine:
         TabSpine = isOn;
         break;
+      case Feature.ReadingTheme:
+        ReadingTheme = isOn;
+        break;
       default:
         throw new ArgumentOutOfRangeException(nameof(feature));
     }
@@ -117,7 +127,25 @@ internal sealed class Features {
   [JsonIgnore]
   public bool NeedsDll =>
       NativeSplit || Theming || ProtocolHandlers || EnhancedFind || WebUiFollowsTheme
-      || LivePreview || TabSpine;
+      || LivePreview || TabSpine || ReadingTheme;
+}
+
+// Reading mode's page theme for each Windows mode, used while the reading-theme
+// switch is on. Stored as "readingMode": {"light": "sepia", "dark": "black"},
+// the Tauri panel's shape.
+internal sealed class ReadingMode {
+  public ReadingTheme Light { get; set; } = EdgePlus.ReadingTheme.Sepia;
+  public ReadingTheme Dark { get; set; } = EdgePlus.ReadingTheme.Black;
+
+  public ReadingTheme ThemeFor(ColorMode mode) => mode == ColorMode.Light ? Light : Dark;
+
+  public void Assign(ColorMode mode, ReadingTheme theme) {
+    if (mode == ColorMode.Light) {
+      Light = theme;
+    } else {
+      Dark = theme;
+    }
+  }
 }
 
 // One theme the user added: an installed Edge theme extension by id.
@@ -186,6 +214,7 @@ internal sealed class Settings {
 
   public Features Features { get; set; } = new();
   public Theming Theming { get; set; } = new();
+  public ReadingMode ReadingMode { get; set; } = new();
   // The msedge.dll build last seen running, so a different one is recognized
   // as an Edge update.
   public string? LastEdgeBuild {
@@ -219,6 +248,7 @@ internal sealed class Settings {
     // An explicit null in the file is a missing section, not a crash later.
     parsed.Features ??= new Features();
     parsed.Theming ??= new Theming();
+    parsed.ReadingMode ??= new ReadingMode();
     parsed.Theming.Themes ??= [];
     parsed.Theming.Light ??= "";
     parsed.Theming.Dark ??= "";
