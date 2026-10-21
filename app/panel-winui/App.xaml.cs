@@ -18,6 +18,7 @@ namespace EdgePlus;
 // with Windows, and ends the process otherwise.
 public partial class App : Application {
   private const string CrashLogName = "edgeplus_error.log";
+  private static readonly TimeSpan s_trimDelay = TimeSpan.FromSeconds(5);
 
   private PanelLoader? _loader;
   // The one window, while it is open.
@@ -45,9 +46,25 @@ public partial class App : Application {
     // A second launch redirected here (Program) shows the window.
     AppInstance.GetCurrent().Activated += (_, _) => dispatcher.TryEnqueue(ShowWindow);
     bool isBootLaunch = Switches.IsPresent(Environment.GetCommandLineArgs(), Switches.Background);
-    if (!isBootLaunch) {
+    if (isBootLaunch) {
+      TrimWhenSettled(dispatcher);
+    } else {
       ShowWindow();
     }
+  }
+
+  // Give memory back once the startup (or the closed window's teardown) has
+  // settled, unless a window opened meanwhile.
+  private void TrimWhenSettled(DispatcherQueue dispatcher) {
+    DispatcherQueueTimer timer = dispatcher.CreateTimer();
+    timer.Interval = s_trimDelay;
+    timer.IsRepeating = false;
+    timer.Tick += (_, _) => {
+      if (_window is null) {
+        ProcessTrim.Run();
+      }
+    };
+    timer.Start();
   }
 
   // Open the window, or bring the open one back.
@@ -79,6 +96,8 @@ public partial class App : Application {
     _window = null;
     if (!_loader!.IsResident()) {
       Exit();
+      return;
     }
+    TrimWhenSettled(DispatcherQueue.GetForCurrentThread());
   }
 }
