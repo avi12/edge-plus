@@ -788,6 +788,9 @@ inline constexpr uintptr_t MCV_drop_target_view = 0x0b0;
 // (primary `this`) is what writes it; ThemeService::GetThemeSupplier reads the
 // same field as +0x760 because it is a method of the base at +8.
 inline constexpr uintptr_t THEMESERVICE_supplier = 0x768;
+// ThemeService::UseDefaultTheme takes its secondary base at +0x10 (it adjusts
+// this - 0x10 itself); the primary `this` there faults.
+inline constexpr uintptr_t THEMESERVICE_use_default_this = 0x10;
 // BrowserThemePack colour-table ids: the id space GetColor is keyed on. The
 // manifest-key -> id map is a {const char* key; int id} array in msedge.dll.
 // Edge keeps a SEPARATE *tints* table with its own enum (frame is 0x1c there),
@@ -906,6 +909,18 @@ inline constexpr int MENU_exit_all = 1;
 // unbounded), and ui::ImageModel (an upper bound, with room to spare).
 inline constexpr size_t ColorVariant_size = 16;
 inline constexpr size_t SizeBounds_size = 16;
+// views::SizeBounds: {width, has width, height, has height}, each a
+// std::optional<int>'s value then its engaged byte, as CalculateProposedLayout
+// reads it.
+inline constexpr uintptr_t SIZEBOUNDS_width = 0x0;
+inline constexpr uintptr_t SIZEBOUNDS_has_width = 0x4;
+inline constexpr uintptr_t SIZEBOUNDS_height = 0x8;
+inline constexpr uintptr_t SIZEBOUNDS_has_height = 0xc;
+// sizeof(EdgeContentsContainerView), the bytes NewView allocates before
+// EdgeContentsContainerView_ctor builds one.
+inline constexpr size_t EdgeContentsContainerView_size = 0x558;
+// A byte NewView's allocator leaves at 1 in a block it handed out poisoned.
+inline constexpr uintptr_t CONTAINER_allocation_poisoned = 0x179;
 inline constexpr size_t ImageModel_size_bound = 256;
 // MenuItemView's icon view. GetChildPreferredSize takes a row's height from
 // this view ALONE (extra children only add width), so a taller row comes from

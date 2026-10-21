@@ -1257,7 +1257,8 @@ inline void ThemeSetFromExtension(void* themeService, void* extension) {
 inline void ThemeUseDefault(void* themeService) {
   using Fn = void(__fastcall*)(void*);
   reinterpret_cast<Fn>(At(edge155::rva::ThemeService_UseDefaultTheme))(
-      reinterpret_cast<uint8_t*>(themeService) + 0x10);
+      reinterpret_cast<uint8_t*>(themeService) +
+      edge155::off::THEMESERVICE_use_default_this);
 }
 
 // A color the profile's active theme extension sets, read from its theme pack.

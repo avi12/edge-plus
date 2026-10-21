@@ -14,14 +14,15 @@ inline constexpr int kFirstGrownPane = 2;
 // append it to the container vector — exactly as the ctor builds panes 0 and 1.
 // Returns false on a poisoned allocation.
 inline bool AddContainer(void* mcv) {
-  void* container = edge::NewView(0x558);  // sizeof(EdgeContentsContainerView)
+  void* container = edge::NewView(edge155::off::EdgeContentsContainerView_size);
   if (!container) {
     Log("[grow] alloc failed");
     return false;
   }
   edge::ConstructContainer(container, edge::McvBrowserView(mcv));
   const bool isPoisoned =
-      edge::Field<uint8_t>(container, 0x179) == 1;  // allocator poison flag
+      edge::Field<uint8_t>(container,
+                           edge155::off::CONTAINER_allocation_poisoned) == 1;
   if (isPoisoned) {
     Log("[grow] poisoned alloc");
     return false;

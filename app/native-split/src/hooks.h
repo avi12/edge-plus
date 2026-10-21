@@ -70,18 +70,23 @@ inline void* __fastcall h_setwc(void* mcv, void* webContents, uint32_t index) {
 }
 
 // LayoutManagerBase::CalculateProposedLayout — `self` is the subobject at
-// MCV+0x340; `sizeBounds` is a const SizeBounds& {width@0, has@4, height@8,
-// has@0xc}. Records the active split's MCV (so a menu command knows what to
+// MCV+0x340; `sizeBounds` is a const SizeBounds& (offsets.h SIZEBOUNDS_*).
+// Records the active split's MCV (so a menu command knows what to
 // grow) and tiles N panes once the split has grown past two.
 using Calc_t = void*(__fastcall*)(void*, void*, void*);
 inline constinit Calc_t o_calc = nullptr;
 inline void* __fastcall h_calc(void* self, void* out, void* sizeBounds) {
   void* mcv = edge::McvFromLayoutBase(self);
   g_activeMcv = mcv;
-  const bool isBounded = edge::Field<uint8_t>(sizeBounds, 0x4) == 1 &&
-                         edge::Field<uint8_t>(sizeBounds, 0xc) == 1;
-  const int width = edge::Field<int32_t>(sizeBounds, 0x0);
-  const int height = edge::Field<int32_t>(sizeBounds, 0x8);
+  const bool isBounded =
+      edge::Field<uint8_t>(sizeBounds, edge155::off::SIZEBOUNDS_has_width) ==
+          1 &&
+      edge::Field<uint8_t>(sizeBounds, edge155::off::SIZEBOUNDS_has_height) ==
+          1;
+  const int width =
+      edge::Field<int32_t>(sizeBounds, edge155::off::SIZEBOUNDS_width);
+  const int height =
+      edge::Field<int32_t>(sizeBounds, edge155::off::SIZEBOUNDS_height);
   // Track the content size on every pass (native too) so a resize snaps.
   const bool isResized = isBounded && anim::NoteHost(mcv, width, height);
   const bool isNativeLayout =
