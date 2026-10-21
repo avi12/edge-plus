@@ -60,8 +60,7 @@ internal sealed class PanelView : IDisposable {
   private readonly ThemingCard _themingCard;
   private readonly ReadingModeCard _readingModeCard;
   private readonly FeatureCard _startupCard = new(Wording.StartWithWindows);
-  private readonly EdgeWatch _edgeWatch = new();
-  private readonly ThemeWatch _themeWatch = new();
+  private readonly BackgroundService? _service;
   private readonly List<IDisposable> _hostSubscriptions = [];
   private PanelState? _state;
   private bool _isDisposed;
@@ -120,18 +119,23 @@ internal sealed class PanelView : IDisposable {
     _hostSubscriptions.Add(broughtBack.Subscribe(new Observer(Refresh)));
     // Coming back to the panel picks up themes installed in Edge meanwhile.
     _window.Activated += OnActivated;
-    // Edge came up on a build not seen before; features that depend on the old
-    // msedge.dll may be paused now, or back.
-    _edgeWatch.BuildChanged += change => OnUiThread(Refresh);
-    // A local theme edited on disk was re-checked and re-installed (or refused).
-    _themeWatch.Refreshed += refresh => OnUiThread(() => ShowActionNotice(refresh.Error ?? ""));
-    _edgeWatch.Start();
-    _themeWatch.Start();
+    // The watchers run in the background service, window or not; the window
+    // listens while it is open (and the service then raises no toast).
+    _service = BackgroundService.Current;
+    if (_service is not null) {
+      _service.IsWindowOpen = true;
+      // Edge came up on a build not seen before; features that depend on the
+      // old msedge.dll may be paused now, or back.
+      _service.BuildChanged += OnBuildChanged;
+      // A local theme edited on disk was re-checked and re-installed (or refused).
+      _service.ThemeRefreshed += OnThemeRefreshed;
+    }
     Refresh();
   }
 
-  // Undo every tie to the host's window and stop every thread, so nothing of
-  // this assembly is left referenced once the host unloads it.
+  // Undo every tie to the host's window and to the background service, so
+  // nothing of this view is left referenced once the window closes or the host
+  // unloads the panel.
   public void Dispose() {
     if (_isDisposed) {
       return;
@@ -141,11 +145,19 @@ internal sealed class PanelView : IDisposable {
     foreach (IDisposable subscription in _hostSubscriptions) {
       subscription.Dispose();
     }
-    _edgeWatch.Stop();
-    _themeWatch.Stop();
+    if (_service is not null) {
+      _service.BuildChanged -= OnBuildChanged;
+      _service.ThemeRefreshed -= OnThemeRefreshed;
+      _service.IsWindowOpen = false;
+    }
     Motion.Forget();
     _slot.Content = null;
   }
+
+  private void OnBuildChanged(BuildChange change) => OnUiThread(Refresh);
+
+  private void OnThemeRefreshed(ThemeRefresh refresh) =>
+      OnUiThread(() => ShowActionNotice(refresh.Error ?? ""));
 
   private void Refresh() => _ = RunAsync(PanelActions.Load);
 
