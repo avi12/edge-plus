@@ -124,7 +124,7 @@ internal sealed class ThemingCard {
       // WinUI can leave the dragged (or last pressed) row in its Pressed or
       // PointerOver look after a drop; every row goes back to Normal.
       ResetRowStates();
-      _ = RunAsync(() => PanelActions.ReorderThemes(CurrentOrder()));
+      _ = ReorderAsync(CurrentOrder());
     };
     // Preview: the list's items take arrow keys for moving focus before a
     // bubbling KeyDown would see them.
@@ -254,7 +254,7 @@ internal sealed class ThemingCard {
   }
 
   private async Task MoveKeepingFocusAsync(IReadOnlyList<string> order, string id) {
-    await RunAsync(() => PanelActions.ReorderThemes(order));
+    await ReorderAsync(order);
     string? moved = _ownKeys.FirstOrDefault(key => IdOf(key) == id);
     if (moved is null) {
       return;
@@ -427,6 +427,17 @@ internal sealed class ThemingCard {
     string? path = await _pick(kind);
     if (path is not null) {
       await RunAsync(() => PanelActions.AddLocalTheme(path));
+    }
+  }
+
+  // A reorder: saved and rendered (only the list and the pickers change), with
+  // a failure shown on the card, but none of RunAsync's busy state — holding
+  // the add buttons for the save disabled and re-enabled File… and Folder…
+  // on every drop.
+  private async Task ReorderAsync(IReadOnlyList<string> order) {
+    string? error = await _run(() => PanelActions.ReorderThemes(order));
+    if (error is not null) {
+      ShowError(error);
     }
   }
 
