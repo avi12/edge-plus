@@ -817,6 +817,59 @@ inline void* NewPlainView() {
   return view;
 }
 
+// views::CreateSolidBackground(out, color): fills `*out`, a unique_ptr<Background>.
+inline void CreateSolidBackground(void** out, uint64_t colorVariant) {
+  using CreateFn = void*(__fastcall*)(void**, uint64_t);
+  reinterpret_cast<CreateFn>(At(edge155::rva::CreateSolidBackground))(
+      out, colorVariant);
+}
+
+// View::SetBackground: takes the background out of `*ownedBackground` and nulls
+// it.
+inline void SetViewBackground(void* view, void** ownedBackground) {
+  using SetFn = void(__fastcall*)(void*, void**);
+  reinterpret_cast<SetFn>(At(edge155::rva::View_SetBackground))(
+      view, ownedBackground);
+}
+
+// Paints `view` with a solid `argb` (a SolidBackground), replacing any
+// background it has.
+inline void SetViewSolidBackground(void* view, uint32_t argb) {
+  const uint64_t colorVariant =
+      argb | (edge155::off::COLORVARIANT_sk_color_tag
+              << edge155::off::COLORVARIANT_tag_shift);
+  void* ownedBackground = nullptr;  // stands in for the unique_ptr
+  CreateSolidBackground(&ownedBackground, colorVariant);
+  SetViewBackground(view, &ownedBackground);
+}
+
+inline void* ViewAccessibility(void* view) {
+  using AccessibilityFn = void*(__fastcall*)(void*);
+  return reinterpret_cast<AccessibilityFn>(
+      At(edge155::rva::View_GetViewAccessibility))(view);
+}
+
+inline void SetAccessibilityIgnored(void* accessibility, bool isIgnored) {
+  using IgnoreFn = void(__fastcall*)(void*, bool);
+  reinterpret_cast<IgnoreFn>(At(edge155::rva::ViewAccessibility_SetIsIgnored))(
+      accessibility, isIgnored);
+}
+
+// A view that only paints: the pointer and assistive tech pass through it.
+inline void MakeViewDecorative(void* view) {
+  using EventsFn = void(__fastcall*)(void*, bool);
+  reinterpret_cast<EventsFn>(
+      At(edge155::rva::View_SetCanProcessEventsWithinSubtree))(view, false);
+  SetAccessibilityIgnored(ViewAccessibility(view), true);
+}
+
+// Destroys and frees a view that has no parent (never one a parent owns).
+inline void DeleteView(void* view) {
+  using DeleteFn = void*(__fastcall*)(void*, unsigned);
+  reinterpret_cast<DeleteFn>(VirtualFunction(
+      view, edge155::off::VIEW_vtbl_DeletingDestructor))(view, 1);
+}
+
 inline void SetViewBounds(void* view, const Rect& bounds) {
   using SetBoundsFn = void(__fastcall*)(void*, const Rect*);
   reinterpret_cast<SetBoundsFn>(At(edge155::rva::View_SetBoundsRect))(view,

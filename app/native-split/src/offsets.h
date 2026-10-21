@@ -223,6 +223,16 @@ inline constexpr uintptr_t ColorVariant_ctor = 0x109d690;
 inline constexpr uintptr_t SimpleMenuModel_AddItemWithIcon = 0x2bb3890;
 // views::View::View(this): a plain view (no layout manager).
 inline constexpr uintptr_t View_ctor = 0x105a54a;
+// (view, std::unique_ptr<views::Background>*): takes the background out of *it.
+inline constexpr uintptr_t View_SetBackground = 0x109d6dc;
+// std::unique_ptr<Background>* views::CreateSolidBackground(out, ColorVariant):
+// the 8-byte variant goes by value in one register.
+inline constexpr uintptr_t CreateSolidBackground = 0x2d27382;
+// (view, bool): false lets every pointer event through the view and its subtree.
+inline constexpr uintptr_t View_SetCanProcessEventsWithinSubtree = 0x105a522;
+// ViewAccessibility& View::GetViewAccessibility(view); then (it, bool).
+inline constexpr uintptr_t View_GetViewAccessibility = 0x1054f1c;
+inline constexpr uintptr_t ViewAccessibility_SetIsIgnored = 0x10a0358;
 // (view, const std::optional<gfx::Size>*): {int width, int height, bool}.
 inline constexpr uintptr_t View_SetPreferredSize = 0x2bd10f6;
 // (view, const gfx::Rect&)
@@ -904,6 +914,14 @@ inline constexpr size_t ControlButtons_button_size = 0x640;
 // sizeof(views::View): its subclasses' own fields start here (ControlButtons
 // @+0x338 its BrowserView, EdgeMultiContentsResizeArea @+0x338 its press point).
 inline constexpr size_t View_size = 0x338;
+// The deleting destructor in a view's vtable: (view, 1) destroys and frees it
+// (views::View::AddChildView deletes a view it cannot add through this slot).
+inline constexpr uintptr_t VIEW_vtbl_DeletingDestructor = 0x48;
+// ui::ColorVariant holding an SkColor: the ARGB in the low 4 bytes, then a tag
+// byte, 1 for an SkColor (0 is a ui::ColorId, ColorVariant_ctor), so the whole
+// variant fits one 64-bit register.
+inline constexpr uint64_t COLORVARIANT_sk_color_tag = 1;
+inline constexpr int COLORVARIANT_tag_shift = 32;
 // sizeof(a FocusableViewsMap): a base::flat_map, i.e. a vector {data, size,
 // capacity}; all zero is empty.
 inline constexpr size_t FocusableViewsMap_size = 0x18;

@@ -1,7 +1,6 @@
-// vtab_views.h — finding tab rows in the vertical tab list. One concern: walk the
-// browser's view tree (read-only) for the tab row view at a model index, or
-// the one nearest a point on screen. UI
-// thread only.
+// vtab_views.h — finding views in the browser's view tree. One concern: walk it
+// (read-only) for the vertical tab row at a model index, the one nearest a
+// point on screen, or the view that holds a given child. UI thread only.
 #pragma once
 #include <windows.h>
 #include <climits>
@@ -89,6 +88,36 @@ inline void* TabRowNearest(void* anyView, int screenY) {
   search.screenY = screenY;
   WalkNearest(edge::ViewRoot(anyView), 0, &search);
   return search.found;
+}
+
+inline bool HoldsChild(void* view, void* child) {
+  const size_t count = edge::ViewChildCount(view);
+  for (size_t i = 0; i < count; i++) {
+    if (edge::ViewChildAt(view, i) == child) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// The view under `view` (itself included) that has `child` among its children,
+// or null: `child` is only compared, never read, so it may already be freed
+// (a parent that was destroyed took it along).
+inline void* ParentHolding(void* view, void* child, int depth = 0) {
+  if (depth > kMaxDepth) {
+    return nullptr;
+  }
+  if (HoldsChild(view, child)) {
+    return view;
+  }
+  const size_t count = edge::ViewChildCount(view);
+  for (size_t i = 0; i < count; i++) {
+    void* holder = ParentHolding(edge::ViewChildAt(view, i), child, depth + 1);
+    if (holder) {
+      return holder;
+    }
+  }
+  return nullptr;
 }
 
 }  // namespace fixedge::vtab_views
