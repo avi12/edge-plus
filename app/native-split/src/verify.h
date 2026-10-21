@@ -5,6 +5,7 @@
 #pragma once
 #include <windows.h>
 #include <cstdint>
+#include <span>
 #include <vector>
 #include "edge.h"
 
@@ -83,10 +84,10 @@ inline constexpr wchar_t kFixedFileInfoBlock[] = L"\\";
 }
 
 // True when the bytes at `rva` are exactly `expected`.
-[[nodiscard]] inline bool BytesAre(uintptr_t rva, const uint8_t* expected,
-                                   size_t length) {
+[[nodiscard]] inline bool BytesAre(uintptr_t rva,
+                                   std::span<const uint8_t> expected) {
   const auto* actual = reinterpret_cast<const uint8_t*>(edge::At(rva));
-  for (size_t i = 0; i < length; i++) {
+  for (size_t i = 0; i < expected.size(); i++) {
     if (actual[i] != expected[i]) {
       return false;
     }
@@ -108,19 +109,15 @@ inline constexpr wchar_t kFixedFileInfoBlock[] = L"\\";
   constexpr uint8_t kNopedJump[] = {edge::kNopOpcode, edge::kNopOpcode};
   const bool isGuardIntact =
       BytesAre(edge155::rva::SetWebContentsAtIndex_guard_imm,
-               kIndexCapImmediate, sizeof(kIndexCapImmediate)) ||
+               kIndexCapImmediate) ||
       BytesAre(edge155::rva::SetWebContentsAtIndex_guard_imm,
-               kLiftedCapImmediate, sizeof(kLiftedCapImmediate));
+               kLiftedCapImmediate);
   const bool isLabelCheckIntact =
-      BytesAre(edge155::rva::SplitA11yLabel_paneidx_jne, kJneRel32,
-               sizeof(kJneRel32)) ||
-      BytesAre(edge155::rva::SplitA11yLabel_paneidx_jne, kNopedJump,
-               sizeof(kNopedJump));
+      BytesAre(edge155::rva::SplitA11yLabel_paneidx_jne, kJneRel32) ||
+      BytesAre(edge155::rva::SplitA11yLabel_paneidx_jne, kNopedJump);
   const bool isActiveIndexCheckIntact =
-      BytesAre(edge155::rva::SetActiveIndex_index_jae, kJaeRel32,
-               sizeof(kJaeRel32)) ||
-      BytesAre(edge155::rva::SetActiveIndex_index_jae, kNopedJump,
-               sizeof(kNopedJump));
+      BytesAre(edge155::rva::SetActiveIndex_index_jae, kJaeRel32) ||
+      BytesAre(edge155::rva::SetActiveIndex_index_jae, kNopedJump);
   return isGuardIntact && isLabelCheckIntact && isActiveIndexCheckIntact;
 }
 

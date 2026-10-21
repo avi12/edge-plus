@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <utility>
 #include <vector>
 #include "geom.h"
@@ -62,7 +63,7 @@ struct SpanShare {
 // Water-fill: pin to `minLength` only the panes whose proportional length
 // would fall below it; the rest keep their exact ratio of what the pinned ones
 // leave. Each round can push another pane under, so it repeats until none is.
-[[nodiscard]] inline SpanShare WaterFill(const std::vector<float>& weights,
+[[nodiscard]] inline SpanShare WaterFill(std::span<const float> weights,
                                          int span, int minLength) {
   const size_t count = weights.size();
   SpanShare share;
@@ -255,8 +256,9 @@ inline constexpr int kFocusEdgeTolerance = 1;
 
 // The leaf on `direction`'s side of `fromLeaf` among `leaves`, or kNoLeaf if
 // there is none.
-[[nodiscard]] inline int DirectionalNeighbour(
-    const std::vector<LeafRect>& leaves, int fromLeaf, Direction direction) {
+[[nodiscard]] inline int DirectionalNeighbour(std::span<const LeafRect> leaves,
+                                              int fromLeaf,
+                                              Direction direction) {
   const Rect* from = nullptr;
   for (const LeafRect& leafRect : leaves) {
     if (leafRect.leaf == fromLeaf) {
@@ -319,7 +321,7 @@ inline void FixWeights(Node& node) {
     weight *= scale;
   }
 }
-[[nodiscard]] inline bool AllEqual(const std::vector<float>& weights) {
+[[nodiscard]] inline bool AllEqual(std::span<const float> weights) {
   float lowest = weights[0];
   float highest = weights[0];
   for (const float weight : weights) {
@@ -328,7 +330,7 @@ inline void FixWeights(Node& node) {
   }
   return highest - lowest <= kEqualWeightTolerance * highest;
 }
-[[nodiscard]] inline float Mean(const std::vector<float>& weights) {
+[[nodiscard]] inline float Mean(std::span<const float> weights) {
   float sum = 0.f;
   for (const float weight : weights) {
     sum += weight;

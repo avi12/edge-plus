@@ -3,7 +3,7 @@
 // where a newly shown pane grows in from. anim.h drives it frame by frame.
 #pragma once
 #include <cmath>
-#include <vector>
+#include <span>
 #include "geom.h"
 
 namespace fixedge::motion {
@@ -81,7 +81,7 @@ using fixedge::Empty;
 // rect on the side it was carved from: an add-right grows out of the old pane's
 // right edge. With no such parent, it grows out of its own centre.
 [[nodiscard]] inline Rect EntryRect(const Rect& target,
-                                    const std::vector<Rect>& before) {
+                                    std::span<const Rect> before) {
   const Point centre{target.x + target.width / 2, target.y + target.height / 2};
   for (const Rect& parent : before) {
     const bool isParent = !Empty(parent) && Contains(parent, centre);

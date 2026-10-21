@@ -5,6 +5,7 @@
 // in our isolated world, so the page's own scripts cannot see or answer them
 // falsely. Every answer is a plain string that find_text.h / ask_text.h parse.
 #pragma once
+#include <span>
 #include <string>
 #include "ask_text.h"
 #include "find_text.h"
@@ -417,7 +418,7 @@ inline std::string ReadParagraphsScript() {
 // Mark the paragraphs `indices` (positions in the list ReadParagraphsScript
 // answered) and scroll to the first. Answers find_text::ParseSearchResult's
 // format; a paragraph whose text has left the page is skipped.
-inline std::string HighlightParagraphsScript(const std::vector<int>& indices) {
+inline std::string HighlightParagraphsScript(std::span<const int> indices) {
   std::string body = RequireHighlights();
   body += R"JS(
     var wanted = [)JS";

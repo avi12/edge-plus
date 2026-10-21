@@ -12,6 +12,7 @@
 #include <cstring>
 #include <functional>
 #include <memory>
+#include <span>
 #include <string>
 #include <vector>
 #include <utility>
@@ -197,8 +198,9 @@ struct SplitIndexVec {
   size_t capacity = 0;
 };
 
-// Build a SplitIndexVec of `count` tab indices in an Edge-allocated buffer.
-inline SplitIndexVec MakeIndexVec(const int* indices, size_t count) {
+// Build a SplitIndexVec of `indices` (tab indices) in an Edge-allocated buffer.
+inline SplitIndexVec MakeIndexVec(std::span<const int> indices) {
+  const size_t count = indices.size();
   int* buffer = static_cast<int*>(EdgeNew(count * sizeof(int)));
   for (size_t i = 0; i < count; i++) {
     buffer[i] = indices[i];

@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <span>
 #include <vector>
 #include "edge.h"
 
@@ -198,7 +199,8 @@ inline bool CreateSplit(void* tsm) {
     Log("[create] no free background tab");
     return false;
   }
-  edge::SplitIndexVec splitIndices = edge::MakeIndexVec(&freeTabIndex, 1);
+  edge::SplitIndexVec splitIndices =
+      edge::MakeIndexVec(std::span(&freeTabIndex, 1));
   uint8_t visual[16] = {};
   SetEvenRatio(visual);
   uint8_t outId[16] = {};
@@ -248,8 +250,8 @@ inline bool CreateSplitN(void* tsm, int requestedPanes) {
   uint8_t visual[16] = {};
   SetEvenRatio(visual);
   uint8_t outId[16] = {};
-  edge::SplitIndexVec splitIndices =
-      edge::MakeIndexVec(memberIndices, static_cast<size_t>(memberCount));
+  edge::SplitIndexVec splitIndices = edge::MakeIndexVec(
+      std::span(memberIndices).first(static_cast<size_t>(memberCount)));
   Log("[createN] AddToSplitImpl n=%d anchor=%d idx=[%d,%d,%d]", memberCount,
       anchor, memberIndices[0], memberCount > 1 ? memberIndices[1] : -1,
       memberCount > 2 ? memberIndices[2] : -1);
@@ -277,12 +279,12 @@ inline bool CreateSplitN(void* tsm, int requestedPanes) {
 // Put `newTab` right after the split's members in the strip. Edge orders a
 // split's members, and so the panes it feeds, by strip index, and a grown
 // split's new pane is its last: so the new member must come last in the strip.
-inline void PlaceAfterMembers(void* tsm, void* root, void* const* memberTabs,
-                              int memberCount, void* newTab) {
+inline void PlaceAfterMembers(void* tsm, void* root,
+                              std::span<void* const> memberTabs, void* newTab) {
   int lastMemberIndex = -1;
-  for (int i = 0; i < memberCount; i++) {
-    lastMemberIndex = std::max(
-        lastMemberIndex, edge::GetIndexOfTabRecursive(root, memberTabs[i]));
+  for (void* memberTab : memberTabs) {
+    lastMemberIndex = std::max(lastMemberIndex,
+                               edge::GetIndexOfTabRecursive(root, memberTab));
   }
   const int newTabIndex = edge::GetIndexOfTabRecursive(root, newTab);
   const bool isFound = lastMemberIndex >= 0 && newTabIndex >= 0;
@@ -353,7 +355,9 @@ inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
     Log("[grow] the new tab %p is not a free background tab", newTab);
     return false;
   }
-  PlaceAfterMembers(tsm, root, memberTabs, memberCount, newTab);
+  PlaceAfterMembers(
+      tsm, root, std::span(memberTabs).first(static_cast<size_t>(memberCount)),
+      newTab);
 
   // Dissolve, then re-resolve every tab's (now standalone) index and re-create.
   edge::RemoveSplitImpl(tsm, split.token, kTransactionalRemove);
@@ -382,8 +386,8 @@ inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
   uint8_t splitId[16] = {};
   edge::CreateRandomToken(splitId);
   uint8_t outId[16] = {};
-  edge::SplitIndexVec splitIndices =
-      edge::MakeIndexVec(memberIndices, static_cast<size_t>(indexCount));
+  edge::SplitIndexVec splitIndices = edge::MakeIndexVec(
+      std::span(memberIndices).first(static_cast<size_t>(indexCount)));
   Log("[grow] AddToSplitImpl n=%d anchor=%d (was %d members)", indexCount,
       anchor, memberCount);
   uint8_t visual[16] = {};
@@ -400,8 +404,10 @@ inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
 }
 
 // The member of the active split whose tab shows `contents`, or -1.
-inline int MemberShowing(void* tsm, void* root, void* const* memberTabs,
-                         int memberCount, const void* contents) {
+inline int MemberShowing(void* tsm, void* root,
+                         std::span<void* const> memberTabs,
+                         const void* contents) {
+  const int memberCount = static_cast<int>(memberTabs.size());
   for (int i = 0; i < memberCount; i++) {
     const int tabIndex = edge::GetIndexOfTabRecursive(root, memberTabs[i]);
     const bool isShowingContents =
@@ -416,7 +422,8 @@ inline int MemberShowing(void* tsm, void* root, void* const* memberTabs,
 // The pages of the active split's members in member order, the order the feeder
 // gives the panes (member i in pane i). Returns how many were written to `out`
 // (up to kMemberBufferSize), 0 when the active tab is not in a split.
-inline int ActiveSplitContents(void* tsm, void** out) {
+inline int ActiveSplitContents(void* tsm,
+                               std::span<void*, kMemberBufferSize> out) {
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
   if (!active) {
     return 0;
@@ -473,10 +480,11 @@ inline int CloseMember(void* tsm, const void* closingContents,
   for (int i = 0; i < memberCount; i++) {
     memberTabs[i] = members.TabAt(i);
   }
-  const int closing =
-      MemberShowing(tsm, root, memberTabs, memberCount, closingContents);
+  const std::span<void* const> liveMemberTabs =
+      std::span(memberTabs).first(static_cast<size_t>(memberCount));
+  const int closing = MemberShowing(tsm, root, liveMemberTabs, closingContents);
   const int activating =
-      MemberShowing(tsm, root, memberTabs, memberCount, activeContents);
+      MemberShowing(tsm, root, liveMemberTabs, activeContents);
   const bool hasBothMembers =
       closing >= 0 && activating >= 0 && closing != activating;
   if (!hasBothMembers) {
@@ -512,8 +520,8 @@ inline int CloseMember(void* tsm, const void* closingContents,
     uint8_t splitId[16] = {};
     edge::CreateRandomToken(splitId);
     uint8_t outId[16] = {};
-    edge::SplitIndexVec splitIndices =
-        edge::MakeIndexVec(memberIndices, static_cast<size_t>(indexCount));
+    edge::SplitIndexVec splitIndices = edge::MakeIndexVec(
+        std::span(memberIndices).first(static_cast<size_t>(indexCount)));
     uint8_t visual[16] = {};
     std::memcpy(visual, settings.visual, sizeof(visual));
     const bool isResplit =

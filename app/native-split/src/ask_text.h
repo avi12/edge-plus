@@ -8,6 +8,7 @@
 #pragma once
 #include <cctype>
 #include <cstddef>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -256,8 +257,7 @@ struct Answer {
   return number;
 }
 
-[[nodiscard]] inline bool Contains(const std::vector<int>& numbers,
-                                   int number) {
+[[nodiscard]] inline bool Contains(std::span<const int> numbers, int number) {
   for (const int candidate : numbers) {
     if (candidate == number) {
       return true;
@@ -369,7 +369,7 @@ inline void SortAscending(std::vector<int>* indices) {
 }
 
 // The paragraph numbers as the highlight script takes them: "3,7,12".
-[[nodiscard]] inline std::string IndexList(const std::vector<int>& indices) {
+[[nodiscard]] inline std::string IndexList(std::span<const int> indices) {
   std::string list;
   for (size_t i = 0; i < indices.size(); i++) {
     list += (i == 0 ? "" : ",") + std::to_string(indices[i]);
