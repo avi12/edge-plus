@@ -1,7 +1,9 @@
-# The WinUI panel
+# The panel
 
-Edge+'s panel as WinUI 3 / C#, modelled on `avi/any-stt`'s app. It reads and
-writes the Tauri panel's `settings.json` unchanged, so either panel can run.
+Edge+'s panel, WinUI 3 / C#, modelled on `avi/any-stt`'s app. It keeps the
+user's choices in `%LOCALAPPDATA%\FixEdge\settings.json`, in the same place and
+shape the earlier Tauri panel used, so an existing install carries over; on its
+first start it also moves that panel's start-at-sign-in entry to itself.
 
 ## Two projects: a host and a swappable panel
 

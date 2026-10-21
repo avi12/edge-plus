@@ -200,7 +200,7 @@ The DevTools call is the dependable trigger: it is exactly what Gmail does, and
 the prompt flow is verified end to end. Step 1 is required on Avi's profile.
 
 **(b) Write the Preferences while Edge is closed (fits the panel).**
-In `edge-native`/panel (Rust, JSON edit of `Default\Preferences`): remove the
+In the panel (a JSON edit of `Default\Preferences`): remove the
 Gmail `mailto` entry from `custom_handlers.ignored_protocol_handlers`, append the
 object below to `registered_protocol_handlers`, keep `enabled: true`, set
 `last_modified` to now (FILETIME / 10). Refuse to write while any msedge
