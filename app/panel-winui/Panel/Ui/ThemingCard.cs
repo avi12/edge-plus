@@ -27,7 +27,6 @@ internal enum LocalThemeKind {
 internal sealed class ThemingCard {
   private const double RowSpacing = 8;
   private const double ColumnGap = 8;
-  private const double PickerMinWidth = 200;
   private const double DimmedOpacity = 0.5;
   private const int RemoveGlyph = 0xE711;
   private const double RemoveGlyphSize = 12;
@@ -61,8 +60,8 @@ internal sealed class ThemingCard {
     Style = StyleKeys.Get(StyleKeys.CardError),
     Visibility = Visibility.Collapsed,
   };
-  private readonly ComboBox _lightPicker = new() { MinWidth = PickerMinWidth };
-  private readonly ComboBox _darkPicker = new() { MinWidth = PickerMinWidth };
+  private readonly ComboBox _lightPicker = new();
+  private readonly ComboBox _darkPicker = new();
   // The panel's own themes, in the library's order, which the user can drag or
   // key into a new one; then Edge's own themes, which are not the panel's to
   // order.
@@ -113,8 +112,8 @@ internal sealed class ThemingCard {
     _body.Children.Add(StoreRow());
     _body.Children.Add(LocalRow());
     _body.Children.Add(_error);
-    _body.Children.Add(PickerRow(Wording.WhenLight, _lightPicker));
-    _body.Children.Add(PickerRow(Wording.WhenDark, _darkPicker));
+    _body.Children.Add(CardRows.Picker(Wording.WhenLight, _lightPicker));
+    _body.Children.Add(CardRows.Picker(Wording.WhenDark, _darkPicker));
     _ownThemes.ItemTemplate = (DataTemplate)XamlReader.Load(RowSlotTemplate);
     _ownThemes.ItemsSource = _ownKeys;
     _ownThemes.ContainerContentChanging += OnOwnRowContainerChanging;
@@ -305,20 +304,6 @@ internal sealed class ThemingCard {
     });
     row.Children.Add(_pickFile);
     row.Children.Add(_pickFolder);
-    return row;
-  }
-
-  private static Grid PickerRow(string label, ComboBox picker) {
-    var row = new Grid { ColumnSpacing = ColumnGap };
-    row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-    row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-    row.Children.Add(new TextBlock {
-      Text = label,
-      Style = StyleKeys.Get(StyleKeys.CardTitle),
-      VerticalAlignment = VerticalAlignment.Center,
-    });
-    Grid.SetColumn(picker, 1);
-    row.Children.Add(picker);
     return row;
   }
 

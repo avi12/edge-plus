@@ -47,7 +47,11 @@ internal static class Wording {
 
   public static string RemoveTheme(string name) => $"Remove {name}";
 
-  public static string ReadingPickerName(string when) => $"Reading mode theme {when}";
+  // A reading mode picker's name for a screen reader.
+  public static string ReadingPickerName(ColorMode mode) =>
+      mode == ColorMode.Light
+          ? "Reading mode theme when Windows is light"
+          : "Reading mode theme when Windows is dark";
 
   // A reading theme as the user reads it: Edge's name, its words spaced out
   // ("LightBlue" -> "Light blue").

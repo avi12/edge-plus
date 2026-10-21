@@ -34,11 +34,12 @@ internal sealed class PanelView : IDisposable {
   private static readonly DoubleCollection s_veilDashes = [4, 3];
   private static readonly TimeSpan s_veilFade = TimeSpan.FromMilliseconds(120);
 
-  // The plain switches, top to bottom; the theming card sits second and the
-  // start-at-sign-in card last.
-  private static readonly Feature[] s_switchCardsAfterTheming = [
-    Feature.WebUiFollowsTheme, Feature.TabSpine, Feature.EnhancedFind, Feature.LivePreview,
-    Feature.QuietDevMode, Feature.ProtocolHandlers,
+  // The cards after the theming card, top to bottom (the Tauri panel's order);
+  // reading mode has a card of its own, the rest are plain switches, and the
+  // start-at-sign-in card comes last.
+  private static readonly Feature[] s_cardsAfterTheming = [
+    Feature.WebUiFollowsTheme, Feature.TabSpine, Feature.ReadingTheme, Feature.EnhancedFind,
+    Feature.LivePreview, Feature.QuietDevMode, Feature.ProtocolHandlers,
   ];
 
   private readonly Window _window;
@@ -57,6 +58,7 @@ internal sealed class PanelView : IDisposable {
   private readonly Grid _dropVeil;
   private readonly Dictionary<Feature, FeatureCard> _switchCards = [];
   private readonly ThemingCard _themingCard;
+  private readonly ReadingModeCard _readingModeCard;
   private readonly FeatureCard _startupCard = new(Wording.StartWithWindows);
   private readonly EdgeWatch _edgeWatch = new();
   private readonly ThemeWatch _themeWatch = new();
@@ -78,10 +80,15 @@ internal sealed class PanelView : IDisposable {
       Visibility = Visibility.Collapsed,
     };
     _themingCard = new ThemingCard(RunAsync, PickLocalThemeAsync);
+    _readingModeCard = new ReadingModeCard(RunAsync);
     AddSwitchCard(Feature.NativeSplit);
     _cardList.Children.Add(_themingCard.View);
-    foreach (Feature feature in s_switchCardsAfterTheming) {
-      AddSwitchCard(feature);
+    foreach (Feature feature in s_cardsAfterTheming) {
+      if (feature == Feature.ReadingTheme) {
+        _cardList.Children.Add(_readingModeCard.View);
+      } else {
+        AddSwitchCard(feature);
+      }
     }
     _startupCard.Toggled += isOn => _ = RunAndReportAsync(
         () => PanelActions.SetStartWithWindows(isOn));
@@ -211,6 +218,8 @@ internal sealed class PanelView : IDisposable {
     }
     bool isThemingHeldOff = state.IsHeldOff(Feature.Theming);
     _themingCard.Update(state, isThemingHeldOff, HeldOffNote(state, isThemingHeldOff));
+    bool isReadingHeldOff = state.IsHeldOff(Feature.ReadingTheme);
+    _readingModeCard.Update(state, isReadingHeldOff, HeldOffNote(state, isReadingHeldOff));
     _startupCard.Update(state.IsStartWithWindows, isLocked: false, note: "");
   }
 
