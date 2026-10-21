@@ -356,3 +356,17 @@ typed `(?i)` shows as `i`) [unit].
   the text field (Edge has none there), so a reloaded DLL reuses the ones an
   earlier load made. With RegExp off, or the find switched off, they are hidden
   (`View::SetVisible`), never removed. [run: shown, then hidden with RegExp off]
+
+## Our switches keep their state when the bar is shown again (155.0.4283.62)
+
+When the bar is shown again (and on a tab change) every switch runs
+`FindInPageOptionToggleView::EdgeOnActiveWebContentsChanged` (`0xc8b5ff0`), which
+sets it from `edge::GetFindInPageOptionToggleValue(the tab's find helper, id)`:
+Edge's own three keep their state there, but for any other id it is false, and it
+calls no `OnButtonToggled`. So on reopen RegExp (and Multiline) went off while
+the flag rows, the slashes and Edge's greyed switches still showed RegExp on.
+That function is hooked: for our ids it does not run (they keep the state they
+have, per window, as RegExp always has), and after any switch the options are
+synced again from the switches (`SyncToggles`, which drops a re-entrant call made
+while it builds a switch). [run: RegExp + Multiline on, Esc, reopen: still on,
+flags shown, `/gm`; RegExp off, Esc, reopen: off, flags hidden, no slashes]

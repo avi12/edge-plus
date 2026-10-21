@@ -692,6 +692,12 @@ inline constexpr uintptr_t FindOptionsControlView_AddFindInPageOptionChildView =
 // click callback; it flips Edge's own state for the id and re-runs the search.
 inline constexpr uintptr_t FindInPageOptionToggleView_OnButtonToggled =
     0xc8b5a10;
+// void EdgeOnActiveWebContentsChanged(this = FindInPageOptionToggleView): run
+// for each switch when the bar is shown again (and on a tab change); it sets the
+// switch from edge::GetFindInPageOptionToggleValue(the tab's find helper, id),
+// which is false for any id but Edge's own, with no OnButtonToggled callback.
+inline constexpr uintptr_t
+    FindInPageOptionToggleView_EdgeOnActiveWebContentsChanged = 0xc8b5ff0;
 // bool views::EdgeToggleButton::GetIsOn(this) and void SetIsOn(this, bool).
 inline constexpr uintptr_t EdgeToggleButton_GetIsOn = 0xb1f5c16;
 inline constexpr uintptr_t EdgeToggleButton_SetIsOn = 0xb1f5c44;

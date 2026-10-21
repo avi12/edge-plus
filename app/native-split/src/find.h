@@ -434,7 +434,7 @@ inline void SyncDecorations(void* findBarView) {
 // chosen assistant's name), and Edge's own three are greyed out while either of
 // ours is on, since they mean nothing to a RegExp or a question. With the find
 // switched off ours are hidden and Edge's are back.
-inline void SyncToggles(void* findBarView) {
+inline void SyncTogglesNow(void* findBarView) {
   bool isAdded = false;
   void* regExp =
       EnsureToggle(findBarView, edge155::off::FINDTOGGLE_id_regexp, &isAdded);
@@ -487,6 +487,19 @@ inline void SyncToggles(void* findBarView) {
     edge::FindBarRelayoutOptions(findBarView);
   }
   SyncDecorations(findBarView);
+}
+
+// SyncTogglesNow, once at a time: building a switch makes Edge set its state
+// (h_active_contents_changed), which syncs again; that inner call is dropped,
+// the outer one finishes the job.
+inline bool g_isSyncingToggles = false;
+inline void SyncToggles(void* findBarView) {
+  if (g_isSyncingToggles) {
+    return;
+  }
+  g_isSyncingToggles = true;
+  SyncTogglesNow(findBarView);
+  g_isSyncingToggles = false;
 }
 
 // --- the bar's width ---------------------------------------------------------------------------------
@@ -1019,6 +1032,8 @@ using ButtonToggled_t = void(__fastcall*)(void*);
 inline AddOptionsView_t o_add_options_view = nullptr;
 inline ToggleOptions_t o_toggle_options = nullptr;
 inline ButtonToggled_t o_button_toggled = nullptr;
+using ActiveContentsChanged_t = void(__fastcall*)(void*);
+inline ActiveContentsChanged_t o_active_contents_changed = nullptr;
 
 // The text changed. Plain text is Edge's search. A RegExp is searched by us (and
 // Edge's own marks and count are cleared first, by asking it to find nothing); a
@@ -1244,6 +1259,27 @@ inline void __fastcall h_button_toggled(void* toggle) {
   h_find(findBarView, &typed);
 }
 
+// A switch is set again from the tab's find options, as the bar is shown again
+// or the tab changes. Edge keeps no state for our ids and so turned them off
+// here, with no click callback: RegExp was off on reopen while its flags and the
+// slashes still showed. Ours keep their state instead (it lives in the switch,
+// per window, as the RegExp switch always has); then everything that follows
+// from the switches is synced again.
+inline void __fastcall h_active_contents_changed(void* toggle) {
+  const int toggleId = edge::FindToggleId(toggle);
+  const bool isOurs =
+      g_isEnabled &&
+      (toggleId == edge155::off::FINDTOGGLE_id_regexp ||
+       toggleId == edge155::off::FINDTOGGLE_id_ask || IsFlagToggleId(toggleId));
+  if (!isOurs) {
+    o_active_contents_changed(toggle);
+  }
+  void* findBarView = g_isEnabled ? edge::FindBarViewOfToggle(toggle) : nullptr;
+  if (findBarView) {
+    SyncToggles(findBarView);
+  }
+}
+
 // The bar closes: take our marks off the page.
 inline void __fastcall h_end_find_session(void* controller, int action,
                                           int isKeepingSelection) {
@@ -1286,6 +1322,9 @@ inline std::vector<HookSite> HookSites() {
       {edge155::rva::FindInPageOptionToggleView_OnButtonToggled,
        reinterpret_cast<void*>(h_button_toggled),
        reinterpret_cast<void**>(&o_button_toggled)},
+      {edge155::rva::FindInPageOptionToggleView_EdgeOnActiveWebContentsChanged,
+       reinterpret_cast<void*>(h_active_contents_changed),
+       reinterpret_cast<void**>(&o_active_contents_changed)},
   };
 }
 
