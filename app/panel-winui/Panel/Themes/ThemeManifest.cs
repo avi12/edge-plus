@@ -126,7 +126,8 @@ internal static class ThemeManifest {
     try {
       return JsonNode.Parse(text) as JsonObject ?? throw Invalid("manifest.json: not an object");
     } catch (JsonException error) {
-      throw Invalid($"manifest.json: {error.Message}");
+      // The parser's own message is for a developer; its position is kept.
+      throw Invalid($"{Wording.ManifestNotJson} (line {error.LineNumber + 1})");
     }
   }
 

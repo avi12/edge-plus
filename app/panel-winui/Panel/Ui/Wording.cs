@@ -47,6 +47,14 @@ internal static class Wording {
 
   public static string RemoveTheme(string name) => $"Remove {name}";
 
+  // What a failure says. The details go to the panel's log (PanelLog), never
+  // into the window.
+  public const string ActionFailed =
+      "That did not work. Edge+ wrote the details to its log (panel.log in %LOCALAPPDATA%\\FixEdge).";
+  public const string ThemeFilesUnreadable =
+      "Edge+ could not read or write that theme's files. Check the folder still exists and is not open elsewhere.";
+  public const string ManifestNotJson = "manifest.json is not valid JSON";
+
   public const string ThemeListName = "Your themes";
   public const string ReorderHelp =
       "Drag a theme, or press Alt+Up or Alt+Down, to move it in this list and in the pickers.";

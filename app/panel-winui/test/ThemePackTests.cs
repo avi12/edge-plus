@@ -119,6 +119,8 @@ internal static class ThemePackTests {
     ExpectRefused("""{"name":"t","version":"1.x","theme":{}}""",
                   "\"1.x\" is not a valid version", "a bad version");
     ExpectRefused("""{"version":"1","theme":{}}""", "manifest.json has no name", "no name");
+    ExpectRefused("{\n  \"name\": oops }", "manifest.json is not valid JSON (line 2)",
+                  "broken JSON is said plainly, with its line, not as the parser's message");
   }
 
   private static void TheKeyFileIsNamedByTheLowerCasedPath() {

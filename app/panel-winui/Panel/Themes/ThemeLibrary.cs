@@ -87,8 +87,9 @@ internal static class ThemeLibrary {
   private static string StoredCrx(string id) => Path.Combine(Paths.ThemesRoot, id + CrxExtension);
 
   // A local theme's id, version and .crx bytes: a .crx is used as it is, a
-  // folder or .zip is packed and signed first. Every failure becomes the
-  // user's sentence.
+  // folder or .zip is packed and signed first. A theme that fails its checks
+  // says why (those sentences are written for the user, in ThemeManifest and
+  // Crx); a file the system cannot read or write is logged and said plainly.
   private static (string Id, string Version, byte[] Crx) LocalThemeCrx(string source) {
     try {
       bool isCrx = string.Equals(Path.GetExtension(source), CrxExtension,
@@ -103,9 +104,11 @@ internal static class ThemeLibrary {
     } catch (InvalidDataException error) {
       throw new ThemeException(error.Message);
     } catch (IOException error) {
-      throw new ThemeException(error.Message);
+      PanelLog.Write($"reading the theme at {source}", error);
+      throw new ThemeException(Wording.ThemeFilesUnreadable);
     } catch (UnauthorizedAccessException error) {
-      throw new ThemeException(error.Message);
+      PanelLog.Write($"reading the theme at {source}", error);
+      throw new ThemeException(Wording.ThemeFilesUnreadable);
     }
   }
 

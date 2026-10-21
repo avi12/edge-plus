@@ -157,7 +157,7 @@ internal sealed class PanelLoader {
 
   private void ReportMountFailure(Exception error) {
     Log($"mount failed: {error}");
-    Swapped?.Invoke($"This panel build failed to load: {error.GetType().Name}: {error.Message}");
+    Swapped?.Invoke($"This panel build failed to load; the reason is in {LogName}.");
   }
 
   // Tear the panel down and drop every reference into it, then unload its

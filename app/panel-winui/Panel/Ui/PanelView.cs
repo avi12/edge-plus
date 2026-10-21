@@ -170,8 +170,10 @@ internal sealed class PanelView : IDisposable {
   }
 
   // Run a panel action off the UI thread (an injection can wait on Edge) and
-  // render the state it returns. Returns why it failed, or null — the
-  // action's own sentence, as the Tauri panel hands its errors to the UI.
+  // render the state it returns. Returns why it failed, or null. Only a
+  // ThemeException carries a sentence written for the user (a theme that
+  // fails its checks says why); anything else is logged and said plainly,
+  // never as a raw exception message.
   private async Task<string?> RunAsync(Func<PanelState> action) {
     try {
       PanelState state = await Task.Run(action);
@@ -179,11 +181,11 @@ internal sealed class PanelView : IDisposable {
         Render(state);
       }
       return null;
-    } catch (Exception error) {
-      if (_state is not null && !_isDisposed) {
-        Render(_state);
-      }
+    } catch (ThemeException error) {
       return error.Message;
+    } catch (Exception error) {
+      PanelLog.Write("panel action failed", error);
+      return Wording.ActionFailed;
     }
   }
 

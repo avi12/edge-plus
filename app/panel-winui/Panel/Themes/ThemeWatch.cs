@@ -69,9 +69,11 @@ internal sealed class ThemeWatch {
     } catch (ThemeException error) {
       return error.Message;
     } catch (IOException error) {
-      return error.Message;
+      PanelLog.Write($"re-installing the edited theme {theme.Id}", error);
+      return Wording.ThemeFilesUnreadable;
     } catch (UnauthorizedAccessException error) {
-      return error.Message;
+      PanelLog.Write($"re-installing the edited theme {theme.Id}", error);
+      return Wording.ThemeFilesUnreadable;
     }
   }
 
