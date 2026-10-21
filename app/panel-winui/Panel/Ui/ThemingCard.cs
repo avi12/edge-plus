@@ -373,31 +373,31 @@ internal sealed class ThemingCard {
     return row;
   }
 
-  // Bring a picker's items in line with the options, in their order, by
-  // theme id: an item that stays is the same object (moved, its label updated
-  // if the theme was renamed), so the chosen one is still chosen after a
-  // reorder. Runs under _isUpdating, so the passing deselection while an item
-  // moves is not taken for a choice and applies no theme.
+  // Bring a picker in line with the options, in their order, and keep its
+  // choice. Rebuilt only when the themes or their order or names changed, and
+  // then with new items: moving a ComboBoxItem by removing and re-inserting
+  // the same element throws (E_INVALIDARG, "Value does not fall within the
+  // expected range"), which put an error line on the card and shifted the
+  // rows under it on every reorder. Runs under _isUpdating, so neither the
+  // rebuild nor the re-selection is taken for a choice, and no theme is
+  // re-applied.
   private static void Fill(ComboBox picker, List<(string Id, string Label)> options,
                            string selectedId) {
-    var labels = options.ToDictionary(option => option.Id, option => option.Label);
-    KeyedList.Sync(picker.Items, options.Select(option => option.Id).ToList(),
-                   item => (string)((ComboBoxItem)item).Tag,
-                   id => new ComboBoxItem { Content = labels[id], Tag = id });
-    ComboBoxItem? chosen = null;
-    foreach (ComboBoxItem item in picker.Items.Cast<ComboBoxItem>()) {
-      string id = (string)item.Tag;
-      bool isRenamed = !Equals(item.Content, labels[id]);
-      if (isRenamed) {
-        item.Content = labels[id];
-      }
-      if (id == selectedId) {
-        chosen = item;
+    var shown = picker.Items.Cast<ComboBoxItem>()
+                    .Select(item => ((string)item.Tag, item.Content as string))
+                    .ToList();
+    bool isCurrent = shown.SequenceEqual(options.Select(option => (option.Id, (string?)option.Label)));
+    if (!isCurrent) {
+      picker.Items.Clear();
+      foreach ((string id, string label) in options) {
+        picker.Items.Add(new ComboBoxItem { Content = label, Tag = id });
       }
     }
     // An id no option has (a theme removed meanwhile) falls back to the
     // default theme, the first option.
-    object? wanted = chosen ?? picker.Items.FirstOrDefault();
+    object? wanted = picker.Items.Cast<ComboBoxItem>()
+                         .FirstOrDefault(item => (string)item.Tag == selectedId)
+        ?? picker.Items.FirstOrDefault();
     if (!ReferenceEquals(picker.SelectedItem, wanted)) {
       picker.SelectedItem = wanted;
     }
