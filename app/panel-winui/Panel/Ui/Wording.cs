@@ -75,8 +75,9 @@ internal static class Wording {
     get;
   } = new(
       "Start Edge+ when Windows starts",
-      "Opens Edge+ minimized when you sign in to Windows, so your settings apply without " +
-          "opening it. Launch Edge+ again to bring its window back.",
+      "Runs Edge+ in the background, with no window, from when you sign in to Windows: your " +
+          "settings apply and an Edge update that needs a newer Edge+ is caught. Launch Edge+ " +
+          "to open its window.",
       0xE7E8);
 
   public static CardWording For(Feature feature) => feature switch {
