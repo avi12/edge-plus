@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Markup;
+using Microsoft.UI.Xaml.Media;
 using Windows.System;
 
 namespace EdgePlus;
@@ -65,8 +66,12 @@ internal sealed class ThemingCard {
   // The panel's own themes, in the library's order, which the user can drag or
   // key into a new one; then Edge's own themes, which are not the panel's to
   // order.
+  // No selection: a row is never "chosen" here, and with selection on, each
+  // dragged row kept the accent bar, so two drags looked like two selected
+  // themes. Alt+Up / Alt+Down act on the focused row instead.
   private readonly ListView _ownThemes = new() {
-    SelectionMode = ListViewSelectionMode.Single,
+    SelectionMode = ListViewSelectionMode.None,
+    IsItemClickEnabled = false,
     CanReorderItems = true,
     CanDragItems = true,
     AllowDrop = true,
@@ -115,8 +120,12 @@ internal sealed class ThemingCard {
     _ownThemes.ContainerContentChanging += OnOwnRowContainerChanging;
     AutomationProperties.SetName(_ownThemes, Wording.ThemeListName);
     AutomationProperties.SetHelpText(_ownThemes, Wording.ReorderHelp);
-    _ownThemes.DragItemsCompleted += (_, _) =>
-        _ = RunAsync(() => PanelActions.ReorderThemes(CurrentOrder()));
+    _ownThemes.DragItemsCompleted += (_, _) => {
+      // WinUI can leave the dragged (or last pressed) row in its Pressed or
+      // PointerOver look after a drop; every row goes back to Normal.
+      ResetRowStates();
+      _ = RunAsync(() => PanelActions.ReorderThemes(CurrentOrder()));
+    };
     // Preview: the list's items take arrow keys for moving focus before a
     // bubbling KeyDown would see them.
     _ownThemes.PreviewKeyDown += OnThemeListKeyDown;
@@ -172,6 +181,7 @@ internal sealed class ThemingCard {
     _ownRowFactories = own.Factories;
     KeyedList.Sync(_ownKeys, own.Order, key => key, key => key, _ownKeys.Move);
     edge.SyncInto(_edgeThemes.Children);
+    ResetRowStates();
     _ownThemes.Visibility = own.Order.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
   }
 
@@ -206,12 +216,12 @@ internal sealed class ThemingCard {
     AutomationProperties.SetName(args.ItemContainer, NameOf(rowKey));
   }
 
-  // Alt+Up / Alt+Down moves the selected theme one place, for whoever does
-  // not drag; focus stays on it.
+  // Alt+Up / Alt+Down moves the focused theme one place, for whoever does not
+  // drag; focus stays on it.
   private void OnThemeListKeyDown(object sender, KeyRoutedEventArgs e) {
     bool isMoveKey = e.Key == VirtualKey.Up || e.Key == VirtualKey.Down;
     bool isMove = isMoveKey && e.KeyStatus.IsMenuKeyDown;
-    if (!isMove || _ownThemes.SelectedItem is not string rowKey) {
+    if (!isMove || FocusedRowKey(e.OriginalSource) is not string rowKey) {
       return;
     }
     e.Handled = true;
@@ -221,13 +231,34 @@ internal sealed class ThemingCard {
     _ = MoveKeepingFocusAsync(order, id);
   }
 
+  private const string NormalState = "Normal";
+
+  private void ResetRowStates() {
+    foreach (string key in _ownKeys) {
+      if (_ownThemes.ContainerFromItem(key) is ListViewItem container) {
+        VisualStateManager.GoToState(container, NormalState, useTransitions: false);
+      }
+    }
+  }
+
+  // The key of the row holding keyboard focus: the list item itself, or an
+  // element inside it (its remove button).
+  private string? FocusedRowKey(object? focused) {
+    var element = focused as DependencyObject;
+    while (element is not null && element is not ListViewItem) {
+      element = VisualTreeHelper.GetParent(element);
+    }
+    return element is ListViewItem container
+        ? _ownThemes.ItemFromContainer(container) as string
+        : null;
+  }
+
   private async Task MoveKeepingFocusAsync(IReadOnlyList<string> order, string id) {
     await RunAsync(() => PanelActions.ReorderThemes(order));
     string? moved = _ownKeys.FirstOrDefault(key => IdOf(key) == id);
     if (moved is null) {
       return;
     }
-    _ownThemes.SelectedItem = moved;
     if (_ownThemes.ContainerFromItem(moved) is ListViewItem container) {
       container.Focus(FocusState.Keyboard);
     }
