@@ -373,14 +373,34 @@ internal sealed class ThemingCard {
     return row;
   }
 
+  // Bring a picker's items in line with the options, in their order, by
+  // theme id: an item that stays is the same object (moved, its label updated
+  // if the theme was renamed), so the chosen one is still chosen after a
+  // reorder. Runs under _isUpdating, so the passing deselection while an item
+  // moves is not taken for a choice and applies no theme.
   private static void Fill(ComboBox picker, List<(string Id, string Label)> options,
                            string selectedId) {
-    picker.Items.Clear();
-    foreach ((string id, string label) in options) {
-      picker.Items.Add(new ComboBoxItem { Content = label, Tag = id });
+    var labels = options.ToDictionary(option => option.Id, option => option.Label);
+    KeyedList.Sync(picker.Items, options.Select(option => option.Id).ToList(),
+                   item => (string)((ComboBoxItem)item).Tag,
+                   id => new ComboBoxItem { Content = labels[id], Tag = id });
+    ComboBoxItem? chosen = null;
+    foreach (ComboBoxItem item in picker.Items.Cast<ComboBoxItem>()) {
+      string id = (string)item.Tag;
+      bool isRenamed = !Equals(item.Content, labels[id]);
+      if (isRenamed) {
+        item.Content = labels[id];
+      }
+      if (id == selectedId) {
+        chosen = item;
+      }
     }
-    int selected = options.FindIndex(option => option.Id == selectedId);
-    picker.SelectedIndex = selected < 0 ? 0 : selected;
+    // An id no option has (a theme removed meanwhile) falls back to the
+    // default theme, the first option.
+    object? wanted = chosen ?? picker.Items.FirstOrDefault();
+    if (!ReferenceEquals(picker.SelectedItem, wanted)) {
+      picker.SelectedItem = wanted;
+    }
   }
 
   private void OnPicked(ColorMode mode, ComboBox picker) {
