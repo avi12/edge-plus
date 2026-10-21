@@ -8,6 +8,7 @@
 #include <windows.h>
 #include <cstddef>
 #include <cstdint>
+#include "handles.h"
 
 namespace fixedge::config {
 
@@ -78,21 +79,21 @@ inline bool LoadFromFile(Wire* out) {
   if (wsprintfA(path, "%s%s", localAppData, kFileRelativePath) <= 0) {
     return false;
   }
-  HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, nullptr,
-                            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-  if (file == INVALID_HANDLE_VALUE) {
+  const handles::UniqueHandle file{
+      CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+                  FILE_ATTRIBUTE_NORMAL, nullptr)};
+  if (!file) {
     return false;
   }
   *out = Wire{};
   DWORD read = 0;
-  const bool isRead = ReadFile(file, out, sizeof(Wire), &read, nullptr);
+  const bool isRead = ReadFile(file.Get(), out, sizeof(Wire), &read, nullptr);
   const bool isKnownSize =
       isRead &&
       (read == sizeof(Wire) || read == kBeforeReadingThemeWireSize ||
        read == kBeforeTabSpineWireSize || read == kBeforeLivePreviewWireSize ||
        read == kBeforeWebUiWireSize || read == kBeforeFindWireSize ||
        read == kLegacyWireSize);
-  CloseHandle(file);
   return isKnownSize;
 }
 

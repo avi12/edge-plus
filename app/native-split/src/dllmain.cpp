@@ -10,6 +10,7 @@
 #include <windows.h>
 #include <cstdlib>
 #include "edge.h"
+#include "handles.h"
 #include "verify.h"
 #include "hooks.h"
 
@@ -130,8 +131,10 @@ BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID) {
     ResetEvent(g_unloadEvent);
     g_configEvent = CreateEventW(nullptr, /*bManualReset=*/FALSE,
                                  /*bInitialState=*/FALSE, kConfigEvent);
-    // Init waits and hooks, which must not run under the loader lock.
-    CreateThread(nullptr, 0, Init, nullptr, 0, nullptr);
+    // Init waits and hooks, which must not run under the loader lock. The
+    // thread runs on after its handle, which nothing waits on, is closed.
+    const handles::UniqueHandle initThread{
+        CreateThread(nullptr, 0, Init, nullptr, 0, nullptr)};
   }
   return TRUE;
 }

@@ -26,6 +26,7 @@
 #include "find_flags.h"
 #include "find_scripts.h"
 #include "find_text.h"
+#include "handles.h"
 #include "tab_list.h"
 
 namespace fixedge::find {
@@ -1139,18 +1140,16 @@ inline void TypeIntoBar(const std::string& text) {
 // The text on the clipboard as UTF-8 (empty when it holds none).
 inline std::string ClipboardText() {
   std::string text;
-  if (!OpenClipboard(nullptr)) {
+  const handles::OpenedClipboard clipboard;
+  if (!clipboard.IsOpen()) {
     return text;
   }
-  HANDLE data = GetClipboardData(CF_UNICODETEXT);
-  const auto* wide =
-      static_cast<const wchar_t*>(data ? GlobalLock(data) : nullptr);
+  const handles::GlobalMemoryLock data{GetClipboardData(CF_UNICODETEXT)};
+  const auto* wide = static_cast<const wchar_t*>(data.Data());
   if (wide) {
     text = TextOf(edge::U16View{reinterpret_cast<const char16_t*>(wide),
                                 std::char_traits<wchar_t>::length(wide)});
-    GlobalUnlock(data);
   }
-  CloseClipboard();
   return text;
 }
 

@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <cstdarg>
 #include <cstdio>
+#include "handles.h"
 
 namespace fixedge {
 
@@ -43,16 +44,14 @@ inline void Log(const char* format, ...) {
     return;
   }
   wcscat_s(path, kLogFileUnderLocalAppData);
-  HANDLE file =
+  const handles::UniqueHandle file{
       CreateFileW(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                  nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-  const bool isFileOpen = file != INVALID_HANDLE_VALUE;
-  if (!isFileOpen) {
+                  nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr)};
+  if (!file) {
     return;
   }
   DWORD written = 0;
-  WriteFile(file, line, static_cast<DWORD>(length), &written, nullptr);
-  CloseHandle(file);
+  WriteFile(file.Get(), line, static_cast<DWORD>(length), &written, nullptr);
 }
 
 }  // namespace fixedge

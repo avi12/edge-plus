@@ -17,6 +17,7 @@
 #include <vector>
 #include "edge.h"
 #include "geom.h"
+#include "handles.h"
 #include "log.h"
 #include "tab_edge.h"
 #include "theme_tone.h"
@@ -91,12 +92,19 @@ inline HINSTANCE ThisModule() {
 // pass hits on, so the popup would take the pointer: Edge would see it leave
 // the tab and end the hover.
 inline HWND CreatePopup(HWND owner, const wchar_t* className, COLORREF color) {
+  handles::UniqueBrush brush{CreateSolidBrush(color)};
   WNDCLASSEXW windowClass{sizeof(windowClass)};
   windowClass.lpfnWndProc = DefWindowProcW;
   windowClass.hInstance = ThisModule();
-  windowClass.hbrBackground = CreateSolidBrush(color);
+  windowClass.hbrBackground = brush.Get();
   windowClass.lpszClassName = className;
-  RegisterClassExW(&windowClass);  // fails harmlessly if already registered
+  // A registered class owns its brush (UnregisterClass deletes it). Once the
+  // class exists, registering fails harmlessly and the brush stays ours to
+  // delete.
+  const bool isRegistered = RegisterClassExW(&windowClass) != 0;
+  if (isRegistered) {
+    brush.Release();
+  }
   HWND popup = CreateWindowExW(
       WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
       className, L"", WS_POPUP, 0, 0, 0, 0, owner, nullptr, ThisModule(),

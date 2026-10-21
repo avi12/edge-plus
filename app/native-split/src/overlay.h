@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include "geom.h"
+#include "handles.h"
 #include "motion.h"
 #include "theme_tone.h"
 
@@ -112,16 +113,17 @@ inline void Paint(const Rect& rect) {
   bitmapInfo.bmiHeader.biPlanes = 1;
   bitmapInfo.bmiHeader.biBitCount = kBitsPerPixel;
   void* bits = nullptr;
-  HDC screenContext = GetDC(nullptr);
-  HDC memoryContext = CreateCompatibleDC(screenContext);
-  HBITMAP bitmap = CreateDIBSection(screenContext, &bitmapInfo, DIB_RGB_COLORS,
-                                    &bits, nullptr, 0);
+  // Declared in the order they are made, so they are given back in reverse:
+  // the bitmap deselected, then deleted, then the two contexts.
+  const handles::WindowDc screenContext{nullptr};
+  const handles::UniqueMemoryDc memoryContext{
+      CreateCompatibleDC(screenContext.Get())};
+  const handles::UniqueBitmap bitmap{CreateDIBSection(
+      screenContext.Get(), &bitmapInfo, DIB_RGB_COLORS, &bits, nullptr, 0)};
   if (!bitmap) {
-    DeleteDC(memoryContext);
-    ReleaseDC(nullptr, screenContext);
     return;
   }
-  HGDIOBJ previousObject = SelectObject(memoryContext, bitmap);
+  const handles::SelectedObject selection{memoryContext.Get(), bitmap.Get()};
   auto* pixels = static_cast<uint32_t*>(bits);
   for (int row = 0; row < rect.height; row++) {
     for (int column = 0; column < rect.width; column++) {
@@ -143,12 +145,8 @@ inline void Paint(const Rect& rect) {
   POINT source{0, 0};
   SIZE size{rect.width, rect.height};
   BLENDFUNCTION blend{AC_SRC_OVER, 0, theme_tone::kChannelMax, AC_SRC_ALPHA};
-  UpdateLayeredWindow(g_window, screenContext, &destination, &size,
-                      memoryContext, &source, 0, &blend, ULW_ALPHA);
-  SelectObject(memoryContext, previousObject);
-  DeleteObject(bitmap);
-  DeleteDC(memoryContext);
-  ReleaseDC(nullptr, screenContext);
+  UpdateLayeredWindow(g_window, screenContext.Get(), &destination, &size,
+                      memoryContext.Get(), &source, 0, &blend, ULW_ALPHA);
 }
 
 inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
