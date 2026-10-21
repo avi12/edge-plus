@@ -24,7 +24,7 @@ inline constexpr int kBisectionSteps = 40;
 // at curve parameter `curveTime`.
 [[nodiscard]] inline constexpr double Bezier(double curveTime,
                                              double firstControl,
-                                             double secondControl) {
+                                             double secondControl) noexcept {
   const double remaining = 1.0 - curveTime;
   return 3 * remaining * remaining * curveTime * firstControl +
          3 * remaining * curveTime * curveTime * secondControl +
@@ -33,7 +33,7 @@ inline constexpr int kBisectionSteps = 40;
 
 // Progress (0..1 linear time) -> eased progress. Solves x(t) = progress by
 // bisection (monotonic for x control points in [0,1]), then returns y(t).
-[[nodiscard]] inline constexpr double Ease(double progress) {
+[[nodiscard]] inline constexpr double Ease(double progress) noexcept {
   if (progress <= 0.0) {
     return 0.0;
   }
@@ -56,20 +56,20 @@ inline constexpr int kBisectionSteps = 40;
 }
 
 [[nodiscard]] inline constexpr bool Same(const Rect& first,
-                                         const Rect& second) {
+                                         const Rect& second) noexcept {
   return first.x == second.x && first.y == second.y &&
          first.width == second.width && first.height == second.height;
 }
 // Empty lives in geom.h beside Rect; anim.h calls it as motion::Empty.
 using fixedge::Empty;
 
-[[nodiscard]] inline int Mix(int from, int to, double progress) {
+[[nodiscard]] inline int Mix(int from, int to, double progress) noexcept {
   return from + static_cast<int>(std::lround((to - from) * progress));
 }
 // Interpolate by eased progress `progress`. Edges (not sizes) are mixed, so
 // panes that tile at both ends stay seamless mid-flight.
 [[nodiscard]] inline Rect Lerp(const Rect& from, const Rect& to,
-                               double progress) {
+                               double progress) noexcept {
   const int left = Mix(from.x, to.x, progress);
   const int top = Mix(from.y, to.y, progress);
   const int right = Mix(from.x + from.width, to.x + to.width, progress);
@@ -83,7 +83,7 @@ using fixedge::Empty;
 // rect on the side it was carved from: an add-right grows out of the old pane's
 // right edge. With no such parent, it grows out of its own centre.
 [[nodiscard]] inline Rect EntryRect(const Rect& target,
-                                    std::span<const Rect> before) {
+                                    std::span<const Rect> before) noexcept {
   const Point centre{target.x + target.width / 2, target.y + target.height / 2};
   for (const Rect& parent : before) {
     const bool isParent = !Empty(parent) && Contains(parent, centre);

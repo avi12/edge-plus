@@ -16,7 +16,8 @@ inline constexpr theme_tone::Argb kStripeOnDark = 0xffff2bd6;
 inline constexpr theme_tone::Argb kStripeOnLight = 0xffc8008f;
 
 // A theme that says nothing of its tone gets the neon, as before there were two.
-[[nodiscard]] constexpr theme_tone::Argb StripeColorFor(theme_tone::Tone tone) {
+[[nodiscard]] constexpr theme_tone::Argb StripeColorFor(
+    theme_tone::Tone tone) noexcept {
   return tone == theme_tone::Tone::kLight ? kStripeOnLight : kStripeOnDark;
 }
 
@@ -26,7 +27,7 @@ enum class Side {
   kRight,
 };
 
-[[nodiscard]] constexpr Side LeadingSide(bool isRightToLeft) {
+[[nodiscard]] constexpr Side LeadingSide(bool isRightToLeft) noexcept {
   return isRightToLeft ? Side::kRight : Side::kLeft;
 }
 
@@ -41,7 +42,7 @@ struct Pieces {
 // A corner square is `cornerSize` tall and fills what the stripe leaves of
 // `cornerSize` across, so stripe and square together cover the curve.
 [[nodiscard]] constexpr Pieces PiecesFor(Rect tab, Side side, int stripeWidth,
-                                         int cornerSize) {
+                                         int cornerSize) noexcept {
   const int cornerWidth = cornerSize - stripeWidth;
   const bool isOnLeft = side == Side::kLeft;
   const int stripeX = isOnLeft ? tab.x : tab.x + tab.width - stripeWidth;

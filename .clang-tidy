@@ -75,6 +75,9 @@
 #     (and every struct member has a default initializer, the Edge ABI
 #     mirrors too: an initializer is not layout)
 #   the rule of five            -> cppcoreguidelines-special-member-functions
+#   noexcept moves, dtors, swap -> performance-noexcept-* (on, from
+#                                  performance-*); noexcept on the pure,
+#                                  non-allocating helpers is by hand
 #   starts_with / ends_with     -> modernize-use-starts-ends-with
 #   one declaration a statement -> readability-isolate-declaration
 #   empty(), not size() > 0     -> readability-container-size-empty

@@ -258,7 +258,7 @@ struct Answer {
 }
 
 [[nodiscard]] inline constexpr bool Contains(std::span<const int> numbers,
-                                             int number) {
+                                             int number) noexcept {
   for (const int candidate : numbers) {
     if (candidate == number) {
       return true;
@@ -267,7 +267,8 @@ struct Answer {
   return false;
 }
 
-[[nodiscard]] inline constexpr bool IsLabelPunctuation(char character) {
+[[nodiscard]] inline constexpr bool IsLabelPunctuation(
+    char character) noexcept {
   return std::string_view("[]().,;:-* \t").find(character) !=
          std::string_view::npos;
 }

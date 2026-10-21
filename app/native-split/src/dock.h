@@ -58,7 +58,7 @@ struct Plan {
 
 [[nodiscard]] inline constexpr int DistanceToEdge(const Rect& rect,
                                                   const Point& point,
-                                                  Direction edge) {
+                                                  Direction edge) noexcept {
   switch (edge) {
     case Direction::kLeft:
       return point.x - rect.x;
@@ -73,7 +73,7 @@ struct Plan {
 
 // The outer band's depth for edge `edge` of `layout`.
 [[nodiscard]] inline constexpr int RootBand(const Rect& layout,
-                                            Direction edge) {
+                                            Direction edge) noexcept {
   const bool isVerticalEdge =
       edge == Direction::kLeft || edge == Direction::kRight;
   const int extent = isVerticalEdge ? layout.width : layout.height;
@@ -86,7 +86,7 @@ struct Plan {
 // the hold band of edge `edge`, so a zone already showing does not flip at the
 // diagonal.
 [[nodiscard]] inline constexpr bool HoldsEdge(Direction edge, float paneX,
-                                              float paneY) {
+                                              float paneY) noexcept {
   switch (edge) {
     case Direction::kLeft:
       return paneX < kEdgeHold;
@@ -101,7 +101,7 @@ struct Plan {
 
 // The nearest edge by the pane's diagonals (FlexLayout): no dead corners.
 [[nodiscard]] inline constexpr Direction DiagonalEdge(float paneX,
-                                                      float paneY) {
+                                                      float paneY) noexcept {
   const bool isBelowMainDiagonal = paneY >= paneX;        // the "\" diagonal
   const bool isBelowAntiDiagonal = paneY >= 1.f - paneX;  // the "/" diagonal
   if (isBelowMainDiagonal) {

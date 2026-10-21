@@ -57,7 +57,7 @@ struct SpanShare {
 
 // The length an unpinned pane of `weight` gets: its ratio of the free span.
 [[nodiscard]] inline constexpr float FreeLength(const SpanShare& share,
-                                                float weight) {
+                                                float weight) noexcept {
   return static_cast<float>(share.freeSpan) * (weight / share.freeWeight);
 }
 
@@ -198,12 +198,12 @@ enum class Direction : uint8_t {
   kRight
 };
 
-[[nodiscard]] inline constexpr Axis AxisOf(Direction direction) {
+[[nodiscard]] inline constexpr Axis AxisOf(Direction direction) noexcept {
   const bool isVertical =
       direction == Direction::kUp || direction == Direction::kDown;
   return isVertical ? Axis::kVertical : Axis::kHorizontal;
 }
-[[nodiscard]] inline constexpr bool IsBefore(Direction direction) {
+[[nodiscard]] inline constexpr bool IsBefore(Direction direction) noexcept {
   return direction == Direction::kUp || direction == Direction::kLeft;
 }
 
@@ -217,18 +217,17 @@ enum class Direction : uint8_t {
 // tolerance only absorbs layout rounding.
 inline constexpr int kFocusEdgeTolerance = 1;
 
-[[nodiscard]] inline constexpr int RectRight(const Rect& rect) {
+[[nodiscard]] inline constexpr int RectRight(const Rect& rect) noexcept {
   return rect.x + rect.width;
 }
-[[nodiscard]] inline constexpr int RectBottom(const Rect& rect) {
+[[nodiscard]] inline constexpr int RectBottom(const Rect& rect) noexcept {
   return rect.y + rect.height;
 }
 
 // How far `candidate` lies past `from` in `direction`; negative when it does
 // not lie that way.
-[[nodiscard]] inline constexpr int DirectionalGap(const Rect& from,
-                                                  const Rect& candidate,
-                                                  Direction direction) {
+[[nodiscard]] inline constexpr int DirectionalGap(
+    const Rect& from, const Rect& candidate, Direction direction) noexcept {
   switch (direction) {
     case Direction::kLeft:
       return from.x - RectRight(candidate);
@@ -243,9 +242,8 @@ inline constexpr int kFocusEdgeTolerance = 1;
 
 // How much of the two panes' shared side faces each other (their overlap on the
 // cross axis); <= 0 when they do not face at all.
-[[nodiscard]] inline constexpr int DirectionalOverlap(const Rect& from,
-                                                      const Rect& candidate,
-                                                      Direction direction) {
+[[nodiscard]] inline constexpr int DirectionalOverlap(
+    const Rect& from, const Rect& candidate, Direction direction) noexcept {
   const bool isHorizontal =
       direction == Direction::kLeft || direction == Direction::kRight;
   if (isHorizontal) {

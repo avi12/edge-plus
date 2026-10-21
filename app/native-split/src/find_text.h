@@ -59,7 +59,8 @@ struct Query {
 }
 
 // Whether `flags` are RegExp flags we take, each at most once.
-[[nodiscard]] inline constexpr bool AreRegExpFlags(std::string_view flags) {
+[[nodiscard]] inline constexpr bool AreRegExpFlags(
+    std::string_view flags) noexcept {
   for (size_t i = 0; i < flags.size(); i++) {
     const bool isKnown =
         std::string_view(kRegExpFlags).find(flags[i]) != std::string_view::npos;
@@ -226,7 +227,8 @@ enum class PatternProblem {
   kNestedRepeat,    // a repeated group that repeats inside: can hang the page
 };
 
-[[nodiscard]] inline constexpr const char* ProblemText(PatternProblem problem) {
+[[nodiscard]] inline constexpr const char* ProblemText(
+    PatternProblem problem) noexcept {
   switch (problem) {
     case PatternProblem::kNone:
     case PatternProblem::kEmpty:
@@ -243,11 +245,11 @@ enum class PatternProblem {
   return "";
 }
 
-[[nodiscard]] inline constexpr bool IsRepeatChar(char character) {
+[[nodiscard]] inline constexpr bool IsRepeatChar(char character) noexcept {
   return character == '*' || character == '+';
 }
 
-[[nodiscard]] inline constexpr bool StartsRepeat(char character) {
+[[nodiscard]] inline constexpr bool StartsRepeat(char character) noexcept {
   return character == '*' || character == '+' || character == '{';
 }
 
@@ -351,7 +353,7 @@ inline constexpr int kNoMatch = -1;
 // The match to go to from `current` (kNoMatch before the first step) among
 // `count`, wrapping at both ends.
 [[nodiscard]] inline constexpr int StepMatch(int current, int count,
-                                             Step step) {
+                                             Step step) noexcept {
   if (count <= 0) {
     return kNoMatch;
   }
@@ -379,7 +381,7 @@ struct SearchResult {
 // The most digits read as a count: any more could overflow an int.
 inline constexpr size_t kMaxCountDigits = 9;
 
-[[nodiscard]] inline constexpr bool IsDigits(std::string_view text) {
+[[nodiscard]] inline constexpr bool IsDigits(std::string_view text) noexcept {
   if (text.empty() || text.size() > kMaxCountDigits) {
     return false;
   }

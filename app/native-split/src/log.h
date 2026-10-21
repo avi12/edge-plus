@@ -16,7 +16,7 @@ inline constexpr int kLogMessageCapacity =
 inline constexpr wchar_t kLogFileUnderLocalAppData[] =
     L"\\FixEdge\\split-native.log";
 
-inline void Log(const char* format, ...) {
+inline void Log(const char* format, ...) noexcept {
   char line[kLogLineCapacity];
   va_list arguments{};
   va_start(arguments, format);

@@ -29,15 +29,15 @@ struct VectorIcon {
 
 using PathElement = uint32_t;
 
-inline constexpr PathElement CommandElement(int command) {
+inline constexpr PathElement CommandElement(int command) noexcept {
   return static_cast<PathElement>(command);
 }
-inline PathElement ArgumentElement(float value) {
+inline PathElement ArgumentElement(float value) noexcept {
   PathElement element = 0;
   memcpy(&element, &value, sizeof(element));
   return element;
 }
-inline float ArgumentOf(PathElement element) {
+inline float ArgumentOf(PathElement element) noexcept {
   float value = 0.f;
   memcpy(&value, &element, sizeof(value));
   return value;
@@ -107,7 +107,7 @@ inline const VectorIcon* Grip() {
 
 // How many arguments a path command takes, for the commands Edge's arrow icon
 // uses; -1 for any other, which the quarter turn refuses.
-inline constexpr int ArgumentCount(int command) {
+inline constexpr int ArgumentCount(int command) noexcept {
   switch (command) {
     case edge155::off::ICON_NEW_PATH:
     case edge155::off::ICON_CLOSE:
