@@ -19,13 +19,15 @@ namespace fixedge::icons {
 // or float argument.
 struct IconRepresentation {
   const void* path = nullptr;
-  size_t pathSize = 0;
+  uint64_t pathSize = 0;
 };
 struct VectorIcon {
   const IconRepresentation* representations = nullptr;
-  size_t representationCount = 0;
+  uint64_t representationCount = 0;
   const char* name = nullptr;
 };
+static_assert(sizeof(IconRepresentation) == 16 && sizeof(VectorIcon) == 24,
+              "gfx::VectorIconRep and gfx::VectorIcon as Edge lays them out");
 
 using PathElement = uint32_t;
 

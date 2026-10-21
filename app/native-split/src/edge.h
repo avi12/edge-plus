@@ -194,15 +194,17 @@ inline void CreateRandomToken(void* outToken) {
 // The split primitives' index argument: {int* data; size_t size; size_t cap}
 // (NOT libc++ vector) — confirmed from the caller storing rodata {1,1} at +8.
 struct SplitIndexVec {
-  int* data = nullptr;
-  size_t size = 0;
-  size_t capacity = 0;
+  int32_t* data = nullptr;
+  uint64_t size = 0;
+  uint64_t capacity = 0;
 };
+static_assert(sizeof(SplitIndexVec) == 24,
+              "the split primitives read 24 bytes");
 
 // Build a SplitIndexVec of `indices` (tab indices) in an Edge-allocated buffer.
-inline SplitIndexVec MakeIndexVec(std::span<const int> indices) {
+inline SplitIndexVec MakeIndexVec(std::span<const int32_t> indices) {
   const size_t count = indices.size();
-  int* buffer = static_cast<int*>(EdgeNew(count * sizeof(int)));
+  auto* buffer = static_cast<int32_t*>(EdgeNew(count * sizeof(int32_t)));
   for (size_t i = 0; i < count; i++) {
     buffer[i] = indices[i];
   }
@@ -362,11 +364,13 @@ inline void* TabWebContentsAt(void* tabStripModel, int index) {
 // --- menu label plumbing (build a real libc++ std::u16string) ----------------
 struct U8View {
   const char* data = nullptr;
-  size_t len = 0;
+  uint64_t len = 0;
 };
+static_assert(sizeof(U8View) == 16, "a std::string_view is {data, size}");
 struct U16String {  // opaque 24-byte libc++ std::u16string storage
   uint64_t _[3] = {};
 };
+static_assert(sizeof(U16String) == 24, "a libc++ std::u16string is 24 bytes");
 // base::UTF8ToUTF16(out /*rcx*/, string_view{ptr,len} /*rdx*/) -> fills `out`.
 inline void Utf8ToUtf16(U16String* out, const U8View* view) {
   using Fn = void*(__fastcall*)(void*, const void*);
@@ -483,7 +487,7 @@ inline void* McvContainerAt(void* mcv, int index) {
   return McvContainers(mcv)[index];
 }
 inline size_t McvCount(void* mcv) {
-  return Field<size_t>(mcv, edge155::off::MCV_containers_count);
+  return Field<uint64_t>(mcv, edge155::off::MCV_containers_count);
 }
 inline void* McvBrowserView(void* mcv) {
   return Field<void*>(mcv, edge155::off::MCV_browser_view);
@@ -492,7 +496,7 @@ inline uint32_t McvOrientation(void* mcv) {
   return Field<uint32_t>(mcv, edge155::off::MCV_orientation);
 }
 inline size_t ViewChildCount(void* view) {
-  return Field<size_t>(view, edge155::off::VIEW_child_count);
+  return Field<uint64_t>(view, edge155::off::VIEW_child_count);
 }
 // Child `index` (< ViewChildCount) of `view`.
 inline void* ViewChildAt(void* view, size_t index) {
@@ -678,7 +682,7 @@ inline bool IsDraggingTabs(void* controller) {
          edge155::off::TABDRAG_state_dragging_tabs;
 }
 inline size_t DraggedTabCount(void* controller) {
-  return Field<size_t>(controller, edge155::off::TABDRAG_drag_data_count);
+  return Field<uint64_t>(controller, edge155::off::TABDRAG_drag_data_count);
 }
 // The WebContents of dragged tab `i` (< DraggedTabCount).
 inline void* DraggedContents(void* controller, size_t i) {
@@ -706,7 +710,7 @@ inline void* DragContextTabFor(void* context, void* webContents) {
 // --- the tab list's layout (TabStripLayoutHelper) ------------------------------
 
 inline size_t TabLayoutSlotCount(void* helper) {
-  return Field<size_t>(helper, edge155::off::TABLAYOUT_slot_count);
+  return Field<uint64_t>(helper, edge155::off::TABLAYOUT_slot_count);
 }
 // The tab view in slot `index`, or null for a slot that holds no tab.
 inline void* TabLayoutSlotTab(void* helper, size_t index) {
@@ -735,7 +739,7 @@ inline Rect* IdealBoundsRects(void* result) {
   return Field<Rect*>(result, edge155::off::IDEALBOUNDS_data);
 }
 inline size_t IdealBoundsCount(void* result) {
-  return Field<size_t>(result, edge155::off::IDEALBOUNDS_count);
+  return Field<uint64_t>(result, edge155::off::IDEALBOUNDS_count);
 }
 
 // Where a mouse event happened, in the window's DIPs (its root location).
@@ -860,7 +864,7 @@ inline Rect* ProposedChildBounds(void* proposedLayout, const void* child) {
   auto* entries =
       Field<uint8_t*>(proposedLayout, edge155::off::PL_child_layouts);
   const auto count =
-      Field<size_t>(proposedLayout, edge155::off::PL_child_count);
+      Field<uint64_t>(proposedLayout, edge155::off::PL_child_count);
   for (size_t i = 0; i < count; i++) {
     uint8_t* entry = entries + i * edge155::off::CL_stride;
     const bool isChildEntry =
@@ -1335,9 +1339,10 @@ inline void RestoreRphDoneSlot() {
 
 // A permission prompt's decision, as PermissionDecided reads it.
 struct PermissionDecision {
-  bool hasValue =
-      false;      // false when the prompt was dismissed without a choice
-  int value = 0;  // 0 = Allow; anything else Edge treats as Block
+  // False when the prompt was dismissed without a choice.
+  bool hasValue = false;
+  // 0 = Allow; anything else Edge treats as Block.
+  int32_t value = 0;
 };
 
 inline PermissionDecision ReadPermissionDecision(const void* decision) {
@@ -1363,7 +1368,7 @@ inline void* ProtocolHandlerRegistryFor(void* profile) {
 
 // How many handlers the registry's live ignored list holds.
 inline size_t IgnoredHandlerCount(void* registry) {
-  return Field<size_t>(registry, edge155::off::RPH_REGISTRY_ignored_size);
+  return Field<uint64_t>(registry, edge155::off::RPH_REGISTRY_ignored_size);
 }
 
 // Copy-construct the registry's ignored handler `index` into `storage`, so it
@@ -1399,8 +1404,9 @@ inline void RemoveIgnoredHandler(void* registry,
 // A read-only view of a libc++ std::u16string's characters.
 struct U16View {
   const char16_t* data = nullptr;
-  size_t length = 0;
+  uint64_t length = 0;
 };
+static_assert(sizeof(U16View) == 16, "a std::u16string_view is {data, size}");
 inline U16View U16StringView(const void* string) {
   const auto* bytes = static_cast<const uint8_t*>(string);
   const bool isLong = (bytes[edge155::off::U16STRING_short_size] &
@@ -1497,6 +1503,7 @@ struct StdStringView {
   uint64_t size = 0;
   uint64_t capacityAndFlag = 0;
 };
+static_assert(sizeof(StdStringView) == 24, "a libc++ std::string is 24 bytes");
 
 inline StdStringView MakeStdStringView(const std::string& text) {
   constexpr uint64_t kLongFlag = uint64_t{1} << 63;
@@ -1522,7 +1529,7 @@ inline void SendPromptToSidePanel(void* browser, const std::string& text,
 inline std::vector<void*> AllWebContents() {
   struct Listing {
     void** data = nullptr;
-    size_t count = 0;
+    uint64_t count = 0;
     void* unused = nullptr;
   } all{};
   using Fn = void*(__fastcall*)(Listing*);
@@ -1746,8 +1753,8 @@ inline void* NewLabelLike(void* model) {
   constexpr int kDirectionalityFromText = 0;
   using Fn = void*(__fastcall*)(void*, const U16View*, int, int, int);
   reinterpret_cast<Fn>(At(edge155::rva::Label_ctor))(
-      label, &empty, Field<int>(model, edge155::off::LABEL_text_context),
-      Field<int>(model, edge155::off::LABEL_text_style),
+      label, &empty, Field<int32_t>(model, edge155::off::LABEL_text_context),
+      Field<int32_t>(model, edge155::off::LABEL_text_style),
       kDirectionalityFromText);
   return label;
 }
@@ -1836,8 +1843,8 @@ inline void FindBarShowResult(void* findBarView, int matches, int ordinal,
   // A read-only std::u16string in its long form {data, size, capacity|flag}.
   struct LongU16String {
     const char16_t* data = nullptr;
-    size_t size = 0;
-    size_t capacityAndFlag = 0;
+    uint64_t size = 0;
+    uint64_t capacityAndFlag = 0;
   };
   const LongU16String text{
       findText.data, findText.length,
@@ -1899,7 +1906,7 @@ inline void* FindToggle(void* findBarView, int toggleId) {
   auto* node =
       Field<uint8_t*>(optionsView, edge155::off::FINDOPTIONS_toggle_map_root);
   while (node) {
-    const int key = Field<int>(node, edge155::off::MAPNODE_key);
+    const int key = Field<int32_t>(node, edge155::off::MAPNODE_key);
     if (toggleId == key) {
       return Field<void*>(node, edge155::off::MAPNODE_value);
     }
@@ -1916,7 +1923,7 @@ inline void* FindBarViewOfToggle(void* toggle) {
 }
 
 inline int FindToggleId(void* toggle) {
-  return Field<int>(toggle, edge155::off::FINDTOGGLE_id);
+  return Field<int32_t>(toggle, edge155::off::FINDTOGGLE_id);
 }
 
 inline bool FindToggleIsOn(void* toggle) {
@@ -1980,7 +1987,7 @@ inline void* AddFindToggle(void* findBarView, int toggleId) {
   reinterpret_cast<Fn>(
       At(edge155::rva::FindOptionsControlView_AddFindInPageOptionChildView))(
       optionsView, toggleId,
-      Field<int>(sibling, edge155::off::FINDTOGGLE_width),
+      Field<int32_t>(sibling, edge155::off::FINDTOGGLE_width),
       Field<void*>(findBarView, edge155::off::FINDBARVIEW_host));
   return FindToggle(findBarView, toggleId);
 }
