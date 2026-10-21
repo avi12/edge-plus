@@ -16,6 +16,7 @@
 #include "edge.h"
 #include "geometry.h"
 #include "overlay.h"
+#include "spine.h"
 #include "split_ops.h"
 #include "state.h"
 
@@ -50,6 +51,23 @@ struct LastMove {
   Point screenPoint{};
 };
 inline constinit LastMove g_lastMove;
+
+// The view of the tab being dragged in `tsm`'s strip, which follows the
+// pointer, or null when no single-tab drag runs in that strip.
+inline void* DraggedTabViewIn(void* tsm) {
+  void* controller = g_lastMove.controller;
+  const bool isDraggingTabs = controller && edge::IsDraggingTabs(controller) &&
+                              edge::DraggedTabCount(controller) > 0;
+  if (!isDraggingTabs) {
+    return nullptr;
+  }
+  void* context = edge::DragContext(controller);
+  const bool isInStrip =
+      context && edge::DragContextTabStripModel(context) == tsm;
+  return isInStrip ? edge::DragContextTabFor(
+                         context, edge::DraggedContents(controller, 0))
+                   : nullptr;
+}
 
 inline bool IsAltHeld() {
   return GetKeyState(VK_MENU) < 0;
@@ -154,6 +172,16 @@ inline void Cancel() {
   g_drop.reset();
 }
 
+// The spine's own timer is too slow for a fast drag, so each pointer move
+// re-places it on the dragged tab as soon as Edge has moved the tab.
+inline void FollowSpine() {
+  void* tsm =
+      spine::g_isActive ? edge::TsmForWindow(channel::g_window) : nullptr;
+  if (tsm) {
+    spine::TickWindow(channel::g_window, DraggedTabViewIn(tsm));
+  }
+}
+
 // --- the detours -------------------------------------------------------------
 
 // TabDragController::ContinueDragging: in Alt mode we take the move (Edge's
@@ -170,7 +198,9 @@ inline int __fastcall h_continue_dragging(void* controller,
     if (g_session.isAltMode) {
       LeaveAltMode();
     }
-    return o_continue_dragging(controller, screenPoint);
+    const int result = o_continue_dragging(controller, screenPoint);
+    FollowSpine();
+    return result;
   }
   if (!g_session.isAltMode) {
     g_session = Session{};

@@ -214,13 +214,16 @@ inline void BeginTick() {
 
 // One browser window's step of a tick: square its selected vertical tab's
 // leading edge and put the stripe on it, or hide them.
-inline void TickWindow(HWND browser) {
+// While a tab of this window is dragged, `draggedTab` is its view, and the
+// spine rides it instead of the selected tab's row, which stays in the list.
+inline void TickWindow(HWND browser, void* draggedTab) {
   void* tsm = edge::TsmForWindow(browser);
   const bool isWindowShown = IsWindowVisible(browser) && !IsIconic(browser);
   void* anyView = edge::McvForWindow(browser);
-  void* tab = tsm && anyView && isWindowShown
-                  ? vtab_views::SelectedTab(tsm, anyView)
-                  : nullptr;
+  void* selectedTab = tsm && anyView && isWindowShown
+                          ? vtab_views::SelectedTab(tsm, anyView)
+                          : nullptr;
+  void* tab = draggedTab && selectedTab ? draggedTab : selectedTab;
   const float scale =
       static_cast<float>(GetDpiForWindow(browser)) / USER_DEFAULT_SCREEN_DPI;
   RECT windowRect{};
