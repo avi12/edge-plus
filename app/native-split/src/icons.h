@@ -18,13 +18,13 @@ namespace fixedge::icons {
 // each VectorIconRep {path, path_size}, each path element a 4-byte command id
 // or float argument.
 struct IconRepresentation {
-  const void* path;
-  size_t pathSize;
+  const void* path = nullptr;
+  size_t pathSize = 0;
 };
 struct VectorIcon {
-  const IconRepresentation* representations;
-  size_t representationCount;
-  const char* name;
+  const IconRepresentation* representations = nullptr;
+  size_t representationCount = 0;
+  const char* name = nullptr;
 };
 
 using PathElement = uint32_t;

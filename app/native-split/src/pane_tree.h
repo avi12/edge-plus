@@ -33,7 +33,7 @@ struct Node {
 };
 
 struct LeafRect {
-  int leaf;
+  int leaf = kNoLeaf;
   Rect rect;
 };
 
@@ -131,7 +131,7 @@ inline std::vector<Rect> ChildRects(const Node& node, const Rect& bounds,
   int cursor = isHorizontal ? bounds.x : bounds.y;
   int used = 0;
   for (int i = 0; i < childCount; i++) {
-    int length;
+    int length = 0;
     const bool isLastChild = i == childCount - 1;
     if (isLastChild) {
       length = span - used;  // the last absorbs rounding so panes tile exactly
@@ -467,7 +467,7 @@ inline bool InsertBeside(Node& root, int target, Direction direction,
   const bool isParentAlongAxis = parent.axis == axis;
   if (isParentAlongAxis) {
     const size_t insertAt = isInsertedBefore ? slot.index : slot.index + 1;
-    float newWeight;
+    float newWeight = 0.f;
     const bool isEqualRow = AllEqual(parent.weights);
     if (isEqualRow) {
       newWeight = Mean(parent.weights);

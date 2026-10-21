@@ -63,13 +63,21 @@
 #                                  modernize-make-unique
 #     (Win32 handles have owners in handles.h for the same reason; no check
 #     can see a CloseHandle a path forgot, so that one stays a review concern.)
+#   nothing left uninitialised  -> cppcoreguidelines-init-variables,
+#                                  cppcoreguidelines-pro-type-member-init
+#     (and every struct member has a default initializer, the Edge ABI
+#     mirrors too: an initializer is not layout)
+#   the rule of five            -> cppcoreguidelines-special-member-functions
 #   no silent narrowing         -> bugprone-narrowing-conversions (on, from
 #                                  bugprone-*: an int that becomes a float, or
 #                                  an unsigned that becomes signed, is cast)
 Checks: >
   -*,
+  cppcoreguidelines-init-variables,
   cppcoreguidelines-no-malloc,
   cppcoreguidelines-owning-memory,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-special-member-functions,
   modernize-make-unique,
   cppcoreguidelines-pro-type-cstyle-cast,
   cppcoreguidelines-prefer-member-initializer,

@@ -37,9 +37,9 @@ enum class Flag {
 };
 
 struct FlagInfo {
-  Flag flag;
-  char letter;        // the JavaScript flag
-  const char* title;  // the switch's words in the bar, without the letter
+  Flag flag = Flag::kIndices;
+  char letter = '\0';      // the JavaScript flag
+  const char* title = "";  // the switch's words in the bar, without the letter
 };
 
 inline constexpr std::array<FlagInfo, 7> kFlags = {{

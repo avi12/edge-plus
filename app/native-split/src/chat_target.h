@@ -12,13 +12,13 @@ namespace fixedge::chat_target {
 // that stops one being written, and a dialog that needs the person (a security
 // check, a consent page). Each is a CSS selector list.
 struct Target {
-  const char* name;  // the assistant's name, as the UI says it
-  const char* answerSelectors;
-  const char* stopSelectors;
-  const char* dialogSelectors;
+  const char* name = "";  // the assistant's name, as the UI says it
+  const char* answerSelectors = "";
+  const char* stopSelectors = "";
+  const char* dialogSelectors = "";
   // The words of the first-use notice that covers the composer until the person
   // accepts it (we never accept it for them).
-  const char* noticeText;
+  const char* noticeText = "";
 };
 
 // What was verified is in docs/re/find-bar.md.

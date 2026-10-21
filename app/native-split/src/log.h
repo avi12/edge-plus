@@ -18,7 +18,7 @@ inline constexpr wchar_t kLogFileUnderLocalAppData[] =
 
 inline void Log(const char* format, ...) {
   char line[kLogLineCapacity];
-  va_list arguments;
+  va_list arguments{};
   va_start(arguments, format);
   int length = vsnprintf(line, kLogMessageCapacity, format, arguments);
   va_end(arguments);

@@ -64,9 +64,9 @@ enum class HotKey : WPARAM {
 };
 
 struct HotKeyBinding {
-  HotKey hotKey;
-  UINT modifiers;
-  UINT key;
+  HotKey hotKey = HotKey::kAddPane;
+  UINT modifiers = 0;
+  UINT key = 0;
 };
 
 // Ctrl+Shift+Alt + a key reshapes the split (add / swap / collapse); Shift+Alt +

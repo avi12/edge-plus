@@ -186,9 +186,9 @@ inline void CreateRandomToken(void* outToken) {
 // The split primitives' index argument: {int* data; size_t size; size_t cap}
 // (NOT libc++ vector) — confirmed from the caller storing rodata {1,1} at +8.
 struct SplitIndexVec {
-  int* data;
-  size_t size;
-  size_t capacity;
+  int* data = nullptr;
+  size_t size = 0;
+  size_t capacity = 0;
 };
 
 // Build a SplitIndexVec of `count` tab indices in an Edge-allocated buffer.
@@ -352,11 +352,11 @@ inline void* TabWebContentsAt(void* tabStripModel, int index) {
 
 // --- menu label plumbing (build a real libc++ std::u16string) ----------------
 struct U8View {
-  const char* data;
-  size_t len;
+  const char* data = nullptr;
+  size_t len = 0;
 };
 struct U16String {  // opaque 24-byte libc++ std::u16string storage
-  uint64_t _[3];
+  uint64_t _[3] = {};
 };
 // base::UTF8ToUTF16(out /*rcx*/, string_view{ptr,len} /*rdx*/) -> fills `out`.
 inline void Utf8ToUtf16(U16String* out, const U8View* view) {
@@ -866,7 +866,7 @@ inline Rect* ProposedChildBounds(void* proposedLayout, const void* child) {
 inline void SetViewPreferredSize(void* view, const Size& size) {
   struct OptionalSize {  // std::optional<gfx::Size>
     Size size;
-    bool hasValue;
+    bool hasValue = false;
   };
   const OptionalSize preferred{size, true};
   using PreferredFn = void(__fastcall*)(void*, const OptionalSize*);
@@ -991,6 +991,8 @@ struct SplitMembers {
   }
   SplitMembers(const SplitMembers&) = delete;
   SplitMembers& operator=(const SplitMembers&) = delete;
+  SplitMembers(SplitMembers&&) = delete;
+  SplitMembers& operator=(SplitMembers&&) = delete;
 
   int Count() const {
     return list.data ? static_cast<int>(list.size) : 0;
@@ -1324,8 +1326,9 @@ inline void RestoreRphDoneSlot() {
 
 // A permission prompt's decision, as PermissionDecided reads it.
 struct PermissionDecision {
-  bool hasValue;  // false when the prompt was dismissed without a choice
-  int value;      // 0 = Allow; anything else Edge treats as Block
+  bool hasValue =
+      false;      // false when the prompt was dismissed without a choice
+  int value = 0;  // 0 = Allow; anything else Edge treats as Block
 };
 
 inline PermissionDecision ReadPermissionDecision(const void* decision) {
@@ -1338,7 +1341,7 @@ inline PermissionDecision ReadPermissionDecision(const void* decision) {
 // are ours, the strings and GURL inside are built and freed by Edge's own copy
 // constructor and destructor.
 struct alignas(16) ProtocolHandlerStorage {
-  uint8_t bytes[edge155::off::PROTOCOL_HANDLER_size];
+  uint8_t bytes[edge155::off::PROTOCOL_HANDLER_size] = {};
 };
 
 // The profile's ProtocolHandlerRegistry (created if it does not exist yet).
@@ -1386,8 +1389,8 @@ inline void RemoveIgnoredHandler(void* registry,
 
 // A read-only view of a libc++ std::u16string's characters.
 struct U16View {
-  const char16_t* data;
-  size_t length;
+  const char16_t* data = nullptr;
+  size_t length = 0;
 };
 inline U16View U16StringView(const void* string) {
   auto* bytes = static_cast<const uint8_t*>(string);
@@ -1481,9 +1484,9 @@ inline bool IsCopilotDropdownButton(void* view) {
 // bit set), over characters that outlive the call: enough for a callee that only
 // reads or copies it.
 struct StdStringView {
-  const char* data;
-  uint64_t size;
-  uint64_t capacityAndFlag;
+  const char* data = nullptr;
+  uint64_t size = 0;
+  uint64_t capacityAndFlag = 0;
 };
 
 inline StdStringView MakeStdStringView(const std::string& text) {
@@ -1509,9 +1512,9 @@ inline void SendPromptToSidePanel(void* browser, const std::string& text,
 // Every WebContents of the browser process (tabs, side panels, hidden pages).
 inline std::vector<void*> AllWebContents() {
   struct Listing {
-    void** data;
-    size_t count;
-    void* unused;
+    void** data = nullptr;
+    size_t count = 0;
+    void* unused = nullptr;
   } all{};
   using Fn = void*(__fastcall*)(Listing*);
   reinterpret_cast<Fn>(At(edge155::rva::WebContentsImpl_GetAllWebContents))(
@@ -1603,7 +1606,7 @@ using ScriptDone = std::function<void(const ScriptResult&)>;
 // std::function to run. Edge destroys it exactly once, run or not.
 struct ScriptCallbackState {
   alignas(8) uint8_t
-      bindStateBase[edge155::off::BINDSTATE_first_bound_argument];
+      bindStateBase[edge155::off::BINDSTATE_first_bound_argument] = {};
   ScriptDone done;
 };
 // Callbacks Edge still holds. DLL unload waits for this to reach zero: a reply
@@ -1696,8 +1699,8 @@ inline bool RunScript(void* webContents, const std::string& utf8Script,
 // Every frame of a page (the main frame first, then its iframes).
 inline std::vector<void*> FramesOf(void* webContents) {
   struct FunctionRef {
-    void* object;
-    void* invoker;
+    void* object = nullptr;
+    void* invoker = nullptr;
   };
   std::vector<void*> frames;
   const FunctionRef collector{
@@ -1823,9 +1826,9 @@ inline void FindBarShowResult(void* findBarView, int matches, int ordinal,
   details[edge155::off::FINDDETAILS_is_final] = 1;
   // A read-only std::u16string in its long form {data, size, capacity|flag}.
   struct LongU16String {
-    const char16_t* data;
-    size_t size;
-    size_t capacityAndFlag;
+    const char16_t* data = nullptr;
+    size_t size = 0;
+    size_t capacityAndFlag = 0;
   };
   const LongU16String text{
       findText.data, findText.length,

@@ -36,9 +36,9 @@ inline constexpr int kAddPaneRowCommand = 0x10f1e;
 // Each directional add, in menu (and arrow) order: its toolbar command, the
 // direction and its label.
 struct MenuItem {
-  MenuCommand command;
-  Direction direction;
-  const char* label;
+  MenuCommand command = MenuCommand::kAddUp;
+  Direction direction = Direction::kUp;
+  const char* label = "";
 };
 inline constexpr MenuItem kMenuItems[] = {
     {MenuCommand::kAddUp, Direction::kUp, "Add pane above"},
