@@ -238,6 +238,10 @@ inline void Teardown(HWND hwnd) {
   EnumWindows(BreakUpWindowSplits, 0);
   // On this thread, so no config apply can switch it back on behind us.
   protocol_handlers::Remove();
+  if (reading_mode::g_isActive) {
+    reading_mode::g_isActive = false;
+    reading_mode::Stop(hwnd);
+  }
   find::Apply(false);
   const bool wasFollowingTheme = theme_follow::g_isActive;
   theme_follow::g_isActive = false;
@@ -399,9 +403,13 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
     RefreshThemeColors();
   }
   live_preview::ApplyConfig(wire);
-  const bool isReadingThemeDue = reading_mode::ApplyConfig(wire);
-  if (isReadingThemeDue) {
+  const bool wasReadingActive = reading_mode::g_isActive;
+  const bool isReadingTurningOn = reading_mode::ApplyConfig(wire);
+  if (isReadingTurningOn) {
     EnumWindows(ApplyWindowReadingTheme, 0);
+    reading_mode::StartPolling(hwnd);
+  } else if (wasReadingActive && !reading_mode::g_isActive) {
+    reading_mode::Stop(hwnd);
   }
   const bool isTurningHandlersOn = protocol_handlers::ApplyConfig(wire);
   if (isTurningHandlersOn) {
@@ -590,6 +598,13 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   const bool isFindPoll = message == WM_TIMER && wparam == find::kTimerId;
   if (isFindPoll) {
     find::Tick();
+    return 0;
+  }
+  const bool isReadingPoll =
+      message == WM_TIMER &&
+      wparam == channel::TimerIdOf(channel::WindowTimer::kReadingPoll);
+  if (isReadingPoll) {
+    reading_mode::Poll();
     return 0;
   }
   const bool isRenderNudge = message == WM_TIMER && wparam == repaint::kTimerId;

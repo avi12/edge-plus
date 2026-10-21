@@ -10,6 +10,7 @@
 #include <windows.h>
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include "handles.h"
 
 namespace fixedge::config {
@@ -39,15 +40,16 @@ struct Wire {
   uint32_t tabSpineActive;  // 1 = the selected tab gets a square leading edge
                             // and the neon spine (with theming on)
   uint32_t readingThemeActive;  // 1 = reading mode follows Windows light/dark
-  uint32_t readingThemeLight;   // reading_themes::ReadingTheme for light
-  uint32_t readingThemeDark;    // reading_themes::ReadingTheme for dark
+                                // (the two themes are chosen in reading mode
+                                // itself and kept by reading_mode.h)
 };
 // protocol.rs writes exactly WIRE_SIZE bytes and LoadFromFile wants all of
 // them, so the struct must stay packed: five u32 fields, the two ids, then the
-// reserved field, the find, WebUI, live-preview and tab-spine switches, and the
-// reading-theme switch and its two themes (u32s).
+// reserved field, the find, WebUI, live-preview, tab-spine and reading-theme
+// switches (u32s). A panel that still writes the two reading themes after the
+// switch (180 bytes) is read for its first sizeof(Wire) bytes.
 // @share WireFieldCount
-inline constexpr size_t kWireFieldCount = 13;
+inline constexpr size_t kWireFieldCount = 11;
 // @share WireIdCount
 inline constexpr size_t kWireIdCount = 2;
 static_assert(sizeof(Wire) == kWireFieldCount * sizeof(uint32_t) +
@@ -74,20 +76,26 @@ inline constexpr DWORD kBeforeReadingThemeWireSize =
 // @share ConfigFileRelativePath
 inline constexpr char kFileRelativePath[] = "\\FixEdge\\fixedge-config.bin";
 
-[[nodiscard]] inline bool LoadFromFile(Wire* out) {
+// `relativePath` (such as kFileRelativePath) under %LOCALAPPDATA%, or empty
+// when that is unset.
+[[nodiscard]] inline std::string LocalAppDataPath(const char* relativePath) {
   char localAppData[MAX_PATH] = {};
   const DWORD length =
       GetEnvironmentVariableA("LOCALAPPDATA", localAppData, MAX_PATH);
   if (length == 0 || length >= MAX_PATH) {
-    return false;
+    return std::string();
   }
-  char path[MAX_PATH] = {};
-  if (wsprintfA(path, "%s%s", localAppData, kFileRelativePath) <= 0) {
+  return std::string(localAppData, length) + relativePath;
+}
+
+[[nodiscard]] inline bool LoadFromFile(Wire* out) {
+  const std::string path = LocalAppDataPath(kFileRelativePath);
+  if (path.empty()) {
     return false;
   }
   const handles::UniqueHandle file{
-      CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
-                  FILE_ATTRIBUTE_NORMAL, nullptr)};
+      CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
+                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)};
   if (!file) {
     return false;
   }
