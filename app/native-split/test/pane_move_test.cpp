@@ -300,7 +300,7 @@ void RunChecks() {
           Layout(tree, 1800, 600));
     Node clamped = FlatTree(3, Axis::kHorizontal);
     ResizeSeam(clamped, seam, -1000);
-    Check(Layout(clamped, 900, 600).rfind("0:[0,0,64,600]", 0) == 0,
+    Check(Layout(clamped, 900, 600).starts_with("0:[0,0,64,600]"),
           "a pane is never dragged below the minimum",
           Layout(clamped, 900, 600));
   }
@@ -315,7 +315,7 @@ void RunChecks() {
     Check(EqualizeSplit(tree, seams[2].path), "reset the column's heights");
     Check(Layout(tree, 900, 600).find("2:[600,0,300,300]") != std::string::npos,
           "the column is even again", Layout(tree, 900, 600));
-    Check(Layout(tree, 900, 600).rfind("0:[0,0,420,600]", 0) == 0,
+    Check(Layout(tree, 900, 600).starts_with("0:[0,0,420,600]"),
           "the row's resize is untouched", Layout(tree, 900, 600));
     Check(EqualizeSplit(tree, seams[0].path), "reset the row's widths");
     Check(!EqualizeSplit(tree, seams[0].path), "already even: nothing to do");

@@ -122,11 +122,6 @@ inline constexpr char kIgnoreCaseFlag[] = "i";
   return title + " (Enter)";
 }
 
-[[nodiscard]] inline bool StartsWith(std::string_view text,
-                                     std::string_view prefix) {
-  return text.compare(0, prefix.size(), prefix) == 0;
-}
-
 // Read the box with a switch on: what is typed is the pattern (case sensitive
 // unless it starts with "(?i)") or the question. An empty box asks nothing.
 [[nodiscard]] inline Query ParseQuery(std::string_view typed, Option option) {
@@ -144,7 +139,7 @@ inline constexpr char kIgnoreCaseFlag[] = "i";
     return query;
   }
   query.mode = Mode::kRegExp;
-  const bool isIgnoringCase = StartsWith(typed, kIgnoreCasePrefix);
+  const bool isIgnoringCase = typed.starts_with(kIgnoreCasePrefix);
   query.pattern =
       isIgnoringCase ? typed.substr(sizeof(kIgnoreCasePrefix) - 1) : typed;
   query.flags = isIgnoringCase ? kIgnoreCaseFlag : "";
@@ -215,10 +210,8 @@ inline constexpr int kMaxMatches = 5000;
     character =
         static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
   }
-  const std::string kPdfSuffix = ".pdf";
-  const bool isPdf = path.size() >= kPdfSuffix.size() &&
-                     path.compare(path.size() - kPdfSuffix.size(),
-                                  kPdfSuffix.size(), kPdfSuffix) == 0;
+  constexpr std::string_view kPdfSuffix = ".pdf";
+  const bool isPdf = path.ends_with(kPdfSuffix);
   return !isPdf;
 }
 

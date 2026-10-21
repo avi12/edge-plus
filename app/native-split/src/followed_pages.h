@@ -23,8 +23,7 @@ inline constexpr std::string_view kExtensions = "edge://extensions";
 
 [[nodiscard]] inline bool IsPageOf(std::string_view url,
                                    std::string_view page) {
-  return url.substr(0, page.size()) == page &&
-         IsHostEnd(url.substr(page.size()));
+  return url.starts_with(page) && IsHostEnd(url.substr(page.size()));
 }
 
 // Whether the page at `url` follows the theme.

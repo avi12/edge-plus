@@ -1996,7 +1996,7 @@ inline void* CopilotSidePanelContents() {
   constexpr char kPanelUrl[] = "edge://discover-chat-v2/";
   for (void* contents : AllWebContents()) {
     const std::string url = IsPageLive(contents) ? TabUrl(contents) : "";
-    if (url.rfind(kPanelUrl, 0) == 0) {
+    if (url.starts_with(kPanelUrl)) {
       return contents;
     }
   }

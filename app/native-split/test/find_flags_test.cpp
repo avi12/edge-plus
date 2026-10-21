@@ -29,8 +29,7 @@ void CheckTable() {
     const std::string title = SwitchTitle(info);
     const std::string ending = std::string(" (") + info.letter + ")";
     const bool isEndingWithLetter =
-        title.size() > ending.size() &&
-        title.compare(title.size() - ending.size(), ending.size(), ending) == 0;
+        title.size() > ending.size() && title.ends_with(ending);
     Check(isEndingWithLetter, "a title ends with the flag's letter");
     Check(title.size() > std::string(info.title).size(),
           "a title is indented under RegExp");
