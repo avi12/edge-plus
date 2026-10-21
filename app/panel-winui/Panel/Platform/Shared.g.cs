@@ -8,22 +8,22 @@
 namespace EdgePlus;
 
 internal static class Shared {
-  // app/native-split/src/config.h:18
+  // app/native-split/src/config.h:19
   public const int WireIdCapacity = 64;
 
-  // app/native-split/src/config.h:49
+  // app/native-split/src/config.h:50
   public const int WireFieldCount = 13;
 
-  // app/native-split/src/config.h:51
+  // app/native-split/src/config.h:52
   public const int WireIdCount = 2;
 
-  // app/native-split/src/config.h:74
+  // app/native-split/src/config.h:75
   public const string ConfigFileRelativePath = "\\FixEdge\\fixedge-config.bin";
 
-  // app/native-split/src/dllmain.cpp:27
+  // app/native-split/src/dllmain.cpp:28
   public const string UnloadEvent = "Local\\fixedge-split-unload";
 
-  // app/native-split/src/dllmain.cpp:33
+  // app/native-split/src/dllmain.cpp:34
   public const string ConfigEvent = "Local\\fixedge-config-changed";
 
   // app/native-split/src/offsets.h:15
