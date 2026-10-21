@@ -1682,6 +1682,75 @@ inline std::string FrameUrl(void* frame) {
 
 // --- the native find bar -------------------------------------------------------
 
+// A new, empty views::Label styled exactly like `model` (the same text context
+// and style, so the same font and the same theme colour ids), not yet in any
+// view. Its parent owns it once added.
+inline void* NewLabelLike(void* model) {
+  void* label = NewView(edge155::off::LABEL_allocation_size);
+  const U16View empty{nullptr, 0};
+  constexpr int kDirectionalityFromText = 0;
+  using Fn = void*(__fastcall*)(void*, const U16View*, int, int, int);
+  reinterpret_cast<Fn>(At(edge155::rva::Label_ctor))(
+      label, &empty, Field<int>(model, edge155::off::LABEL_text_context),
+      Field<int>(model, edge155::off::LABEL_text_style),
+      kDirectionalityFromText);
+  return label;
+}
+
+// Give `label` the colour `model` was asked to draw in (its SetEnabledColor:
+// for the find bar's count, a theme colour id), if it was asked one.
+inline void LabelCopyEnabledColor(void* label, void* model) {
+  const bool isSet =
+      Field<uint8_t>(model,
+                     edge155::off::LABEL_requested_enabled_color_is_set) != 0;
+  if (!isSet) {
+    return;
+  }
+  using Fn = void(__fastcall*)(void*, uint64_t);
+  reinterpret_cast<Fn>(At(edge155::rva::Label_SetEnabledColor))(
+      label,
+      Field<uint64_t>(model, edge155::off::LABEL_requested_enabled_color));
+}
+
+// Draw `label` in the font `textfield` draws its text in.
+inline void LabelUseTextfieldFont(void* label, void* textfield) {
+  using GetFn = const void*(__fastcall*)(void*);
+  const void* fontList = reinterpret_cast<GetFn>(
+      At(edge155::rva::Textfield_GetFontList))(textfield);
+  using SetFn = void(__fastcall*)(void*, const void*);
+  reinterpret_cast<SetFn>(At(edge155::rva::Label_SetFontList))(label, fontList);
+}
+
+inline bool IsPlainLabel(void* view) {
+  return VtableRva(view) == edge155::rva::Label_vftable;
+}
+
+inline void LabelSetText(void* label, U16View text) {
+  using Fn = void(__fastcall*)(void*, const U16View*);
+  reinterpret_cast<Fn>(At(edge155::rva::Label_SetText))(label, &text);
+}
+
+// The bar's text field and its "n/m" count label.
+inline void* FindBarTextfield(void* findBarView) {
+  return Field<void*>(findBarView, edge155::off::FINDBARVIEW_textfield);
+}
+inline void* FindBarCountLabel(void* findBarView) {
+  return Field<void*>(findBarView, edge155::off::FINDBARVIEW_match_count_label);
+}
+
+// The bar re-measures itself (its window follows).
+inline void FindBarPreferredSizeChanged(void* findBarView) {
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(edge155::rva::FindBarView_PreferredSizeChanged))(
+      findBarView);
+}
+
+// The bar's own row changed children: lay it out again.
+inline void FindBarRelayout(void* findBarView) {
+  InvalidateLayout(findBarView);
+  FindBarPreferredSizeChanged(findBarView);
+}
+
 // What the bar's text field holds now (a view of the field's own storage, valid
 // until the field next changes).
 inline U16View FindBarText(void* findBarView) {
@@ -1864,9 +1933,7 @@ inline void* AddFindToggle(void* findBarView, int toggleId) {
 // The options view grew or shrank: lay it out again and let the bar re-measure.
 inline void FindBarRelayoutOptions(void* findBarView) {
   InvalidateLayout(FindOptionsView(findBarView));
-  using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(edge155::rva::FindBarView_PreferredSizeChanged))(
-      findBarView);
+  FindBarPreferredSizeChanged(findBarView);
 }
 
 // The page of Copilot's side panel, or null while it is not open: the

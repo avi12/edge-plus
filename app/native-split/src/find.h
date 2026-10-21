@@ -168,6 +168,10 @@ inline edge::U16View Utf16Of(const std::u16string& text) {
   return edge::U16View{text.data(), text.size()};
 }
 
+inline std::string TextOf(const edge::U16View view) {
+  return edge::Utf16ToUtf8(view);
+}
+
 inline std::u16string Utf16FromUtf8(const std::string& utf8) {
   edge::U16String converted{};
   edge::Utf8ToUtf16(&converted, utf8.c_str());
@@ -291,6 +295,138 @@ inline find_text::Query QueryOf(void* findBarView, const std::string& typed) {
   return query;
 }
 
+// --- the slashes around a RegExp ---------------------------------------------------------------------
+// With the RegExp switch on, the box reads like a JavaScript literal: "/" before
+// the text field and "/" plus the flags the search runs with after it
+// (find_text::RegExpDecoration). They are two plain Labels of Edge's own, styled
+// like the bar's "n/m" count (its dimmed font and theme colours), set into the
+// bar's row on either side of the text field: the caret, the selection, copy and
+// paste and the searched text never see them, and the row mirrors them in a
+// right-to-left UI. They are found again by where they sit (a plain Label right
+// before and after the text field, where Edge has none), so a reloaded DLL
+// takes up the ones it made before rather than adding more.
+
+struct Decorations {
+  void* prefix = nullptr;
+  void* suffix = nullptr;
+};
+
+// The row the text field sits in (its parent view) and its place there; false
+// when there is none.
+inline bool TextfieldPlace(void* findBarView, void** row, size_t* index) {
+  void* textfield = edge::FindBarTextfield(findBarView);
+  void* parent = textfield ? edge::ViewParent(textfield) : nullptr;
+  const size_t count = parent ? edge::ViewChildCount(parent) : 0;
+  for (size_t i = 0; i < count; i++) {
+    if (edge::ViewChildAt(parent, i) == textfield) {
+      *row = parent;
+      *index = i;
+      return true;
+    }
+  }
+  return false;
+}
+
+// The plain Label at `index` of `row`, or null.
+inline void* PlainLabelAt(void* row, size_t index) {
+  const bool isInRow = index < edge::ViewChildCount(row);
+  void* child = isInRow ? edge::ViewChildAt(row, index) : nullptr;
+  return child && edge::IsPlainLabel(child) ? child : nullptr;
+}
+
+inline Decorations FindDecorations(void* findBarView) {
+  void* row = nullptr;
+  size_t index = 0;
+  if (!TextfieldPlace(findBarView, &row, &index)) {
+    return Decorations{};
+  }
+  void* prefix = index > 0 ? PlainLabelAt(row, index - 1) : nullptr;
+  return Decorations{prefix, PlainLabelAt(row, index + 1)};
+}
+
+// Log the row's children (their vtables name their classes in the PDB), the
+// evidence for where the slashes went.
+inline void LogRow(void* row) {
+  const size_t count = edge::ViewChildCount(row);
+  for (size_t i = 0; i < count; i++) {
+    Log("[find]   row child %zu vtable %#llx", i,
+        static_cast<unsigned long long>(
+            edge::VtableRva(edge::ViewChildAt(row, i))));
+  }
+}
+
+// A slash label: in the box's own font (so the same size and baseline as the
+// typed text) and the count's colour, Edge's dimmed secondary text colour for
+// the theme, so it reads as quieter than the text in light and dark alike.
+inline void* NewDecorationLabel(void* findBarView) {
+  void* countLabel = edge::FindBarCountLabel(findBarView);
+  void* label = edge::NewLabelLike(countLabel);
+  edge::LabelCopyEnabledColor(label, countLabel);
+  edge::LabelUseTextfieldFont(label, edge::FindBarTextfield(findBarView));
+  return label;
+}
+
+// The bar's decorations, made the first time they are needed.
+inline Decorations EnsureDecorations(void* findBarView) {
+  const Decorations found = FindDecorations(findBarView);
+  const bool isComplete = found.prefix && found.suffix;
+  const void* countLabel = edge::FindBarCountLabel(findBarView);
+  void* row = nullptr;
+  size_t index = 0;
+  const bool canAdd =
+      !isComplete && countLabel && TextfieldPlace(findBarView, &row, &index);
+  if (!canAdd) {
+    return found;
+  }
+  if (!found.prefix) {
+    edge::AddChildViewAt(row, NewDecorationLabel(findBarView), index);
+    index++;
+  }
+  if (!found.suffix) {
+    edge::AddChildViewAt(row, NewDecorationLabel(findBarView), index + 1);
+  }
+  Log("[find] slash labels added around the box, row %p (vtable %#llx)", row,
+      static_cast<unsigned long long>(edge::VtableRva(row)));
+  LogRow(row);
+  return FindDecorations(findBarView);
+}
+
+// The suffix each bar shows now, so its row is laid out again only on a change.
+inline std::map<void*, std::string>& ShownSuffixes() {
+  static std::map<void*, std::string> suffixes;
+  return suffixes;
+}
+
+// Show the slashes while RegExp is the chosen switch, with the flags the box and
+// the switches now give; hide them otherwise.
+inline void SyncDecorations(void* findBarView) {
+  const bool isShowing = OptionOf(findBarView) == find_text::Option::kRegExp;
+  const Decorations decorations =
+      isShowing ? EnsureDecorations(findBarView) : FindDecorations(findBarView);
+  if (!decorations.prefix || !decorations.suffix) {
+    return;
+  }
+  const find_text::LiteralDecoration literal = find_text::RegExpDecoration(
+      TextOf(edge::FindBarText(findBarView)), FlagsOn(findBarView));
+  const std::string shown = isShowing ? literal.suffix : std::string();
+  std::string& lastShown = ShownSuffixes()[findBarView];
+  const bool isVisibilityChanged =
+      edge::ViewGetVisible(decorations.prefix) != isShowing;
+  if (!isVisibilityChanged && shown == lastShown) {
+    return;
+  }
+  lastShown = shown;
+  if (isShowing) {
+    edge::LabelSetText(decorations.prefix,
+                       Utf16Of(Utf16FromUtf8(literal.prefix)));
+    edge::LabelSetText(decorations.suffix, Utf16Of(Utf16FromUtf8(shown)));
+  }
+  edge::SetViewVisible(decorations.prefix, isShowing);
+  edge::SetViewVisible(decorations.suffix, isShowing);
+  edge::InvalidateLayout(edge::ViewParent(decorations.prefix));
+  edge::FindBarRelayout(findBarView);
+}
+
 // Bring the bar's options up to date: our two switches exist (and show the
 // chosen assistant's name), and Edge's own three are greyed out while either of
 // ours is on, since they mean nothing to a RegExp or a question. With the find
@@ -347,6 +483,7 @@ inline void SyncToggles(void* findBarView) {
   if (isAdded || isFlagVisibilityChanged) {
     edge::FindBarRelayoutOptions(findBarView);
   }
+  SyncDecorations(findBarView);
 }
 
 // --- the bar's width ---------------------------------------------------------------------------------
@@ -842,10 +979,6 @@ inline HWND BrowserWindowInUse() {
   return isSubclassedUsable ? channel::g_window : nullptr;
 }
 
-inline std::string TextOf(const edge::U16View view) {
-  return edge::Utf16ToUtf8(view);
-}
-
 // The session for the bar whose `findBarView` just ran one of its functions,
 // and the window's MultiContentsView it searches; null when the window cannot
 // be found.
@@ -896,6 +1029,8 @@ inline void __fastcall h_find(void* findBarView, const edge::U16View* typed) {
   if (session) {
     ApplyBarWidth(*session, OptionOf(findBarView) == find_text::Option::kAsk);
   }
+  // A typed (?i) changes the flags the closing slash shows.
+  SyncDecorations(findBarView);
   const find_text::Query query = QueryOf(findBarView, TextOf(*typed));
   const bool isOurs = session && query.mode != find_text::Mode::kText;
   if (!isOurs) {

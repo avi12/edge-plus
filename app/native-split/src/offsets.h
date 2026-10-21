@@ -699,6 +699,22 @@ inline constexpr uintptr_t EdgeToggleButton_SetIsOn = 0xb1f5c44;
 inline constexpr uintptr_t View_SetEnabled = 0x1070896;
 // void views::Label::SetText(this, const std::u16string_view*).
 inline constexpr uintptr_t Label_SetText = 0x1058090;
+// views::Label::Label(this, const std::u16string_view* text, int text_context,
+// int text_style, gfx::DirectionalityMode (5th, on the stack)): the overload
+// FindBarMatchCountLabel's constructor calls (context 5, its own style, mode 0).
+inline constexpr uintptr_t Label_ctor = 0x26ed562;
+// The vtable a plain views::Label has at +0 once constructed (read live off one
+// Label_ctor built; the PDB names several Label vftables); a subclass such as
+// FindBarMatchCountLabel has its own, so this names a bare Label.
+inline constexpr uintptr_t Label_vftable = 0x117297d0;
+// void views::Label::SetEnabledColor(this, ui::ColorVariant): the variant is 8
+// bytes passed by value (a colour or a colour id, its index byte at +4); it
+// lands in LABEL_requested_enabled_color.
+inline constexpr uintptr_t Label_SetEnabledColor = 0xff79a0;
+// void views::Label::SetFontList(this, const gfx::FontList&) and
+// const gfx::FontList& views::Textfield::GetFontList(this) (its RenderText's).
+inline constexpr uintptr_t Label_SetFontList = 0x2dac100;
+inline constexpr uintptr_t Textfield_GetFontList = 0x1021bd0;
 
 // --- live tab hover preview (docs/re/live-preview.md) ---
 // A hovered tab's card already shows a frame from Edge's own continuous tab
@@ -1096,6 +1112,18 @@ inline constexpr int kScriptWorldId = 11;
 inline constexpr uintptr_t FINDBARVIEW_textfield = 0x390;
 inline constexpr uintptr_t FINDBARVIEW_match_count_label = 0x398;
 inline constexpr uintptr_t FINDBARLABEL_set_text_vtable_offset = 0x3a8;
+// views::Label: its text context and text style (Label::GetTextContext and
+// GetTextStyle are bare reads of these), which pick its font and colour id.
+inline constexpr uintptr_t LABEL_text_context = 0x388;
+inline constexpr uintptr_t LABEL_text_style = 0x38c;
+// views::Label: the colour asked for by SetEnabledColor, a
+// std::optional<ui::ColorVariant> (the variant's 8 bytes, then the engaged
+// flag), as Label::SetEnabledColor writes it.
+inline constexpr uintptr_t LABEL_requested_enabled_color = 0x3b0;
+inline constexpr uintptr_t LABEL_requested_enabled_color_is_set = 0x3b8;
+// Bytes to allocate for a views::Label: FindBarMatchCountLabel's own fields start
+// here, so a Label fits in it.
+inline constexpr size_t LABEL_allocation_size = 0x4a8;
 // The TextfieldController subobject HandleKeyEvent receives as `this` sits this
 // far into the FindBarView (the text field is at +0x58 of it).
 inline constexpr uintptr_t FINDBARVIEW_textfield_controller = 0x338;
