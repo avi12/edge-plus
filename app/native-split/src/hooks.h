@@ -691,8 +691,10 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
 }
 
 inline void RemoveAll() {
-  protocol_handlers::Remove();
+  // The UI-side teardown first (it also turns the link handlers off, on the UI
+  // thread), then the handlers again in case it could not run.
   control::Remove();
+  protocol_handlers::Remove();
   MH_DisableHook(MH_ALL_HOOKS);  // the safety patches stay (see InstallAll)
   MH_Uninitialize();
 }

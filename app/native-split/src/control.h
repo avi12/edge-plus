@@ -42,6 +42,10 @@ using channel::OperandOf;
 
 inline constinit WNDPROC g_originalProc = nullptr;
 inline constinit bool g_hasHotKeys = false;
+// Set by the UI-side teardown before unload: from then on a config apply still
+// queued behind it must not switch anything back on (it once turned the link
+// handlers on mid-unload, leaving a vtable slot pointing into the freed DLL).
+inline constinit bool g_isTornDown = false;
 
 inline constexpr wchar_t kBrowserWindowClass[] = L"Chrome_WidgetWin_1";
 inline constexpr int kClassNameLength = 64;
@@ -230,7 +234,10 @@ inline void RefreshThemeColors() {
 // collapse), then end the drag session, the preview window, the grips, the
 // animation timer and the hot-keys.
 inline void Teardown(HWND hwnd) {
+  g_isTornDown = true;
   EnumWindows(BreakUpWindowSplits, 0);
+  // On this thread, so no config apply can switch it back on behind us.
+  protocol_handlers::Remove();
   find::Apply(false);
   const bool wasFollowingTheme = theme_follow::g_isActive;
   theme_follow::g_isActive = false;
@@ -492,7 +499,8 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
     return;
   }
   if (wparam == CodeOf(Command::kApplyConfig)) {
-    if (g_hasPendingConfig) {
+    const bool shouldApply = g_hasPendingConfig && !g_isTornDown;
+    if (shouldApply) {
       ApplyConfig(hwnd, g_pendingConfig);
     }
     return;
