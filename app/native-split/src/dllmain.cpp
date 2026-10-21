@@ -10,6 +10,7 @@
 #include <windows.h>
 #include <cstdlib>
 #include "edge.h"
+#include "handles.h"
 #include "verify.h"
 #include "hooks.h"
 
@@ -17,18 +18,27 @@ using namespace fixedge;
 
 namespace {
 
-HMODULE g_self = nullptr;
-HANDLE g_unloadEvent = nullptr;
-HANDLE g_configEvent = nullptr;
+constinit HMODULE g_self = nullptr;
+constinit HANDLE g_unloadEvent = nullptr;
+constinit HANDLE g_configEvent = nullptr;
 
 // The companion app toggles the feature off by signalling this; we then remove
 // the hooks and drop out of Edge without a restart.
+// @share UnloadEvent
 constexpr wchar_t kUnloadEvent[] = L"Local\\fixedge-split-unload";
 
 // The companion app signals this after it rewrites the config file, so we
 // re-read it and apply the new state live (which features are on, which theme
 // per OS mode). Auto-reset: each change wakes the wait once.
+// @share ConfigEvent
 constexpr wchar_t kConfigEvent[] = L"Local\\fixedge-config-changed";
+
+// The events the main loop waits on, in the order of its handle array.
+enum class WaitedEvent : size_t {
+  kUnload,
+  kConfig
+};
+constexpr DWORD kWaitedEventCount = 2;
 
 // msedge.dll may still be loading when Init runs: poll for it this many times,
 // this far apart, before giving up.
@@ -48,18 +58,18 @@ void ReleaseEvents() {
 DWORD WINAPI Init(LPVOID) {
   HMODULE edgeModule = nullptr;
   for (int i = 0; i < kModuleWaitAttempts && !edgeModule; i++) {
-    edgeModule = GetModuleHandleW(edge::kModule);
+    edgeModule = GetModuleHandleW(edge155::kModule);
     if (!edgeModule) {
       Sleep(kModuleWaitStepMilliseconds);
     }
   }
   if (!edgeModule) {
-    Log("[err] %ls not found", edge::kModule);
+    Log("[err] %ls not found", edge155::kModule);
     ReleaseEvents();
     return 0;
   }
   edge::Bind(edgeModule);
-  Log("[init] fixedge-split loaded. %ls base=%p", edge::kModule,
+  Log("[init] fixedge-split loaded. %ls base=%p", edge155::kModule,
       reinterpret_cast<void*>(edge::g_base));
 
   // Fail safe: the offsets are specific to one Edge build. Refuse to hook anything
@@ -78,10 +88,13 @@ DWORD WINAPI Init(LPVOID) {
   }
   Log("[init] hooks installed; directional-add menu armed");
 
-  const HANDLE events[2] = {g_unloadEvent, g_configEvent};
+  // In WaitedEvent order.
+  const HANDLE events[kWaitedEventCount] = {g_unloadEvent, g_configEvent};
   while (true) {
-    const DWORD which = WaitForMultipleObjects(2, events, FALSE, INFINITE);
-    const bool isConfigChange = which == WAIT_OBJECT_0 + 1;
+    const DWORD which =
+        WaitForMultipleObjects(kWaitedEventCount, events, FALSE, INFINITE);
+    const bool isConfigChange =
+        which == WAIT_OBJECT_0 + static_cast<DWORD>(WaitedEvent::kConfig);
     if (isConfigChange) {
       control::OnConfigChanged();
       continue;
@@ -120,8 +133,10 @@ BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID) {
     ResetEvent(g_unloadEvent);
     g_configEvent = CreateEventW(nullptr, /*bManualReset=*/FALSE,
                                  /*bInitialState=*/FALSE, kConfigEvent);
-    // Init waits and hooks, which must not run under the loader lock.
-    CreateThread(nullptr, 0, Init, nullptr, 0, nullptr);
+    // Init waits and hooks, which must not run under the loader lock. The
+    // thread runs on after its handle, which nothing waits on, is closed.
+    const handles::UniqueHandle initThread{
+        CreateThread(nullptr, 0, Init, nullptr, 0, nullptr)};
   }
   return TRUE;
 }

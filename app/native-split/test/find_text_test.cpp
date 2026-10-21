@@ -20,6 +20,11 @@ void Check(bool ok, const char* what) {
   }
 }
 
+// Stepping and the flag check are constexpr: they hold at compile time.
+static_assert(StepMatch(kNoMatch, 3, Step::kNext) == 0);
+static_assert(StepMatch(0, 3, Step::kPrevious) == 2);
+static_assert(AreRegExpFlags("gim") && !AreRegExpFlags("gg"));
+
 // The fields joined by the field separator (a hex escape would swallow the
 // digit after it).
 std::string Fields(std::initializer_list<std::string> fields) {
@@ -27,7 +32,7 @@ std::string Fields(std::initializer_list<std::string> fields) {
   bool isFirst = true;
   for (const std::string& field : fields) {
     if (!isFirst) {
-      joined += kFieldSeparator;
+      joined += fixedge::web_text::kFieldSeparator;
     }
     isFirst = false;
     joined += field;
@@ -73,7 +78,7 @@ void CheckPatternShape() {
   Check(CheckRegex(std::string(kMaxPatternChars + 1, 'a')) ==
             PatternProblem::kTooLong,
         "too long");
-  Check(std::string(ProblemText(PatternProblem::kNestedRepeat)).size() > 0,
+  Check(!std::string(ProblemText(PatternProblem::kNestedRepeat)).empty(),
         "a problem has words");
 }
 

@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The panel's pure-logic tests: a plain console exe that compiles the panel's
+    pure sources straight from their folders and checks them, the way
+    app\native-split\test compiles the DLL's pure headers. No test framework,
+    for the same supply-chain reason the UI has no component library — the
+    harness is Program.cs, a page long.
+
+      app\panel-winui\test\run.cmd     (dotnet run on this project)
+
+    A file listed here must not touch WinUI or Win32: that is what makes it
+    pure, and what lets this project build without the Windows App SDK.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>EdgePlus</RootNamespace>
+    <AssemblyName>edgeplus-tests</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="*.cs" />
+  </ItemGroup>
+
+  <!-- The pure sources under test, from the panel and the host. -->
+  <ItemGroup>
+    <Compile Include="..\Host\PanelSource.cs" Link="Host\PanelSource.cs" />
+    <Compile Include="..\Host\ResizeHandles.cs" Link="Host\ResizeHandles.cs" />
+    <Compile Include="..\Panel\Dll\ConfigWire.cs" Link="Panel\ConfigWire.cs" />
+    <Compile Include="..\Panel\Edge\DevModePrompt.cs" Link="Panel\DevModePrompt.cs" />
+    <Compile Include="..\Panel\Edge\EdgeBuild.cs" Link="Panel\EdgeBuild.cs" />
+    <Compile Include="..\Panel\Edge\EdgeUserData.cs" Link="Panel\EdgeUserData.cs" />
+    <Compile Include="..\Panel\Edge\FileVersion.cs" Link="Panel\FileVersion.cs" />
+    <Compile Include="..\Panel\Platform\PanelState.cs" Link="Panel\PanelState.cs" />
+    <Compile Include="..\Panel\Platform\Paths.cs" Link="Panel\Paths.cs" />
+    <Compile Include="..\Panel\Platform\ReadingThemes.g.cs" Link="Panel\ReadingThemes.g.cs" />
+    <Compile Include="..\Panel\Platform\Settings.cs" Link="Panel\Settings.cs" />
+    <Compile Include="..\Panel\Platform\Shared.g.cs" Link="Panel\Shared.g.cs" />
+    <Compile Include="..\Panel\Platform\Switches.cs" Link="Panel\Switches.cs" />
+    <Compile Include="..\Panel\Setup\StartupEntry.cs" Link="Panel\StartupEntry.cs" />
+    <Compile Include="..\Panel\Themes\Crx.cs" Link="Panel\Crx.cs" />
+    <Compile Include="..\Panel\Themes\ExtensionId.cs" Link="Panel\ExtensionId.cs" />
+    <Compile Include="..\Panel\Themes\InstalledThemes.cs" Link="Panel\InstalledThemes.cs" />
+    <Compile Include="..\Panel\Themes\Protobuf.cs" Link="Panel\Protobuf.cs" />
+    <Compile Include="..\Panel\Themes\StoreUrl.cs" Link="Panel\StoreUrl.cs" />
+    <Compile Include="..\Panel\Themes\ThemeManifest.cs" Link="Panel\ThemeManifest.cs" />
+    <Compile Include="..\Panel\Themes\ThemeOrder.cs" Link="Panel\ThemeOrder.cs" />
+    <Compile Include="..\Panel\Themes\ThemePacker.cs" Link="Panel\ThemePacker.cs" />
+    <Compile Include="..\Panel\Ui\KeyedList.cs" Link="Panel\KeyedList.cs" />
+    <Compile Include="..\Panel\Ui\Wording.cs" Link="Panel\Wording.cs" />
+  </ItemGroup>
+</Project>

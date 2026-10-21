@@ -15,8 +15,6 @@
 
 namespace fixedge::dividers {
 
-using namespace fixedge::edge155;
-
 // A stock split has two containers; dividers belong to grown splits only.
 inline constexpr int kStockContainerCount = 2;
 
@@ -40,7 +38,7 @@ inline void Ensure(void* mcv) {
   Pool& pool = Pools()[mcv];
   const size_t needed = static_cast<size_t>(count - 1);
   while (pool.views.size() < needed) {
-    void* view = edge::NewView(off::EdgeResizeArea_size);
+    void* view = edge::NewView(edge155::off::EdgeResizeArea_size);
     edge::ConstructResizeArea(view, mcv);  // starts hidden
     edge::AddChildViewAt(mcv, view, edge::ViewChildCount(mcv));
     pool.views.push_back(view);
@@ -119,7 +117,7 @@ struct Drag {
   Node startTree;   // the total distance dragged
   Point pressedAt;  // window DIPs
 };
-inline Drag g_drag;
+inline constinit Drag g_drag;
 
 inline void Begin(void* mcv, const Seam& seam, Node startTree,
                   Point pressedAt) {

@@ -28,7 +28,7 @@ std::string Fields(std::initializer_list<std::string> fields) {
   bool isFirst = true;
   for (const std::string& field : fields) {
     if (!isFirst) {
-      joined += fixedge::find_text::kFieldSeparator;
+      joined += fixedge::web_text::kFieldSeparator;
     }
     isFirst = false;
     joined += field;

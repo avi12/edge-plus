@@ -20,6 +20,9 @@ void Check(bool ok, const char* what) {
   }
 }
 
+// The flag set is constexpr: a bar's first switches hold at compile time.
+static_assert(IsDefaultOn(Flag::kMultiline) && !IsDefaultOn(Flag::kSticky));
+
 void CheckTable() {
   std::string letters;
   for (const FlagInfo& info : kFlags) {
@@ -29,8 +32,7 @@ void CheckTable() {
     const std::string title = SwitchTitle(info);
     const std::string ending = std::string(" (") + info.letter + ")";
     const bool isEndingWithLetter =
-        title.size() > ending.size() &&
-        title.compare(title.size() - ending.size(), ending.size(), ending) == 0;
+        title.size() > ending.size() && title.ends_with(ending);
     Check(isEndingWithLetter, "a title ends with the flag's letter");
     Check(title.size() > std::string(info.title).size(),
           "a title is indented under RegExp");
@@ -112,6 +114,25 @@ void CheckScriptFlags() {
   Check(ScriptFlags("gm") == "gm", "g and m typed are not doubled");
 }
 
+void CheckDecoration() {
+  using fixedge::find_text::RegExpDecoration;
+  Check(RegExpDecoration("pric", DefaultFlags()).prefix == "/",
+        "the pattern opens with a slash");
+  Check(RegExpDecoration("pric", DefaultFlags()).suffix == "/gm",
+        "an untouched bar closes with the default flags");
+  Check(RegExpDecoration("(?i)pric", DefaultFlags()).suffix == "/gim",
+        "a typed (?i) shows as i");
+  FlagSet ignoreCaseOnly;
+  SetOn(&ignoreCaseOnly, Flag::kIgnoreCase, true);
+  Check(RegExpDecoration("", ignoreCaseOnly).suffix == "/gi",
+        "the switches alone, with Multiline off, even for an empty box");
+  FlagSet sticky = DefaultFlags();
+  SetOn(&sticky, Flag::kSticky, true);
+  SetOn(&sticky, Flag::kIndices, true);
+  Check(RegExpDecoration("a/b", sticky).suffix == "/dgmy",
+        "canonical order, and a slash in the pattern changes nothing");
+}
+
 }  // namespace
 
 int main() {
@@ -122,6 +143,7 @@ int main() {
     CheckExclusive();
     CheckMerge();
     CheckScriptFlags();
+    CheckDecoration();
   } catch (...) {
     return 1;
   }

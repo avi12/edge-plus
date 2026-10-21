@@ -21,8 +21,6 @@
 
 namespace fixedge::menu {
 
-using namespace fixedge::edge155;
-
 enum class MenuCommand : int {
   kAddUp = 0x6ac,
   kAddDown = 0x6ad,
@@ -38,9 +36,9 @@ inline constexpr int kAddPaneRowCommand = 0x10f1e;
 // Each directional add, in menu (and arrow) order: its toolbar command, the
 // direction and its label.
 struct MenuItem {
-  MenuCommand command;
-  Direction direction;
-  const char* label;
+  MenuCommand command = MenuCommand::kAddUp;
+  Direction direction = Direction::kUp;
+  const char* label = "";
 };
 inline constexpr MenuItem kMenuItems[] = {
     {MenuCommand::kAddUp, Direction::kUp, "Add pane above"},
@@ -55,26 +53,26 @@ inline constexpr int kNoArrow = -1;
 // The pane whose ⋯ opened the menu (ToggleContextMenu), consumed by the next
 // action on it; without one (a menu opened elsewhere) an add uses the active
 // pane.
-inline void* g_menuMcv = nullptr;
-inline int g_menuPane = kNoLeaf;
+inline constinit void* g_menuMcv = nullptr;
+inline constinit int g_menuPane = kNoLeaf;
 inline void ForgetMenuPane() {
   g_menuMcv = nullptr;
   g_menuPane = kNoLeaf;
 }
 // The open ⋯ menu's arrow buttons.
-inline void* g_arrows[kMenuItemCount] = {};
+inline constinit void* g_arrows[kMenuItemCount] = {};
 // The open ⋯ menu's "Add pane" row (MenuItemView) and its d-pad, centred in
 // the row by h_row_layout; and the row icon's natural height (before the row
 // was made d-pad tall).
-inline void* g_addPaneRow = nullptr;
-inline void* g_dpad = nullptr;
-inline int g_addPaneIconHeight = 0;
+inline constinit void* g_addPaneRow = nullptr;
+inline constinit void* g_dpad = nullptr;
+inline constinit int g_addPaneIconHeight = 0;
 
 // Labels built once into static u16strings (short permanent allocations), so
 // the hooks can reference them on every menu open without re-allocating.
-inline edge::U16String g_labels[kMenuItemCount];
-inline edge::U16String g_rowLabel;
-inline bool g_hasLabels = false;
+inline constinit edge::U16String g_labels[kMenuItemCount];
+inline constinit edge::U16String g_rowLabel;
+inline constinit bool g_hasLabels = false;
 inline void BuildLabels() {
   for (size_t i = 0; i < kMenuItemCount; i++) {
     edge::Utf8ToUtf16(&g_labels[i], kMenuItems[i].label);
@@ -99,7 +97,7 @@ inline void AddBesideMenuPane(Direction direction) {
 // ours. `self` (rcx) is the model; the rest (the TabStripModel, the menu source
 // and the optional tab index, then one stack argument) pass through untouched.
 using Ctor_t = void*(__fastcall*)(void*, void*, void*, void*, void*);
-inline Ctor_t o_ctor = nullptr;
+inline constinit Ctor_t o_ctor = nullptr;
 inline void* __fastcall h_ctor(void* self, void* tsm, void* menuSource,
                                void* optionalTabIndex, void* argument5) {
   void* result = o_ctor(self, tsm, menuSource, optionalTabIndex, argument5);
@@ -115,7 +113,7 @@ inline void* __fastcall h_ctor(void* self, void* tsm, void* menuSource,
 
 // Diagnostic: did the ⋯ split menu even route through WebUISplitTabsControl?
 using HandleCtx_t = void*(__fastcall*)(void*, void*, void*, void*);
-inline HandleCtx_t o_handle_ctx = nullptr;
+inline constinit HandleCtx_t o_handle_ctx = nullptr;
 inline void* __fastcall h_handle_ctx(void* self, void* argument2,
                                      void* argument3, void* argument4) {
   Log("[diag] WebUISplitTabsControl::HandleContextMenu fired");
@@ -125,7 +123,7 @@ inline void* __fastcall h_handle_ctx(void* self, void* argument2,
 // SplitTabMenuModel::ExecuteCommand(self=delegate, int command_id, int
 // event_flags). Our ids add a pane; every other id is Edge's own.
 using Exec_t = void*(__fastcall*)(void*, int, int);
-inline Exec_t o_exec = nullptr;
+inline constinit Exec_t o_exec = nullptr;
 inline void* __fastcall h_exec(void* self, int commandId, int eventFlags) {
   for (const MenuItem& item : kMenuItems) {
     const bool isItemCommand = commandId == static_cast<int>(item.command);
@@ -141,7 +139,7 @@ inline void* __fastcall h_exec(void* self, int commandId, int eventFlags) {
 
 // ControlButtons::ToggleContextMenu: remember whose ⋯ this is, then open it.
 using Toggle_t = void(__fastcall*)(void*, void*);
-inline Toggle_t o_toggle = nullptr;
+inline constinit Toggle_t o_toggle = nullptr;
 inline void __fastcall h_toggle(void* bar, void* argument2) {
   ForgetMenuPane();
   std::fill(std::begin(g_arrows), std::end(g_arrows), nullptr);
@@ -160,7 +158,7 @@ inline void __fastcall h_toggle(void* bar, void* argument2) {
 // hands that to PopulateMenu), so the detour must too. After Edge's own items
 // (fitted to the split by pane_menu.h): a separator and the "Add pane" row.
 using Build_t = void*(__fastcall*)(void*);
-inline Build_t o_build = nullptr;
+inline constinit Build_t o_build = nullptr;
 inline void* __fastcall h_build(void* menu) {
   void* model = o_build(menu);
   if (!model) {
@@ -172,7 +170,7 @@ inline void* __fastcall h_build(void* menu) {
   }
   edge::MenuAddSeparator(model);
   edge::MenuAddItemWithIcon(model, kAddPaneRowCommand, &g_rowLabel,
-                            edge::At(rva::Icon_SplitScene));
+                            edge::At(edge155::rva::Icon_SplitScene));
   return model;
 }
 
@@ -202,7 +200,7 @@ inline Point DpadCell(Direction direction) {
 // item lays its child views out right-aligned at full height, so the four
 // arrows sit in one plain container that places them itself.
 using Populate_t = void(__fastcall*)(void*, void*, void*);
-inline Populate_t o_populate = nullptr;
+inline constinit Populate_t o_populate = nullptr;
 inline void __fastcall h_populate(void* menu, void* rootItem, void* model) {
   o_populate(menu, rootItem, model);
   void* row =
@@ -241,7 +239,7 @@ inline void __fastcall h_populate(void* menu, void* rootItem, void* model) {
 // Edge would centre the icon on a standard row's height and pin the d-pad to
 // the top, while the label sits in the middle. Centre both like the label.
 using RowLayout_t = void*(__fastcall*)(void*, void*, const void*);
-inline RowLayout_t o_row_layout = nullptr;
+inline constinit RowLayout_t o_row_layout = nullptr;
 
 // Give `child` `height` in the proposed layout, centred in its row.
 inline void CentreInRow(void* proposedLayout, const void* child, int height) {
@@ -291,7 +289,7 @@ inline void RunArrow(Direction direction) {
 // on the row itself (not on an arrow, whose button takes its own clicks) keeps
 // the menu open. Every other id: the original.
 using ShouldExecute_t = bool(__fastcall*)(void*, int, const void*);
-inline ShouldExecute_t o_should_execute = nullptr;
+inline constinit ShouldExecute_t o_should_execute = nullptr;
 inline bool __fastcall h_should_execute(void* self, int commandId,
                                         const void* event) {
   const bool isAddPaneRow = commandId == kAddPaneRowCommand;
@@ -302,7 +300,7 @@ inline bool __fastcall h_should_execute(void* self, int commandId,
 // item that acts on a pane runs on the menu's own (pane_menu.h), the rest as
 // before; the "Add pane" row itself does nothing.
 using ControlExec_t = void(__fastcall*)(void*, int, int);
-inline ControlExec_t o_control_exec = nullptr;
+inline constinit ControlExec_t o_control_exec = nullptr;
 inline void __fastcall h_control_exec(void* menu, int commandId,
                                       int eventFlags) {
   const bool isAddPaneRow = commandId == kAddPaneRowCommand;

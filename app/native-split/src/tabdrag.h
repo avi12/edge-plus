@@ -21,8 +21,6 @@
 
 namespace fixedge::tabdrag {
 
-using namespace fixedge::edge155;
-
 // The Alt mode of the current tab drag.
 struct Session {
   bool isAltMode = false;
@@ -32,7 +30,7 @@ struct Session {
   void* mcv = nullptr;              // the split view the plan is for
   dock::Plan plan;                  // what releasing now would do
 };
-inline Session g_session;
+inline constinit Session g_session;
 
 // A drop, applied once the drag has finished ending (channel kTabDrop).
 struct Drop {
@@ -42,7 +40,7 @@ struct Drop {
   void* splitContents = nullptr;
   Node tree;  // the split's layout with the dragged tab as its newest pane
 };
-inline std::optional<Drop> g_drop;
+inline constinit std::optional<Drop> g_drop;
 
 // The drag's latest pointer move. A drag only advances on pointer moves, so
 // Alt pressed or released while the pointer rests would otherwise change nothing
@@ -51,7 +49,7 @@ struct LastMove {
   void* controller = nullptr;
   Point screenPoint{};
 };
-inline LastMove g_lastMove;
+inline constinit LastMove g_lastMove;
 
 inline bool IsAltHeld() {
   return GetKeyState(VK_MENU) < 0;
@@ -110,7 +108,8 @@ inline void PreviewDock(Point screenPoint) {
   void* mcv = edge::McvForWindow(channel::g_window);
   const int panes = mcv ? edge::McvActiveSplitPanes(mcv) : 0;
   const bool isOwnSplitShown =
-      panes >= 2 && edge::TsmForWindow(channel::g_window) == g_session.tsm;
+      panes >= split_data::kMinSplitMembers &&
+      edge::TsmForWindow(channel::g_window) == g_session.tsm;
   if (!isOwnSplitShown) {
     g_session.plan = {};
     overlay::Hide();
@@ -160,7 +159,7 @@ inline void Cancel() {
 // TabDragController::ContinueDragging: in Alt mode we take the move (Edge's
 // would reorder or tear off the tab), else Edge's own.
 using ContinueDragging_t = int(__fastcall*)(void*, const Point*);
-inline ContinueDragging_t o_continue_dragging = nullptr;
+inline constinit ContinueDragging_t o_continue_dragging = nullptr;
 inline int __fastcall h_continue_dragging(void* controller,
                                           const Point* screenPoint) {
   g_lastMove = LastMove{controller, *screenPoint};
@@ -190,11 +189,11 @@ inline int __fastcall h_continue_dragging(void* controller,
 // and freeing the controller); the split is only changed after that, since
 // changing the strip mid-drag ends the drag.
 using EndDrag_t = void(__fastcall*)(void*, int);
-inline EndDrag_t o_end_drag = nullptr;
+inline constinit EndDrag_t o_end_drag = nullptr;
 inline void __fastcall h_end_drag(void* controller, int reason) {
   const bool isDropping = g_session.isAltMode &&
-                          reason == off::TABDRAG_end_complete && IsAltHeld() &&
-                          g_session.splitContents &&
+                          reason == edge155::off::TABDRAG_end_complete &&
+                          IsAltHeld() && g_session.splitContents &&
                           g_session.plan.zone != dock::Zone::kNone;
   if (isDropping) {
     g_drop = Drop{g_session.tsm, g_session.mcv, g_session.draggedContents,
@@ -212,11 +211,11 @@ inline void __fastcall h_end_drag(void* controller, int reason) {
 // EventTracker::OnEvent: Alt's key events switch modes; they must not end the
 // drag the way every other key does.
 using TrackerEvent_t = void(__fastcall*)(void*, void*);
-inline TrackerEvent_t o_tracker_event = nullptr;
+inline constinit TrackerEvent_t o_tracker_event = nullptr;
 inline void __fastcall h_tracker_event(void* tracker, void* event) {
   const int type = edge::EventType(event);
-  const bool isKeyEvent = type == off::EVENT_type_key_pressed ||
-                          type == off::EVENT_type_key_released;
+  const bool isKeyEvent = type == edge155::off::EVENT_type_key_pressed ||
+                          type == edge155::off::EVENT_type_key_released;
   const bool isAltKeyEvent = isKeyEvent && IsAltKey(edge::KeyEventCode(event));
   if (isAltKeyEvent) {
     // Replay the pointer's last move so the mode switches now, not on the next

@@ -9,25 +9,27 @@ namespace fixedge::edge155 {
 
 // The build these offsets belong to (the module's file version,
 // major.minor.build.revision). verify.h refuses to hook anything else.
+// The @share markers hand the build to the WinUI panel, which holds the DLL
+// back from any other (tools/Export-SharedConstants.ps1).
+// @share EdgeModule
 inline constexpr wchar_t kModule[] = L"msedge.dll";
+// @share EdgeVersionMajor
 inline constexpr int kVersionMajor = 155;
+// @share EdgeVersionMinor
 inline constexpr int kVersionMinor = 0;
+// @share EdgeVersionBuild
 inline constexpr int kVersionBuild = 4283;
+// @share EdgeVersionRevision
 inline constexpr int kVersionRevision = 62;
-// TODO: the PE header's TimeDateStamp, as an extra guard (0 = not checked).
-inline constexpr uint32_t kTimeDateStamp = 0;
 // The preferred load address the PDB and the disassembly are written against.
 inline constexpr uintptr_t kImageBase = 0x180000000;
 
 // --- function RVAs (add to the msedge.dll base at runtime) ---
 namespace rva {
-inline constexpr uintptr_t MultiContentsView_ctor = 0x2d24796;
 // cap: index < 2
 inline constexpr uintptr_t MultiContentsView_SetWebContentsAtIndex = 0xc92c4e8;
 // the `2` in cmp index,2
 inline constexpr uintptr_t SetWebContentsAtIndex_guard_imm = 0xc92c4f2;
-// loops the vector
-inline constexpr uintptr_t MultiContentsView_ShowSplitView = 0xc92c5cc;
 // CHECK(index < 2)
 inline constexpr uintptr_t MultiContentsView_SetActiveIndex = 0xc92c94e;
 // loops the vector
@@ -36,13 +38,6 @@ inline constexpr uintptr_t MultiContentsView_UpdateContentsBorderAndOverlay =
 // 2 entries + 1 sep
 inline constexpr uintptr_t MultiContentsView_CalculateProposedLayout =
     0x2b6f360;
-// 2-element size array
-inline constexpr uintptr_t MultiContentsView_GetViewSizes = 0x2b6f800;
-inline constexpr uintptr_t MultiContentsView_CalculateSeparatorLayouts =
-    0x2b6f906;
-inline constexpr uintptr_t MultiContentsView_ClampToMinSize = 0x2b6f8c2;
-// already N-ready
-inline constexpr uintptr_t MultiContentsView_ExecuteOnEachVisible = 0x2bab654;
 // FocusableViewsMap* GetFocusableViewsMapFor(this, ContentsContainerView*):
 // a lookup in MCV+0x4c8, a flat_map with an entry per container Edge itself
 // built (two), so null for ours. Its one caller,
@@ -51,14 +46,10 @@ inline constexpr uintptr_t MultiContentsView_ExecuteOnEachVisible = 0x2bab654;
 inline constexpr uintptr_t MultiContentsView_GetFocusableViewsMapFor =
     0x2badad8;
 inline constexpr uintptr_t EdgeMultiContentsResizeArea_ctor = 0x2d260b0;
-inline constexpr uintptr_t ContentsContainerView_ctor = 0x2d26a32;
 inline constexpr uintptr_t EdgeContentsContainerView_ctor = 0x2d261b0;
-inline constexpr uintptr_t SplitWindowControllerImplV2_ctor = 0x31edb92;
-inline constexpr uintptr_t IsEdgeSplitWindowEnabled = 0x0feda5d;
-// The layout applier + the one append primitive the geometry uses. emplace_back
+// The one append primitive the geometry uses. emplace_back
 // grows the real std::vector<ChildLayout> with the real allocator, so calling it
 // is the only safe way to add pane/separator entries from the injected DLL.
-inline constexpr uintptr_t LayoutManagerBase_ApplyLayout = 0x100ca78;
 // std::vector<ChildLayout>::emplace_back<View*, bool, const gfx::Rect&>
 //   (rcx = &vector, rdx = View**, r8 = bool*, r9 = gfx::Rect*)
 inline constexpr uintptr_t ChildLayouts_emplace_back = 0x27a8fda;
@@ -73,8 +64,6 @@ inline constexpr uintptr_t View_SetVisible = 0x10483f0;
 inline constexpr uintptr_t View_GetVisible = 0x0fcc262;  // bool (this)
 // (&vec@+0x368, raw_ptr*)
 inline constexpr uintptr_t Containers_emplace_back = 0x2d25408;
-// (p) BackupRef, gated
-inline constexpr uintptr_t RawPtr_AcquireInternal = 0x0fc9ef0;
 // (this) mark layout dirty
 inline constexpr uintptr_t View_InvalidateLayout = 0x0feb7f0;
 // (this) relayout now
@@ -89,8 +78,6 @@ inline constexpr uintptr_t WebContents_WasShown = 0x2a17d30;
 inline constexpr uintptr_t TabStripModel_GetWebContentsAt = 0x105231e;
 
 // --- the feed pipeline (controller.md) ---
-// (BrowserView*) feeds panes
-inline constexpr uintptr_t BrowserView_ShowSplitView = 0xc930f1a;
 // void BrowserView::MaybeUpdateSplitView(this, WebContents* forContents): with
 // the contents no longer in a split, runs MultiContentsView::CloseSplitView
 // (clears pane 1, hides the resize area, moves content to container 0). The
@@ -111,8 +98,6 @@ inline constexpr uintptr_t SplitTabs_LogSplitViewCreatedUKM = 0xa23e294;
 inline constexpr uintptr_t SplitTabs_LogSplitViewUpdatedUKM = 0xa23e3e2;
 // (out base::Token*) random 16B id
 inline constexpr uintptr_t TokenCreateRandom = 0x1ed4ac0;
-// ({layout,ratio=0.5})
-inline constexpr uintptr_t SplitTabVisualData_ctor = 0x2d2521e;
 // create 2-pane (caps at 2)
 inline constexpr uintptr_t TabStripModel_AddToNewSplit = 0xa274686;
 // N-generic add worker
@@ -121,15 +106,12 @@ inline constexpr uintptr_t TabStripModel_AddToSplitImpl = 0xa274b90;
 inline constexpr uintptr_t TabStripModel_UpdateTabInSplit = 0xa273a2c;
 inline constexpr uintptr_t TabStripModel_RemoveSplitImpl = 0xa26ecca;
 inline constexpr uintptr_t GetTabsAndIndicesInSplit = 0xa26a7b0;
-inline constexpr uintptr_t GetSplitForTab = 0x2b91c94;
 // (tsm, &id)->SplitTabData*
 inline constexpr uintptr_t GetSplitData = 0xa268504;
 // (rootColl, int)->TabModel*
 inline constexpr uintptr_t GetTabAtIndexRecursive = 0x0febd12;
 // (rootColl, TabModel*)->int
 inline constexpr uintptr_t GetIndexOfTabRecursive = 0x0feb5e8;
-inline constexpr uintptr_t TabStripModel_GetActiveTab = 0x100c080;
-inline constexpr uintptr_t TabStripModel_InsertDetachedTabAt = 0xa268916;
 // (aura::Window*)->BrowserView*
 inline constexpr uintptr_t BrowserView_ForNativeWindow = 0x1038160;
 // (HWND)->aura::Window*
@@ -138,7 +120,6 @@ inline constexpr uintptr_t GetContentWindowForHWND = 0x26fd796;
 // --- the split's 3-dot menu (extension point for directional "add pane") ---
 inline constexpr uintptr_t SplitTabMenuModel_ctor = 0xa265cee;
 inline constexpr uintptr_t SplitTabMenuModel_ExecuteCommand = 0xa266590;
-inline constexpr uintptr_t SplitTabMenuModel_GetLabelForCommandId = 0xa266190;
 // (model, cmd_id, &u16string)
 inline constexpr uintptr_t SimpleMenuModel_AddItem = 0x10585d4;
 // diag: the ⋯ split menu
@@ -478,6 +459,19 @@ inline constexpr uintptr_t ThemeServiceFactory_GetForProfile = 0xfcf172;
 // behind any WebContents, our bridge from a pane to its ThemeService.
 inline constexpr uintptr_t WebContentsImpl_GetBrowserContext = 0x113cae0;
 
+// --- reading mode's page theme (docs/re/reading-mode-theme.md) ---
+// DomDistillerContextKeyedService* DomDistillerServiceFactory::
+// GetForBrowserContext(content::BrowserContext*): the profile's distiller
+// service (its DomDistillerService base at DOMDISTILLERKEYED_service).
+inline constexpr uintptr_t DomDistillerServiceFactory_GetForBrowserContext =
+    0x2e52da0;
+// void DistilledPagePrefs::SetTheme(this, dom_distiller::Theme, std::string
+// source): writes the reading_view.theme pref and posts NotifyOnChangeTheme, so
+// every open reading view runs readingViewController.setPreferences({theme}).
+// `source` (the viewer that asked, which is skipped) is passed by value and the
+// callee frees it; an empty one notifies every viewer.
+inline constexpr uintptr_t DistilledPagePrefs_SetTheme = 0xbf84f80;
+
 // --- WebUI pages follow the theme (docs/re/webui-color-scheme.md) ---
 // Two pieces make a page light or dark, and Edge feeds neither from the theme:
 // the page's prefers-color-scheme (computed per WebContents) and the colors
@@ -513,7 +507,36 @@ inline constexpr uintptr_t ThemeService_GetColorProviderKey = 0xfcf25c;
 // extension's color for `id`, false when the theme did not set it. Its colors
 // are a table of 8-byte {int id, SkColor} entries.
 inline constexpr uintptr_t BrowserThemePack_GetColor = 0x87d5030;
-
+// SkColor ui::ColorProvider::GetColor(this, ui::ColorId id): the browser-wide
+// colour read every view resolves an id through. Signature:
+// SkColor __fastcall(void* this, int id).
+inline constexpr uintptr_t ColorProvider_GetColor = 0xffd9ce;
+// void EdgeTab::UpdateForegroundColors(this): recomputes a tab's title, close
+// and icon colours (through EdgeTabStyleViews::CalculateTargetColors and
+// TabStyle::GetTabForegroundColor) whenever its state, hover, theme or window
+// focus changes, and hands them to its views.
+inline constexpr uintptr_t EdgeTab_UpdateForegroundColors = 0x2a607a0;
+// bool Tab::IsActive(this): the tab is the strip's active one. EdgeTab's Tab
+// base is at +0, so an EdgeTab* passes as is.
+inline constexpr uintptr_t Tab_IsActive = 0x1047f30;
+// EdgeTabStyleViews::PaintInactiveTabBackground (rva 0x27d2448) +0x75: the return
+// address of its call to PaintTabBackground, on the stack whenever a tab other
+// than the active one paints its fill (a hovered one).
+inline constexpr uintptr_t
+    EdgeTabStyleViews_PaintInactiveTabBackground_PaintTabBackground_return =
+        0x27d24bd;
+// EdgeTabStyleViews::CalculateTargetColors (rva 0x28a9190) +0xbd / +0xcf: the
+// return addresses of its two EdgeGetTabBackgroundColor calls (the active and
+// the inactive fill), which it blends into a tab's hover target.
+inline constexpr uintptr_t
+    EdgeTabStyleViews_CalculateTargetColors_active_return = 0x28a924d;
+inline constexpr uintptr_t
+    EdgeTabStyleViews_CalculateTargetColors_inactive_return = 0x28a925f;
+// EdgeTabStyleViews::PaintTab's cold part: after a SaveLayerAlpha at the tab's
+// hover (throb) value it paints the tab as active (PaintTabBackground, active =
+// true); 0x4716481 is that call's return address.
+inline constexpr uintptr_t EdgeTabStyleViews_PaintTab_hover_layer_return =
+    0x4716481;
 // The OS light/dark signal does NOT come through Edge. ui::NativeThemeObserver
 // is a base::CheckedObserver (the observer list uses CheckedObserverAdapter), so
 // a hand-rolled observer object would have to fake a weak-ptr factory. Instead
@@ -588,6 +611,10 @@ inline constexpr uintptr_t CopilotButton_vftables[] = {
     0x113634e0, 0x11363500, 0x11363520, 0x11363540, 0x11363580, 0x113635d0,
     0x113635e8, 0x11363600, 0x11363630, 0x113636e0, 0x11363700, 0x11363740,
     0x11363758, 0x11363770, 0x113637a0, 0x113637b8, 0x115b6220, 0x1173fd10};
+
+// The vftable of a tab row in the vertical tab list (found by tabrows::Dump: one
+// per tab, children of the list's container, in the model's order).
+inline constexpr uintptr_t VerticalTab_vftable = 0x1166fd70;
 // EdgeCopilotDropdownMenuButton: the chevron beside the chat pill (a sibling in
 // EdgeCopilotToolbarSplitButtonContainer). Its constructor sets both its tooltip
 // and its accessible name from the formatted string "$1 menu"; the vftables
@@ -610,12 +637,6 @@ inline constexpr uintptr_t Copilot_IsConsumerLabelButtonWithDropdownEnabled =
 // for a button already built, and stores the new one in EDGETOOLBAR_chatButton.
 inline constexpr uintptr_t EdgeToolbarView_CreateDiscoverButtonIfNecessary =
     0x3221240;
-// views::WebView: (this, BrowserContext*); LoadInitialURL(this, const GURL&,
-// HttpsUpgradePolicy, base::Location* by value); the scalar deleting dtor
-// (this, 1).
-inline constexpr uintptr_t WebView_ctor = 0x2d27f6e;
-inline constexpr uintptr_t WebView_LoadInitialURL = 0xc3fe140;
-inline constexpr uintptr_t WebView_ScalarDeletingDtor = 0x34208b0;
 // --- running a script in a page, and reading a tab ---
 // RenderFrameHost* WebContentsImpl::GetPrimaryMainFrame(this).
 inline constexpr uintptr_t WebContentsImpl_GetPrimaryMainFrame = 0x113caf0;
@@ -691,6 +712,12 @@ inline constexpr uintptr_t FindOptionsControlView_AddFindInPageOptionChildView =
 // click callback; it flips Edge's own state for the id and re-runs the search.
 inline constexpr uintptr_t FindInPageOptionToggleView_OnButtonToggled =
     0xc8b5a10;
+// void EdgeOnActiveWebContentsChanged(this = FindInPageOptionToggleView): run
+// for each switch when the bar is shown again (and on a tab change); it sets the
+// switch from edge::GetFindInPageOptionToggleValue(the tab's find helper, id),
+// which is false for any id but Edge's own, with no OnButtonToggled callback.
+inline constexpr uintptr_t
+    FindInPageOptionToggleView_EdgeOnActiveWebContentsChanged = 0xc8b5ff0;
 // bool views::EdgeToggleButton::GetIsOn(this) and void SetIsOn(this, bool).
 inline constexpr uintptr_t EdgeToggleButton_GetIsOn = 0xb1f5c16;
 inline constexpr uintptr_t EdgeToggleButton_SetIsOn = 0xb1f5c44;
@@ -698,11 +725,50 @@ inline constexpr uintptr_t EdgeToggleButton_SetIsOn = 0xb1f5c44;
 inline constexpr uintptr_t View_SetEnabled = 0x1070896;
 // void views::Label::SetText(this, const std::u16string_view*).
 inline constexpr uintptr_t Label_SetText = 0x1058090;
+// views::Label::Label(this, const std::u16string_view* text, int text_context,
+// int text_style, gfx::DirectionalityMode (5th, on the stack)): the overload
+// FindBarMatchCountLabel's constructor calls (context 5, its own style, mode 0).
+inline constexpr uintptr_t Label_ctor = 0x26ed562;
+// The vtable a plain views::Label has at +0 once constructed (read live off one
+// Label_ctor built; the PDB names several Label vftables); a subclass such as
+// FindBarMatchCountLabel has its own, so this names a bare Label.
+inline constexpr uintptr_t Label_vftable = 0x117297d0;
+// void views::Label::SetEnabledColor(this, ui::ColorVariant): the variant is 8
+// bytes passed by value (a colour or a colour id, its index byte at +4); it
+// lands in LABEL_requested_enabled_color.
+inline constexpr uintptr_t Label_SetEnabledColor = 0xff79a0;
+// void views::Label::SetFontList(this, const gfx::FontList&) and
+// const gfx::FontList& views::Textfield::GetFontList(this) (its RenderText's).
+inline constexpr uintptr_t Label_SetFontList = 0x2dac100;
+inline constexpr uintptr_t Textfield_GetFontList = 0x1021bd0;
+
+// --- live tab hover preview (docs/re/live-preview.md) ---
+// A hovered tab's card already shows a frame from Edge's own continuous tab
+// capturer (BackgroundThumbnailVideoCapturer), and the card repaints every frame
+// it receives; it looks frozen only because Edge stops the capturer after one
+// good frame. Keeping the capturer alive while a hover card is open turns the
+// still into live video, reusing Edge's pipeline (live_preview.h).
+// void ThumbnailTabHelper::TabStateTracker::StopCapture(this): the driver's
+// end-of-capture-session call (-> BackgroundThumbnailVideoCapturer::Stop). Not
+// per-frame, idempotent; suppressing it keeps the already-running capturer going.
+inline constexpr uintptr_t ThumbnailTabHelper_TabStateTracker_StopCapture =
+    0x2b06e90;
+// void TabHoverCardThumbnailObserver::Observe(this, ThumbnailImage*): a hover
+// card's thumbnail subscription begins (once per hover / tab retarget) — the
+// moment a preview is on screen and frames are wanted.
+inline constexpr uintptr_t TabHoverCardThumbnailObserver_Observe = 0x8f5dd84;
+// void TabHoverCardController::OnCardClosing(this): the hover card's definitive
+// teardown (once per close).
+inline constexpr uintptr_t TabHoverCardController_OnCardClosing = 0xa62c3e0;
+// bool base::i18n::IsRTL(): Edge's UI runs right to left (its locale, or the
+// --force-ui-direction switch). A bare `jmp` to ICUIsRTL, which asks
+// GetForcedTextDirection and then the default ICU locale; Views mirrors every
+// tab by it.
+inline constexpr uintptr_t base_i18n_IsRTL = 0xfd20a0;
 }  // namespace rva
 
 // --- struct field offsets ---
 namespace off {
-
 // --- MultiContentsView : public views::View, public views::LayoutManagerBase ---
 // The View base is at +0; the LayoutManagerBase subobject is embedded at +0x340
 // (verified: CalculateProposedLayout's `this` is that subobject, and it recovers
@@ -729,10 +795,49 @@ inline constexpr uintptr_t MCV_drop_target_view = 0x0b0;
 // (primary `this`) is what writes it; ThemeService::GetThemeSupplier reads the
 // same field as +0x760 because it is a method of the base at +8.
 inline constexpr uintptr_t THEMESERVICE_supplier = 0x768;
-// The BrowserThemePack color ids a theme sets from its manifest's "colors"
-// (the ids of the manifest-key table beside "toolbar" and "frame").
-inline constexpr int THEMECOLOR_toolbar = 23;
-inline constexpr int THEMECOLOR_frame = 28;
+// ThemeService::UseDefaultTheme takes its secondary base at +0x10 (it adjusts
+// this - 0x10 itself); the primary `this` there faults.
+inline constexpr uintptr_t THEMESERVICE_use_default_this = 0x10;
+// BrowserThemePack colour-table ids: the id space GetColor is keyed on. The
+// manifest-key -> id map is a {const char* key; int id} array in msedge.dll.
+// Edge keeps a SEPARATE *tints* table with its own enum (frame is 0x1c there),
+// so a tint id handed to GetColor always misses — do not cross the two.
+inline constexpr int THEMECOLOR_frame = 0x02;  // frame colour
+inline constexpr int THEMECOLOR_tab_text =
+    0x12;  // active-tab text (cyan accent)
+inline constexpr int THEMECOLOR_toolbar = 0x17;  // toolbar colour (dark ground)
+// Edge's vertical-tab strip colour ids. Edge has no manifest key for them:
+// BrowserThemePack::EdgeSetVTabAndRelatedColor (rva 0x87d42fe) DERIVES all of
+// them from the toolbar colour (it reads THEMECOLOR_toolbar/0x17, then stores a
+// contiguous run 0x23-0x2c) and GetColor reads them back when the colour mixer
+// builds the vertical-tab views' ColorProvider. That is why a theme can tint the
+// rail (it follows the toolbar) but cannot give the SELECTED tab its own colour -
+// every one is just a shade of the toolbar. The ten ids pair as active-window /
+// inactive-window; the DLL overrides only the selected tab so it adopts the
+// theme's own accent (docs/re/theming.md, hooks.h h_getcolor). Verified from the
+// store sequence in EdgeSetVTabAndRelatedColor.
+inline constexpr int VTABCOLOR_background = 0x23;  // rail bg
+inline constexpr int VTABCOLOR_background_inactive =
+    0x24;  // rail, unfocused window
+inline constexpr int VTABCOLOR_background_alt =
+    0x27;  // idle fill (+0x28 inact.)
+inline constexpr int VTABCOLOR_selected_background = 0x25;  // selected tab bg
+inline constexpr int VTABCOLOR_selected_background_inactive = 0x26;
+inline constexpr int VTABCOLOR_foreground = 0x29;  // idle text (+0x2a inactive)
+inline constexpr int VTABCOLOR_selected_foreground = 0x2b;  // selected text
+inline constexpr int VTABCOLOR_selected_foreground_inactive = 0x2c;
+// Native ui::ColorIds (ColorProvider's id space, distinct from the pack ids
+// above). A tab's title and close colour: TabStyle::GetTabForegroundColor picks
+// one of four from a [state][window focus] table at rva 0x12631428; a vertical
+// tab always uses the active-state pair, so every title shares it.
+inline constexpr int UICOLOR_tab_foreground_first = 0xad6;
+inline constexpr int UICOLOR_tab_foreground_last = 0xad9;
+// The audio/alert icon of the ACTIVE tab: tabs::GetAlertIndicatorColor (rva
+// 0x2a613ea) indexes [alert kind][active][window focus] tables (rva 0x126354a0,
+// 0x126354e0); these are their active-tab entries. Seen live: a playing tab's
+// speaker is 0xbfe.
+inline constexpr int UICOLOR_active_tab_alert[] = {
+    0xaba, 0xabb, 0xabe, 0xabf, 0xab6, 0xab7, 0xc00, 0xc02, 0xbfe};
 // WebContentsImpl::GetController is a bare `lea rax, [this + 0x280]`.
 inline constexpr uintptr_t WEBCONTENTS_controller = 0x280;
 // content::ReloadType::NORMAL.
@@ -811,6 +916,18 @@ inline constexpr int MENU_exit_all = 1;
 // unbounded), and ui::ImageModel (an upper bound, with room to spare).
 inline constexpr size_t ColorVariant_size = 16;
 inline constexpr size_t SizeBounds_size = 16;
+// views::SizeBounds: {width, has width, height, has height}, each a
+// std::optional<int>'s value then its engaged byte, as CalculateProposedLayout
+// reads it.
+inline constexpr uintptr_t SIZEBOUNDS_width = 0x0;
+inline constexpr uintptr_t SIZEBOUNDS_has_width = 0x4;
+inline constexpr uintptr_t SIZEBOUNDS_height = 0x8;
+inline constexpr uintptr_t SIZEBOUNDS_has_height = 0xc;
+// sizeof(EdgeContentsContainerView), the bytes NewView allocates before
+// EdgeContentsContainerView_ctor builds one.
+inline constexpr size_t EdgeContentsContainerView_size = 0x558;
+// A byte NewView's allocator leaves at 1 in a block it handed out poisoned.
+inline constexpr uintptr_t CONTAINER_allocation_poisoned = 0x179;
 inline constexpr size_t ImageModel_size_bound = 256;
 // MenuItemView's icon view. GetChildPreferredSize takes a row's height from
 // this view ALONE (extra children only add width), so a taller row comes from
@@ -1017,11 +1134,6 @@ inline constexpr uintptr_t RECT_h = 0xc;
 // split-button container).
 inline constexpr uintptr_t EDGETOOLBAR_discoverBase = 0x5a8;
 inline constexpr uintptr_t EDGETOOLBAR_chatButton = 0x5d0;
-// sizeof(views::WebView): every `new views::WebView` asks for 0x540.
-inline constexpr size_t WebView_size = 0x540;
-// sizeof(base::Location) {function, file, line, program counter}, which
-// LoadInitialURL takes by value (by address under the x64 ABI).
-inline constexpr size_t Location_size = 0x20;
 // libc++ std::u16string: a short string keeps its length in the last byte,
 // and its top bit marks the long form {data, size, capacity}.
 inline constexpr uintptr_t U16STRING_short_size = 0x17;
@@ -1041,6 +1153,23 @@ inline constexpr int kScriptWorldId = 11;
 inline constexpr uintptr_t FINDBARVIEW_textfield = 0x390;
 inline constexpr uintptr_t FINDBARVIEW_match_count_label = 0x398;
 inline constexpr uintptr_t FINDBARLABEL_set_text_vtable_offset = 0x3a8;
+// views::Label: its text context and text style (Label::GetTextContext and
+// GetTextStyle are bare reads of these), which pick its font and colour id.
+inline constexpr uintptr_t LABEL_text_context = 0x388;
+// DomDistillerContextKeyedService: its DomDistillerService base, and that
+// service's DistilledPagePrefs* (ChromeDomDistillerClient::GetDistilledPagePrefs
+// does exactly this: +8, then the field at +0x20).
+inline constexpr uintptr_t DOMDISTILLERKEYED_service = 0x8;
+inline constexpr uintptr_t DOMDISTILLERSERVICE_distilled_page_prefs = 0x20;
+inline constexpr uintptr_t LABEL_text_style = 0x38c;
+// views::Label: the colour asked for by SetEnabledColor, a
+// std::optional<ui::ColorVariant> (the variant's 8 bytes, then the engaged
+// flag), as Label::SetEnabledColor writes it.
+inline constexpr uintptr_t LABEL_requested_enabled_color = 0x3b0;
+inline constexpr uintptr_t LABEL_requested_enabled_color_is_set = 0x3b8;
+// Bytes to allocate for a views::Label: FindBarMatchCountLabel's own fields start
+// here, so a Label fits in it.
+inline constexpr size_t LABEL_allocation_size = 0x4a8;
 // The TextfieldController subobject HandleKeyEvent receives as `this` sits this
 // far into the FindBarView (the text field is at +0x58 of it).
 inline constexpr uintptr_t FINDBARVIEW_textfield_controller = 0x338;

@@ -7,7 +7,9 @@
 #include <algorithm>
 #include <cmath>
 #include "geom.h"
+#include "handles.h"
 #include "motion.h"
+#include "theme_tone.h"
 
 namespace fixedge::overlay {
 
@@ -35,28 +37,30 @@ inline constexpr float kRootBorderDip = 3.f;
 inline constexpr float kCornerRadiusDip = 8.f;
 inline constexpr float kDashDip = 8.f;
 
-inline constexpr uint32_t kOpaque = 255;   // a colour channel at full strength
 inline constexpr WORD kBitsPerPixel = 32;  // BGRA
 
-inline HWND g_window = nullptr;
-inline bool g_isShown = false;
-inline Style g_style = Style::kPane;
-inline float g_scale = 1.f;
-inline Rect g_from;
-inline Rect g_to;
-inline Rect g_current;  // the rect painted now
-inline ULONGLONG g_moveStart = 0;
+inline constinit HWND g_window = nullptr;
+inline constinit bool g_isShown = false;
+inline constinit Style g_style = Style::kPane;
+inline constinit float g_scale = 1.f;
+inline constinit Rect g_from;
+inline constinit Rect g_to;
+inline constinit Rect g_current;  // the rect painted now
+inline constinit ULONGLONG g_moveStart = 0;
 
 // Premultiplied BGRA pixel of `color` at `alpha` (0..1).
 inline uint32_t Pixel(COLORREF color, float alpha) {
-  const auto alphaByte = static_cast<uint32_t>(std::lround(alpha * kOpaque));
-  const auto red = GetRValue(color) * alphaByte / kOpaque;
-  const auto green = GetGValue(color) * alphaByte / kOpaque;
-  const auto blue = GetBValue(color) * alphaByte / kOpaque;
-  return (alphaByte << 24) | (red << 16) | (green << 8) | blue;
+  const auto alphaByte =
+      static_cast<uint32_t>(std::lround(alpha * theme_tone::kChannelMax));
+  const auto red = GetRValue(color) * alphaByte / theme_tone::kChannelMax;
+  const auto green = GetGValue(color) * alphaByte / theme_tone::kChannelMax;
+  const auto blue = GetBValue(color) * alphaByte / theme_tone::kChannelMax;
+  return (alphaByte << theme_tone::kAlphaShift) |
+         (red << theme_tone::kRedShift) | (green << theme_tone::kGreenShift) |
+         (blue << theme_tone::kBlueShift);
 }
 
-inline float FillAlpha(Style style) {
+inline constexpr float FillAlpha(Style style) noexcept {
   switch (style) {
     case Style::kRoot:
       return kRootFillAlpha;
@@ -109,16 +113,17 @@ inline void Paint(const Rect& rect) {
   bitmapInfo.bmiHeader.biPlanes = 1;
   bitmapInfo.bmiHeader.biBitCount = kBitsPerPixel;
   void* bits = nullptr;
-  HDC screenContext = GetDC(nullptr);
-  HDC memoryContext = CreateCompatibleDC(screenContext);
-  HBITMAP bitmap = CreateDIBSection(screenContext, &bitmapInfo, DIB_RGB_COLORS,
-                                    &bits, nullptr, 0);
+  // Declared in the order they are made, so they are given back in reverse:
+  // the bitmap deselected, then deleted, then the two contexts.
+  const handles::WindowDc screenContext{nullptr};
+  const handles::UniqueMemoryDc memoryContext{
+      CreateCompatibleDC(screenContext.Get())};
+  const handles::UniqueBitmap bitmap{CreateDIBSection(
+      screenContext.Get(), &bitmapInfo, DIB_RGB_COLORS, &bits, nullptr, 0)};
   if (!bitmap) {
-    DeleteDC(memoryContext);
-    ReleaseDC(nullptr, screenContext);
     return;
   }
-  HGDIOBJ previousObject = SelectObject(memoryContext, bitmap);
+  const handles::SelectedObject selection{memoryContext.Get(), bitmap.Get()};
   auto* pixels = static_cast<uint32_t*>(bits);
   for (int row = 0; row < rect.height; row++) {
     for (int column = 0; column < rect.width; column++) {
@@ -139,13 +144,9 @@ inline void Paint(const Rect& rect) {
   POINT destination{rect.x, rect.y};
   POINT source{0, 0};
   SIZE size{rect.width, rect.height};
-  BLENDFUNCTION blend{AC_SRC_OVER, 0, kOpaque, AC_SRC_ALPHA};
-  UpdateLayeredWindow(g_window, screenContext, &destination, &size,
-                      memoryContext, &source, 0, &blend, ULW_ALPHA);
-  SelectObject(memoryContext, previousObject);
-  DeleteObject(bitmap);
-  DeleteDC(memoryContext);
-  ReleaseDC(nullptr, screenContext);
+  BLENDFUNCTION blend{AC_SRC_OVER, 0, theme_tone::kChannelMax, AC_SRC_ALPHA};
+  UpdateLayeredWindow(g_window, screenContext.Get(), &destination, &size,
+                      memoryContext.Get(), &source, 0, &blend, ULW_ALPHA);
 }
 
 inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,

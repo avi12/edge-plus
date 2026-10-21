@@ -12,6 +12,7 @@
 #include <windows.h>
 #include <cstddef>
 #include <cstring>
+#include "channel.h"
 #include "config.h"
 #include "edge.h"
 #include "log.h"
@@ -23,7 +24,7 @@ struct ThemeId {
   char value[config::kIdCapacity] = {};
   size_t length = 0;
 
-  bool IsEmpty() const {
+  [[nodiscard]] bool IsEmpty() const {
     return length == 0;
   }
 
@@ -36,9 +37,9 @@ struct ThemeId {
 };
 
 // The themes assigned to each OS mode, and whether the feature is switched on.
-inline ThemeId g_lightTheme;
-inline ThemeId g_darkTheme;
-inline bool g_isActive = false;
+inline constinit ThemeId g_lightTheme;
+inline constinit ThemeId g_darkTheme;
+inline constinit bool g_isActive = false;
 
 // Windows is in dark mode when this value is 0 (apps use the light theme when
 // it is 1 or absent).
@@ -62,7 +63,8 @@ inline bool IsOsDarkMode() {
 // the same one the OS light/dark flip sends — so a switch driven by that flip
 // refreshes fully, and a switch pushed from the panel refreshes the frame at
 // once and the rest on the next interaction.
-inline constexpr UINT kRepaintTimerId = 0xF1EE;
+inline constexpr UINT_PTR kRepaintTimerId =
+    channel::TimerIdOf(channel::WindowTimer::kThemeRepaint);
 inline constexpr UINT kRepaintDelayMs = 180;
 
 inline void ScheduleRepaint(void* hwnd) {
@@ -81,15 +83,25 @@ inline void Repaint(void* hwnd) {
 // A theme Edge no longer has installed is asked for again (see Apply); the
 // install lands asynchronously, so the apply is retried on a one-shot timer a
 // few times, then given up.
-inline constexpr UINT kInstallRetryTimerId = 0xF1EF;
 inline constexpr UINT kInstallRetryDelayMs = 1500;
 inline constexpr int kMaxInstallRetries = 6;
-inline int g_installRetries = 0;
+inline constinit int g_installRetries = 0;
+
+// A thread timer, not a window one: a fresh launch was seen to lose the window
+// timer, leaving the dark theme uninstalled until the next config change. The
+// callback only posts to the channel, which applies on the UI thread.
+inline void CALLBACK InstallRetryFired(HWND, UINT, UINT_PTR timerId, DWORD) {
+  KillTimer(nullptr, timerId);
+  channel::Post(channel::CodeOf(channel::Command::kApplyTheme));
+}
+
+inline void ScheduleInstallRetry() {
+  SetTimer(nullptr, 0, kInstallRetryDelayMs, InstallRetryFired);
+}
 
 // Apply the theme assigned to the given mode to the window's browser, live.
 inline void Apply(void* hwnd, bool isDark) {
-  void* tsm = edge::TsmForWindow(hwnd);
-  void* profile = tsm ? edge::ProfileForTabStrip(tsm) : nullptr;
+  void* profile = edge::ProfileForTabStrip(edge::TsmForWindow(hwnd));
   void* themeService =
       profile ? edge::ThemeServiceForProfile(profile) : nullptr;
   if (!themeService) {
@@ -112,8 +124,7 @@ inline void Apply(void* hwnd, bool isDark) {
     const bool canRetry = g_installRetries < kMaxInstallRetries;
     if (canRetry) {
       g_installRetries++;
-      SetTimer(static_cast<HWND>(hwnd), kInstallRetryTimerId,
-               kInstallRetryDelayMs, nullptr);
+      ScheduleInstallRetry();
     }
     Log("[theme] %s theme %.*s not installed yet; asked Edge to install it "
         "(try %d of %d)",
@@ -142,12 +153,6 @@ inline void ApplyForCurrentOsMode(void* hwnd) {
   }
 }
 
-// The install-retry timer fired: try the apply again.
-inline void RetryApply(void* hwnd) {
-  KillTimer(static_cast<HWND>(hwnd), kInstallRetryTimerId);
-  ApplyForCurrentOsMode(hwnd);
-}
-
 // Take the panel's latest theming choice and apply it right away. Turning the
 // feature off returns both modes to the default theme so nothing we set is left
 // behind.
@@ -165,15 +170,13 @@ inline void ApplyConfig(void* hwnd, const config::Wire& wire) {
     return;
   }
   // Just switched off: drop back to the default theme once.
-  if (wasActive) {
-    Log("[theme] disabled; reverting to default theme");
-    void* tsm = edge::TsmForWindow(hwnd);
-    void* profile = tsm ? edge::ProfileForTabStrip(tsm) : nullptr;
-    void* themeService =
-        profile ? edge::ThemeServiceForProfile(profile) : nullptr;
-    if (themeService) {
-      edge::ThemeUseDefault(themeService);
-    }
+  if (!wasActive) {
+    return;
+  }
+  Log("[theme] disabled; reverting to default theme");
+  void* themeService = edge::ThemeServiceForWindow(hwnd);
+  if (themeService) {
+    edge::ThemeUseDefault(themeService);
   }
 }
 

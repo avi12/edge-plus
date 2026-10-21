@@ -101,3 +101,24 @@ body {
   font-family: inherit;
   font-size: 13px;
 }
+
+/* A feature card with its settings under the header: the card itself, the
+   panel of settings below a rule, dimmed while the feature is off. */
+.card {
+  padding: var(--space-l);
+  border: 1px solid var(--stroke-2);
+  border-radius: 8px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.card-panel {
+  margin-top: var(--space-l);
+  padding-top: var(--space-l);
+  border-top: 1px solid var(--stroke-2);
+  transition: opacity 140ms ease;
+}
+
+.card-panel.dimmed {
+  opacity: 50%;
+}

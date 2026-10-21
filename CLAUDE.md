@@ -161,14 +161,58 @@ The two `if` rules above apply to both. A value both sides need (event names, th
 config wire layout, data-folder paths) has one home per side and must match the
 DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h}`).
 
+# The WinUI panel (`app/panel-winui/`)
+
+The same panel as WinUI 3 / C#, modelled on `avi/any-stt`'s app: unpackaged and
+self-contained, its own `Program.Main`, Google C# style from `app/.editorconfig`.
+It reads and writes the Tauri panel's `settings.json` unchanged, so either panel
+can run; the Tauri one stays until Avi switches.
+
+- **Host + swappable panel** (see `app/panel-winui/README.md`): `EdgePlus.csproj`
+  is a thin host (process, single instance, window, `App.xaml`, `Host/`);
+  `Panel/EdgePlus.Panel.csproj` is everything else, loaded into a collectible
+  load context and swapped live on rebuild in a dev run. In the panel: no
+  compiled XAML, no WinRT subclasses, CsWinRT's AOT optimizer off, JSON through
+  a source-generated context, and every thread / host subscription torn down in
+  `PanelView.Dispose` — each of those otherwise pins the old panel.
+- **Panel layout**: `Platform/` (paths, settings, the actions the window calls),
+  `Dll/` (the config wire, its events, the embedded DLL, `DllSync`), `Edge/`
+  (the pinned build, the Edge watcher, installed themes, the dev-mode waiter,
+  legacy cleanup), `Themes/`, `Setup/` (start at sign-in), `Ui/`, and `Native/`.
+  A `Native/` folder (the panel's or the host's) is the **only** place with a
+  `[DllImport]` (the C# form of `unsafe_code = "forbid"`; `tools/lint.ps1`
+  enforces it).
+- **UI**: WinUI's own controls only — no CommunityToolkit, no UI library. Cards
+  are built in code (`PanelView`, `FeatureCard`, `ThemingCard`) from App.xaml's
+  styles, whose colours are all `ThemeResource`. Every sentence is in
+  `Ui/Wording.cs`; glyphs are code points (dotnet format rewrites a `\u` escape
+  into an invisible character). Motion goes through `Ui/Motion.cs`, which
+  follows Windows' Animation effects switch live.
+- **The embedded split DLL is rebuilt whenever its sources are newer**: a stale
+  one, carried silently, once replaced Edge's current DLL at panel start.
+- **Shared values** come from the DLL's sources: `// @share Name` markers in
+  `app/native-split/src` become `Panel/Platform/Shared.g.cs`
+  (`tools/Export-SharedConstants.ps1`, run before every build). Put a marker on
+  its own line above the declaration so the Tauri `build.rs` still parses it.
+- **C# naming** (any-stt's): `PascalCase` types, members and constants,
+  `camelCase` locals and parameters, `_camelCase` private fields, `s_camelCase`
+  private statics, `is`/`has`/`can` booleans. The `if` and enum rules apply.
+- **Tests**: `test/` compiles the pure sources (no WinUI, no Win32) into a
+  dependency-free console harness: `app\panel-winui\test\run.cmd`.
+- **Never run the full panel against Avi's Edge** unless asked: at start (and
+  on every live swap) it injects the DLL into every Edge browser process on the
+  pinned build, replacing a loaded DLL that differs from the one it carries.
+
 # Linting
 
 - The panel: `pnpm --dir app/panel lint` (oxlint, eslint, stylelint, `cargo
   clippy -D warnings`, then `fallow`). `pnpm --dir app/panel check` runs
   svelte-check. Run after each panel change and fix what it reports.
-- The C++ DLL: `pwsh tools/lint.ps1` (`-Fix` applies clang-format and
-  clang-tidy's fixes). The gate is clang-format (`.clang-format`), clang-tidy
-  (`.clang-tidy`, correctness as errors) and a restricted-syntax pass.
+- The C++ DLL and the WinUI panel: `pwsh tools/lint.ps1` (`-Fix` applies
+  clang-format, clang-tidy's fixes and dotnet format). The gate is clang-format
+  (`.clang-format`), clang-tidy (`.clang-tidy`, correctness as errors), a
+  restricted-syntax pass, the C# house rules, the `Shared.g.cs` freshness check
+  and dotnet format.
   `pwsh tools/lint.ps1 -InstallHook` gates every commit on its staged C++.
 
 # Native split: build and test
@@ -180,6 +224,9 @@ DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h}`).
   time or "the oldest msedge" (Avi's real Edge is running). Kill it the same way.
 - Iterate by hot-reload — signal `Local\fixedge-split-unload`, rebuild, re-inject
   into the same pid — not by relaunching Edge.
+- Inject timestamped copies (`fixedge-split-<ticks>.dll`, a loaded DLL can't be
+  overwritten) from `out/`, never from temp/scratchpad. Each new hash triggers a
+  Defender cloud scan; `out/` is the one folder Avi excluded from Defender.
 - Capture the test window with `PrintWindow`, never the screen.
 - The DLL's control channel (`fixedge.addpane`, codes in `src/control.h`) drives
   every pane action from a script, so changes can be verified without clicks.

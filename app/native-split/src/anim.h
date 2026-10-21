@@ -11,6 +11,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include "channel.h"
 #include "edge.h"
 #include "motion.h"
 #include "pane_tree.h"
@@ -28,9 +29,12 @@ struct HostSize {
   int height = 0;
 };
 
-inline bool g_isEnabled = false;  // SPI_GETCLIENTAREAANIMATION, read at Install
-inline HWND g_hwnd = nullptr;     // the window whose timer drives the frames
-inline constexpr UINT_PTR kTimerId = 0xF1ED;
+// SPI_GETCLIENTAREAANIMATION, read at Install.
+inline constinit bool g_isEnabled = false;
+// The window whose timer drives the frames.
+inline constinit HWND g_hwnd = nullptr;
+inline constexpr UINT_PTR kTimerId =
+    channel::TimerIdOf(channel::WindowTimer::kAnimationFrame);
 inline constexpr UINT kFrameMs = 15;
 
 // Set before a pane is added that must paint at once (a tab dropped in): its
@@ -38,7 +42,7 @@ inline constexpr UINT kFrameMs = 15;
 // frame while it grows in, which left it blank until the growth finished. The
 // next flight's new panes appear in place; the flag clears when that flight is
 // planned.
-inline bool g_isNextEntryInPlace = false;
+inline constinit bool g_isNextEntryInPlace = false;
 
 inline std::map<void*, Flight>& Flights() {
   static std::map<void*, Flight> flights;
@@ -213,12 +217,6 @@ inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
         motion::Lerp(flight->second.from[i].rect, placed[i].rect, eased);
   }
   Remember(contents, placed);
-}
-
-// Forget `mcv`'s flight, so the next layout starts a fresh one from where its
-// panes are on screen now (after a caller has moved them there itself).
-inline void Restart(void* mcv) {
-  Flights().erase(mcv);
 }
 
 // WM_TIMER: re-run the layout of every MCV in flight; the detour calls Apply.

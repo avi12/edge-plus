@@ -21,6 +21,7 @@
 #include <array>
 #include <cstddef>
 #include <string>
+#include <string_view>
 
 namespace fixedge::find_flags {
 
@@ -37,9 +38,9 @@ enum class Flag {
 };
 
 struct FlagInfo {
-  Flag flag;
-  char letter;        // the JavaScript flag
-  const char* title;  // the switch's words in the bar, without the letter
+  Flag flag = Flag::kIndices;
+  char letter = '\0';      // the JavaScript flag
+  const char* title = "";  // the switch's words in the bar, without the letter
 };
 
 inline constexpr std::array<FlagInfo, 7> kFlags = {{
@@ -57,7 +58,7 @@ struct FlagSet {
   unsigned bits = 0;
 };
 
-inline unsigned BitOf(Flag flag) {
+[[nodiscard]] inline constexpr unsigned BitOf(Flag flag) noexcept {
   return 1u << static_cast<unsigned>(flag);
 }
 
@@ -66,20 +67,22 @@ inline constexpr char kAlwaysOnFlag = 'g';
 
 // What a bar starts with: ^ and $ are line edges (m), exactly as the search
 // behaved before there were switches.
-inline FlagSet DefaultFlags() {
+[[nodiscard]] inline constexpr FlagSet DefaultFlags() noexcept {
   return FlagSet{BitOf(Flag::kMultiline)};
 }
 
-inline bool IsDefaultOn(Flag flag) {
+[[nodiscard]] inline constexpr bool IsDefaultOn(Flag flag) noexcept {
   return (DefaultFlags().bits & BitOf(flag)) != 0;
 }
 
-inline bool IsOn(const FlagSet& set, Flag flag) {
+[[nodiscard]] inline constexpr bool IsOn(const FlagSet& set,
+                                         Flag flag) noexcept {
   return (set.bits & BitOf(flag)) != 0;
 }
 
 // The flag that cannot be on together with `flag` (u and v), if there is one.
-inline bool HasExclusive(Flag flag, Flag* other) {
+[[nodiscard]] inline constexpr bool HasExclusive(Flag flag,
+                                                 Flag* other) noexcept {
   if (flag == Flag::kUnicode) {
     *other = Flag::kUnicodeSets;
     return true;
@@ -92,7 +95,7 @@ inline bool HasExclusive(Flag flag, Flag* other) {
 }
 
 // Turn a flag on or off; turning one on turns off the one it excludes.
-inline void SetOn(FlagSet* set, Flag flag, bool isOn) {
+inline constexpr void SetOn(FlagSet* set, Flag flag, bool isOn) noexcept {
   if (!isOn) {
     set->bits &= ~BitOf(flag);
     return;
@@ -105,7 +108,7 @@ inline void SetOn(FlagSet* set, Flag flag, bool isOn) {
 }
 
 // The switches that are on as flag letters, canonical order.
-inline std::string Letters(const FlagSet& set) {
+[[nodiscard]] inline std::string Letters(const FlagSet& set) {
   std::string letters;
   for (const FlagInfo& info : kFlags) {
     if (IsOn(set, info.flag)) {
@@ -119,10 +122,11 @@ inline std::string Letters(const FlagSet& set) {
 // once, in canonical order. Typed letters that are not flags are dropped (the typed form has
 // already refused them). A typed u next to a switched-on v (or the reverse) is
 // kept as it is: the page's RegExp refuses the pair and the bar says so.
-inline std::string Merge(const std::string& typedFlags, const FlagSet& set) {
+[[nodiscard]] inline std::string Merge(std::string_view typedFlags,
+                                       const FlagSet& set) {
   std::string merged;
   for (const FlagInfo& info : kFlags) {
-    const bool isTyped = typedFlags.find(info.letter) != std::string::npos;
+    const bool isTyped = typedFlags.find(info.letter) != std::string_view::npos;
     if (isTyped || IsOn(set, info.flag)) {
       merged.push_back(info.letter);
     }
@@ -137,7 +141,7 @@ inline std::string Merge(const std::string& typedFlags, const FlagSet& set) {
 // em spaces so the column shows the nesting, and ends with the flag's letter.
 inline constexpr char kSubGroupIndent[] = "\xE2\x80\x83\xE2\x80\x83";
 
-inline std::string SwitchTitle(const FlagInfo& info) {
+[[nodiscard]] inline std::string SwitchTitle(const FlagInfo& info) {
   return std::string(kSubGroupIndent) + info.title + " (" + info.letter + ")";
 }
 

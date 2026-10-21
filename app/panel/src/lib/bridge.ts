@@ -20,7 +20,32 @@ export enum Feature {
   QuietDevMode = "quietDevMode",
   ProtocolHandlers = "protocolHandlers",
   EnhancedFind = "enhancedFind",
-  WebUiFollowsTheme = "webUiFollowsTheme"
+  WebUiFollowsTheme = "webUiFollowsTheme",
+  LivePreview = "livePreview",
+  TabSpine = "tabSpine",
+  ReadingTheme = "readingTheme"
+}
+
+/** A reading mode page theme, in the grid's order; the values match `ReadingTheme` in settings.rs. */
+export enum ReadingTheme {
+  Sepia = "sepia",
+  Light = "light",
+  Grey = "grey",
+  Blue = "blue",
+  Yellow = "yellow",
+  Green = "green",
+  Lavender = "lavender",
+  LightBlue = "lightBlue",
+  SkyBlue = "skyBlue",
+  LightGreen = "lightGreen",
+  Black = "black",
+  DarkGrey = "darkGrey"
+}
+
+/** The reading mode theme for each Windows mode; matches `ReadingMode` in settings.rs. */
+export interface ReadingMode {
+  light: ReadingTheme;
+  dark: ReadingTheme;
 }
 
 /** A newly seen Edge build and what it switched off (often nothing); matches `BuildChange` in edge_build.rs. */
@@ -43,7 +68,11 @@ export enum LocalThemeKind {
   Folder = "folder"
 }
 
-export type ThemeSource = "store" | "local";
+/** Where a theme came from; the values match `ThemeSource` in settings.rs. */
+export enum ThemeSource {
+  Store = "store",
+  Local = "local"
+}
 
 export interface ThemeEntry {
   id: string;
@@ -73,11 +102,15 @@ export interface Features {
   protocolHandlers: boolean;
   enhancedFind: boolean;
   webUiFollowsTheme: boolean;
+  livePreview: boolean;
+  tabSpine: boolean;
+  readingTheme: boolean;
 }
 
 export interface AppState {
   features: Features;
   theming: Theming;
+  readingMode: ReadingMode;
   /** Themes installed in Edge that the panel did not add. */
   edgeThemes: EdgeTheme[];
   edgeRunning: boolean;
@@ -92,59 +125,103 @@ export interface AppState {
   unsupported: Feature[];
 }
 
-export type Mode = "light" | "dark";
+/** The Windows colour mode a theme is picked for; the values match `Mode` in settings.rs. */
+export enum Mode {
+  Light = "light",
+  Dark = "dark"
+}
+
+/** Every Tauri command the core exposes; the values match the handler names in commands.rs. */
+enum Command {
+  LoadState = "load_state",
+  TakeEdgeUpdate = "take_edge_update",
+  SetSplit = "set_split",
+  SetTheming = "set_theming",
+  SetQuietDevMode = "set_quiet_dev_mode",
+  SetStartWithWindows = "set_start_with_windows",
+  SetProtocolHandlers = "set_protocol_handlers",
+  SetEnhancedFind = "set_enhanced_find",
+  SetWebUiFollowsTheme = "set_web_ui_follows_theme",
+  SetLivePreview = "set_live_preview",
+  SetTabSpine = "set_tab_spine",
+  SetReadingTheme = "set_reading_theme",
+  SetReadingModeTheme = "set_reading_mode_theme",
+  AddStoreTheme = "add_store_theme",
+  AddLocalTheme = "add_local_theme",
+  RemoveTheme = "remove_theme",
+  SetModeTheme = "set_mode_theme"
+}
 
 export function loadState(): Promise<AppState> {
-  return invoke<AppState>("load_state");
+  return invoke<AppState>(Command.LoadState);
 }
 
 /** The Edge update that switched features off before the UI was listening, handed over once. */
 export function takeEdgeUpdate(): Promise<EdgeUpdate | null> {
-  return invoke<EdgeUpdate | null>("take_edge_update");
+  return invoke<EdgeUpdate | null>(Command.TakeEdgeUpdate);
 }
 
 export function setSplit(enabled: boolean): Promise<AppState> {
-  return invoke<AppState>("set_split", { enabled });
+  return invoke<AppState>(Command.SetSplit, { enabled });
 }
 
 export function setTheming(enabled: boolean): Promise<AppState> {
-  return invoke<AppState>("set_theming", { enabled });
+  return invoke<AppState>(Command.SetTheming, { enabled });
 }
 
 export function setQuietDevMode(enabled: boolean): Promise<AppState> {
-  return invoke<AppState>("set_quiet_dev_mode", { enabled });
+  return invoke<AppState>(Command.SetQuietDevMode, { enabled });
 }
 
 export function setStartWithWindows(enabled: boolean): Promise<AppState> {
-  return invoke<AppState>("set_start_with_windows", { enabled });
+  return invoke<AppState>(Command.SetStartWithWindows, { enabled });
 }
 
 export function setProtocolHandlers(enabled: boolean): Promise<AppState> {
-  return invoke<AppState>("set_protocol_handlers", { enabled });
+  return invoke<AppState>(Command.SetProtocolHandlers, { enabled });
 }
 
 export function setEnhancedFind(enabled: boolean): Promise<AppState> {
-  return invoke<AppState>("set_enhanced_find", { enabled });
+  return invoke<AppState>(Command.SetEnhancedFind, { enabled });
 }
 
 export function setWebUiFollowsTheme(enabled: boolean): Promise<AppState> {
-  return invoke<AppState>("set_web_ui_follows_theme", { enabled });
+  return invoke<AppState>(Command.SetWebUiFollowsTheme, { enabled });
+}
+
+export function setLivePreview(enabled: boolean): Promise<AppState> {
+  return invoke<AppState>(Command.SetLivePreview, { enabled });
+}
+
+export function setTabSpine(enabled: boolean): Promise<AppState> {
+  return invoke<AppState>(Command.SetTabSpine, { enabled });
+}
+
+export function setReadingTheme(enabled: boolean): Promise<AppState> {
+  return invoke<AppState>(Command.SetReadingTheme, { enabled });
+}
+
+export function setReadingModeTheme(mode: Mode, theme: ReadingTheme): Promise<AppState> {
+  return invoke<AppState>(Command.SetReadingModeTheme, {
+    mode,
+    theme
+  });
 }
 
 export function addStoreTheme(url: string): Promise<AppState> {
-  return invoke<AppState>("add_store_theme", { url });
+  return invoke<AppState>(Command.AddStoreTheme, { url });
 }
 
 export function addLocalTheme(path: string): Promise<AppState> {
-  return invoke<AppState>("add_local_theme", { path });
+  return invoke<AppState>(Command.AddLocalTheme, { path });
 }
 
 export function removeTheme(id: string): Promise<AppState> {
-  return invoke<AppState>("remove_theme", { id });
+  return invoke<AppState>(Command.RemoveTheme, { id });
 }
 
 export function setModeTheme(mode: Mode, id: string): Promise<AppState> {
-  return invoke<AppState>("set_mode_theme", {
+  return invoke<AppState>(Command.SetModeTheme, {
     mode,
     id
   });

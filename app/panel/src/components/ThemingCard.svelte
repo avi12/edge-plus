@@ -6,8 +6,8 @@
   import TextInput from "@/components/TextInput.svelte";
   import ThemeList from "@/components/ThemeList.svelte";
   import type { ThemeRow } from "@/components/ThemeList.svelte";
-  import { LocalThemeKind } from "@/lib/bridge";
-  import type { EdgeTheme, Mode, ThemeSource, Theming } from "@/lib/bridge";
+  import { LocalThemeKind, Mode, ThemeSource } from "@/lib/bridge";
+  import type { EdgeTheme, Theming } from "@/lib/bridge";
 
   interface Props {
     description: string;
@@ -78,11 +78,15 @@
   ]);
 
   function sourceLabel(source: ThemeSource): string {
-    if (source === "local") {
+    if (source === ThemeSource.Store) {
+      return "Store";
+    }
+
+    if (source === ThemeSource.Local) {
       return "Local";
     }
 
-    return "Store";
+    return "";
   }
 
   async function run(action: () => Promise<void>): Promise<void> {
@@ -137,7 +141,7 @@
     />
   </CardHeader>
 
-  <div class="panel" class:dimmed={!enabled}>
+  <div class="card-panel" class:dimmed={!enabled}>
     <div class="add">
       <div class="add-row">
         <TextInput
@@ -163,7 +167,7 @@
       <span class="assign-label">When Windows is light</span>
       <Select
         label="Light-mode theme"
-        onchange={id => setMode("light", id)}
+        onchange={id => setMode(Mode.Light, id)}
         {options}
         value={theming.light}
       />
@@ -172,7 +176,7 @@
       <span class="assign-label">When Windows is dark</span>
       <Select
         label="Dark-mode theme"
-        onchange={id => setMode("dark", id)}
+        onchange={id => setMode(Mode.Dark, id)}
         {options}
         value={theming.dark}
       />
@@ -183,25 +187,6 @@
 </section>
 
 <style>
-  .card {
-    padding: var(--space-l);
-    border: 1px solid var(--stroke-2);
-    border-radius: 8px;
-    background: var(--bg-card);
-    box-shadow: var(--shadow-card);
-  }
-
-  .panel {
-    margin-top: var(--space-l);
-    padding-top: var(--space-l);
-    border-top: 1px solid var(--stroke-2);
-    transition: opacity 140ms ease;
-  }
-
-  .panel.dimmed {
-    opacity: 50%;
-  }
-
   .add {
     display: flex;
     flex-direction: column;

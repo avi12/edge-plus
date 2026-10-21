@@ -11,6 +11,8 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <memory>
+#include <span>
 #include <string>
 #include <vector>
 #include <utility>
@@ -21,9 +23,8 @@
 
 namespace fixedge::edge {
 
-using namespace fixedge::edge155;
-
-inline uintptr_t g_base = 0;  // msedge.dll load address, set once by Bind()
+// msedge.dll's load address, set once by Bind().
+inline constinit uintptr_t g_base = 0;
 
 inline bool Bind(HMODULE module) {
   g_base = reinterpret_cast<uintptr_t>(module);
@@ -77,6 +78,12 @@ template <class T>
 inline T& Field(void* object, uintptr_t offset) {
   return *reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(object) + offset);
 }
+// The same field of an object we may only read.
+template <class T>
+inline const T& Field(const void* object, uintptr_t offset) {
+  return *reinterpret_cast<const T*>(reinterpret_cast<const uint8_t*>(object) +
+                                     offset);
+}
 
 // The function in `object`'s vtable at `slotOffset`. offsets.h records a vtable
 // slot as the byte offset the disassembly indexes it by, not as a slot number.
@@ -89,53 +96,54 @@ inline void* VirtualFunction(void* object, uintptr_t slotOffset) {
 
 inline void* NewView(size_t size) {
   using Fn = void*(__fastcall*)(size_t);
-  return reinterpret_cast<Fn>(At(rva::CheckedOperatorNew3))(size);
+  return reinterpret_cast<Fn>(At(edge155::rva::CheckedOperatorNew3))(size);
 }
 
 inline void ConstructContainer(void* container, void* browserView) {
   using Fn = void*(__fastcall*)(void*, void*);
-  reinterpret_cast<Fn>(At(rva::EdgeContentsContainerView_ctor))(container,
-                                                                browserView);
+  reinterpret_cast<Fn>(At(edge155::rva::EdgeContentsContainerView_ctor))(
+      container, browserView);
 }
 
 inline void AddChildViewAt(void* parent, void* child, size_t index) {
   using Fn = void*(__fastcall*)(void*, void*, size_t);
-  reinterpret_cast<Fn>(At(rva::AddChildViewAtImpl))(parent, child, index);
+  reinterpret_cast<Fn>(At(edge155::rva::AddChildViewAtImpl))(parent, child,
+                                                             index);
 }
 
 // Appends a raw_ptr<ContentsContainerView> to the MCV container vector; `slot`
 // points to an 8-byte stack temp holding the container pointer.
 inline void ContainersEmplaceBack(void* vector, void* slot) {
   using Fn = void*(__fastcall*)(void*, void*);
-  reinterpret_cast<Fn>(At(rva::Containers_emplace_back))(vector, slot);
+  reinterpret_cast<Fn>(At(edge155::rva::Containers_emplace_back))(vector, slot);
 }
 
 inline void SetViewVisible(void* view, bool isVisible) {
   using Fn = void(__fastcall*)(void*, bool);
-  reinterpret_cast<Fn>(At(rva::View_SetVisible))(view, isVisible);
+  reinterpret_cast<Fn>(At(edge155::rva::View_SetVisible))(view, isVisible);
 }
 
 inline bool ViewGetVisible(void* view) {
   using Fn = bool(__fastcall*)(void*);
-  return reinterpret_cast<Fn>(At(rva::View_GetVisible))(view);
+  return reinterpret_cast<Fn>(At(edge155::rva::View_GetVisible))(view);
 }
 
 // Re-draw each pane's border/overlay from MCV_active_index (loops every container).
 inline void McvUpdateBorders(void* mcv) {
   using Fn = void(__fastcall*)(void*);
   reinterpret_cast<Fn>(
-      At(rva::MultiContentsView_UpdateContentsBorderAndOverlay))(mcv);
+      At(edge155::rva::MultiContentsView_UpdateContentsBorderAndOverlay))(mcv);
 }
 
 inline void InvalidateLayout(void* view) {
   using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::View_InvalidateLayout))(view);
+  reinterpret_cast<Fn>(At(edge155::rva::View_InvalidateLayout))(view);
 }
 // Force a synchronous relayout now (InvalidateLayout only marks dirty; a pure
 // tree edit with no data-model change needs this to re-run the layout detour).
 inline void LayoutImmediately(void* view) {
   using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::View_LayoutImmediately))(view);
+  reinterpret_cast<Fn>(At(edge155::rva::View_LayoutImmediately))(view);
 }
 
 // std::vector<ChildLayout>::emplace_back<View*, bool, const gfx::Rect&>.
@@ -143,7 +151,7 @@ inline void LayoutImmediately(void* view) {
 inline void EmplaceChildLayout(void* vector, void* viewSlot, void* visibleSlot,
                                void* rectSlot) {
   using Fn = void*(__fastcall*)(void*, void*, void*, void*);
-  reinterpret_cast<Fn>(At(rva::ChildLayouts_emplace_back))(
+  reinterpret_cast<Fn>(At(edge155::rva::ChildLayouts_emplace_back))(
       vector, viewSlot, visibleSlot, rectSlot);
 }
 
@@ -151,14 +159,14 @@ inline void EmplaceChildLayout(void* vector, void* viewSlot, void* visibleSlot,
 inline void ContentsWebViewSetContents(void* contentsWebView,
                                        void* webContents) {
   using Fn = void*(__fastcall*)(void*, void*);
-  reinterpret_cast<Fn>(At(rva::ContentsWebView_SetWebContents))(contentsWebView,
-                                                                webContents);
+  reinterpret_cast<Fn>(At(edge155::rva::ContentsWebView_SetWebContents))(
+      contentsWebView, webContents);
 }
 
 // Force a (background) WebContents to the visible state so the pane paints.
 inline void WebContentsWasShown(void* webContents) {
   using Fn = void*(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::WebContents_WasShown))(webContents);
+  reinterpret_cast<Fn>(At(edge155::rva::WebContents_WasShown))(webContents);
 }
 
 // --- native split data-model helpers ---------------------------------------
@@ -170,30 +178,33 @@ inline void WebContentsWasShown(void* webContents) {
 // reallocated/freed by Edge's own allocator).
 inline void* EdgeNew(size_t size) {
   using Fn = void*(__fastcall*)(size_t);
-  return reinterpret_cast<Fn>(At(rva::EdgeOperatorNew))(size);
+  return reinterpret_cast<Fn>(At(edge155::rva::EdgeOperatorNew))(size);
 }
 // Edge's operator delete, for memory Edge allocated and handed to us.
 inline void EdgeDelete(void* memory) {
   using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::EdgeOperatorDelete))(memory);
+  reinterpret_cast<Fn>(At(edge155::rva::EdgeOperatorDelete))(memory);
 }
 // base::Token::CreateRandom(out base::Token*) — a valid split id.
 inline void CreateRandomToken(void* outToken) {
   using Fn = void*(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::TokenCreateRandom))(outToken);
+  reinterpret_cast<Fn>(At(edge155::rva::TokenCreateRandom))(outToken);
 }
 
 // The split primitives' index argument: {int* data; size_t size; size_t cap}
 // (NOT libc++ vector) — confirmed from the caller storing rodata {1,1} at +8.
 struct SplitIndexVec {
-  int* data;
-  size_t size;
-  size_t capacity;
+  int32_t* data = nullptr;
+  uint64_t size = 0;
+  uint64_t capacity = 0;
 };
+static_assert(sizeof(SplitIndexVec) == 24,
+              "the split primitives read 24 bytes");
 
-// Build a SplitIndexVec of `count` tab indices in an Edge-allocated buffer.
-inline SplitIndexVec MakeIndexVec(const int* indices, size_t count) {
-  int* buffer = static_cast<int*>(EdgeNew(count * sizeof(int)));
+// Build a SplitIndexVec of `indices` (tab indices) in an Edge-allocated buffer.
+inline SplitIndexVec MakeIndexVec(std::span<const int32_t> indices) {
+  const size_t count = indices.size();
+  auto* buffer = static_cast<int32_t*>(EdgeNew(count * sizeof(int32_t)));
   for (size_t i = 0; i < count; i++) {
     buffer[i] = indices[i];
   }
@@ -202,46 +213,46 @@ inline SplitIndexVec MakeIndexVec(const int* indices, size_t count) {
 
 // TabStripModel members + the split primitives (docs/re/split-grow-impl.md).
 inline void* RootCollection(void* tsm) {
-  return Field<void*>(tsm, off::TSM_collection);
+  return Field<void*>(tsm, edge155::off::TSM_collection);
 }
 inline void* ActiveTab(void* tsm) {
-  return Field<void*>(tsm, off::TSM_active_tab);
+  return Field<void*>(tsm, edge155::off::TSM_active_tab);
 }
 
 // TabModel virtuals, called through the tab's vtable.
 inline void* TabContents(void* tab) {
   using Fn = void*(__fastcall*)(void*);
   return reinterpret_cast<Fn>(
-      VirtualFunction(tab, off::TABMODEL_vtbl_GetContents))(tab);
+      VirtualFunction(tab, edge155::off::TABMODEL_vtbl_GetContents))(tab);
 }
 inline bool TabIsSplit(void* tab) {
   using Fn = bool(__fastcall*)(void*);
-  return reinterpret_cast<Fn>(VirtualFunction(tab, off::TABMODEL_vtbl_IsSplit))(
-      tab);
+  return reinterpret_cast<Fn>(
+      VirtualFunction(tab, edge155::off::TABMODEL_vtbl_IsSplit))(tab);
 }
 // Fills `outOptionalSplitId`, a 24-byte optional<SplitTabId>: the Token @0, its
 // has-value bool @0x10.
 inline void TabGetSplit(void* tab, void* outOptionalSplitId) {
   using Fn = void(__fastcall*)(void*, void*);
-  reinterpret_cast<Fn>(VirtualFunction(tab, off::TABMODEL_vtbl_GetSplit))(
-      tab, outOptionalSplitId);
+  reinterpret_cast<Fn>(VirtualFunction(
+      tab, edge155::off::TABMODEL_vtbl_GetSplit))(tab, outOptionalSplitId);
 }
 
 inline void* GetSplitData(void* tsm, void* splitId) {
   using Fn = void*(__fastcall*)(void*, void*);
-  return reinterpret_cast<Fn>(At(rva::GetSplitData))(tsm, splitId);
+  return reinterpret_cast<Fn>(At(edge155::rva::GetSplitData))(tsm, splitId);
 }
 // Fills `outVector`, a 24-byte {data, size, capacity} vector.
 inline void GetTabsAndIndicesInSplit(void* tsm, void* outVector,
                                      void* splitId) {
   using Fn = void*(__fastcall*)(void*, void*, void*);
-  reinterpret_cast<Fn>(At(rva::GetTabsAndIndicesInSplit))(tsm, outVector,
-                                                          splitId);
+  reinterpret_cast<Fn>(At(edge155::rva::GetTabsAndIndicesInSplit))(
+      tsm, outVector, splitId);
 }
 inline void* GetTabAtIndexRecursive(void* rootCollection, int index) {
   using Fn = void*(__fastcall*)(void*, int);
-  return reinterpret_cast<Fn>(At(rva::GetTabAtIndexRecursive))(rootCollection,
-                                                               index);
+  return reinterpret_cast<Fn>(At(edge155::rva::GetTabAtIndexRecursive))(
+      rootCollection, index);
 }
 // GetIndexOfTabRecursive(rcx=collection, rdx=out{size_t index; bool found}, r8=tab).
 // Returns -1 when the tab is not in the collection.
@@ -252,22 +263,22 @@ inline int GetIndexOfTabRecursive(void* rootCollection, void* tabModel) {
     uint8_t padding[7];
   } result = {};
   using Fn = void(__fastcall*)(void*, void*, void*);
-  reinterpret_cast<Fn>(At(rva::GetIndexOfTabRecursive))(rootCollection, &result,
-                                                        tabModel);
+  reinterpret_cast<Fn>(At(edge155::rva::GetIndexOfTabRecursive))(
+      rootCollection, &result, tabModel);
   return result.isFound ? static_cast<int>(result.index) : -1;
 }
 // Close the tab at strip `index` as a user gesture (Edge's own X does this).
 inline void CloseTabAt(void* tsm, int index) {
   using CloseFn = void(__fastcall*)(void*, int, uint32_t);
-  reinterpret_cast<CloseFn>(At(rva::TabStripModel_CloseWebContentsAt))(
-      tsm, index, off::TSM_close_user_gesture);
+  reinterpret_cast<CloseFn>(At(edge155::rva::TabStripModel_CloseWebContentsAt))(
+      tsm, index, edge155::off::TSM_close_user_gesture);
 }
 
 // Activate the tab at strip `index` (no gesture metrics: details zeroed).
 inline void ActivateTabAt(void* tsm, int index) {
-  uint8_t gestureDetails[off::TSM_gesture_details_size] = {};
+  uint8_t gestureDetails[edge155::off::TSM_gesture_details_size] = {};
   using ActivateFn = void(__fastcall*)(void*, int, const void*);
-  reinterpret_cast<ActivateFn>(At(rva::TabStripModel_ActivateTabAt))(
+  reinterpret_cast<ActivateFn>(At(edge155::rva::TabStripModel_ActivateTabAt))(
       tsm, index, gestureDetails);
 }
 
@@ -281,7 +292,7 @@ inline void* TabModelAt(void* tsm, int index) {
 inline int IndexOfWebContents(void* tsm, void* webContents) {
   using IndexFn = int(__fastcall*)(void*, void*);
   return reinterpret_cast<IndexFn>(
-      At(rva::TabStripModel_GetIndexOfWebContents))(tsm, webContents);
+      At(edge155::rva::TabStripModel_GetIndexOfWebContents))(tsm, webContents);
 }
 
 // The tab model showing `webContents` in `tsm`'s strip, or null (also for a
@@ -294,21 +305,21 @@ inline void* TabShowing(void* tsm, void* webContents) {
 // selection alone.
 inline void MoveTabTo(void* tsm, int index, int toIndex) {
   using MoveFn = int(__fastcall*)(void*, int, int, bool);
-  reinterpret_cast<MoveFn>(At(rva::TabStripModel_MoveWebContentsAt))(
+  reinterpret_cast<MoveFn>(At(edge155::rva::TabStripModel_MoveWebContentsAt))(
       tsm, index, toIndex, false);
 }
 
 inline void RemoveSplitImpl(void* tsm, void* splitId, int flag) {
   using Fn = void*(__fastcall*)(void*, void*, int);
-  reinterpret_cast<Fn>(At(rva::TabStripModel_RemoveSplitImpl))(tsm, splitId,
-                                                               flag);
+  reinterpret_cast<Fn>(At(edge155::rva::TabStripModel_RemoveSplitImpl))(
+      tsm, splitId, flag);
 }
 // 7 args: 4 register + 3 stack ([rsp+0x20/0x28/0x30]).
 inline void AddToSplitImpl(void* tsm, void* outSplitId, void* splitId,
                            SplitIndexVec* indices, int anchor, void* visualData,
                            int flag) {
   using Fn = void*(__fastcall*)(void*, void*, void*, void*, int, void*, int);
-  reinterpret_cast<Fn>(At(rva::TabStripModel_AddToSplitImpl))(
+  reinterpret_cast<Fn>(At(edge155::rva::TabStripModel_AddToSplitImpl))(
       tsm, outSplitId, splitId, indices, anchor, visualData, flag);
 }
 // AddToNewSplit(tsm, out base::Token*, SplitIndexVec*, SplitTabVisualData*) — creates
@@ -316,7 +327,7 @@ inline void AddToSplitImpl(void* tsm, void* outSplitId, void* splitId,
 inline void AddToNewSplit(void* tsm, void* outSplitId, SplitIndexVec* indices,
                           void* visualData) {
   using Fn = void*(__fastcall*)(void*, void*, void*, void*);
-  reinterpret_cast<Fn>(At(rva::TabStripModel_AddToNewSplit))(
+  reinterpret_cast<Fn>(At(edge155::rva::TabStripModel_AddToNewSplit))(
       tsm, outSplitId, indices, visualData);
 }
 // UpdateTabInSplit(tsm, anchor=last split member TabModel*, int newTabIndex, int flag)
@@ -325,7 +336,7 @@ inline void AddToNewSplit(void* tsm, void* outSplitId, SplitIndexVec* indices,
 inline void UpdateTabInSplit(void* tsm, void* anchorMember, int newTabIndex,
                              int flag) {
   using Fn = void*(__fastcall*)(void*, void*, int, int);
-  reinterpret_cast<Fn>(At(rva::TabStripModel_UpdateTabInSplit))(
+  reinterpret_cast<Fn>(At(edge155::rva::TabStripModel_UpdateTabInSplit))(
       tsm, anchorMember, newTabIndex, flag);
 }
 
@@ -334,33 +345,36 @@ inline void UpdateTabInSplit(void* tsm, void* anchorMember, int newTabIndex,
 // aura window, not the HWND).
 inline void* AuraWindowForHWND(void* hwnd) {
   using Fn = void*(__fastcall*)(void*);
-  return reinterpret_cast<Fn>(At(rva::GetContentWindowForHWND))(hwnd);
+  return reinterpret_cast<Fn>(At(edge155::rva::GetContentWindowForHWND))(hwnd);
 }
 inline void* BrowserViewForAura(void* auraWindow) {
   using Fn = void*(__fastcall*)(void*);
-  return reinterpret_cast<Fn>(At(rva::BrowserView_ForNativeWindow))(auraWindow);
+  return reinterpret_cast<Fn>(At(edge155::rva::BrowserView_ForNativeWindow))(
+      auraWindow);
 }
 
 // TabStripModel::GetWebContentsAt — bounds-checked by the callee; caller must
 // still pass 0 <= index < TabCount or it aborts.
 inline void* TabWebContentsAt(void* tabStripModel, int index) {
   using Fn = void*(__fastcall*)(void*, int);
-  return reinterpret_cast<Fn>(At(rva::TabStripModel_GetWebContentsAt))(
+  return reinterpret_cast<Fn>(At(edge155::rva::TabStripModel_GetWebContentsAt))(
       tabStripModel, index);
 }
 
 // --- menu label plumbing (build a real libc++ std::u16string) ----------------
 struct U8View {
-  const char* data;
-  size_t len;
+  const char* data = nullptr;
+  uint64_t len = 0;
 };
+static_assert(sizeof(U8View) == 16, "a std::string_view is {data, size}");
 struct U16String {  // opaque 24-byte libc++ std::u16string storage
-  uint64_t _[3];
+  uint64_t _[3] = {};
 };
+static_assert(sizeof(U16String) == 24, "a libc++ std::u16string is 24 bytes");
 // base::UTF8ToUTF16(out /*rcx*/, string_view{ptr,len} /*rdx*/) -> fills `out`.
 inline void Utf8ToUtf16(U16String* out, const U8View* view) {
   using Fn = void*(__fastcall*)(void*, const void*);
-  reinterpret_cast<Fn>(At(rva::UTF8ToUTF16))(out, view);
+  reinterpret_cast<Fn>(At(edge155::rva::UTF8ToUTF16))(out, view);
 }
 // The same, from a NUL-terminated UTF-8 string.
 inline void Utf8ToUtf16(U16String* out, const char* utf8) {
@@ -372,120 +386,121 @@ inline void ViewSetTooltip(void* view, const char* utf8) {
   U16String text{};
   Utf8ToUtf16(&text, utf8);
   using Fn = void(__fastcall*)(void*, const void*);
-  reinterpret_cast<Fn>(At(rva::View_SetTooltipText))(view, &text);
+  reinterpret_cast<Fn>(At(edge155::rva::View_SetTooltipText))(view, &text);
 }
 
 inline int MouseClickCount(const void* mouseEvent) {
   using CountFn = int(__fastcall*)(const void*);
-  return reinterpret_cast<CountFn>(At(rva::MouseEvent_GetClickCount))(
+  return reinterpret_cast<CountFn>(At(edge155::rva::MouseEvent_GetClickCount))(
       mouseEvent);
 }
 
 inline bool ViewIsMouseHovered(void* view) {
   using HoveredFn = bool(__fastcall*)(void*);
-  return reinterpret_cast<HoveredFn>(At(rva::View_IsMouseHovered))(view);
+  return reinterpret_cast<HoveredFn>(At(edge155::rva::View_IsMouseHovered))(
+      view);
 }
 
 // Make a menu item measure itself again after `child` was added to it.
 inline void MenuItemRemeasure(void* menuItem, void* child) {
   using ChangedFn = void(__fastcall*)(void*, void*);
-  reinterpret_cast<ChangedFn>(At(rva::MenuItemView_ChildPreferredSizeChanged))(
-      menuItem, child);
+  reinterpret_cast<ChangedFn>(At(
+      edge155::rva::MenuItemView_ChildPreferredSizeChanged))(menuItem, child);
 }
 
 inline void* MenuItemById(void* rootMenuItem, int commandId) {
   using ByIdFn = void*(__fastcall*)(void*, int);
-  return reinterpret_cast<ByIdFn>(At(rva::MenuItemView_GetMenuItemByID))(
-      rootMenuItem, commandId);
+  return reinterpret_cast<ByIdFn>(
+      At(edge155::rva::MenuItemView_GetMenuItemByID))(rootMenuItem, commandId);
 }
 
 // ui::SimpleMenuModel::AddItemWithIcon with `icon` (a gfx::VectorIcon) drawn
 // the way Edge draws its split ⋯ items' icons.
 inline void MenuAddItemWithIcon(void* model, int commandId,
                                 const U16String* label, const void* icon) {
-  alignas(16) uint8_t colorVariant[off::ColorVariant_size] = {};
+  alignas(16) uint8_t colorVariant[edge155::off::ColorVariant_size] = {};
   using ColorFn = void*(__fastcall*)(void*, int);
-  reinterpret_cast<ColorFn>(At(rva::ColorVariant_ctor))(
-      colorVariant, off::MENU_icon_color_id);
+  reinterpret_cast<ColorFn>(At(edge155::rva::ColorVariant_ctor))(
+      colorVariant, edge155::off::MENU_icon_color_id);
   uint64_t colorValue = 0;
   memcpy(&colorValue, colorVariant, sizeof(colorValue));
-  alignas(16) uint8_t image[off::ImageModel_size_bound] = {};
+  alignas(16) uint8_t image[edge155::off::ImageModel_size_bound] = {};
   using FromIconFn =
       void*(__fastcall*)(void*, const void*, uint64_t, int, const void*);
-  reinterpret_cast<FromIconFn>(At(rva::ImageModel_FromVectorIcon))(
+  reinterpret_cast<FromIconFn>(At(edge155::rva::ImageModel_FromVectorIcon))(
       image, icon, colorValue, 0, nullptr);
   using AddFn = void(__fastcall*)(void*, int, const void*, const void*);
-  reinterpret_cast<AddFn>(At(rva::SimpleMenuModel_AddItemWithIcon))(
+  reinterpret_cast<AddFn>(At(edge155::rva::SimpleMenuModel_AddItemWithIcon))(
       model, commandId, label, image);
   using DtorFn = void(__fastcall*)(void*);
-  reinterpret_cast<DtorFn>(At(rva::ImageModel_dtor))(image);
+  reinterpret_cast<DtorFn>(At(edge155::rva::ImageModel_dtor))(image);
 }
 
 // ui::SimpleMenuModel::AddSeparator(model, NORMAL_SEPARATOR).
 inline void MenuAddSeparator(void* model) {
   using SeparatorFn = void(__fastcall*)(void*, int);
-  reinterpret_cast<SeparatorFn>(At(rva::SimpleMenuModel_AddSeparator))(
-      model, off::MENU_normal_separator);
+  reinterpret_cast<SeparatorFn>(At(edge155::rva::SimpleMenuModel_AddSeparator))(
+      model, edge155::off::MENU_normal_separator);
 }
 
 // ui::SimpleMenuModel::AddItem(model /*rcx*/, int command_id /*edx*/, &u16string /*r8*/).
 inline void MenuAddItem(void* model, int commandId, const U16String* label) {
   using Fn = void*(__fastcall*)(void*, int, const void*);
-  reinterpret_cast<Fn>(At(rva::SimpleMenuModel_AddItem))(model, commandId,
-                                                         label);
+  reinterpret_cast<Fn>(At(edge155::rva::SimpleMenuModel_AddItem))(
+      model, commandId, label);
 }
 
 // A ui::SimpleMenuModel's items, by index (each call CHECKs the index).
 inline size_t MenuItemCount(void* model) {
   using CountFn = size_t(__fastcall*)(void*);
-  return reinterpret_cast<CountFn>(At(rva::SimpleMenuModel_GetItemCount))(
-      model);
+  return reinterpret_cast<CountFn>(
+      At(edge155::rva::SimpleMenuModel_GetItemCount))(model);
 }
 inline int MenuCommandIdAt(void* model, size_t index) {
   using IdFn = int(__fastcall*)(void*, size_t);
-  return reinterpret_cast<IdFn>(At(rva::SimpleMenuModel_GetCommandIdAt))(model,
-                                                                         index);
+  return reinterpret_cast<IdFn>(
+      At(edge155::rva::SimpleMenuModel_GetCommandIdAt))(model, index);
 }
 inline void MenuRemoveItemAt(void* model, size_t index) {
   using RemoveFn = void(__fastcall*)(void*, size_t);
-  reinterpret_cast<RemoveFn>(At(rva::SimpleMenuModel_RemoveItemAt))(model,
-                                                                    index);
+  reinterpret_cast<RemoveFn>(At(edge155::rva::SimpleMenuModel_RemoveItemAt))(
+      model, index);
 }
 // The label is copied into the item.
 inline void MenuSetLabel(void* model, size_t index, const U16String* label) {
   using LabelFn = void(__fastcall*)(void*, size_t, const void*);
-  reinterpret_cast<LabelFn>(At(rva::SimpleMenuModel_SetLabel))(model, index,
-                                                               label);
+  reinterpret_cast<LabelFn>(At(edge155::rva::SimpleMenuModel_SetLabel))(
+      model, index, label);
 }
 
 // --- MultiContentsView field accessors (named, typed, one place each) ---------
 
 // The container vector OBJECT begins at this address (pass to ContainersEmplaceBack).
 inline void* McvContainerVector(void* mcv) {
-  return reinterpret_cast<uint8_t*>(mcv) + off::MCV_containers_data;
+  return reinterpret_cast<uint8_t*>(mcv) + edge155::off::MCV_containers_data;
 }
 // The vector's begin pointer: an array of ContentsContainerView*.
 inline void** McvContainers(void* mcv) {
-  return Field<void**>(mcv, off::MCV_containers_data);
+  return Field<void**>(mcv, edge155::off::MCV_containers_data);
 }
 inline void* McvContainerAt(void* mcv, int index) {
   return McvContainers(mcv)[index];
 }
 inline size_t McvCount(void* mcv) {
-  return Field<size_t>(mcv, off::MCV_containers_count);
+  return Field<uint64_t>(mcv, edge155::off::MCV_containers_count);
 }
 inline void* McvBrowserView(void* mcv) {
-  return Field<void*>(mcv, off::MCV_browser_view);
+  return Field<void*>(mcv, edge155::off::MCV_browser_view);
 }
 inline uint32_t McvOrientation(void* mcv) {
-  return Field<uint32_t>(mcv, off::MCV_orientation);
+  return Field<uint32_t>(mcv, edge155::off::MCV_orientation);
 }
 inline size_t ViewChildCount(void* view) {
-  return Field<size_t>(view, off::VIEW_child_count);
+  return Field<uint64_t>(view, edge155::off::VIEW_child_count);
 }
 // Child `index` (< ViewChildCount) of `view`.
 inline void* ViewChildAt(void* view, size_t index) {
-  return Field<void**>(view, off::VIEW_children)[index];
+  return Field<void**>(view, edge155::off::VIEW_children)[index];
 }
 // Where `object`'s vtable sits in msedge.dll, to name its class from the PDB.
 inline uintptr_t VtableRva(void* object) {
@@ -495,21 +510,21 @@ inline uintptr_t VtableRva(void* object) {
 // CalculateProposedLayout runs on the LayoutManagerBase subobject embedded at
 // MCV_layout_base.
 inline void* McvFromLayoutBase(void* layoutBase) {
-  return reinterpret_cast<uint8_t*>(layoutBase) - off::MCV_layout_base;
+  return reinterpret_cast<uint8_t*>(layoutBase) - edge155::off::MCV_layout_base;
 }
 inline void* BrowserViewMcv(void* browserView) {
-  return Field<void*>(browserView, off::BV_multi_contents_view);
+  return Field<void*>(browserView, edge155::off::BV_multi_contents_view);
 }
 
 // A view's current bounds in its parent's coordinates (views::View::bounds_).
 inline Rect ViewBounds(void* view) {
-  return Field<Rect>(view, off::VIEW_bounds);
+  return Field<Rect>(view, edge155::off::VIEW_bounds);
 }
 
 // --- views helpers -------------------------------------------------------------
 
 inline void* ViewParent(void* view) {
-  return Field<void*>(view, off::VIEW_parent);
+  return Field<void*>(view, edge155::off::VIEW_parent);
 }
 // The widget's root view: its coordinates are the window's client area in DIPs.
 inline void* ViewRoot(void* view) {
@@ -521,21 +536,22 @@ inline void* ViewRoot(void* view) {
 // Convert `point` in place from `source`'s coordinates to `target`'s.
 inline void ConvertPoint(void* source, void* target, Point* point) {
   using Fn = void(__fastcall*)(void*, void*, Point*);
-  reinterpret_cast<Fn>(At(rva::View_ConvertPointToTarget))(source, target,
-                                                           point);
+  reinterpret_cast<Fn>(At(edge155::rva::View_ConvertPointToTarget))(
+      source, target, point);
 }
 // A view's bounds in screen DIPs.
 inline Rect ViewBoundsInScreen(void* view) {
   Rect bounds{};
   using BoundsFn = void*(__fastcall*)(void*, Rect*);
-  reinterpret_cast<BoundsFn>(At(rva::View_GetBoundsInScreen))(view, &bounds);
+  reinterpret_cast<BoundsFn>(At(edge155::rva::View_GetBoundsInScreen))(view,
+                                                                       &bounds);
   return bounds;
 }
 // Convert `point` in place from screen DIPs to `view`'s coordinates.
 inline void ConvertPointFromScreen(void* view, Point* point) {
   using ConvertFn = void(__fastcall*)(void*, Point*);
-  reinterpret_cast<ConvertFn>(At(rva::View_ConvertPointFromScreen))(view,
-                                                                    point);
+  reinterpret_cast<ConvertFn>(At(edge155::rva::View_ConvertPointFromScreen))(
+      view, point);
 }
 
 // --- a page's navigation --------------------------------------------------------
@@ -543,25 +559,27 @@ inline void ConvertPointFromScreen(void* view, Point* point) {
 // Whether `webContents` was opened by another page that can still script it.
 inline bool HasOpener(void* webContents) {
   using OpenerFn = bool(__fastcall*)(void*);
-  return reinterpret_cast<OpenerFn>(At(rva::WebContentsImpl_HasOpener))(
-      webContents);
+  return reinterpret_cast<OpenerFn>(
+      At(edge155::rva::WebContentsImpl_HasOpener))(webContents);
 }
 
 // Load `url` (a GURL*) in `webContents`, as a link would.
 inline void NavigateTo(void* webContents, const void* url) {
-  alignas(16) uint8_t params[off::LoadURLParams_size] = {};
+  alignas(16) uint8_t params[edge155::off::LoadURLParams_size] = {};
   using ParamsFn = void*(__fastcall*)(void*, const void*);
-  reinterpret_cast<ParamsFn>(At(rva::LoadURLParams_ctor))(params, url);
+  reinterpret_cast<ParamsFn>(At(edge155::rva::LoadURLParams_ctor))(params, url);
   using ControllerFn = const void*(__fastcall*)(void*);
   const void* controller = reinterpret_cast<ControllerFn>(
-      At(rva::WebContentsImpl_GetController))(webContents);
-  alignas(8) uint8_t navigationHandle[off::WeakPtr_size] = {};
+      At(edge155::rva::WebContentsImpl_GetController))(webContents);
+  alignas(8) uint8_t navigationHandle[edge155::off::WeakPtr_size] = {};
   using LoadFn = void(__fastcall*)(const void*, void*, const void*);
-  reinterpret_cast<LoadFn>(At(rva::NavigationControllerImpl_LoadURLWithParams))(
+  reinterpret_cast<LoadFn>(
+      At(edge155::rva::NavigationControllerImpl_LoadURLWithParams))(
       controller, navigationHandle, params);
   using DtorFn = void(__fastcall*)(void*);
-  reinterpret_cast<DtorFn>(At(rva::WeakReference_dtor))(navigationHandle);
-  reinterpret_cast<DtorFn>(At(rva::LoadURLParams_dtor))(params);
+  reinterpret_cast<DtorFn>(At(edge155::rva::WeakReference_dtor))(
+      navigationHandle);
+  reinterpret_cast<DtorFn>(At(edge155::rva::LoadURLParams_dtor))(params);
 }
 
 // Open the GURL `gurl` in a new background tab at strip `index`
@@ -570,14 +588,14 @@ inline void NavigateTo(void* webContents, const void* url) {
 // (tab_strip_model at +0x30), as AddAndReturnTabAt takes it.
 inline void* AddBackgroundTabForGurl(void* browser, const void* gurl,
                                      int index) {
-  alignas(8) uint8_t noGroup[off::OptionalTabGroupId_size] = {};
+  alignas(8) uint8_t noGroup[edge155::off::OptionalTabGroupId_size] = {};
   constexpr uint32_t kNoExtraTransition = 0;
   constexpr bool kIsForeground = false;
   constexpr bool kIsPinned = false;
   constexpr uint64_t kNoOptionalInt = 0;  // an empty optional<int>
   using AddFn = void*(__fastcall*)(void*, const void*, uint32_t, int, bool,
                                    const void*, bool, uint64_t);
-  return reinterpret_cast<AddFn>(At(rva::Chrome_AddAndReturnTabAt))(
+  return reinterpret_cast<AddFn>(At(edge155::rva::Chrome_AddAndReturnTabAt))(
       browser, gurl, kNoExtraTransition, index, kIsForeground, noGroup,
       kIsPinned, kNoOptionalInt);
 }
@@ -587,12 +605,12 @@ inline void* AddBackgroundTab(void* browser, const char* url, int index) {
     const char* data;
     size_t size;
   } urlView = {url, std::strlen(url)};
-  alignas(16) uint8_t gurl[off::GURL_size] = {};
+  alignas(16) uint8_t gurl[edge155::off::GURL_size] = {};
   using GurlFn = void*(__fastcall*)(void*, const void*);
-  reinterpret_cast<GurlFn>(At(rva::GURL_ctor_string))(gurl, &urlView);
+  reinterpret_cast<GurlFn>(At(edge155::rva::GURL_ctor_string))(gurl, &urlView);
   void* webContents = AddBackgroundTabForGurl(browser, gurl, index);
   using DtorFn = void(__fastcall*)(void*);
-  reinterpret_cast<DtorFn>(At(rva::GURL_dtor))(gurl);
+  reinterpret_cast<DtorFn>(At(edge155::rva::GURL_dtor))(gurl);
   return webContents;
 }
 
@@ -600,14 +618,15 @@ inline void* AddBackgroundTab(void* browser, const char* url, int index) {
 // Edge's split "Open this webpage in a new tab" copies.
 inline const void* LastCommittedUrl(void* webContents) {
   using UrlFn = const void*(__fastcall*)(void*);
-  return reinterpret_cast<UrlFn>(At(rva::WebContentsImpl_GetLastCommittedURL))(
-      webContents);
+  return reinterpret_cast<UrlFn>(
+      At(edge155::rva::WebContentsImpl_GetLastCommittedURL))(webContents);
 }
 
 // The page Edge's split button opens in its new pane: it offers the window's
 // other tabs.
 inline const char* StartingPageUrl() {
-  return static_cast<const char*>(At(rva::EdgeUISplitWindowStartingPageURL));
+  return static_cast<const char*>(
+      At(edge155::rva::EdgeUISplitWindowStartingPageURL));
 }
 
 // Whether `webContents` is Edge's split starting page, judged as Edge's split
@@ -615,126 +634,136 @@ inline const char* StartingPageUrl() {
 inline bool IsStartingPage(void* webContents) {
   constexpr bool kIsJudgedByUrl = false;
   using StartingFn = bool(__fastcall*)(void*, bool);
-  return reinterpret_cast<StartingFn>(At(
-      rva::SplitWindowController_IsStartingPage))(webContents, kIsJudgedByUrl);
+  return reinterpret_cast<StartingFn>(
+      At(edge155::rva::SplitWindowController_IsStartingPage))(webContents,
+                                                              kIsJudgedByUrl);
 }
 
 // A task's bound base::WeakPtr (its BindState's first bound argument): its
 // pointer while the WeakPtr is valid, else null.
 inline void* BoundWeakTarget(void* bindState) {
-  void* flag = Field<void*>(bindState, off::BINDSTATE_first_bound_argument);
+  void* flag =
+      Field<void*>(bindState, edge155::off::BINDSTATE_first_bound_argument);
   const bool isValid =
-      flag && Field<uint8_t>(flag, off::WEAKFLAG_invalidated) == 0;
-  return isValid ? Field<void*>(bindState, off::BINDSTATE_first_bound_argument +
-                                               sizeof(void*))
+      flag && Field<uint8_t>(flag, edge155::off::WEAKFLAG_invalidated) == 0;
+  return isValid ? Field<void*>(bindState,
+                                edge155::off::BINDSTATE_first_bound_argument +
+                                    sizeof(void*))
                  : nullptr;
 }
 // Null the bound WeakPtr's pointer, so the task finds nothing to act on and
 // only releases its reference.
 inline void ClearBoundWeakTarget(void* bindState) {
-  Field<void*>(bindState, off::BINDSTATE_first_bound_argument + sizeof(void*)) =
-      nullptr;
+  Field<void*>(bindState, edge155::off::BINDSTATE_first_bound_argument +
+                              sizeof(void*)) = nullptr;
 }
 
 // The WebContents of the starting page a SplitWindowStartingUIHandler serves.
 inline void* StartingPageOf(void* handler) {
-  void* webUi = Field<void*>(handler, off::STARTINGHANDLER_web_ui);
-  return webUi ? Field<void*>(webUi, off::WEBUI_web_contents) : nullptr;
+  void* webUi = Field<void*>(handler, edge155::off::STARTINGHANDLER_web_ui);
+  return webUi ? Field<void*>(webUi, edge155::off::WEBUI_web_contents)
+               : nullptr;
 }
 
 // --- events -------------------------------------------------------------------
 
 inline int EventType(void* event) {
-  return Field<int32_t>(event, off::EVENT_type);
+  return Field<int32_t>(event, edge155::off::EVENT_type);
 }
 // A key event's ui::KeyboardCode (the Windows virtual-key code).
 inline int KeyEventCode(void* keyEvent) {
-  return Field<uint8_t>(keyEvent, off::KEYEVENT_key_code);
+  return Field<uint8_t>(keyEvent, edge155::off::KEYEVENT_key_code);
 }
 
 // --- a tab drag (TabDragController) ---------------------------------------------
 
 inline bool IsDraggingTabs(void* controller) {
-  return Field<int32_t>(controller, off::TABDRAG_state) ==
-         off::TABDRAG_state_dragging_tabs;
+  return Field<int32_t>(controller, edge155::off::TABDRAG_state) ==
+         edge155::off::TABDRAG_state_dragging_tabs;
 }
 inline size_t DraggedTabCount(void* controller) {
-  return Field<size_t>(controller, off::TABDRAG_drag_data_count);
+  return Field<uint64_t>(controller, edge155::off::TABDRAG_drag_data_count);
 }
 // The WebContents of dragged tab `i` (< DraggedTabCount).
 inline void* DraggedContents(void* controller, size_t i) {
-  auto* entries = Field<uint8_t*>(controller, off::TABDRAG_drag_data);
-  return Field<void*>(entries + i * off::TABDRAGDATA_size,
-                      off::TABDRAGDATA_contents);
+  auto* entries = Field<uint8_t*>(controller, edge155::off::TABDRAG_drag_data);
+  return Field<void*>(entries + i * edge155::off::TABDRAGDATA_size,
+                      edge155::off::TABDRAGDATA_contents);
 }
 // The tab strip the drag is attached to (a TabDragContext view).
 inline void* DragContext(void* controller) {
-  return Field<void*>(controller, off::TABDRAG_attached_context);
+  return Field<void*>(controller, edge155::off::TABDRAG_attached_context);
 }
 inline void* DragContextTabStripModel(void* context) {
   using ModelFn = void*(__fastcall*)(void*);
   return reinterpret_cast<ModelFn>(VirtualFunction(
-      context, off::DRAGCONTEXT_vtbl_GetTabStripModel))(context);
+      context, edge155::off::DRAGCONTEXT_vtbl_GetTabStripModel))(context);
 }
 // The tab view showing `webContents` in the drag's strip, or null.
 inline void* DragContextTabFor(void* context, void* webContents) {
   using TabFn = void*(__fastcall*)(void*, void*);
   return reinterpret_cast<TabFn>(VirtualFunction(
-      context, off::DRAGCONTEXT_vtbl_GetTabForContents))(context, webContents);
+      context, edge155::off::DRAGCONTEXT_vtbl_GetTabForContents))(context,
+                                                                  webContents);
 }
 
 // --- the tab list's layout (TabStripLayoutHelper) ------------------------------
 
 inline size_t TabLayoutSlotCount(void* helper) {
-  return Field<size_t>(helper, off::TABLAYOUT_slot_count);
+  return Field<uint64_t>(helper, edge155::off::TABLAYOUT_slot_count);
 }
 // The tab view in slot `index`, or null for a slot that holds no tab.
 inline void* TabLayoutSlotTab(void* helper, size_t index) {
-  auto* slots = Field<uint8_t*>(helper, off::TABLAYOUT_slots);
-  uint8_t* slot = slots + index * off::TABSLOT_size;
-  const bool isTab =
-      Field<uint32_t>(slot, off::TABSLOT_type) == off::TABSLOT_type_tab;
-  return isTab ? Field<void*>(slot, off::TABSLOT_view) : nullptr;
+  auto* slots = Field<uint8_t*>(helper, edge155::off::TABLAYOUT_slots);
+  uint8_t* slot = slots + index * edge155::off::TABSLOT_size;
+  const bool isTab = Field<uint32_t>(slot, edge155::off::TABSLOT_type) ==
+                     edge155::off::TABSLOT_type_tab;
+  return isTab ? Field<void*>(slot, edge155::off::TABSLOT_view) : nullptr;
 }
 inline bool IsTabViewInSplit(void* tabView) {
-  return (Field<uint8_t>(tabView, off::TABVIEW_split_has_value) & 1) != 0;
+  return (Field<uint8_t>(tabView, edge155::off::TABVIEW_split_has_value) & 1) !=
+         0;
 }
 // Whether `other` is a tab of the same class as `tabView`, in the same split.
 inline bool IsTabViewInSameSplit(void* tabView, void* other) {
   const bool isSameClass = Field<void*>(other, 0) == Field<void*>(tabView, 0);
   return isSameClass && IsTabViewInSplit(other) &&
-         memcmp(reinterpret_cast<uint8_t*>(tabView) + off::TABVIEW_split_token,
-                reinterpret_cast<uint8_t*>(other) + off::TABVIEW_split_token,
-                off::TABVIEW_split_token_size) == 0;
+         memcmp(reinterpret_cast<uint8_t*>(tabView) +
+                    edge155::off::TABVIEW_split_token,
+                reinterpret_cast<uint8_t*>(other) +
+                    edge155::off::TABVIEW_split_token,
+                edge155::off::TABVIEW_split_token_size) == 0;
 }
 // CalculateIdealBounds's result: one rect per slot.
 inline Rect* IdealBoundsRects(void* result) {
-  return Field<Rect*>(result, off::IDEALBOUNDS_data);
+  return Field<Rect*>(result, edge155::off::IDEALBOUNDS_data);
 }
 inline size_t IdealBoundsCount(void* result) {
-  return Field<size_t>(result, off::IDEALBOUNDS_count);
+  return Field<uint64_t>(result, edge155::off::IDEALBOUNDS_count);
 }
 
 // Where a mouse event happened, in the window's DIPs (its root location).
 inline Point EventRootLocation(const void* event) {
-  const auto* location = reinterpret_cast<const float*>(
-      reinterpret_cast<const uint8_t*>(event) + off::EVENT_root_location);
+  const auto* location =
+      reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(event) +
+                                     edge155::off::EVENT_root_location);
   return Point{static_cast<int32_t>(location[0]),
                static_cast<int32_t>(location[1])};
 }
 inline void ViewReorderChild(void* parent, void* child, size_t index) {
   using Fn = void(__fastcall*)(void*, void*, size_t);
-  reinterpret_cast<Fn>(At(rva::View_ReorderChildView))(parent, child, index);
+  reinterpret_cast<Fn>(At(edge155::rva::View_ReorderChildView))(parent, child,
+                                                                index);
 }
 inline void ViewRemoveChild(void* parent, void* child) {
   using Fn = void(__fastcall*)(void*, void*);
-  reinterpret_cast<Fn>(At(rva::View_RemoveChildView))(parent, child);
+  reinterpret_cast<Fn>(At(edge155::rva::View_RemoveChildView))(parent, child);
 }
 
 // --- per-pane hover controls -------------------------------------------------
 
 inline void* ContainerControlButtons(void* container) {
-  return Field<void*>(container, off::ECCV_control_buttons);
+  return Field<void*>(container, edge155::off::ECCV_control_buttons);
 }
 
 // EdgeContentsContainerView::SetControlButtons(unique_ptr<ControlButtons>*), a
@@ -742,10 +771,10 @@ inline void* ContainerControlButtons(void* container) {
 // out of `*ownedBar` and nulls it.
 inline void ContainerSetControlButtons(void* container, void** ownedBar) {
   void* buttonsInterface =
-      reinterpret_cast<uint8_t*>(container) + off::ECCV_buttons_iface;
+      reinterpret_cast<uint8_t*>(container) + edge155::off::ECCV_buttons_iface;
   using Fn = void(__fastcall*)(void*, void**);
-  reinterpret_cast<Fn>(
-      VirtualFunction(buttonsInterface, off::ECCV_vtbl_SetControlButtons))(
+  reinterpret_cast<Fn>(VirtualFunction(
+      buttonsInterface, edge155::off::ECCV_vtbl_SetControlButtons))(
       buttonsInterface, ownedBar);
 }
 
@@ -753,10 +782,10 @@ inline void ContainerSetControlButtons(void* container, void** ownedBar) {
 // EnsureControlButtons does for pane 1 (`not_first` = true there).
 inline void GiveControlButtons(void* container, void* browserView,
                                bool not_first) {
-  void* bar = NewView(off::ControlButtons_size);
+  void* bar = NewView(edge155::off::ControlButtons_size);
   using Ctor = void*(__fastcall*)(void*, void*, bool);
-  reinterpret_cast<Ctor>(At(rva::ControlButtons_ctor))(bar, browserView,
-                                                       not_first);
+  reinterpret_cast<Ctor>(At(edge155::rva::ControlButtons_ctor))(
+      bar, browserView, not_first);
   void* ownedBar = bar;  // stands in for the unique_ptr the callee empties
   ContainerSetControlButtons(container, &ownedBar);
 }
@@ -765,78 +794,83 @@ inline void GiveControlButtons(void* container, void* browserView,
 // bytes from NewView); it starts hidden.
 inline void ConstructResizeArea(void* view, void* mcv) {
   using CtorFn = void*(__fastcall*)(void*, void*);
-  reinterpret_cast<CtorFn>(At(rva::EdgeMultiContentsResizeArea_ctor))(view,
-                                                                      mcv);
+  reinterpret_cast<CtorFn>(At(edge155::rva::EdgeMultiContentsResizeArea_ctor))(
+      view, mcv);
 }
 
 // Edge's own (single, two-pane) resize handle of a split.
 inline void* McvResizeArea(void* mcv) {
-  return Field<void*>(mcv, off::MCV_resize_area);
+  return Field<void*>(mcv, edge155::off::MCV_resize_area);
 }
 
 // The X button of a pane's hover bar.
 inline void* ControlButtonsCloseButton(void* bar) {
-  return Field<void*>(bar, off::ControlButtons_close_button);
+  return Field<void*>(bar, edge155::off::ControlButtons_close_button);
 }
 
 // A plain views::View (no layout manager: its children stay where they are
 // put), not yet parented.
 inline void* NewPlainView() {
-  void* view = NewView(off::View_size);
+  void* view = NewView(edge155::off::View_size);
   using CtorFn = void*(__fastcall*)(void*);
-  reinterpret_cast<CtorFn>(At(rva::View_ctor))(view);
+  reinterpret_cast<CtorFn>(At(edge155::rva::View_ctor))(view);
   return view;
 }
 
 inline void SetViewBounds(void* view, const Rect& bounds) {
   using SetBoundsFn = void(__fastcall*)(void*, const Rect*);
-  reinterpret_cast<SetBoundsFn>(At(rva::View_SetBoundsRect))(view, &bounds);
+  reinterpret_cast<SetBoundsFn>(At(edge155::rva::View_SetBoundsRect))(view,
+                                                                      &bounds);
 }
 
 inline Size ViewPreferredSize(void* view) {
   Size size{};
-  const uint8_t unboundedSizeBounds[off::SizeBounds_size] = {};
+  const uint8_t unboundedSizeBounds[edge155::off::SizeBounds_size] = {};
   using PreferredFn = void*(__fastcall*)(void*, Size*, const void*);
-  reinterpret_cast<PreferredFn>(At(rva::View_GetPreferredSize))(
+  reinterpret_cast<PreferredFn>(At(edge155::rva::View_GetPreferredSize))(
       view, &size, unboundedSizeBounds);
   return size;
 }
 
 inline void* MenuItemIconView(void* menuItem) {
-  return Field<void*>(menuItem, off::MENUITEM_icon_view);
+  return Field<void*>(menuItem, edge155::off::MENUITEM_icon_view);
 }
 
 // Close the open menu, if any, as MenuRunner::Cancel does.
 inline void CancelActiveMenu() {
   using ActiveFn = const void*(__fastcall*)();
-  const void* controller =
-      reinterpret_cast<ActiveFn>(At(rva::MenuController_GetActiveInstance))();
+  const void* controller = reinterpret_cast<ActiveFn>(
+      At(edge155::rva::MenuController_GetActiveInstance))();
   if (!controller) {
     return;
   }
   using CancelFn = void(__fastcall*)(const void*, int, int);
-  reinterpret_cast<CancelFn>(At(rva::MenuController_Cancel))(
-      controller, off::MENU_exit_all, 0);
+  reinterpret_cast<CancelFn>(At(edge155::rva::MenuController_Cancel))(
+      controller, edge155::off::MENU_exit_all, 0);
 }
 
 // The MenuItemView whose views::LayoutDelegate base `layoutDelegate` is.
 inline void* MenuItemOfLayoutDelegate(void* layoutDelegate) {
-  return static_cast<uint8_t*>(layoutDelegate) - off::MENUITEM_layout_delegate;
+  return static_cast<uint8_t*>(layoutDelegate) -
+         edge155::off::MENUITEM_layout_delegate;
 }
 
 inline int ProposedHostHeight(void* proposedLayout) {
-  return Field<Size>(proposedLayout, off::PL_host_size).height;
+  return Field<Size>(proposedLayout, edge155::off::PL_host_size).height;
 }
 
 // The bounds a views::ProposedLayout gives `child`, or null if it has none.
 inline Rect* ProposedChildBounds(void* proposedLayout, const void* child) {
-  auto* entries = Field<uint8_t*>(proposedLayout, off::PL_child_layouts);
-  const auto count = Field<size_t>(proposedLayout, off::PL_child_count);
+  auto* entries =
+      Field<uint8_t*>(proposedLayout, edge155::off::PL_child_layouts);
+  const auto count =
+      Field<uint64_t>(proposedLayout, edge155::off::PL_child_count);
   for (size_t i = 0; i < count; i++) {
-    uint8_t* entry = entries + i * off::CL_stride;
-    const bool isChildEntry = Field<void*>(entry, off::CL_child) == child;
+    uint8_t* entry = entries + i * edge155::off::CL_stride;
+    const bool isChildEntry =
+        Field<void*>(entry, edge155::off::CL_child) == child;
     if (isChildEntry) {
-      return reinterpret_cast<Rect*>(entry + off::CL_bounds);
+      return reinterpret_cast<Rect*>(entry + edge155::off::CL_bounds);
     }
   }
   return nullptr;
@@ -845,19 +879,20 @@ inline Rect* ProposedChildBounds(void* proposedLayout, const void* child) {
 inline void SetViewPreferredSize(void* view, const Size& size) {
   struct OptionalSize {  // std::optional<gfx::Size>
     Size size;
-    bool hasValue;
+    bool hasValue = false;
   };
   const OptionalSize preferred{size, true};
   using PreferredFn = void(__fastcall*)(void*, const OptionalSize*);
-  reinterpret_cast<PreferredFn>(At(rva::View_SetPreferredSize))(view,
-                                                                &preferred);
+  reinterpret_cast<PreferredFn>(At(edge155::rva::View_SetPreferredSize))(
+      view, &preferred);
 }
 
 // One round icon button in the hover bar's style, not yet parented.
 inline void* NewControlButton(const void* icon) {
-  void* button = NewView(off::ControlButtons_button_size);
+  void* button = NewView(edge155::off::ControlButtons_button_size);
   using CtorFn = void*(__fastcall*)(void*, const void*);
-  reinterpret_cast<CtorFn>(At(rva::ControlButtons_Button_ctor))(button, icon);
+  reinterpret_cast<CtorFn>(At(edge155::rva::ControlButtons_Button_ctor))(button,
+                                                                         icon);
   return button;
 }
 
@@ -866,27 +901,28 @@ inline void* NewControlButton(const void* icon) {
 inline void* ControlButtonsAddButton(void* bar, int stringId, const void* icon,
                                      bool clickable) {
   using Fn = void*(__fastcall*)(void*, int, const void*, bool);
-  return reinterpret_cast<Fn>(At(rva::ControlButtons_AddButton))(
+  return reinterpret_cast<Fn>(At(edge155::rva::ControlButtons_AddButton))(
       bar, stringId, icon, clickable);
 }
 // Re-run the bar's own layout so its width follows its visible buttons.
 inline void ControlButtonsRelayout(void* bar) {
   using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::ControlButtons_InitLayout))(bar);
+  reinterpret_cast<Fn>(At(edge155::rva::ControlButtons_InitLayout))(bar);
 }
 
 // Watch a pane's WebContents for mouse input so hovering it shows its bar.
 inline void ListenSplitInput(void* webContents) {
   using Fn = void(__fastcall*)(void*, void*);
-  reinterpret_cast<Fn>(At(rva::SplitWindow_ListenWebContentsInputEvent))(
-      webContents, nullptr);
+  reinterpret_cast<Fn>(
+      At(edge155::rva::SplitWindow_ListenWebContentsInputEvent))(webContents,
+                                                                 nullptr);
 }
 
 // The browser's SplitWindowController (null if it has none).
 inline void* SplitWindowControllerFor(void* browser) {
   using Fn = void*(__fastcall*)(void*);
-  return reinterpret_cast<Fn>(At(rva::SplitWindowController_FromBrowser))(
-      browser);
+  return reinterpret_cast<Fn>(
+      At(edge155::rva::SplitWindowController_FromBrowser))(browser);
 }
 // Tell the open starting pages of `controller`'s window that `webContents` is
 // no longer a tab to offer: each drops its card
@@ -894,23 +930,26 @@ inline void* SplitWindowControllerFor(void* browser) {
 // page has opened, so none to tell.
 inline void WithdrawFromStartingPages(void* controller, void* webContents) {
   const void* notifier =
-      controller ? Field<void*>(controller,
-                                off::SPLITCONTROLLER_starting_page_notifier)
-                 : nullptr;
+      controller
+          ? Field<void*>(controller,
+                         edge155::off::SPLITCONTROLLER_starting_page_notifier)
+          : nullptr;
   if (!notifier) {
     return;
   }
   using ClosingFn = void(__fastcall*)(const void*, void*);
-  reinterpret_cast<ClosingFn>(At(rva::StartingPageNotifierImpl_OnTabClosing))(
-      notifier, webContents);
+  reinterpret_cast<ClosingFn>(
+      At(edge155::rva::StartingPageNotifierImpl_OnTabClosing))(notifier,
+                                                               webContents);
 }
 // What a pane's hover runs: show the bar of the container showing
 // `webContents`, hide the rest.
 inline bool SplitWindowControllerShowControlButton(void* controller,
                                                    void* webContents) {
   using Fn = bool(__fastcall*)(void*, void*);
-  return reinterpret_cast<Fn>(At(rva::SplitWindowController_ShowControlButton))(
-      controller, webContents);
+  return reinterpret_cast<Fn>(
+      At(edge155::rva::SplitWindowController_ShowControlButton))(controller,
+                                                                 webContents);
 }
 
 // Run the hover's effect for the pane showing `webContents` directly (the test
@@ -925,19 +964,20 @@ inline bool ShowControlButtonFor(void* browser, void* webContents) {
 
 // A container's ContentsWebView (the pane's web view).
 inline void* ContainerWebView(void* container) {
-  return Field<void*>(container, off::CCV_contents_web_view);
+  return Field<void*>(container, edge155::off::CCV_contents_web_view);
 }
 // The WebContents a container's web view is showing (null if none).
 inline void* ContainerWebContents(void* container) {
-  return Field<void*>(ContainerWebView(container), off::CWV_web_contents);
+  return Field<void*>(ContainerWebView(container),
+                      edge155::off::CWV_web_contents);
 }
 
 // --- Browser / TabStripModel field accessors ---------------------------------
 inline void* BrowserOf(void* browserView) {
-  return Field<void*>(browserView, off::BV_browser);
+  return Field<void*>(browserView, edge155::off::BV_browser);
 }
 inline void* TabStripModelOf(void* browser) {
-  return Field<void*>(browser, off::BROWSER_tab_strip_model);
+  return Field<void*>(browser, edge155::off::BROWSER_tab_strip_model);
 }
 // The TabStripModel behind an MCV's browser view (null if none).
 inline void* McvTabStripModel(void* mcv) {
@@ -945,8 +985,9 @@ inline void* McvTabStripModel(void* mcv) {
   return browserView ? TabStripModelOf(BrowserOf(browserView)) : nullptr;
 }
 inline int TabCount(void* tabStripModel) {
-  void* collection = Field<void*>(tabStripModel, off::TSM_collection);
-  return collection ? Field<int32_t>(collection, off::TABCOLL_count) : 0;
+  void* collection = Field<void*>(tabStripModel, edge155::off::TSM_collection);
+  return collection ? Field<int32_t>(collection, edge155::off::TABCOLL_count)
+                    : 0;
 }
 
 // A split's members as Edge lists them (GetTabsAndIndicesInSplit): a vector
@@ -963,14 +1004,16 @@ struct SplitMembers {
   }
   SplitMembers(const SplitMembers&) = delete;
   SplitMembers& operator=(const SplitMembers&) = delete;
+  SplitMembers(SplitMembers&&) = delete;
+  SplitMembers& operator=(SplitMembers&&) = delete;
 
-  int Count() const {
+  [[nodiscard]] int Count() const {
     return list.data ? static_cast<int>(list.size) : 0;
   }
   // Member `i`'s tab model (0 <= i < Count()).
-  void* TabAt(int i) const {
+  [[nodiscard]] void* TabAt(int i) const {
     return Field<void*>(
-        list.data + static_cast<size_t>(i) * off::SPLITMEMBER_size, 0);
+        list.data + static_cast<size_t>(i) * edge155::off::SPLITMEMBER_size, 0);
   }
 
   struct {
@@ -1022,8 +1065,8 @@ inline void* TsmForWindow(void* hwnd) {
 // one full-window pane (CloseSplitView). Used after a split is dissolved.
 inline void MaybeUpdateSplitView(void* browserView, void* webContents) {
   using Fn = void(__fastcall*)(void*, void*);
-  reinterpret_cast<Fn>(At(rva::BrowserView_MaybeUpdateSplitView))(browserView,
-                                                                  webContents);
+  reinterpret_cast<Fn>(At(edge155::rva::BrowserView_MaybeUpdateSplitView))(
+      browserView, webContents);
 }
 
 // MultiContentsView from a top-level Win32 browser window handle.
@@ -1040,8 +1083,8 @@ inline void* McvForWindow(void* hwnd) {
 // content::BrowserContext* (the Profile) behind a WebContents.
 inline void* BrowserContextOf(void* webContents) {
   using Fn = void*(__fastcall*)(void*);
-  return reinterpret_cast<Fn>(At(rva::WebContentsImpl_GetBrowserContext))(
-      webContents);
+  return reinterpret_cast<Fn>(
+      At(edge155::rva::WebContentsImpl_GetBrowserContext))(webContents);
 }
 
 // The Profile (BrowserContext) behind a TabStripModel's active tab, our bridge
@@ -1052,11 +1095,53 @@ inline void* ProfileForTabStrip(void* tsm) {
   return webContents ? BrowserContextOf(webContents) : nullptr;
 }
 
+// Set the reading mode's page theme of the profile behind `browserContext`
+// (dom_distiller's pref, `theme` its number): persisted, and every open reading
+// view of the profile switches to it.
+inline void SetReadingTheme(void* browserContext, int32_t theme) {
+  using GetFn = void*(__fastcall*)(void*);
+  void* keyed = reinterpret_cast<GetFn>(
+      At(edge155::rva::DomDistillerServiceFactory_GetForBrowserContext))(
+      browserContext);
+  if (!keyed) {
+    return;
+  }
+  void* service =
+      static_cast<uint8_t*>(keyed) + edge155::off::DOMDISTILLERKEYED_service;
+  const void* prefs = Field<void*>(
+      service, edge155::off::DOMDISTILLERSERVICE_distilled_page_prefs);
+  if (!prefs) {
+    return;
+  }
+  // An empty libc++ std::string (short, length 0): the callee owns and frees it,
+  // and frees nothing for a short one.
+  struct EmptyString {
+    uint64_t words[3] = {};
+  };
+  static_assert(sizeof(EmptyString) == 24, "a libc++ std::string is 24 bytes");
+  EmptyString noSource{};
+  using SetFn = void(__fastcall*)(const void*, int32_t, EmptyString*);
+  reinterpret_cast<SetFn>(At(edge155::rva::DistilledPagePrefs_SetTheme))(
+      prefs, theme, &noSource);
+}
+
 // The per-profile ThemeService (one serves the whole profile).
+// Whether Edge lays its UI out right to left (base::i18n::IsRTL).
+inline bool IsUiRightToLeft() {
+  using Fn = bool(__fastcall*)();
+  return reinterpret_cast<Fn>(At(edge155::rva::base_i18n_IsRTL))();
+}
+
 inline void* ThemeServiceForProfile(void* profile) {
   using Fn = void*(__fastcall*)(void*);
-  return reinterpret_cast<Fn>(At(rva::ThemeServiceFactory_GetForProfile))(
-      profile);
+  return reinterpret_cast<Fn>(
+      At(edge155::rva::ThemeServiceFactory_GetForProfile))(profile);
+}
+
+// The ThemeService of the profile behind a browser window, or null.
+inline void* ThemeServiceForWindow(void* hwnd) {
+  void* profile = ProfileForTabStrip(TsmForWindow(hwnd));
+  return profile ? ThemeServiceForProfile(profile) : nullptr;
 }
 
 // A libc++ std::string holding a theme id, to pass by const-ref. One reused
@@ -1068,12 +1153,12 @@ inline const void* ThemeIdString(const char* themeId) {
   static uint64_t storage[3] = {0, 0, 0};  // an empty libc++ std::string
   // Clear in place (size 0, keeps any heap buffer): assign(size_type n=0, char).
   using ClearFn = void(__fastcall*)(void*, size_t, char);
-  reinterpret_cast<ClearFn>(At(rva::BasicStringChar_assignFill))(&storage, 0,
-                                                                 0);
+  reinterpret_cast<ClearFn>(At(edge155::rva::BasicStringChar_assignFill))(
+      &storage, 0, 0);
   // Append the NUL-terminated id (strlen inside), building it fresh each call.
   using AppendFn = void(__fastcall*)(void*, const char*);
-  reinterpret_cast<AppendFn>(At(rva::BasicStringChar_append))(&storage,
-                                                              themeId);
+  reinterpret_cast<AppendFn>(At(edge155::rva::BasicStringChar_append))(&storage,
+                                                                       themeId);
   return &storage;
 }
 
@@ -1090,24 +1175,24 @@ inline void* ExtensionById(void* profile, const char* themeId,
                            ExtensionState* state) {
   *state = ExtensionState::kAbsent;
   using RegistryFn = void*(__fastcall*)(void*);
-  void* registry =
-      reinterpret_cast<RegistryFn>(At(rva::ExtensionRegistry_Get))(profile);
+  void* registry = reinterpret_cast<RegistryFn>(
+      At(edge155::rva::ExtensionRegistry_Get))(profile);
   if (!registry) {
     return nullptr;
   }
   using GetByIdFn = void*(__fastcall*)(void*, const void*);
   const auto getById =
-      reinterpret_cast<GetByIdFn>(At(rva::ExtensionSet_GetByID));
-  void* extension =
-      getById(reinterpret_cast<uint8_t*>(registry) + off::REGISTRY_disabled_set,
-              ThemeIdString(themeId));
+      reinterpret_cast<GetByIdFn>(At(edge155::rva::ExtensionSet_GetByID));
+  void* extension = getById(reinterpret_cast<uint8_t*>(registry) +
+                                edge155::off::REGISTRY_disabled_set,
+                            ThemeIdString(themeId));
   if (extension) {
     *state = ExtensionState::kDisabled;
     return extension;
   }
-  extension =
-      getById(reinterpret_cast<uint8_t*>(registry) + off::REGISTRY_enabled_set,
-              ThemeIdString(themeId));
+  extension = getById(
+      reinterpret_cast<uint8_t*>(registry) + edge155::off::REGISTRY_enabled_set,
+      ThemeIdString(themeId));
   if (extension) {
     *state = ExtensionState::kEnabled;
   }
@@ -1122,12 +1207,13 @@ inline void* ExtensionById(void* profile, const char* themeId,
 inline void EnableDisabledExtension(void* profile, const char* themeId) {
   using GetRegistrarFn = void*(__fastcall*)(void*);
   const void* registrar = reinterpret_cast<GetRegistrarFn>(
-      At(rva::ExtensionRegistrar_Get))(profile);
+      At(edge155::rva::ExtensionRegistrar_Get))(profile);
   if (!registrar) {
     return;
   }
   using EnableFn = void(__fastcall*)(const void*, const void*);
-  reinterpret_cast<EnableFn>(At(rva::ExtensionRegistrar_EnableExtension))(
+  reinterpret_cast<EnableFn>(
+      At(edge155::rva::ExtensionRegistrar_EnableExtension))(
       registrar, ThemeIdString(themeId));
 }
 
@@ -1138,19 +1224,20 @@ inline void EnableDisabledExtension(void* profile, const char* themeId) {
 inline void ReinstallExternalExtension(void* profile, const char* themeId) {
   using GetFn = void*(__fastcall*)(void*);
   const void* const prefs =
-      reinterpret_cast<GetFn>(At(rva::ExtensionPrefs_Get))(profile);
+      reinterpret_cast<GetFn>(At(edge155::rva::ExtensionPrefs_Get))(profile);
   if (prefs) {
     using ClearFn = void(__fastcall*)(const void*, const void*);
     reinterpret_cast<ClearFn>(
-        At(rva::ExtensionPrefs_ClearExternalExtensionUninstalled))(
+        At(edge155::rva::ExtensionPrefs_ClearExternalExtensionUninstalled))(
         prefs, ThemeIdString(themeId));
   }
-  const void* const manager =
-      reinterpret_cast<GetFn>(At(rva::ExternalProviderManager_Get))(profile);
+  const void* const manager = reinterpret_cast<GetFn>(
+      At(edge155::rva::ExternalProviderManager_Get))(profile);
   if (manager) {
     using CheckFn = void(__fastcall*)(const void*);
     reinterpret_cast<CheckFn>(
-        At(rva::ExternalProviderManager_CheckForExternalUpdates))(manager);
+        At(edge155::rva::ExternalProviderManager_CheckForExternalUpdates))(
+        manager);
   }
 }
 
@@ -1160,8 +1247,8 @@ inline void ReinstallExternalExtension(void* profile, const char* themeId) {
 // prove it; the +0x10 secondary base faults here).
 inline void ThemeSetFromExtension(void* themeService, void* extension) {
   using Fn = void(__fastcall*)(void*, void*, bool);
-  reinterpret_cast<Fn>(At(rva::ThemeService_DoSetTheme))(themeService,
-                                                         extension, false);
+  reinterpret_cast<Fn>(At(edge155::rva::ThemeService_DoSetTheme))(
+      themeService, extension, false);
 }
 
 // Drop any extension theme and return the profile to the default theme, live.
@@ -1169,48 +1256,60 @@ inline void ThemeSetFromExtension(void* themeService, void* extension) {
 // this - 0x10 back to the primary), so it takes that secondary-base pointer.
 inline void ThemeUseDefault(void* themeService) {
   using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::ThemeService_UseDefaultTheme))(
-      reinterpret_cast<uint8_t*>(themeService) + 0x10);
+  reinterpret_cast<Fn>(At(edge155::rva::ThemeService_UseDefaultTheme))(
+      reinterpret_cast<uint8_t*>(themeService) +
+      edge155::off::THEMESERVICE_use_default_this);
 }
 
 // A color the profile's active theme extension sets, read from its theme pack.
 // A default theme has no pack, and a theme leaves most colors unset.
 inline theme_tone::OptionalColor ThemePaletteColor(void* themeService,
                                                    int colorId) {
-  const void* pack = Field<void*>(themeService, off::THEMESERVICE_supplier);
+  const void* pack =
+      Field<void*>(themeService, edge155::off::THEMESERVICE_supplier);
   if (!pack) {
     return {};
   }
   using Fn = bool(__fastcall*)(const void*, int, uint32_t*);
   uint32_t color = 0;
-  const bool isSet = reinterpret_cast<Fn>(At(rva::BrowserThemePack_GetColor))(
-      pack, colorId, &color);
+  const bool isSet = reinterpret_cast<Fn>(
+      At(edge155::rva::BrowserThemePack_GetColor))(pack, colorId, &color);
   return {isSet, color};
+}
+
+// Whether the active theme of `themeService` is light or dark, read off the
+// colours it paints the toolbar and frame with (theme_tone::ToneOf).
+inline theme_tone::Tone ThemeTone(void* themeService) {
+  return theme_tone::ToneOf(
+      ThemePaletteColor(themeService, edge155::off::THEMECOLOR_toolbar),
+      ThemePaletteColor(themeService, edge155::off::THEMECOLOR_frame));
 }
 
 // Tell `webContents` its color provider changed: a WebUI page fetches its
 // colors.css again and the page's web preferences are computed again.
 inline void NotifyColorProviderChanged(void* webContents) {
   using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::WebContentsImpl_OnColorProviderChanged))(
+  reinterpret_cast<Fn>(
+      At(edge155::rva::WebContentsImpl_OnColorProviderChanged))(
       reinterpret_cast<uint8_t*>(webContents) +
-      off::WEBCONTENTS_color_observer);
+      edge155::off::WEBCONTENTS_color_observer);
 }
 
 // Reload the page in `webContents` as the reload button does (no repost
 // prompt).
 inline void ReloadPage(void* webContents) {
   using Fn = void(__fastcall*)(void*, int32_t, bool);
-  reinterpret_cast<Fn>(At(rva::NavigationControllerImpl_Reload))(
-      reinterpret_cast<uint8_t*>(webContents) + off::WEBCONTENTS_controller,
-      off::RELOADTYPE_normal, false);
+  reinterpret_cast<Fn>(At(edge155::rva::NavigationControllerImpl_Reload))(
+      reinterpret_cast<uint8_t*>(webContents) +
+          edge155::off::WEBCONTENTS_controller,
+      edge155::off::RELOADTYPE_normal, false);
 }
 
 // --- web protocol handlers -------------------------------------------------------
 // The handler bubble model's OnDoneButtonClicked vtable slot, as an RVA.
 inline constexpr uintptr_t kRphDoneSlotRva =
-    rva::ContentSettingRPHBubbleModel_vftable +
-    off::BubbleModel_OnDoneButtonClicked_slot;
+    edge155::rva::ContentSettingRPHBubbleModel_vftable +
+    edge155::off::BubbleModel_OnDoneButtonClicked_slot;
 
 // The function the handler bubble's Done slot points at now.
 inline void* RphDoneSlot() {
@@ -1220,7 +1319,8 @@ inline void* RphDoneSlot() {
 // Whether the Done slot still holds Edge's own empty virtual (the build check
 // for the slot, before we ever write it).
 inline bool RphDoneSlotIsStock() {
-  return RphDoneSlot() == At(rva::ContentSettingBubbleModel_EmptyVirtual);
+  return RphDoneSlot() ==
+         At(edge155::rva::ContentSettingBubbleModel_EmptyVirtual);
 }
 
 // Point the handler bubble's Done slot at `function` (the vtable lives in
@@ -1236,38 +1336,41 @@ inline void SetRphDoneSlot(void* function) {
 
 // Put Edge's own empty virtual back in the Done slot.
 inline void RestoreRphDoneSlot() {
-  SetRphDoneSlot(At(rva::ContentSettingBubbleModel_EmptyVirtual));
+  SetRphDoneSlot(At(edge155::rva::ContentSettingBubbleModel_EmptyVirtual));
 }
 
 // A permission prompt's decision, as PermissionDecided reads it.
 struct PermissionDecision {
-  bool hasValue;  // false when the prompt was dismissed without a choice
-  int value;      // 0 = Allow; anything else Edge treats as Block
+  // False when the prompt was dismissed without a choice.
+  bool hasValue = false;
+  // 0 = Allow; anything else Edge treats as Block.
+  int32_t value = 0;
 };
 
 inline PermissionDecision ReadPermissionDecision(const void* decision) {
-  void* raw = const_cast<void*>(decision);
-  return {Field<uint8_t>(raw, off::PERMISSION_DECISION_has_value) == 1,
-          Field<int32_t>(raw, off::PERMISSION_DECISION_value)};
+  return {Field<uint8_t>(decision,
+                         edge155::off::PERMISSION_DECISION_has_value) == 1,
+          Field<int32_t>(decision, edge155::off::PERMISSION_DECISION_value)};
 }
 
 // Room for one custom_handlers::ProtocolHandler that our DLL owns: the bytes
 // are ours, the strings and GURL inside are built and freed by Edge's own copy
 // constructor and destructor.
 struct alignas(16) ProtocolHandlerStorage {
-  uint8_t bytes[off::PROTOCOL_HANDLER_size];
+  uint8_t bytes[edge155::off::PROTOCOL_HANDLER_size] = {};
 };
 
 // The profile's ProtocolHandlerRegistry (created if it does not exist yet).
 inline void* ProtocolHandlerRegistryFor(void* profile) {
   using Fn = void*(__fastcall*)(void*);
   return reinterpret_cast<Fn>(
-      At(rva::ProtocolHandlerRegistryFactory_GetForBrowserContext))(profile);
+      At(edge155::rva::ProtocolHandlerRegistryFactory_GetForBrowserContext))(
+      profile);
 }
 
 // How many handlers the registry's live ignored list holds.
 inline size_t IgnoredHandlerCount(void* registry) {
-  return Field<size_t>(registry, off::RPH_REGISTRY_ignored_size);
+  return Field<uint64_t>(registry, edge155::off::RPH_REGISTRY_ignored_size);
 }
 
 // Copy-construct the registry's ignored handler `index` into `storage`, so it
@@ -1275,15 +1378,16 @@ inline size_t IgnoredHandlerCount(void* registry) {
 // DestroyProtocolHandler.
 inline void CopyIgnoredHandler(void* registry, size_t index,
                                ProtocolHandlerStorage* storage) {
-  auto* data = Field<uint8_t*>(registry, off::RPH_REGISTRY_ignored_data);
+  auto* data =
+      Field<uint8_t*>(registry, edge155::off::RPH_REGISTRY_ignored_data);
   using Fn = void*(__fastcall*)(void*, const void*);
-  reinterpret_cast<Fn>(At(rva::ProtocolHandler_CopyConstructor))(
-      storage, data + index * off::PROTOCOL_HANDLER_size);
+  reinterpret_cast<Fn>(At(edge155::rva::ProtocolHandler_CopyConstructor))(
+      storage, data + index * edge155::off::PROTOCOL_HANDLER_size);
 }
 
 inline void DestroyProtocolHandler(ProtocolHandlerStorage* storage) {
   using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::ProtocolHandler_Destructor))(storage);
+  reinterpret_cast<Fn>(At(edge155::rva::ProtocolHandler_Destructor))(storage);
 }
 
 // Lift the block on `handler` (a copy, never an element of the ignored list)
@@ -1292,7 +1396,8 @@ inline void RemoveIgnoredHandler(void* registry,
                                  const ProtocolHandlerStorage* handler) {
   constexpr bool kShouldSave = true;
   using Fn = void(__fastcall*)(void*, const void*, bool);
-  reinterpret_cast<Fn>(At(rva::ProtocolHandlerRegistry_RemoveIgnoredHandler))(
+  reinterpret_cast<Fn>(
+      At(edge155::rva::ProtocolHandlerRegistry_RemoveIgnoredHandler))(
       registry, handler, kShouldSave);
 }
 
@@ -1300,26 +1405,27 @@ inline void RemoveIgnoredHandler(void* registry,
 
 // A read-only view of a libc++ std::u16string's characters.
 struct U16View {
-  const char16_t* data;
-  size_t length;
+  const char16_t* data = nullptr;
+  uint64_t length = 0;
 };
+static_assert(sizeof(U16View) == 16, "a std::u16string_view is {data, size}");
 inline U16View U16StringView(const void* string) {
-  auto* bytes = static_cast<const uint8_t*>(string);
-  const bool isLong =
-      (bytes[off::U16STRING_short_size] & off::U16STRING_long_flag) != 0;
+  const auto* bytes = static_cast<const uint8_t*>(string);
+  const bool isLong = (bytes[edge155::off::U16STRING_short_size] &
+                       edge155::off::U16STRING_long_flag) != 0;
   if (isLong) {
-    return U16View{
-        *reinterpret_cast<const char16_t* const*>(bytes),
-        *reinterpret_cast<const size_t*>(bytes + off::U16STRING_long_size)};
+    return U16View{*reinterpret_cast<const char16_t* const*>(bytes),
+                   *reinterpret_cast<const size_t*>(
+                       bytes + edge155::off::U16STRING_long_size)};
   }
   return U16View{reinterpret_cast<const char16_t*>(bytes),
-                 bytes[off::U16STRING_short_size]};
+                 bytes[edge155::off::U16STRING_short_size]};
 }
 
 // Whether `view` is Edge's toolbar chat button (EdgeCopilotToolbarLabelButton).
 inline bool IsCopilotButton(void* view) {
   const uintptr_t vtable = VtableRva(view);
-  for (const uintptr_t candidate : rva::CopilotButton_vftables) {
+  for (const uintptr_t candidate : edge155::rva::CopilotButton_vftables) {
     if (vtable == candidate) {
       return true;
     }
@@ -1344,10 +1450,10 @@ inline bool IsReadable(const void* address, size_t size) {
 inline void* ToolbarOfChatButton(void* button) {
   for (void* view = ViewParent(button); view; view = ViewParent(view)) {
     const void* field =
-        reinterpret_cast<uint8_t*>(view) + off::EDGETOOLBAR_chatButton;
+        reinterpret_cast<uint8_t*>(view) + edge155::off::EDGETOOLBAR_chatButton;
     const bool isOwner =
         IsReadable(field, sizeof(void*)) &&
-        Field<void*>(view, off::EDGETOOLBAR_chatButton) == button;
+        Field<void*>(view, edge155::off::EDGETOOLBAR_chatButton) == button;
     if (isOwner) {
       return view;
     }
@@ -1361,14 +1467,15 @@ inline void* ToolbarOfChatButton(void* button) {
 // still point at it, and a view nobody draws is harmless. False when Edge built
 // nothing.
 inline bool RebuildChatButton(void* toolbar) {
-  void* oldButton = Field<void*>(toolbar, off::EDGETOOLBAR_chatButton);
+  void* oldButton = Field<void*>(toolbar, edge155::off::EDGETOOLBAR_chatButton);
   void* oldParent = ViewParent(oldButton);
   using Fn = void(__fastcall*)(void*);
   reinterpret_cast<Fn>(
-      At(rva::EdgeToolbarView_CreateDiscoverButtonIfNecessary))(
-      reinterpret_cast<uint8_t*>(toolbar) + off::EDGETOOLBAR_discoverBase);
+      At(edge155::rva::EdgeToolbarView_CreateDiscoverButtonIfNecessary))(
+      reinterpret_cast<uint8_t*>(toolbar) +
+      edge155::off::EDGETOOLBAR_discoverBase);
   const bool isRebuilt =
-      Field<void*>(toolbar, off::EDGETOOLBAR_chatButton) != oldButton;
+      Field<void*>(toolbar, edge155::off::EDGETOOLBAR_chatButton) != oldButton;
   if (isRebuilt && oldParent) {
     ViewRemoveChild(oldParent, oldButton);
   }
@@ -1379,43 +1486,13 @@ inline bool RebuildChatButton(void* toolbar) {
 // (EdgeCopilotDropdownMenuButton).
 inline bool IsCopilotDropdownButton(void* view) {
   const uintptr_t vtable = VtableRva(view);
-  for (const uintptr_t candidate : rva::CopilotDropdownButton_vftables) {
+  for (const uintptr_t candidate :
+       edge155::rva::CopilotDropdownButton_vftables) {
     if (vtable == candidate) {
       return true;
     }
   }
   return false;
-}
-
-// A views::WebView for `browserContext` (its WebContents is created on first
-// load, in that profile's own storage), not yet parented.
-inline void* NewWebView(void* browserContext) {
-  void* webView = NewView(off::WebView_size);
-  using CtorFn = void*(__fastcall*)(void*, void*);
-  reinterpret_cast<CtorFn>(At(rva::WebView_ctor))(webView, browserContext);
-  return webView;
-}
-// Load `url` (UTF-8) in `webView`, creating its WebContents.
-inline void WebViewLoadUrl(void* webView, const char* url) {
-  const U8View urlView{url, std::strlen(url)};
-  alignas(16) uint8_t gurl[off::GURL_size] = {};
-  using GurlFn = void*(__fastcall*)(void*, const void*);
-  reinterpret_cast<GurlFn>(At(rva::GURL_ctor_string))(gurl, &urlView);
-  constexpr int kNoHttpsUpgradePolicy = 0;
-  // An empty base::Location: it only labels the WebContents creation.
-  alignas(8) uint8_t location[off::Location_size] = {};
-  using LoadFn = void(__fastcall*)(void*, const void*, int, void*);
-  reinterpret_cast<LoadFn>(At(rva::WebView_LoadInitialURL))(
-      webView, gurl, kNoHttpsUpgradePolicy, location);
-  using DtorFn = void(__fastcall*)(void*);
-  reinterpret_cast<DtorFn>(At(rva::GURL_dtor))(gurl);
-}
-// Destroy an unparented WebView and the WebContents it owns.
-inline void DeleteWebView(void* webView) {
-  constexpr int kDeleteSelf = 1;
-  using DtorFn = void*(__fastcall*)(void*, int);
-  reinterpret_cast<DtorFn>(At(rva::WebView_ScalarDeletingDtor))(webView,
-                                                                kDeleteSelf);
 }
 
 // --- Copilot's side panel ----------------------------------------------------
@@ -1424,10 +1501,11 @@ inline void DeleteWebView(void* webView) {
 // bit set), over characters that outlive the call: enough for a callee that only
 // reads or copies it.
 struct StdStringView {
-  const char* data;
-  uint64_t size;
-  uint64_t capacityAndFlag;
+  const char* data = nullptr;
+  uint64_t size = 0;
+  uint64_t capacityAndFlag = 0;
 };
+static_assert(sizeof(StdStringView) == 24, "a libc++ std::string is 24 bytes");
 
 inline StdStringView MakeStdStringView(const std::string& text) {
   constexpr uint64_t kLongFlag = uint64_t{1} << 63;
@@ -1444,42 +1522,39 @@ inline void SendPromptToSidePanel(void* browser, const std::string& text,
   const StdStringView asked = MakeStdStringView(title);
   using Fn =
       void(__fastcall*)(void*, const void*, const void*, const void*, bool);
-  reinterpret_cast<Fn>(At(rva::CopilotUtils_SendPageContextualPromptToChat))(
+  reinterpret_cast<Fn>(
+      At(edge155::rva::CopilotUtils_SendPageContextualPromptToChat))(
       browser, &page, nullptr, &asked, false);
 }
 
 // Every WebContents of the browser process (tabs, side panels, hidden pages).
 inline std::vector<void*> AllWebContents() {
   struct Listing {
-    void** data;
-    size_t count;
-    void* unused;
+    void** data = nullptr;
+    uint64_t count = 0;
+    void* unused = nullptr;
   } all{};
   using Fn = void*(__fastcall*)(Listing*);
-  reinterpret_cast<Fn>(At(rva::WebContentsImpl_GetAllWebContents))(&all);
+  reinterpret_cast<Fn>(At(edge155::rva::WebContentsImpl_GetAllWebContents))(
+      &all);
   return all.data ? std::vector<void*>(all.data, all.data + all.count)
                   : std::vector<void*>();
 }
 
 // --- reading a tab, and running a script in a page ---------------------------
 
-// The WebContents a views::WebView shows (null before its first load).
-inline void* WebViewContents(void* webView) {
-  return Field<void*>(webView, off::CWV_web_contents);
-}
-
 // A libc++ std::string's characters (the same layout as the u16string above).
 inline std::string StdStringText(const void* string) {
-  auto* bytes = static_cast<const uint8_t*>(string);
-  const bool isLong =
-      (bytes[off::U16STRING_short_size] & off::U16STRING_long_flag) != 0;
+  const auto* bytes = static_cast<const uint8_t*>(string);
+  const bool isLong = (bytes[edge155::off::U16STRING_short_size] &
+                       edge155::off::U16STRING_long_flag) != 0;
   if (isLong) {
-    return std::string(
-        *reinterpret_cast<const char* const*>(bytes),
-        *reinterpret_cast<const size_t*>(bytes + off::U16STRING_long_size));
+    return std::string(*reinterpret_cast<const char* const*>(bytes),
+                       *reinterpret_cast<const size_t*>(
+                           bytes + edge155::off::U16STRING_long_size));
   }
   return std::string(reinterpret_cast<const char*>(bytes),
-                     bytes[off::U16STRING_short_size]);
+                     bytes[edge155::off::U16STRING_short_size]);
 }
 
 inline std::string Utf16ToUtf8(U16View text) {
@@ -1501,7 +1576,8 @@ inline std::string TabUrl(void* webContents) {
   using SpecFn = const void*(__fastcall*)(const void*);
   const void* url = LastCommittedUrl(webContents);
   const void* spec =
-      url ? reinterpret_cast<SpecFn>(At(rva::GURL_spec))(url) : nullptr;
+      url ? reinterpret_cast<SpecFn>(At(edge155::rva::GURL_spec))(url)
+          : nullptr;
   return spec ? StdStringText(spec) : std::string();
 }
 
@@ -1510,18 +1586,19 @@ inline std::string VisibleUrl(void* webContents) {
   using UrlFn = const void*(__fastcall*)(void*);
   void* const* vtable = *reinterpret_cast<void***>(webContents);
   const void* url = reinterpret_cast<UrlFn>(
-      vtable[off::WEBCONTENTS_get_visible_url_slot / sizeof(void*)])(
+      vtable[edge155::off::WEBCONTENTS_get_visible_url_slot / sizeof(void*)])(
       webContents);
   using SpecFn = const void*(__fastcall*)(const void*);
   const void* spec =
-      url ? reinterpret_cast<SpecFn>(At(rva::GURL_spec))(url) : nullptr;
+      url ? reinterpret_cast<SpecFn>(At(edge155::rva::GURL_spec))(url)
+          : nullptr;
   return spec ? StdStringText(spec) : std::string();
 }
 
 inline void* PrimaryMainFrame(void* webContents) {
   using Fn = void*(__fastcall*)(void*);
-  return reinterpret_cast<Fn>(At(rva::WebContentsImpl_GetPrimaryMainFrame))(
-      webContents);
+  return reinterpret_cast<Fn>(
+      At(edge155::rva::WebContentsImpl_GetPrimaryMainFrame))(webContents);
 }
 
 // Whether the tab's page has a running renderer: false for a discarded
@@ -1529,8 +1606,9 @@ inline void* PrimaryMainFrame(void* webContents) {
 inline bool IsPageLive(void* webContents) {
   const void* frame = PrimaryMainFrame(webContents);
   using Fn = bool(__fastcall*)(const void*);
-  return frame && reinterpret_cast<Fn>(
-                      At(rva::RenderFrameHostImpl_IsRenderFrameLive))(frame);
+  return frame &&
+         reinterpret_cast<Fn>(
+             At(edge155::rva::RenderFrameHostImpl_IsRenderFrameLive))(frame);
 }
 
 // What a finished script handed back: its string result, or nothing when the
@@ -1545,31 +1623,35 @@ using ScriptDone = std::function<void(const ScriptResult&)>;
 // ourselves (Edge only ever calls its invoke and destructor slots), holding the
 // std::function to run. Edge destroys it exactly once, run or not.
 struct ScriptCallbackState {
-  alignas(8) uint8_t bindStateBase[off::BINDSTATE_first_bound_argument];
+  alignas(8) uint8_t
+      bindStateBase[edge155::off::BINDSTATE_first_bound_argument] = {};
   ScriptDone done;
 };
 // Callbacks Edge still holds. DLL unload waits for this to reach zero: a reply
 // that arrived after the DLL was freed would jump into unmapped code.
-inline std::atomic<int> g_liveScriptCallbacks{0};
+inline constinit std::atomic<int> g_liveScriptCallbacks{0};
 
 inline void __fastcall InvokeScriptCallback(void* bindState, void* value) {
   auto* state = static_cast<ScriptCallbackState*>(bindState);
   ScriptResult result;
   const uint8_t variantIndex =
-      value ? Field<uint8_t>(value, off::VALUE_variant_index) : 0;
-  result.isString = variantIndex == off::VALUE_string_index;
+      value ? Field<uint8_t>(value, edge155::off::VALUE_variant_index) : 0;
+  result.isString = variantIndex == edge155::off::VALUE_string_index;
   if (result.isString) {
     result.text = StdStringText(value);
   }
   state->done(result);
 }
+// Edge hands back the state RunScriptInFrame released to it: own it again, and
+// let the owner free it.
 inline void __fastcall DestroyScriptCallback(const void* bindState) {
-  delete static_cast<const ScriptCallbackState*>(bindState);
+  const std::unique_ptr<const ScriptCallbackState> state{
+      static_cast<const ScriptCallbackState*>(bindState)};
   g_liveScriptCallbacks--;
 }
 
 // Whether every script callback has been destroyed within `timeoutMs`.
-inline bool WaitForScriptCallbacks(DWORD timeoutMs) {
+[[nodiscard]] inline bool WaitForScriptCallbacks(DWORD timeoutMs) {
   constexpr DWORD kStepMs = 20;
   for (DWORD waited = 0; waited < timeoutMs; waited += kStepMs) {
     if (g_liveScriptCallbacks == 0) {
@@ -1584,8 +1666,8 @@ inline bool WaitForScriptCallbacks(DWORD timeoutMs) {
 // it outgrew the inline buffer).
 inline void FreeU16String(U16String* string) {
   auto* bytes = reinterpret_cast<uint8_t*>(string);
-  const bool isLong =
-      (bytes[off::U16STRING_short_size] & off::U16STRING_long_flag) != 0;
+  const bool isLong = (bytes[edge155::off::U16STRING_short_size] &
+                       edge155::off::U16STRING_long_flag) != 0;
   if (isLong) {
     EdgeDelete(*reinterpret_cast<void**>(bytes));
   }
@@ -1601,14 +1683,16 @@ inline bool RunScriptInFrame(const void* frame, const std::string& utf8Script,
   }
   const void* callbackSlot = nullptr;
   if (done) {
-    auto* state = new ScriptCallbackState{};
+    auto state = std::make_unique<ScriptCallbackState>();
     using BaseCtor = void*(__fastcall*)(void*, void*, void*);
-    reinterpret_cast<BaseCtor>(At(rva::BindStateBase_ctor))(
-        state, reinterpret_cast<void*>(InvokeScriptCallback),
+    reinterpret_cast<BaseCtor>(At(edge155::rva::BindStateBase_ctor))(
+        state.get(), reinterpret_cast<void*>(InvokeScriptCallback),
         reinterpret_cast<void*>(DestroyScriptCallback));
     state->done = std::move(done);
     g_liveScriptCallbacks++;
-    callbackSlot = state;
+    // Edge owns the callback from here, and frees it through
+    // DestroyScriptCallback exactly once, run or not.
+    callbackSlot = state.release();
   }
   U16String script{};
   const U8View scriptView{utf8Script.data(), utf8Script.size()};
@@ -1616,8 +1700,8 @@ inline bool RunScriptInFrame(const void* frame, const std::string& utf8Script,
   using ExecuteFn =
       void(__fastcall*)(const void*, const U16String*, const void**, int);
   reinterpret_cast<ExecuteFn>(
-      At(rva::RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld))(
-      frame, &script, &callbackSlot, off::kScriptWorldId);
+      At(edge155::rva::RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld))(
+      frame, &script, &callbackSlot, edge155::off::kScriptWorldId);
   FreeU16String(&script);
   return true;
 }
@@ -1633,8 +1717,8 @@ inline bool RunScript(void* webContents, const std::string& utf8Script,
 // Every frame of a page (the main frame first, then its iframes).
 inline std::vector<void*> FramesOf(void* webContents) {
   struct FunctionRef {
-    void* object;
-    void* invoker;
+    void* object = nullptr;
+    void* invoker = nullptr;
   };
   std::vector<void*> frames;
   const FunctionRef collector{
@@ -1642,8 +1726,9 @@ inline std::vector<void*> FramesOf(void* webContents) {
         static_cast<std::vector<void*>*>(object)->push_back(frame);
       })};
   using Fn = void(__fastcall*)(void*, const FunctionRef*);
-  reinterpret_cast<Fn>(At(rva::WebContentsImpl_ForEachRenderFrameHost))(
-      webContents, &collector);
+  reinterpret_cast<Fn>(
+      At(edge155::rva::WebContentsImpl_ForEachRenderFrameHost))(webContents,
+                                                                &collector);
   return frames;
 }
 
@@ -1652,21 +1737,91 @@ inline std::string FrameUrl(void* frame) {
   using UrlFn = const void*(__fastcall*)(void*);
   using SpecFn = const void*(__fastcall*)(const void*);
   const void* url = reinterpret_cast<UrlFn>(
-      At(rva::RenderFrameHostImpl_GetLastCommittedURL))(frame);
+      At(edge155::rva::RenderFrameHostImpl_GetLastCommittedURL))(frame);
   const void* spec =
-      url ? reinterpret_cast<SpecFn>(At(rva::GURL_spec))(url) : nullptr;
+      url ? reinterpret_cast<SpecFn>(At(edge155::rva::GURL_spec))(url)
+          : nullptr;
   return spec ? StdStringText(spec) : std::string();
 }
 
 // --- the native find bar -------------------------------------------------------
+
+// A new, empty views::Label styled exactly like `model` (the same text context
+// and style, so the same font and the same theme colour ids), not yet in any
+// view. Its parent owns it once added.
+inline void* NewLabelLike(void* model) {
+  void* label = NewView(edge155::off::LABEL_allocation_size);
+  const U16View empty{nullptr, 0};
+  constexpr int kDirectionalityFromText = 0;
+  using Fn = void*(__fastcall*)(void*, const U16View*, int, int, int);
+  reinterpret_cast<Fn>(At(edge155::rva::Label_ctor))(
+      label, &empty, Field<int32_t>(model, edge155::off::LABEL_text_context),
+      Field<int32_t>(model, edge155::off::LABEL_text_style),
+      kDirectionalityFromText);
+  return label;
+}
+
+// Give `label` the colour `model` was asked to draw in (its SetEnabledColor:
+// for the find bar's count, a theme colour id), if it was asked one.
+inline void LabelCopyEnabledColor(void* label, void* model) {
+  const bool isSet =
+      Field<uint8_t>(model,
+                     edge155::off::LABEL_requested_enabled_color_is_set) != 0;
+  if (!isSet) {
+    return;
+  }
+  using Fn = void(__fastcall*)(void*, uint64_t);
+  reinterpret_cast<Fn>(At(edge155::rva::Label_SetEnabledColor))(
+      label,
+      Field<uint64_t>(model, edge155::off::LABEL_requested_enabled_color));
+}
+
+// Draw `label` in the font `textfield` draws its text in.
+inline void LabelUseTextfieldFont(void* label, void* textfield) {
+  using GetFn = const void*(__fastcall*)(void*);
+  const void* fontList = reinterpret_cast<GetFn>(
+      At(edge155::rva::Textfield_GetFontList))(textfield);
+  using SetFn = void(__fastcall*)(void*, const void*);
+  reinterpret_cast<SetFn>(At(edge155::rva::Label_SetFontList))(label, fontList);
+}
+
+inline bool IsPlainLabel(void* view) {
+  return VtableRva(view) == edge155::rva::Label_vftable;
+}
+
+inline void LabelSetText(void* label, U16View text) {
+  using Fn = void(__fastcall*)(void*, const U16View*);
+  reinterpret_cast<Fn>(At(edge155::rva::Label_SetText))(label, &text);
+}
+
+// The bar's text field and its "n/m" count label.
+inline void* FindBarTextfield(void* findBarView) {
+  return Field<void*>(findBarView, edge155::off::FINDBARVIEW_textfield);
+}
+inline void* FindBarCountLabel(void* findBarView) {
+  return Field<void*>(findBarView, edge155::off::FINDBARVIEW_match_count_label);
+}
+
+// The bar re-measures itself (its window follows).
+inline void FindBarPreferredSizeChanged(void* findBarView) {
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(edge155::rva::FindBarView_PreferredSizeChanged))(
+      findBarView);
+}
+
+// The bar's own row changed children: lay it out again.
+inline void FindBarRelayout(void* findBarView) {
+  InvalidateLayout(findBarView);
+  FindBarPreferredSizeChanged(findBarView);
+}
 
 // What the bar's text field holds now (a view of the field's own storage, valid
 // until the field next changes).
 inline U16View FindBarText(void* findBarView) {
   U16View text{nullptr, 0};
   using Fn = void*(__fastcall*)(void*, U16View*);
-  reinterpret_cast<Fn>(At(rva::Textfield_GetText))(
-      Field<void*>(findBarView, off::FINDBARVIEW_textfield), &text);
+  reinterpret_cast<Fn>(At(edge155::rva::Textfield_GetText))(
+      Field<void*>(findBarView, edge155::off::FINDBARVIEW_textfield), &text);
   return text;
 }
 
@@ -1676,55 +1831,56 @@ inline U16View FindBarText(void* findBarView) {
 inline void FindBarShowResult(void* findBarView, int matches, int ordinal,
                               U16View findText) {
   static int s_requestId = 0;
-  uint8_t details[off::FINDDETAILS_size] = {};
+  uint8_t details[edge155::off::FINDDETAILS_size] = {};
   // The bar skips a result equal to the one it last showed; ours may follow a
   // status line it knows nothing about, so every result is a new one.
   s_requestId++;
-  std::memcpy(details + off::FINDDETAILS_request_id, &s_requestId,
+  std::memcpy(details + edge155::off::FINDDETAILS_request_id, &s_requestId,
               sizeof(s_requestId));
-  std::memcpy(details + off::FINDDETAILS_matches, &matches, sizeof(matches));
-  std::memcpy(details + off::FINDDETAILS_active_ordinal, &ordinal,
+  std::memcpy(details + edge155::off::FINDDETAILS_matches, &matches,
+              sizeof(matches));
+  std::memcpy(details + edge155::off::FINDDETAILS_active_ordinal, &ordinal,
               sizeof(ordinal));
-  details[off::FINDDETAILS_is_final] = 1;
+  details[edge155::off::FINDDETAILS_is_final] = 1;
   // A read-only std::u16string in its long form {data, size, capacity|flag}.
   struct LongU16String {
-    const char16_t* data;
-    size_t size;
-    size_t capacityAndFlag;
+    const char16_t* data = nullptr;
+    uint64_t size = 0;
+    uint64_t capacityAndFlag = 0;
   };
   const LongU16String text{
       findText.data, findText.length,
-      (findText.length + 1) |
-          (size_t{off::U16STRING_long_flag} << (8 * (sizeof(size_t) - 1)))};
+      (findText.length + 1) | (size_t{edge155::off::U16STRING_long_flag}
+                               << (8 * (sizeof(size_t) - 1)))};
   using Fn = void(__fastcall*)(void*, const void*, const void*);
-  reinterpret_cast<Fn>(At(rva::FindBarView_UpdateForResult))(findBarView,
-                                                             details, &text);
+  reinterpret_cast<Fn>(At(edge155::rva::FindBarView_UpdateForResult))(
+      findBarView, details, &text);
 }
 
 // The bar's count label (a views::Label).
 inline void* FindBarLabel(void* findBarView) {
-  return Field<void*>(findBarView, off::FINDBARVIEW_match_count_label);
+  return Field<void*>(findBarView, edge155::off::FINDBARVIEW_match_count_label);
 }
 
 // The Windows virtual-key code of the key `keyEvent` (a ui::KeyEvent) reports
 // being pressed, or 0 when it is not a key press.
 inline uint8_t PressedKeyCode(const void* keyEvent) {
-  auto* bytes = static_cast<const uint8_t*>(keyEvent);
+  const auto* bytes = static_cast<const uint8_t*>(keyEvent);
   int32_t type = 0;
-  std::memcpy(&type, bytes + off::KEYEVENT_type, sizeof(type));
-  const bool isPressed = type == off::KEYEVENT_type_pressed;
-  return isPressed ? bytes[off::KEYEVENT_key_code] : uint8_t{0};
+  std::memcpy(&type, bytes + edge155::off::KEYEVENT_type, sizeof(type));
+  const bool isPressed = type == edge155::off::KEYEVENT_type_pressed;
+  return isPressed ? bytes[edge155::off::KEYEVENT_key_code] : uint8_t{0};
 }
 
 // Whether `keyEvent` is Enter being pressed.
 inline bool IsEnterPressed(const void* keyEvent) {
-  return PressedKeyCode(keyEvent) == off::KEYEVENT_key_enter;
+  return PressedKeyCode(keyEvent) == edge155::off::KEYEVENT_key_enter;
 }
 
 // The FindBarView behind the TextfieldController its key handler is called on.
 inline void* FindBarViewOfKeyController(void* controller) {
   return static_cast<uint8_t*>(controller) -
-         off::FINDBARVIEW_textfield_controller;
+         edge155::off::FINDBARVIEW_textfield_controller;
 }
 
 // Put `text` in the bar's count label in place of "n/m" (a short status).
@@ -1732,14 +1888,14 @@ inline void FindBarSetLabel(void* findBarView, U16View text) {
   void* label = FindBarLabel(findBarView);
   using Fn = void(__fastcall*)(void*, const U16View*);
   reinterpret_cast<Fn>(VirtualFunction(
-      label, off::FINDBARLABEL_set_text_vtable_offset))(label, &text);
+      label, edge155::off::FINDBARLABEL_set_text_vtable_offset))(label, &text);
 }
 
 // --- the bar's option toggles -----------------------------------------------------
 
 // The options view (a column of toggles), or null before the bar first needed it.
 inline void* FindOptionsView(void* findBarView) {
-  return Field<void*>(findBarView, off::FINDBARVIEW_options_view);
+  return Field<void*>(findBarView, edge155::off::FINDBARVIEW_options_view);
 }
 
 // The toggle built for `id`, or null. A walk down the options view's map, as
@@ -1749,61 +1905,68 @@ inline void* FindToggle(void* findBarView, int toggleId) {
   if (!optionsView) {
     return nullptr;
   }
-  auto* node = Field<uint8_t*>(optionsView, off::FINDOPTIONS_toggle_map_root);
+  auto* node =
+      Field<uint8_t*>(optionsView, edge155::off::FINDOPTIONS_toggle_map_root);
   while (node) {
-    const int key = Field<int>(node, off::MAPNODE_key);
+    const int key = Field<int32_t>(node, edge155::off::MAPNODE_key);
     if (toggleId == key) {
-      return Field<void*>(node, off::MAPNODE_value);
+      return Field<void*>(node, edge155::off::MAPNODE_value);
     }
-    node = Field<uint8_t*>(
-        node, toggleId < key ? off::MAPNODE_left : off::MAPNODE_right);
+    node = Field<uint8_t*>(node, toggleId < key ? edge155::off::MAPNODE_left
+                                                : edge155::off::MAPNODE_right);
   }
   return nullptr;
 }
 
 // The FindBarView a toggle sits in (through its FindBarHost), or null.
 inline void* FindBarViewOfToggle(void* toggle) {
-  void* host = Field<void*>(toggle, off::FINDTOGGLE_host);
-  return host ? Field<void*>(host, off::FINDBARHOST_view) : nullptr;
+  void* host = Field<void*>(toggle, edge155::off::FINDTOGGLE_host);
+  return host ? Field<void*>(host, edge155::off::FINDBARHOST_view) : nullptr;
 }
 
 inline int FindToggleId(void* toggle) {
-  return Field<int>(toggle, off::FINDTOGGLE_id);
+  return Field<int32_t>(toggle, edge155::off::FINDTOGGLE_id);
 }
 
 inline bool FindToggleIsOn(void* toggle) {
-  const void* const button = Field<void*>(toggle, off::FINDTOGGLE_button);
+  const void* const button =
+      Field<void*>(toggle, edge155::off::FINDTOGGLE_button);
   using Fn = bool(__fastcall*)(const void*);
-  return button &&
-         reinterpret_cast<Fn>(At(rva::EdgeToggleButton_GetIsOn))(button);
+  return button && reinterpret_cast<Fn>(
+                       At(edge155::rva::EdgeToggleButton_GetIsOn))(button);
 }
 
 // Move the switch alone: Edge's SetToggleState would also write the id into its
 // own find parameters, which means nothing for our two.
 inline void FindToggleSetOn(void* toggle, bool isOn) {
-  const void* const button = Field<void*>(toggle, off::FINDTOGGLE_button);
+  const void* const button =
+      Field<void*>(toggle, edge155::off::FINDTOGGLE_button);
   using Fn = void(__fastcall*)(const void*, bool);
   if (button) {
-    reinterpret_cast<Fn>(At(rva::EdgeToggleButton_SetIsOn))(button, isOn);
+    reinterpret_cast<Fn>(At(edge155::rva::EdgeToggleButton_SetIsOn))(button,
+                                                                     isOn);
   }
 }
 
 inline void ViewSetEnabled(void* view, bool isEnabled) {
   using Fn = void(__fastcall*)(void*, bool);
-  reinterpret_cast<Fn>(At(rva::View_SetEnabled))(view, isEnabled);
+  reinterpret_cast<Fn>(At(edge155::rva::View_SetEnabled))(view, isEnabled);
 }
 
 // Enable or grey out a whole toggle: the title and the switch (a disabled
 // switch takes no click).
 inline void FindToggleSetEnabled(void* toggle, bool isEnabled) {
-  ViewSetEnabled(Field<void*>(toggle, off::FINDTOGGLE_label), isEnabled);
-  ViewSetEnabled(Field<void*>(toggle, off::FINDTOGGLE_button), isEnabled);
+  ViewSetEnabled(Field<void*>(toggle, edge155::off::FINDTOGGLE_label),
+                 isEnabled);
+  ViewSetEnabled(Field<void*>(toggle, edge155::off::FINDTOGGLE_button),
+                 isEnabled);
 }
 
 inline void FindToggleSetTitle(void* toggle, U16View title) {
-  const void* const label = Field<void*>(toggle, off::FINDTOGGLE_label);
+  const void* const label =
+      Field<void*>(toggle, edge155::off::FINDTOGGLE_label);
   using Fn = void(__fastcall*)(const void*, const U16View*);
-  reinterpret_cast<Fn>(At(rva::Label_SetText))(label, &title);
+  reinterpret_cast<Fn>(At(edge155::rva::Label_SetText))(label, &title);
 }
 
 // Build toggle `id` at the end of the options view, sized like Edge's own
@@ -1812,9 +1975,9 @@ inline void FindToggleSetTitle(void* toggle, U16View title) {
 inline void* AddFindToggle(void* findBarView, int toggleId) {
   const void* const optionsView = FindOptionsView(findBarView);
   void* sibling = nullptr;
-  for (const int siblingId :
-       {off::FINDTOGGLE_id_match_case, off::FINDTOGGLE_id_whole_word,
-        off::FINDTOGGLE_id_diacritics}) {
+  for (const int siblingId : {edge155::off::FINDTOGGLE_id_match_case,
+                              edge155::off::FINDTOGGLE_id_whole_word,
+                              edge155::off::FINDTOGGLE_id_diacritics}) {
     if (!sibling) {
       sibling = FindToggle(findBarView, siblingId);
     }
@@ -1824,17 +1987,17 @@ inline void* AddFindToggle(void* findBarView, int toggleId) {
   }
   using Fn = void(__fastcall*)(const void*, int, int, void*);
   reinterpret_cast<Fn>(
-      At(rva::FindOptionsControlView_AddFindInPageOptionChildView))(
-      optionsView, toggleId, Field<int>(sibling, off::FINDTOGGLE_width),
-      Field<void*>(findBarView, off::FINDBARVIEW_host));
+      At(edge155::rva::FindOptionsControlView_AddFindInPageOptionChildView))(
+      optionsView, toggleId,
+      Field<int32_t>(sibling, edge155::off::FINDTOGGLE_width),
+      Field<void*>(findBarView, edge155::off::FINDBARVIEW_host));
   return FindToggle(findBarView, toggleId);
 }
 
 // The options view grew or shrank: lay it out again and let the bar re-measure.
 inline void FindBarRelayoutOptions(void* findBarView) {
   InvalidateLayout(FindOptionsView(findBarView));
-  using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(At(rva::FindBarView_PreferredSizeChanged))(findBarView);
+  FindBarPreferredSizeChanged(findBarView);
 }
 
 // The page of Copilot's side panel, or null while it is not open: the
@@ -1843,7 +2006,7 @@ inline void* CopilotSidePanelContents() {
   constexpr char kPanelUrl[] = "edge://discover-chat-v2/";
   for (void* contents : AllWebContents()) {
     const std::string url = IsPageLive(contents) ? TabUrl(contents) : "";
-    if (url.rfind(kPanelUrl, 0) == 0) {
+    if (url.starts_with(kPanelUrl)) {
       return contents;
     }
   }

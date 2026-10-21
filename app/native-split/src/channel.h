@@ -9,8 +9,8 @@
 
 namespace fixedge::channel {
 
-inline HWND g_window = nullptr;  // the subclassed browser window
-inline UINT g_message = 0;       // the registered kMessageName
+inline constinit HWND g_window = nullptr;  // the subclassed browser window
+inline constinit UINT g_message = 0;       // the registered kMessageName
 
 inline constexpr wchar_t kMessageName[] = L"fixedge.addpane";
 
@@ -47,7 +47,7 @@ inline constexpr WPARAM kDirectionCount =
     static_cast<WPARAM>(Direction::kRight) + 1;
 inline constexpr WPARAM kShowBarPaneLimit = 16;
 
-inline constexpr WPARAM CodeOf(Command command) {
+[[nodiscard]] inline constexpr WPARAM CodeOf(Command command) noexcept {
   return static_cast<WPARAM>(command);
 }
 
@@ -63,17 +63,20 @@ static_assert(CodeOf(Command::kMenuArrowBase) + kDirectionCount <=
               "the menu-arrow range overlaps the next code");
 
 // The code for `direction` in a range of one code per direction.
-inline constexpr WPARAM CodeOf(Command base, Direction direction) {
+[[nodiscard]] inline constexpr WPARAM CodeOf(Command base,
+                                             Direction direction) noexcept {
   return CodeOf(base) + static_cast<WPARAM>(direction);
 }
 
 // Whether `wparam` is one of the `count` codes that start at `base`.
-inline bool IsInRange(WPARAM wparam, Command base, WPARAM count) {
+[[nodiscard]] inline constexpr bool IsInRange(WPARAM wparam, Command base,
+                                              WPARAM count) noexcept {
   return wparam >= CodeOf(base) && wparam < CodeOf(base) + count;
 }
 
 // The operand of a ranged code (its offset from `base`).
-inline int OperandOf(WPARAM wparam, Command base) {
+[[nodiscard]] inline constexpr int OperandOf(WPARAM wparam,
+                                             Command base) noexcept {
   return static_cast<int>(wparam) - static_cast<int>(CodeOf(base));
 }
 
@@ -83,6 +86,20 @@ inline void Post(WPARAM code) {
   if (isOpen) {
     PostMessageW(g_window, g_message, code, 0);
   }
+}
+
+// The WM_TIMER ids set on the subclassed browser window, each dispatched by
+// control.h's window procedure to the module that set it. One closed set, so
+// no two modules can pick the same id.
+enum class WindowTimer : UINT_PTR {
+  kFindPoll = 0xF1EC,        // find.h: the find bar's poll
+  kAnimationFrame = 0xF1ED,  // anim.h: a pane transition's next frame
+  kThemeRepaint = 0xF1EE,    // theme.h: the frame redraw after a theme swap
+  kRenderNudge = 0xF1EF,     // repaint.h: the settled panes' paint nudge
+};
+
+[[nodiscard]] inline constexpr UINT_PTR TimerIdOf(WindowTimer timer) noexcept {
+  return static_cast<UINT_PTR>(timer);
 }
 
 }  // namespace fixedge::channel

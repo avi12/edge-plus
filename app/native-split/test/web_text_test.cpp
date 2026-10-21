@@ -49,6 +49,17 @@ void CheckEscaping() {
         "UTF-8 passes through for the script to read");
 }
 
+void CheckScriptAnswers() {
+  Check(JsOkAnswer() == "\"ok\"", "a bare ok is the tag alone");
+  Check(JsOkAnswer({"count", "\"1\""}) ==
+            "[\"ok\", count, \"1\"].join(\"\\u001f\")",
+        "an ok joins its fields with the separator");
+  Check(JsErrorAnswer("No \"page\".") == "\"err\\u001fNo \\\"page\\\".\"",
+        "a fixed error is one literal, escaped");
+  Check(JsErrorAnswerFrom("error.message") == "\"err\\u001f\" + error.message",
+        "a computed error is appended to the tag");
+}
+
 }  // namespace
 
 int main() {
@@ -56,6 +67,7 @@ int main() {
     CheckTruncation();
     CheckUrls();
     CheckEscaping();
+    CheckScriptAnswers();
   } catch (...) {
     return 1;
   }

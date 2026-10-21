@@ -5,6 +5,7 @@
 // in our isolated world, so the page's own scripts cannot see or answer them
 // falsely. Every answer is a plain string that find_text.h / ask_text.h parse.
 #pragma once
+#include <span>
 #include <string>
 #include "ask_text.h"
 #include "find_text.h"
@@ -18,8 +19,6 @@ inline constexpr int kMaxReadChars = 60000;
 inline constexpr int kMaxParagraphCarryChars = 1200;
 // How much of a page a search looks through.
 inline constexpr int kMaxSearchChars = 4000000;
-// The longest selection that prefills the bar.
-inline constexpr int kMaxSelectionChars = 200;
 
 // The highlight names the page's stylesheet is written for.
 inline constexpr char kMatchHighlight[] = "fixedge-find";
@@ -256,23 +255,38 @@ inline std::string Wrap(const std::string& body) {
   return "(function () {\n  try {" + Helpers() + body +
          R"JS(
   } catch (error) {
-    return "err\x1fThe page would not let Edge search it.";
+    return )JS" +
+         web_text::JsErrorAnswer("The page would not let Edge search it.") +
+         R"JS(;
   }
 })())JS";
 }
 
 // `ok US count US isCapped US current`, once `fx.ranges` holds the matches.
-inline constexpr char kShownAnswer[] =
-    R"JS(return ["ok", String(fx.ranges.length), isCapped ? "1" : "0", String(current)].join("\x1f");)JS";
+inline std::string ShownAnswer() {
+  return "return " +
+         web_text::JsOkAnswer({"String(fx.ranges.length)",
+                               R"JS(isCapped ? "1" : "0")JS",
+                               "String(current)"}) +
+         ";";
+}
+
+// The page-side check that the CSS Custom Highlight API is there.
+inline std::string RequireHighlights() {
+  return R"JS(
+    if (!window.CSS || !CSS.highlights || typeof Highlight === "undefined") {
+      return )JS" +
+         web_text::JsErrorAnswer("This page cannot show highlights.") +
+         R"JS(;
+    })JS";
+}
 
 // Mark every match of `source` (a RegExp source) with `flags`, scroll to the
 // first one in view, and answer how many there are. Answers `err` with the
 // RegExp's own message when it will not compile.
 inline std::string SearchScript(const find_text::Search& search) {
-  std::string body = R"JS(
-    if (!window.CSS || !CSS.highlights || typeof Highlight === "undefined") {
-      return "err\x1fThis page cannot show highlights.";
-    }
+  std::string body = RequireHighlights();
+  body += R"JS(
     fx.clear();
     var regex;
     try {
@@ -281,7 +295,10 @@ inline std::string SearchScript(const find_text::Search& search) {
           web_text::JsStringLiteral(search.flags);
   body += R"JS();
     } catch (error) {
-      return "err\x1f" + String(error.message).replace(/^[\s\S]*\/[a-z]*: /, "");
+      return )JS";
+  body += web_text::JsErrorAnswerFrom(
+      R"JS(String(error.message).replace(/^[\s\S]*\/[a-z]*: /, ""))JS");
+  body += R"JS(;
     }
     var map = fx.collect();
     var ranges = [];
@@ -326,7 +343,7 @@ inline std::string SearchScript(const find_text::Search& search) {
       fx.goTo(current);
     }
     )JS";
-  body += kShownAnswer;
+  body += ShownAnswer();
   return Wrap(body);
 }
 
@@ -337,29 +354,20 @@ inline std::string GoToScript(int index) {
   var fx = window.__fxFind;
   if (!fx || !fx.ranges[)JS") +
          std::to_string(index) + R"JS(]) {
-    return "err\x1fThe page changed. Search again.";
+    return )JS" +
+         web_text::JsErrorAnswer("The page changed. Search again.") + R"JS(;
   }
   fx.goTo()JS" +
          std::to_string(index) + R"JS();
-  return "ok";
+  return )JS" +
+         web_text::JsOkAnswer() + R"JS(;
 })())JS";
 }
 
 // Take every highlight and the stylesheet back out of the page.
-inline constexpr char kClearScript[] =
-    R"JS((function () { if (window.__fxFind) { window.__fxFind.clear(); } return "ok"; })())JS";
-
-// The page's selection, one line, for the bar to start from.
-inline std::string SelectionScript() {
-  return std::string(R"JS((function () {
-  try {
-    var text = String(window.getSelection ? window.getSelection() : "");
-    return text.replace(/\s+/g, " ").trim().slice(0, )JS") +
-         std::to_string(kMaxSelectionChars) + R"JS();
-  } catch (error) {
-    return "";
-  }
-})())JS";
+inline std::string ClearScript() {
+  return R"JS((function () { if (window.__fxFind) { window.__fxFind.clear(); } return )JS" +
+         web_text::JsOkAnswer() + "; })()";
 }
 
 // Read the page as paragraphs for Ask Copilot: one per block of text, in
@@ -369,7 +377,9 @@ inline std::string SelectionScript() {
 inline std::string ReadParagraphsScript() {
   std::string body = R"JS(
     if (document.contentType === "application/pdf") {
-      return "err\x1fPDF pages cannot be read yet.";
+      return )JS";
+  body += web_text::JsErrorAnswer("PDF pages cannot be read yet.");
+  body += R"JS(;
     }
     var map = fx.collect();
     fx.paragraphs = [];
@@ -396,18 +406,21 @@ inline std::string ReadParagraphsScript() {
   body += std::to_string(kMaxParagraphCarryChars);
   body += R"JS());
     }
-    return ["ok", isCut ? "1" : "0", texts.join("\x1e")].join("\x1f");)JS";
+    return )JS";
+  const std::string paragraphSeparator =
+      web_text::JsStringLiteral(std::string(1, ask_text::kParagraphSeparator));
+  body += web_text::JsOkAnswer(
+      {R"JS(isCut ? "1" : "0")JS", "texts.join(" + paragraphSeparator + ")"});
+  body += ";";
   return Wrap(body);
 }
 
 // Mark the paragraphs `indices` (positions in the list ReadParagraphsScript
 // answered) and scroll to the first. Answers find_text::ParseSearchResult's
 // format; a paragraph whose text has left the page is skipped.
-inline std::string HighlightParagraphsScript(const std::vector<int>& indices) {
-  std::string body = R"JS(
-    if (!window.CSS || !CSS.highlights || typeof Highlight === "undefined") {
-      return "err\x1fThis page cannot show highlights.";
-    }
+inline std::string HighlightParagraphsScript(std::span<const int> indices) {
+  std::string body = RequireHighlights();
+  body += R"JS(
     var wanted = [)JS";
   body += ask_text::IndexList(indices);
   body += R"JS(];
@@ -429,7 +442,7 @@ inline std::string HighlightParagraphsScript(const std::vector<int>& indices) {
       fx.goTo(0);
     }
     )JS";
-  body += kShownAnswer;
+  body += ShownAnswer();
   return Wrap(body);
 }
 

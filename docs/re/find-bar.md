@@ -323,3 +323,50 @@ Not run: two browser windows (the state is in each window's own views),
 the labels changing when the assistant is changed while the options are open
 (they refresh on the next show), Match diacritics, the keyboard (tab to a
 switch, space), and Shift+Enter / arrows with a switch on.
+
+## The /literal/flags decoration (155.0.4283.62)
+
+With the RegExp switch on, the box reads like a JavaScript literal: `/` before
+the text field and `/` plus the flags the search runs with after it (`/gi` with
+Ignore case on and Multiline off). The words come from
+`find_text::RegExpDecoration`, which runs the same `ParseQuery` and
+`find_flags::Merge` as the search, so the shown flags are the searched ones (a
+typed `(?i)` shows as `i`) [unit].
+
+- **Where they live.** The text field is not a direct child of `FindBarView`: its
+  parent is a row view (vtable rva `0x116baed0`) holding the text field
+  (`0x11726410`), the `FindBarMatchCountLabel` (`0x116bb610`), a separator
+  (`0x116d19f0`) and the buttons. Two plain `views::Label`s go into that row on
+  either side of the text field (`AddChildViewAt` at its index and index + 1), so
+  the caret, the selection, copy and paste and the searched text never include
+  them, and the row's layout mirrors them in a right-to-left UI. [run]
+- **Building a Label.** `CheckedOperatorNew3(0x4a8)` (FindBarMatchCountLabel's own
+  fields start at `0x4a8`, so a Label fits), then `views::Label::Label(this, const
+  u16string_view*, int context, int style, int directionality)` at `0x26ed562`, the
+  overload FindBarMatchCountLabel's constructor calls, with the count's own context
+  and style (`Label+0x388` / `+0x38c`). A constructed plain Label's vtable is
+  `0x117297d0` (read live; the PDB names several Label vftables). [run]
+- **Their look.** `Label::SetFontList` with the text field's `GetFontList` (same
+  size and baseline as the typed text: the suffix's `i` covers the same rows as a
+  typed `i`), and `Label::SetEnabledColor` with the count label's requested colour
+  (the `std::optional<ColorVariant>` at `Label+0x3b0`, engaged flag `+0x3b8`),
+  Edge's dimmed secondary text colour for the theme (`#9c9c9c` against the text's
+  `#fafafa` in the dark default). [run]
+- **Finding them again.** By position: a plain Label right before and right after
+  the text field (Edge has none there), so a reloaded DLL reuses the ones an
+  earlier load made. With RegExp off, or the find switched off, they are hidden
+  (`View::SetVisible`), never removed. [run: shown, then hidden with RegExp off]
+
+## Our switches keep their state when the bar is shown again (155.0.4283.62)
+
+When the bar is shown again (and on a tab change) every switch runs
+`FindInPageOptionToggleView::EdgeOnActiveWebContentsChanged` (`0xc8b5ff0`), which
+sets it from `edge::GetFindInPageOptionToggleValue(the tab's find helper, id)`:
+Edge's own three keep their state there, but for any other id it is false, and it
+calls no `OnButtonToggled`. So on reopen RegExp (and Multiline) went off while
+the flag rows, the slashes and Edge's greyed switches still showed RegExp on.
+That function is hooked: for our ids it does not run (they keep the state they
+have, per window, as RegExp always has), and after any switch the options are
+synced again from the switches (`SyncToggles`, which drops a re-entrant call made
+while it builds a switch). [run: RegExp + Multiline on, Esc, reopen: still on,
+flags shown, `/gm`; RegExp off, Esc, reopen: off, flags hidden, no slashes]

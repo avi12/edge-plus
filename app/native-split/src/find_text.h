@@ -8,6 +8,7 @@
 #include <cctype>
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <vector>
 #include "find_flags.h"
 #include "web_text.h"
@@ -41,11 +42,11 @@ struct Query {
   bool isFlagsFinal = false;
 };
 
-inline bool IsSpace(char character) {
+[[nodiscard]] inline bool IsSpace(char character) {
   return std::isspace(static_cast<unsigned char>(character)) != 0;
 }
 
-inline std::string TrimmedSpaces(const std::string& text) {
+[[nodiscard]] inline std::string TrimmedSpaces(std::string_view text) {
   size_t start = 0;
   size_t end = text.size();
   while (start < end && IsSpace(text[start])) {
@@ -54,14 +55,15 @@ inline std::string TrimmedSpaces(const std::string& text) {
   while (end > start && IsSpace(text[end - 1])) {
     end--;
   }
-  return text.substr(start, end - start);
+  return std::string(text.substr(start, end - start));
 }
 
 // Whether `flags` are RegExp flags we take, each at most once.
-inline bool AreRegExpFlags(const std::string& flags) {
+[[nodiscard]] inline constexpr bool AreRegExpFlags(
+    std::string_view flags) noexcept {
   for (size_t i = 0; i < flags.size(); i++) {
     const bool isKnown =
-        std::string(kRegExpFlags).find(flags[i]) != std::string::npos;
+        std::string_view(kRegExpFlags).find(flags[i]) != std::string_view::npos;
     const bool isRepeated = flags.find(flags[i]) != i;
     if (!isKnown || isRepeated) {
       return false;
@@ -74,7 +76,7 @@ inline bool AreRegExpFlags(const std::string& flags) {
 // first) is a question; `/pattern/flags` (a slash, a pattern, the last slash,
 // then only known flags) is a RegExp; anything else, including a RegExp not yet
 // closed, is plain text for Edge.
-inline Query ParseQuery(const std::string& typed) {
+[[nodiscard]] inline Query ParseQuery(std::string_view typed) {
   Query query;
   const bool isQuestion =
       typed.size() >= 2 && typed[0] == kAskMark && IsSpace(typed[1]);
@@ -89,7 +91,7 @@ inline Query ParseQuery(const std::string& typed) {
   if (!isDelimited) {
     return query;
   }
-  const std::string flags = typed.substr(closing + 1);
+  const std::string_view flags = typed.substr(closing + 1);
   if (!AreRegExpFlags(flags)) {
     return query;
   }
@@ -115,17 +117,15 @@ inline constexpr char kIgnoreCaseFlag[] = "i";
 
 // The switch for a question, named for the assistant that will answer it. It
 // also says how to send: the box itself stays free for the question.
-inline std::string AskTitle(const std::string& assistantName) {
-  return "Ask " + assistantName + " (Enter)";
-}
-
-inline bool StartsWith(const std::string& text, const std::string& prefix) {
-  return text.compare(0, prefix.size(), prefix) == 0;
+[[nodiscard]] inline std::string AskTitle(std::string_view assistantName) {
+  std::string title = "Ask ";
+  title += assistantName;
+  return title + " (Enter)";
 }
 
 // Read the box with a switch on: what is typed is the pattern (case sensitive
 // unless it starts with "(?i)") or the question. An empty box asks nothing.
-inline Query ParseQuery(const std::string& typed, Option option) {
+[[nodiscard]] inline Query ParseQuery(std::string_view typed, Option option) {
   if (option == Option::kNone) {
     return ParseQuery(typed);
   }
@@ -140,11 +140,28 @@ inline Query ParseQuery(const std::string& typed, Option option) {
     return query;
   }
   query.mode = Mode::kRegExp;
-  const bool isIgnoringCase = StartsWith(typed, kIgnoreCasePrefix);
+  const bool isIgnoringCase = typed.starts_with(kIgnoreCasePrefix);
   query.pattern =
       isIgnoringCase ? typed.substr(sizeof(kIgnoreCasePrefix) - 1) : typed;
   query.flags = isIgnoringCase ? kIgnoreCaseFlag : "";
   return query;
+}
+
+// What the box shows around its text while the RegExp switch is on, as in a
+// JavaScript literal: a slash before the pattern, and after it a slash and the
+// flags the search really runs with (the typed (?i) and the flag switches,
+// merged as the search merges them). Shown beside the text, never part of it.
+struct LiteralDecoration {
+  std::string prefix;
+  std::string suffix;
+};
+
+[[nodiscard]] inline LiteralDecoration RegExpDecoration(
+    std::string_view typed, const find_flags::FlagSet& switches) {
+  const Query query = ParseQuery(typed, Option::kRegExp);
+  const std::string slash(1, kRegExpDelimiter);
+  return LiteralDecoration{slash,
+                           slash + find_flags::Merge(query.flags, switches)};
 }
 
 // The box is a single line, so a line break in a RegExp is typed (Shift+Enter) or
@@ -154,7 +171,7 @@ inline constexpr char kEscapedNewline[] = "\\n";
 
 // Text pasted into the box with its line breaks (CR, LF or CRLF, each one break)
 // written as \n.
-inline std::string EscapeLineBreaks(const std::string& pasted) {
+[[nodiscard]] inline std::string EscapeLineBreaks(std::string_view pasted) {
   std::string escaped;
   for (size_t i = 0; i < pasted.size(); i++) {
     const char character = pasted[i];
@@ -179,28 +196,23 @@ inline std::string EscapeLineBreaks(const std::string& pasted) {
 inline constexpr size_t kMaxPatternChars = 500;
 inline constexpr int kMaxMatches = 5000;
 
-// Fields of a report, and its lines (the same separators the page scripts use).
-inline constexpr char kFieldSeparator = '\x1f';
-
 // --- which pages the bar can search ------------------------------------------------
 
 // Web pages and local files whose text is in the page. An Edge page (settings, a
 // new tab) and a PDF (Edge's viewer draws it; its own find searches it) are left
 // to Edge's stock find.
-inline bool IsSearchableUrl(const std::string& url) {
+[[nodiscard]] inline bool IsSearchableUrl(std::string_view url) {
   if (!web_text::IsWebPageUrl(url)) {
     return false;
   }
   const size_t pathEnd = url.find_first_of("?#");
-  std::string path = url.substr(0, pathEnd);
+  std::string path(url.substr(0, pathEnd));
   for (char& character : path) {
     character =
         static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
   }
-  const std::string kPdfSuffix = ".pdf";
-  const bool isPdf = path.size() >= kPdfSuffix.size() &&
-                     path.compare(path.size() - kPdfSuffix.size(),
-                                  kPdfSuffix.size(), kPdfSuffix) == 0;
+  constexpr std::string_view kPdfSuffix = ".pdf";
+  const bool isPdf = path.ends_with(kPdfSuffix);
   return !isPdf;
 }
 
@@ -215,7 +227,8 @@ enum class PatternProblem {
   kNestedRepeat,    // a repeated group that repeats inside: can hang the page
 };
 
-inline const char* ProblemText(PatternProblem problem) {
+[[nodiscard]] inline constexpr const char* ProblemText(
+    PatternProblem problem) noexcept {
   switch (problem) {
     case PatternProblem::kNone:
     case PatternProblem::kEmpty:
@@ -232,11 +245,11 @@ inline const char* ProblemText(PatternProblem problem) {
   return "";
 }
 
-inline bool IsRepeatChar(char character) {
+[[nodiscard]] inline constexpr bool IsRepeatChar(char character) noexcept {
   return character == '*' || character == '+';
 }
 
-inline bool StartsRepeat(char character) {
+[[nodiscard]] inline constexpr bool StartsRepeat(char character) noexcept {
   return character == '*' || character == '+' || character == '{';
 }
 
@@ -245,7 +258,7 @@ inline bool StartsRepeat(char character) {
 // after the page had already started (a group left open is reported by the
 // page, but a nested repeat such as (a+)+ is accepted by it and then runs for
 // minutes), and keeps the message in one place.
-inline PatternProblem CheckRegex(const std::string& pattern) {
+[[nodiscard]] inline PatternProblem CheckRegex(std::string_view pattern) {
   if (pattern.empty()) {
     return PatternProblem::kEmpty;
   }
@@ -311,12 +324,13 @@ struct Search {
 // text is one line per block), and the typed ones add the rest (a RegExp is case
 // sensitive unless it says "i", as in JavaScript). In JavaScript's canonical
 // order.
-inline std::string ScriptFlags(const std::string& typedFlags) {
-  return find_flags::Merge(typedFlags + "gm", find_flags::FlagSet{});
+[[nodiscard]] inline std::string ScriptFlags(std::string_view typedFlags) {
+  return find_flags::Merge(std::string(typedFlags) + "gm",
+                           find_flags::FlagSet{});
 }
 
 // The search a RegExp query runs, or why it cannot.
-inline Search BuildSearch(const Query& query) {
+[[nodiscard]] inline Search BuildSearch(const Query& query) {
   Search search;
   search.problem = CheckRegex(query.pattern);
   if (search.problem != PatternProblem::kNone) {
@@ -338,7 +352,8 @@ inline constexpr int kNoMatch = -1;
 
 // The match to go to from `current` (kNoMatch before the first step) among
 // `count`, wrapping at both ends.
-inline int StepMatch(int current, int count, Step step) {
+[[nodiscard]] inline constexpr int StepMatch(int current, int count,
+                                             Step step) noexcept {
   if (count <= 0) {
     return kNoMatch;
   }
@@ -363,22 +378,11 @@ struct SearchResult {
   std::string error;
 };
 
-inline std::vector<std::string> SplitFields(const std::string& raw) {
-  std::vector<std::string> fields;
-  size_t start = 0;
-  while (true) {
-    const size_t end = raw.find(kFieldSeparator, start);
-    if (end == std::string::npos) {
-      fields.push_back(raw.substr(start));
-      return fields;
-    }
-    fields.push_back(raw.substr(start, end - start));
-    start = end + 1;
-  }
-}
+// The most digits read as a count: any more could overflow an int.
+inline constexpr size_t kMaxCountDigits = 9;
 
-inline bool IsDigits(const std::string& text) {
-  if (text.empty() || text.size() > 9) {
+[[nodiscard]] inline constexpr bool IsDigits(std::string_view text) noexcept {
+  if (text.empty() || text.size() > kMaxCountDigits) {
     return false;
   }
   for (const char character : text) {
@@ -389,19 +393,20 @@ inline bool IsDigits(const std::string& text) {
   return true;
 }
 
-inline SearchResult ParseSearchResult(const std::string& raw) {
+[[nodiscard]] inline SearchResult ParseSearchResult(std::string_view raw) {
   SearchResult result;
-  const std::vector<std::string> fields = SplitFields(raw);
-  const bool isError = fields[0] == "err";
+  const std::vector<std::string> fields = web_text::SplitFields(raw);
+  const bool isError = fields[0] == web_text::kErrorTag;
   if (isError) {
     result.error = fields.size() > 1 ? fields[1] : std::string();
     return result;
   }
   constexpr size_t kOkFieldCount = 4;
-  const bool isComplete = fields[0] == "ok" && fields.size() == kOkFieldCount &&
+  const bool isComplete = fields[0] == web_text::kOkTag &&
+                          fields.size() == kOkFieldCount &&
                           IsDigits(fields[1]) && IsDigits(fields[3]);
   if (!isComplete) {
-    result.error = "The page gave an answer Edge could not read.";
+    result.error = web_text::kUnreadableAnswer;
     return result;
   }
   result.isOk = true;

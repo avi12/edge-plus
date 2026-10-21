@@ -11,6 +11,7 @@
 #include "config.h"
 #include "edge.h"
 #include "geometry.h"
+#include "spine.h"
 #include "split_ops.h"
 #include "split_data.h"
 #include "state.h"
@@ -27,6 +28,8 @@
 #include "tabrows.h"
 #include "theme.h"
 #include "theme_follow.h"
+#include "live_preview.h"
+#include "reading_mode.h"
 #include "assistant.h"
 #include "find.h"
 
@@ -37,8 +40,12 @@ using channel::Command;
 using channel::IsInRange;
 using channel::OperandOf;
 
-inline WNDPROC g_originalProc = nullptr;
-inline bool g_hasHotKeys = false;
+inline constinit WNDPROC g_originalProc = nullptr;
+inline constinit bool g_hasHotKeys = false;
+// Set by the UI-side teardown before unload: from then on a config apply still
+// queued behind it must not switch anything back on (it once turned the link
+// handlers on mid-unload, leaving a vtable slot pointing into the freed DLL).
+inline constinit bool g_isTornDown = false;
 
 inline constexpr wchar_t kBrowserWindowClass[] = L"Chrome_WidgetWin_1";
 inline constexpr int kClassNameLength = 64;
@@ -61,9 +68,9 @@ enum class HotKey : WPARAM {
 };
 
 struct HotKeyBinding {
-  HotKey hotKey;
-  UINT modifiers;
-  UINT key;
+  HotKey hotKey = HotKey::kAddPane;
+  UINT modifiers = 0;
+  UINT key = 0;
 };
 
 // Ctrl+Shift+Alt + a key reshapes the split (add / swap / collapse); Shift+Alt +
@@ -170,6 +177,52 @@ inline BOOL CALLBACK RefreshWindowFollowedPages(HWND hwnd, LPARAM lparam) {
   return TRUE;
 }
 
+// EnumWindows callback: one spine tick (spine.h) for each of this process's
+// browser windows, so every window marks its own selected tab.
+inline BOOL CALLBACK TickWindowSpine(HWND hwnd, LPARAM /*unused*/) {
+  if (!IsOurBrowserClassWindow(hwnd)) {
+    return TRUE;
+  }
+  if (edge::TsmForWindow(hwnd)) {
+    spine::TickWindow(hwnd);
+  }
+  return TRUE;
+}
+
+// The spine's timer callback (a thread timer, spine::Start): tick every browser
+// window. Runs on the UI thread that started it.
+inline void CALLBACK TickSpines(HWND /*unused*/, UINT /*unused*/,
+                                UINT_PTR /*unused*/, DWORD /*unused*/) {
+  if (spine::g_isStopRequested) {
+    spine::Remove();
+    return;
+  }
+  spine::BeginTick();
+  EnumWindows(TickWindowSpine, 0);
+}
+
+// EnumWindows callback: set the reading mode theme (reading_mode.h) in the
+// profile behind each of this process's browser windows.
+inline BOOL CALLBACK ApplyWindowReadingTheme(HWND hwnd, LPARAM /*unused*/) {
+  if (!IsOurBrowserClassWindow(hwnd)) {
+    return TRUE;
+  }
+  void* tsm = edge::TsmForWindow(hwnd);
+  if (tsm) {
+    reading_mode::ApplyTo(edge::ProfileForTabStrip(tsm));
+  }
+  return TRUE;
+}
+
+// Everything that follows Windows light and dark, on its flip: the browser
+// theme and the reading mode's page theme.
+inline void ApplyForCurrentOsMode(HWND hwnd) {
+  theme::ApplyForCurrentOsMode(hwnd);
+  if (reading_mode::g_isActive) {
+    EnumWindows(ApplyWindowReadingTheme, 0);
+  }
+}
+
 inline void RefreshThemeColors() {
   int refreshed = 0;
   EnumWindows(RefreshWindowFollowedPages, reinterpret_cast<LPARAM>(&refreshed));
@@ -181,16 +234,22 @@ inline void RefreshThemeColors() {
 // collapse), then end the drag session, the preview window, the grips, the
 // animation timer and the hot-keys.
 inline void Teardown(HWND hwnd) {
+  g_isTornDown = true;
   EnumWindows(BreakUpWindowSplits, 0);
+  // On this thread, so no config apply can switch it back on behind us.
+  protocol_handlers::Remove();
   find::Apply(false);
   const bool wasFollowingTheme = theme_follow::g_isActive;
   theme_follow::g_isActive = false;
   if (wasFollowingTheme) {
     RefreshThemeColors();
   }
+  live_preview::g_isActive = false;
+  live_preview::g_isCardOpen = false;
   drag::Cancel();
   tabdrag::Cancel();
   overlay::Remove();
+  spine::Remove();
   grip::RemoveAll();
   dividers::RemoveAll();
   anim::Remove();
@@ -198,11 +257,6 @@ inline void Teardown(HWND hwnd) {
     UnregisterHotKeys(hwnd);
   }
   g_hasHotKeys = false;
-}
-
-inline bool IsKeyDown(int virtualKey) {
-  constexpr SHORT kDownBit = static_cast<SHORT>(0x8000);
-  return (GetKeyState(virtualKey) & kDownBit) != 0;
 }
 
 // --- the hot-keys ----------------------------------------------------------
@@ -275,6 +329,11 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     // both assigned themes stay installed for live switching while the split is
     // off but theming is still on. (MH_ALL_HOOKS turned it off above.)
     MH_EnableHook(edge::At(edge155::rva::ThemeService_RemoveUnusedThemes));
+    // Nor is the vertical-tab selected-tab recolour: it rides theming too.
+    MH_EnableHook(edge::At(edge155::rva::BrowserThemePack_GetColor));
+    // Nor is the selected tab's ink: theming too.
+    MH_EnableHook(edge::At(edge155::rva::ColorProvider_GetColor));
+    MH_EnableHook(edge::At(edge155::rva::EdgeTab_UpdateForegroundColors));
     // Nor are the link-handler detours (they pass through while that feature
     // is off).
     protocol_handlers::EnableHooks();
@@ -285,6 +344,8 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     find::EnableAll();
     // Nor are the WebUI pages' theme colors.
     theme_follow::EnableAll();
+    // Nor is the live tab preview.
+    live_preview::EnableAll();
   }
 }
 
@@ -325,9 +386,22 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
     }
   }
   theme::ApplyConfig(hwnd, wire);
+  // The spine has its own switch, and needs theming: the squared corners take
+  // the selected fill the theme's colour hook answers.
+  const bool isSpineWanted = theme::g_isActive && wire.tabSpineActive != 0;
+  if (isSpineWanted && !spine::g_isActive) {
+    spine::Start(TickSpines);
+  } else if (!isSpineWanted && spine::g_isActive) {
+    spine::Remove();
+  }
   const bool isFollowChanged = theme_follow::ApplyConfig(wire);
   if (isFollowChanged) {
     RefreshThemeColors();
+  }
+  live_preview::ApplyConfig(wire);
+  const bool isReadingThemeDue = reading_mode::ApplyConfig(wire);
+  if (isReadingThemeDue) {
+    EnumWindows(ApplyWindowReadingTheme, 0);
   }
   const bool isTurningHandlersOn = protocol_handlers::ApplyConfig(wire);
   if (isTurningHandlersOn) {
@@ -344,8 +418,8 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
 // The config read from disk at Install, applied on the UI thread via a posted
 // kApplyConfig (ApplyConfig touches Edge views, so it must not run on the Init
 // thread that does the subclassing).
-inline config::Wire g_pendingConfig = {};
-inline bool g_hasPendingConfig = false;
+inline constinit config::Wire g_pendingConfig = {};
+inline constinit bool g_hasPendingConfig = false;
 
 // The app signalled a config change (dllmain's waiter thread calls this): re-read
 // the file and apply it on the UI thread. Posting to our own subclassed window
@@ -383,7 +457,7 @@ inline void EnsureGripsByCommand(HWND hwnd) {
 
 inline void ShowBarByCommand(HWND hwnd, int pane) {
   void* mcv = edge::McvForWindow(hwnd);
-  const bool hasPane = mcv && pane < static_cast<int>(edge::McvCount(mcv));
+  const bool hasPane = mcv && std::cmp_less(pane, edge::McvCount(mcv));
   if (hasPane) {
     void* webContents =
         edge::ContainerWebContents(edge::McvContainerAt(mcv, pane));
@@ -425,7 +499,8 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
     return;
   }
   if (wparam == CodeOf(Command::kApplyConfig)) {
-    if (g_hasPendingConfig) {
+    const bool shouldApply = g_hasPendingConfig && !g_isTornDown;
+    if (shouldApply) {
       ApplyConfig(hwnd, g_pendingConfig);
     }
     return;
@@ -434,7 +509,7 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
   // theming apply and the unload teardown run; every split command is ignored.
   if (!SplitActive()) {
     if (wparam == CodeOf(Command::kApplyTheme)) {
-      theme::ApplyForCurrentOsMode(hwnd);
+      ApplyForCurrentOsMode(hwnd);
     } else if (wparam == CodeOf(Command::kTeardown)) {
       Teardown(hwnd);
     }
@@ -476,7 +551,7 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
       offer::CloseOfferPane();
       return;
     case Command::kApplyTheme:
-      theme::ApplyForCurrentOsMode(hwnd);
+      ApplyForCurrentOsMode(hwnd);
       return;
     default:
       break;
@@ -527,12 +602,6 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
       message == WM_TIMER && wparam == theme::kRepaintTimerId;
   if (isThemeRepaint) {
     theme::Repaint(hwnd);
-    return 0;
-  }
-  const bool isThemeInstallRetry =
-      message == WM_TIMER && wparam == theme::kInstallRetryTimerId;
-  if (isThemeInstallRetry) {
-    theme::RetryApply(hwnd);
     return 0;
   }
   const bool isOurHotKey = message == WM_HOTKEY && HasBinding(wparam);
@@ -615,6 +684,17 @@ inline void Remove() {
                         SMTO_BLOCK, kTeardownTimeoutMs, nullptr);
     SetWindowLongPtrW(hwnd, GWLP_WNDPROC,
                       reinterpret_cast<LONG_PTR>(g_originalProc));
+  }
+  // The spine's thread timer runs this DLL's code; when the teardown could not
+  // stop it (the window above has closed), have its next tick stop it.
+  if (spine::g_isTimerRunning) {
+    spine::g_isStopRequested = true;
+    const ULONGLONG deadline = GetTickCount64() + kTeardownTimeoutMs;
+    while (spine::g_isTimerRunning && GetTickCount64() < deadline) {
+      Sleep(spine::kTickIntervalMs);
+    }
+    Log("[spine] timer stopped by its own tick: %s",
+        spine::g_isTimerRunning ? "no" : "yes");
   }
   g_hasHotKeys = false;
   channel::g_window = nullptr;

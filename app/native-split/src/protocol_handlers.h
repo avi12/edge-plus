@@ -37,12 +37,12 @@ enum class Decision : int32_t {
   kDeny = 2,           // "Block"
 };
 
-inline bool g_isActive = false;
+inline constinit bool g_isActive = false;
 
 // The bubble model whose Done button was just pressed. Done runs the accept
 // callback first and only then closes the bubble (CommitChanges), all on the UI
 // thread, so the next CommitChanges for this model is Done's.
-inline void* g_doneModel = nullptr;
+inline constinit void* g_doneModel = nullptr;
 
 // Our OnDoneButtonClicked, installed in the handler bubble model's vtable slot
 // while the feature is on (the slot's own function is an empty `ret`).
@@ -53,7 +53,7 @@ inline void __fastcall OnDoneButtonClicked(void* model) {
 // ContentSettingRPHBubbleModel::CommitChanges — run Edge's commit only when the
 // bubble is closing because the user pressed Done.
 using CommitChanges_t = void(__fastcall*)(void*);
-inline CommitChanges_t o_commit_changes = nullptr;
+inline constinit CommitChanges_t o_commit_changes = nullptr;
 inline void __fastcall h_commit_changes(void* model) {
   const bool isDone = model == g_doneModel;
   g_doneModel = nullptr;
@@ -68,7 +68,7 @@ inline void __fastcall h_commit_changes(void* model) {
 // RegisterProtocolHandlerPermissionRequest::PermissionDecided — "Just this
 // time" decides nothing instead of blocking the site.
 using PermissionDecided_t = void(__fastcall*)(void*, const void*);
-inline PermissionDecided_t o_permission_decided = nullptr;
+inline constinit PermissionDecided_t o_permission_decided = nullptr;
 inline void __fastcall h_permission_decided(void* request,
                                             const void* decision) {
   const edge::PermissionDecision decided =

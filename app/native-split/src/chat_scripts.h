@@ -18,15 +18,28 @@ namespace fixedge::chat_scripts {
 
 using chat_target::Target;
 
-// What the reply script answers while the answer is still arriving, and while
-// a dialog (a security check, a consent page) waits for the person.
-inline constexpr char kWaitAnswer[] = "wait";
-inline constexpr char kUserAnswer[] = "user";
-// What it answers when the page was replaced after the prompt went in (the side
-// panel reloads): the question has to be sent again.
-inline constexpr char kReloadedAnswer[] = "reloaded";
-// What the arm script answers.
-inline constexpr char kArmedAnswer[] = "armed";
+// The one-word answers the page scripts give besides `ok US text` / `err US why`.
+enum class ScriptAnswer {
+  kWait,  // the answer is still arriving
+  kUser,  // a dialog (a security check, a consent page) waits for the person
+  kReloaded,  // the page was replaced after the prompt went in (the side panel
+              // reloads): the question has to be sent again
+  kArmed,     // what the arm script answers
+};
+
+inline const char* AnswerText(ScriptAnswer answer) {
+  switch (answer) {
+    case ScriptAnswer::kWait:
+      return "wait";
+    case ScriptAnswer::kUser:
+      return "user";
+    case ScriptAnswer::kReloaded:
+      return "reloaded";
+    case ScriptAnswer::kArmed:
+      return "armed";
+  }
+  return "";
+}
 
 // How long the answer must stay unchanged (and no stop button show) before it
 // counts as finished.
@@ -47,16 +60,16 @@ inline std::string ArmScript(const Target& target, const std::string& prompt) {
     prompt: prompt, lastText: "", changedAt: Date.now(), failure: ""
   };
   return ")JS";
-  script += kArmedAnswer;
+  script += AnswerText(ScriptAnswer::kArmed);
   script += R"JS(";
 }))JS";
   script += "(" + web_text::JsStringLiteral(prompt) + ")";
   return script;
 }
 
-// Asked about once a second after sending: kWaitAnswer while the answer is
-// missing or still being written, kUserAnswer while a dialog needs the person,
-// kReloadedAnswer when the page lost the question, then
+// Asked about once a second after sending: kWait while the answer is
+// missing or still being written, kUser while a dialog needs the person,
+// kReloaded when the page lost the question, then
 // `ok US text` (ask_text::ParseReply's format), or `err US why`.
 inline std::string ReplyScript(const Target& target) {
   std::string script = "(function () {";
@@ -64,11 +77,13 @@ inline std::string ReplyScript(const Target& target) {
   var state = window.__fxChat;
   if (!state) {
     return ")JS";
-  script += kReloadedAnswer;
+  script += AnswerText(ScriptAnswer::kReloaded);
   script += R"JS(";
   }
   if (state.failure) {
-    return "err\x1f" + state.failure;
+    return )JS";
+  script += web_text::JsErrorAnswerFrom("state.failure");
+  script += R"JS(;
   }
   var dialog = document.querySelector()JS";
   script += web_text::JsStringLiteral(target.dialogSelectors);
@@ -78,7 +93,7 @@ inline std::string ReplyScript(const Target& target) {
   script += R"JS() >= 0;
   if ((dialog && dialog.offsetWidth) || isNoticeShown) {
     return ")JS";
-  script += kUserAnswer;
+  script += AnswerText(ScriptAnswer::kUser);
   script += R"JS(";
   }
   var squeeze = function (text) { return String(text).replace(/\s+/g, " ").trim(); };
@@ -100,14 +115,14 @@ inline std::string ReplyScript(const Target& target) {
   }
   if (text === null) {
     return ")JS";
-  script += kWaitAnswer;
+  script += AnswerText(ScriptAnswer::kWait);
   script += R"JS(";
   }
   if (text !== state.lastText) {
     state.lastText = text;
     state.changedAt = Date.now();
     return ")JS";
-  script += kWaitAnswer;
+  script += AnswerText(ScriptAnswer::kWait);
   script += R"JS(";
   }
   var isWriting = !!document.querySelector()JS";
@@ -118,10 +133,12 @@ inline std::string ReplyScript(const Target& target) {
   script += R"JS(;
   if (!text || isWriting || !isSettled) {
     return ")JS";
-  script += kWaitAnswer;
+  script += AnswerText(ScriptAnswer::kWait);
   script += R"JS(";
   }
-  return "ok\x1f" + text;
+  return )JS";
+  script += web_text::JsOkAnswer({"text"});
+  script += R"JS(;
 })())JS";
   return script;
 }

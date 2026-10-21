@@ -27,13 +27,14 @@ struct Size {
   int32_t height = 0;
 };
 
-inline bool Contains(const Rect& rect, const Point& point) {
+[[nodiscard]] inline constexpr bool Contains(const Rect& rect,
+                                             const Point& point) noexcept {
   return point.x >= rect.x && point.x < rect.x + rect.width &&
          point.y >= rect.y && point.y < rect.y + rect.height;
 }
 
 // A rect with no area, which nothing can be inside.
-inline bool Empty(const Rect& rect) {
+[[nodiscard]] inline constexpr bool Empty(const Rect& rect) noexcept {
   return rect.width <= 0 || rect.height <= 0;
 }
 

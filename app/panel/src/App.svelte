@@ -1,10 +1,11 @@
 <script lang="ts">
   import FeatureCard from "@/components/FeatureCard.svelte";
+  import ReadingModeCard from "@/components/ReadingModeCard.svelte";
   import ThemingCard from "@/components/ThemingCard.svelte";
   import { FIND_DESCRIPTION, FIND_TITLE } from "@/lib/assistantNames";
-  import type { AppState, Mode } from "@/lib/bridge";
+  import type { AppState, ReadingTheme } from "@/lib/bridge";
   import * as bridge from "@/lib/bridge";
-  import { Feature, LocalThemeKind } from "@/lib/bridge";
+  import { Feature, LocalThemeKind, Mode } from "@/lib/bridge";
   import { describeHeldOff, describeUnsupported, describeUpdate } from "@/lib/edgeBuild";
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -38,6 +39,24 @@
       `<rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="8" x2="21" y2="8"/>` +
       `<circle cx="12" cy="14" r="3"/><path d="M12 11 A3 3 0 0 0 12 17 Z" fill="currentColor" stroke="none"/></svg>`;
 
+  // A thumbnail with a play triangle: a live preview.
+  const livePreviewIcon =
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
+      `<rect x="3" y="5" width="18" height="14" rx="1.5"/>` +
+      `<path d="M10 9.5 L15 12 L10 14.5 Z" fill="currentColor" stroke="none"/></svg>`;
+
+  // A tab with a square, striped leading edge: the selected tab's spine.
+  const tabSpineIcon =
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
+      `<path d="M4 7 H18.5 A2.5 2.5 0 0 1 21 9.5 V14.5 A2.5 2.5 0 0 1 18.5 17 H4 Z"/>` +
+      `<rect x="3" y="6.2" width="2.6" height="11.6" fill="currentColor" stroke="none"/></svg>`;
+
+  // An open book with a half-filled sun/moon disc: reading mode by light and dark.
+  const readingModeIcon =
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
+      `<path d="M3 6 C6 5 9 5 12 7 C15 5 18 5 21 6 V18 C18 17 15 17 12 19 C9 17 6 17 3 18 Z"/>` +
+      `<line x1="12" y1="7" x2="12" y2="19"/></svg>`;
+
   // A power button.
   const startupIcon =
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">` +
@@ -62,6 +81,15 @@
     "Like Chrome: when a site such as Gmail offers to open email or calendar links, closing the " +
       "bubble no longer blocks it for good; only Ignore or Block does. Turning this on lifts " +
       "earlier blocks. Live, no restart.";
+  const livePreviewDescription =
+    "Hover a tab and its thumbnail plays live instead of a frozen snapshot, by keeping Edge's own " +
+      "tab capture running while the preview is open. Live, no restart. Open Edge first.";
+  const tabSpineDescription =
+    "Gives the selected vertical tab a straight leading edge with a neon magenta stripe (on the " +
+      "right when Edge runs right to left). Works with Theming on. Live, no restart.";
+  const readingModeDescription =
+    "Reading mode uses one page theme while Windows is light and another while it is dark, set " +
+      "as Windows switches and kept for every page you open in reading mode. Live, no restart.";
 
   let appState = $state<AppState | null>(null);
   let isDraggingOver = $state(false);
@@ -81,6 +109,15 @@
   );
   const isWebUiHeldOff = $derived(
     unsupported.has(Feature.WebUiFollowsTheme) && appState?.features.webUiFollowsTheme !== true
+  );
+  const isLivePreviewHeldOff = $derived(
+    unsupported.has(Feature.LivePreview) && appState?.features.livePreview !== true
+  );
+  const isTabSpineHeldOff = $derived(
+    unsupported.has(Feature.TabSpine) && appState?.features.tabSpine !== true
+  );
+  const isReadingThemeHeldOff = $derived(
+    unsupported.has(Feature.ReadingTheme) && appState?.features.readingTheme !== true
   );
   // What a locked card says about why, on the card itself.
   function heldOffNote(isHeldOff: boolean): string {
@@ -199,6 +236,22 @@
     appState = await bridge.setWebUiFollowsTheme(value);
   }
 
+  async function onLivePreview(value: boolean): Promise<void> {
+    appState = await bridge.setLivePreview(value);
+  }
+
+  async function onTabSpine(value: boolean): Promise<void> {
+    appState = await bridge.setTabSpine(value);
+  }
+
+  async function onReadingTheme(value: boolean): Promise<void> {
+    appState = await bridge.setReadingTheme(value);
+  }
+
+  async function onSetReadingMode(mode: Mode, theme: ReadingTheme): Promise<void> {
+    appState = await bridge.setReadingModeTheme(mode, theme);
+  }
+
   async function onAddStore(url: string): Promise<void> {
     appState = await bridge.addStoreTheme(url);
   }
@@ -274,6 +327,27 @@
     />
 
     <FeatureCard
+      checked={appState.features.tabSpine}
+      description={tabSpineDescription}
+      disabled={isTabSpineHeldOff}
+      icon={tabSpineIcon}
+      note={heldOffNote(isTabSpineHeldOff)}
+      onchange={onTabSpine}
+      title="Square selected tab with neon spine"
+    />
+
+    <ReadingModeCard
+      description={readingModeDescription}
+      disabled={isReadingThemeHeldOff}
+      enabled={appState.features.readingTheme}
+      icon={readingModeIcon}
+      note={heldOffNote(isReadingThemeHeldOff)}
+      onSetMode={onSetReadingMode}
+      onToggle={onReadingTheme}
+      readingMode={appState.readingMode}
+    />
+
+    <FeatureCard
       checked={appState.features.enhancedFind}
       description={FIND_DESCRIPTION}
       disabled={isFindHeldOff}
@@ -281,6 +355,16 @@
       note={heldOffNote(isFindHeldOff)}
       onchange={onEnhancedFind}
       title={FIND_TITLE}
+    />
+
+    <FeatureCard
+      checked={appState.features.livePreview}
+      description={livePreviewDescription}
+      disabled={isLivePreviewHeldOff}
+      icon={livePreviewIcon}
+      note={heldOffNote(isLivePreviewHeldOff)}
+      onchange={onLivePreview}
+      title="Live tab preview on hover"
     />
 
     <FeatureCard

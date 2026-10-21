@@ -53,8 +53,13 @@ app/
   panel/         the Tauri panel (Rust core + Svelte UI): one switch per feature
     src/           the Svelte front end, styled as Fluent 2 by hand (no UI deps)
     src-tauri/     the Rust core; edge-native/ holds all the Win32 glue
+  panel-winui/   the same panel as WinUI 3 / C# (modelled on avi/any-stt), on
+                 its way to replacing the Tauri one; Native/ holds its Win32
   native-split/  the C++ DLL the panel injects into Edge's browser process
 ```
+
+Both panels read and write the same `settings.json` and drive the DLL the same
+way, so either can run.
 
 The panel keeps the user's choices in `%LOCALAPPDATA%\FixEdge\settings.json` and
 drives each feature directly. Every Win32 action — enumerating Edge's browser
@@ -97,6 +102,15 @@ The panel (Rust + Svelte):
 pnpm --dir app/panel app          # live dev (Vite + Tauri)
 pnpm --dir app/panel lint         # oxlint + eslint + stylelint + clippy + fallow
 pnpm --dir app/panel check        # svelte-check
+```
+
+The WinUI panel (C#; .NET 10 SDK, Windows App SDK 1.8):
+
+```powershell
+dotnet build app\panel-winui                 # -> bin\...\edgeplus.exe (builds the DLL if missing)
+dotnet publish app\panel-winui -c Release    # one self-contained edgeplus.exe
+app\panel-winui\test\run.cmd                 # the pure-logic unit tests
+pwsh tools\lint.ps1                          # includes dotnet format + the C# house rules
 ```
 
 The native split DLL:

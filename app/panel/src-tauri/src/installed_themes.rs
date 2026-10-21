@@ -13,6 +13,11 @@ const MESSAGE_PREFIX: &str = "__MSG_";
 const MESSAGE_SUFFIX: &str = "__";
 const FALLBACK_LOCALE: &str = "en";
 const EXTENSION_ID_LENGTH: usize = 32;
+const EXTENSIONS_DIR: &str = "Extensions";
+const MANIFEST_FILE: &str = "manifest.json";
+const MESSAGES_FILE: &str = "messages.json";
+const PREFERENCES_FILE: &str = "Preferences";
+const SECURE_PREFERENCES_FILE: &str = "Secure Preferences";
 
 /// A theme Edge has installed in one of its profiles.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -103,15 +108,16 @@ fn profile_dirs(user_data: &Path) -> Vec<PathBuf> {
     entries
         .filter_map(Result::ok)
         .map(|entry| entry.path())
-        .filter(|path| path.join("Extensions").is_dir())
+        .filter(|path| path.join(EXTENSIONS_DIR).is_dir())
         .collect()
 }
 
 fn scan_profile(profile: &Path) -> Vec<InstalledTheme> {
-    let active = read_json(&profile.join("Preferences")).and_then(|prefs| active_theme_id(&prefs));
-    let registered =
-        read_json(&profile.join("Secure Preferences")).and_then(|secure| registered_ids(&secure));
-    let Ok(entries) = std::fs::read_dir(profile.join("Extensions")) else {
+    let active =
+        read_json(&profile.join(PREFERENCES_FILE)).and_then(|prefs| active_theme_id(&prefs));
+    let registered = read_json(&profile.join(SECURE_PREFERENCES_FILE))
+        .and_then(|secure| registered_ids(&secure));
+    let Ok(entries) = std::fs::read_dir(profile.join(EXTENSIONS_DIR)) else {
         return Vec::new();
     };
     let mut themes = Vec::new();
@@ -140,7 +146,7 @@ fn newest_version_dir(extension: &Path) -> Option<PathBuf> {
         .ok()?
         .filter_map(Result::ok)
         .map(|entry| entry.path())
-        .filter(|path| path.join("manifest.json").is_file())
+        .filter(|path| path.join(MANIFEST_FILE).is_file())
         .collect();
     versions.sort_by_cached_key(|path| version_key(path));
     versions.pop()
@@ -161,7 +167,7 @@ fn version_key(path: &Path) -> Vec<u64> {
 }
 
 fn theme_name_in(version_dir: &Path) -> Option<String> {
-    let manifest = read_json(&version_dir.join("manifest.json"))?;
+    let manifest = read_json(&version_dir.join(MANIFEST_FILE))?;
     let messages = read_messages(version_dir, &manifest);
     theme_name(&manifest, messages.as_ref())
 }
@@ -175,12 +181,12 @@ fn read_messages(version_dir: &Path, manifest: &Value) -> Option<Value> {
         .into_iter()
         .chain(std::iter::once(FALLBACK_LOCALE));
     for locale in preferred {
-        if let Some(messages) = read_json(&locales.join(locale).join("messages.json")) {
+        if let Some(messages) = read_json(&locales.join(locale).join(MESSAGES_FILE)) {
             return Some(messages);
         }
     }
     let first = std::fs::read_dir(&locales).ok()?.find_map(Result::ok)?;
-    read_json(&first.path().join("messages.json"))
+    read_json(&first.path().join(MESSAGES_FILE))
 }
 
 // Edge writes these files with a UTF-8 byte-order mark in some cases.
@@ -259,7 +265,7 @@ mod tests {
         let profile = root.join("Default");
         let id = "a".repeat(32);
         let other = "b".repeat(32);
-        let version = profile.join("Extensions").join(&id).join("1.0_0");
+        let version = profile.join(EXTENSIONS_DIR).join(&id).join("1.0_0");
         let locale = version.join("_locales").join("en");
         std::fs::create_dir_all(&locale).expect("test fixture");
         std::fs::write(
@@ -272,11 +278,11 @@ mod tests {
             "{\"n\":{\"message\":\"Night\"}}",
         )
         .expect("test fixture");
-        let plain = profile.join("Extensions").join(&other).join("2.0_0");
+        let plain = profile.join(EXTENSIONS_DIR).join(&other).join("2.0_0");
         std::fs::create_dir_all(&plain).expect("test fixture");
         std::fs::write(plain.join("manifest.json"), "{\"name\":\"Tool\"}").expect("test fixture");
         std::fs::write(
-            profile.join("Preferences"),
+            profile.join(PREFERENCES_FILE),
             format!("{{\"extensions\":{{\"theme\":{{\"id\":\"{id}\"}}}}}}"),
         )
         .expect("test fixture");

@@ -1,0 +1,252 @@
+<#
+.SYNOPSIS
+  Generates app\panel-winui\Panel\Platform\Shared.g.cs from the @share markers in the
+  native split's C++ sources.
+
+.DESCRIPTION
+  The WinUI panel (C#) and the injected DLL (C++) have to agree on a handful of
+  facts: the named events the panel signals, the config file the DLL reads and
+  the size of its id fields, and the msedge.dll build the DLL was reversed
+  against. C# cannot include a C++ header, so this makes the C++ side the source
+  and the C# side a build output — avi/any-stt's Export-SharedConstants.ps1,
+  pointed at app\native-split\src.
+
+  A marker comment
+
+      // @share <Name>
+
+  exports a value as `EdgePlus.Shared.<Name>`. On a line that carries a value,
+  the value is the first string literal on it (an L"" prefix is ignored), or
+  the first `= <integer>;`. A marker on a line of its own takes the statement
+  under it instead — its string literals joined, or else its integer — which
+  keeps the declaration line itself exactly as other readers of the header
+  (the Tauri panel's build.rs) parse it.
+
+  Run by the csproj before every C# build, so the generated file cannot go
+  stale, and by tools\lint.ps1 with -Check, so a committed copy that disagrees
+  with the headers fails the gate rather than shipping.
+
+.PARAMETER Check
+  Compare against the file on disk instead of writing it. Exits 1 when they
+  differ.
+#>
+[CmdletBinding()]
+param(
+    [switch]$Check
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$sourceRoot = Join-Path $repoRoot 'app\native-split\src'
+$outputPath = Join-Path $repoRoot 'app\panel-winui\Panel\Platform\Shared.g.cs'
+$outputName = 'app/panel-winui/Panel/Platform/Shared.g.cs'
+
+# The marker, and the two value shapes it can sit on.
+$markerPattern = '//\s*@share\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*$'
+$stringPattern = 'L?"(?<value>(?:[^"\\]|\\.)*)"'
+$integerPattern = '=\s*(?<value>-?\d+)\s*;'
+
+# C++ source escapes, undone, so the C# literal holds the same characters the
+# compiler put in the C++ one. Only the escapes these values actually use.
+function ConvertFrom-CppEscapes([string]$text) {
+    $text -replace '\\\\', "`u{1}" -replace '\\"', '"' -replace "`u{1}", '\'
+}
+
+function ConvertTo-CSharpLiteral([string]$text) {
+    '"' + ($text -replace '\\', '\\' -replace '"', '\"') + '"'
+}
+
+# The value one piece of C++ carries: its first string, else its integer.
+function Read-Value([string]$code) {
+    $asString = [regex]::Match($code, $stringPattern)
+    if ($asString.Success) {
+        $text = ''
+        foreach ($piece in [regex]::Matches($code, $stringPattern)) {
+            $text += ConvertFrom-CppEscapes $piece.Groups['value'].Value
+        }
+        return [pscustomobject]@{ Type = 'string'; Value = ConvertTo-CSharpLiteral $text }
+    }
+    $asInteger = [regex]::Match($code, $integerPattern)
+    if ($asInteger.Success) {
+        return [pscustomobject]@{ Type = 'int'; Value = $asInteger.Groups['value'].Value }
+    }
+    return $null
+}
+
+$constants = [ordered]@{}
+$files = Get-ChildItem -Path $sourceRoot -Recurse -Include '*.h', '*.cpp' | Sort-Object FullName
+foreach ($file in $files) {
+    $relative = [IO.Path]::GetRelativePath($repoRoot, $file.FullName).Replace('\', '/')
+    $lines = @(Get-Content -LiteralPath $file.FullName)
+    $lineNumber = 0
+    foreach ($line in $lines) {
+        $lineNumber++
+        $marker = [regex]::Match($line, $markerPattern)
+        if (-not $marker.Success) {
+            continue
+        }
+        $name = $marker.Groups['name'].Value
+        if ($constants.Contains($name)) {
+            throw "@share $name is claimed twice: $($constants[$name].Origin) and ${relative}:$lineNumber"
+        }
+        $value = Read-Value $line.Substring(0, $marker.Index)
+        $origin = "${relative}:$lineNumber"
+        if (-not $value) {
+            # A marker on its own line: the statement under it, which C++
+            # spreads over as many lines as it needs.
+            $statement = ''
+            for ($index = $lineNumber; $index -lt $lines.Count; $index++) {
+                $statement += ' ' + ($lines[$index] -replace '//.*$', '')
+                if ($lines[$index] -match ';\s*(//.*)?$') {
+                    $origin = "${relative}:$($index + 1)"
+                    break
+                }
+            }
+            $value = Read-Value $statement
+        }
+        if (-not $value) {
+            throw "@share $name at ${relative}:$lineNumber has no string or integer value"
+        }
+        $constants[$name] = [pscustomobject]@{
+            Type   = $value.Type
+            Value  = $value.Value
+            Origin = $origin
+        }
+    }
+}
+
+if ($constants.Count -eq 0) {
+    throw 'No @share markers found under app\native-split\src. The generator would empty Shared.g.cs.'
+}
+
+$lines = [Collections.Generic.List[string]]::new()
+$lines.Add('// <auto-generated />')
+$lines.Add('// Generated by tools\Export-SharedConstants.ps1 from the @share markers in the')
+$lines.Add('// native split''s C++ sources. Do not edit: the next build overwrites it, and')
+$lines.Add('// tools\lint.ps1 fails if a committed copy disagrees with the headers.')
+$lines.Add('//')
+$lines.Add('// Every value here is one the DLL also reads. Change it there.')
+$lines.Add('')
+$lines.Add('namespace EdgePlus;')
+$lines.Add('')
+$lines.Add('internal static class Shared {')
+$isFirst = $true
+foreach ($name in $constants.Keys) {
+    if (-not $isFirst) {
+        $lines.Add('')
+    }
+    $isFirst = $false
+    $constant = $constants[$name]
+    $lines.Add("  // $($constant.Origin)")
+    $lines.Add("  public const $($constant.Type) $name = $($constant.Value);")
+}
+$lines.Add('}')
+# CRLF, and a trailing newline, to match everything else the tree checks in.
+$generated = ($lines -join "`r`n") + "`r`n"
+
+# --- reading_themes.h: the reading mode's page themes ------------------------
+# An enum and its table rather than single values, so they are read from the
+# header's own shapes instead of @share markers: `enum class ReadingTheme`
+# gives each theme's Edge number, and `kThemes` gives the swatch grid's order
+# and Edge's name for each. The C# enum is declared in that grid order.
+$readingHeader = Join-Path $sourceRoot 'reading_themes.h'
+$readingOutputPath = Join-Path $repoRoot 'app\panel-winui\Panel\Platform\ReadingThemes.g.cs'
+$readingOutputName = 'app/panel-winui/Panel/Platform/ReadingThemes.g.cs'
+$readingText = [IO.File]::ReadAllText($readingHeader)
+$enumBody = [regex]::Match($readingText, 'enum class ReadingTheme\s*:\s*\w+\s*\{(?<body>[^}]*)\}')
+if (-not $enumBody.Success) {
+    throw 'reading_themes.h has no `enum class ReadingTheme : <type> { ... }`'
+}
+$numbers = [ordered]@{}
+foreach ($entry in [regex]::Matches($enumBody.Groups['body'].Value, 'k(?<name>\w+)\s*=\s*(?<value>-?\d+)')) {
+    $numbers[$entry.Groups['name'].Value] = [int]$entry.Groups['value'].Value
+}
+$grid = [Collections.Generic.List[pscustomobject]]::new()
+foreach ($row in [regex]::Matches($readingText, '\{ReadingTheme::k(?<theme>\w+),\s*"(?<name>[^"]*)"\}')) {
+    $theme = $row.Groups['theme'].Value
+    if (-not $numbers.Contains($theme)) {
+        throw "reading_themes.h's kThemes names ReadingTheme::k$theme, which the enum does not declare"
+    }
+    $grid.Add([pscustomobject]@{ Theme = $theme; Name = $row.Groups['name'].Value })
+}
+if ($grid.Count -ne $numbers.Count) {
+    throw "reading_themes.h's kThemes lists $($grid.Count) themes but the enum declares $($numbers.Count)"
+}
+# The settings file's spelling of each (camelCase, as the Tauri panel's
+# settings.rs writes it).
+function ConvertTo-CamelCase([string]$name) { $name.Substring(0, 1).ToLowerInvariant() + $name.Substring(1) }
+
+$reading = [Collections.Generic.List[string]]::new()
+$reading.Add('// <auto-generated />')
+$reading.Add('// Generated by tools\Export-SharedConstants.ps1 from app/native-split/src/reading_themes.h')
+$reading.Add('// (its ReadingTheme enum and its kThemes table). Do not edit: the next build')
+$reading.Add('// overwrites it, and tools\lint.ps1 fails if a committed copy disagrees with')
+$reading.Add('// the header. Change the themes there.')
+$reading.Add('')
+$reading.Add('using System.Text.Json.Serialization;')
+$reading.Add('')
+$reading.Add('namespace EdgePlus;')
+$reading.Add('')
+$reading.Add('// One of reading mode''s twelve page themes, declared in the order of Edge''s')
+$reading.Add('// swatch grid (row one, then row two); each value is Edge''s own number for it')
+$reading.Add('// (its reading_view.theme pref), which is what the DLL is sent.')
+$reading.Add('[JsonConverter(typeof(JsonStringEnumConverter<ReadingTheme>))]')
+$reading.Add('internal enum ReadingTheme {')
+foreach ($row in $grid) {
+    $reading.Add("  [JsonStringEnumMemberName(`"$(ConvertTo-CamelCase $row.Theme)`")]")
+    $reading.Add("  $($row.Theme) = $($numbers[$row.Theme]),")
+}
+$reading.Add('}')
+$reading.Add('')
+$reading.Add('internal static class ReadingThemes {')
+$reading.Add('  // The swatch grid, in order.')
+$reading.Add('  public static readonly ReadingTheme[] Grid = [')
+foreach ($row in $grid) {
+    $reading.Add("    ReadingTheme.$($row.Theme),")
+}
+$reading.Add('  ];')
+$reading.Add('')
+$reading.Add('  // Edge''s name for each, as its theme table has it.')
+$reading.Add('  public static string EdgeName(ReadingTheme theme) => theme switch {')
+foreach ($row in $grid) {
+    $reading.Add("    ReadingTheme.$($row.Theme) => `"$($row.Name)`",")
+}
+$reading.Add('    _ => theme.ToString(),')
+$reading.Add('  };')
+$reading.Add('}')
+$readingGenerated = ($reading -join "`r`n") + "`r`n"
+
+$outputs = @(
+    [pscustomobject]@{ Path = $outputPath; Name = $outputName; Text = $generated; From = "$($constants.Count) @share markers" }
+    [pscustomobject]@{ Path = $readingOutputPath; Name = $readingOutputName; Text = $readingGenerated; From = "reading_themes.h ($($grid.Count) themes)" }
+)
+
+if ($Check) {
+    $isCurrent = $true
+    foreach ($output in $outputs) {
+        $current = if (Test-Path -LiteralPath $output.Path) { [IO.File]::ReadAllText($output.Path) } else { '' }
+        if ($current -ne $output.Text) {
+            Write-Host "[shared] $($output.Name) is out of date with the C++ headers." -ForegroundColor Red
+            $isCurrent = $false
+        } else {
+            Write-Host "[shared] $($output.Name) matches $($output.From)"
+        }
+    }
+    if (-not $isCurrent) {
+        Write-Host "[shared] run: pwsh tools/Export-SharedConstants.ps1"
+        exit 1
+    }
+    exit 0
+}
+
+# Only when it changed, so an unchanged header does not make every build
+# recompile the panel.
+foreach ($output in $outputs) {
+    $current = if (Test-Path -LiteralPath $output.Path) { [IO.File]::ReadAllText($output.Path) } else { '' }
+    if ($current -ne $output.Text) {
+        [IO.File]::WriteAllText($output.Path, $output.Text)
+    }
+    Write-Host "[shared] $($output.Name) <- $($output.From)"
+}

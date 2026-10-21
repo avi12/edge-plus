@@ -38,8 +38,87 @@
 #   cert-dcl50-cpp — Log() is a printf-style variadic on purpose.
 #   bugprone-unchecked-string-to-number-conversion, misc-no-recursion
 #       (the layout tree is recursive by nature), the rest as in any-stt.
+#
+# ---- C++ best practices, held once applied ----------------------------------
+# Each practice below was applied to the whole tree, and its check is an error
+# from then on, so a regression fails the gate instead of waiting for review:
+#   no C casts                  -> cppcoreguidelines-pro-type-cstyle-cast,
+#                                  google-readability-casting
+#   nullptr, never NULL or 0    -> modernize-use-nullptr
+#   override on every override  -> modernize-use-override
+#   default member initializers -> modernize-use-default-member-init,
+#                                  cppcoreguidelines-prefer-member-initializer
+#   explicit converting ctors   -> google-explicit-constructor
+#   `using`, `= default/delete` -> modernize-use-using, modernize-use-equals-*
+#   C++ headers, bool literals  -> modernize-deprecated-headers,
+#                                  modernize-use-bool-literals,
+#                                  modernize-redundant-void-arg
+#   no dynamic throw() specs    -> modernize-use-noexcept
+#   virtual dtors, no slicing   -> cppcoreguidelines-virtual-class-destructor,
+#                                  cppcoreguidelines-slicing
+#   const member functions      -> readability-make-member-function-const,
+#                                  readability-non-const-parameter
+#   const is never cast away    -> cppcoreguidelines-pro-type-const-cast
+#     (edge::Field has a const overload for fields we only read)
+#   `const auto*` for const     -> readability-qualified-auto
+#   [[nodiscard]] results       -> modernize-use-nodiscard (const member
+#                                  functions); by hand, every function of the
+#                                  pure headers and every call that reports
+#                                  success (verify, InstallAll, LoadFromFile)
+#   no raw new/delete or malloc -> cppcoreguidelines-owning-memory,
+#                                  cppcoreguidelines-no-malloc,
+#                                  modernize-make-unique
+#     (Win32 handles have owners in handles.h for the same reason; no check
+#     can see a CloseHandle a path forgot, so that one stays a review concern.)
+#   nothing left uninitialised  -> cppcoreguidelines-init-variables,
+#                                  cppcoreguidelines-pro-type-member-init
+#     (and every struct member has a default initializer, the Edge ABI
+#     mirrors too: an initializer is not layout)
+#   the rule of five            -> cppcoreguidelines-special-member-functions
+#   noexcept moves, dtors, swap -> performance-noexcept-* (on, from
+#                                  performance-*); noexcept on the pure,
+#                                  non-allocating helpers is by hand
+#   starts_with / ends_with     -> modernize-use-starts-ends-with
+#   signed vs unsigned compares -> modernize-use-integer-sign-comparison
+#                                  (std::cmp_less and friends)
+#   one declaration a statement -> readability-isolate-declaration
+#   empty(), not size() > 0     -> readability-container-size-empty
+#   no silent narrowing         -> bugprone-narrowing-conversions (on, from
+#                                  bugprone-*: an int that becomes a float, or
+#                                  an unsigned that becomes signed, is cast)
 Checks: >
   -*,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-no-malloc,
+  cppcoreguidelines-owning-memory,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-special-member-functions,
+  modernize-make-unique,
+  cppcoreguidelines-pro-type-const-cast,
+  cppcoreguidelines-pro-type-cstyle-cast,
+  cppcoreguidelines-prefer-member-initializer,
+  cppcoreguidelines-slicing,
+  cppcoreguidelines-virtual-class-destructor,
+  google-explicit-constructor,
+  google-readability-casting,
+  modernize-deprecated-headers,
+  modernize-redundant-void-arg,
+  modernize-use-bool-literals,
+  modernize-use-default-member-init,
+  modernize-use-integer-sign-comparison,
+  modernize-use-equals-default,
+  modernize-use-equals-delete,
+  modernize-use-nodiscard,
+  modernize-use-noexcept,
+  modernize-use-nullptr,
+  modernize-use-override,
+  modernize-use-starts-ends-with,
+  modernize-use-using,
+  readability-make-member-function-const,
+  readability-non-const-parameter,
+  readability-container-size-empty,
+  readability-isolate-declaration,
+  readability-qualified-auto,
   bugprone-*,
   cert-*,
   clang-analyzer-*,
@@ -63,7 +142,6 @@ Checks: >
   readability-function-cognitive-complexity,
   -bugprone-easily-swappable-parameters,
   -bugprone-multi-level-implicit-pointer-conversion,
-  -bugprone-narrowing-conversions,
   -bugprone-reserved-identifier,
   -bugprone-unchecked-string-to-number-conversion,
   -cert-dcl37-c,

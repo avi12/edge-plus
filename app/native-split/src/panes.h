@@ -2,6 +2,7 @@
 // 2-container MultiContentsView into an N-container one by replaying the ctor's
 // own per-pane block (docs/re/ctor.md). UI thread only.
 #pragma once
+#include <utility>
 #include "edge.h"
 
 namespace fixedge::panes {
@@ -13,14 +14,15 @@ inline constexpr int kFirstGrownPane = 2;
 // append it to the container vector — exactly as the ctor builds panes 0 and 1.
 // Returns false on a poisoned allocation.
 inline bool AddContainer(void* mcv) {
-  void* container = edge::NewView(0x558);  // sizeof(EdgeContentsContainerView)
+  void* container = edge::NewView(edge155::off::EdgeContentsContainerView_size);
   if (!container) {
     Log("[grow] alloc failed");
     return false;
   }
   edge::ConstructContainer(container, edge::McvBrowserView(mcv));
   const bool isPoisoned =
-      edge::Field<uint8_t>(container, 0x179) == 1;  // allocator poison flag
+      edge::Field<uint8_t>(container,
+                           edge155::off::CONTAINER_allocation_poisoned) == 1;
   if (isPoisoned) {
     Log("[grow] poisoned alloc");
     return false;
@@ -38,7 +40,7 @@ inline bool AddContainer(void* mcv) {
 // once each.
 inline void EnsureControlButtons(void* mcv, int index) {
   const bool isGrownPane =
-      index >= kFirstGrownPane && index < static_cast<int>(edge::McvCount(mcv));
+      index >= kFirstGrownPane && std::cmp_less(index, edge::McvCount(mcv));
   if (!isGrownPane) {
     return;
   }
@@ -57,20 +59,6 @@ inline void EnsureControlButtons(void* mcv, int index) {
   const bool isLaterPane = true;
   edge::GiveControlButtons(container, edge::McvBrowserView(mcv), isLaterPane);
   Log("[grow] pane %d got its control buttons", index);
-}
-
-// Grow to exactly `targetPanes` containers (no-op if already at/above). Returns
-// the resulting count.
-inline size_t GrowToPanes(void* mcv, int targetPanes) {
-  size_t count = edge::McvCount(mcv);
-  while (static_cast<int>(count) < targetPanes) {
-    const bool isAdded = AddContainer(mcv);
-    if (!isAdded) {
-      break;
-    }
-    count = edge::McvCount(mcv);
-  }
-  return count;
 }
 
 }  // namespace fixedge::panes

@@ -13,21 +13,19 @@
 
 namespace fixedge::collapse {
 
-using namespace fixedge::edge155;
-
 // DoActionToSplitWindow(controller, WebContents*, int action): `action` is an
-// off::SplitAction.
+// edge155::off::SplitAction.
 using DoAction_t = void*(__fastcall*)(void*, void*, int);
-inline DoAction_t o_do_action = nullptr;
+inline constinit DoAction_t o_do_action = nullptr;
 
 inline void* __fastcall h_do_action(void* controller, void* webContents,
                                     int action) {
   const bool isKeepingLastTab =
-      action == static_cast<int>(off::SplitAction::kDissolveKeepLast);
+      action == static_cast<int>(edge155::off::SplitAction::kDissolveKeepLast);
   if (isKeepingLastTab) {
     Log("[collapse] action 3 -> 2 (the first pane stays in front, the rest "
         "become tabs)");
-    action = static_cast<int>(off::SplitAction::kDissolveKeepFirst);
+    action = static_cast<int>(edge155::off::SplitAction::kDissolveKeepFirst);
   }
   return o_do_action(controller, webContents, action);
 }

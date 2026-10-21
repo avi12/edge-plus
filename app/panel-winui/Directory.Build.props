@@ -1,0 +1,26 @@
+<Project>
+  <!--
+    The product's identity, written once for every project here: the host exe
+    (EdgePlus.csproj) and the swappable panel (Panel\EdgePlus.Panel.csproj) both
+    stamp it, and Product.cs reads it back off whichever assembly it is compiled
+    into, so a rename or a version bump is this block and nothing else.
+  -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Product>Edge+</Product>
+    <Description>Live feature switches for Microsoft Edge</Description>
+    <Company>Avi</Company>
+    <Authors>Avi</Authors>
+    <Copyright>© 2026 Avi</Copyright>
+    <!-- Keep AssemblyInformationalVersion equal to <Version>: the SDK appends
+         +<commit sha> by default, and Product.Version is what the footer shows. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <!-- The C# counterpart of the Tauri core's `unsafe_code = "forbid"`. Every
+         Win32 call is a [DllImport] in a Native\ folder, which needs no unsafe
+         block; tools\lint.ps1 fails a [DllImport] anywhere else. -->
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <RepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))</RepositoryRoot>
+  </PropertyGroup>
+</Project>

@@ -12,7 +12,10 @@ const featureNames: Record<Feature, string> = {
   [Feature.QuietDevMode]: "Hiding the developer-mode prompt",
   [Feature.ProtocolHandlers]: "Asking to handle links",
   [Feature.EnhancedFind]: "The enhanced find bar",
-  [Feature.WebUiFollowsTheme]: "Settings and extensions pages following the theme"
+  [Feature.WebUiFollowsTheme]: "Settings and extensions pages following the theme",
+  [Feature.LivePreview]: "Live tab preview on hover",
+  [Feature.TabSpine]: "The square selected tab with its neon spine",
+  [Feature.ReadingTheme]: "Reading mode following Windows light and dark"
 };
 
 function joinNames(features: Feature[]): string {

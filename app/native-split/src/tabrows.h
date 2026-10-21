@@ -15,8 +15,6 @@
 
 namespace fixedge::tabrows {
 
-using namespace fixedge::edge155;
-
 // A tab row pairs only exactly two members; anything bigger is shown unpaired.
 inline constexpr int kPairedMembers = 2;
 
@@ -42,10 +40,10 @@ struct BoundsList {
   Rect* rects = nullptr;
   size_t count = 0;
 
-  void* TabAt(size_t index) const {
+  [[nodiscard]] void* TabAt(size_t index) const {
     return edge::TabLayoutSlotTab(helper, index);
   }
-  Rect& RectAt(size_t index) const {
+  [[nodiscard]] Rect& RectAt(size_t index) const {
     return rects[index];
   }
 };
@@ -162,7 +160,7 @@ inline void SpreadPiledSplits(void* helper, void* result) {
 // fills `out` with every slot's ideal bounds and returns it. Fix them up before
 // the helper stores them or sizes the container from them.
 using CalculateIdealBounds_t = void*(__fastcall*)(void*, void*, uint64_t);
-inline CalculateIdealBounds_t o_calculate_ideal_bounds = nullptr;
+inline constinit CalculateIdealBounds_t o_calculate_ideal_bounds = nullptr;
 inline void* __fastcall h_calculate_ideal_bounds(void* helper, void* out,
                                                  uint64_t availableWidth) {
   void* result = o_calculate_ideal_bounds(helper, out, availableWidth);

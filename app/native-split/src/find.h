@@ -26,20 +26,16 @@
 #include "find_flags.h"
 #include "find_scripts.h"
 #include "find_text.h"
+#include "handles.h"
 #include "tab_list.h"
 
 namespace fixedge::find {
 
-using namespace fixedge::edge155;
-
 // Whether the enhanced find is switched on; the panel pushes it (config.h).
-inline bool g_isEnabled = false;
+inline constinit bool g_isEnabled = false;
 
-inline bool IsEnabled() {
-  return g_isEnabled;
-}
-
-inline constexpr UINT_PTR kTimerId = 0xF1EC;
+inline constexpr UINT_PTR kTimerId =
+    channel::TimerIdOf(channel::WindowTimer::kFindPoll);
 inline constexpr UINT kTickIntervalMs = 100;
 
 // --- what the bar says ---------------------------------------------------------------------------
@@ -174,6 +170,10 @@ inline edge::U16View Utf16Of(const std::u16string& text) {
   return edge::U16View{text.data(), text.size()};
 }
 
+inline std::string TextOf(const edge::U16View view) {
+  return edge::Utf16ToUtf8(view);
+}
+
 inline std::u16string Utf16FromUtf8(const std::string& utf8) {
   edge::U16String converted{};
   edge::Utf8ToUtf16(&converted, utf8.c_str());
@@ -214,8 +214,9 @@ inline find_text::Option OptionOf(void* findBarView) {
   if (!g_isEnabled) {
     return find_text::Option::kNone;
   }
-  void* regExp = edge::FindToggle(findBarView, off::FINDTOGGLE_id_regexp);
-  void* ask = edge::FindToggle(findBarView, off::FINDTOGGLE_id_ask);
+  void* regExp =
+      edge::FindToggle(findBarView, edge155::off::FINDTOGGLE_id_regexp);
+  void* ask = edge::FindToggle(findBarView, edge155::off::FINDTOGGLE_id_ask);
   if (regExp && edge::FindToggleIsOn(regExp)) {
     return find_text::Option::kRegExp;
   }
@@ -238,21 +239,21 @@ inline void* EnsureToggle(void* findBarView, int toggleId, bool* isAdded) {
 inline int ToggleIdOfFlag(find_flags::Flag flag) {
   switch (flag) {
     case find_flags::Flag::kIndices:
-      return off::FINDTOGGLE_id_flag_indices;
+      return edge155::off::FINDTOGGLE_id_flag_indices;
     case find_flags::Flag::kIgnoreCase:
-      return off::FINDTOGGLE_id_flag_ignore_case;
+      return edge155::off::FINDTOGGLE_id_flag_ignore_case;
     case find_flags::Flag::kMultiline:
-      return off::FINDTOGGLE_id_flag_multiline;
+      return edge155::off::FINDTOGGLE_id_flag_multiline;
     case find_flags::Flag::kDotAll:
-      return off::FINDTOGGLE_id_flag_dot_all;
+      return edge155::off::FINDTOGGLE_id_flag_dot_all;
     case find_flags::Flag::kUnicode:
-      return off::FINDTOGGLE_id_flag_unicode;
+      return edge155::off::FINDTOGGLE_id_flag_unicode;
     case find_flags::Flag::kUnicodeSets:
-      return off::FINDTOGGLE_id_flag_unicode_sets;
+      return edge155::off::FINDTOGGLE_id_flag_unicode_sets;
     case find_flags::Flag::kSticky:
-      return off::FINDTOGGLE_id_flag_sticky;
+      return edge155::off::FINDTOGGLE_id_flag_sticky;
   }
-  return off::FINDTOGGLE_id_flag_indices;
+  return edge155::off::FINDTOGGLE_id_flag_indices;
 }
 
 // The flag a toggle id stands for, or null when it is not a flag switch.
@@ -296,13 +297,149 @@ inline find_text::Query QueryOf(void* findBarView, const std::string& typed) {
   return query;
 }
 
+// --- the slashes around a RegExp ---------------------------------------------------------------------
+// With the RegExp switch on, the box reads like a JavaScript literal: "/" before
+// the text field and "/" plus the flags the search runs with after it
+// (find_text::RegExpDecoration). They are two plain Labels of Edge's own, styled
+// like the bar's "n/m" count (its dimmed font and theme colours), set into the
+// bar's row on either side of the text field: the caret, the selection, copy and
+// paste and the searched text never see them, and the row mirrors them in a
+// right-to-left UI. They are found again by where they sit (a plain Label right
+// before and after the text field, where Edge has none), so a reloaded DLL
+// takes up the ones it made before rather than adding more.
+
+struct Decorations {
+  void* prefix = nullptr;
+  void* suffix = nullptr;
+};
+
+// The row the text field sits in (its parent view) and its place there; false
+// when there is none.
+inline bool TextfieldPlace(void* findBarView, void** row, size_t* index) {
+  void* textfield = edge::FindBarTextfield(findBarView);
+  void* parent = textfield ? edge::ViewParent(textfield) : nullptr;
+  const size_t count = parent ? edge::ViewChildCount(parent) : 0;
+  for (size_t i = 0; i < count; i++) {
+    if (edge::ViewChildAt(parent, i) == textfield) {
+      *row = parent;
+      *index = i;
+      return true;
+    }
+  }
+  return false;
+}
+
+// The plain Label at `index` of `row`, or null.
+inline void* PlainLabelAt(void* row, size_t index) {
+  const bool isInRow = index < edge::ViewChildCount(row);
+  void* child = isInRow ? edge::ViewChildAt(row, index) : nullptr;
+  return child && edge::IsPlainLabel(child) ? child : nullptr;
+}
+
+inline Decorations FindDecorations(void* findBarView) {
+  void* row = nullptr;
+  size_t index = 0;
+  if (!TextfieldPlace(findBarView, &row, &index)) {
+    return Decorations{};
+  }
+  void* prefix = index > 0 ? PlainLabelAt(row, index - 1) : nullptr;
+  return Decorations{prefix, PlainLabelAt(row, index + 1)};
+}
+
+// Log the row's children (their vtables name their classes in the PDB), the
+// evidence for where the slashes went.
+inline void LogRow(void* row) {
+  const size_t count = edge::ViewChildCount(row);
+  for (size_t i = 0; i < count; i++) {
+    Log("[find]   row child %zu vtable %#llx", i,
+        static_cast<unsigned long long>(
+            edge::VtableRva(edge::ViewChildAt(row, i))));
+  }
+}
+
+// A slash label: in the box's own font (so the same size and baseline as the
+// typed text) and the count's colour, Edge's dimmed secondary text colour for
+// the theme, so it reads as quieter than the text in light and dark alike.
+inline void* NewDecorationLabel(void* findBarView) {
+  void* countLabel = edge::FindBarCountLabel(findBarView);
+  void* label = edge::NewLabelLike(countLabel);
+  edge::LabelCopyEnabledColor(label, countLabel);
+  edge::LabelUseTextfieldFont(label, edge::FindBarTextfield(findBarView));
+  return label;
+}
+
+// The bar's decorations, made the first time they are needed.
+inline Decorations EnsureDecorations(void* findBarView) {
+  const Decorations found = FindDecorations(findBarView);
+  const bool isComplete = found.prefix && found.suffix;
+  const void* countLabel = edge::FindBarCountLabel(findBarView);
+  void* row = nullptr;
+  size_t index = 0;
+  const bool canAdd =
+      !isComplete && countLabel && TextfieldPlace(findBarView, &row, &index);
+  if (!canAdd) {
+    return found;
+  }
+  if (!found.prefix) {
+    edge::AddChildViewAt(row, NewDecorationLabel(findBarView), index);
+    index++;
+  }
+  if (!found.suffix) {
+    edge::AddChildViewAt(row, NewDecorationLabel(findBarView), index + 1);
+  }
+  Log("[find] slash labels added around the box, row %p (vtable %#llx)", row,
+      static_cast<unsigned long long>(edge::VtableRva(row)));
+  LogRow(row);
+  return FindDecorations(findBarView);
+}
+
+// The suffix each bar shows now, so its row is laid out again only on a change.
+inline std::map<void*, std::string>& ShownSuffixes() {
+  static std::map<void*, std::string> suffixes;
+  return suffixes;
+}
+
+// Show the slashes while RegExp is the chosen switch, with the flags the box and
+// the switches now give; hide them otherwise.
+inline void SyncDecorations(void* findBarView) {
+  const bool isShowing = OptionOf(findBarView) == find_text::Option::kRegExp;
+  const Decorations decorations =
+      isShowing ? EnsureDecorations(findBarView) : FindDecorations(findBarView);
+  if (!decorations.prefix || !decorations.suffix) {
+    return;
+  }
+  const find_text::LiteralDecoration literal = find_text::RegExpDecoration(
+      TextOf(edge::FindBarText(findBarView)), FlagsOn(findBarView));
+  const std::string shown = isShowing ? literal.suffix : std::string();
+  std::string& lastShown = ShownSuffixes()[findBarView];
+  const bool isVisibilityChanged =
+      edge::ViewGetVisible(decorations.prefix) != isShowing;
+  if (!isVisibilityChanged && shown == lastShown) {
+    return;
+  }
+  lastShown = shown;
+  Log("[find] slashes %s, flag switches on \"%s\"",
+      isShowing ? shown.c_str() : "hidden",
+      find_flags::Letters(FlagsOn(findBarView)).c_str());
+  if (isShowing) {
+    edge::LabelSetText(decorations.prefix,
+                       Utf16Of(Utf16FromUtf8(literal.prefix)));
+    edge::LabelSetText(decorations.suffix, Utf16Of(Utf16FromUtf8(shown)));
+  }
+  edge::SetViewVisible(decorations.prefix, isShowing);
+  edge::SetViewVisible(decorations.suffix, isShowing);
+  edge::InvalidateLayout(edge::ViewParent(decorations.prefix));
+  edge::FindBarRelayout(findBarView);
+}
+
 // Bring the bar's options up to date: our two switches exist (and show the
 // chosen assistant's name), and Edge's own three are greyed out while either of
 // ours is on, since they mean nothing to a RegExp or a question. With the find
 // switched off ours are hidden and Edge's are back.
-inline void SyncToggles(void* findBarView) {
+inline void SyncTogglesNow(void* findBarView) {
   bool isAdded = false;
-  void* regExp = EnsureToggle(findBarView, off::FINDTOGGLE_id_regexp, &isAdded);
+  void* regExp =
+      EnsureToggle(findBarView, edge155::off::FINDTOGGLE_id_regexp, &isAdded);
   // The flag switches are built right after RegExp so they sit under it.
   const bool isRegExpOn = regExp && edge::FindToggleIsOn(regExp);
   const bool isShowingFlags = g_isEnabled && isRegExpOn;
@@ -311,21 +448,22 @@ inline void SyncToggles(void* findBarView) {
     const int flagToggleId = ToggleIdOfFlag(info.flag);
     const bool isNewToggle = !edge::FindToggle(findBarView, flagToggleId);
     void* flagToggle = EnsureToggle(findBarView, flagToggleId, &isAdded);
-    const bool isStartingOn =
-        flagToggle && isNewToggle && find_flags::IsDefaultOn(info.flag);
+    if (!flagToggle) {
+      continue;
+    }
+    const bool isStartingOn = isNewToggle && find_flags::IsDefaultOn(info.flag);
     if (isStartingOn) {
       edge::FindToggleSetOn(flagToggle, true);
     }
-    if (flagToggle) {
-      const std::u16string title = Utf16FromUtf8(find_flags::SwitchTitle(info));
-      edge::FindToggleSetTitle(flagToggle, Utf16Of(title));
-      isFlagVisibilityChanged =
-          isFlagVisibilityChanged ||
-          edge::ViewGetVisible(flagToggle) != isShowingFlags;
-      edge::SetViewVisible(flagToggle, isShowingFlags);
-    }
+    const std::u16string title = Utf16FromUtf8(find_flags::SwitchTitle(info));
+    edge::FindToggleSetTitle(flagToggle, Utf16Of(title));
+    isFlagVisibilityChanged =
+        isFlagVisibilityChanged ||
+        edge::ViewGetVisible(flagToggle) != isShowingFlags;
+    edge::SetViewVisible(flagToggle, isShowingFlags);
   }
-  void* ask = EnsureToggle(findBarView, off::FINDTOGGLE_id_ask, &isAdded);
+  void* ask =
+      EnsureToggle(findBarView, edge155::off::FINDTOGGLE_id_ask, &isAdded);
   if (regExp) {
     const std::u16string title = Utf16FromUtf8(find_text::kRegExpName);
     edge::FindToggleSetTitle(regExp, Utf16Of(title));
@@ -338,9 +476,9 @@ inline void SyncToggles(void* findBarView) {
     edge::SetViewVisible(ask, g_isEnabled);
   }
   const bool isEdgeLocked = OptionOf(findBarView) != find_text::Option::kNone;
-  const int edgeIds[] = {off::FINDTOGGLE_id_match_case,
-                         off::FINDTOGGLE_id_whole_word,
-                         off::FINDTOGGLE_id_diacritics};
+  const int edgeIds[] = {edge155::off::FINDTOGGLE_id_match_case,
+                         edge155::off::FINDTOGGLE_id_whole_word,
+                         edge155::off::FINDTOGGLE_id_diacritics};
   for (const int toggleId : edgeIds) {
     void* toggle = edge::FindToggle(findBarView, toggleId);
     if (toggle) {
@@ -350,6 +488,20 @@ inline void SyncToggles(void* findBarView) {
   if (isAdded || isFlagVisibilityChanged) {
     edge::FindBarRelayoutOptions(findBarView);
   }
+  SyncDecorations(findBarView);
+}
+
+// SyncTogglesNow, once at a time: building a switch makes Edge set its state
+// (h_active_contents_changed), which syncs again; that inner call is dropped,
+// the outer one finishes the job.
+inline constinit bool g_isSyncingToggles = false;
+inline void SyncToggles(void* findBarView) {
+  if (g_isSyncingToggles) {
+    return;
+  }
+  g_isSyncingToggles = true;
+  SyncTogglesNow(findBarView);
+  g_isSyncingToggles = false;
 }
 
 // --- the bar's width ---------------------------------------------------------------------------------
@@ -448,7 +600,7 @@ inline void ClearTarget(void* mcv, Session& session) {
   const bool isClearable =
       IsTabAlive(mcv, session.target) && edge::IsPageLive(session.target);
   if (isClearable) {
-    edge::RunScript(session.target, find_scripts::kClearScript, nullptr);
+    edge::RunScript(session.target, find_scripts::ClearScript(), nullptr);
   }
   session.target = nullptr;
   session.count = 0;
@@ -509,6 +661,7 @@ inline void RunSearch(void* mcv, Session& session,
     ClearTarget(mcv, session);
   }
   session.target = contents;
+  Log("[find] RegExp search with flags \"%s\"", query.flags.c_str());
   const unsigned long long seq = ++session.searchSeq;
   void* view = session.findBarView;
   const bool isRunning =
@@ -530,7 +683,7 @@ inline void OnWentTo(void* mcv, void* view, unsigned long long seq, int index,
   if (!isCurrentSearch) {
     return;
   }
-  const bool isMoved = result.isString && result.text == "ok";
+  const bool isMoved = result.isString && result.text == web_text::kOkTag;
   if (isMoved) {
     session->current = index;
     ShowCount(*session);
@@ -845,10 +998,6 @@ inline HWND BrowserWindowInUse() {
   return isSubclassedUsable ? channel::g_window : nullptr;
 }
 
-inline std::string TextOf(const edge::U16View view) {
-  return edge::Utf16ToUtf8(view);
-}
-
 // The session for the bar whose `findBarView` just ran one of its functions,
 // and the window's MultiContentsView it searches; null when the window cannot
 // be found.
@@ -875,16 +1024,18 @@ using Find_t = void(__fastcall*)(void*, const edge::U16View*);
 using FindNext_t = void(__fastcall*)(void*, bool);
 using HandleKeyEvent_t = bool(__fastcall*)(void*, void*, const void*);
 using EndFindSession_t = void(__fastcall*)(void*, int, int);
-inline Find_t o_find = nullptr;
-inline FindNext_t o_find_next = nullptr;
-inline HandleKeyEvent_t o_handle_key_event = nullptr;
-inline EndFindSession_t o_end_find_session = nullptr;
+inline constinit Find_t o_find = nullptr;
+inline constinit FindNext_t o_find_next = nullptr;
+inline constinit HandleKeyEvent_t o_handle_key_event = nullptr;
+inline constinit EndFindSession_t o_end_find_session = nullptr;
 using AddOptionsView_t = void(__fastcall*)(void*, bool);
 using ToggleOptions_t = void(__fastcall*)(void*, void*);
 using ButtonToggled_t = void(__fastcall*)(void*);
-inline AddOptionsView_t o_add_options_view = nullptr;
-inline ToggleOptions_t o_toggle_options = nullptr;
-inline ButtonToggled_t o_button_toggled = nullptr;
+inline constinit AddOptionsView_t o_add_options_view = nullptr;
+inline constinit ToggleOptions_t o_toggle_options = nullptr;
+inline constinit ButtonToggled_t o_button_toggled = nullptr;
+using ActiveContentsChanged_t = void(__fastcall*)(void*);
+inline constinit ActiveContentsChanged_t o_active_contents_changed = nullptr;
 
 // The text changed. Plain text is Edge's search. A RegExp is searched by us (and
 // Edge's own marks and count are cleared first, by asking it to find nothing); a
@@ -899,6 +1050,8 @@ inline void __fastcall h_find(void* findBarView, const edge::U16View* typed) {
   if (session) {
     ApplyBarWidth(*session, OptionOf(findBarView) == find_text::Option::kAsk);
   }
+  // A typed (?i) changes the flags the closing slash shows.
+  SyncDecorations(findBarView);
   const find_text::Query query = QueryOf(findBarView, TextOf(*typed));
   const bool isOurs = session && query.mode != find_text::Mode::kText;
   if (!isOurs) {
@@ -988,18 +1141,16 @@ inline void TypeIntoBar(const std::string& text) {
 // The text on the clipboard as UTF-8 (empty when it holds none).
 inline std::string ClipboardText() {
   std::string text;
-  if (!OpenClipboard(nullptr)) {
+  const handles::OpenedClipboard clipboard;
+  if (!clipboard.IsOpen()) {
     return text;
   }
-  HANDLE data = GetClipboardData(CF_UNICODETEXT);
-  const auto* wide =
-      static_cast<const wchar_t*>(data ? GlobalLock(data) : nullptr);
+  const handles::GlobalMemoryLock data{GetClipboardData(CF_UNICODETEXT)};
+  const auto* wide = static_cast<const wchar_t*>(data.Data());
   if (wide) {
     text = TextOf(edge::U16View{reinterpret_cast<const char16_t*>(wide),
                                 std::char_traits<wchar_t>::length(wide)});
-    GlobalUnlock(data);
   }
-  CloseClipboard();
   return text;
 }
 
@@ -1073,9 +1224,10 @@ inline void __fastcall h_toggle_options(void* findBarView, void* argument) {
 // switches now read it. A flag switch only needs the search again.
 inline void __fastcall h_button_toggled(void* toggle) {
   const int toggleId = edge::FindToggleId(toggle);
-  const bool isOurs = g_isEnabled && (toggleId == off::FINDTOGGLE_id_regexp ||
-                                      toggleId == off::FINDTOGGLE_id_ask ||
-                                      IsFlagToggleId(toggleId));
+  const bool isOurs =
+      g_isEnabled &&
+      (toggleId == edge155::off::FINDTOGGLE_id_regexp ||
+       toggleId == edge155::off::FINDTOGGLE_id_ask || IsFlagToggleId(toggleId));
   void* findBarView = isOurs ? edge::FindBarViewOfToggle(toggle) : nullptr;
   if (!findBarView) {
     o_button_toggled(toggle);
@@ -1085,9 +1237,9 @@ inline void __fastcall h_button_toggled(void* toggle) {
   const bool isTurningOn = edge::FindToggleIsOn(toggle);
   const find_flags::FlagInfo* flag = FlagOfToggleId(toggleId);
   const bool isFlag = flag != nullptr;
-  const int otherId = toggleId == off::FINDTOGGLE_id_regexp
-                          ? off::FINDTOGGLE_id_ask
-                          : off::FINDTOGGLE_id_regexp;
+  const int otherId = toggleId == edge155::off::FINDTOGGLE_id_regexp
+                          ? edge155::off::FINDTOGGLE_id_ask
+                          : edge155::off::FINDTOGGLE_id_regexp;
   void* other = edge::FindToggle(findBarView, otherId);
   if (isTurningOn && other && !isFlag) {
     edge::FindToggleSetOn(other, false);
@@ -1105,6 +1257,27 @@ inline void __fastcall h_button_toggled(void* toggle) {
   SyncToggles(findBarView);
   const edge::U16View typed = edge::FindBarText(findBarView);
   h_find(findBarView, &typed);
+}
+
+// A switch is set again from the tab's find options, as the bar is shown again
+// or the tab changes. Edge keeps no state for our ids and so turned them off
+// here, with no click callback: RegExp was off on reopen while its flags and the
+// slashes still showed. Ours keep their state instead (it lives in the switch,
+// per window, as the RegExp switch always has); then everything that follows
+// from the switches is synced again.
+inline void __fastcall h_active_contents_changed(void* toggle) {
+  const int toggleId = edge::FindToggleId(toggle);
+  const bool isOurs =
+      g_isEnabled &&
+      (toggleId == edge155::off::FINDTOGGLE_id_regexp ||
+       toggleId == edge155::off::FINDTOGGLE_id_ask || IsFlagToggleId(toggleId));
+  if (!isOurs) {
+    o_active_contents_changed(toggle);
+  }
+  void* findBarView = g_isEnabled ? edge::FindBarViewOfToggle(toggle) : nullptr;
+  if (findBarView) {
+    SyncToggles(findBarView);
+  }
 }
 
 // The bar closes: take our marks off the page.
@@ -1130,25 +1303,28 @@ struct HookSite {
 
 inline std::vector<HookSite> HookSites() {
   return {
-      {rva::FindBarView_Find, reinterpret_cast<void*>(h_find),
+      {edge155::rva::FindBarView_Find, reinterpret_cast<void*>(h_find),
        reinterpret_cast<void**>(&o_find)},
-      {rva::FindBarView_FindNext, reinterpret_cast<void*>(h_find_next),
+      {edge155::rva::FindBarView_FindNext, reinterpret_cast<void*>(h_find_next),
        reinterpret_cast<void**>(&o_find_next)},
-      {rva::FindBarView_HandleKeyEvent,
+      {edge155::rva::FindBarView_HandleKeyEvent,
        reinterpret_cast<void*>(h_handle_key_event),
        reinterpret_cast<void**>(&o_handle_key_event)},
-      {rva::FindBarController_EndFindSession,
+      {edge155::rva::FindBarController_EndFindSession,
        reinterpret_cast<void*>(h_end_find_session),
        reinterpret_cast<void**>(&o_end_find_session)},
-      {rva::FindBarView_EdgeMaybeAddFindOptionsView,
+      {edge155::rva::FindBarView_EdgeMaybeAddFindOptionsView,
        reinterpret_cast<void*>(h_add_options_view),
        reinterpret_cast<void**>(&o_add_options_view)},
-      {rva::FindBarView_EdgeToggleFindOptions,
+      {edge155::rva::FindBarView_EdgeToggleFindOptions,
        reinterpret_cast<void*>(h_toggle_options),
        reinterpret_cast<void**>(&o_toggle_options)},
-      {rva::FindInPageOptionToggleView_OnButtonToggled,
+      {edge155::rva::FindInPageOptionToggleView_OnButtonToggled,
        reinterpret_cast<void*>(h_button_toggled),
        reinterpret_cast<void**>(&o_button_toggled)},
+      {edge155::rva::FindInPageOptionToggleView_EdgeOnActiveWebContentsChanged,
+       reinterpret_cast<void*>(h_active_contents_changed),
+       reinterpret_cast<void**>(&o_active_contents_changed)},
   };
 }
 

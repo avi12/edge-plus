@@ -6,13 +6,12 @@
 // UI thread only.
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <map>
 #include "edge.h"
 #include "icons.h"
 
 namespace fixedge::grip {
-
-using namespace fixedge::edge155;
 
 // A grip button, and the split it belongs to.
 struct Grip {
@@ -20,9 +19,11 @@ struct Grip {
   void* mcv = nullptr;
 };
 
-// Each hover bar (ControlButtons view) -> its grip.
-inline std::map<void*, Grip>& Grips() {
-  static std::map<void*, Grip> grips;
+// Each hover bar (ControlButtons view) -> its grip. std::less<> lets a bar be
+// looked up by a pointer to const.
+using GripMap = std::map<void*, Grip, std::less<>>;
+inline GripMap& Grips() {
+  static GripMap grips;
   return grips;
 }
 
@@ -42,7 +43,7 @@ inline void EnsureGrips(void* mcv) {
       continue;
     }
     void* button = edge::ControlButtonsAddButton(
-        bar, off::ControlButtons_more_string_id, icons::Grip(),
+        bar, edge155::off::ControlButtons_more_string_id, icons::Grip(),
         /*clickable=*/false);
     edge::ViewReorderChild(bar, button, 0);  // first: grip, ⋯, X
     edge::ViewSetTooltip(button, kTooltip);
@@ -55,7 +56,7 @@ inline void EnsureGrips(void* mcv) {
 // If `bar` is the hover bar of a pane in a grown split (every such bar has a
 // grip), that split and the pane's container index; else false.
 inline bool LocateBar(const void* bar, void** mcv, int* pane) {
-  const auto entry = Grips().find(const_cast<void*>(bar));
+  const auto entry = Grips().find(bar);
   if (entry == Grips().end()) {
     return false;
   }

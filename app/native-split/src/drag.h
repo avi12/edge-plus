@@ -28,7 +28,7 @@ struct Session {
   Point pressedAt{};  // window DIPs
   dock::Plan plan;    // what releasing now would do
 };
-inline Session g_session;
+inline constinit Session g_session;
 
 inline bool IsActive() {
   return g_session.isPressed || g_session.isDragging;
@@ -54,11 +54,13 @@ inline Rect SplitToScreen(void* mcv, const Rect& rect) {
   edge::ConvertPoint(mcv, root, &topLeft);
   edge::ConvertPoint(mcv, root, &bottomRight);
   const float scale = Scale();
-  POINT screenTopLeft{static_cast<LONG>(std::lround(topLeft.x * scale)),
-                      static_cast<LONG>(std::lround(topLeft.y * scale))};
+  POINT screenTopLeft{
+      static_cast<LONG>(std::lround(static_cast<float>(topLeft.x) * scale)),
+      static_cast<LONG>(std::lround(static_cast<float>(topLeft.y) * scale))};
   POINT screenBottomRight{
-      static_cast<LONG>(std::lround(bottomRight.x * scale)),
-      static_cast<LONG>(std::lround(bottomRight.y * scale))};
+      static_cast<LONG>(std::lround(static_cast<float>(bottomRight.x) * scale)),
+      static_cast<LONG>(
+          std::lround(static_cast<float>(bottomRight.y) * scale))};
   ClientToScreen(channel::g_window, &screenTopLeft);
   ClientToScreen(channel::g_window, &screenBottomRight);
   return Rect{screenTopLeft.x, screenTopLeft.y,
@@ -66,7 +68,7 @@ inline Rect SplitToScreen(void* mcv, const Rect& rect) {
               screenBottomRight.y - screenTopLeft.y};
 }
 
-inline overlay::Style StyleOf(dock::Zone zone) {
+inline constexpr overlay::Style StyleOf(dock::Zone zone) noexcept {
   switch (zone) {
     case dock::Zone::kRootEdge:
       return overlay::Style::kRoot;
@@ -108,9 +110,11 @@ inline void Move(Point rootLocation) {
   if (!g_session.isDragging) {
     const float scale = Scale();
     const int movedX = static_cast<int>(
-        std::abs(rootLocation.x - g_session.pressedAt.x) * scale);
+        static_cast<float>(std::abs(rootLocation.x - g_session.pressedAt.x)) *
+        scale);
     const int movedY = static_cast<int>(
-        std::abs(rootLocation.y - g_session.pressedAt.y) * scale);
+        static_cast<float>(std::abs(rootLocation.y - g_session.pressedAt.y)) *
+        scale);
     const bool isWithinDragThreshold = movedX < GetSystemMetrics(SM_CXDRAG) &&
                                        movedY < GetSystemMetrics(SM_CYDRAG);
     if (isWithinDragThreshold) {

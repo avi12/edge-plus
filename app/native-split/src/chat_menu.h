@@ -6,8 +6,6 @@
 
 namespace fixedge::chat_menu {
 
-using namespace fixedge::edge155;
-
 // The chevron next to chat button `button`: a sibling in the same container.
 inline void* DropdownBeside(void* button) {
   void* container = edge::ViewParent(button);

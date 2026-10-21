@@ -20,6 +20,10 @@ use windows_sys::Win32::System::Registry::{
 const EXTENSIONS_KEY: &str = r"Software\Microsoft\Edge\Extensions";
 const CHROME_STORE_UPDATE_URL: &str = "https://clients2.google.com/service/update2/crx";
 const EDGE_STORE_UPDATE_URL: &str = "https://edge.microsoft.com/extensionwebstorebase/v1/crx";
+// The value names Edge's external-extension loader reads under each id.
+const UPDATE_URL_VALUE: &str = "update_url";
+const PATH_VALUE: &str = "path";
+const VERSION_VALUE: &str = "version";
 
 /// Which store a theme came from, so the matching update URL is used.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -39,7 +43,7 @@ pub fn install_store(extension_id: &str, store: Store) -> io::Result<()> {
         Store::Chrome => CHROME_STORE_UPDATE_URL,
         Store::Edge => EDGE_STORE_UPDATE_URL,
     };
-    let result = set_string(key, "update_url", url);
+    let result = set_string(key, UPDATE_URL_VALUE, url);
     close(key);
     result
 }
@@ -52,8 +56,8 @@ pub fn install_store(extension_id: &str, store: Store) -> io::Result<()> {
 pub fn install_local(extension_id: &str, crx_path: &Path, version: &str) -> io::Result<()> {
     let key = create_extension_key(extension_id)?;
     let path_text = crx_path.to_string_lossy();
-    let result =
-        set_string(key, "path", &path_text).and_then(|()| set_string(key, "version", version));
+    let result = set_string(key, PATH_VALUE, &path_text)
+        .and_then(|()| set_string(key, VERSION_VALUE, version));
     close(key);
     result
 }

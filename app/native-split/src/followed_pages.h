@@ -13,7 +13,7 @@ inline constexpr std::string_view kExtensions = "edge://extensions";
 
 // A page's address continues past the host only with a path, query or
 // fragment, so "edge://settingsfoo" is another host.
-inline bool IsHostEnd(std::string_view rest) {
+[[nodiscard]] inline bool IsHostEnd(std::string_view rest) {
   if (rest.empty()) {
     return true;
   }
@@ -21,13 +21,13 @@ inline bool IsHostEnd(std::string_view rest) {
   return next == '/' || next == '?' || next == '#';
 }
 
-inline bool IsPageOf(std::string_view url, std::string_view page) {
-  return url.substr(0, page.size()) == page &&
-         IsHostEnd(url.substr(page.size()));
+[[nodiscard]] inline bool IsPageOf(std::string_view url,
+                                   std::string_view page) {
+  return url.starts_with(page) && IsHostEnd(url.substr(page.size()));
 }
 
 // Whether the page at `url` follows the theme.
-inline bool Follows(std::string_view url) {
+[[nodiscard]] inline bool Follows(std::string_view url) {
   return IsPageOf(url, kSettings) || IsPageOf(url, kExtensions);
 }
 

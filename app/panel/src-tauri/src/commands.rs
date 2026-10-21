@@ -12,7 +12,9 @@ use serde::Serialize;
 
 use crate::edge_build::BuildChange;
 use crate::installed_themes::{self, InstalledTheme};
-use crate::settings::{Feature, Features, Mode, Settings, ThemeEntry, ThemeSource, Theming};
+use crate::settings::{
+    Feature, Features, Mode, ReadingMode, ReadingTheme, Settings, ThemeEntry, ThemeSource, Theming,
+};
 use crate::startup::{run_command, STARTUP_ENTRY_NAME};
 use crate::{edge_build, edge_watch, paths, payload, store_url, DEVMODE_WAITER_ARG};
 
@@ -24,9 +26,11 @@ const REAPPLY_DELAYS: [std::time::Duration; 3] = [
 const UNLOAD_POLLS: u32 = 40;
 const UNLOAD_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(100);
 const SPLIT_MODULE: &str = "fixedge-split.dll";
-// DETACHED_PROCESS | CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB: the dev-mode
-// waiter must outlive the panel window and Edge's job object.
-const DETACHED_FLAGS: u32 = 0x0000_0008 | 0x0800_0000 | 0x0100_0000;
+const DETACHED_PROCESS: u32 = 0x0000_0008;
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
+// The dev-mode waiter must outlive the panel window and Edge's job object.
+const DETACHED_FLAGS: u32 = DETACHED_PROCESS | CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB;
 
 /// The whole state the UI renders.
 #[derive(Serialize)]
@@ -34,6 +38,7 @@ const DETACHED_FLAGS: u32 = 0x0000_0008 | 0x0800_0000 | 0x0100_0000;
 pub struct StateDto {
     features: Features,
     theming: Theming,
+    reading_mode: ReadingMode,
     /// Themes Edge already has installed, read from its profiles (not the
     /// panel's own library). Applied by id like the panel's themes.
     edge_themes: Vec<InstalledTheme>,
@@ -56,6 +61,7 @@ fn state_of(settings: &Settings) -> StateDto {
     StateDto {
         features: settings.features,
         theming: settings.theming.clone(),
+        reading_mode: settings.reading_mode,
         edge_themes: edge_themes_not_in(&settings.theming),
         edge_running: !edge_native::edge_browser_pids().is_empty(),
         start_with_windows: edge_native::is_startup_enabled(
@@ -94,6 +100,11 @@ pub(crate) fn apply(settings: &Settings) {
             dark_id: &settings.theming.dark,
             enhanced_find_active: features.enhanced_find,
             web_ui_follows_theme_active: features.web_ui_follows_theme,
+            live_preview_active: features.live_preview,
+            tab_spine_active: features.tab_spine,
+            reading_theme_active: features.reading_theme,
+            reading_theme_light: settings.reading_mode.light.wire_value(),
+            reading_theme_dark: settings.reading_mode.dark.wire_value(),
         },
     );
     // `needs_dll` includes the enhanced find bar and the WebUI theme colors,
@@ -195,6 +206,37 @@ pub fn set_enhanced_find(enabled: bool) -> Result<StateDto, String> {
 pub fn set_web_ui_follows_theme(enabled: bool) -> Result<StateDto, String> {
     let mut settings = Settings::load();
     settings.features.web_ui_follows_theme = enabled;
+    persist_and_apply(&settings)
+}
+
+#[tauri::command]
+pub fn set_live_preview(enabled: bool) -> Result<StateDto, String> {
+    let mut settings = Settings::load();
+    settings.features.live_preview = enabled;
+    persist_and_apply(&settings)
+}
+
+#[tauri::command]
+pub fn set_tab_spine(enabled: bool) -> Result<StateDto, String> {
+    let mut settings = Settings::load();
+    settings.features.tab_spine = enabled;
+    persist_and_apply(&settings)
+}
+
+#[tauri::command]
+pub fn set_reading_theme(enabled: bool) -> Result<StateDto, String> {
+    let mut settings = Settings::load();
+    settings.features.reading_theme = enabled;
+    persist_and_apply(&settings)
+}
+
+#[tauri::command]
+pub fn set_reading_mode_theme(mode: Mode, theme: ReadingTheme) -> Result<StateDto, String> {
+    let mut settings = Settings::load();
+    match mode {
+        Mode::Light => settings.reading_mode.light = theme,
+        Mode::Dark => settings.reading_mode.dark = theme,
+    }
     persist_and_apply(&settings)
 }
 
@@ -322,21 +364,13 @@ pub fn remove_theme(id: String) -> Result<StateDto, String> {
 }
 
 #[tauri::command]
-pub fn set_mode_theme(mode: String, id: String) -> Result<StateDto, String> {
+pub fn set_mode_theme(mode: Mode, id: String) -> Result<StateDto, String> {
     let mut settings = Settings::load();
-    match parse_mode(&mode)? {
+    match mode {
         Mode::Light => settings.theming.light = id,
         Mode::Dark => settings.theming.dark = id,
     }
     persist_and_apply(&settings)
-}
-
-fn parse_mode(mode: &str) -> Result<Mode, String> {
-    match mode {
-        "light" => Ok(Mode::Light),
-        "dark" => Ok(Mode::Dark),
-        _ => Err(format!("unknown mode: {mode}")),
-    }
 }
 
 fn add_or_replace(theming: &mut Theming, entry: ThemeEntry) {

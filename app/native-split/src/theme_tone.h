@@ -11,12 +11,16 @@
 
 namespace fixedge::theme_tone {
 
-// A theme's color as Skia stores it: 0xAARRGGBB.
+// A theme's color as Skia stores it: 0xAARRGGBB (also a Windows BGRA pixel).
 using Argb = uint32_t;
 
+inline constexpr int kAlphaShift = 24;
 inline constexpr int kRedShift = 16;
 inline constexpr int kGreenShift = 8;
+inline constexpr int kBlueShift = 0;
 inline constexpr uint32_t kChannelMask = 0xff;
+// A channel at full strength (an opaque alpha).
+inline constexpr uint32_t kChannelMax = 0xff;
 
 // Chromium's color_utils::IsDark: a color is dark when its luma (the weighted
 // sum of its channels, out of 255) is below the middle. The weights are the
@@ -27,7 +31,7 @@ inline constexpr int kBlueWeight = 114;
 inline constexpr int kWeightScale = 1000;
 inline constexpr int kDarkLumaBelow = 128;
 
-constexpr int Luma(Argb color) {
+[[nodiscard]] constexpr int Luma(Argb color) noexcept {
   const int red = static_cast<int>((color >> kRedShift) & kChannelMask);
   const int green = static_cast<int>((color >> kGreenShift) & kChannelMask);
   const int blue = static_cast<int>(color & kChannelMask);
@@ -35,8 +39,24 @@ constexpr int Luma(Argb color) {
          kWeightScale;
 }
 
-constexpr bool IsDark(Argb color) {
+[[nodiscard]] constexpr bool IsDark(Argb color) noexcept {
   return Luma(color) < kDarkLumaBelow;
+}
+
+// `from` moved `toPercent` percent of the way toward `to`, opaque: how a window
+// that lost focus dims a colour into its surroundings.
+inline constexpr uint32_t kPercentScale = 100;
+[[nodiscard]] constexpr Argb Blend(Argb from, Argb to,
+                                   uint32_t toPercent) noexcept {
+  const auto mix = [&](int shift) {
+    const uint32_t fromChannel = (from >> shift) & kChannelMask;
+    const uint32_t toChannel = (to >> shift) & kChannelMask;
+    return ((fromChannel * (kPercentScale - toPercent) +
+             toChannel * toPercent) /
+            kPercentScale)
+           << shift;
+  };
+  return 0xff000000u | mix(kRedShift) | mix(kGreenShift) | mix(kBlueShift);
 }
 
 // What a theme's palette says about its own tone.
@@ -52,7 +72,8 @@ struct OptionalColor {
   Argb color = 0;
 };
 
-constexpr Tone ToneOf(OptionalColor toolbar, OptionalColor frame) {
+[[nodiscard]] constexpr Tone ToneOf(OptionalColor toolbar,
+                                    OptionalColor frame) noexcept {
   if (toolbar.isSet) {
     return IsDark(toolbar.color) ? Tone::kDark : Tone::kLight;
   }
