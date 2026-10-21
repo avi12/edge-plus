@@ -17,10 +17,10 @@
 namespace fixedge::reading_mode {
 
 inline bool g_isActive = false;
-inline int32_t g_lightTheme = static_cast<int32_t>(
-    reading_themes::ReadingTheme::kSepia);
-inline int32_t g_darkTheme = static_cast<int32_t>(
-    reading_themes::ReadingTheme::kBlack);
+inline int32_t g_lightTheme =
+    static_cast<int32_t>(reading_themes::ReadingTheme::kSepia);
+inline int32_t g_darkTheme =
+    static_cast<int32_t>(reading_themes::ReadingTheme::kBlack);
 
 // Take the panel's choice; true when the theme should be applied now (switched
 // on, or a choice changed while on).

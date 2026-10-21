@@ -48,26 +48,29 @@ inline constexpr std::array<ThemeInfo, 12> kThemes = {{
     {ReadingTheme::kDarkGrey, "DarkGrey"},
 }};
 
-// Whether a number from the wire is one of the twelve (anything else is ignored).
-constexpr bool IsOffered(int32_t value) {
+// The theme a number from the wire names, or false when it is not one of the
+// twelve (anything else is ignored). Looked up, never cast, so no other number
+// ever becomes a ReadingTheme.
+constexpr bool ThemeOf(int32_t value, ReadingTheme* theme) {
   for (const ThemeInfo& info : kThemes) {
     if (static_cast<int32_t>(info.theme) == value) {
+      *theme = info.theme;
       return true;
     }
   }
   return false;
 }
 
+constexpr bool IsOffered(int32_t value) {
+  ReadingTheme ignored = ReadingTheme::kSepia;
+  return ThemeOf(value, &ignored);
+}
+
 // The theme a Windows mode asks for, or false when the choice for it is not one
 // of the twelve.
 constexpr bool ThemeForMode(bool isDark, int32_t lightChoice,
                             int32_t darkChoice, ReadingTheme* theme) {
-  const int32_t choice = isDark ? darkChoice : lightChoice;
-  if (!IsOffered(choice)) {
-    return false;
-  }
-  *theme = static_cast<ReadingTheme>(choice);
-  return true;
+  return ThemeOf(isDark ? darkChoice : lightChoice, theme);
 }
 
 }  // namespace fixedge::reading_themes
