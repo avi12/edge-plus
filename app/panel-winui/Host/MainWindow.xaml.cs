@@ -10,7 +10,7 @@ namespace EdgePlus;
 // the panel fills. The panel itself — every card and notice — is loaded and,
 // in a dev run, swapped live by PanelLoader; nothing of it is compiled in here.
 public sealed partial class MainWindow : Window {
-  // In device-independent pixels, the Tauri window's sizes: the width is fixed
+  // In device-independent pixels: the width is fixed
   // and only the height is the user's.
   private const int WindowWidth = 560;
   private const int WindowHeight = 640;

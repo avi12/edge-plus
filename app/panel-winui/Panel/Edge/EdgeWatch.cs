@@ -13,13 +13,13 @@ namespace EdgePlus;
 // was not there on the previous (cheap, 2 s) window poll, and whenever the
 // install folder's launcher changes, the build is checked (Reconcile) before
 // anything is injected; features a different msedge.dll would break are
-// paused (EdgeSupport) and the UI is told. The Tauri panel's edge_watch.rs.
+// paused (EdgeSupport) and the UI is told.
 internal sealed class EdgeWatch {
   private static readonly TimeSpan s_pollInterval = TimeSpan.FromSeconds(2);
 
-  // Raised on the watch thread with each newly seen build (and what it switched
-  // off, often nothing). The window subscribes before Start, so unlike the
-  // Tauri panel no change can be missed before the UI listens.
+  // Raised on the watch thread with each newly seen build (and what it pauses,
+  // often nothing). BackgroundService subscribes before Start, so no change
+  // can be missed.
   public event Action<BuildChange>? BuildChanged;
 
   private readonly PollThread _thread = new("Edge watch", s_pollInterval);

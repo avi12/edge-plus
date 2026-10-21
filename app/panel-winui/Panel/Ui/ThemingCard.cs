@@ -23,7 +23,7 @@ internal enum LocalThemeKind {
 // store link or a local file or folder, pick one for Windows' light mode and one
 // for dark, and the list of themes (the panel's own, removable, then those Edge
 // already had). Every change goes through PanelActions, so switching a theme
-// needs no restart. The Tauri panel's ThemingCard.svelte and ThemeList.svelte.
+// needs no restart.
 internal sealed class ThemingCard {
   private const double RowSpacing = 8;
   private const double ColumnGap = 8;

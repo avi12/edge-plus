@@ -12,8 +12,7 @@ internal sealed class ThemeException(string message) : Exception(message);
 // What the user does with themes: add one from a store link or a local folder,
 // .zip or .crx, remove one, and pick one per Windows mode. Each change is
 // installed through Edge's own loader (ExternalExtensions), persisted, and
-// pushed to the running Edge (DllSync), so switching needs no restart. The
-// Tauri panel's theme commands.
+// pushed to the running Edge (DllSync), so switching needs no restart.
 internal static class ThemeLibrary {
   private const string CrxExtension = ".crx";
   private const string IdentityChanged = "The theme's identity changed; add it again.";

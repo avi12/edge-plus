@@ -16,7 +16,7 @@ namespace EdgePlus;
 // what Edge's theme loader would trip over (a manifest that is not a theme, a
 // missing or non-image file, colours out of range); Revise gives every re-pack a
 // higher four-part version, because Edge only replaces an installed extension
-// with a newer one. The Tauri panel's manifest.rs; its messages are the user's.
+// with a newer one. Its messages are the user's.
 internal static class ThemeManifest {
   public const string ManifestName = "manifest.json";
   private const long MaxThemeBytes = 64L * 1024 * 1024;
@@ -177,7 +177,7 @@ internal static class ThemeManifest {
   }
 
   // A JSON number as a whole number, or null for a fraction or anything else
-  // (255.0 is not a channel, as in the Tauri panel's serde reading).
+  // (255.0 is not a channel).
   private static long? AsInteger(JsonNode? node) {
     bool isNumber = node is JsonValue value && value.GetValueKind() == JsonValueKind.Number;
     if (!isNumber) {

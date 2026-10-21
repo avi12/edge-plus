@@ -8,8 +8,8 @@ namespace EdgePlus;
 // The data folder is a shared contract with the injected DLL, which reads the
 // config file from it (config.h) and writes its log beside it (log.h); its
 // location comes from the DLL's own constant (Shared), so the two cannot name
-// different folders. The Tauri panel uses the same folder and files, so either
-// panel picks up where the other left off.
+// different folders. The earlier Tauri panel used the same folder and files,
+// so an install of it carries over.
 internal static class Paths {
   private const string SettingsFileName = "settings.json";
   private const string SplitDllFileName = "fixedge-split.dll";

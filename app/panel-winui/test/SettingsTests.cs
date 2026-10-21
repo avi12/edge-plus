@@ -7,8 +7,8 @@ internal static class SettingsTests {
   public static void Run() {
     DefaultsAreSplitOnTheRestOff();
     AFileFromTheGeminiDaysStillLoads();
-    TheTauriPanelsFileLoads();
-    WritesTheTauriShape();
+    AnExistingFileLoads();
+    WritesTheExistingShape();
     RoundTripsThroughAFile();
     BrokenOrNullSectionsFallBack();
     RemovingAThemeClearsItsAssignments();
@@ -30,8 +30,8 @@ internal static class SettingsTests {
                 "the old readingMode object is not written");
   }
 
-  // The tab spine defaults on, as in the Tauri panel: it was part of the
-  // theming until it got a switch of its own.
+  // The tab spine defaults on: it was part of the theming until it got a
+  // switch of its own.
   private static void DefaultsAreSplitOnTheRestOff() {
     var settings = new Settings();
     Expect.That(settings.Features.NativeSplit, "the split defaults on");
@@ -51,7 +51,9 @@ internal static class SettingsTests {
     Expect.Equal("", settings.Theming.Light, "a missing theming section is empty");
   }
 
-  private static void TheTauriPanelsFileLoads() {
+  // A file as installs already have it (the earlier Tauri panel wrote the
+  // same shape), so existing settings carry over.
+  private static void AnExistingFileLoads() {
     const string text = """
         {
           "features": { "nativeSplit": true, "theming": true, "quietDevMode": false,
@@ -76,7 +78,7 @@ internal static class SettingsTests {
     Expect.Equal("155.0.4283.62", settings.LastEdgeBuild, "the last build is read");
   }
 
-  private static void WritesTheTauriShape() {
+  private static void WritesTheExistingShape() {
     var settings = new Settings();
     settings.Theming.AddOrReplace(new ThemeEntry {
       Id = "abc",

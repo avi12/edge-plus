@@ -42,7 +42,7 @@ struct Wire {
                                 // (the two themes are chosen in reading mode
                                 // itself and kept by reading_mode.h)
 };
-// protocol.rs writes exactly WIRE_SIZE bytes and LoadFromFile wants all of
+// ConfigWire.cs writes exactly WIRE_SIZE bytes and LoadFromFile wants all of
 // them, so the struct must stay packed: five u32 fields, the two ids, then the
 // reserved field, the find, WebUI, live-preview, tab-spine and reading-theme
 // switches (u32s). A panel that still writes the two reading themes after the
@@ -53,7 +53,7 @@ inline constexpr size_t kWireFieldCount = 11;
 inline constexpr size_t kWireIdCount = 2;
 static_assert(sizeof(Wire) == kWireFieldCount * sizeof(uint32_t) +
                                   kWireIdCount * size_t{kIdCapacity},
-              "Wire must stay packed as protocol.rs writes it");
+              "Wire must stay packed as ConfigWire.cs writes it");
 
 // The sizes of the files a panel wrote before `reserved`, before
 // `enhancedFindActive`, before `webUiFollowsThemeActive`, before

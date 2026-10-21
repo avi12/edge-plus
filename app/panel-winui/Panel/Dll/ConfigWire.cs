@@ -81,7 +81,7 @@ internal static class ConfigWire {
   private static void WriteFlag(byte[] wire, int offset, bool isOn) =>
       BinaryPrimitives.WriteUInt32LittleEndian(wire.AsSpan(offset), isOn ? 1u : 0u);
 
-  // An id longer than the field is cut to it, as the Tauri panel does.
+  // An id longer than the field is cut to it.
   private static void WriteId(byte[] wire, int lengthOffset, int idOffset, string id) {
     byte[] bytes = Encoding.UTF8.GetBytes(id);
     int length = Math.Min(bytes.Length, Shared.WireIdCapacity);

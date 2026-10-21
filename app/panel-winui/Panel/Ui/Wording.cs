@@ -13,8 +13,7 @@ internal sealed record CardWording(string Title, string Description, int GlyphCo
 }
 
 // Every sentence the window shows, in one place: each card's wording, and what
-// the panel says when Edge runs a build the split DLL was not made for. The
-// Tauri panel's App.svelte constants, assistantNames.ts and edgeBuild.ts.
+// the panel says when Edge runs a build the split DLL was not made for.
 internal static class Wording {
   // The browser assistant's name; the DLL has its own copy (chat_target.h),
   // which must match.

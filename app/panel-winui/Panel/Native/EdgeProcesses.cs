@@ -12,7 +12,7 @@ namespace EdgePlus;
 // Edge runs one browser process per profile plus many renderer, GPU and utility
 // children, all named msedge.exe. Only the browser process owns a top-level
 // window, so the browser processes are the msedge.exe pids that own a visible,
-// titled top-level window — the Tauri panel's edge-native process.rs, as is.
+// titled top-level window.
 internal static class EdgeProcesses {
   private const string EdgeImageName = "msedge.exe";
   private const uint ProcessQueryLimitedInformation = 0x1000;

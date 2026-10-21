@@ -19,7 +19,7 @@ internal sealed record CrxProof(byte[] PublicKey, byte[] Signature, byte[] Signe
 // A CRX3 file is a "Cr24" magic, the format version, the header's length, a
 // CrxFileHeader protobuf carrying the RSA public key, then a ZIP. The
 // extension id is derived from that public key (ExtensionId); the version is
-// the "version" of the ZIP's manifest.json. The Tauri panel's crx.rs.
+// the "version" of the ZIP's manifest.json.
 internal static class Crx {
   public static readonly byte[] Magic = "Cr24"u8.ToArray();
   public const uint FormatVersion = 3;

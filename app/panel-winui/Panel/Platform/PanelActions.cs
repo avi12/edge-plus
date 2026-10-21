@@ -4,8 +4,7 @@ using System.Collections.Generic;
 namespace EdgePlus;
 
 // Everything the window can ask for, each returning the state to render next.
-// The Tauri panel's commands.rs: the UI never touches settings, Edge or the DLL
-// itself. Each can block (an injection waits for Edge), so the window calls
+// The UI never touches settings, Edge or the DLL itself. Each can block (an injection waits for Edge), so the window calls
 // them off the UI thread.
 internal static class PanelActions {
   public static PanelState Load() => Read(Settings.Load());

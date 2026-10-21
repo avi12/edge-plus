@@ -10,7 +10,7 @@ namespace EdgePlus;
 // (EdgeSupport.Effective): a paused feature goes as off, so on an unsupported
 // build nothing is injected and a loaded copy unloads. In a simulation
 // (EdgeInstall) nothing here runs, so the Edge that is running is never
-// touched. The Tauri panel's commands::apply and sync_on_start.
+// touched.
 internal static class DllSync {
   private const int UnloadPolls = 40;
   private const int UnloadPollMilliseconds = 100;

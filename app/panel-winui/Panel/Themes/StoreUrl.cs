@@ -17,7 +17,7 @@ internal sealed record ParsedStoreTheme(string Id, string? Name, ThemeStore Stor
 // Pulling a theme's identity out of a pasted store URL. Only the real stores
 // are recognised, each by its exact host and the path before the theme
 // (StoreSite): <prefix>/<slug>/<id> or <prefix>/<id>. Pure string logic, no
-// network; the Tauri panel's store_url.rs mirrors it.
+// network.
 internal static class StoreUrl {
   private const string HttpsPrefix = "https://";
   private const string SchemeSeparator = "://";

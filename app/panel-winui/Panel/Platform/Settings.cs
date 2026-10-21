@@ -31,7 +31,7 @@ internal enum Feature {
 }
 
 // Where a theme came from, so the installer knows how to add it to Edge. Stored
-// lower-case, as the Tauri panel's settings.rs writes it.
+// lower-case.
 [JsonConverter(typeof(JsonStringEnumConverter<ThemeSource>))]
 internal enum ThemeSource {
   [JsonStringEnumMemberName("store")]
@@ -184,8 +184,8 @@ internal sealed class Theming {
 
 // The user's persisted choices: which switches are on, and the theme library
 // with the light/dark assignment. Stored as settings.json in the data folder,
-// in exactly the shape the Tauri panel writes (settings.rs), so the two panels
-// read each other's file. Only this file is the panel's own; every other file
+// in exactly the shape the earlier Tauri panel wrote, so an existing file
+// carries over; keep it so. Only this file is the panel's own; every other file
 // is a contract with Edge or the DLL.
 internal sealed class Settings {
 

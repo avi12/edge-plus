@@ -15,7 +15,7 @@ namespace EdgePlus;
 // The window's content: a card per feature, grouped into titled sections
 // (PanelLayout), the notices above them and the footer under them. It renders whatever
 // PanelState the last action returned and never touches settings, Edge or the
-// DLL itself (PanelActions does). The Tauri panel's App.svelte.
+// DLL itself (PanelActions does).
 //
 // Built in C#, not XAML, and composed from WinUI's controls rather than
 // subclassing them: this assembly is swapped live in a collectible load
