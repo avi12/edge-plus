@@ -76,6 +76,12 @@ template <class T>
 inline T& Field(void* object, uintptr_t offset) {
   return *reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(object) + offset);
 }
+// The same field of an object we may only read.
+template <class T>
+inline const T& Field(const void* object, uintptr_t offset) {
+  return *reinterpret_cast<const T*>(reinterpret_cast<const uint8_t*>(object) +
+                                     offset);
+}
 
 // The function in `object`'s vtable at `slotOffset`. offsets.h records a vtable
 // slot as the byte offset the disassembly indexes it by, not as a slot number.
@@ -1332,9 +1338,9 @@ struct PermissionDecision {
 };
 
 inline PermissionDecision ReadPermissionDecision(const void* decision) {
-  void* raw = const_cast<void*>(decision);
-  return {Field<uint8_t>(raw, edge155::off::PERMISSION_DECISION_has_value) == 1,
-          Field<int32_t>(raw, edge155::off::PERMISSION_DECISION_value)};
+  return {Field<uint8_t>(decision,
+                         edge155::off::PERMISSION_DECISION_has_value) == 1,
+          Field<int32_t>(decision, edge155::off::PERMISSION_DECISION_value)};
 }
 
 // Room for one custom_handlers::ProtocolHandler that our DLL owns: the bytes
@@ -1393,7 +1399,7 @@ struct U16View {
   size_t length = 0;
 };
 inline U16View U16StringView(const void* string) {
-  auto* bytes = static_cast<const uint8_t*>(string);
+  const auto* bytes = static_cast<const uint8_t*>(string);
   const bool isLong = (bytes[edge155::off::U16STRING_short_size] &
                        edge155::off::U16STRING_long_flag) != 0;
   if (isLong) {
@@ -1527,7 +1533,7 @@ inline std::vector<void*> AllWebContents() {
 
 // A libc++ std::string's characters (the same layout as the u16string above).
 inline std::string StdStringText(const void* string) {
-  auto* bytes = static_cast<const uint8_t*>(string);
+  const auto* bytes = static_cast<const uint8_t*>(string);
   const bool isLong = (bytes[edge155::off::U16STRING_short_size] &
                        edge155::off::U16STRING_long_flag) != 0;
   if (isLong) {
@@ -1847,7 +1853,7 @@ inline void* FindBarLabel(void* findBarView) {
 // The Windows virtual-key code of the key `keyEvent` (a ui::KeyEvent) reports
 // being pressed, or 0 when it is not a key press.
 inline uint8_t PressedKeyCode(const void* keyEvent) {
-  auto* bytes = static_cast<const uint8_t*>(keyEvent);
+  const auto* bytes = static_cast<const uint8_t*>(keyEvent);
   int32_t type = 0;
   std::memcpy(&type, bytes + edge155::off::KEYEVENT_type, sizeof(type));
   const bool isPressed = type == edge155::off::KEYEVENT_type_pressed;

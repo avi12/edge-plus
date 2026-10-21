@@ -6,6 +6,7 @@
 // UI thread only.
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <map>
 #include "edge.h"
 #include "icons.h"
@@ -18,9 +19,11 @@ struct Grip {
   void* mcv = nullptr;
 };
 
-// Each hover bar (ControlButtons view) -> its grip.
-inline std::map<void*, Grip>& Grips() {
-  static std::map<void*, Grip> grips;
+// Each hover bar (ControlButtons view) -> its grip. std::less<> lets a bar be
+// looked up by a pointer to const.
+using GripMap = std::map<void*, Grip, std::less<>>;
+inline GripMap& Grips() {
+  static GripMap grips;
   return grips;
 }
 
@@ -53,7 +56,7 @@ inline void EnsureGrips(void* mcv) {
 // If `bar` is the hover bar of a pane in a grown split (every such bar has a
 // grip), that split and the pane's container index; else false.
 inline bool LocateBar(const void* bar, void** mcv, int* pane) {
-  const auto entry = Grips().find(const_cast<void*>(bar));
+  const auto entry = Grips().find(bar);
   if (entry == Grips().end()) {
     return false;
   }

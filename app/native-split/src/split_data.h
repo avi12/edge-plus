@@ -598,9 +598,8 @@ inline int BreakUpGrownSplits(void* tsm) {
       grownSplits.push_back(token);
     }
   }
-  for (const SplitToken& token : grownSplits) {
-    edge::RemoveSplitImpl(tsm, const_cast<uint8_t*>(token.bytes),
-                          kTransactionalRemove);
+  for (SplitToken& token : grownSplits) {
+    edge::RemoveSplitImpl(tsm, token.bytes, kTransactionalRemove);
   }
   if (!grownSplits.empty()) {
     Log("[breakup] dissolved %zu grown split(s) into tabs", grownSplits.size());
