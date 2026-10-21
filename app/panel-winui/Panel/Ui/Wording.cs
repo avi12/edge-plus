@@ -143,49 +143,44 @@ internal static class Wording {
     _ => throw new ArgumentOutOfRangeException(nameof(feature)),
   };
 
-  // How a feature is named inside a sentence.
-  public static string NameInSentence(Feature feature) => feature switch {
-    Feature.NativeSplit => "Split view",
-    Feature.Theming => "Theming",
-    Feature.QuietDevMode => "Hiding the developer-mode prompt",
-    Feature.ProtocolHandlers => "Asking to handle links",
-    Feature.EnhancedFind => "The enhanced find bar",
-    Feature.WebUiFollowsTheme => "Settings and extensions pages following the theme",
-    Feature.LivePreview => "Live tab preview on hover",
-    Feature.TabSpine => "The square selected tab with its neon spine",
-    Feature.ReadingTheme => "Reading mode following Windows light and dark",
-    _ => throw new ArgumentOutOfRangeException(nameof(feature)),
-  };
+  // How a build other than the supported one is introduced: newer is an
+  // update, older a version Edge+ does not know.
+  public static string EdgeLead(FileVersion edge, FileVersion supported) =>
+      edge > supported ? $"Edge updated to {edge}." : $"Edge is on version {edge}.";
 
-  // What an Edge update switched off, as one sentence; empty when it switched
-  // nothing off.
-  public static string DescribeUpdate(BuildChange change) {
-    if (change.Disabled.Count == 0) {
+  // What one card says about its feature on this build; empty when the build
+  // holds nothing back. "Edge updated to 156.0.1.0. Split into any grid is
+  // paused until Edge+ supports this version."
+  public static string DescribeFeature(PanelState state, Feature feature) {
+    FeatureState featureState = state.StateOf(feature);
+    bool isHeld = featureState is FeatureState.Paused or FeatureState.Unavailable;
+    if (!isHeld || state.EdgeBuild is not FileVersion edge) {
       return "";
     }
-    bool isUpdate = change.PreviousBuild is not null && change.PreviousBuild != change.EdgeBuild;
-    string lead = isUpdate
-        ? $"Edge updated to {change.EdgeBuild}"
-        : $"Edge {change.EdgeBuild} is running";
-    return $"{lead}; turned off {JoinNames(change.Disabled)} — Edge+ supports Edge " +
-           $"{change.SupportedBuild}.";
+    string verb = featureState == FeatureState.Paused ? "paused" : "unavailable";
+    return $"{EdgeLead(edge, state.SupportedEdgeBuild)} {For(feature).Title} is {verb} until " +
+           "Edge+ supports this version.";
   }
 
-  // Why one card's switch is locked, shown on the card itself.
-  public static string DescribeHeldOff(PanelState state) =>
-      $"Unavailable on Edge {state.EdgeBuild?.ToString() ?? "this version"} — Edge+ supports " +
-      $"Edge {state.SupportedEdgeBuild}.";
-
-  // Which features the running Edge holds off, as one sentence; empty when it
-  // holds none.
-  public static string DescribeUnsupported(PanelState state) {
-    if (state.Unsupported.Count == 0) {
+  // The features a build pauses, as one sentence; empty when it pauses none.
+  // The panel's notice and the toast's body.
+  public static string DescribePaused(FileVersion edge, FileVersion supported,
+                                      IReadOnlyList<Feature> paused) {
+    if (paused.Count == 0) {
       return "";
     }
-    return $"{JoinNames(state.Unsupported)} need Edge {state.SupportedEdgeBuild}; this is Edge " +
-           $"{state.EdgeBuild?.ToString() ?? "unknown"}.";
+    return $"{EdgeLead(edge, supported)} Paused until Edge+ supports this version: " +
+           $"{JoinTitles(paused)}.";
   }
 
-  private static string JoinNames(IEnumerable<Feature> features) =>
-      string.Join(" and ", features.Select(NameInSentence));
+  // The toast's title.
+  public const string PausedToastTitle = "Edge+ paused features for this Edge version";
+
+  // "A", "A and B", "A, B and C", by card title.
+  private static string JoinTitles(IReadOnlyList<Feature> features) {
+    string[] titles = features.Select(feature => For(feature).Title).ToArray();
+    return titles.Length <= 1
+        ? string.Join("", titles)
+        : $"{string.Join(", ", titles[..^1])} and {titles[^1]}";
+  }
 }

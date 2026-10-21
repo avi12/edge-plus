@@ -85,10 +85,6 @@ internal static class PanelActions {
   }
 
   private static PanelState Read(Settings settings) {
-    FileVersion? running = EdgeWatch.RunningBuild();
-    IReadOnlyList<Feature> unsupported = running is FileVersion build
-        ? EdgeBuild.Unsupported(build, EdgeBuild.Pinned)
-        : [];
     return new PanelState(
         Features: settings.Features,
         Theming: settings.Theming,
@@ -97,8 +93,7 @@ internal static class PanelActions {
         IsEdgeRunning: EdgeProcesses.BrowserPids().Length > 0,
         IsStartWithWindows: StartupEntry.IsEnabled(StartupKeys.User, StartupEntry.Name),
         IsSplitLoaded: DllChannel.IsLoaded(),
-        EdgeBuild: running,
-        SupportedEdgeBuild: EdgeBuild.Pinned,
-        Unsupported: unsupported);
+        EdgeBuild: EdgeWatch.CurrentBuild(),
+        SupportedEdgeBuild: EdgeBuild.Pinned);
   }
 }

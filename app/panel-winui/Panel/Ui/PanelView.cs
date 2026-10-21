@@ -64,9 +64,6 @@ internal sealed class PanelView : IDisposable {
   private readonly ThemeWatch _themeWatch = new();
   private readonly List<IDisposable> _hostSubscriptions = [];
   private PanelState? _state;
-  // What the last Edge update switched off; replaces the standing held-off
-  // sentence it would only repeat.
-  private string _updateNotice = "";
   private bool _isDisposed;
 
   public PanelView(Window window, ContentControl slot, IObservable<EventArgs> settingChanged,
@@ -124,11 +121,8 @@ internal sealed class PanelView : IDisposable {
     // Coming back to the panel picks up themes installed in Edge meanwhile.
     _window.Activated += OnActivated;
     // Edge came up on a build not seen before; features that depend on the old
-    // msedge.dll may have been switched off.
-    _edgeWatch.BuildChanged += change => OnUiThread(() => {
-      _updateNotice = Wording.DescribeUpdate(change);
-      Refresh();
-    });
+    // msedge.dll may be paused now, or back.
+    _edgeWatch.BuildChanged += change => OnUiThread(Refresh);
     // A local theme edited on disk was re-checked and re-installed (or refused).
     _themeWatch.Refreshed += refresh => OnUiThread(() => ShowActionNotice(refresh.Error ?? ""));
     _edgeWatch.Start();
@@ -206,26 +200,24 @@ internal sealed class PanelView : IDisposable {
   private void Render(PanelState state) {
     _state = state;
     _openEdgeHint.Visibility = state.IsEdgeRunning ? Visibility.Collapsed : Visibility.Visible;
-    string buildNotice = _updateNotice.Length > 0
-        ? _updateNotice
-        : Wording.DescribeUnsupported(state);
+    // The features this Edge build pauses, together; each card also says it.
+    string buildNotice = state.EdgeBuild is FileVersion edge
+        ? Wording.DescribePaused(edge, state.SupportedEdgeBuild, state.Paused)
+        : "";
     _buildNotice.Message = buildNotice;
     _buildNotice.IsOpen = buildNotice.Length > 0;
 
+    // A paused switch shows the user's choice (on), locked, with why.
     foreach ((Feature feature, FeatureCard card) in _switchCards) {
-      bool isHeldOff = state.IsHeldOff(feature);
-      card.Update(state.Features.IsOn(feature), isHeldOff, HeldOffNote(state, isHeldOff));
+      card.Update(state.Features.IsOn(feature), state.IsLocked(feature),
+                  Wording.DescribeFeature(state, feature));
     }
-    bool isThemingHeldOff = state.IsHeldOff(Feature.Theming);
-    _themingCard.Update(state, isThemingHeldOff, HeldOffNote(state, isThemingHeldOff));
-    bool isReadingHeldOff = state.IsHeldOff(Feature.ReadingTheme);
-    _readingModeCard.Update(state, isReadingHeldOff, HeldOffNote(state, isReadingHeldOff));
+    _themingCard.Update(state, state.IsLocked(Feature.Theming),
+                        Wording.DescribeFeature(state, Feature.Theming));
+    _readingModeCard.Update(state, state.IsLocked(Feature.ReadingTheme),
+                            Wording.DescribeFeature(state, Feature.ReadingTheme));
     _startupCard.Update(state.IsStartWithWindows, isLocked: false, note: "");
   }
-
-  // What a locked card says about why, on the card itself.
-  private static string HeldOffNote(PanelState state, bool isHeldOff) =>
-      isHeldOff ? Wording.DescribeHeldOff(state) : "";
 
   private void ShowActionNotice(string message) {
     _actionNotice.Message = message;

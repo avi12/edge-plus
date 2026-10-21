@@ -4,12 +4,13 @@ using System.Linq;
 
 namespace EdgePlus;
 
-// A newly seen Edge build, and what it switched off (often nothing).
+// A newly seen Edge build, and which of the user's features it pauses (often
+// none).
 internal sealed record BuildChange(
     FileVersion EdgeBuild,
     FileVersion? PreviousBuild,
     FileVersion SupportedBuild,
-    IReadOnlyList<Feature> Disabled);
+    IReadOnlyList<Feature> Paused);
 
 // Which Edge build the DLL is made for, and which features another build rules
 // out. Pure: what is running is handed in (EdgeWatch reads it).
@@ -57,17 +58,4 @@ internal static class EdgeBuild {
     }
     return builds[0];
   }
-
-  // The features that cannot run on `running`, on or off.
-  public static IReadOnlyList<Feature> Unsupported(FileVersion running, FileVersion pinned) {
-    if (running == pinned) {
-      return [];
-    }
-    return Enum.GetValues<Feature>().Where(DependsOnPinnedBuild).ToArray();
-  }
-
-  // The features that cannot run on `running` and are on in `features`.
-  public static IReadOnlyList<Feature> Blocked(Features features, FileVersion running,
-                                               FileVersion pinned) =>
-      Unsupported(running, pinned).Where(features.IsOn).ToArray();
 }

@@ -19,17 +19,21 @@ internal readonly record struct DllConfig(
     bool IsReadingThemeActive,
     ReadingTheme ReadingThemeLight,
     ReadingTheme ReadingThemeDark) {
-  public static DllConfig From(Settings settings) => new(
-      IsSplitActive: settings.Features.NativeSplit,
-      IsThemingActive: settings.Features.Theming,
-      IsProtocolHandlersActive: settings.Features.ProtocolHandlers,
+  public static DllConfig From(Settings settings) => From(settings, settings.Features);
+
+  // With the switches as they apply on the current Edge build (a paused
+  // feature off), rather than as the user chose them.
+  public static DllConfig From(Settings settings, Features features) => new(
+      IsSplitActive: features.NativeSplit,
+      IsThemingActive: features.Theming,
+      IsProtocolHandlersActive: features.ProtocolHandlers,
       LightId: settings.Theming.Light,
       DarkId: settings.Theming.Dark,
-      IsEnhancedFindActive: settings.Features.EnhancedFind,
-      IsWebUiFollowsThemeActive: settings.Features.WebUiFollowsTheme,
-      IsLivePreviewActive: settings.Features.LivePreview,
-      IsTabSpineActive: settings.Features.TabSpine,
-      IsReadingThemeActive: settings.Features.ReadingTheme,
+      IsEnhancedFindActive: features.EnhancedFind,
+      IsWebUiFollowsThemeActive: features.WebUiFollowsTheme,
+      IsLivePreviewActive: features.LivePreview,
+      IsTabSpineActive: features.TabSpine,
+      IsReadingThemeActive: features.ReadingTheme,
       ReadingThemeLight: settings.ReadingMode.Light,
       ReadingThemeDark: settings.ReadingMode.Dark);
 }

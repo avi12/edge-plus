@@ -15,14 +15,19 @@ internal sealed record PanelState(
     // Windows will start the panel at sign-in; read from the Run key itself.
     bool IsStartWithWindows,
     bool IsSplitLoaded,
-    // The msedge.dll build the running Edge is on; null when Edge is not running.
+    // The Edge build now (EdgeWatch.CurrentBuild: the running one, else the
+    // installed one); null when it cannot be read.
     FileVersion? EdgeBuild,
     // The only build the split DLL supports.
-    FileVersion SupportedEdgeBuild,
-    // The features that cannot run on the running build; their switches are held
-    // off until Edge is on the supported build.
-    IReadOnlyList<Feature> Unsupported) {
-  // A held-off switch can still be turned off, never on.
-  public bool IsHeldOff(Feature feature) =>
-      Unsupported.Contains(feature) && !Features.IsOn(feature);
+    FileVersion SupportedEdgeBuild) {
+  public FeatureState StateOf(Feature feature) =>
+      EdgeSupport.StateOf(Features, feature, EdgeBuild, SupportedEdgeBuild);
+
+  // A paused or unavailable switch is held as it is until a supported build.
+  public bool IsLocked(Feature feature) =>
+      StateOf(feature) is FeatureState.Paused or FeatureState.Unavailable;
+
+  // The user's features this Edge build pauses.
+  public IReadOnlyList<Feature> Paused =>
+      EdgeSupport.Paused(Features, EdgeBuild, SupportedEdgeBuild);
 }
