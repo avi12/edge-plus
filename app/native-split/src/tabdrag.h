@@ -52,6 +52,11 @@ struct LastMove {
 };
 inline constinit LastMove g_lastMove;
 
+// A tab drag is running from its first pointer move to its end.
+inline bool IsTabDragRunning() {
+  return g_lastMove.controller != nullptr;
+}
+
 // The view of the tab being dragged in `tsm`'s strip, which follows the
 // pointer, or null when no single-tab drag runs in that strip.
 inline void* DraggedTabViewIn(void* tsm) {

@@ -58,6 +58,13 @@ struct WindowSet {
   HWND bottomCorner = nullptr;
   tab_edge::Side side = tab_edge::Side::kLeft;
   theme_tone::Argb stripeColor = 0;
+  // The row the spine last marked, which a drop's settle starts from.
+  Rect lastRow{};
+  // After a tab drag: the spine marks the slot nearest `dropRow` until the
+  // selected row reaches it, or until `settleDeadline`.
+  bool isSettling = false;
+  Rect dropRow{};
+  ULONGLONG settleDeadline = 0;
 };
 
 inline constinit std::vector<WindowSet> g_sets;
@@ -181,6 +188,27 @@ inline void FollowFill() {
   Log("[spine] corners filled %08x", g_paintedFill);
 }
 
+// After a tab drag ends, Edge updates its tab order at once but moves the list's
+// rows a few ticks later, so the selected row by index is first a neighbour of
+// the dropped tab; the spine marks the slot nearest the drop until the selected
+// row is back there, or this long has passed.
+inline constexpr ULONGLONG kSettleTimeoutMs = 1500;
+inline constinit bool g_wasTabDragRunning = false;
+
+// Once per tick, with whether a tab drag is running: starts the settle when the
+// drag has ended (during the drag the spine rides the dragged tab).
+inline void NoteTabDrag(bool isTabDragRunning) {
+  const bool hasDragEnded = g_wasTabDragRunning && !isTabDragRunning;
+  g_wasTabDragRunning = isTabDragRunning;
+  if (hasDragEnded) {
+    for (WindowSet& set : g_sets) {
+      set.isSettling = set.lastRow.height > 0;
+      set.dropRow = set.lastRow;
+      set.settleDeadline = GetTickCount64() + kSettleTimeoutMs;
+    }
+  }
+}
+
 inline void Place(HWND popup, const Rect& rect) {
   if (popup) {
     SetWindowPos(popup, nullptr, rect.x, rect.y, rect.width, rect.height,
@@ -192,6 +220,14 @@ inline void Hide(const WindowSet& set) {
   for (HWND popup : {set.stripe, set.topCorner, set.bottomCorner}) {
     if (popup) {
       ShowWindow(popup, SW_HIDE);
+    }
+  }
+}
+
+inline void HideFor(HWND browser) {
+  for (const WindowSet& set : g_sets) {
+    if (set.browser == browser) {
+      Hide(set);
     }
   }
 }
@@ -210,6 +246,14 @@ inline void BeginTick() {
   std::erase_if(g_sets, [](const WindowSet& set) {
     return !IsWindow(set.browser);
   });
+}
+
+// A view's screen bounds (DIPs) in pixels.
+inline Rect ScreenRow(const Rect& bounds, float scale) {
+  return Rect{static_cast<int>(static_cast<float>(bounds.x) * scale),
+              static_cast<int>(static_cast<float>(bounds.y) * scale),
+              static_cast<int>(static_cast<float>(bounds.width) * scale),
+              static_cast<int>(static_cast<float>(bounds.height) * scale)};
 }
 
 // One browser window's step of a tick: square its selected vertical tab's
@@ -235,21 +279,34 @@ inline void TickWindow(HWND browser, void* draggedTab) {
   const bool isVisibleRow = bounds.width > 0 && bounds.height > 0;
   const bool isMarkable = tab && isInVerticalList && isVisibleRow;
   if (!isMarkable) {
-    for (const WindowSet& set : g_sets) {
-      if (set.browser == browser) {
-        Hide(set);
-      }
-    }
+    HideFor(browser);
     return;
   }
-  const WindowSet& set = SetFor(browser, StripeColorOf(browser));
+  WindowSet& set = SetFor(browser, StripeColorOf(browser));
   FollowFill();
-  const Rect row{static_cast<int>(static_cast<float>(bounds.x) * scale), top,
-                 static_cast<int>(static_cast<float>(bounds.width) * scale),
-                 static_cast<int>(static_cast<float>(bounds.height) * scale)};
-  const tab_edge::Pieces pieces =
-      tab_edge::PiecesFor(row, set.side, static_cast<int>(kWidthDip * scale),
-                          static_cast<int>(kCornerDip * scale));
+  const Rect row = ScreenRow(bounds, scale);
+  // The tab lands in the slot nearest where it was released, and Edge snaps it
+  // there at once; until the selected row catches up, the spine marks that slot.
+  Rect markedRow = row;
+  if (set.isSettling) {
+    void* slotTab = vtab_views::TabRowNearest(
+        anyView, static_cast<int>(static_cast<float>(set.dropRow.y) / scale));
+    const Rect slot = slotTab
+                          ? ScreenRow(edge::ViewBoundsInScreen(slotTab), scale)
+                          : set.dropRow;
+    const bool isAtSlot = row.y == slot.y;
+    const bool isOverdue = GetTickCount64() >= set.settleDeadline;
+    const bool isStillSettling = !isAtSlot && !isOverdue;
+    if (isStillSettling) {
+      markedRow = slot;
+    } else {
+      set.isSettling = false;
+    }
+  }
+  set.lastRow = markedRow;
+  const tab_edge::Pieces pieces = tab_edge::PiecesFor(
+      markedRow, set.side, static_cast<int>(kWidthDip * scale),
+      static_cast<int>(kCornerDip * scale));
   Place(set.stripe, pieces.stripe);
   // Until the colour hook has answered a fill, the corners stay hidden rather
   // than show a square of the wrong colour.
