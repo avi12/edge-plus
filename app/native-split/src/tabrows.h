@@ -190,85 +190,120 @@ inline size_t SlotOfTab(const BoundsList& list, int tabIndex) {
   return list.count;
 }
 
-// The tabs of the leaving tab's split other than it close up into the split's
-// first rects, in order. The leaving tab then stands on its own: after the
-// others if it was the split's last tab, else before them (the tab list sizes
-// itself from the last tab's rect, so that tab must stay the furthest on). In a
-// vertical list it takes a full row of its own, in a horizontal strip a slot
-// with a gap. Tabs after the split make room for what the split now takes.
-inline void LayOutDetached(const BoundsList& list, const DetachLayout& detach,
+// How far along the list's axis a rect reaches: its top in a vertical list, its
+// right edge in a horizontal strip.
+inline int ReachOf(const Rect& rect, bool isVertical) {
+  return isVertical ? rect.y : rect.x + rect.width;
+}
+
+// The split's rects as the layout gave them, and the span they cover.
+struct RunRects {
+  std::vector<Rect> before;
+  int left = 0;
+  int right = 0;
+  int reach = 0;  // the furthest ReachOf any of them has
+};
+
+inline RunRects MeasureRun(const BoundsList& list, const DetachLayout& detach,
                            bool isVertical) {
-  const size_t memberCount = detach.runEnd - detach.runStart;
-  std::vector<Rect> before(list.rects + detach.runStart,
-                           list.rects + detach.runEnd);
-  int rowLeft = before.front().x;
-  int rowRight = rowLeft;
-  int oldFar = isVertical ? before.front().y : rowLeft;
-  for (const Rect& rect : before) {
-    rowLeft = std::min(rowLeft, rect.x);
-    rowRight = std::max(rowRight, rect.x + rect.width);
-    oldFar = std::max(oldFar, isVertical ? rect.y : rect.x + rect.width);
+  RunRects run;
+  run.before.assign(list.rects + detach.runStart, list.rects + detach.runEnd);
+  run.left = run.before.front().x;
+  run.right = run.left;
+  run.reach = ReachOf(run.before.front(), isVertical);
+  for (const Rect& rect : run.before) {
+    run.left = std::min(run.left, rect.x);
+    run.right = std::max(run.right, rect.x + rect.width);
+    run.reach = std::max(run.reach, ReachOf(rect, isVertical));
   }
-  const bool isLast = detach.slot == detach.runEnd - 1;
-  const Rect first = before.front();
-  const Rect last = before.back();
+  return run;
+}
+
+// The split's other tabs take the split's first rects, in order, closing up the
+// place the leaving tab held.
+inline void CloseUp(const BoundsList& list, const DetachLayout& detach,
+                    const RunRects& run) {
+  size_t next = 0;
+  for (size_t slot = detach.runStart; slot < detach.runEnd; slot++) {
+    if (slot != detach.slot) {
+      list.RectAt(slot) = run.before[next++];
+    }
+  }
+}
+
+// Move the split's other tabs by `offset` along the list's axis; returns how far
+// they then reach, starting from `reach`.
+inline int ShiftRemaining(const BoundsList& list, const DetachLayout& detach,
+                          int offset, bool isVertical, int reach) {
+  for (size_t slot = detach.runStart; slot < detach.runEnd; slot++) {
+    if (slot == detach.slot) {
+      continue;
+    }
+    Rect& rect = list.RectAt(slot);
+    (isVertical ? rect.y : rect.x) += offset;
+    reach = std::max(reach, ReachOf(rect, isVertical));
+  }
+  return reach;
+}
+
+// A vertical list: the leaving tab takes a full row, after the split's rows if it
+// was the split's last tab (in the freed row when the last row held it alone),
+// else before them, which pushes the others down a row. Returns the reach.
+inline int PlaceDetachedVertical(const BoundsList& list,
+                                 const DetachLayout& detach,
+                                 const RunRects& run, bool isLast,
+                                 Rect& detached) {
+  const Rect first = run.before.front();
+  const Rect last = run.before.back();
   const bool hasFollowing = detach.runEnd < list.count;
   const int rowGap = hasFollowing
                          ? list.RectAt(detach.runEnd).y - (last.y + last.height)
                          : kDefaultRowGap;
   const int pitch = last.height + std::max(rowGap, 0);
-  // Close up: the others take the first rects, in order.
-  size_t next = 0;
-  for (size_t slot = detach.runStart; slot < detach.runEnd; slot++) {
-    if (slot != detach.slot) {
-      list.RectAt(slot) = before[next++];
-    }
+  detached.x = run.left;
+  detached.width = run.right - run.left;
+  if (!isLast) {
+    return ShiftRemaining(list, detach, pitch, true, first.y);
   }
-  const size_t remaining = memberCount - 1;
-  Rect detached = first;
-  int newFar = oldFar;
-  if (isVertical) {
-    if (isLast) {
-      const bool isLastRowFree = before[remaining - 1].y != last.y;
-      detached.x = rowLeft;
-      detached.width = rowRight - rowLeft;
-      detached.y = isLastRowFree ? last.y : last.y + pitch;
-      newFar = detached.y;
-    } else {
-      newFar = first.y;
-      for (size_t slot = detach.runStart; slot < detach.runEnd; slot++) {
-        if (slot != detach.slot) {
-          list.RectAt(slot).y += pitch;
-          newFar = std::max(newFar, list.RectAt(slot).y);
-        }
-      }
-      detached.x = rowLeft;
-      detached.width = rowRight - rowLeft;
-    }
-  } else {
-    if (isLast) {
-      detached.x = last.x + kPreviewGapDip;
-      newFar = detached.x + detached.width;
-    } else {
-      const int offset = first.width + kPreviewGapDip;
-      newFar = first.x + first.width;
-      for (size_t slot = detach.runStart; slot < detach.runEnd; slot++) {
-        if (slot != detach.slot) {
-          list.RectAt(slot).x += offset;
-          newFar =
-              std::max(newFar, list.RectAt(slot).x + list.RectAt(slot).width);
-        }
-      }
-    }
+  const bool isLastRowFree = run.before[run.before.size() - 2].y != last.y;
+  detached.y = isLastRowFree ? last.y : last.y + pitch;
+  return detached.y;
+}
+
+// A horizontal strip: the leaving tab takes a slot a gap away from the split's
+// others, after them if it was the split's last tab, else before them, which
+// pushes the others along. Returns the reach.
+inline int PlaceDetachedHorizontal(const BoundsList& list,
+                                   const DetachLayout& detach,
+                                   const RunRects& run, bool isLast,
+                                   Rect& detached) {
+  const Rect first = run.before.front();
+  if (isLast) {
+    detached.x = run.before.back().x + kPreviewGapDip;
+    return detached.x + detached.width;
   }
+  const int offset = first.width + kPreviewGapDip;
+  return ShiftRemaining(list, detach, offset, false, first.x + first.width);
+}
+
+// The tabs of the leaving tab's split other than it close up. The leaving tab
+// then stands on its own: after the others if it was the split's last tab, else
+// before them (the tab list sizes itself from the last tab's rect, so that tab
+// must stay the furthest on). Tabs after the split make room for what the split
+// now takes.
+inline void LayOutDetached(const BoundsList& list, const DetachLayout& detach,
+                           bool isVertical) {
+  const RunRects run = MeasureRun(list, detach, isVertical);
+  CloseUp(list, detach, run);
+  const bool isLast = detach.slot == detach.runEnd - 1;
+  Rect detached = run.before.front();
+  const int newReach =
+      isVertical ? PlaceDetachedVertical(list, detach, run, isLast, detached)
+                 : PlaceDetachedHorizontal(list, detach, run, isLast, detached);
   list.RectAt(detach.slot) = detached;
-  const int shift = newFar - oldFar;
+  const int shift = newReach - run.reach;
   for (size_t i = detach.runEnd; i < list.count; i++) {
-    if (isVertical) {
-      list.RectAt(i).y += shift;
-    } else {
-      list.RectAt(i).x += shift;
-    }
+    (isVertical ? list.RectAt(i).y : list.RectAt(i).x) += shift;
   }
 }
 
