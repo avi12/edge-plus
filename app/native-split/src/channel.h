@@ -20,20 +20,23 @@ inline constexpr wchar_t kMessageName[] = L"fixedge.addpane";
 // kCreatePanesBase) panes, from kCreateSplit up a 2-pane split, and below
 // kCreateSplit it grows the split by one pane.
 enum class Command : WPARAM {
-  kCreateSplit = 100,      // Edge's proven 2-pane AddToNewSplit
-  kCreatePanesBase = 200,  // + N: N panes, directly through AddToSplitImpl
-  kAddPaneBase = 300,      // + Direction: add a pane beside the active one
-  kSwap = 400,             // swap the active pane with its counterpart
-  kShowBarBase = 500,      // + i: show pane i's hover bar
-  kEnsureGrips = 700,      // give every pane of a grown split its drag grip
-  kTeardown = 701,         // undo everything UI-side before this DLL unloads
-  kMenuArrowBase = 710,    // + Direction: a ⋯ d-pad arrow was clicked
-  kTabDrop = 720,          // a tab Alt-dragged onto the split: add it
-  kLinkPane = 721,         // a pane's link opened a tab: make it a pane
-  kCloseOfferPane = 722,   // a grown split's tab offer was dismissed
-  kDumpTabRows = 900,      // log the split rows of the vertical tab list
-  kApplyTheme = 800,       // apply the theme for the current OS light/dark mode
-  kApplyConfig = 801,      // apply the config read from disk, on the UI thread
+  kCreateSplit = 100,        // Edge's proven 2-pane AddToNewSplit
+  kCreatePanesBase = 200,    // + N: N panes, directly through AddToSplitImpl
+  kAddPaneBase = 300,        // + Direction: add a pane beside the active one
+  kSwap = 400,               // swap the active pane with its counterpart
+  kShowBarBase = 500,        // + i: show pane i's hover bar
+  kEnsureGrips = 700,        // give every pane of a grown split its drag grip
+  kTeardown = 701,           // undo everything UI-side before this DLL unloads
+  kMenuArrowBase = 710,      // + Direction: a ⋯ d-pad arrow was clicked
+  kTabDrop = 720,            // a tab Alt-dragged onto the split: add it
+  kLinkPane = 721,           // a pane's link opened a tab: make it a pane
+  kCloseOfferPane = 722,     // a grown split's tab offer was dismissed
+  kDumpTabRows = 900,        // log the split rows of the vertical tab list
+  kEndPreviewDetach = 909,   // end the preview below
+  kPreviewDetachBase = 910,  // + i: the tab list shows pane i out of its split
+                             // (a script's stand-in for dragging it there)
+  kApplyTheme = 800,   // apply the theme for the current OS light/dark mode
+  kApplyConfig = 801,  // apply the config read from disk, on the UI thread
   kRedrawFollowedPages = 803,  // a theme swap changed a followed page's tone
   kReloadConfig = 802,  // re-read the config file and apply it (a script's
                         // stand-in for the config event, which wakes only
@@ -55,6 +58,9 @@ inline constexpr WPARAM kShowBarPaneLimit = 16;
 static_assert(CodeOf(Command::kAddPaneBase) + kDirectionCount <=
                   CodeOf(Command::kSwap),
               "the add-pane range overlaps the next code");
+static_assert(CodeOf(Command::kEndPreviewDetach) <
+                  CodeOf(Command::kPreviewDetachBase),
+              "the preview range starts after the code that ends it");
 static_assert(CodeOf(Command::kShowBarBase) + kShowBarPaneLimit <=
                   CodeOf(Command::kEnsureGrips),
               "the show-bar range overlaps the next code");

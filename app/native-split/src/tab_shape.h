@@ -20,7 +20,6 @@ namespace fixedge::tab_shape {
 
 inline constinit bool g_isSquared = false;
 
-
 // The vertical tab EdgeTabStyleViews::GetPath is outlining right now, or null.
 inline constinit void* g_outlinedTab = nullptr;
 
@@ -63,9 +62,9 @@ inline void __fastcall h_set_rect_xy(void* roundedRect, const void* skRect,
   }
   const tab_edge::Side leading = tab_edge::LeadingSide(edge::IsUiRightToLeft());
   const std::vector<Rect> siblings = edge::SplitSiblingBounds(g_outlinedTab);
-  const bool hasTrailingNeighbor = tab_edge::HasTrailingNeighbor(
-      edge::ViewBounds(g_outlinedTab), leading, siblings.data(),
-      siblings.size());
+  const bool hasTrailingNeighbor =
+      tab_edge::HasTrailingNeighbor(edge::ViewBounds(g_outlinedTab), leading,
+                                    siblings.data(), siblings.size());
   edge::SetRoundedRectRadii(
       roundedRect, skRect,
       tab_edge::RadiiFor(leading, radiusX, hasTrailingNeighbor));
@@ -85,7 +84,8 @@ inline void __fastcall h_draw_round_rect(void* canvas, const Rect* rect,
           edge::At(edge155::rva::SplitTabView_OnPaint_DrawRoundRect_return);
   o_draw_round_rect(canvas, rect, radius, flags);
   if (isSplitGroupFill) {
-    const tab_edge::Side leading = tab_edge::LeadingSide(edge::IsUiRightToLeft());
+    const tab_edge::Side leading =
+        tab_edge::LeadingSide(edge::IsUiRightToLeft());
     edge::CanvasDrawRect(canvas, tab_edge::LeadingStrip(*rect, leading, radius),
                          flags);
   }

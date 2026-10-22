@@ -10,6 +10,7 @@
 #pragma once
 #include <windows.h>
 #include <algorithm>
+#include <vector>
 #include "edge.h"
 #include "log.h"
 
@@ -156,6 +157,179 @@ inline void SpreadPiledSplits(void* helper, void* result) {
   }
 }
 
+// --- a pane being dragged out of its split, previewed in the tab list --------
+
+// The strip index of the tab of the pane being dragged out of its split, or -1.
+// While it is set, the tab list is laid out as if that tab had already left its
+// split: the split's other tabs close up and the tab stands on its own.
+inline constinit int g_previewTabIndex = -1;
+// The view whose children are the tab views of the last layout pass; relaid out
+// when the preview starts or ends. Only ever used within one drag.
+inline constinit void* g_listView = nullptr;
+// The gap between a split and a tab of its own in a horizontal strip.
+inline constexpr int kPreviewGapDip = 10;
+
+// Where a tab that leaves its split stands, and what moves for it.
+struct DetachLayout {
+  size_t slot = 0;      // the leaving tab's slot
+  size_t runStart = 0;  // its split's slots: [runStart, runEnd)
+  size_t runEnd = 0;
+};
+
+// The slot of the `tabIndex`th tab, or the slot count if there is none.
+inline size_t SlotOfTab(const BoundsList& list, int tabIndex) {
+  int tabsSeen = 0;
+  for (size_t index = 0; index < list.count; index++) {
+    if (list.TabAt(index)) {
+      if (tabsSeen == tabIndex) {
+        return index;
+      }
+      tabsSeen++;
+    }
+  }
+  return list.count;
+}
+
+// The tabs of the leaving tab's split other than it close up into the split's
+// first rects, in order. The leaving tab then stands on its own: after the
+// others if it was the split's last tab, else before them (the tab list sizes
+// itself from the last tab's rect, so that tab must stay the furthest on). In a
+// vertical list it takes a full row of its own, in a horizontal strip a slot
+// with a gap. Tabs after the split make room for what the split now takes.
+inline void LayOutDetached(const BoundsList& list, const DetachLayout& detach,
+                           bool isVertical) {
+  const size_t memberCount = detach.runEnd - detach.runStart;
+  std::vector<Rect> before(list.rects + detach.runStart,
+                           list.rects + detach.runEnd);
+  int rowLeft = before.front().x;
+  int rowRight = rowLeft;
+  int oldFar = isVertical ? before.front().y : rowLeft;
+  for (const Rect& rect : before) {
+    rowLeft = std::min(rowLeft, rect.x);
+    rowRight = std::max(rowRight, rect.x + rect.width);
+    oldFar = std::max(oldFar, isVertical ? rect.y : rect.x + rect.width);
+  }
+  const bool isLast = detach.slot == detach.runEnd - 1;
+  const Rect first = before.front();
+  const Rect last = before.back();
+  const bool hasFollowing = detach.runEnd < list.count;
+  const int rowGap = hasFollowing
+                         ? list.RectAt(detach.runEnd).y - (last.y + last.height)
+                         : kDefaultRowGap;
+  const int pitch = last.height + std::max(rowGap, 0);
+  // Close up: the others take the first rects, in order.
+  size_t next = 0;
+  for (size_t slot = detach.runStart; slot < detach.runEnd; slot++) {
+    if (slot != detach.slot) {
+      list.RectAt(slot) = before[next++];
+    }
+  }
+  const size_t remaining = memberCount - 1;
+  Rect detached = first;
+  int newFar = oldFar;
+  if (isVertical) {
+    if (isLast) {
+      const bool isLastRowFree = before[remaining - 1].y != last.y;
+      detached.x = rowLeft;
+      detached.width = rowRight - rowLeft;
+      detached.y = isLastRowFree ? last.y : last.y + pitch;
+      newFar = detached.y;
+    } else {
+      newFar = first.y;
+      for (size_t slot = detach.runStart; slot < detach.runEnd; slot++) {
+        if (slot != detach.slot) {
+          list.RectAt(slot).y += pitch;
+          newFar = std::max(newFar, list.RectAt(slot).y);
+        }
+      }
+      detached.x = rowLeft;
+      detached.width = rowRight - rowLeft;
+    }
+  } else {
+    if (isLast) {
+      detached.x = last.x + kPreviewGapDip;
+      newFar = detached.x + detached.width;
+    } else {
+      const int offset = first.width + kPreviewGapDip;
+      newFar = first.x + first.width;
+      for (size_t slot = detach.runStart; slot < detach.runEnd; slot++) {
+        if (slot != detach.slot) {
+          list.RectAt(slot).x += offset;
+          newFar =
+              std::max(newFar, list.RectAt(slot).x + list.RectAt(slot).width);
+        }
+      }
+    }
+  }
+  list.RectAt(detach.slot) = detached;
+  const int shift = newFar - oldFar;
+  for (size_t i = detach.runEnd; i < list.count; i++) {
+    if (isVertical) {
+      list.RectAt(i).y += shift;
+    } else {
+      list.RectAt(i).x += shift;
+    }
+  }
+}
+
+// Apply the preview of a pane leaving its split, if one is shown and its tab is
+// in a split of more than a pair (a pair is Edge's to take apart).
+inline void ApplyDetachPreview(void* helper, void* result) {
+  const BoundsList list{helper, edge::IdealBoundsRects(result),
+                        edge::IdealBoundsCount(result)};
+  const bool hasRectPerSlot =
+      list.rects && list.count == edge::TabLayoutSlotCount(helper);
+  if (!hasRectPerSlot) {
+    return;
+  }
+  for (size_t i = 0; i < list.count && !g_listView; i++) {
+    void* firstTab = list.TabAt(i);
+    g_listView = firstTab ? edge::ViewParent(firstTab) : nullptr;
+  }
+  if (g_previewTabIndex < 0) {
+    return;
+  }
+  DetachLayout detach;
+  detach.slot = SlotOfTab(list, g_previewTabIndex);
+  if (detach.slot >= list.count) {
+    return;
+  }
+  void* tab = list.TabAt(detach.slot);
+  detach.runStart = detach.slot;
+  while (detach.runStart > 0 && list.TabAt(detach.runStart - 1) &&
+         edge::IsTabViewInSameSplit(tab, list.TabAt(detach.runStart - 1))) {
+    detach.runStart--;
+  }
+  const size_t length = SplitRunLength(list, detach.runStart);
+  detach.runEnd = detach.runStart + length;
+  const bool isGrownSplit = length > static_cast<size_t>(kPairedMembers);
+  if (!isGrownSplit) {
+    return;
+  }
+  const bool isVertical =
+      edge::VtableRva(tab) == edge155::rva::VerticalTab_vftable;
+  LayOutDetached(list, detach, isVertical);
+}
+
+// Start or end the preview for the tab at strip index `tabIndex` (-1 to end),
+// and lay the tab list out again to show it, unless `isRelayoutWanted` is false
+// (the real change is about to do it).
+inline void SetDetachPreview(int tabIndex, bool isRelayoutWanted = true) {
+  if (tabIndex == g_previewTabIndex) {
+    return;
+  }
+  g_previewTabIndex = tabIndex;
+  Log("[tabrows] detach preview of tab %d (list view %p, relayout %d)",
+      tabIndex, g_listView, isRelayoutWanted ? 1 : 0);
+  if (g_listView && isRelayoutWanted) {
+    edge::InvalidateLayout(g_listView);
+    edge::LayoutImmediately(g_listView);
+  }
+  if (tabIndex < 0) {
+    g_listView = nullptr;
+  }
+}
+
 // TabStripLayoutHelper::CalculateIdealBounds(this, out, optional<int> width):
 // fills `out` with every slot's ideal bounds and returns it. Fix them up before
 // the helper stores them or sizes the container from them.
@@ -165,6 +339,7 @@ inline void* __fastcall h_calculate_ideal_bounds(void* helper, void* out,
                                                  uint64_t availableWidth) {
   void* result = o_calculate_ideal_bounds(helper, out, availableWidth);
   SpreadPiledSplits(helper, out);
+  ApplyDetachPreview(helper, out);
   return result;
 }
 

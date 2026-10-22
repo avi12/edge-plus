@@ -548,6 +548,9 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
     case Command::kDumpTabRows:
       tabrows::Dump(edge::McvForWindow(hwnd));
       return;
+    case Command::kEndPreviewDetach:
+      tabrows::SetDetachPreview(-1);
+      return;
     case Command::kTeardown:
       Teardown(hwnd);
       return;
@@ -565,6 +568,14 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
       return;
     default:
       break;
+  }
+  const bool isPreviewDetach = IsInRange(wparam, Command::kPreviewDetachBase,
+                                         channel::kShowBarPaneLimit);
+  if (isPreviewDetach) {
+    drag::ShowDetachInTabList(edge::McvForWindow(hwnd),
+                              OperandOf(wparam, Command::kPreviewDetachBase),
+                              dock::Zone::kDetach);
+    return;
   }
   const bool isShowBar =
       IsInRange(wparam, Command::kShowBarBase, channel::kShowBarPaneLimit);

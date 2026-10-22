@@ -16,6 +16,7 @@
 #include "overlay.h"
 #include "repaint.h"
 #include "split_ops.h"
+#include "tabrows.h"
 #include "state.h"
 
 namespace fixedge::drag {
@@ -82,11 +83,27 @@ inline constexpr overlay::Style StyleOf(dock::Zone zone) noexcept {
 
 // --- the session -----------------------------------------------------------
 
+// While the pane is held outside its split (releasing there would take it out as
+// a tab), the tab list shows it as a tab of its own, and the rest of the split
+// closed up; back over the split, the list is as it was.
+inline void ShowDetachInTabList(void* mcv, int pane, dock::Zone zone) {
+  const bool isGrownSplit =
+      edge::McvActiveSplitPanes(mcv) > tabrows::kPairedMembers;
+  int tabIndex = -1;
+  if (zone == dock::Zone::kDetach && isGrownSplit) {
+    void* contents =
+        edge::ContainerWebContents(edge::McvContainerAt(mcv, pane));
+    tabIndex = edge::IndexOfWebContents(edge::McvTabStripModel(mcv), contents);
+  }
+  tabrows::SetDetachPreview(tabIndex);
+}
+
 // Escape / lost capture / teardown: end without committing.
 inline void Cancel() {
   const bool wasDragging = g_session.isDragging;
   g_session = Session{};
   overlay::Hide();
+  tabrows::SetDetachPreview(-1);
   if (wasDragging) {
     Log("[drag] cancelled");
   }
@@ -128,6 +145,7 @@ inline void Move(Point rootLocation) {
   g_session.plan = dock::Resolve(tree, geometry::SplitArea(g_session.mcv),
                                  RootToSplit(g_session.mcv, rootLocation),
                                  g_session.pane, g_session.plan);
+  ShowDetachInTabList(g_session.mcv, g_session.pane, g_session.plan.zone);
   const bool hasDropTarget = g_session.plan.zone != dock::Zone::kNone;
   if (hasDropTarget) {
     overlay::Show(channel::g_window,
@@ -151,11 +169,13 @@ inline void Release() {
   const int pane = g_session.pane;
   g_session = Session{};
   overlay::Hide();
+  const bool isDetaching = isDropping && plan.zone == dock::Zone::kDetach;
+  // A real detach lays the list out itself; any other end puts it back now.
+  tabrows::SetDetachPreview(-1, !isDetaching);
   if (!isDropping) {
     Log("[drag] released pane %d with no drop target", pane);
     return;
   }
-  const bool isDetaching = plan.zone == dock::Zone::kDetach;
   if (isDetaching) {
     const bool hasDetached = split_ops::DetachPane(mcv, pane);
     if (hasDetached) {
