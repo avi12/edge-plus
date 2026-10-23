@@ -16,8 +16,8 @@ internal static class SettingsTests {
     ReadingModeIsOnlyItsSwitch();
   }
 
-  // The reading themes are picked in reading mode itself now; a file that
-  // still carries the old "readingMode" object loads, and it is not written.
+  // The reading themes are now picked in reading mode itself, so the old
+  // "readingMode" object is read past and never written.
   private static void ReadingModeIsOnlyItsSwitch() {
     Expect.That(!new Settings().Features.ReadingTheme, "reading mode is off by default");
     Settings loaded = Settings.Parse(
@@ -30,8 +30,6 @@ internal static class SettingsTests {
                 "the old readingMode object is not written");
   }
 
-  // The tab shape defaults on: it was part of the theming until it got a
-  // switch of its own.
   private static void DefaultsAreSplitOnTheRestOff() {
     var settings = new Settings();
     Expect.That(settings.Features.NativeSplit, "the split defaults on");
@@ -51,8 +49,7 @@ internal static class SettingsTests {
     Expect.Equal("", settings.Theming.Light, "a missing theming section is empty");
   }
 
-  // A file as installs already have it (the earlier Tauri panel wrote the
-  // same shape), so existing settings carry over.
+  // The shape the earlier Tauri panel wrote.
   private static void AnExistingFileLoads() {
     const string text = """
         {

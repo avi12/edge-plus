@@ -2,9 +2,8 @@ using System;
 
 namespace EdgePlus;
 
-// The test runner: every suite in order, a line per suite, a non-zero exit on
-// the first failed check. Shaped like app\native-split\test's Check(): a failed
-// check ends its suite, because the checks after it read results it vouched for.
+// A failed check ends its suite (as in app\native-split\test), because the
+// checks after it read results it vouched for.
 internal static class Program {
   private static readonly (string Name, Action Run)[] s_suites = [
     ("switches", SwitchesTests.Run),

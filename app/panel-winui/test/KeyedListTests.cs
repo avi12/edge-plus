@@ -4,8 +4,7 @@ using System.Linq;
 namespace EdgePlus;
 
 internal static class KeyedListTests {
-  // An item that remembers when it was made, so a test can tell a kept item
-  // from a recreated one.
+  // Made tells a kept item from a recreated one.
   private sealed record Item(string Key, int Made);
 
   public static void Run() {
