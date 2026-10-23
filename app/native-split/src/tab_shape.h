@@ -85,7 +85,8 @@ enum class Corner {
   kLeftFoot,
   kTopLeft,
   kTopRight,
-  kRightFoot
+  kRightFoot,
+  kBottomRight
 };
 
 inline Corner CornerOfCaller(const void* caller) {
@@ -97,7 +98,9 @@ inline Corner CornerOfCaller(const void* caller) {
       {edge155::rva::EdgeTabStyleViews_GetPath_topRightArc_return,
        Corner::kTopRight},
       {edge155::rva::EdgeTabStyleViews_GetPath_rightFoot_return,
-       Corner::kRightFoot}};
+       Corner::kRightFoot},
+      {edge155::rva::EdgeTabStyleViews_GetPath_bottomRightArc_return,
+       Corner::kBottomRight}};
   for (const auto& [rva, corner] : corners) {
     if (caller == edge::At(rva)) {
       return corner;
@@ -156,6 +159,9 @@ inline void* __fastcall h_arc_to(void* path, uint64_t radii, float rotation,
       break;
     case Corner::kRightFoot:
       target.x -= radius.x;
+      break;
+    case Corner::kBottomRight:
+      target.x += radius.x;
       break;
     case Corner::kNone:
       break;

@@ -540,6 +540,9 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
     case Command::kDumpTabRows:
       tabrows::Dump(edge::McvForWindow(hwnd));
       return;
+    case Command::kForceTabShape:
+      ApplyTabShape(true);
+      return;
     case Command::kEndPreviewDetach:
       tabrows::SetDetachPreview(-1);
       return;

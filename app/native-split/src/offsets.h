@@ -247,6 +247,11 @@ inline constexpr uintptr_t EdgeTabStyleViews_GetPath_topRightArc_return =
     0x27d3cc6;
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_rightFoot_return =
     0x27d3d44;
+// A vertical tab's outline (pathTypes 0 and 1) is built by the same four arcs,
+// except that its fourth, the bottom-right corner, is a call at its own return
+// address: it ends one radius in from the right side, at the tab's bottom.
+inline constexpr uintptr_t EdgeTabStyleViews_GetPath_bottomRightArc_return =
+    0x4715cb0;
 // A vertical tab's outline: GetPath builds an SkRRect (setRectXY, above) and adds
 // it to the path with SkPath::addRRect(this, const SkRRect&, direction,
 // startIndex), whose call returns to EdgeTabStyleViews_GetPath_addRRect_return.

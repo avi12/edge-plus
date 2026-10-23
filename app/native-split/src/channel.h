@@ -32,6 +32,8 @@ enum class Command : WPARAM {
   kLinkPane = 721,           // a pane's link opened a tab: make it a pane
   kCloseOfferPane = 722,     // a grown split's tab offer was dismissed
   kDumpTabRows = 900,        // log the split rows of the vertical tab list
+  kForceTabShape = 908,      // cut the tab corners without theming (a script's
+                             // stand-in for the theme and its switch)
   kEndPreviewDetach = 909,   // end the preview below
   kPreviewDetachBase = 910,  // + i: the tab list shows pane i out of its split
                              // (a script's stand-in for dragging it there)
