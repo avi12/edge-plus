@@ -19,10 +19,10 @@ internal static class ConfigWireTests {
         IsEnhancedFindActive: true,
         IsWebUiFollowsThemeActive: true,
         IsLivePreviewActive: true,
-        IsTabSpineActive: true,
+        IsTabShapeActive: true,
         IsReadingThemeActive: true));
-    Expect.Equal(164, ConfigWire.TabSpineActiveOffset, "the tab spine at 164");
-    Expect.Equal(1u, U32At(wire, 164), "tab spine on");
+    Expect.Equal(164, ConfigWire.TabShapeActiveOffset, "the tab shape at 164");
+    Expect.Equal(1u, U32At(wire, 164), "tab shape on");
     Expect.Equal(168, ConfigWire.ReadingThemeActiveOffset, "the reading theme switch at 168");
     Expect.Equal(1u, U32At(wire, 168), "reading theme on");
     byte[] defaults = ConfigWire.Encode(DllConfig.From(new Settings()));

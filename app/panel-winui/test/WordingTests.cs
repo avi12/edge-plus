@@ -22,7 +22,7 @@ internal static class WordingTests {
       NativeSplit = true,
       Theming = true,
       LivePreview = false,
-      TabSpine = false,
+      TabShape = false,
     };
     PanelState updated = State(choice, s_updated);
     Expect.Equal("Edge updated to 156.0.1.0. Split into any grid is paused until Edge+ supports " +

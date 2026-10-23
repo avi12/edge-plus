@@ -23,7 +23,7 @@ internal sealed record BuildChange(
 // What each feature depends on:
 //
 // * The split, the theming, the link handlers, the find bar, the WebUI theme
-//   colours, the live preview, the tab spine and the reading theme all run
+//   colours, the live preview, the tab shape and the reading theme all run
 //   inside the injected DLL and call into
 //   msedge.dll by RVA, so a different msedge.dll breaks every one of them.
 // * The developer-mode prompt only edits a key in each profile's Preferences
@@ -37,7 +37,7 @@ internal static class EdgeBuild {
 
   public static bool DependsOnPinnedBuild(Feature feature) => feature switch {
     Feature.NativeSplit or Feature.Theming or Feature.ProtocolHandlers or Feature.EnhancedFind
-        or Feature.WebUiFollowsTheme or Feature.LivePreview or Feature.TabSpine
+        or Feature.WebUiFollowsTheme or Feature.LivePreview or Feature.TabShape
         or Feature.ReadingTheme => true,
     Feature.QuietDevMode => false,
     _ => throw new ArgumentOutOfRangeException(nameof(feature)),

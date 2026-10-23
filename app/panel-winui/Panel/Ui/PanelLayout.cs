@@ -32,8 +32,8 @@ internal static class PanelLayout {
     ]),
     (Section.LookAndThemes, [
       new(Feature.Theming),
-      // The spine is drawn as part of the theme (spine.h), so it is under it.
-      new(Feature.TabSpine, Needs: Feature.Theming),
+      // The cut corners are cut from the theme's tab fill (tab_shape.h), so it is under it.
+      new(Feature.TabShape, Needs: Feature.Theming),
       new(Feature.WebUiFollowsTheme),
       new(Feature.ReadingTheme),
     ]),

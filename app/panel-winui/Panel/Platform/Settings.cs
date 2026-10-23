@@ -22,9 +22,9 @@ internal enum Feature {
   // A hovered tab shows a live preview instead of a frozen snapshot
   // (live_preview.h).
   LivePreview,
-  // The selected vertical tab gets a square leading edge and the neon spine,
-  // while theming is on (spine.h).
-  TabSpine,
+  // Tabs, vertical and horizontal, get a square leading edge and a cut trailing
+  // corner, while theming is on (tab_shape.h).
+  TabShape,
   // Reading mode's page theme follows Windows light and dark (reading_mode.h);
   // the two themes are picked in reading mode itself and kept by the DLL.
   ReadingTheme,
@@ -46,7 +46,7 @@ internal enum ColorMode {
   Dark,
 }
 
-// The feature switches, with their defaults (the split and the tab spine on,
+// The feature switches, with their defaults (the split and the tab shape on,
 // the rest off). A settings file written when a removed switch existed still
 // loads: an unknown field is ignored.
 internal sealed class Features {
@@ -70,7 +70,9 @@ internal sealed class Features {
     get; set;
   }
   // On by default: it was part of the theming until it got a switch of its own.
-  public bool TabSpine { get; set; } = true;
+  // Saved as "tabSpine", the name it has always had, so a saved choice carries over.
+  [JsonPropertyName("tabSpine")]
+  public bool TabShape { get; set; } = true;
   public bool ReadingTheme {
     get; set;
   }
@@ -83,7 +85,7 @@ internal sealed class Features {
     Feature.EnhancedFind => EnhancedFind,
     Feature.WebUiFollowsTheme => WebUiFollowsTheme,
     Feature.LivePreview => LivePreview,
-    Feature.TabSpine => TabSpine,
+    Feature.TabShape => TabShape,
     Feature.ReadingTheme => ReadingTheme,
     _ => throw new ArgumentOutOfRangeException(nameof(feature)),
   };
@@ -111,8 +113,8 @@ internal sealed class Features {
       case Feature.LivePreview:
         LivePreview = isOn;
         break;
-      case Feature.TabSpine:
-        TabSpine = isOn;
+      case Feature.TabShape:
+        TabShape = isOn;
         break;
       case Feature.ReadingTheme:
         ReadingTheme = isOn;
@@ -127,7 +129,7 @@ internal sealed class Features {
   [JsonIgnore]
   public bool NeedsDll =>
       NativeSplit || Theming || ProtocolHandlers || EnhancedFind || WebUiFollowsTheme
-      || LivePreview || TabSpine || ReadingTheme;
+      || LivePreview || TabShape || ReadingTheme;
 }
 
 // One theme the user added: an installed Edge theme extension by id.

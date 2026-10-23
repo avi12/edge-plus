@@ -15,7 +15,7 @@ internal readonly record struct DllConfig(
     bool IsEnhancedFindActive,
     bool IsWebUiFollowsThemeActive,
     bool IsLivePreviewActive,
-    bool IsTabSpineActive,
+    bool IsTabShapeActive,
     bool IsReadingThemeActive) {
   public static DllConfig From(Settings settings) => From(settings, settings.Features);
 
@@ -30,7 +30,7 @@ internal readonly record struct DllConfig(
       IsEnhancedFindActive: features.EnhancedFind,
       IsWebUiFollowsThemeActive: features.WebUiFollowsTheme,
       IsLivePreviewActive: features.LivePreview,
-      IsTabSpineActive: features.TabSpine,
+      IsTabShapeActive: features.TabShape,
       IsReadingThemeActive: features.ReadingTheme);
 }
 
@@ -38,7 +38,7 @@ internal readonly record struct DllConfig(
 // app/native-split/src/config.h field for field: five u32s, the two ids, then a
 // reserved u32 (once the chosen assistant; written as zero, never read), the
 // find switch, the WebUI-follows-theme switch, the live-preview switch, the
-// tab-spine switch, and the reading-theme switch (its light and dark themes are
+// tab-shape switch, and the reading-theme switch (its light and dark themes are
 // picked in reading mode itself and kept by the DLL). Every u32 is
 // little-endian, as the DLL reads it on x64.
 internal static class ConfigWire {
@@ -55,8 +55,8 @@ internal static class ConfigWire {
   public const int EnhancedFindActiveOffset = ReservedOffset + FieldBytes;
   public const int WebUiFollowsThemeActiveOffset = EnhancedFindActiveOffset + FieldBytes;
   public const int LivePreviewActiveOffset = WebUiFollowsThemeActiveOffset + FieldBytes;
-  public const int TabSpineActiveOffset = LivePreviewActiveOffset + FieldBytes;
-  public const int ReadingThemeActiveOffset = TabSpineActiveOffset + FieldBytes;
+  public const int TabShapeActiveOffset = LivePreviewActiveOffset + FieldBytes;
+  public const int ReadingThemeActiveOffset = TabShapeActiveOffset + FieldBytes;
   public const int Size = ReadingThemeActiveOffset + FieldBytes;
 
   // The size config.h static_asserts, from its own counts.
@@ -73,7 +73,7 @@ internal static class ConfigWire {
     WriteFlag(wire, EnhancedFindActiveOffset, config.IsEnhancedFindActive);
     WriteFlag(wire, WebUiFollowsThemeActiveOffset, config.IsWebUiFollowsThemeActive);
     WriteFlag(wire, LivePreviewActiveOffset, config.IsLivePreviewActive);
-    WriteFlag(wire, TabSpineActiveOffset, config.IsTabSpineActive);
+    WriteFlag(wire, TabShapeActiveOffset, config.IsTabShapeActive);
     WriteFlag(wire, ReadingThemeActiveOffset, config.IsReadingThemeActive);
     return wire;
   }

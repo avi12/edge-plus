@@ -10,7 +10,7 @@ internal static class EdgeBuildTests {
 
   private static readonly Feature[] s_dllFeatures = [
     Feature.NativeSplit, Feature.Theming, Feature.ProtocolHandlers, Feature.EnhancedFind,
-    Feature.WebUiFollowsTheme, Feature.LivePreview, Feature.TabSpine, Feature.ReadingTheme,
+    Feature.WebUiFollowsTheme, Feature.LivePreview, Feature.TabShape, Feature.ReadingTheme,
   ];
 
   public static void Run() {
@@ -92,7 +92,7 @@ internal static class EdgeBuildTests {
       NativeSplit = false,
       Theming = true,
       QuietDevMode = true,
-      TabSpine = false,
+      TabShape = false,
     };
     IReadOnlyList<Feature> paused =
         EdgeSupport.Paused(onlyTheming, Version("156.0.1.0"), s_pinned);

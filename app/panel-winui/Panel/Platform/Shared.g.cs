@@ -11,13 +11,13 @@ internal static class Shared {
   // app/native-split/src/config.h:19
   public const int WireIdCapacity = 64;
 
-  // app/native-split/src/config.h:51
+  // app/native-split/src/config.h:50
   public const int WireFieldCount = 11;
 
-  // app/native-split/src/config.h:53
+  // app/native-split/src/config.h:52
   public const int WireIdCount = 2;
 
-  // app/native-split/src/config.h:76
+  // app/native-split/src/config.h:75
   public const string ConfigFileRelativePath = "\\FixEdge\\fixedge-config.bin";
 
   // app/native-split/src/dllmain.cpp:28
