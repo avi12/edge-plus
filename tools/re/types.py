@@ -32,6 +32,7 @@ TI_GET_OFFSET    = 6
 TI_GET_CHILDRENCOUNT = 13
 TI_FINDCHILDREN  = 7
 TI_GET_SYMTAG    = 10
+SYMTAG_POINTER   = 14
 
 dbg = C.WinDLL("dbghelp.dll")
 k32 = C.WinDLL("kernel32.dll")
@@ -75,14 +76,12 @@ def get_name(tidx):
     return s
 
 def typename(tidx):
-    # Walk to a printable type name; fall back to tag/length.
     nm = get_name(tidx)
     if nm:
         return nm
     tag = get_u32(tidx, TI_GET_SYMTAG)
     ln = get_u64(tidx, TI_GET_LENGTH)
-    # pointer (tag 14) -> "<pointee>*"
-    if tag == 14:
+    if tag == SYMTAG_POINTER:
         sub = get_u32(tidx, TI_GET_TYPEID)
         if sub is not None:
             return (typename(sub) or "?") + "*"
