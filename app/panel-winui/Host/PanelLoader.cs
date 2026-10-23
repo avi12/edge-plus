@@ -21,12 +21,21 @@ namespace EdgePlus;
 internal sealed class PanelLoader {
   private const string ResourceName = "panel/edgeplus-panel.dll";
   private const string EntryTypeName = "EdgePlus.PanelEntry";
-  private const string StartMethod = "StartBackground";
-  private const string MountMethod = "Mount";
-  private const string ResidentMethod = "IsResident";
-  private const string WaiterMethod = "RunDevModeWaiter";
-  private const string PanelBuildOutputKey = "PanelBuildOutput";
-  private const string RepositoryRootKey = "RepositoryRoot";
+
+  // Each name is the PanelEntry method it calls.
+  private enum EntryMethodName {
+    StartBackground,
+    Mount,
+    IsResident,
+    RunDevModeWaiter,
+  }
+
+  // Each name is an AssemblyMetadata key stamped by EdgePlus.csproj.
+  private enum BuildMetadataKey {
+    PanelBuildOutput,
+    RepositoryRoot,
+  }
+
   // A build writes the output in several steps; a swap waits this long after
   // the last change before reading it.
   private static readonly TimeSpan s_settleDelay = TimeSpan.FromMilliseconds(800);
@@ -60,8 +69,8 @@ internal sealed class PanelLoader {
   // Null outside a dev run.
   public static string? DevBuildOutput {
     get {
-      string? output = Metadata(PanelBuildOutputKey);
-      return PanelSource.IsDevRun(AppContext.BaseDirectory, Metadata(RepositoryRootKey), output)
+      string? output = Metadata(BuildMetadataKey.PanelBuildOutput);
+      return PanelSource.IsDevRun(AppContext.BaseDirectory, Metadata(BuildMetadataKey.RepositoryRoot), output)
           ? output
           : null;
     }
@@ -98,7 +107,7 @@ internal sealed class PanelLoader {
   public bool IsResident() {
     try {
       return _context is not null
-             && _context.EntryMethod(ResidentMethod).Invoke(null, null) is true;
+             && _context.EntryMethod(EntryMethodName.IsResident).Invoke(null, null) is true;
     } catch (TargetInvocationException error) {
       Log($"resident check failed: {error.InnerException ?? error}");
       return false;
@@ -108,7 +117,7 @@ internal sealed class PanelLoader {
   // Never unloaded.
   public static void RunDevModeWaiter() {
     PanelContext context = LoadCopy(ReadCurrentBuild());
-    context.EntryMethod(WaiterMethod).Invoke(null, null);
+    context.EntryMethod(EntryMethodName.RunDevModeWaiter).Invoke(null, null);
   }
 
   private void Watch(string output) {
@@ -155,7 +164,7 @@ internal sealed class PanelLoader {
       TryRun(() => {
         _context = LoadCopy(assembly);
         _loadedBytes = assembly;
-        _service = (IDisposable)_context.EntryMethod(StartMethod).Invoke(null, null)!;
+        _service = (IDisposable)_context.EntryMethod(EntryMethodName.StartBackground).Invoke(null, null)!;
       });
 
   private bool TryMount() {
@@ -163,7 +172,7 @@ internal sealed class PanelLoader {
       return true;
     }
     WindowView view = _view;
-    return TryRun(() => _mounted = (IDisposable)_context.EntryMethod(MountMethod).Invoke(
+    return TryRun(() => _mounted = (IDisposable)_context.EntryMethod(EntryMethodName.Mount).Invoke(
         null, [view.Window, view.Slot, view.SettingChanged, view.BroughtBack])!);
   }
 
@@ -297,10 +306,11 @@ internal sealed class PanelLoader {
     }
   }
 
-  private static string? Metadata(string key) {
+  private static string? Metadata(BuildMetadataKey key) {
+    string keyName = key.ToString();
     foreach (AssemblyMetadataAttribute attribute in
              typeof(PanelLoader).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()) {
-      if (attribute.Key == key) {
+      if (attribute.Key == keyName) {
         return attribute.Value;
       }
     }
@@ -309,7 +319,8 @@ internal sealed class PanelLoader {
 
   // Load returns null, so every other reference resolves in the default context.
   private sealed class PanelContext() : AssemblyLoadContext("Edge+ panel", isCollectible: true) {
-    public MethodInfo EntryMethod(string name) {
+    public MethodInfo EntryMethod(EntryMethodName entryMethod) {
+      string name = entryMethod.ToString();
       foreach (Assembly assembly in Assemblies) {
         Type? entry = assembly.GetType(EntryTypeName);
         if (entry?.GetMethod(name) is MethodInfo method) {
