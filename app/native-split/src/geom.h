@@ -1,13 +1,12 @@
-// Geometry value types — one concern: plain rectangles, points and sizes,
-// matching gfx::Rect's, gfx::Point's and gfx::Size's in-memory layouts so a
-// pointer to one can be handed straight to Edge.
+// geom.h — geometry value types laid out as gfx::Rect, gfx::Point and gfx::Size
+// are, so a pointer to one can be handed straight to Edge.
 #pragma once
 #include <bit>
 #include <cstdint>
 
 namespace fixedge {
 
-// gfx::Rect is four little-endian int32s {x, y, w, h} (see docs/re/split-view-abi.md).
+// docs/re/split-view-abi.md.
 struct Rect {
   int32_t x = 0;
   int32_t y = 0;
@@ -16,14 +15,13 @@ struct Rect {
   bool operator==(const Rect& other) const = default;
 };
 
-// gfx::Point is two int32s {x, y}; a Point* can be handed to Edge as a gfx::Point*.
 struct Point {
   int32_t x = 0;
   int32_t y = 0;
 };
 
-// SkPoint, and SkVector (a corner's radii): two floats {x, y}. Skia takes one by
-// value in a single register, so a call passes it packed (PackPoint).
+// SkPoint / SkVector. Skia takes one by value in a single register, so a call
+// passes it packed.
 struct PointF {
   float x = 0;
   float y = 0;
@@ -38,7 +36,6 @@ struct PointF {
   return std::bit_cast<PointF>(packed);
 }
 
-// gfx::Size is two int32s {width, height}.
 struct Size {
   int32_t width = 0;
   int32_t height = 0;
@@ -50,7 +47,6 @@ struct Size {
          point.y >= rect.y && point.y < rect.y + rect.height;
 }
 
-// A rect with no area, which nothing can be inside.
 [[nodiscard]] inline constexpr bool Empty(const Rect& rect) noexcept {
   return rect.width <= 0 || rect.height <= 0;
 }

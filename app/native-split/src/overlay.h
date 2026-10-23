@@ -1,7 +1,6 @@
-// overlay.h — the drop preview. One concern: show one translucent rect over the
-// split (screen pixels) where the dragged pane will land, easing between targets.
-// A click-through layered Win32 popup owned by the browser window, so it never
-// enters Edge's view tree or layout. UI thread only.
+// overlay.h — the drop preview: a translucent rect where the dragged pane will
+// land. A click-through layered Win32 popup owned by the browser window, so it
+// never enters Edge's view tree or layout. UI thread only.
 #pragma once
 #include <windows.h>
 #include <algorithm>
@@ -13,21 +12,18 @@
 
 namespace fixedge::overlay {
 
-// What the rect means: beside a pane, the whole split's edge, or a swap.
 enum class Style : uint8_t {
-  kPane,
-  kRoot,
+  kPane,  // beside a pane
+  kRoot,  // the whole split's edge
   kSwap
 };
 
 inline constexpr wchar_t kWindowClass[] = L"FixEdgeDropPreview";
 inline constexpr UINT_PTR kTimerId = 1;
-// How long a move eases from one target to the next.
 inline constexpr unsigned kMoveMs = 90;
 inline constexpr UINT kFrameMs = 15;
 
-// The look, in DIPs and alphas (0..1): the whole-split edge is bolder, a swap
-// is fainter with a dashed edge.
+// A swap is drawn with a dashed edge.
 inline constexpr float kPaneFillAlpha = 0.22f;
 inline constexpr float kRootFillAlpha = 0.30f;
 inline constexpr float kSwapFillAlpha = 0.12f;
@@ -45,10 +41,10 @@ inline constinit Style g_style = Style::kPane;
 inline constinit float g_scale = 1.f;
 inline constinit Rect g_from;
 inline constinit Rect g_to;
-inline constinit Rect g_current;  // the rect painted now
+inline constinit Rect g_current;
 inline constinit ULONGLONG g_moveStart = 0;
 
-// Premultiplied BGRA pixel of `color` at `alpha` (0..1).
+// Premultiplied BGRA.
 inline uint32_t Pixel(COLORREF color, float alpha) {
   const auto alphaByte =
       static_cast<uint32_t>(std::lround(alpha * theme_tone::kChannelMax));
@@ -72,13 +68,11 @@ inline constexpr float FillAlpha(Style style) noexcept {
   return kPaneFillAlpha;
 }
 
-// How far the pixel at (`column`, `row`) lies inside the edge of a `width` x
-// `height` rect whose corners are rounded to `radius` (negative = outside a
-// rounded corner).
+// Negative outside a rounded corner.
 inline int DistanceInside(int column, int row, int width, int height,
                           int radius) {
-  // How far the pixel lies past the nearest corner arc's centre, toward the
-  // side (positive on both axes = within a corner's square).
+  // Past the nearest corner arc's centre (positive on both axes = within a
+  // corner's square).
   const int cornerX = std::max(radius - column, column - (width - 1 - radius));
   const int cornerY = std::max(radius - row, row - (height - 1 - radius));
   const bool isInCorner = cornerX > 0 && cornerY > 0;
@@ -91,8 +85,6 @@ inline int DistanceInside(int column, int row, int width, int height,
                   std::min(row, height - 1 - row));
 }
 
-// Render `rect` (screen px) into the layered window: a rounded, tinted fill
-// with an outline in the system accent colour, styled by g_style.
 inline void Paint(const Rect& rect) {
   const bool canPaint = g_window && rect.width > 0 && rect.height > 0;
   if (!canPaint) {
@@ -113,8 +105,8 @@ inline void Paint(const Rect& rect) {
   bitmapInfo.bmiHeader.biPlanes = 1;
   bitmapInfo.bmiHeader.biBitCount = kBitsPerPixel;
   void* bits = nullptr;
-  // Declared in the order they are made, so they are given back in reverse:
-  // the bitmap deselected, then deleted, then the two contexts.
+  // Declaration order: given back in reverse, the bitmap deselected before it is
+  // deleted.
   const handles::WindowDc screenContext{nullptr};
   const handles::UniqueMemoryDc memoryContext{
       CreateCompatibleDC(screenContext.Get())};
@@ -186,8 +178,7 @@ inline HINSTANCE ThisModule() {
   return thisModule;
 }
 
-// Show the preview at `rect` (screen px) over `owner`; moves ease from the
-// current rect.
+// `rect` in screen px.
 inline void Show(HWND owner, const Rect& rect, Style style) {
   if (!g_window) {
     WNDCLASSEXW windowClass{sizeof(windowClass)};
@@ -207,7 +198,7 @@ inline void Show(HWND owner, const Rect& rect, Style style) {
       static_cast<float>(GetDpiForWindow(owner)) / USER_DEFAULT_SCREEN_DPI;
   const bool isRestyled = style != g_style;
   g_style = style;
-  if (!g_isShown) {  // first appearance: no slide-in
+  if (!g_isShown) {
     g_to = rect;
     g_current = rect;
     Paint(g_current);
@@ -238,7 +229,6 @@ inline void Hide() {
   g_isShown = false;
 }
 
-// Destroy the window and its class (before this DLL unloads).
 inline void Remove() {
   if (g_window) {
     DestroyWindow(g_window);

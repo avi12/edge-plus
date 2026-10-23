@@ -1,6 +1,5 @@
-// geometry.h — the N-pane layout. One concern: translate the split tree's leaf
-// rectangles into the ChildLayouts that Edge's layout applier consumes. The tree
-// decides positions; this file only speaks Edge's ProposedLayout ABI.
+// geometry.h — the N-pane layout: the split tree's leaf rectangles as the
+// ChildLayouts of Edge's ProposedLayout.
 #pragma once
 #include <algorithm>
 #include <cstring>
@@ -13,18 +12,14 @@
 
 namespace fixedge::geometry {
 
-// The split's orientation as a tree axis (SplitTabLayout: 0 is one axis, any
-// other value the other).
+// SplitTabLayout: 0 is one axis, any other value the other.
 inline Axis SplitAxis(void* mcv) {
   return edge::McvOrientation(mcv) != 0 ? Axis::kVertical : Axis::kHorizontal;
 }
 
-// The tree `mcv`'s `panes` are tiled by: the live one when it tiles that many
-// panes, else a flat equal split along the split's orientation. The one rule
-// the layout, a drag and a directional add all use. The live tree is the
-// MCV's, not a tab's: a plain tab (one pane) or another split shown in the
-// same window tiles a different count and must not take the grown split's
-// geometry (a plain tab drew in the old first pane's box).
+// The live tree only when it tiles that many panes: a plain tab or another split
+// shown in the same MCV must not take the grown split's geometry (a plain tab
+// drew in the old first pane's box).
 inline Node LiveTree(void* mcv, int panes) {
   const Node* live = TreeFor(mcv);
   const bool isLiveForPanes = live && LeafCount(*live) == panes;
@@ -34,7 +29,6 @@ inline Node LiveTree(void* mcv, int panes) {
   return FlatTree(panes, SplitAxis(mcv));
 }
 
-// The split's content box in its own coordinates (what TilePanes tiles).
 inline Rect SplitArea(void* mcv) {
   const Rect bounds = edge::ViewBounds(mcv);
   return Rect{0, 0, bounds.width, bounds.height};
@@ -43,12 +37,10 @@ inline Rect SplitArea(void* mcv) {
 // The bytes a ProposedLayout occupies (its constructor only zeroes these).
 inline constexpr size_t kProposedLayoutBytes = 0x20;
 
-// Build the out ProposedLayout for `mcv` across a `width`x`height` content box,
-// showing exactly `panes` of the MCV's containers (the live split's member
-// count; 1 when collapsed). The container vector only grows, so any container
-// beyond `panes` is hidden and given a zero rect rather than destroyed. Caller
-// guarantees a bounded available size. Pane moves are eased by anim::Apply
-// unless `snap` (a window resize). Returns `out`.
+// `panes` is the live split's member count (1 when collapsed). The container
+// vector only grows, so surplus containers are hidden with a zero rect rather
+// than destroyed. Caller guarantees a bounded available size. `snap` (a window
+// resize) skips easing.
 inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
                        bool snap) {
   std::memset(out, 0, kProposedLayoutBytes);
@@ -56,7 +48,6 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
   edge::Field<int32_t>(out, edge155::off::PL_host_size + 4) = height;
 
   const int count = static_cast<int>(edge::McvCount(mcv));
-  // At least one pane, and never more than there are containers.
   const int shownPanes = std::min(std::max(panes, 1), count);
   const Axis axis = SplitAxis(mcv);
   const Node root = LiveTree(mcv, shownPanes);
@@ -72,7 +63,7 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
       placed.push_back(leafRect);
     }
   }
-  anim::Apply(mcv, placed, snap);  // targets -> this frame's rects
+  anim::Apply(mcv, placed, snap);
 
   void* childLayouts =
       reinterpret_cast<uint8_t*>(out) + edge155::off::PL_child_layouts;
@@ -84,8 +75,7 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
     Rect rect = leafRect.rect;
     edge::EmplaceChildLayout(childLayouts, &container, &isVisible, &rect);
   }
-  // Surplus containers from a previously larger split: hide + zero them so they
-  // leave no stale pixels (they are reused if the split grows again).
+  // Zeroed too, so they leave no stale pixels.
   for (int i = shownPanes; i < count; i++) {
     edge::SetViewVisible(containers[i], false);
     bool isVisible = false;
@@ -93,21 +83,16 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
     edge::EmplaceChildLayout(childLayouts, &containers[i], &isVisible,
                              &zeroRect);
   }
-  // The dividers sit in the seams of the target layout.
   dividers::Place(mcv, root, Rect{0, 0, width, height}, childLayouts);
   Log("[layout] tiled %zu/%d panes in %dx%d (%s)", placed.size(), count, width,
       height, axis == Axis::kVertical ? "rows" : "cols");
   return out;
 }
 
-// Before the layout hook comes off (the split switched off, or this DLL
-// unloading), leave `mcv`'s views as Edge's own layout expects them. Edge's
-// GetViewSizes CHECKs that panes 0 and 1 are both visible whenever its divider
-// handle is, and TilePanes leaves exactly that combination on a grown split
-// collapsed to one pane (pane 1 hidden as surplus, the handle kept visible for
-// the borders): the next stock layout, e.g. the frame relayout of a theme
-// change, crashed Edge. The first two panes and the handle show only while the
-// active tab is in a split; every surplus container stays hidden.
+// Before the layout hook comes off. Edge's GetViewSizes CHECKs that panes 0 and
+// 1 are both visible whenever its divider handle is, and TilePanes leaves pane
+// 1 hidden with the handle visible on a grown split collapsed to one pane: the
+// next stock layout (e.g. a theme change's frame relayout) crashed Edge.
 inline void RestoreStockVisibility(void* mcv) {
   const int count = static_cast<int>(edge::McvCount(mcv));
   const bool isSplitShown = edge::McvActiveSplitPanes(mcv) >= 2;

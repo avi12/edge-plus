@@ -1,10 +1,8 @@
-// ask_text.h — the text side of "Ask" in the find bar. One concern, all
-// of it pure (no Edge, no Win32; unit-tested in test/ask_text_test.cpp): the
-// page's paragraphs, the prompts that carry them (with the question) to Copilot
-// in pieces its message box can take, and the reading of Copilot's reply into
-// the paragraphs to highlight. Copilot is only ever asked to name paragraphs by
-// label; what it names is checked against the labels that were sent, so a reply
-// can never highlight something that was not offered.
+// ask_text.h — the text side of "Ask" in the find bar: the page's paragraphs,
+// the prompts that carry them to Copilot, and reading its reply into paragraphs
+// to highlight. Pure; tested in test/ask_text_test.cpp. Copilot only names
+// paragraphs by label, checked against the labels sent, so a reply can never
+// highlight something that was not offered.
 #pragma once
 #include <cctype>
 #include <cstddef>
@@ -24,14 +22,10 @@ inline constexpr char kParagraphSeparator = '\x1e';
 inline constexpr size_t kMinParagraphChars = 12;
 // What one paragraph may cost in a prompt; the rest of a long one is cut.
 inline constexpr size_t kMaxParagraphChars = 600;
-// The paragraphs of one prompt, and the longest question taken.
 inline constexpr size_t kChunkChars = 6000;
 inline constexpr size_t kMaxQuestionChars = 300;
-// A long page is asked about in at most this many prompts, and at most this
-// many paragraphs are marked in the end.
 inline constexpr size_t kMaxChunks = 4;
 inline constexpr size_t kMaxHighlights = 8;
-// What Copilot is told it may name per prompt.
 inline constexpr int kMaxLabelsPerReply = 5;
 
 inline constexpr char kNoneWord[] = "NONE";
@@ -88,8 +82,7 @@ struct PageParagraphs {
   return std::string(text.substr(start, end - start));
 }
 
-// Squeeze every run of whitespace (a newline inside a paragraph included) to
-// one space, so a label and its text stay on one line of the prompt.
+// So a label and its text stay on one line of the prompt.
 [[nodiscard]] inline std::string Flatten(std::string_view text) {
   std::string flat;
   bool isPendingSpace = false;
@@ -107,8 +100,6 @@ struct PageParagraphs {
   return flat;
 }
 
-// The paragraphs worth asking about, each cut to what it may cost and keeping
-// its place in the page's list.
 [[nodiscard]] inline std::vector<Paragraph> Prepare(
     const std::vector<std::string>& texts) {
   std::vector<Paragraph> kept;
@@ -127,15 +118,12 @@ struct PageParagraphs {
 
 // --- the prompts -------------------------------------------------------------------------
 
-// A paragraph's label as the prompt shows it. In square brackets so it still
-// stands out when the chat's message box drops the line breaks between
-// paragraphs (Copilot's editor does with plain text).
+// In square brackets so it still stands out when Copilot's message box drops
+// the line breaks between paragraphs, as it does with plain text.
 [[nodiscard]] inline std::string LabelOf(int index) {
   return "[P" + std::to_string(index) + "]";
 }
 
-// One prompt: the question, the rules of the reply, and the paragraphs it
-// carries (named by `indices`, in the page's order).
 struct Chunk {
   std::vector<int> indices;
   std::string prompt;
@@ -229,9 +217,8 @@ struct Answer {
   return std::isalnum(static_cast<unsigned char>(character)) != 0;
 }
 
-// The paragraph number of a label such as "P12" at `start`, or -1: a P (either
-// case) not glued to a word before it, then digits not glued to a word after.
-// `end` is where the label stops.
+// The number of a label such as "P12" at `start`, or -1. `end` is where the
+// label stops.
 [[nodiscard]] inline int LabelAt(std::string_view text, size_t start,
                                  size_t* end) {
   const bool isP =
@@ -273,10 +260,8 @@ struct Answer {
          std::string_view::npos;
 }
 
-// The first sentence of `text`, cut at a line end or at a full stop followed by
-// a space, and to kMaxNoteChars at the longest: the reply may run on into the
-// page's own chrome (the answer is read from the page's text when its markup is
-// not known).
+// Capped because the reply may run on into the page's own chrome (it is read
+// from the page's text when its markup is not known).
 inline constexpr size_t kMaxNoteChars = 200;
 
 [[nodiscard]] inline std::string FirstSentence(std::string_view text) {
@@ -298,8 +283,7 @@ inline constexpr size_t kMaxNoteChars = 200;
   return sentence;
 }
 
-// What Copilot said after (or instead of) its labels: its first sentence
-// without the leading labels.
+// The reply's first sentence after its leading labels.
 [[nodiscard]] inline std::string NoteOf(std::string_view reply) {
   const std::string text = Trim(reply);
   size_t cursor = 0;
@@ -316,8 +300,7 @@ inline constexpr size_t kMaxNoteChars = 200;
   return FirstSentence(Trim(text.substr(cursor)));
 }
 
-// Read Copilot's reply to one prompt. Only labels among `offered` count; a label
-// it invented, or from another prompt, is ignored.
+// A label it invented, or from another prompt, is ignored.
 [[nodiscard]] inline Answer ParseAnswer(std::string_view reply,
                                         const std::vector<int>& offered) {
   Answer answer;
@@ -346,8 +329,6 @@ inline constexpr size_t kMaxNoteChars = 200;
   return answer;
 }
 
-// Add what one reply named to the paragraphs to highlight: no repeats, at most
-// kMaxHighlights in all.
 inline void Accumulate(std::vector<int>* highlights, const Answer& answer) {
   for (const int index : answer.indices) {
     const bool canAdd =
@@ -358,8 +339,7 @@ inline void Accumulate(std::vector<int>* highlights, const Answer& answer) {
   }
 }
 
-// The paragraphs in the page's reading order (the bar steps through them top to
-// bottom whatever order Copilot ranked them in).
+// The bar steps through them top to bottom, whatever order Copilot ranked them.
 inline void SortAscending(std::vector<int>* indices) {
   for (size_t i = 1; i < indices->size(); i++) {
     for (size_t j = i; j > 0 && (*indices)[j - 1] > (*indices)[j]; j--) {
@@ -370,7 +350,7 @@ inline void SortAscending(std::vector<int>* indices) {
   }
 }
 
-// The paragraph numbers as the highlight script takes them: "3,7,12".
+// "3,7,12"
 [[nodiscard]] inline std::string IndexList(std::span<const int> indices) {
   std::string list;
   for (size_t i = 0; i < indices.size(); i++) {

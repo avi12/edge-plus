@@ -1,10 +1,7 @@
-// edge.h — the single binding layer between our DLL and msedge.dll.
-//
-// SSOT / DRY: every RVA call and every struct-field access goes through here, so
-// a struct offset or function signature is written exactly once. offsets.h holds
-// the raw numbers; this header gives them names, types and calling conventions.
-// On x64 every calling convention collapses to the one Windows ABI, so the
-// `__fastcall` tags are documentation, not behaviour.
+// edge.h — the single binding layer between our DLL and msedge.dll: every RVA
+// call and struct-field access goes through here, typed once; offsets.h holds
+// the raw numbers. On x64 the `__fastcall` tags are documentation, not
+// behaviour.
 #pragma once
 #include <windows.h>
 #include <atomic>
@@ -50,7 +47,7 @@ inline uint8_t PatchByte(uintptr_t rva, uint8_t value) {
   return previousByte;
 }
 
-inline constexpr uint8_t kNopOpcode = 0x90;  // x86 `nop`, one byte
+inline constexpr uint8_t kNopOpcode = 0x90;
 // SetWebContentsAtIndex's `cmp index, 2` becomes `cmp index, 0xff`.
 inline constexpr uint8_t kLiftedIndexCap = 0xff;
 
@@ -160,7 +157,6 @@ inline void EmplaceChildLayout(void* vector, void* viewSlot, void* visibleSlot,
       vector, viewSlot, visibleSlot, rectSlot);
 }
 
-// Attach a WebContents to a ContentsWebView (the real render path).
 inline void ContentsWebViewSetContents(void* contentsWebView,
                                        void* webContents) {
   using Fn = void*(__fastcall*)(void*, void*);
@@ -185,12 +181,10 @@ inline void* EdgeNew(size_t size) {
   using Fn = void*(__fastcall*)(size_t);
   return reinterpret_cast<Fn>(At(edge155::rva::EdgeOperatorNew))(size);
 }
-// Edge's operator delete, for memory Edge allocated and handed to us.
 inline void EdgeDelete(void* memory) {
   using Fn = void(__fastcall*)(void*);
   reinterpret_cast<Fn>(At(edge155::rva::EdgeOperatorDelete))(memory);
 }
-// base::Token::CreateRandom(out base::Token*) — a valid split id.
 inline void CreateRandomToken(void* outToken) {
   using Fn = void*(__fastcall*)(void*);
   reinterpret_cast<Fn>(At(edge155::rva::TokenCreateRandom))(outToken);
@@ -206,7 +200,6 @@ struct SplitIndexVec {
 static_assert(sizeof(SplitIndexVec) == 24,
               "the split primitives read 24 bytes");
 
-// Build a SplitIndexVec of `indices` (tab indices) in an Edge-allocated buffer.
 inline SplitIndexVec MakeIndexVec(std::span<const int32_t> indices) {
   const size_t count = indices.size();
   auto* buffer = static_cast<int32_t*>(EdgeNew(count * sizeof(int32_t)));
@@ -287,7 +280,6 @@ inline void ActivateTabAt(void* tsm, int index) {
       tsm, index, gestureDetails);
 }
 
-// The tab model at strip `index`, or null.
 inline void* TabModelAt(void* tsm, int index) {
   void* root = RootCollection(tsm);
   return root && index >= 0 ? GetTabAtIndexRecursive(root, index) : nullptr;
@@ -300,8 +292,6 @@ inline int IndexOfWebContents(void* tsm, void* webContents) {
       At(edge155::rva::TabStripModel_GetIndexOfWebContents))(tsm, webContents);
 }
 
-// The tab model showing `webContents` in `tsm`'s strip, or null (also for a
-// null `tsm`).
 inline void* TabShowing(void* tsm, void* webContents) {
   return tsm ? TabModelAt(tsm, IndexOfWebContents(tsm, webContents)) : nullptr;
 }
@@ -372,7 +362,7 @@ struct U8View {
   uint64_t len = 0;
 };
 static_assert(sizeof(U8View) == 16, "a std::string_view is {data, size}");
-struct U16String {  // opaque 24-byte libc++ std::u16string storage
+struct U16String {
   uint64_t _[3] = {};
 };
 static_assert(sizeof(U16String) == 24, "a libc++ std::u16string is 24 bytes");
@@ -381,12 +371,10 @@ inline void Utf8ToUtf16(U16String* out, const U8View* view) {
   using Fn = void*(__fastcall*)(void*, const void*);
   reinterpret_cast<Fn>(At(edge155::rva::UTF8ToUTF16))(out, view);
 }
-// The same, from a NUL-terminated UTF-8 string.
 inline void Utf8ToUtf16(U16String* out, const char* utf8) {
   const U8View view{utf8, strlen(utf8)};
   Utf8ToUtf16(out, &view);
 }
-// views::View::SetTooltipText(view, const std::u16string&), from UTF-8.
 inline void ViewSetTooltip(void* view, const char* utf8) {
   U16String text{};
   Utf8ToUtf16(&text, utf8);
@@ -538,7 +526,6 @@ inline void* ViewRoot(void* view) {
   }
   return view;
 }
-// Convert `point` in place from `source`'s coordinates to `target`'s.
 inline void ConvertPoint(void* source, void* target, Point* point) {
   using Fn = void(__fastcall*)(void*, void*, Point*);
   reinterpret_cast<Fn>(At(edge155::rva::View_ConvertPointToTarget))(
@@ -552,7 +539,6 @@ inline Rect ViewBoundsInScreen(void* view) {
                                                                        &bounds);
   return bounds;
 }
-// Convert `point` in place from screen DIPs to `view`'s coordinates.
 inline void ConvertPointFromScreen(void* view, Point* point) {
   using ConvertFn = void(__fastcall*)(void*, Point*);
   reinterpret_cast<ConvertFn>(At(edge155::rva::View_ConvertPointFromScreen))(
@@ -604,7 +590,6 @@ inline void* AddBackgroundTabForGurl(void* browser, const void* gurl,
       browser, gurl, kNoExtraTransition, index, kIsForeground, noGroup,
       kIsPinned, kNoOptionalInt);
 }
-// The same, from a UTF-8 URL string.
 inline void* AddBackgroundTab(void* browser, const char* url, int index) {
   const struct {
     const char* data;
@@ -704,7 +689,6 @@ inline void* DragContextTabStripModel(void* context) {
   return reinterpret_cast<ModelFn>(VirtualFunction(
       context, edge155::off::DRAGCONTEXT_vtbl_GetTabStripModel))(context);
 }
-// The tab view showing `webContents` in the drag's strip, or null.
 inline void* DragContextTabFor(void* context, void* webContents) {
   using TabFn = void*(__fastcall*)(void*, void*);
   return reinterpret_cast<TabFn>(VirtualFunction(
@@ -729,7 +713,6 @@ inline bool IsTabViewInSplit(void* tabView) {
   return (Field<uint8_t>(tabView, edge155::off::TABVIEW_split_has_value) & 1) !=
          0;
 }
-// Whether `other` is a tab of the same class as `tabView`, in the same split.
 inline bool IsTabViewInSameSplit(void* tabView, void* other) {
   const bool isSameClass = Field<void*>(other, 0) == Field<void*>(tabView, 0);
   return isSameClass && IsTabViewInSplit(other) &&
@@ -808,7 +791,6 @@ inline void* McvResizeArea(void* mcv) {
   return Field<void*>(mcv, edge155::off::MCV_resize_area);
 }
 
-// The X button of a pane's hover bar.
 inline void* ControlButtonsCloseButton(void* bar) {
   return Field<void*>(bar, edge155::off::ControlButtons_close_button);
 }
@@ -923,7 +905,6 @@ inline void ListenSplitInput(void* webContents) {
                                                                  nullptr);
 }
 
-// The browser's SplitWindowController (null if it has none).
 inline void* SplitWindowControllerFor(void* browser) {
   using Fn = void*(__fastcall*)(void*);
   return reinterpret_cast<Fn>(
@@ -967,11 +948,9 @@ inline bool ShowControlButtonFor(void* browser, void* webContents) {
   return SplitWindowControllerShowControlButton(controller, webContents);
 }
 
-// A container's ContentsWebView (the pane's web view).
 inline void* ContainerWebView(void* container) {
   return Field<void*>(container, edge155::off::CCV_contents_web_view);
 }
-// The WebContents a container's web view is showing (null if none).
 inline void* ContainerWebContents(void* container) {
   return Field<void*>(ContainerWebView(container),
                       edge155::off::CWV_web_contents);
@@ -984,7 +963,6 @@ inline void* BrowserOf(void* browserView) {
 inline void* TabStripModelOf(void* browser) {
   return Field<void*>(browser, edge155::off::BROWSER_tab_strip_model);
 }
-// The TabStripModel behind an MCV's browser view (null if none).
 inline void* McvTabStripModel(void* mcv) {
   void* browserView = mcv ? McvBrowserView(mcv) : nullptr;
   return browserView ? TabStripModelOf(BrowserOf(browserView)) : nullptr;
@@ -1055,7 +1033,6 @@ inline int McvActiveSplitPanes(void* mcv) {
   return memberCount < 1 ? 1 : memberCount;
 }
 
-// TabStripModel from a top-level Win32 browser window handle (no split needed).
 inline void* TsmForWindow(void* hwnd) {
   void* auraWindow = AuraWindowForHWND(hwnd);
   if (!auraWindow) {
@@ -1074,7 +1051,6 @@ inline void MaybeUpdateSplitView(void* browserView, void* webContents) {
       browserView, webContents);
 }
 
-// MultiContentsView from a top-level Win32 browser window handle.
 inline void* McvForWindow(void* hwnd) {
   void* auraWindow = AuraWindowForHWND(hwnd);
   if (!auraWindow) {
@@ -1130,8 +1106,6 @@ inline void SetReadingTheme(void* browserContext, int32_t theme) {
       prefs, theme, &noSource);
 }
 
-// The per-profile ThemeService (one serves the whole profile).
-// Whether Edge lays its UI out right to left (base::i18n::IsRTL).
 inline bool IsUiRightToLeft() {
   using Fn = bool(__fastcall*)();
   return reinterpret_cast<Fn>(At(edge155::rva::base_i18n_IsRTL))();
@@ -1143,7 +1117,6 @@ inline void* ThemeServiceForProfile(void* profile) {
       At(edge155::rva::ThemeServiceFactory_GetForProfile))(profile);
 }
 
-// The ThemeService of the profile behind a browser window, or null.
 inline void* ThemeServiceForWindow(void* hwnd) {
   void* profile = ProfileForTabStrip(TsmForWindow(hwnd));
   return profile ? ThemeServiceForProfile(profile) : nullptr;
@@ -1156,11 +1129,10 @@ inline void* ThemeServiceForWindow(void* hwnd) {
 // theme callers satisfy.
 inline const void* ThemeIdString(const char* themeId) {
   static uint64_t storage[3] = {0, 0, 0};  // an empty libc++ std::string
-  // Clear in place (size 0, keeps any heap buffer): assign(size_type n=0, char).
+  // assign(size_type n = 0, char)
   using ClearFn = void(__fastcall*)(void*, size_t, char);
   reinterpret_cast<ClearFn>(At(edge155::rva::BasicStringChar_assignFill))(
       &storage, 0, 0);
-  // Append the NUL-terminated id (strlen inside), building it fresh each call.
   using AppendFn = void(__fastcall*)(void*, const char*);
   reinterpret_cast<AppendFn>(At(edge155::rva::BasicStringChar_append))(&storage,
                                                                        themeId);
@@ -1169,7 +1141,7 @@ inline const void* ThemeIdString(const char* themeId) {
 
 // Where an installed extension sits in the profile's registry.
 enum class ExtensionState : uint8_t {
-  kAbsent,    // not installed
+  kAbsent,
   kEnabled,   // loaded and on (the active theme is)
   kDisabled,  // installed but off (an inactive theme, or one not yet accepted)
 };
@@ -1316,7 +1288,6 @@ inline constexpr uintptr_t kRphDoneSlotRva =
     edge155::rva::ContentSettingRPHBubbleModel_vftable +
     edge155::off::BubbleModel_OnDoneButtonClicked_slot;
 
-// The function the handler bubble's Done slot points at now.
 inline void* RphDoneSlot() {
   return *reinterpret_cast<void**>(At(kRphDoneSlotRva));
 }
@@ -1339,7 +1310,6 @@ inline void SetRphDoneSlot(void* function) {
   }
 }
 
-// Put Edge's own empty virtual back in the Done slot.
 inline void RestoreRphDoneSlot() {
   SetRphDoneSlot(At(edge155::rva::ContentSettingBubbleModel_EmptyVirtual));
 }
@@ -1373,7 +1343,6 @@ inline void* ProtocolHandlerRegistryFor(void* profile) {
       profile);
 }
 
-// How many handlers the registry's live ignored list holds.
 inline size_t IgnoredHandlerCount(void* registry) {
   return Field<uint64_t>(registry, edge155::off::RPH_REGISTRY_ignored_size);
 }
@@ -1408,7 +1377,6 @@ inline void RemoveIgnoredHandler(void* registry,
 
 // --- the browser assistant's toolbar button ----------------------------------
 
-// A read-only view of a libc++ std::u16string's characters.
 struct U16View {
   const char16_t* data = nullptr;
   uint64_t length = 0;
@@ -1438,7 +1406,6 @@ inline bool IsCopilotButton(void* view) {
   return false;
 }
 
-// Whether `size` bytes at `address` can be read.
 inline bool IsReadable(const void* address, size_t size) {
   MEMORY_BASIC_INFORMATION info{};
   const bool isQueried = VirtualQuery(address, &info, sizeof(info)) != 0;
@@ -1678,9 +1645,9 @@ inline void FreeU16String(U16String* string) {
   }
 }
 
-// Run `utf8Script` in `webContents`' main frame, in our isolated world, and
-// pass `done` the script's string result on the UI thread later (pass an empty
-// `done` to not wait). False if the page has no live renderer to run it.
+// Run `utf8Script` in `frame`, in our isolated world, and pass `done` the
+// script's string result on the UI thread later (pass an empty `done` to not
+// wait).
 inline bool RunScriptInFrame(const void* frame, const std::string& utf8Script,
                              ScriptDone done) {
   if (!frame) {
@@ -1695,8 +1662,7 @@ inline bool RunScriptInFrame(const void* frame, const std::string& utf8Script,
         reinterpret_cast<void*>(DestroyScriptCallback));
     state->done = std::move(done);
     g_liveScriptCallbacks++;
-    // Edge owns the callback from here, and frees it through
-    // DestroyScriptCallback exactly once, run or not.
+    // Edge owns it from here and frees it through DestroyScriptCallback.
     callbackSlot = state.release();
   }
   U16String script{};
@@ -1711,7 +1677,6 @@ inline bool RunScriptInFrame(const void* frame, const std::string& utf8Script,
   return true;
 }
 
-// Run `utf8Script` in the main frame of a live page.
 inline bool RunScript(void* webContents, const std::string& utf8Script,
                       ScriptDone done) {
   const void* frame =
@@ -1737,7 +1702,6 @@ inline std::vector<void*> FramesOf(void* webContents) {
   return frames;
 }
 
-// The URL a frame last committed, in UTF-8.
 inline std::string FrameUrl(void* frame) {
   using UrlFn = const void*(__fastcall*)(void*);
   using SpecFn = const void*(__fastcall*)(const void*);
@@ -1799,7 +1763,6 @@ inline void LabelSetText(void* label, U16View text) {
   reinterpret_cast<Fn>(At(edge155::rva::Label_SetText))(label, &text);
 }
 
-// The bar's text field and its "n/m" count label.
 inline void* FindBarTextfield(void* findBarView) {
   return Field<void*>(findBarView, edge155::off::FINDBARVIEW_textfield);
 }
@@ -1862,7 +1825,6 @@ inline void FindBarShowResult(void* findBarView, int matches, int ordinal,
       findBarView, details, &text);
 }
 
-// The bar's count label (a views::Label).
 inline void* FindBarLabel(void* findBarView) {
   return Field<void*>(findBarView, edge155::off::FINDBARVIEW_match_count_label);
 }
@@ -1877,7 +1839,6 @@ inline uint8_t PressedKeyCode(const void* keyEvent) {
   return isPressed ? bytes[edge155::off::KEYEVENT_key_code] : uint8_t{0};
 }
 
-// Whether `keyEvent` is Enter being pressed.
 inline bool IsEnterPressed(const void* keyEvent) {
   return PressedKeyCode(keyEvent) == edge155::off::KEYEVENT_key_enter;
 }
@@ -1923,7 +1884,6 @@ inline void* FindToggle(void* findBarView, int toggleId) {
   return nullptr;
 }
 
-// The FindBarView a toggle sits in (through its FindBarHost), or null.
 inline void* FindBarViewOfToggle(void* toggle) {
   void* host = Field<void*>(toggle, edge155::off::FINDTOGGLE_host);
   return host ? Field<void*>(host, edge155::off::FINDBARHOST_view) : nullptr;
@@ -2036,7 +1996,6 @@ inline void* CopilotChatFrame() {
 
 // --- a tab's outline (EdgeTabStyleViews::GetPath) ------------------------------
 
-// The view of the tab an EdgeTabStyleViews styles, or null before it has one.
 inline void* TabViewOfStyleViews(void* styleViews) {
   void* tab = Field<void*>(styleViews, edge155::off::STYLEVIEWS_tab);
   if (!tab) {

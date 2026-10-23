@@ -1,6 +1,4 @@
-// tab_list.h - a browser window's tabs, as the enhanced find reads them. One
-// concern: name a tab by an id, find it again by that id, and name the active
-// one.
+// tab_list.h - a browser window's tabs by id, as the enhanced find reads them.
 #pragma once
 #include <string>
 #include "edge.h"
@@ -11,7 +9,7 @@ inline std::string TabIdOf(void* contents) {
   return std::to_string(reinterpret_cast<uintptr_t>(contents));
 }
 
-// The tab with id `tabId` in `mcv`'s window, or null if it was closed.
+// Null if it was closed.
 inline void* FindTab(void* mcv, const std::string& tabId) {
   void* tsm = edge::McvTabStripModel(mcv);
   const int count = tsm ? edge::TabCount(tsm) : 0;

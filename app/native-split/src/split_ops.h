@@ -1,6 +1,5 @@
-// split_ops.h — the compound "add a pane in a direction" action. One concern:
-// orchestrate the tree edit + container build + content feed + relayout that a
-// directional-add menu command performs. UI thread only.
+// split_ops.h — compound pane actions: the tree edit, data-model change, content
+// feed and relayout that adding, moving or closing a pane takes. UI thread only.
 #pragma once
 #include <optional>
 #include "edge.h"
@@ -15,7 +14,6 @@
 
 namespace fixedge::split_ops {
 
-// The pane (container index) showing `webContents`, or kNoLeaf.
 inline int LeafShowing(void* mcv, const void* webContents) {
   const int count = static_cast<int>(edge::McvCount(mcv));
   for (int i = 0; i < count; i++) {
@@ -28,10 +26,9 @@ inline int LeafShowing(void* mcv, const void* webContents) {
   return kNoLeaf;
 }
 
-// Index of the active pane, the one showing the strip's active tab, else 0.
-// The panes' primary flags can lag the strip: Edge may activate a pane while a
-// rebuild has it hidden, and hooks.h ignores that, so a hidden pane keeps the
-// flag.
+// The pane showing the strip's active tab, else 0. Not the panes' primary flag,
+// which can lag the strip: Edge may activate a pane while a rebuild has it
+// hidden, and hooks.h ignores that.
 inline int ActiveLeaf(void* mcv) {
   void* tsm = edge::McvTabStripModel(mcv);
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
@@ -40,8 +37,7 @@ inline int ActiveLeaf(void* mcv) {
   return leaf != kNoLeaf ? leaf : 0;
 }
 
-// Give a newly built pane content from a background tab (from the strip tail, so
-// never the active/split tabs). Blank if none spare.
+// From the strip's tail, so never the active or split tabs; blank if none spare.
 inline void FeedNewPane(void* mcv, int leaf) {
   void* browserView = edge::McvBrowserView(mcv);
   void* tsm = edge::TabStripModelOf(edge::BrowserOf(browserView));
@@ -59,31 +55,26 @@ inline void FeedNewPane(void* mcv, int leaf) {
   Log("[feed] no background tab fed into leaf %d", leaf);
 }
 
-// Whether the active tab of `tsm` is in a split.
 inline bool IsActiveTabSplit(void* tsm) {
   void* active = edge::ActiveTab(tsm);
   return active && edge::TabIsSplit(active);
 }
 
-// Grow the active split by one member, `newTab` (a TabModel*; null: a free
-// background tab), and lay the panes out as `tree`, in which the new pane is
-// the newest leaf (GrowSplit appends it as the last container). The tree goes
-// in first, so the relayout the grow triggers already uses it; a failed grow
-// puts back the tree that was there. UI thread.
+// `newTab` (a TabModel*; null: a free background tab) is `tree`'s newest leaf,
+// since GrowSplit appends it as the last container. The tree goes in first, so
+// the relayout the grow triggers already uses it.
 inline bool GrowWithTree(void* mcv, void* tsm, Node tree, void* newTab) {
   // A copy, not a pointer: the speculative edit below overwrites this entry.
   const Node* existing = IsActiveTabSplit(tsm) ? TreeFor(mcv) : nullptr;
   const std::optional<Node> previousTree =
       existing ? std::optional<Node>(*existing) : std::nullopt;
   Trees()[mcv] = std::move(tree);
-  // The feeder builds the new container, feeds it real content and shows it;
-  // our layout detour positions it by the tree above.
   const bool hasGrown = split_data::GrowSplit(tsm, newTab);
   if (!hasGrown) {
     if (previousTree) {
       Trees()[mcv] = *previousTree;
     } else {
-      ForgetTree(mcv);  // undo the speculative edit
+      ForgetTree(mcv);
     }
     Log("[grow] failed; tree reverted");
     return false;
@@ -93,7 +84,7 @@ inline bool GrowWithTree(void* mcv, void* tsm, Node tree, void* newTab) {
   // its growth resizes it every frame: it stays blank until it is nudged once
   // the layout has settled. Every way a pane is added comes through here.
   repaint::ScheduleAll();
-  // A pane's tab is no longer one an open tab offer may list.
+  // An open tab offer must no longer list a pane's tab.
   if (newTab) {
     edge::WithdrawFromStartingPages(
         edge::SplitWindowControllerFor(
@@ -103,10 +94,8 @@ inline bool GrowWithTree(void* mcv, void* tsm, Node tree, void* newTab) {
   return true;
 }
 
-// Add one pane beside pane `besideLeaf`, in `direction`, as a real split-tree
-// edit: `newTab` (null: a free background tab) becomes the new pane. Unsplit,
-// the one pane (the active tab) is container 0. Whether the pane was added.
-// UI thread.
+// `newTab` null: a free background tab. Unsplit, the one pane (the active tab)
+// is container 0.
 inline bool AddPane(void* mcv, Direction direction, int besideLeaf,
                     void* newTab = nullptr) {
   void* tsm = edge::McvTabStripModel(mcv);
@@ -131,17 +120,11 @@ inline bool AddPane(void* mcv, Direction direction, int besideLeaf,
   return hasGrown;
 }
 
-// Add one pane beside the active pane.
 inline void AddPane(void* mcv, Direction direction) {
   AddPane(mcv, direction, mcv ? ActiveLeaf(mcv) : 0);
 }
 
-// Move focus to the pane on `direction`'s side of the active one — the native
-// equivalent of the extension's Alt+Shift+arrow pane focus. The target is
-// picked from the panes' on-screen rects (DirectionalNeighbour), then its
-// member tab is activated, which focuses that pane the way a click does.
-// No-op when the active tab is not in a split or there is no pane that way.
-// Returns whether focus moved. UI thread.
+// Activating the target's member tab focuses that pane the way a click does.
 inline bool FocusNeighbour(void* mcv, Direction direction) {
   void* tsm = mcv ? edge::McvTabStripModel(mcv) : nullptr;
   const int panes = mcv ? edge::McvActiveSplitPanes(mcv) : 0;
@@ -169,10 +152,8 @@ inline bool FocusNeighbour(void* mcv, Direction direction) {
   return true;
 }
 
-// Swap the active pane with its sibling along its parent split's axis (the
-// position-aware "counterpart"). Pure tree edit: the leaves' container indices
-// swap position, so the two panes' content trades places on relayout. No Edge
-// object moves. No-op without a live tree. UI thread.
+// A pure tree edit: the two leaves trade places on relayout; no Edge object
+// moves.
 inline void SwapActive(void* mcv) {
   if (!mcv) {
     return;
@@ -188,7 +169,8 @@ inline void SwapActive(void* mcv) {
   if (hasSwapped) {
     Trees()[mcv] = tree;
     edge::InvalidateLayout(mcv);
-    edge::LayoutImmediately(mcv);  // no data-model change, so force the re-tile
+    // No data-model change to trigger the re-tile.
+    edge::LayoutImmediately(mcv);
     Log("[swap] swapped pane %d with its counterpart", activeLeaf);
   } else {
     Log("[swap] pane %d has no counterpart", activeLeaf);
@@ -196,12 +178,10 @@ inline void SwapActive(void* mcv) {
 }
 
 // Put member i's page back in pane i of a grown split. When CloseMember
-// re-creates the split under a new id, Edge re-feeds only the member it
-// activates, through a path that bypasses SetWebContentsAtIndex, and into pane
-// 0: the other panes are left empty and the first member is in no pane at all.
-// Mismatched panes are emptied first, so no page is pulled out of a pane that
-// still needs it, then filled. Runs once the layout has settled, after Edge's
-// own re-feed.
+// re-creates the split, Edge re-feeds only the member it activates, bypassing
+// SetWebContentsAtIndex, and into pane 0. Mismatched panes are emptied first, so
+// no page is pulled out of a pane that still needs it. Runs after Edge's own
+// re-feed has settled.
 inline void SyncPanesToMembers(void* mcv) {
   void* tsm = mcv ? edge::McvTabStripModel(mcv) : nullptr;
   const bool isGrownView =
@@ -239,8 +219,7 @@ inline void SyncPanesToMembers(void* mcv) {
   }
 }
 
-// The pane that takes over activity when `closing` closes: the one before it in
-// reading order, else the one after.
+// The one before `closing` in reading order, else the one after.
 inline int NeighbourLeaf(const Node& tree, int closing) {
   std::vector<int> order;
   CollectLeaves(tree, order);
@@ -256,10 +235,8 @@ inline int NeighbourLeaf(const Node& tree, int closing) {
   return closing;
 }
 
-// Close pane `pane` of a split of three or more: only that pane's tab closes,
-// its siblings share its space in proportion, and the rest of the layout stays.
-// Containers after the closed one are re-fed one slot earlier; the transition
-// eases every pane from where its tab was drawn to its new place. Returns false to leave a two-pane split to Edge. UI thread.
+// Its siblings share its space and the rest of the layout stays. Returns false
+// to leave a two-pane split to Edge.
 inline bool RemovePaneFromSplit(void* mcv, int pane,
                                 split_data::MemberFate fate) {
   void* tsm = edge::McvTabStripModel(mcv);
@@ -284,9 +261,7 @@ inline bool RemovePaneFromSplit(void* mcv, int pane,
   RemovePane(tree, pane);
   Trees()[mcv] = tree;
   anim::ForgetTab(closingContents);
-  // Laid out on Edge's own schedule, after it re-feeds the containers; each
-  // pane then eases from where its tab was (anim::LastDrawn). Once that has
-  // settled, the panes are matched to the members and nudged to paint.
+  // Laid out on Edge's own schedule, after it re-feeds the containers.
   edge::InvalidateLayout(mcv);
   repaint::ScheduleAll();
   Log("[close] pane %d left the split (%s); %d panes remain", pane,
@@ -299,7 +274,6 @@ inline bool ClosePane(void* mcv, int pane) {
   return RemovePaneFromSplit(mcv, pane, split_data::MemberFate::kClose);
 }
 
-// Take pane `pane` out of the split as a standalone tab; nothing closes.
 inline bool DetachPane(void* mcv, int pane) {
   return RemovePaneFromSplit(mcv, pane, split_data::MemberFate::kKeepAsTab);
 }

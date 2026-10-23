@@ -1,15 +1,9 @@
-// tab_shape.h — the tab's outline. One concern: Edge outlines a tab (its fill,
-// hover and press) in EdgeTabStyleViews::GetPath, as one rounded rectangle for a
-// vertical tab and as four arcs for a horizontal one, and a split's members'
-// shared fill as another rounded rectangle (SplitTabView::OnPaint). While the
-// tab shape is on, every tab gets a straight leading edge (the left one, the
-// right one in a right-to-left UI) and a 45 degree cut on its trailing top
-// corner, the chamfer of the skin's cards and buttons; a horizontal tab also
-// loses its flared feet. Changing the outline is what shapes the tab in whatever
-// colour Edge paints it, so nothing is painted over the fill. Within a split's
-// row the members' seams are straight too, so the row reads as one shape with
-// one round trailing end. Nothing here paints, except the group fill: Edge's own
-// drawing, plus the same paint over the corners it rounded. UI thread only.
+// tab_shape.h — the tab's outline: a straight leading edge and a 45 degree cut
+// on the trailing top corner. Edge outlines a tab (fill, hover, press) in
+// EdgeTabStyleViews::GetPath, as one rounded rectangle for a vertical tab and
+// four arcs for a horizontal one; changing the outline shapes the tab in
+// whatever colour Edge paints it, so nothing is painted over the fill except a
+// split group's (SplitTabView::OnPaint). UI thread only.
 #pragma once
 #include <windows.h>
 #include <intrin.h>
@@ -24,14 +18,13 @@ namespace fixedge::tab_shape {
 
 inline constinit bool g_isSquared = false;
 
-// The tab EdgeTabStyleViews::GetPath is outlining right now, or null.
+// The tab GetPath is outlining right now, so the Skia calls it makes can be told
+// from every other.
 inline constinit void* g_outlinedTab = nullptr;
 
 using GetPath_t = void*(__fastcall*)(void*, void*, int, float, const int*);
 inline constinit GetPath_t o_get_path = nullptr;
 
-// EdgeTabStyleViews::GetPath: notes which tab it is for, so the
-// rounded rectangle it builds can be told from every other (h_set_rect_xy).
 inline void* __fastcall h_get_path(void* styleViews, void* outPath,
                                    int pathType, float scale,
                                    const int* isUnscaled) {
@@ -44,9 +37,8 @@ inline void* __fastcall h_get_path(void* styleViews, void* outPath,
 using SetRectXY_t = void(__fastcall*)(void*, const void*, float, float);
 inline constinit SetRectXY_t o_set_rect_xy = nullptr;
 
-// SkRRect::setRectXY, for the one call that builds a vertical tab's outline in
-// EdgeTabStyleViews::GetPath: the radius is Edge's, the corners are ours. Every
-// other caller is Skia's own use, unchanged.
+// SkRRect::setRectXY, for the one call that builds a vertical tab's outline: the
+// radius is Edge's, the corners are ours.
 inline void __fastcall h_set_rect_xy(void* roundedRect, const void* skRect,
                                      float radiusX, float radiusY) {
   const bool isTabOutline =
@@ -105,27 +97,23 @@ inline OutlineArc ArcOfCaller(const void* caller) {
 // How far the trailing top corner's cut reaches, as a share of the corner's
 // radius: enough to read as a chamfer, short of the close button beside it.
 inline constexpr float kTrailingCutRatio = 0.75f;
-// The corner radius GetPath is using (the arcs before the top-right one set it).
+// Set by the arcs before the top-right one.
 inline constinit float g_cornerRadius = 0;
-// The cut at the top-right corner, in the units of the path.
 inline float TrailingCut() {
   return g_cornerRadius * kTrailingCutRatio;
 }
-// The length of a chamfer's two legs for a corner of `radius`: the corner's own
-// radius plus the cut, the same on a horizontal tab (arc plus h_line_to) and a
-// vertical one (h_add_rrect).
+// The same on a horizontal tab (arc plus h_line_to) and a vertical one
+// (h_add_rrect).
 inline float ChamferLeg(float radius) {
   return radius * (1 + kTrailingCutRatio);
 }
 
 // SkPath::arcTo, for the calls in GetPath that round a horizontal tab's outline.
-// With no radius an arc is a straight line to its end, so the feet (the flared
-// tails either side of the tab) end level with the tab's bottom and the sides
-// run straight; the top-left corner is square; and the top-right corner, by the
-// close button, becomes a 45 degree cut, the chamfer of the skin's cards and
-// buttons (h_line_to starts it earlier along the top). Every other caller is
-// Skia's own use, unchanged. A right-to-left UI keeps Edge's corners: its
-// leading corner is the right one, built from different calls.
+// With no radius an arc is a straight line to its end, so the flared feet end
+// level with the tab's bottom, the top-left corner is square and the top-right
+// one becomes the cut (h_line_to starts it earlier along the top). A
+// right-to-left UI keeps Edge's corners: its leading corner is built from
+// different calls.
 inline void* __fastcall h_arc_to(void* path, uint64_t radii, float rotation,
                                  int arcSize, uint8_t direction, uint64_t end) {
   const OutlineArc corner =
@@ -167,8 +155,7 @@ using LineTo_t = void*(__fastcall*)(void*, uint64_t);
 inline constinit LineTo_t o_line_to = nullptr;
 
 // SkPath::lineTo, for the one call in GetPath that draws the tab's top edge up
-// to its top-right corner: it stops a cut's length short, where the chamfer
-// starts. Every other caller is Skia's own use, unchanged.
+// to its top-right corner: it stops a cut's length short.
 inline void* __fastcall h_line_to(void* path, uint64_t point) {
   const bool isTopEdge =
       g_outlinedTab && !edge::IsUiRightToLeft() &&
@@ -182,8 +169,7 @@ inline void* __fastcall h_line_to(void* path, uint64_t point) {
   return o_line_to(path, PackPoint(target));
 }
 
-// How a vertical tab's outline, an SkRRect from h_set_rect_xy, is turned into a
-// path: SkPath::addRRect(this, const SkRRect&, direction, startIndex).
+// SkPath::addRRect(this, const SkRRect&, direction, startIndex).
 using AddRRect_t = void*(__fastcall*)(void*, const void*, int, unsigned);
 inline constinit AddRRect_t o_add_rrect = nullptr;
 using MoveTo_t = void*(__fastcall*)(void*, uint64_t);
@@ -196,12 +182,10 @@ inline constexpr uintptr_t kRRectRight = 0x8;
 inline constexpr uintptr_t kRRectBottom = 0xc;
 inline constexpr uintptr_t kRRectRadii = 0x10;
 
-// The vertical tab's outline: the call in GetPath that adds the rounded
-// rectangle becomes a polygon with the same bounds, whose trailing top corner,
-// the one h_set_rect_xy left round, is cut 45 degrees as a horizontal tab's is
-// (TrailingCut). A tab with a split neighbour on its trailing side had no round
-// corner there, so it stays a rectangle. Every other caller is Skia's own use,
-// unchanged.
+// The vertical tab's rounded rectangle becomes a polygon with the same bounds,
+// its trailing top corner (the one h_set_rect_xy left round) cut. A tab with a
+// split neighbour on its trailing side has no radius there, so stays a
+// rectangle.
 inline void* __fastcall h_add_rrect(void* path, const void* roundedRect,
                                     int direction, unsigned startIndex) {
   const bool isTabOutline =
@@ -243,8 +227,8 @@ using DrawRoundRect_t = void(__fastcall*)(void*, const Rect*, int, const void*);
 inline constinit DrawRoundRect_t o_draw_round_rect = nullptr;
 
 // Canvas::DrawRoundRect, for the one call that paints a split group's rounded
-// fill (SplitTabView::OnPaint): Edge draws it, then the same paint goes over the
-// leading corners it rounded. Every other caller is Edge's own, unchanged.
+// fill (SplitTabView::OnPaint): the same paint then goes over the leading
+// corners it rounded.
 inline void __fastcall h_draw_round_rect(void* canvas, const Rect* rect,
                                          int radius, const void* flags) {
   const bool isSplitGroupFill =

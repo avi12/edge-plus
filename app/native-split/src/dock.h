@@ -1,11 +1,7 @@
-// dock.h — where a dragged pane would land. One concern, zero Edge/Win32 deps,
-// so it is unit-testable: map a pointer position over the split to a drop zone,
-// apply that edit to a copy of the tree, and report the resulting tree plus the
-// rect the dragged pane will occupy in it (the preview is the real outcome, not
-// an approximation). The dragged pane is one of the split's own (its grip) or
-// an incoming one (a tab dragged in from the strip). The zone rules follow
-// dockview / FlexLayout / react-mosaic (see docs/re/drag-dock.md); all lengths
-// are DIPs in the split's coordinates.
+// dock.h — where a dragged pane would land: the drop zone under the pointer and
+// the tree it would produce, so the preview is the real outcome. Pure; zone
+// rules follow dockview / FlexLayout / react-mosaic (docs/re/drag-dock.md). All
+// lengths are DIPs in the split's coordinates.
 #pragma once
 #include <algorithm>
 #include <vector>
@@ -71,7 +67,6 @@ struct Plan {
   }
 }
 
-// The outer band's depth for edge `edge` of `layout`.
 [[nodiscard]] inline constexpr int RootBand(const Rect& layout,
                                             Direction edge) noexcept {
   const bool isVerticalEdge =
@@ -82,9 +77,8 @@ struct Plan {
   return std::clamp(share, kRootBandMin, kRootBandMax);
 }
 
-// Whether a pane-relative position (`paneX`, `paneY` in 0..1) is still within
-// the hold band of edge `edge`, so a zone already showing does not flip at the
-// diagonal.
+// `paneX`, `paneY` in 0..1. Holding keeps a zone already showing from flipping
+// at the diagonal.
 [[nodiscard]] inline constexpr bool HoldsEdge(Direction edge, float paneX,
                                               float paneY) noexcept {
   switch (edge) {
@@ -102,15 +96,14 @@ struct Plan {
 // The nearest edge by the pane's diagonals (FlexLayout): no dead corners.
 [[nodiscard]] inline constexpr Direction DiagonalEdge(float paneX,
                                                       float paneY) noexcept {
-  const bool isBelowMainDiagonal = paneY >= paneX;        // the "\" diagonal
-  const bool isBelowAntiDiagonal = paneY >= 1.f - paneX;  // the "/" diagonal
+  const bool isBelowMainDiagonal = paneY >= paneX;
+  const bool isBelowAntiDiagonal = paneY >= 1.f - paneX;
   if (isBelowMainDiagonal) {
     return isBelowAntiDiagonal ? Direction::kDown : Direction::kLeft;
   }
   return isBelowAntiDiagonal ? Direction::kRight : Direction::kUp;
 }
 
-// Drop `pane` on `zone` of `tree`: move it there, or insert it if incoming.
 // Returns false if nothing would change (an incoming pane cannot swap).
 inline bool ApplyDrop(Node& tree, int pane, Source source, Zone zone,
                       int target, Direction direction) {
@@ -134,7 +127,7 @@ inline bool ApplyDrop(Node& tree, int pane, Source source, Zone zone,
   }
 }
 
-// Finish a plan: apply the edit to a copy; a no-op yields kNone.
+// A no-op yields kNone.
 [[nodiscard]] inline Plan Finish(const Node& tree, const Rect& layout, int pane,
                                  Source source, Zone zone, int target,
                                  Direction direction) {
@@ -159,8 +152,7 @@ inline bool ApplyDrop(Node& tree, int pane, Source source, Zone zone,
   return plan;
 }
 
-// Releasing `pane` outside the split takes it out as a tab of its own. The
-// tree is unchanged here (the split's data model does the removal); the
+// The tree is unchanged here (the split's data model does the removal); the
 // preview is where the pane sits now.
 [[nodiscard]] inline Plan DetachPlan(const Node& tree, const Rect& layout,
                                      int pane) {
@@ -179,8 +171,7 @@ inline bool ApplyDrop(Node& tree, int pane, Source source, Zone zone,
   return plan;
 }
 
-// The outer-band edge `point` is in, if any: the edge already shown holds a
-// little longer than it took to enter, otherwise the nearest edge in its band.
+// The edge already shown holds a little longer than it took to enter.
 [[nodiscard]] inline bool FindRootEdge(const Rect& layout, Point point,
                                        const Plan& shown, Direction& rootEdge) {
   const bool isHoldingRootEdge =
@@ -208,8 +199,6 @@ inline bool ApplyDrop(Node& tree, int pane, Source source, Zone zone,
   return hasRootEdge;
 }
 
-// The plan for a pointer inside `leafRect`: its centre swaps (a moving pane
-// only), its edges dock beside it; the dragged pane itself offers nothing.
 [[nodiscard]] inline Plan ResolvePaneDrop(const Node& tree, const Rect& layout,
                                           Point point, int pane, Source source,
                                           const Plan& shown,
@@ -243,13 +232,10 @@ inline bool ApplyDrop(Node& tree, int pane, Source source, Zone zone,
                 DiagonalEdge(paneX, paneY));
 }
 
-// Resolve `point` (split coordinates) while dragging `pane` from `source`.
-// `shown` is the plan currently shown, for hysteresis. Precedence: the whole
-// split's outer band first (checked before any pane, as dockview's root target
-// is), then the pane under the pointer — its centre swaps (a moving pane only),
-// its edges dock beside it; the gap between two panes keeps what is shown. So
-// near a pane's bottom edge docks below that pane, and dragging on, deep
-// toward the split's bottom, spans the whole bottom.
+// `shown` is the plan currently shown, for hysteresis. The split's outer band
+// wins over any pane (as dockview's root target does), so near a pane's bottom
+// edge docks below that pane, and dragging on toward the split's bottom spans
+// the whole bottom.
 [[nodiscard]] inline Plan ResolveDrop(const Node& tree, const Rect& layout,
                                       Point point, int pane, Source source,
                                       const Plan& shown) {
@@ -266,7 +252,6 @@ inline bool ApplyDrop(Node& tree, int pane, Source source, Zone zone,
   point.x = std::clamp(point.x, layout.x, layout.x + layout.width - 1);
   point.y = std::clamp(point.y, layout.y, layout.y + layout.height - 1);
 
-  // 1. The whole split's outer band.
   Direction rootEdge = Direction::kUp;
   const bool hasRootEdge = FindRootEdge(layout, point, shown, rootEdge);
   if (hasRootEdge) {
@@ -278,7 +263,6 @@ inline bool ApplyDrop(Node& tree, int pane, Source source, Zone zone,
     }
   }
 
-  // 2. The pane under the pointer (the dragged pane itself offers nothing).
   std::vector<LeafRect> leaves;
   LayoutTree(tree, layout, kPaneGap, leaves);
   for (const LeafRect& leafRect : leaves) {
@@ -287,8 +271,8 @@ inline bool ApplyDrop(Node& tree, int pane, Source source, Zone zone,
                              leafRect);
     }
   }
-  // 3. The gap between two panes belongs to neither: a pane's zone already
-  // shown holds there, so crossing from pane to pane does not blink it off.
+  // A pane's zone holds over the gap between panes, so crossing from pane to
+  // pane does not blink it off.
   const bool isPaneZoneShown =
       shown.zone == Zone::kPaneEdge || shown.zone == Zone::kSwap;
   if (isPaneZoneShown) {
@@ -297,13 +281,12 @@ inline bool ApplyDrop(Node& tree, int pane, Source source, Zone zone,
   return {};
 }
 
-// Dragging the split's own pane `moving` (its grip).
 [[nodiscard]] inline Plan Resolve(const Node& tree, const Rect& layout,
                                   Point point, int moving, const Plan& shown) {
   return ResolveDrop(tree, layout, point, moving, Source::kMoving, shown);
 }
 
-// Dragging a new pane `incoming` (a tab) in: it joins the tree as that leaf.
+// `incoming` is the leaf the dragged-in tab joins the tree as.
 [[nodiscard]] inline Plan ResolveIncoming(const Node& tree, const Rect& layout,
                                           Point point, int incoming,
                                           const Plan& shown) {

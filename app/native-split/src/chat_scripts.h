@@ -1,10 +1,6 @@
-// chat_scripts.h — the scripts that drive an assistant's web chat for "Ask".
-// One concern: the JavaScript that puts a prompt into the chat's message box and
-// presses send, and the JavaScript that reads the answer once it has stopped
-// growing. Edge has no public API to ask Copilot a question, so this drives the
-// signed-in web app the way a person would. What differs (selectors, name) is a
-// chat_target::Target, the one table to fix when the web app changes. They run
-// in our isolated world.
+// chat_scripts.h — the scripts that read an assistant's web chat answer for
+// "Ask", in our isolated world. Edge has no API that returns the answer. When
+// the web app changes, fix its chat_target::Target.
 //
 // The answer's markup is a guess backed by a fallback that needs no markup: the
 // text that appears after the prompt. What was verified live is in
@@ -18,13 +14,12 @@ namespace fixedge::chat_scripts {
 
 using chat_target::Target;
 
-// The one-word answers the page scripts give besides `ok US text` / `err US why`.
+// The one-word page-script answers besides `ok US text` / `err US why`.
 enum class ScriptAnswer {
-  kWait,  // the answer is still arriving
+  kWait,
   kUser,  // a dialog (a security check, a consent page) waits for the person
-  kReloaded,  // the page was replaced after the prompt went in (the side panel
-              // reloads): the question has to be sent again
-  kArmed,     // what the arm script answers
+  kReloaded,  // the side panel reloaded after the prompt went in: send it again
+  kArmed,
 };
 
 inline const char* AnswerText(ScriptAnswer answer) {
@@ -41,16 +36,14 @@ inline const char* AnswerText(ScriptAnswer answer) {
   return "";
 }
 
-// How long the answer must stay unchanged (and no stop button show) before it
-// counts as finished.
+// How long the answer must stay unchanged (and no stop button show).
 inline constexpr int kSettleMs = 2500;
-// How much of the end of the prompt is looked for on the page, to tell where
-// the answer begins when the answer's own markup is not known.
+// The prompt's tail looked for on the page, to tell where the answer begins
+// when the answer's own markup is not known.
 inline constexpr int kEchoTailChars = 60;
 
-// Run in the side panel's page once the question was sent: remember what the
-// page held before the answer (how many answers there were) and the question,
-// so the reply script can tell the new answer from the old page.
+// Remembers how many answers the page held before, so the reply script can
+// tell the new answer from the old page.
 inline std::string ArmScript(const Target& target, const std::string& prompt) {
   std::string script = R"JS((function (prompt) {
   window.__fxChat = {
@@ -67,10 +60,7 @@ inline std::string ArmScript(const Target& target, const std::string& prompt) {
   return script;
 }
 
-// Asked about once a second after sending: kWait while the answer is
-// missing or still being written, kUser while a dialog needs the person,
-// kReloaded when the page lost the question, then
-// `ok US text` (ask_text::ParseReply's format), or `err US why`.
+// Answers in ask_text::ParseReply's format once settled.
 inline std::string ReplyScript(const Target& target) {
   std::string script = "(function () {";
   script += R"JS(

@@ -1,17 +1,10 @@
-// live_preview.h — a hovered tab shows a LIVE miniature, not a frozen snapshot.
-// One concern: keep Edge's own tab-thumbnail video capturer running while a hover
-// card is open, so the frames it already produces keep reaching the card. See
+// live_preview.h — a hovered tab shows a live miniature, not a frozen snapshot.
 // docs/re/live-preview.md.
 //
-// Edge draws the hover preview from a continuous capturer
-// (BackgroundThumbnailVideoCapturer) and the card already repaints every frame it
-// receives; it looks static only because Edge stops the capturer after the first
-// good frame (ThumbnailTabHelper::TabStateTracker::StopCapture). While the feature
-// is on and a hover card is open, we suppress that one stop and the existing
-// pipeline delivers live video — no new capture, no mirroring. A card's thumbnail
-// subscription beginning (TabHoverCardThumbnailObserver::Observe) marks a preview
-// on screen; the card closing (TabHoverCardController::OnCardClosing) ends it.
-// Everything else, and the feature off, keeps Edge's behaviour exactly.
+// Edge draws the hover preview from a continuous capturer and the card already
+// repaints every frame it receives; it looks static only because Edge stops the
+// capturer after the first good frame. While a hover card is open we suppress
+// that one stop.
 #pragma once
 #include "MinHook.h"
 #include "config.h"
@@ -20,17 +13,12 @@
 
 namespace fixedge::live_preview {
 
-// The feature switch, and whether a hover card is on screen right now, so the
-// capturer is held open only while one is. Observe sets it, OnCardClosing clears
-// it — a bool, not a counter, because Observe fires again when a hover retargets
-// to another tab and only ever one hover card is open at a time.
 inline constinit bool g_isActive = false;
+// A bool, not a counter: Observe fires again when a hover retargets to another
+// tab, and only one hover card is ever open.
 inline constinit bool g_isCardOpen = false;
 
-// ThumbnailTabHelper::TabStateTracker::StopCapture: Edge's "end this capture
-// session" call. While a hover card is open we return without stopping, so the
-// capturer keeps delivering frames and the card goes live; otherwise Edge stops
-// as usual. Not a per-frame call, so this runs rarely.
+// ThumbnailTabHelper::TabStateTracker::StopCapture: not per-frame.
 using StopCapture_t = void(__fastcall*)(void*);
 inline constinit StopCapture_t o_stop_capture = nullptr;
 inline void __fastcall h_stop_capture(void* tracker) {
@@ -41,8 +29,7 @@ inline void __fastcall h_stop_capture(void* tracker) {
   o_stop_capture(tracker);
 }
 
-// TabHoverCardThumbnailObserver::Observe: a hover card's live thumbnail
-// subscription begins, i.e. a preview is on screen and frames are wanted.
+// TabHoverCardThumbnailObserver::Observe: a preview is on screen.
 using Observe_t = void(__fastcall*)(void*, void*);
 inline constinit Observe_t o_observe = nullptr;
 inline void __fastcall h_observe(void* observer, void* thumbnailImage) {
@@ -50,16 +37,14 @@ inline void __fastcall h_observe(void* observer, void* thumbnailImage) {
   o_observe(observer, thumbnailImage);
 }
 
-// TabHoverCardController::OnCardClosing: the hover card is gone, so stop holding
-// the capturer open; Edge's next StopCapture then winds it down normally.
+// TabHoverCardController::OnCardClosing: Edge's next StopCapture then winds the
+// capturer down normally.
 using OnCardClosing_t = void(__fastcall*)(void*);
 inline constinit OnCardClosing_t o_on_card_closing = nullptr;
 inline void __fastcall h_on_card_closing(void* controller) {
   g_isCardOpen = false;
   o_on_card_closing(controller);
 }
-
-// --- install / apply -----------------------------------------------------
 
 inline bool EnableSite(uintptr_t site) {
   const MH_STATUS status = MH_EnableHook(edge::At(site));
@@ -97,8 +82,6 @@ inline bool Install() {
   return isEnabled;
 }
 
-// Take the panel's switch. Turning it off also forgets any open-card state, so a
-// later StopCapture is never suppressed by a stale flag.
 inline void ApplyConfig(const config::Wire& wire) {
   const bool wasActive = g_isActive;
   g_isActive = wire.livePreviewActive != 0;

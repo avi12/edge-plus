@@ -1,13 +1,8 @@
-// theme.h — the enhanced-theming subsystem: use one theme when Windows is in
-// light mode and another when it is in dark, and re-apply the moment Windows
-// flips, with no browser restart. One concern: picking and applying an already
-// installed theme. The panel installs each theme (through Edge's own
-// external-extension loader) and pushes which to use for light and which for
-// dark (config.h, over WM_COPYDATA); this module switches between them.
-//
-// The OS light/dark signal is the browser window's WM_SETTINGCHANGE (control.h
-// forwards it here); the mode itself is read straight from the OS, so no Edge
-// theme-observer ABI is touched.
+// theme.h — one installed theme for Windows' light mode and another for dark,
+// re-applied live the moment Windows flips. The panel installs the themes and
+// pushes the choice (config.h); control.h forwards WM_SETTINGCHANGE here, and
+// the mode is read straight from the OS, so no Edge theme-observer ABI is
+// touched.
 #pragma once
 #include <windows.h>
 #include <cstddef>
@@ -19,7 +14,7 @@
 
 namespace fixedge::theme {
 
-// An extension id (32 lowercase letters) or empty for "use the default theme".
+// An extension id, or empty for the default theme.
 struct ThemeId {
   char value[config::kIdCapacity] = {};
   size_t length = 0;
@@ -36,13 +31,11 @@ struct ThemeId {
   }
 };
 
-// The themes assigned to each OS mode, and whether the feature is switched on.
 inline constinit ThemeId g_lightTheme;
 inline constinit ThemeId g_darkTheme;
 inline constinit bool g_isActive = false;
 
-// Windows is in dark mode when this value is 0 (apps use the light theme when
-// it is 1 or absent).
+// AppsUseLightTheme absent means light.
 inline bool IsOsDarkMode() {
   DWORD usesLightTheme = 1;
   DWORD size = sizeof(usesLightTheme);
@@ -53,16 +46,10 @@ inline bool IsOsDarkMode() {
   return usesLightTheme == 0;
 }
 
-// The new theme lands in the model, but Edge's frame and toolbar only repaint on
-// a frame change; a no-move, no-size SWP_FRAMECHANGED makes them redraw at once.
-// (When the OS light/dark flip is the trigger Edge repaints anyway; a config
-// change pushed from the panel would otherwise lag until the next interaction.)
-// The apply settles asynchronously, so we redraw on a one-shot timer that fires
-// after it has settled (the timer id is handled in control.h). The frame redraws
-// on a frame change; WM_THEMECHANGED is the signal Edge rebuilds its colors from,
-// the same one the OS light/dark flip sends — so a switch driven by that flip
-// refreshes fully, and a switch pushed from the panel refreshes the frame at
-// once and the rest on the next interaction.
+// Edge's frame and toolbar only repaint on a frame change, so a theme pushed
+// from the panel would lag until the next interaction: SWP_FRAMECHANGED redraws
+// the frame and WM_THEMECHANGED (what the OS flip sends) makes Edge rebuild its
+// colors. The apply settles asynchronously, hence a one-shot timer (control.h).
 inline constexpr UINT_PTR kRepaintTimerId =
     channel::TimerIdOf(channel::WindowTimer::kThemeRepaint);
 inline constexpr UINT kRepaintDelayMs = 180;
@@ -80,9 +67,7 @@ inline void Repaint(void* hwnd) {
   PostMessageW(window, WM_THEMECHANGED, 0, 0);
 }
 
-// A theme Edge no longer has installed is asked for again (see Apply); the
-// install lands asynchronously, so the apply is retried on a one-shot timer a
-// few times, then given up.
+// A reinstall lands asynchronously, so the apply is retried a few times.
 inline constexpr UINT kInstallRetryDelayMs = 1500;
 inline constexpr int kMaxInstallRetries = 6;
 inline constinit int g_installRetries = 0;
@@ -99,7 +84,6 @@ inline void ScheduleInstallRetry() {
   SetTimer(nullptr, 0, kInstallRetryDelayMs, InstallRetryFired);
 }
 
-// Apply the theme assigned to the given mode to the window's browser, live.
 inline void Apply(void* hwnd, bool isDark) {
   void* profile = edge::ProfileForTabStrip(edge::TsmForWindow(hwnd));
   void* themeService =
@@ -146,16 +130,14 @@ inline void Apply(void* hwnd, bool isDark) {
       isDisabled ? "disabled" : "enabled");
 }
 
-// Apply whichever theme matches the current OS mode (a no-op when off).
 inline void ApplyForCurrentOsMode(void* hwnd) {
   if (g_isActive) {
     Apply(hwnd, IsOsDarkMode());
   }
 }
 
-// Take the panel's latest theming choice and apply it right away. Turning the
-// feature off returns both modes to the default theme so nothing we set is left
-// behind.
+// Turning the feature off returns to the default theme, so nothing we set is
+// left behind.
 inline void ApplyConfig(void* hwnd, const config::Wire& wire) {
   g_lightTheme.Set(wire.lightId, wire.lightLength);
   g_darkTheme.Set(wire.darkId, wire.darkLength);
@@ -169,7 +151,6 @@ inline void ApplyConfig(void* hwnd, const config::Wire& wire) {
     ApplyForCurrentOsMode(hwnd);
     return;
   }
-  // Just switched off: drop back to the default theme once.
   if (!wasActive) {
     return;
   }

@@ -1,9 +1,6 @@
-// assistant.h — the browser assistant: Copilot. One concern: keep the chevron
-// beside Edge's toolbar chat button, whose dropdown carries the chat menu
-// (Summarize, Talk). A personal profile in Edge's Copilot Mode gets the button
-// without it, so one hook answers "the dropdown is enabled" and the toolbars
-// already built are rebuilt to grow it. The hook is independent of the split,
-// so turning the split off does not take the chevron away.
+// assistant.h — keep the chevron beside Edge's toolbar chat button, whose
+// dropdown carries the chat menu. Independent of the split, so turning the
+// split off does not take the chevron away.
 #pragma once
 #include <vector>
 #include "MinHook.h"
@@ -13,17 +10,13 @@
 
 namespace fixedge::assistant {
 
-// The assistant's name, for every place the UI mentions it (the enhanced
-// find's "Ask <name>"); the table is chat_target.h's.
 inline const char* Name() {
   return chat_target::kCopilotTarget.name;
 }
 
 // A personal profile in Edge's Copilot Mode gets the chat button without its
-// chevron: Edge answers "no" here when the toolbar is built. The chevron
-// carries the chat menu, so it is always wanted: this answers "yes".
-// Takes effect for each toolbar built after the DLL loads (a new window);
-// EnsureChevron rebuilds the ones already open.
+// chevron: Edge answers "no" here when the toolbar is built. Takes effect for
+// toolbars built after the DLL loads; EnsureChevron rebuilds the open ones.
 using DropdownEnabled_t = bool(__fastcall*)(bool);
 inline constinit DropdownEnabled_t o_dropdown_enabled = nullptr;
 
@@ -31,9 +24,6 @@ inline bool __fastcall h_dropdown_enabled(bool /*isChecked*/) {
   return true;
 }
 
-// --- the chevron on the live button --------------------------------------
-
-// Collect every chat button under `view` (one per browser window; usually one).
 inline void CollectButtons(void* view, std::vector<void*>* buttons) {
   if (edge::IsCopilotButton(view)) {
     buttons->push_back(view);
@@ -44,8 +34,6 @@ inline void CollectButtons(void* view, std::vector<void*>* buttons) {
   }
 }
 
-// A toolbar built before this DLL loaded has the bare chat button: build it again
-// so it gets the split-button container and its chevron.
 inline void EnsureChevron(void* mcv) {
   std::vector<void*> buttons;
   CollectButtons(edge::ViewRoot(mcv), &buttons);
@@ -66,8 +54,6 @@ inline void EnsureChevron(void* mcv) {
     }
   }
 }
-
-// --- install / apply -----------------------------------------------------
 
 inline bool EnableAll() {
   const MH_STATUS status = MH_EnableHook(
@@ -91,8 +77,6 @@ inline bool Install() {
   return isEnabled;
 }
 
-// Give `mcv`'s window the chevron now, and lay the whole window out again so the
-// toolbar settles around it.
 inline void Apply(void* mcv) {
   if (!mcv) {
     return;

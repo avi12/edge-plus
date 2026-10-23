@@ -1,9 +1,6 @@
 // split_data.h — grow the native split's DATA MODEL by one member, the way Edge
-// itself does it (RemoveSplitImpl + AddToSplitImpl, docs/re/split-grow-impl.md).
-// One concern: make a 2-member split a 3-member split so Edge feeds/controls all
-// panes; the view-side container growth + N-tiling (hooks.h) then render them.
-// UI thread only. Heavily logged so an autonomous test shows exactly where it
-// stops.
+// itself does it (RemoveSplitImpl + AddToSplitImpl, docs/re/split-grow-impl.md),
+// so Edge feeds and controls every pane; hooks.h renders them. UI thread only.
 #pragma once
 #include <algorithm>
 #include <cstddef>
@@ -22,12 +19,9 @@ inline constexpr int kMinSplitMembers = 2;
 // for GrowSplit to grow it.
 inline constexpr int kMaxCreateMembers = 6;
 inline constexpr int kMaxGrowMembers = 7;
-// Stack buffers sized past the largest member count either path accepts.
 inline constexpr int kMemberBufferSize = 8;
-// SplitTabVisualData's ratio as Edge's own default ctor sets it: an even split.
+// SplitTabVisualData's ratio as Edge's own default ctor sets it.
 inline constexpr double kEvenSplitRatio = 0.5;
-// How far up a faulting stack to look, and how many msedge.dll return
-// addresses to log from it.
 inline constexpr int kStackScanSlots = 400;
 inline constexpr int kMaxLoggedReturnAddresses = 14;
 
@@ -51,8 +45,8 @@ inline void LogFault(const char* primitive,
       static_cast<unsigned long long>(faultAddress - edge::g_base));
 }
 
-// SEH-guarded UpdateTabInSplit: a bad arg can int3/ud2 and kill the browser. Catch
-// it so Edge survives and we can iterate. No C++ objects here, so __try is legal.
+// A bad argument can int3/ud2 and kill the browser. No C++ objects here, so
+// __try is legal.
 inline bool SafeUpdateTabInSplit(void* tsm, void* anchor, int newTabIndex,
                                  int flag) {
   const EXCEPTION_POINTERS* exceptionInfo = nullptr;
@@ -77,8 +71,8 @@ inline bool SafeAddToSplit(void* tsm, void* outId, void* splitId,
   } __except (exceptionInfo = GetExceptionInformation(),
               EXCEPTION_EXECUTE_HANDLER) {
     LogFault("AddToSplitImpl", exceptionInfo);
-    // Scan the faulting stack for return addresses inside msedge.dll's .text so
-    // the exact call chain to the crash can be resolved offline.
+    // Log the msedge.dll return addresses on the faulting stack, so the call
+    // chain can be resolved offline.
     const uintptr_t moduleStart = edge::g_base;
     const uintptr_t moduleEnd = edge::g_base + 0x0c000000;
     const auto* stackSlots =
@@ -136,7 +130,6 @@ inline SplitSettings ReadSettings(void* tsm, void* splitToken) {
   return settings;
 }
 
-// After the re-create: give the new split its old toggle back.
 inline void RestoreLinkMode(void* tsm, void* newSplitToken,
                             const SplitSettings& settings) {
   if (void* splitData = edge::GetSplitData(tsm, newSplitToken)) {
@@ -145,7 +138,6 @@ inline void RestoreLinkMode(void* tsm, void* newSplitToken,
   }
 }
 
-// The toggle of the split `splitTab` belongs to (false if none).
 inline bool IsLinkModeOn(void* tsm, void* splitTab) {
   OptionalSplitId split = {};
   edge::TabGetSplit(splitTab, &split);
@@ -155,19 +147,17 @@ inline bool IsLinkModeOn(void* tsm, void* splitTab) {
          edge::Field<bool>(splitData, edge155::off::SPLITDATA_link_mode);
 }
 
-// How many members the split `tab` belongs to has (0 if it is in none).
 inline int MemberCountOf(void* tsm, void* tab) {
   OptionalSplitId split = {};
   edge::TabGetSplit(tab, &split);
   return split.hasValue ? edge::SplitMembers(tsm, split.token).Count() : 0;
 }
 
-// A background tab: neither the active tab nor already in any split.
 inline bool IsFreeTab(void* tab, void* active) {
   return tab && tab != active && !edge::TabIsSplit(tab);
 }
 
-// The strip index of a free tab, searching from the strip's tail, or -1.
+// Searches from the strip's tail; -1 when none.
 inline int FindFreeTab(void* tsm, void* root, void* active) {
   const int tabCount = edge::TabCount(tsm);
   for (int i = tabCount - 1; i >= 0; i--) {
@@ -179,8 +169,8 @@ inline int FindFreeTab(void* tsm, void* root, void* active) {
   return -1;
 }
 
-// Create a fresh 2-pane split from the active tab + one background tab.
-// Proven 2-pane native split via AddToNewSplit (its size==1 branch adds active).
+// The active tab + one background tab: AddToNewSplit's size==1 branch adds the
+// active tab itself.
 inline bool CreateSplit(void* tsm) {
   void* root = tsm ? edge::RootCollection(tsm) : nullptr;
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
@@ -209,8 +199,7 @@ inline bool CreateSplit(void* tsm) {
   return true;
 }
 
-// Direct AddToSplitImpl with `requestedPanes` standalone tabs (diagnostic: 2 vs
-// N behavior).
+// Diagnostic: AddToSplitImpl directly with `requestedPanes` standalone tabs.
 inline bool CreateSplitN(void* tsm, int requestedPanes) {
   void* root = tsm ? edge::RootCollection(tsm) : nullptr;
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
@@ -260,8 +249,8 @@ inline bool CreateSplitN(void* tsm, int requestedPanes) {
                      AddToSplitFlag::kNewSplit);
   Log("[createN] AddToSplitImpl %s (%d panes)", isAdded ? "done" : "FAILED",
       memberCount);
-  // Even if the call faulted, did the DATA model get the split? (isolates a
-  // data-model fault from a synchronous view-refresh fault.)
+  // Even after a fault, log whether the data model got the split: tells a
+  // data-model fault from a synchronous view-refresh fault.
   void* activeAfter = edge::ActiveTab(tsm);
   OptionalSplitId splitAfter = {};
   if (activeAfter) {
@@ -276,9 +265,8 @@ inline bool CreateSplitN(void* tsm, int requestedPanes) {
   return isAdded;
 }
 
-// Put `newTab` right after the split's members in the strip. Edge orders a
-// split's members, and so the panes it feeds, by strip index, and a grown
-// split's new pane is its last: so the new member must come last in the strip.
+// Edge orders a split's members, and so the panes it feeds, by strip index, and
+// a grown split's new pane is its last: so the new member must come last.
 inline void PlaceAfterMembers(void* tsm, void* root,
                               std::span<void* const> memberTabs, void* newTab) {
   int lastMemberIndex = -1;
@@ -303,13 +291,11 @@ inline void PlaceAfterMembers(void* tsm, void* root,
   edge::MoveTabTo(tsm, newTabIndex, afterMembers);
 }
 
-// Add one pane to the active split (Arc-style incremental grow): `newTab` (a
-// TabModel*), or, if null, a free background tab from the strip's tail. If the
-// active tab isn't split yet, create a 2-pane split instead (any free tab).
-// Edge's split is identified by one base::Token; to add a member we dissolve it
-// and re-create it under a fresh id with every old member plus the new tab,
-// preserving the orientation/ratio. (UpdateTabInSplit only *replaces* a member,
-// never appends.)
+// Add `newTab` (a TabModel*; null: a free background tab) to the active split,
+// or make a 2-pane split if the active tab is not in one. Edge has no append
+// (UpdateTabInSplit only replaces a member), so the split is dissolved and
+// re-created under a fresh id with every old member plus the new tab, keeping
+// its orientation and ratio.
 inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
   void* root = tsm ? edge::RootCollection(tsm) : nullptr;
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
@@ -325,7 +311,6 @@ inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
     return CreateSplitN(tsm, kMinSplitMembers);
   }
 
-  // Capture the live members (TabModel*) and the visual before dissolving.
   const edge::SplitMembers members(tsm, split.token);
   const int memberCount = members.Count();
   const bool isGrowableCount =
@@ -340,7 +325,6 @@ inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
   }
   const SplitSettings settings = ReadSettings(tsm, split.token);
 
-  // The tab to become the new pane: the one given, else a free background tab.
   if (!newTab) {
     const int freeTabIndex = FindFreeTab(tsm, root, active);
     const bool hasFreeTab = freeTabIndex >= 0;
@@ -359,9 +343,9 @@ inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
       tsm, root, std::span(memberTabs).first(static_cast<size_t>(memberCount)),
       newTab);
 
-  // Dissolve, then re-resolve every tab's (now standalone) index and re-create.
+  // Dissolving moves tabs: every index is re-resolved after it.
   edge::RemoveSplitImpl(tsm, split.token, kTransactionalRemove);
-  int memberIndices[kMemberBufferSize + 1];  // every old member + the new tab
+  int memberIndices[kMemberBufferSize + 1];
   int indexCount = 0;
   for (int i = 0; i < memberCount; i++) {
     const int memberIndex = edge::GetIndexOfTabRecursive(root, memberTabs[i]);
@@ -403,7 +387,6 @@ inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
   return isAdded;
 }
 
-// The member of the active split whose tab shows `contents`, or -1.
 inline int MemberShowing(void* tsm, void* root,
                          std::span<void* const> memberTabs,
                          const void* contents) {
@@ -419,9 +402,8 @@ inline int MemberShowing(void* tsm, void* root,
   return -1;
 }
 
-// The pages of the active split's members in member order, the order the feeder
-// gives the panes (member i in pane i). Returns how many were written to `out`
-// (up to kMemberBufferSize), 0 when the active tab is not in a split.
+// The active split's pages in member order, the order the feeder gives the
+// panes (member i in pane i). Returns how many were written; 0 when unsplit.
 inline int ActiveSplitContents(void* tsm,
                                std::span<void*, kMemberBufferSize> out) {
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
@@ -443,17 +425,14 @@ inline int ActiveSplitContents(void* tsm,
 
 // What happens to the tab of the member that leaves a split.
 enum class MemberFate : uint8_t {
-  kClose,      // the tab closes
-  kKeepAsTab,  // the tab stays in the strip, standalone
+  kClose,
+  kKeepAsTab,
 };
 
-// Take the member showing `closingContents` out of the active split and keep
-// the other members split. Edge removes a member by dissolving the whole split,
-// so: dissolve keeping every tab, close the one tab (unless `fate` keeps it),
-// re-split the rest in their order under a fresh id with the same visual, then
-// activate the member showing `activeContents`. Returns how many members remain
-// (1 means the split is gone and that tab fills the window), or 0 if nothing
-// was done.
+// Take the member showing `closingContents` out of the active split. Edge
+// removes a member only by dissolving the whole split, so the rest are re-split
+// under a fresh id with the same visual. Returns how many members remain (1: the
+// split is gone), or 0 if nothing was done.
 inline int CloseMember(void* tsm, const void* closingContents,
                        const void* activeContents,
                        MemberFate fate = MemberFate::kClose) {
@@ -540,9 +519,7 @@ inline int CloseMember(void* tsm, const void* closingContents,
   return remaining;
 }
 
-// Collapse the active split: dissolve it so every member becomes a standalone
-// tab again and the active tab fills the whole window. Nothing is closed. Works
-// for any member count (the view shrinks back to one pane on the notify).
+// Every member becomes a standalone tab again; nothing is closed.
 inline bool CollapseSplit(void* tsm) {
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
   if (!active) {
@@ -560,8 +537,8 @@ inline bool CollapseSplit(void* tsm) {
   return true;
 }
 
-// A split's 16-byte id, by value, so grown splits can be collected before any
-// is dissolved (dissolving one shifts tab indices, but never another's id).
+// By value, so splits can be collected before any is dissolved: dissolving one
+// shifts tab indices, but never another's id.
 struct SplitToken {
   uint8_t bytes[16];
 };
@@ -570,18 +547,15 @@ inline bool IsSameToken(const SplitToken& token, const uint8_t* other) {
   return std::memcmp(token.bytes, other, sizeof(token.bytes)) == 0;
 }
 
-// Break every split of MORE than two panes in `tsm` back into standalone tabs:
-// each member becomes its own tab (none closed), the active tab stays in front.
-// Two-pane splits are Edge's own and left untouched. Returns how many splits
-// were dissolved. Used when the feature is switched off, so no grown split
-// outlives the DLL and renders broken under stock Edge. UI thread.
+// Dissolve every split of more than two panes into standalone tabs, leaving
+// Edge's own two-pane splits alone, so no grown split outlives the DLL and
+// renders broken under stock Edge. Returns how many were dissolved.
 inline int BreakUpGrownSplits(void* tsm) {
   void* root = tsm ? edge::RootCollection(tsm) : nullptr;
   if (!root) {
     return 0;
   }
-  // Collect first, dissolve after: RemoveSplitImpl moves tabs, so scanning and
-  // dissolving in one pass would skip tabs.
+  // Collect first, dissolve after: RemoveSplitImpl moves tabs.
   std::vector<SplitToken> grownSplits;
   const int tabCount = edge::TabCount(tsm);
   for (int i = 0; i < tabCount; i++) {

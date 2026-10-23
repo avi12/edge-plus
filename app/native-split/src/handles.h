@@ -1,21 +1,12 @@
-// handles.h — owners for Win32 resources. One concern: every kernel handle, GDI
-// object, device context, clipboard session and global-memory lock this DLL
-// opens for the length of a scope is given back by its owner's destructor, on
-// every path out of that scope (an early return, or an exception from the work
-// in between), instead of by a Close/Delete call each path has to remember.
-//
-// What outlives a scope is not owned here: the DLL's signal events live until
-// unload (dllmain.cpp), and a window class brush belongs to its class once the
-// class is registered.
+// handles.h — scope owners for Win32 resources (RAII). What outlives a scope is
+// not owned here: the DLL's signal events live until unload, and a window class
+// brush belongs to its class once registered.
 #pragma once
 #include <windows.h>
 #include <utility>
 
 namespace fixedge::handles {
 
-// One owned value of a Win32 handle type. `Traits` names the handle type, which
-// values hold nothing, and how a held one is given back. Move-only: exactly one
-// owner gives each handle back, once.
 template <class Traits>
 class Unique {
  public:
@@ -49,12 +40,10 @@ class Unique {
     return IsValid();
   }
 
-  // Stop owning the handle (another owner took it over) and return it.
   Handle Release() noexcept {
     return std::exchange(handle, Handle{});
   }
 
-  // Give the held handle back now and hold `replacement` instead.
   void Reset(Handle replacement = Handle{}) noexcept {
     if (IsValid()) {
       Traits::Close(handle);
@@ -66,9 +55,8 @@ class Unique {
   Handle handle{};
 };
 
-// A kernel object (a file, a process, a thread): CloseHandle. Win32 spells "no
-// handle" two ways (null from most creators, INVALID_HANDLE_VALUE from
-// CreateFile), and both hold nothing.
+// Win32 spells "no handle" two ways: null from most creators,
+// INVALID_HANDLE_VALUE from CreateFile.
 struct KernelTraits {
   using Handle = HANDLE;
   static bool IsValid(HANDLE handle) noexcept {
@@ -80,7 +68,6 @@ struct KernelTraits {
 };
 using UniqueHandle = Unique<KernelTraits>;
 
-// A GDI object made by a Create* call (a bitmap, a brush): DeleteObject.
 template <class GdiHandle>
 struct GdiObjectTraits {
   using Handle = GdiHandle;
@@ -94,7 +81,6 @@ struct GdiObjectTraits {
 using UniqueBitmap = Unique<GdiObjectTraits<HBITMAP>>;
 using UniqueBrush = Unique<GdiObjectTraits<HBRUSH>>;
 
-// A memory device context from CreateCompatibleDC: DeleteDC.
 struct MemoryDcTraits {
   using Handle = HDC;
   static bool IsValid(HDC context) noexcept {
@@ -106,8 +92,7 @@ struct MemoryDcTraits {
 };
 using UniqueMemoryDc = Unique<MemoryDcTraits>;
 
-// The device context GetDC lends for `window` (null: the whole screen), handed
-// back with ReleaseDC.
+// A null window lends the whole screen's DC.
 class WindowDc {
  public:
   explicit WindowDc(HWND ofWindow) noexcept
@@ -132,9 +117,8 @@ class WindowDc {
   HDC context = nullptr;
 };
 
-// `object` selected into `context` for this scope; the object it displaced is
-// selected back when the scope ends (before the object itself is deleted, as
-// long as its owner was declared first).
+// Declare the object's owner first, so the displaced object is selected back
+// before the object itself is deleted.
 class SelectedObject {
  public:
   SelectedObject(HDC intoContext, HGDIOBJ object) noexcept
@@ -153,8 +137,6 @@ class SelectedObject {
   HGDIOBJ previous = nullptr;
 };
 
-// The clipboard, opened for this scope (OpenClipboard), closed at its end when
-// it was opened.
 class OpenedClipboard {
  public:
   OpenedClipboard() noexcept : isOpen(OpenClipboard(nullptr) != FALSE) {
@@ -177,8 +159,6 @@ class OpenedClipboard {
   bool isOpen = false;
 };
 
-// Global memory `memory` locked for this scope (GlobalLock), unlocked at its
-// end when the lock was taken. Null memory locks nothing.
 class GlobalMemoryLock {
  public:
   explicit GlobalMemoryLock(HGLOBAL lockedMemory) noexcept
@@ -195,7 +175,6 @@ class GlobalMemoryLock {
   GlobalMemoryLock(GlobalMemoryLock&&) = delete;
   GlobalMemoryLock& operator=(GlobalMemoryLock&&) = delete;
 
-  // The locked bytes, or null when nothing could be locked.
   [[nodiscard]] const void* Data() const noexcept {
     return data;
   }

@@ -1,6 +1,4 @@
-// motion.h — the pure pane-transition math. One concern, zero Edge/Win32 deps,
-// so it is unit-testable on the host: the easing curve, rect interpolation, and
-// where a newly shown pane grows in from. anim.h drives it frame by frame.
+// motion.h — the pane-transition math anim.h drives frame by frame. Pure.
 #pragma once
 #include <cmath>
 #include <span>
@@ -8,20 +6,16 @@
 
 namespace fixedge::motion {
 
-// Transition length and curve: the snappy cubic-bezier(0.16, 1, 0.3, 1), its
-// control points named as CSS names them.
+// cubic-bezier(0.16, 1, 0.3, 1), its control points named as CSS names them.
 inline constexpr unsigned kDurationMs = 220;
 inline constexpr double kX1 = 0.16;
 inline constexpr double kY1 = 1.0;
 inline constexpr double kX2 = 0.3;
 inline constexpr double kY2 = 1.0;
-// Each bisection step halves the search interval; 40 of them leave an error of
-// about 1e-12, far below a pixel.
+// An error of about 1e-12, far below a pixel.
 inline constexpr int kBisectionSteps = 40;
 
-// One axis of a CSS-style cubic bezier running from 0 to 1, with its two
-// control points at `firstControl` and `secondControl` on that axis, evaluated
-// at curve parameter `curveTime`.
+// One axis of a CSS-style cubic bezier running from 0 to 1.
 [[nodiscard]] inline constexpr double Bezier(double curveTime,
                                              double firstControl,
                                              double secondControl) noexcept {
@@ -31,8 +25,8 @@ inline constexpr int kBisectionSteps = 40;
          curveTime * curveTime * curveTime;
 }
 
-// Progress (0..1 linear time) -> eased progress. Solves x(t) = progress by
-// bisection (monotonic for x control points in [0,1]), then returns y(t).
+// Solves x(t) = progress by bisection (monotonic for x control points in
+// [0,1]), then returns y(t).
 [[nodiscard]] inline constexpr double Ease(double progress) noexcept {
   if (progress <= 0.0) {
     return 0.0;
@@ -60,14 +54,14 @@ inline constexpr int kBisectionSteps = 40;
   return first.x == second.x && first.y == second.y &&
          first.width == second.width && first.height == second.height;
 }
-// Empty lives in geom.h beside Rect; anim.h calls it as motion::Empty.
+// anim.h calls it as motion::Empty.
 using fixedge::Empty;
 
 [[nodiscard]] inline int Mix(int from, int to, double progress) noexcept {
   return from + static_cast<int>(std::lround((to - from) * progress));
 }
-// Interpolate by eased progress `progress`. Edges (not sizes) are mixed, so
-// panes that tile at both ends stay seamless mid-flight.
+// Edges (not sizes) are mixed, so panes that tile at both ends stay seamless
+// mid-flight.
 [[nodiscard]] inline Rect Lerp(const Rect& from, const Rect& to,
                                double progress) noexcept {
   const int left = Mix(from.x, to.x, progress);
@@ -77,11 +71,9 @@ using fixedge::Empty;
   return Rect{left, top, right - left, bottom - top};
 }
 
-// Where a pane that was not on screen grows in from. A new pane is carved out of
-// a pane that was there (the one it split), so find the old rect holding its
-// target's centre and collapse the target onto the edge it shares with that old
-// rect on the side it was carved from: an add-right grows out of the old pane's
-// right edge. With no such parent, it grows out of its own centre.
+// A new pane is carved out of the old pane holding its centre, so it grows out
+// of the edge it was carved from (an add-right grows out of the old pane's
+// right edge); with no such parent, out of its own centre.
 [[nodiscard]] inline Rect EntryRect(const Rect& target,
                                     std::span<const Rect> before) noexcept {
   const Point centre{target.x + target.width / 2, target.y + target.height / 2};

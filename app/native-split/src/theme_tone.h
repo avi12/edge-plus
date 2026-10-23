@@ -1,17 +1,12 @@
-// theme_tone.h — is an Edge theme dark or light? One concern: the pure decision
-// from a theme's own colors, so the WebUI pages (settings, extensions) can be
-// told the same light/dark the browser frame shows. No Edge, no Win32.
-//
-// A theme extension paints the frame and toolbar with its own colors and says
-// nothing about light or dark, so the tone is read off those colors: the toolbar
-// first (the largest surface a theme always colors), the frame when it left the
-// toolbar alone, and no verdict when it set neither.
+// theme_tone.h — is an Edge theme dark or light? A theme extension says nothing
+// about it, so the tone is read off its colors: the toolbar first (the largest
+// surface a theme always colors), else the frame. Pure.
 #pragma once
 #include <cstdint>
 
 namespace fixedge::theme_tone {
 
-// A theme's color as Skia stores it: 0xAARRGGBB (also a Windows BGRA pixel).
+// 0xAARRGGBB as Skia stores it (also a Windows BGRA pixel).
 using Argb = uint32_t;
 
 inline constexpr int kAlphaShift = 24;
@@ -19,12 +14,9 @@ inline constexpr int kRedShift = 16;
 inline constexpr int kGreenShift = 8;
 inline constexpr int kBlueShift = 0;
 inline constexpr uint32_t kChannelMask = 0xff;
-// A channel at full strength (an opaque alpha).
 inline constexpr uint32_t kChannelMax = 0xff;
 
-// Chromium's color_utils::IsDark: a color is dark when its luma (the weighted
-// sum of its channels, out of 255) is below the middle. The weights are the
-// Rec. 601 ones, in thousandths.
+// Chromium's color_utils::IsDark, with Rec. 601 luma weights.
 inline constexpr int kRedWeight = 299;
 inline constexpr int kGreenWeight = 587;
 inline constexpr int kBlueWeight = 114;
@@ -43,8 +35,7 @@ inline constexpr int kDarkLumaBelow = 128;
   return Luma(color) < kDarkLumaBelow;
 }
 
-// `from` moved `toPercent` percent of the way toward `to`, opaque: how a window
-// that lost focus dims a colour into its surroundings.
+// Opaque; how a window that lost focus dims a colour into its surroundings.
 inline constexpr uint32_t kPercentScale = 100;
 [[nodiscard]] constexpr Argb Blend(Argb from, Argb to,
                                    uint32_t toPercent) noexcept {
@@ -59,14 +50,12 @@ inline constexpr uint32_t kPercentScale = 100;
   return 0xff000000u | mix(kRedShift) | mix(kGreenShift) | mix(kBlueShift);
 }
 
-// What a theme's palette says about its own tone.
 enum class Tone {
   kUnknown,  // the theme colored neither the toolbar nor the frame
   kLight,
   kDark,
 };
 
-// A color a theme may or may not have set.
 struct OptionalColor {
   bool isSet = false;
   Argb color = 0;

@@ -1,11 +1,9 @@
-// reading_scripts.h — the script reading_mode.h runs in each reading view. One
-// concern: the JavaScript that adds a "Light mode | Dark mode" switch above the
-// Themes grid of reading mode's Appearance settings, lets the grid pick the theme
-// for the side shown, and answers what was picked; and the script that takes it
-// all out again. They run in our isolated world, which the page's CSP does not
-// govern and whose globals the page cannot see; the DOM (its open shadow roots
-// included) is shared, so the switch sits in Edge's own flyout, styled with its
-// own Fluent tokens (docs/re/reading-mode-theme.md). Pure: strings only.
+// reading_scripts.h — the scripts reading_mode.h runs in each reading view: a
+// "Light mode | Dark mode" switch above the Themes grid of reading mode's
+// Appearance settings, and its removal. They run in our isolated world, which
+// the page's CSP does not govern; the DOM (open shadow roots included) is
+// shared, so the switch sits in Edge's own flyout, styled with its own Fluent
+// tokens (docs/re/reading-mode-theme.md). Pure: strings only.
 #pragma once
 #include <string>
 #include "reading_themes.h"
@@ -13,16 +11,14 @@
 
 namespace fixedge::reading_scripts {
 
-// The words of the switch, in the style of the swatches' own labels.
 inline constexpr char kGroupLabel[] = "Themes for";
 inline constexpr char kLightLabel[] = "Light mode";
 inline constexpr char kDarkLabel[] = "Dark mode";
 
-// Where the page script keeps its state between runs (one object per page, in
-// our isolated world).
+// The page script's state between runs.
 inline constexpr char kStateKey[] = "__fixedgeReadingMode";
 
-// Find the flyout's shadow root (null until reading mode has built it).
+// Null until reading mode has built the flyout.
 inline constexpr char kPaneJs[] = R"JS(
     function pane() {
       var bar = document.querySelector("reader-mode-bar");
@@ -30,10 +26,9 @@ inline constexpr char kPaneJs[] = R"JS(
       return host && host.shadowRoot;
     })JS";
 
-// Decorate the flyout when it is shown (and keep its switch, its checkmark and
-// the grid in step with `choices`), then answer `ok` or, when the person picked
-// a theme since the last run, `ok US light US dark`. `isDark` is Windows' mode:
-// the side the switch opens on, and the side whose pick the page itself applies.
+// Answers `ok`, or `ok US light US dark` when a theme was picked since the last
+// run. `isDark` is Windows' mode: the side the switch opens on, and the side
+// whose pick the page itself applies.
 [[nodiscard]] inline std::string DecorateScript(
     bool isDark, const reading_themes::Choices& choices) {
   std::string script = "(function () {\n  var config = {mode: ";
@@ -99,7 +94,6 @@ inline constexpr char kPaneJs[] = R"JS(
       render(root);
     }
 
-    // The switch: one segmented control of two segments.
     function addSwitch(root) {
       if (!root.querySelector(".fixedge-style")) {
         var style = document.createElement("style");
@@ -156,11 +150,9 @@ inline constexpr char kPaneJs[] = R"JS(
       title.after(bar);
     }
 
-    // The grid, once per grid element: a pick for Windows' own side is the
-    // page's (it switches and saves the theme itself) and is only noted; a pick
-    // for the other side never reaches the page, so the page keeps its theme.
-    // Once the switch is taken out (RemoveScript) these listeners let
-    // everything through.
+    // A pick for Windows' own side is the page's (it switches and saves the
+    // theme itself) and is only noted; a pick for the other side never reaches
+    // the page. After RemoveScript these listeners let everything through.
     function wireGrid(root) {
       var group = root.querySelector("fluent-radio-group");
       if (!group || state.wired.has(group)) {
@@ -210,7 +202,7 @@ inline constexpr char kPaneJs[] = R"JS(
       });
     }
 
-    // Everything the flyout needs; safe to run again at any time.
+    // Idempotent.
     function ensure(root) {
       addSwitch(root);
       wireGrid(root);
@@ -256,9 +248,8 @@ inline constexpr char kPaneJs[] = R"JS(
   return script;
 }
 
-// Take the switch, its style and its checkmarks out again, so the flyout is
-// exactly Edge's own (the grid's listeners stay until the page reloads, but
-// with their state gone they pass every pick straight to the page).
+// The grid's listeners stay until the page reloads, but with their state gone
+// they pass every pick straight to the page.
 [[nodiscard]] inline std::string RemoveScript() {
   std::string script = "(function () {\n  var key = ";
   script += web_text::JsStringLiteral(kStateKey) + ";";

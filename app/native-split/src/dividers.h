@@ -1,10 +1,6 @@
-// dividers.h — the draggable dividers between panes. One concern: keep one of
-// Edge's own divider views (EdgeMultiContentsResizeArea, the 2-pane split's
-// resize handle: same look, hover pill and resize cursor) per seam of a grown
-// split's tree, place each in its seam (the strip the layout leaves between two
-// panes) on every layout pass, and turn a drag on one into a tree resize that
-// keeps every other proportion. A split of N panes has N - 1 seams. Views are
-// created outside layout and reused; surplus ones are hidden. UI thread only.
+// dividers.h — the draggable dividers between panes: one of Edge's own 2-pane
+// resize handles (EdgeMultiContentsResizeArea) per seam of a grown split's
+// tree. Views are created outside layout and reused. UI thread only.
 #pragma once
 #include <map>
 #include <vector>
@@ -15,21 +11,18 @@
 
 namespace fixedge::dividers {
 
-// A stock split has two containers; dividers belong to grown splits only.
 inline constexpr int kStockContainerCount = 2;
 
-// Each grown split's divider views, and the seam each showed at the last layout.
 struct Pool {
   std::vector<void*> views;
-  std::vector<Seam> seams;
+  std::vector<Seam> seams;  // as of the last layout
 };
 inline std::map<void*, Pool>& Pools() {
   static std::map<void*, Pool> pools;
   return pools;
 }
 
-// Make sure `mcv` has a divider view for every possible seam (one fewer than
-// its containers) and that they sit above the panes in z-order.
+// Above the panes in z-order.
 inline void Ensure(void* mcv) {
   const int count = static_cast<int>(edge::McvCount(mcv));
   if (count <= kStockContainerCount) {
@@ -39,7 +32,7 @@ inline void Ensure(void* mcv) {
   const size_t needed = static_cast<size_t>(count - 1);
   while (pool.views.size() < needed) {
     void* view = edge::NewView(edge155::off::EdgeResizeArea_size);
-    edge::ConstructResizeArea(view, mcv);  // starts hidden
+    edge::ConstructResizeArea(view, mcv);
     edge::AddChildViewAt(mcv, view, edge::ViewChildCount(mcv));
     pool.views.push_back(view);
     Log("[divider] %zu views for %p", pool.views.size(), mcv);
@@ -49,7 +42,6 @@ inline void Ensure(void* mcv) {
   }
 }
 
-// The divider's rect: the whole strip of `seam`.
 inline Rect RectOf(const Seam& seam) {
   if (seam.axis == Axis::kHorizontal) {
     return Rect{seam.position, seam.crossStart, seam.thickness,
@@ -58,9 +50,6 @@ inline Rect RectOf(const Seam& seam) {
   return Rect{seam.crossStart, seam.position, seam.crossLength, seam.thickness};
 }
 
-// Layout pass: one divider in each seam of `tree` in `area` (tiled kPaneGap
-// apart), the rest (and Edge's own two-pane handle) hidden. Appends to the
-// ChildLayouts vector.
 inline void Place(void* mcv, const Node& tree, const Rect& area,
                   void* childLayouts) {
   auto entry = Pools().find(mcv);
@@ -93,7 +82,6 @@ inline void Place(void* mcv, const Node& tree, const Rect& area,
   }
 }
 
-// If `view` is one of our dividers, its split and the seam it shows.
 inline bool Locate(const void* view, void** mcv, Seam* seam) {
   for (const auto& [split, pool] : Pools()) {
     for (size_t i = 0; i < pool.views.size(); i++) {
@@ -108,13 +96,12 @@ inline bool Locate(const void* view, void** mcv, Seam* seam) {
   return false;
 }
 
-// --- dragging a divider ------------------------------------------------------
-
 struct Drag {
   bool isActive = false;
   void* mcv = nullptr;
-  Seam seam;        // measured at the press, so the result depends only on
-  Node startTree;   // the total distance dragged
+  // Measured at the press, so the result depends only on the total distance.
+  Seam seam;
+  Node startTree;
   Point pressedAt;  // window DIPs
 };
 inline constinit Drag g_drag;
@@ -122,7 +109,7 @@ inline constinit Drag g_drag;
 inline void Begin(void* mcv, const Seam& seam, Node startTree,
                   Point pressedAt) {
   g_drag = Drag{true, mcv, seam, std::move(startTree), pressedAt};
-  anim::SetLive(mcv, true);  // the panes follow the pointer, no easing
+  anim::SetLive(mcv, true);
   Log("[divider] drag started on a seam at %d (%s)", seam.position,
       seam.axis == Axis::kHorizontal ? "between columns" : "between rows");
 }
@@ -152,8 +139,7 @@ inline void End() {
   Log("[divider] drag ended");
 }
 
-// Double-click: every pane of the split `seam` divides gets an equal share
-// again (eased into place), like Edge's own handle resets its two panes.
+// Double-click, like Edge's own handle resets its two panes.
 inline void ResetToEqual(void* mcv, const Seam& seam, Node tree) {
   if (!EqualizeSplit(tree, seam.path)) {
     return;
@@ -164,8 +150,7 @@ inline void ResetToEqual(void* mcv, const Seam& seam, Node tree) {
   Log("[divider] reset a split to equal sizes");
 }
 
-// Take every divider back out (before this DLL unloads). The views are left
-// unparented rather than deleted, like the grips.
+// The views are left unparented rather than deleted, like the grips.
 inline void RemoveAll() {
   End();
   for (auto& [mcv, pool] : Pools()) {

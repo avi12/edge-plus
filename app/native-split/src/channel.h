@@ -1,8 +1,6 @@
-// channel.h — the DLL's command channel into Edge's UI thread. One concern: the
-// browser window it rides on, the registered message, and the codes posted
-// through it. control.h subclasses the window and runs the codes; hooks post
-// work that must wait until Edge's current event is done; scripts post the
-// same numbers.
+// channel.h — the DLL's command channel into Edge's UI thread: hooks post work
+// that must wait until Edge's current event is done, and scripts post the same
+// codes. control.h subclasses the window and runs them.
 #pragma once
 #include <windows.h>
 #include "pane_tree.h"
@@ -10,12 +8,11 @@
 namespace fixedge::channel {
 
 inline constinit HWND g_window = nullptr;  // the subclassed browser window
-inline constinit UINT g_message = 0;       // the registered kMessageName
+inline constinit UINT g_message = 0;
 
 inline constexpr wchar_t kMessageName[] = L"fixedge.addpane";
 
-// The codes: the wParam of a kMessageName message. A `...Base` starts a range
-// and the code's offset from it is the operand. A code no command claims falls
+// The wParam. A `...Base` starts a range and the offset from it is the operand. A code no command claims falls
 // through: from kCreatePanesBase up it creates a split of (code -
 // kCreatePanesBase) panes, from kCreateSplit up a 2-pane split, and below
 // kCreateSplit it grows the split by one pane.
@@ -45,9 +42,6 @@ enum class Command : WPARAM {
                         // one of the DLLs loaded in the system)
 };
 
-// The width of each range: one code per Direction (kUp..kRight), and the
-// panes whose hover bar can be shown. A code must stay clear of every range
-// below it (a range of directions spans kDirectionCount codes).
 inline constexpr WPARAM kDirectionCount =
     static_cast<WPARAM>(Direction::kRight) + 1;
 inline constexpr WPARAM kShowBarPaneLimit = 16;
@@ -56,7 +50,6 @@ inline constexpr WPARAM kShowBarPaneLimit = 16;
   return static_cast<WPARAM>(command);
 }
 
-// Every range ends before the next code starts.
 static_assert(CodeOf(Command::kAddPaneBase) + kDirectionCount <=
                   CodeOf(Command::kSwap),
               "the add-pane range overlaps the next code");
@@ -70,25 +63,21 @@ static_assert(CodeOf(Command::kMenuArrowBase) + kDirectionCount <=
                   CodeOf(Command::kTabDrop),
               "the menu-arrow range overlaps the next code");
 
-// The code for `direction` in a range of one code per direction.
 [[nodiscard]] inline constexpr WPARAM CodeOf(Command base,
                                              Direction direction) noexcept {
   return CodeOf(base) + static_cast<WPARAM>(direction);
 }
 
-// Whether `wparam` is one of the `count` codes that start at `base`.
 [[nodiscard]] inline constexpr bool IsInRange(WPARAM wparam, Command base,
                                               WPARAM count) noexcept {
   return wparam >= CodeOf(base) && wparam < CodeOf(base) + count;
 }
 
-// The operand of a ranged code (its offset from `base`).
 [[nodiscard]] inline constexpr int OperandOf(WPARAM wparam,
                                              Command base) noexcept {
   return static_cast<int>(wparam) - static_cast<int>(CodeOf(base));
 }
 
-// Queue `code` to run on the UI thread once the current event is done.
 inline void Post(WPARAM code) {
   const bool isOpen = g_window && g_message != 0;
   if (isOpen) {
@@ -96,9 +85,8 @@ inline void Post(WPARAM code) {
   }
 }
 
-// The WM_TIMER ids set on the subclassed browser window, each dispatched by
-// control.h's window procedure to the module that set it. One closed set, so
-// no two modules can pick the same id.
+// The WM_TIMER ids on the subclassed browser window: one closed set, so no two
+// modules can pick the same id.
 enum class WindowTimer : UINT_PTR {
   kFindPoll = 0xF1EC,        // find.h: the find bar's poll
   kAnimationFrame = 0xF1ED,  // anim.h: a pane transition's next frame

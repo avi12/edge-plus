@@ -1,8 +1,6 @@
-// control.h — runs pane actions on Edge's UI thread. One concern: subclass the
-// browser window so its hot-keys and the channel's message (channel.h, wParam =
-// a Command) run pane actions on the very thread that owns the views (the
-// WndProc runs on the UI thread). Hooks queue work there, and scripts post the
-// same codes. The original WndProc is restored on unload.
+// control.h — runs pane actions on Edge's UI thread: subclasses the browser
+// window so its hot-keys and the channel's message (channel.h) run on the thread
+// that owns the views.
 #pragma once
 #include <windows.h>
 #include <cstring>
@@ -52,8 +50,6 @@ inline constexpr wchar_t kBrowserWindowClass[] = L"Chrome_WidgetWin_1";
 inline constexpr int kClassNameLength = 64;
 inline constexpr UINT kTeardownTimeoutMs = 5000;
 
-// Hot-key ids, delivered as WM_HOTKEY's wParam to this window's (UI-thread)
-// WndProc.
 enum class HotKey : WPARAM {
   kAddPane = 1,
   kCollapse = 2,
@@ -74,23 +70,22 @@ struct HotKeyBinding {
   UINT key = 0;
 };
 
-// Ctrl+Shift+Alt + a key reshapes the split (add / swap / collapse); Shift+Alt +
-// an arrow moves focus between panes, matching the extension's pane focus. Keys
-// are registered (and unregistered) in this order.
+// Ctrl+Shift+Alt + an arrow adds a pane on that side; Shift+Alt + an arrow
+// focuses the pane on that side.
 inline constexpr UINT kEditModifiers = MOD_CONTROL | MOD_SHIFT | MOD_ALT;
 inline constexpr UINT kFocusModifiers = MOD_SHIFT | MOD_ALT;
 inline constexpr HotKeyBinding kHotKeyBindings[] = {
-    {HotKey::kAddPane, kEditModifiers, 'A'},     // add a pane to the right
-    {HotKey::kCollapse, kEditModifiers, 'X'},    // collapse to active pane
-    {HotKey::kLeft, kEditModifiers, VK_LEFT},    // add a pane to the left
-    {HotKey::kUp, kEditModifiers, VK_UP},        // add a pane above
-    {HotKey::kRight, kEditModifiers, VK_RIGHT},  // add a pane to the right
-    {HotKey::kDown, kEditModifiers, VK_DOWN},    // add a pane below
-    {HotKey::kSwap, kEditModifiers, 'S'},        // swap with the counterpart
-    {HotKey::kFocusLeft, kFocusModifiers, VK_LEFT},    // focus the pane left
-    {HotKey::kFocusUp, kFocusModifiers, VK_UP},        // focus the pane above
-    {HotKey::kFocusRight, kFocusModifiers, VK_RIGHT},  // focus the pane right
-    {HotKey::kFocusDown, kFocusModifiers, VK_DOWN},    // focus the pane below
+    {HotKey::kAddPane, kEditModifiers, 'A'},
+    {HotKey::kCollapse, kEditModifiers, 'X'},
+    {HotKey::kLeft, kEditModifiers, VK_LEFT},
+    {HotKey::kUp, kEditModifiers, VK_UP},
+    {HotKey::kRight, kEditModifiers, VK_RIGHT},
+    {HotKey::kDown, kEditModifiers, VK_DOWN},
+    {HotKey::kSwap, kEditModifiers, 'S'},
+    {HotKey::kFocusLeft, kFocusModifiers, VK_LEFT},
+    {HotKey::kFocusUp, kFocusModifiers, VK_UP},
+    {HotKey::kFocusRight, kFocusModifiers, VK_RIGHT},
+    {HotKey::kFocusDown, kFocusModifiers, VK_DOWN},
 };
 
 inline bool HasBinding(WPARAM wparam) {
@@ -119,9 +114,7 @@ inline void UnregisterHotKeys(HWND hwnd) {
   }
 }
 
-// Whether `hwnd` is a top-level window of this Edge process with the browser
-// window class (it may still be a toast or bubble; callers check for a tab
-// strip).
+// It may still be a toast or bubble; callers check for a tab strip.
 inline bool IsOurBrowserClassWindow(HWND hwnd) {
   DWORD processId = 0;
   GetWindowThreadProcessId(hwnd, &processId);
@@ -134,10 +127,8 @@ inline bool IsOurBrowserClassWindow(HWND hwnd) {
   return wcscmp(className, kBrowserWindowClass) == 0;
 }
 
-// EnumWindows callback: break up every grown split in each of this process's
-// browser windows (all on this UI thread), so none outlives the DLL. Switching
-// the feature off leaves the user with plain tabs, not a split stock Edge would
-// mis-render.
+// No grown split may outlive the DLL: stock Edge would mis-render it, so the
+// user is left with plain tabs.
 inline BOOL CALLBACK BreakUpWindowSplits(HWND hwnd, LPARAM /*unused*/) {
   if (!IsOurBrowserClassWindow(hwnd)) {
     return TRUE;
@@ -164,9 +155,7 @@ inline BOOL CALLBACK BreakUpWindowSplits(HWND hwnd, LPARAM /*unused*/) {
   return TRUE;
 }
 
-// EnumWindows callback: have the followed pages open in each of this process's
-// browser windows (theme_follow.h) take up a change of the switch. The count of
-// pages refreshed so far is the int at `lparam`.
+// `lparam` points at the int counting the pages refreshed so far.
 inline BOOL CALLBACK RefreshWindowFollowedPages(HWND hwnd, LPARAM lparam) {
   if (!IsOurBrowserClassWindow(hwnd)) {
     return TRUE;
@@ -178,8 +167,6 @@ inline BOOL CALLBACK RefreshWindowFollowedPages(HWND hwnd, LPARAM lparam) {
   return TRUE;
 }
 
-// EnumWindows callback: queue a repaint of every tab in each of this process's
-// browser windows, so a change of tab outline (tab_shape.h) shows at once.
 inline BOOL CALLBACK RepaintWindowTabs(HWND hwnd, LPARAM /*unused*/) {
   if (!IsOurBrowserClassWindow(hwnd)) {
     return TRUE;
@@ -191,7 +178,6 @@ inline BOOL CALLBACK RepaintWindowTabs(HWND hwnd, LPARAM /*unused*/) {
   return TRUE;
 }
 
-// Switch the cut-corner tab outline (tab_shape.h) on or off, and repaint.
 inline void ApplyTabShape(bool isOn) {
   if (tab_shape::g_isSquared == isOn) {
     return;
@@ -200,8 +186,6 @@ inline void ApplyTabShape(bool isOn) {
   EnumWindows(RepaintWindowTabs, 0);
 }
 
-// EnumWindows callback: set the reading mode theme (reading_mode.h) in the
-// profile behind each of this process's browser windows.
 inline BOOL CALLBACK ApplyWindowReadingTheme(HWND hwnd, LPARAM /*unused*/) {
   if (!IsOurBrowserClassWindow(hwnd)) {
     return TRUE;
@@ -213,8 +197,6 @@ inline BOOL CALLBACK ApplyWindowReadingTheme(HWND hwnd, LPARAM /*unused*/) {
   return TRUE;
 }
 
-// Everything that follows Windows light and dark, on its flip: the browser
-// theme and the reading mode's page theme.
 inline void ApplyForCurrentOsMode(HWND hwnd) {
   theme::ApplyForCurrentOsMode(hwnd);
   if (reading_mode::g_isActive) {
@@ -228,10 +210,7 @@ inline void RefreshThemeColors() {
   Log("[theme-follow] %d open page(s) recomputed their colors", refreshed);
 }
 
-// Everything that must be undone on the UI thread before unload: first break
-// every grown split back into standalone tabs (while the hooks still render the
-// collapse), then end the drag session, the preview window, the grips, the
-// animation timer and the hot-keys.
+// Splits are broken up first, while the hooks still render the collapse.
 inline void Teardown(HWND hwnd) {
   g_isTornDown = true;
   EnumWindows(BreakUpWindowSplits, 0);
@@ -261,8 +240,6 @@ inline void Teardown(HWND hwnd) {
   }
   g_hasHotKeys = false;
 }
-
-// --- the hot-keys ----------------------------------------------------------
 
 inline void CollapseByHotKey(HWND hwnd) {
   void* tsm = edge::TsmForWindow(hwnd);
@@ -318,8 +295,6 @@ inline void RunHotKey(HWND hwnd, HotKey hotKey) {
   }
 }
 
-// --- the panel's live configuration ----------------------------------------
-
 // Turn the split's hooks on or off without disturbing the window subclass that
 // theming also rides. Disabling them leaves the menus and layout stock; the
 // byte-patch safety fixes stay (they are inert without a grown split).
@@ -328,33 +303,23 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     MH_EnableHook(MH_ALL_HOOKS);
   } else {
     MH_DisableHook(MH_ALL_HOOKS);
-    // The theme garbage-collector suppressor is not a split hook: keep it on so
-    // both assigned themes stay installed for live switching while the split is
-    // off but theming is still on. (MH_ALL_HOOKS turned it off above.)
+    // MH_ALL_HOOKS also turned off the hooks that are not the split's: theming's
+    // (the theme garbage-collector suppressor keeps both assigned themes
+    // installed for live switching) and those of features with their own switch.
     MH_EnableHook(edge::At(edge155::rva::ThemeService_RemoveUnusedThemes));
-    // Nor is the vertical-tab selected-tab recolour: it rides theming too.
     MH_EnableHook(edge::At(edge155::rva::BrowserThemePack_GetColor));
-    // Nor is the selected tab's ink: theming too.
     MH_EnableHook(edge::At(edge155::rva::ColorProvider_GetColor));
     MH_EnableHook(edge::At(edge155::rva::EdgeTab_UpdateForegroundColors));
-    // Nor are the link-handler detours (they pass through while that feature
-    // is off).
     protocol_handlers::EnableHooks();
-    // The chat button's chevron is its own feature, not a split hook: keep it
-    // live.
     assistant::EnableAll();
-    // Nor is the enhanced find: it follows its own switch.
     find::EnableAll();
-    // Nor are the WebUI pages' theme colors.
     theme_follow::EnableAll();
-    // Nor is the live tab preview.
     live_preview::EnableAll();
   }
 }
 
-// EnumWindows callback: lift the link-handler blocks of the profile behind each
-// of this process's browser windows (protocol_handlers.h), adding the count to
-// the size_t at `lparam`. A profile with no window open is not reached.
+// Adds the count to the size_t at `lparam`. A profile with no window open is not
+// reached.
 inline BOOL CALLBACK LiftWindowHandlerBlocks(HWND hwnd, LPARAM lparam) {
   if (!IsOurBrowserClassWindow(hwnd)) {
     return TRUE;
@@ -365,17 +330,13 @@ inline BOOL CALLBACK LiftWindowHandlerBlocks(HWND hwnd, LPARAM lparam) {
   return TRUE;
 }
 
-// Apply the panel's desired state (config.h): which features are on, and which
-// theme to use for each OS mode. Read from the config file whenever the app
-// signals a change (OnConfigChanged), so both take effect live.
 inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
   const bool wasSplitActive = g_splitActive;
   g_splitActive = wire.splitActive != 0;
   const bool isTurningSplitOff = wasSplitActive && !g_splitActive;
   const bool isTurningSplitOn = !wasSplitActive && g_splitActive;
   if (isTurningSplitOff) {
-    // Break grown splits up while the hooks still render the collapse, then
-    // leave the menus and layout stock.
+    // Break splits up while the hooks still render the collapse.
     EnumWindows(BreakUpWindowSplits, 0);
     SetSplitHooksEnabled(false);
     if (g_hasHotKeys) {
@@ -417,23 +378,19 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
   find::Apply(isFindActive);
 }
 
-// The config read from disk at Install, applied on the UI thread via a posted
-// kApplyConfig (ApplyConfig touches Edge views, so it must not run on the Init
-// thread that does the subclassing).
+// Applied through a posted kApplyConfig: ApplyConfig touches Edge views, so it
+// must not run on the Init thread that does the subclassing.
 inline constinit config::Wire g_pendingConfig = {};
 inline constinit bool g_hasPendingConfig = false;
 
-// The app signalled a config change (dllmain's waiter thread calls this): re-read
-// the file and apply it on the UI thread. Posting to our own subclassed window
-// means we never depend on the app guessing which window we hooked.
+// Runs on dllmain's waiter thread. Posting to our own subclassed window means the
+// app never has to guess which window we hooked.
 inline void OnConfigChanged() {
   g_hasPendingConfig = config::LoadFromFile(&g_pendingConfig);
   if (g_hasPendingConfig) {
     channel::Post(CodeOf(Command::kApplyConfig));
   }
 }
-
-// --- the channel's commands ------------------------------------------------
 
 inline void AddPaneByCommand(HWND hwnd, WPARAM wparam) {
   void* mcv = edge::McvForWindow(hwnd);
@@ -491,7 +448,6 @@ inline void CreateOrGrowByCommand(HWND hwnd, WPARAM wparam) {
 }
 
 inline void RunCommand(HWND hwnd, WPARAM wparam) {
-  // The config read from disk at load, now on the UI thread.
   if (wparam == CodeOf(Command::kRedrawFollowedPages)) {
     RefreshThemeColors();
     return;
@@ -507,8 +463,7 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
     }
     return;
   }
-  // With the split switched off (the DLL stays loaded for theming), only the
-  // theming apply and the unload teardown run; every split command is ignored.
+  // With the split off, the DLL stays loaded for theming alone.
   if (!SplitActive()) {
     if (wparam == CodeOf(Command::kApplyTheme)) {
       ApplyForCurrentOsMode(hwnd);
@@ -581,8 +536,6 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
   CreateOrGrowByCommand(hwnd, wparam);
 }
 
-// --- the window procedure --------------------------------------------------
-
 inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
                                    LPARAM lparam) {
   // RegisterHotKey must run on the thread that owns the window; this WndProc is
@@ -591,7 +544,6 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   if (!g_hasHotKeys && SplitActive()) {
     RegisterHotKeys(hwnd);
   }
-  // Escape cancels a pane drag (the drag itself arrives through views; hooks.h).
   const bool isEscapeDuringDrag =
       message == WM_KEYDOWN && wparam == VK_ESCAPE && drag::IsActive();
   if (isEscapeDuringDrag) {
@@ -651,8 +603,6 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   return CallWindowProcW(g_originalProc, hwnd, message, wparam, lparam);
 }
 
-// EnumWindows callback: claim the first visible, titled browser window of this
-// process.
 inline BOOL CALLBACK FindBrowserWindow(HWND hwnd, LPARAM /*unused*/) {
   const bool isVisibleWithTitle =
       IsWindowVisible(hwnd) && GetWindowTextLengthW(hwnd) != 0;

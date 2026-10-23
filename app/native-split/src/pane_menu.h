@@ -1,13 +1,10 @@
 // pane_menu.h — Edge's own items on a pane's ⋯ menu (SplitWindowControlMenu),
-// fitted to the N-pane split. One concern: which of Edge's items the menu
-// keeps, and what they say. Its "Add pane" row is menu.h's.
-//   - No split offers "Send feedback".
+// fitted to the N-pane split. Its "Add pane" row is menu.h's.
 //   - A split of three or more drops the items another control does there:
 //     "Separate two tabs" (the toolbar's split button), "Switch left and right
 //     tabs" (it only ever swaps the first two panes; dragging a pane onto
 //     another swaps any two) and "Switch to vertical / horizontal" (a grown
 //     split is laid out by its tree, which ignores Edge's orientation).
-//   - The link toggle says what links.h made it do.
 //   - "Open this webpage in a new tab" copies the menu's own pane. Edge's
 //     copies the first pane from the first pane's ⋯ and the LAST pane from any
 //     other's (DoActionToSplitWindow ignores the page it is handed), which past
@@ -22,7 +19,6 @@
 
 namespace fixedge::pane_menu {
 
-// Edge's items a split of three or more leaves out.
 inline constexpr edge155::off::ControlMenuCommand kGrownSplitRepeats[] = {
     edge155::off::ControlMenuCommand::kSeparate,
     edge155::off::ControlMenuCommand::kSwitchSides,
@@ -30,12 +26,11 @@ inline constexpr edge155::off::ControlMenuCommand kGrownSplitRepeats[] = {
     edge155::off::ControlMenuCommand::kSwitchToHorizontal,
 };
 
-// Whether `mcv` (null when unknown) shows a split of three or more panes.
+// `mcv` is null when unknown.
 inline bool IsGrownSplit(void* mcv) {
   return mcv && edge::McvActiveSplitPanes(mcv) > split_data::kMinSplitMembers;
 }
 
-// Whether the menu leaves Edge's item `command` out.
 inline bool IsLeftOut(int command, bool isGrownSplit) {
   const bool isFeedback =
       command ==
@@ -55,8 +50,7 @@ inline bool IsLeftOut(int command, bool isGrownSplit) {
   return false;
 }
 
-// The link toggle's label, built once into a static u16string (a short
-// permanent allocation), the way menu.h builds its own labels.
+// Built once: a short permanent allocation, as menu.h builds its labels.
 inline constinit edge::U16String g_linkModeLabel;
 inline constinit bool g_hasLinkModeLabel = false;
 inline const edge::U16String* LinkModeLabel() {
@@ -67,8 +61,8 @@ inline const edge::U16String* LinkModeLabel() {
   return &g_linkModeLabel;
 }
 
-// Fit the ⋯ menu Edge just built (`model`, before PopulateMenu makes its item
-// views) to the split `mcv` shows (null when unknown: a split that never grew).
+// Before PopulateMenu makes the item views. `mcv` is null for a split that
+// never grew.
 inline void FitItems(void* model, void* mcv) {
   const bool isGrownSplit = IsGrownSplit(mcv);
   // From the last item, so a removal never shifts an index still to be read.
@@ -88,9 +82,7 @@ inline void FitItems(void* model, void* mcv) {
   }
 }
 
-// SplitWindowControlMenu::ExecuteCommand, for the ⋯ menu of `mcv`'s container
-// `pane` (mcv null when unknown): runs `command` here if it acts on that pane,
-// and returns whether it did; else Edge runs it.
+// SplitWindowControlMenu::ExecuteCommand: false leaves `command` to Edge.
 inline bool RunItem(int command, void* mcv, int pane) {
   const bool isCopyOfMenuPane =
       command ==

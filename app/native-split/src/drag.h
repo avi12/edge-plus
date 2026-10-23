@@ -1,10 +1,6 @@
-// drag.h — dragging a pane by its grip. One concern: the press -> move -> release
-// session. Edge delivers the grip's mouse events through views (hooks.h detours
-// views::Button's handlers), so views owns the mouse capture and every position
-// arrives in the window's DIPs. Past the system drag threshold each move
-// resolves the drop (dock::Resolve) and shows it (overlay); release commits the
-// planned tree, and the transition animation carries the panes there. Escape or
-// a lost capture cancels. UI thread only.
+// drag.h — dragging a pane by its grip. Edge delivers the grip's mouse events
+// through views (hooks.h detours views::Button's handlers), so views owns the
+// mouse capture and every position arrives in the window's DIPs. UI thread.
 #pragma once
 #include <windows.h>
 #include <cmath>
@@ -25,7 +21,7 @@ struct Session {
   bool isPressed = false;   // a grip is held, not yet past the drag threshold
   bool isDragging = false;  // past it: the preview follows the pointer
   void* mcv = nullptr;
-  int pane = -1;      // the container index being dragged
+  int pane = -1;
   Point pressedAt{};  // window DIPs
   dock::Plan plan;    // what releasing now would do
 };
@@ -34,8 +30,6 @@ inline constinit Session g_session;
 inline bool IsActive() {
   return g_session.isPressed || g_session.isDragging;
 }
-
-// --- coordinates: the window's DIPs <-> the split's DIPs <-> screen pixels ---
 
 inline float Scale() {
   return static_cast<float>(GetDpiForWindow(channel::g_window)) /
@@ -47,7 +41,6 @@ inline Point RootToSplit(void* mcv, Point point) {
   return point;
 }
 
-// A rect in the split's DIPs -> screen pixels (for the preview window).
 inline Rect SplitToScreen(void* mcv, const Rect& rect) {
   Point topLeft{rect.x, rect.y};
   Point bottomRight{rect.x + rect.width, rect.y + rect.height};
@@ -81,11 +74,8 @@ inline constexpr overlay::Style StyleOf(dock::Zone zone) noexcept {
   }
 }
 
-// --- the session -----------------------------------------------------------
-
-// While the pane is held outside its split (releasing there would take it out as
-// a tab), the tab list shows it as a tab of its own, and the rest of the split
-// closed up; back over the split, the list is as it was.
+// While the pane is held outside its split, the tab list shows it as a tab of
+// its own and the rest of the split closed up.
 inline void ShowDetachInTabList(void* mcv, int pane, dock::Zone zone) {
   const bool isGrownSplit =
       edge::McvActiveSplitPanes(mcv) > tabrows::kPairedMembers;
@@ -98,7 +88,6 @@ inline void ShowDetachInTabList(void* mcv, int pane, dock::Zone zone) {
   tabrows::SetDetachPreview(tabIndex);
 }
 
-// Escape / lost capture / teardown: end without committing.
 inline void Cancel() {
   const bool wasDragging = g_session.isDragging;
   g_session = Session{};
@@ -109,7 +98,6 @@ inline void Cancel() {
   }
 }
 
-// The grip of `pane` in `mcv` was pressed at `rootLocation` (window DIPs).
 inline void Begin(void* mcv, int pane, Point rootLocation) {
   g_session = Session{};
   g_session.isPressed = true;
@@ -119,7 +107,6 @@ inline void Begin(void* mcv, int pane, Point rootLocation) {
   Log("[drag] grip pressed on pane %d", pane);
 }
 
-// The pointer moved to `rootLocation` (window DIPs) with the grip held.
 inline void Move(Point rootLocation) {
   if (!IsActive()) {
     return;
@@ -157,7 +144,6 @@ inline void Move(Point rootLocation) {
   SetCursor(LoadCursorW(nullptr, reinterpret_cast<LPCWSTR>(IDC_SIZEALL)));
 }
 
-// The grip was released: commit the planned drop (if any) and end the session.
 inline void Release() {
   if (!IsActive()) {
     return;

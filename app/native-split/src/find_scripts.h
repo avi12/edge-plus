@@ -1,9 +1,7 @@
-// find_scripts.h — the scripts the find bar runs inside the page being searched.
-// One concern: the JavaScript that marks matches (with the CSS Custom Highlight
-// API, so the page's own DOM is never changed), moves between them, reads the
-// page's paragraphs for Ask Copilot and marks the ones Copilot named. They run
-// in our isolated world, so the page's own scripts cannot see or answer them
-// falsely. Every answer is a plain string that find_text.h / ask_text.h parse.
+// find_scripts.h — the JavaScript the find bar runs inside the page. Matches are
+// marked with the CSS Custom Highlight API, so the page's DOM is never changed;
+// the scripts run in our isolated world, so the page's own scripts cannot see
+// or answer them falsely. Answers are parsed by find_text.h / ask_text.h.
 #pragma once
 #include <span>
 #include <string>
@@ -13,22 +11,17 @@
 
 namespace fixedge::find_scripts {
 
-// How much of a page is read for Ask Copilot, and how much of one paragraph is
-// carried out of the page (ask_text.h cuts the rest for the prompt).
+// ask_text.h cuts a carried paragraph further for the prompt.
 inline constexpr int kMaxReadChars = 60000;
 inline constexpr int kMaxParagraphCarryChars = 1200;
-// How much of a page a search looks through.
 inline constexpr int kMaxSearchChars = 4000000;
 
-// The highlight names the page's stylesheet is written for.
 inline constexpr char kMatchHighlight[] = "fixedge-find";
 inline constexpr char kCurrentHighlight[] = "fixedge-find-current";
 
-// The page-side helpers, defined once per page (idempotent): `collect` walks
-// the page's visible text into one string (a newline between blocks, runs of
-// whitespace squeezed as the page shows them) with a map back to the text
-// nodes; `rangeFor` turns an offset pair in that string into a DOM Range;
-// `show`, `goTo` and `clear` own the highlights.
+// Defined once per page. `collect` walks the visible text into one string (a
+// newline between blocks, whitespace squeezed as the page shows it) with a map
+// back to the text nodes, which `rangeFor` turns offsets into a Range through.
 inline std::string Helpers() {
   std::string script = R"JS(
   var fx = window.__fxFind;
@@ -196,7 +189,6 @@ inline std::string Helpers() {
       return map;
     };
 
-    // The DOM position of offset `offset` of the collected text.
     fx.locate = function (map, offset, isEnd) {
       var low = 0;
       var high = map.starts.length - 1;
@@ -248,9 +240,7 @@ inline std::string Helpers() {
   return script;
 }
 
-// `body` (a script's own statements, using `fx`) wrapped so it runs with the
-// helpers defined and never throws out of the page: a failure answers the
-// error line.
+// Never throws out of the page: a failure answers the error line.
 inline std::string Wrap(const std::string& body) {
   return "(function () {\n  try {" + Helpers() + body +
          R"JS(
@@ -271,7 +261,6 @@ inline std::string ShownAnswer() {
          ";";
 }
 
-// The page-side check that the CSS Custom Highlight API is there.
 inline std::string RequireHighlights() {
   return R"JS(
     if (!window.CSS || !CSS.highlights || typeof Highlight === "undefined") {
@@ -281,9 +270,6 @@ inline std::string RequireHighlights() {
     })JS";
 }
 
-// Mark every match of `source` (a RegExp source) with `flags`, scroll to the
-// first one in view, and answer how many there are. Answers `err` with the
-// RegExp's own message when it will not compile.
 inline std::string SearchScript(const find_text::Search& search) {
   std::string body = RequireHighlights();
   body += R"JS(
@@ -347,8 +333,6 @@ inline std::string SearchScript(const find_text::Search& search) {
   return Wrap(body);
 }
 
-// Make match `index` the current one and scroll it into view. Answers `ok`, or
-// `err` when the page no longer holds the matches (it was reloaded).
 inline std::string GoToScript(int index) {
   return std::string(R"JS((function () {
   var fx = window.__fxFind;
@@ -364,16 +348,13 @@ inline std::string GoToScript(int index) {
 })())JS";
 }
 
-// Take every highlight and the stylesheet back out of the page.
 inline std::string ClearScript() {
   return R"JS((function () { if (window.__fxFind) { window.__fxFind.clear(); } return )JS" +
          web_text::JsOkAnswer() + "; })()";
 }
 
-// Read the page as paragraphs for Ask Copilot: one per block of text, in
-// reading order, remembered so ones Copilot names can be marked later. Answers
-// ask_text::ParsePageParagraphs' format. A PDF has no text in the page (Edge's
-// viewer draws it), so it is refused.
+// One paragraph per block of text, remembered so the ones Copilot names can be
+// marked later.
 inline std::string ReadParagraphsScript() {
   std::string body = R"JS(
     if (document.contentType === "application/pdf") {
@@ -415,9 +396,8 @@ inline std::string ReadParagraphsScript() {
   return Wrap(body);
 }
 
-// Mark the paragraphs `indices` (positions in the list ReadParagraphsScript
-// answered) and scroll to the first. Answers find_text::ParseSearchResult's
-// format; a paragraph whose text has left the page is skipped.
+// `indices` are positions in the list ReadParagraphsScript answered; a
+// paragraph whose text has left the page is skipped.
 inline std::string HighlightParagraphsScript(std::span<const int> indices) {
   std::string body = RequireHighlights();
   body += R"JS(

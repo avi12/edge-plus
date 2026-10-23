@@ -1,9 +1,7 @@
-// assistant_chat.h — asking the assistant (Copilot) a question from inside Edge.
-// One concern: the steps of one question. It goes to Copilot's side panel by
-// the same Edge function the page's "Ask Copilot" menu runs (the panel opens and
-// the question is in it, as for a person), then the panel's page is read until
-// the answer stops growing, and the answer is handed back. Edge has no API that
-// returns the answer, so reading the panel's page (chat_scripts.h) is ours.
+// assistant_chat.h — asking Copilot a question: it goes to Copilot's side panel
+// by the function the page's "Ask Copilot" menu runs, then the panel's page is
+// read until the answer stops growing. Edge has no API that returns the answer,
+// so reading the panel's page (chat_scripts.h) is ours.
 #pragma once
 #include <windows.h>
 #include <functional>
@@ -17,20 +15,16 @@
 
 namespace fixedge::assistant_chat {
 
-// How long the side panel may take to open, how long an answer may take, and how
-// often each step is tried.
 inline constexpr ULONGLONG kPanelWaitMs = 20000;
 inline constexpr ULONGLONG kReplyTimeoutMs = 120000;
 inline constexpr ULONGLONG kStepMs = 700;
-// How many times the question is sent again after the panel was reloaded.
+// After the panel was reloaded.
 inline constexpr int kMaxResends = 2;
 // How long a dialog may wait for the person before the question is given up.
 inline constexpr ULONGLONG kUserWaitMs = 120000;
 
-// The short title the panel is given with the question.
 inline constexpr char kPanelTitle[] = "Find the answer on this page";
 
-// What the caller is told besides the answer.
 enum class Notice {
   kNeedsUser,  // a dialog in the panel waits for the person
   kSent,       // the panel has the question; now waiting for the answer
@@ -49,20 +43,19 @@ struct Chat {
   void* browser = nullptr;
   HWND window = nullptr;
   Phase phase = Phase::kIdle;
-  unsigned long long token =
-      0;  // names the question; a late answer to an older one is dropped
+  // Names the question; a late answer to an older one is dropped.
+  unsigned long long token = 0;
   ULONGLONG phaseStartedAt = 0;
   ULONGLONG nextTryAt = 0;
   bool isScriptRunning = false;
   bool isNeedingUser = false;
   ULONGLONG blockedSince = 0;  // when a dialog first waited for the person
-  int resendCount = 0;         // times the question was sent again
+  int resendCount = 0;
   std::string prompt;
   DoneFn onDone;
   NoticeFn onNotice;
 };
 
-// The assistant's name, for what is said to the user about it.
 inline std::string NameOf(const Chat& /*chat*/) {
   return chat_target::kCopilotTarget.name;
 }
@@ -72,7 +65,7 @@ inline std::map<void*, Chat>& Chats() {
   return chats;
 }
 
-// Whether `chat` still belongs to `mcv`: a closed window destroyed its views.
+// A closed window destroyed its views.
 inline bool IsLive(void* mcv, const Chat& chat) {
   return IsWindow(chat.window) && edge::McvForWindow(chat.window) == mcv;
 }
@@ -93,7 +86,6 @@ inline Chat* ChatFor(void* mcv) {
   return entry == Chats().end() ? nullptr : &entry->second;
 }
 
-// `chat` if it is `mcv`'s and is still working on question `token`.
 inline Chat* Current(void* mcv, unsigned long long token) {
   Chat* chat = ChatFor(mcv);
   const bool isCurrent =
@@ -101,7 +93,6 @@ inline Chat* Current(void* mcv, unsigned long long token) {
   return isCurrent ? chat : nullptr;
 }
 
-// The question ends: tell the caller.
 inline void Finish(Chat& chat, const ask_text::Reply& reply) {
   const DoneFn done = std::move(chat.onDone);
   chat.phase = Phase::kIdle;
@@ -120,7 +111,6 @@ inline void Fail(Chat& chat, const std::string& why) {
   Finish(chat, reply);
 }
 
-// Put the question in Copilot's side panel (opening it).
 inline void Dispatch(Chat& chat) {
   edge::SendPromptToSidePanel(chat.browser, chat.prompt, kPanelTitle);
   chat.phase = Phase::kWaitingForPanel;
@@ -129,10 +119,8 @@ inline void Dispatch(Chat& chat) {
   chat.isScriptRunning = false;
 }
 
-// Start asking: `prompt` goes to the assistant, and `onDone` gets its answer
-// (or why there is none) later, on the UI thread. False if the window has no
-// browser to open the panel in. One question at a time per window: a new one
-// replaces the old (whose callback is never called).
+// `onDone` is called later on the UI thread. One question at a time per window:
+// a new one replaces the old, whose callback is never called.
 inline bool Ask(HWND window, void* mcv, const std::string& prompt,
                 DoneFn onDone, NoticeFn onNotice) {
   static unsigned long long nextToken = 1;
@@ -155,7 +143,7 @@ inline bool Ask(HWND window, void* mcv, const std::string& prompt,
   return true;
 }
 
-// Give up on the question in flight without telling anyone (the bar closed).
+// Without telling anyone (the bar closed).
 inline void Cancel(void* mcv) {
   Chat* chat = ChatFor(mcv);
   if (!chat) {
@@ -166,8 +154,6 @@ inline void Cancel(void* mcv) {
   chat->onNotice = nullptr;
   chat->prompt.clear();
 }
-
-// --- the steps ---------------------------------------------------------------------------
 
 inline void OnArmed(void* mcv, unsigned long long token,
                     const edge::ScriptResult& result) {
@@ -289,7 +275,7 @@ inline void StepWaitingForReply(void* mcv, Chat& chat, const void* frame,
   }
 }
 
-// One timer tick (find.h's): move every question in flight one step on.
+// find.h's timer.
 inline void Tick() {
   DropStale();
   const ULONGLONG now = GetTickCount64();
@@ -313,8 +299,6 @@ inline void Tick() {
     }
   }
 }
-
-// --- teardown -----------------------------------------------------------------------------
 
 inline void RemoveAll() {
   Chats().clear();

@@ -1,9 +1,8 @@
-// repaint.h — making panes draw after a move. One concern: a pane whose page was
-// resized or reparented by a drag shows nothing until its page is resized again
-// or the window changes focus, because the page's compositor has no frame to
-// draw. Once a layout has settled, every visible pane is given that resize, one
-// pixel and back inside a single UI task, so nothing paints in between. UI
-// thread only.
+// repaint.h — making panes draw after a move. A pane whose page was resized or
+// reparented by a drag shows nothing until its page is resized again or the
+// window changes focus, because its compositor has no frame to draw. So every
+// visible pane is resized one pixel and back inside a single UI task, so
+// nothing paints in between. UI thread only.
 #pragma once
 #include <windows.h>
 #include "channel.h"
@@ -18,14 +17,11 @@ inline constexpr UINT_PTR kTimerId =
 inline constexpr UINT kSettleMarginMs = 120;
 inline constexpr int kNudgePixels = 1;
 
-// Nudge every visible pane once the layout and its transition have settled.
 inline void ScheduleAll() {
   SetTimer(channel::g_window, kTimerId,
            static_cast<UINT>(motion::kDurationMs) + kSettleMarginMs, nullptr);
 }
 
-// The timer's work (control.h): resize each visible pane's container by a pixel
-// and back.
 inline void NudgeAll() {
   KillTimer(channel::g_window, kTimerId);
   void* mcv = edge::McvForWindow(channel::g_window);

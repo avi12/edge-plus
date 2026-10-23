@@ -1,20 +1,12 @@
-// find_flags.h — the RegExp flags the find bar's options offer as switches. One
-// concern, all of it pure (no Edge, no Win32; unit-tested in
-// test/find_flags_test.cpp): which flags there are, their words, which are on
-// at first, which exclude each other, and merging the switched-on ones with the
-// flags typed after a closing slash into one string in JavaScript's canonical
-// order ("dgimsuvy"). g is never a switch: every match is always found, so the
-// merged flags always carry it.
+// find_flags.h — the RegExp flags the find bar's options offer as switches, and
+// merging them with the flags typed after a closing slash. Pure.
 //
 // What each one does in our matcher (find_scripts.h runs it in the page):
 //   d  match indices: asked for, never shown (a highlight needs none)
 //   g  every match is found and marked (always on, not a switch)
-//   i  ignore case
 //   m  ^ and $ stand for the start and end of a line (a page's text is one line
 //      per block); off, for the start and end of the whole page text
-//   s  . also matches a line break
-//   u  Unicode mode          } cannot both be on, as in JavaScript: turning
-//   v  Unicode sets mode     } one on turns the other off
+//   u, v  cannot both be on, as in JavaScript
 //   y  sticky: the first match is found anywhere, then each next match must
 //      start exactly where the one before it ended (a contiguous run)
 #pragma once
@@ -39,8 +31,8 @@ enum class Flag {
 
 struct FlagInfo {
   Flag flag = Flag::kIndices;
-  char letter = '\0';      // the JavaScript flag
-  const char* title = "";  // the switch's words in the bar, without the letter
+  char letter = '\0';
+  const char* title = "";  // without the letter
 };
 
 inline constexpr std::array<FlagInfo, 7> kFlags = {{
@@ -53,7 +45,6 @@ inline constexpr std::array<FlagInfo, 7> kFlags = {{
     {Flag::kSticky, 'y', "Sticky"},
 }};
 
-// The switches that are on, one bit per flag.
 struct FlagSet {
   unsigned bits = 0;
 };
@@ -62,11 +53,9 @@ struct FlagSet {
   return 1u << static_cast<unsigned>(flag);
 }
 
-// The flag that is always on, and so has no switch: a search marks every match.
 inline constexpr char kAlwaysOnFlag = 'g';
 
-// What a bar starts with: ^ and $ are line edges (m), exactly as the search
-// behaved before there were switches.
+// m, exactly as the search behaved before there were switches.
 [[nodiscard]] inline constexpr FlagSet DefaultFlags() noexcept {
   return FlagSet{BitOf(Flag::kMultiline)};
 }
@@ -80,7 +69,6 @@ inline constexpr char kAlwaysOnFlag = 'g';
   return (set.bits & BitOf(flag)) != 0;
 }
 
-// The flag that cannot be on together with `flag` (u and v), if there is one.
 [[nodiscard]] inline constexpr bool HasExclusive(Flag flag,
                                                  Flag* other) noexcept {
   if (flag == Flag::kUnicode) {
@@ -94,7 +82,6 @@ inline constexpr char kAlwaysOnFlag = 'g';
   return false;
 }
 
-// Turn a flag on or off; turning one on turns off the one it excludes.
 inline constexpr void SetOn(FlagSet* set, Flag flag, bool isOn) noexcept {
   if (!isOn) {
     set->bits &= ~BitOf(flag);
@@ -107,7 +94,6 @@ inline constexpr void SetOn(FlagSet* set, Flag flag, bool isOn) noexcept {
   set->bits |= BitOf(flag);
 }
 
-// The switches that are on as flag letters, canonical order.
 [[nodiscard]] inline std::string Letters(const FlagSet& set) {
   std::string letters;
   for (const FlagInfo& info : kFlags) {
@@ -118,10 +104,9 @@ inline constexpr void SetOn(FlagSet* set, Flag flag, bool isOn) noexcept {
   return letters;
 }
 
-// The flags typed in the box OR the switches, plus the always-on g: each letter
-// once, in canonical order. Typed letters that are not flags are dropped (the typed form has
-// already refused them). A typed u next to a switched-on v (or the reverse) is
-// kept as it is: the page's RegExp refuses the pair and the bar says so.
+// Typed letters that are not flags are dropped (the typed form has already
+// refused them). A typed u next to a switched-on v (or the reverse) is kept: the
+// page's RegExp refuses the pair and the bar says so.
 [[nodiscard]] inline std::string Merge(std::string_view typedFlags,
                                        const FlagSet& set) {
   std::string merged;
@@ -137,8 +122,7 @@ inline constexpr void SetOn(FlagSet* set, Flag flag, bool isOn) noexcept {
   return merged;
 }
 
-// A flag's switch sits under RegExp as a sub-group: its title is pushed in by
-// em spaces so the column shows the nesting, and ends with the flag's letter.
+// Two em spaces: a flag's switch sits under RegExp as a sub-group.
 inline constexpr char kSubGroupIndent[] = "\xE2\x80\x83\xE2\x80\x83";
 
 [[nodiscard]] inline std::string SwitchTitle(const FlagInfo& info) {

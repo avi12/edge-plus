@@ -606,12 +606,10 @@ inline constexpr uintptr_t EdgeTabStyleViews_PaintTab_hover_layer_return =
 // straight from the OS (HKCU Themes\Personalize\AppsUseLightTheme, 0 = dark).
 // No Edge theme-observer ABI is touched.
 
-// Building the libc++ std::string id we hand RevertToExtensionTheme, into one
-// reused DLL-lifetime buffer (so we never pair an operator delete ourselves):
-// first clear it with the fill assign(size_type n, char c) at n = 0 (keeps any
-// heap buffer), then append(const char* s) the NUL-terminated id. The *string*
-// overloads of assign/append read a source string's own fields, not a raw
-// pointer, so these two char-pointer entries are the ones to call.
+// The libc++ std::string a theme id is built in (edge::ThemeIdString): the fill
+// assign(size_type n, char c) at n = 0 clears it, keeping any heap buffer, then
+// append(const char* s). The *string* overloads of assign/append read a source
+// string's own fields, not a raw pointer, so these char-pointer ones are used.
 inline constexpr uintptr_t BasicStringChar_assignFill = 0x1ff42f2;
 inline constexpr uintptr_t BasicStringChar_append = 0x27f9326;
 
@@ -865,10 +863,9 @@ inline constexpr uintptr_t THEMESERVICE_use_default_this = 0x10;
 // manifest-key -> id map is a {const char* key; int id} array in msedge.dll.
 // Edge keeps a SEPARATE *tints* table with its own enum (frame is 0x1c there),
 // so a tint id handed to GetColor always misses — do not cross the two.
-inline constexpr int THEMECOLOR_frame = 0x02;  // frame colour
-inline constexpr int THEMECOLOR_tab_text =
-    0x12;  // active-tab text (cyan accent)
-inline constexpr int THEMECOLOR_toolbar = 0x17;  // toolbar colour (dark ground)
+inline constexpr int THEMECOLOR_frame = 0x02;
+inline constexpr int THEMECOLOR_tab_text = 0x12;  // the active tab's text
+inline constexpr int THEMECOLOR_toolbar = 0x17;
 // Edge's vertical-tab strip colour ids. Edge has no manifest key for them:
 // BrowserThemePack::EdgeSetVTabAndRelatedColor (rva 0x87d42fe) DERIVES all of
 // them from the toolbar colour (it reads THEMECOLOR_toolbar/0x17, then stores a
@@ -918,11 +915,11 @@ inline constexpr uintptr_t WEBCONTENTS_color_observer = 0x80;
 // last committed URL is still empty or the previous page's then). Edge's own
 // EdgeComputePreferredColorScheme asks it.
 inline constexpr uintptr_t WEBCONTENTS_get_visible_url_slot = 0x68;
-// ui::ColorProviderKey: its first field is the ColorMode (read first by
-// ColorProviderSource::GetColorMode), 0 = light, 1 = dark.
 // The pair EdgeComputePreferredColorScheme fills.
 inline constexpr uintptr_t PREFERREDSCHEME_color_scheme = 0x0;
 inline constexpr uintptr_t PREFERREDSCHEME_scrollbar_scheme = 0x4;
+// ui::ColorProviderKey: its first field is the ColorMode (read first by
+// ColorProviderSource::GetColorMode), 0 = light, 1 = dark.
 inline constexpr uintptr_t COLORPROVIDERKEY_color_mode = 0x0;
 inline constexpr int32_t COLORMODE_light = 0;
 inline constexpr int32_t COLORMODE_dark = 1;
@@ -1238,12 +1235,12 @@ inline constexpr uintptr_t FINDBARLABEL_set_text_vtable_offset = 0x3a8;
 // views::Label: its text context and text style (Label::GetTextContext and
 // GetTextStyle are bare reads of these), which pick its font and colour id.
 inline constexpr uintptr_t LABEL_text_context = 0x388;
+inline constexpr uintptr_t LABEL_text_style = 0x38c;
 // DomDistillerContextKeyedService: its DomDistillerService base, and that
 // service's DistilledPagePrefs* (ChromeDomDistillerClient::GetDistilledPagePrefs
 // does exactly this: +8, then the field at +0x20).
 inline constexpr uintptr_t DOMDISTILLERKEYED_service = 0x8;
 inline constexpr uintptr_t DOMDISTILLERSERVICE_distilled_page_prefs = 0x20;
-inline constexpr uintptr_t LABEL_text_style = 0x38c;
 // views::Label: the colour asked for by SetEnabledColor, a
 // std::optional<ui::ColorVariant> (the variant's 8 bytes, then the engaged
 // flag), as Label::SetEnabledColor writes it.
@@ -1298,8 +1295,9 @@ inline constexpr int32_t KEYEVENT_type_pressed = 7;
 inline constexpr uint8_t KEYEVENT_key_enter = 0x0d;
 // find_in_page::FindNotificationDetails (0x28 bytes): request id, number of
 // matches (-1 = unknown), the match's selection rect, the active match's
-// 1-based ordinal (-1 = unknown) and whether this is the final update, then a ref-counted pointer (null here) that the copy constructor
-// reads, so the whole 0x28 must be ours.
+// 1-based ordinal (-1 = unknown) and whether this is the final update, then a
+// ref-counted pointer (null here) that the copy constructor reads, so the whole
+// 0x28 must be ours.
 inline constexpr size_t FINDDETAILS_size = 0x28;
 inline constexpr uintptr_t FINDDETAILS_request_id = 0x00;
 inline constexpr uintptr_t FINDDETAILS_matches = 0x04;

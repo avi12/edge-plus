@@ -1,5 +1,4 @@
-// Logging — one concern: a line to the debugger and to the panel-readable file
-// %LOCALAPPDATA%\FixEdge\split-native.log. Header-only; the single TU includes it.
+// log.h — a line to the debugger and to the panel-readable log file.
 #pragma once
 #include <windows.h>
 #include <cstdarg>
@@ -9,8 +8,7 @@
 namespace fixedge {
 
 inline constexpr size_t kLogLineCapacity = 512;
-// The formatted message's share of the line: the '\n' and terminator Log
-// appends need the last two bytes.
+// The '\n' and terminator Log appends need the last two bytes.
 inline constexpr int kLogMessageCapacity =
     static_cast<int>(kLogLineCapacity) - 2;
 inline constexpr wchar_t kLogFileUnderLocalAppData[] =
@@ -26,8 +24,7 @@ inline void Log(const char* format, ...) noexcept {
   if (isFormatError) {
     return;
   }
-  // vsnprintf returns the length the whole message WOULD have; a longer one was
-  // cut to fit, so the '\n' goes after what was actually written.
+  // vsnprintf returns the length the whole message WOULD have.
   const bool isTruncated = length >= kLogMessageCapacity;
   if (isTruncated) {
     length = kLogMessageCapacity - 1;

@@ -1,12 +1,6 @@
 // fixedge-split.dll — injected into Edge's browser process to grow the native
-// split beyond two panes. Authorized personal customization of the user's own
-// Edge (the fix-edge repo). Pinned to one msedge.dll build via offsets.h.
-//
-// This translation unit is deliberately thin: DLL lifecycle only. Each concern
-// lives in its own header — edge.h (the binding SSOT), pane_tree.h (the pure
-// layout model), panes.h (container growth), geometry.h (the layout detour),
-// hooks.h (MinHook wiring). Everything N-pane is gated on count > 2, so a stock
-// two-pane split is byte-for-byte untouched.
+// split beyond two panes; this file is the DLL lifecycle only. Everything N-pane
+// is gated on count > 2, so a stock two-pane split is untouched.
 #include <windows.h>
 #include <cstdlib>
 #include "edge.h"
@@ -22,30 +16,23 @@ constinit HMODULE g_self = nullptr;
 constinit HANDLE g_unloadEvent = nullptr;
 constinit HANDLE g_configEvent = nullptr;
 
-// The companion app toggles the feature off by signalling this; we then remove
-// the hooks and drop out of Edge without a restart.
 // @share UnloadEvent
 constexpr wchar_t kUnloadEvent[] = L"Local\\fixedge-split-unload";
 
-// The companion app signals this after it rewrites the config file, so we
-// re-read it and apply the new state live (which features are on, which theme
-// per OS mode). Auto-reset: each change wakes the wait once.
 // @share ConfigEvent
 constexpr wchar_t kConfigEvent[] = L"Local\\fixedge-config-changed";
 
-// The events the main loop waits on, in the order of its handle array.
+// In the order of the main loop's handle array.
 enum class WaitedEvent : size_t {
   kUnload,
   kConfig
 };
 constexpr DWORD kWaitedEventCount = 2;
 
-// msedge.dll may still be loading when Init runs: poll for it this many times,
-// this far apart, before giving up.
+// msedge.dll may still be loading when Init runs.
 constexpr int kModuleWaitAttempts = 100;
 constexpr DWORD kModuleWaitStepMilliseconds = 50;
 
-// How long unload waits for scripts Edge is still running for us to finish.
 constexpr DWORD kScriptDrainTimeoutMilliseconds = 5000;
 
 // Close the signal events so the panel sees this DLL as gone (a stale leftover
@@ -72,9 +59,6 @@ DWORD WINAPI Init(LPVOID) {
   Log("[init] fixedge-split loaded. %ls base=%p", edge155::kModule,
       reinterpret_cast<void*>(edge::g_base));
 
-  // Fail safe: the offsets are specific to one Edge build. Refuse to hook anything
-  // if this isn't that exact build or the hook sites don't look like code, so a
-  // stale or mismatched DLL can never corrupt a browser it wasn't reversed against.
   if (!verify::Ok()) {
     Log("[verify] FAILED - refusing to hook (wrong Edge build or unexpected "
         "code)");
@@ -88,7 +72,6 @@ DWORD WINAPI Init(LPVOID) {
   }
   Log("[init] hooks installed; directional-add menu armed");
 
-  // In WaitedEvent order.
   const HANDLE events[kWaitedEventCount] = {g_unloadEvent, g_configEvent};
   while (true) {
     const DWORD which =
@@ -99,7 +82,7 @@ DWORD WINAPI Init(LPVOID) {
       control::OnConfigChanged();
       continue;
     }
-    break;  // unload signalled (or the wait failed)
+    break;
   }
   Log("[unload] signalled; removing hooks");
   hooks::RemoveAll();
@@ -122,19 +105,15 @@ BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID) {
   if (isProcessAttach) {
     g_self = module;
     DisableThreadLibraryCalls(module);
-    // Two signals from the app: unload (detach) and config-changed (re-read and
-    // apply the config live). Unload is manual-reset (reset first so a quick
-    // off->on re-toggle does not self-unload); config is auto-reset. Created
+    // Reset first so a quick off->on re-toggle does not self-unload. Created
     // here, not in Init: the unload event existing is how the panel tells a
-    // DLL that is loading from a stale leftover, and it must never free the
-    // first.
+    // loading DLL from a stale leftover, and it must never free the first.
     g_unloadEvent = CreateEventW(nullptr, /*bManualReset=*/TRUE,
                                  /*bInitialState=*/FALSE, kUnloadEvent);
     ResetEvent(g_unloadEvent);
     g_configEvent = CreateEventW(nullptr, /*bManualReset=*/FALSE,
                                  /*bInitialState=*/FALSE, kConfigEvent);
-    // Init waits and hooks, which must not run under the loader lock. The
-    // thread runs on after its handle, which nothing waits on, is closed.
+    // Init waits and hooks, which must not run under the loader lock.
     const handles::UniqueHandle initThread{
         CreateThread(nullptr, 0, Init, nullptr, 0, nullptr)};
   }

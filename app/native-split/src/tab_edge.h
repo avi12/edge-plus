@@ -1,15 +1,14 @@
-// tab_edge.h — how a tab's leading edge is shaped. One concern: the pure
-// geometry behind the tab outline (tab_shape.h): the corner radii that keep the
-// leading edge (the left one, the right one when Edge's UI runs right to left)
-// straight on every tab, the seam between members of a split, and the strip
-// that squares a split group's fill. No Edge, no Win32.
+// tab_edge.h — the geometry behind tab_shape.h's tab outline: a straight
+// leading edge (the right one when Edge's UI runs right to left), the seam
+// between members of a split, and the strip that squares a split group's fill.
+// Pure.
 #pragma once
 #include <cstddef>
 #include "geom.h"
 
 namespace fixedge::tab_edge {
 
-// The side of the tab that leads: where the favicon is.
+// Where the favicon is.
 enum class Side {
   kLeft,
   kRight,
@@ -19,10 +18,10 @@ enum class Side {
   return isRightToLeft ? Side::kRight : Side::kLeft;
 }
 
-// One corner's radii, as Skia takes it (SkVector).
+// SkVector.
 using CornerRadius = PointF;
 
-// The corners of a rounded rectangle, in Skia's order.
+// In Skia's order.
 enum class Corner {
   kUpperLeft,
   kUpperRight,
@@ -36,10 +35,8 @@ struct CornerRadii {
   CornerRadius corners[kCornerCount];
 };
 
-// A tab's corners with its leading side and its trailing bottom corner straight.
-// Its trailing top corner keeps the radius, which tab_shape.h's outline turns
-// into a cut, unless another member of a split sits against it in the same row:
-// then the seam between the two is straight too.
+// The trailing top corner keeps the radius (tab_shape.h turns it into a cut)
+// unless another member of a split sits against it in the same row.
 [[nodiscard]] constexpr CornerRadii RadiiFor(
     Side leading, float radius, bool hasTrailingNeighbor) noexcept {
   const CornerRadius round{radius, radius};
@@ -57,8 +54,6 @@ struct CornerRadii {
 // How far apart two members of a split may be and still be one seam.
 inline constexpr int kSeamSlack = 2;
 
-// Whether a rect of `others` is `tab`'s neighbour on the trailing side: in its
-// row and touching it there. Rects are in the same coordinates.
 [[nodiscard]] constexpr bool HasTrailingNeighbor(Rect tab, Side leading,
                                                  const Rect* others,
                                                  size_t count) noexcept {
@@ -78,8 +73,7 @@ inline constexpr int kSeamSlack = 2;
   return false;
 }
 
-// The strip along `rect`'s leading side that squares a rounded rectangle's
-// leading corners when painted over it: the full height, `width` across.
+// Painted over a rounded rectangle, squares its leading corners.
 [[nodiscard]] constexpr Rect LeadingStrip(Rect rect, Side leading,
                                           int width) noexcept {
   const int stripWidth = width < rect.width ? width : rect.width;

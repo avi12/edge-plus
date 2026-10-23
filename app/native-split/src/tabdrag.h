@@ -1,11 +1,6 @@
-// tabdrag.h — Alt + drag a tab into a split. One concern: while ONE tab is
-// dragged in the strip with Alt held, hovering a split's tab shows that split,
-// and over the split the docking preview shows where the tab would land as a
-// new pane; releasing adds it there. Without Alt the drag is Edge's own. Edge's
-// TabDragController is driven through three detours: its pointer moves
-// (ContinueDragging, skipped in Alt mode, so the tab neither reorders nor tears
-// off), its end (EndDrag), and its key watcher (EventTracker, which would end
-// the drag the moment Alt is pressed). UI thread only. docs/re/tab-drag.md.
+// tabdrag.h — Alt + drag one tab into a split: hovering a split's tab shows that
+// split, and over it the docking preview shows where the tab would land as a
+// new pane. Without Alt the drag is Edge's own. UI thread. docs/re/tab-drag.md.
 #pragma once
 #include <windows.h>
 #include <optional>
@@ -21,18 +16,17 @@
 
 namespace fixedge::tabdrag {
 
-// The Alt mode of the current tab drag.
 struct Session {
   bool isAltMode = false;
   void* tsm = nullptr;
-  void* draggedContents = nullptr;  // the dragged tab's WebContents
-  void* splitContents = nullptr;    // the split tab hovered into view, if any
-  void* mcv = nullptr;              // the split view the plan is for
-  dock::Plan plan;                  // what releasing now would do
+  void* draggedContents = nullptr;
+  void* splitContents = nullptr;  // the split tab hovered into view, if any
+  void* mcv = nullptr;            // the split view the plan is for
+  dock::Plan plan;                // what releasing now would do
 };
 inline constinit Session g_session;
 
-// A drop, applied once the drag has finished ending (channel kTabDrop).
+// Applied once the drag has finished ending (channel kTabDrop).
 struct Drop {
   void* tsm = nullptr;
   void* mcv = nullptr;
@@ -42,9 +36,8 @@ struct Drop {
 };
 inline constinit std::optional<Drop> g_drop;
 
-// The drag's latest pointer move. A drag only advances on pointer moves, so
-// Alt pressed or released while the pointer rests would otherwise change nothing
-// until it moved; the key event replays this move instead.
+// A drag only advances on pointer moves, so Alt pressed or released while the
+// pointer rests would change nothing until it moved; the key event replays this.
 struct LastMove {
   void* controller = nullptr;
   Point screenPoint{};
@@ -59,7 +52,6 @@ inline bool IsAltKey(int keyCode) {
   return keyCode == VK_MENU || keyCode == VK_LMENU || keyCode == VK_RMENU;
 }
 
-// Alt mode applies to a drag of exactly one tab that is not in a split.
 inline bool CanDock(void* controller, void* tsm) {
   const bool isSingleTabDrag = edge::IsDraggingTabs(controller) &&
                                edge::DraggedTabCount(controller) == 1;
@@ -71,8 +63,7 @@ inline bool CanDock(void* controller, void* tsm) {
   return tab && !edge::TabIsSplit(tab);
 }
 
-// The strip index of the tab under `screenPoint` (screen DIPs), skipping the
-// dragged tab itself, or -1.
+// Skips the dragged tab itself; -1 if none.
 inline int TabUnder(void* context, void* tsm, Point screenPoint) {
   const int tabCount = edge::TabCount(tsm);
   for (int i = 0; i < tabCount; i++) {
@@ -89,7 +80,6 @@ inline int TabUnder(void* context, void* tsm, Point screenPoint) {
   return -1;
 }
 
-// Hovering a split's tab shows that split (activates it).
 inline void ShowSplitUnder(void* context, Point screenPoint) {
   const int index = TabUnder(context, g_session.tsm, screenPoint);
   void* tab = edge::TabModelAt(g_session.tsm, index);
@@ -103,7 +93,6 @@ inline void ShowSplitUnder(void* context, Point screenPoint) {
   Log("[tabdrag] showing the split of tab %d", index);
 }
 
-// Over the split shown in this window: preview where the tab would dock.
 inline void PreviewDock(Point screenPoint) {
   void* mcv = edge::McvForWindow(channel::g_window);
   const int panes = mcv ? edge::McvActiveSplitPanes(mcv) : 0;
@@ -132,8 +121,7 @@ inline void PreviewDock(Point screenPoint) {
   }
 }
 
-// Alt released (or the drag no longer qualifies): back to Edge's own drag,
-// with the dragged tab active again, as Edge's drag expects.
+// Edge's drag expects the dragged tab active again.
 inline void LeaveAltMode() {
   overlay::Hide();
   const int draggedIndex =
@@ -146,7 +134,6 @@ inline void LeaveAltMode() {
   Log("[tabdrag] Alt released: Edge's drag again");
 }
 
-// Unload / teardown: forget the session and any pending drop.
 inline void Cancel() {
   overlay::Hide();
   g_session = Session{};
@@ -181,13 +168,11 @@ inline int __fastcall h_continue_dragging(void* controller,
   }
   ShowSplitUnder(context, *screenPoint);
   PreviewDock(*screenPoint);
-  return 0;  // the drag lives on
+  return 0;
 }
 
-// TabDragController::EndDrag: a release in Alt mode over a drop target queues
-// the drop. Edge ends the drag first either way (re-selecting the dragged tab
-// and freeing the controller); the split is only changed after that, since
-// changing the strip mid-drag ends the drag.
+// TabDragController::EndDrag: the drop is queued, not applied, since changing
+// the strip mid-drag ends the drag.
 using EndDrag_t = void(__fastcall*)(void*, int);
 inline constinit EndDrag_t o_end_drag = nullptr;
 inline void __fastcall h_end_drag(void* controller, int reason) {
@@ -218,8 +203,6 @@ inline void __fastcall h_tracker_event(void* tracker, void* event) {
                           type == edge155::off::EVENT_type_key_released;
   const bool isAltKeyEvent = isKeyEvent && IsAltKey(edge::KeyEventCode(event));
   if (isAltKeyEvent) {
-    // Replay the pointer's last move so the mode switches now, not on the next
-    // move: Alt down over a split's tab shows that split at once.
     const bool isDragRunning = g_lastMove.controller != nullptr;
     if (isDragRunning) {
       const Point restingPoint = g_lastMove.screenPoint;
@@ -245,8 +228,7 @@ inline void ApplyDrop() {
     Log("[tabdrag] drop: a tab went away");
     return;
   }
-  edge::ActivateTabAt(drop.tsm,
-                      splitIndex);  // the split shows again
+  edge::ActivateTabAt(drop.tsm, splitIndex);
   anim::g_isNextEntryInPlace = true;
   const bool hasGrown = split_ops::GrowWithTree(
       drop.mcv, drop.tsm, std::move(drop.tree), draggedTab);

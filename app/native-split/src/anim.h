@@ -1,11 +1,8 @@
-// anim.h — animated pane transitions. One concern: when the tree's target rects
-// change at a steady window size (add, collapse, swap), ease every pane from
-// where it is on screen now to its target over a few frames, instead of jumping.
-// The on-screen View bounds are the "from" (so a retarget mid-flight continues
-// smoothly, and the native 2-pane layout hands off cleanly). A window timer
-// re-runs the layout each frame; the layout detour asks Apply() for that frame's
-// rects. A window resize snaps (it already tracks the pointer). Gated on the
-// system's "Animation effects" setting. UI thread only.
+// anim.h — animated pane transitions: when the panes' target rects change at a
+// steady window size, ease each pane from where it is drawn to its target. A
+// window timer re-runs the layout each frame and the layout detour asks Apply()
+// for that frame's rects. Gated on the system's "Animation effects". UI thread
+// only.
 #pragma once
 #include <windows.h>
 #include <map>
@@ -21,7 +18,7 @@ namespace fixedge::anim {
 struct Flight {
   std::vector<LeafRect> from;  // parallel to `to`
   std::vector<LeafRect> to;
-  std::vector<const void*> contents;  // the tab each placed container showed
+  std::vector<const void*> contents;
   ULONGLONG start = 0;
 };
 struct HostSize {
@@ -29,19 +26,15 @@ struct HostSize {
   int height = 0;
 };
 
-// SPI_GETCLIENTAREAANIMATION, read at Install.
 inline constinit bool g_isEnabled = false;
-// The window whose timer drives the frames.
 inline constinit HWND g_hwnd = nullptr;
 inline constexpr UINT_PTR kTimerId =
     channel::TimerIdOf(channel::WindowTimer::kAnimationFrame);
 inline constexpr UINT kFrameMs = 15;
 
-// Set before a pane is added that must paint at once (a tab dropped in): its
-// page then takes its final size in one step instead of being resized every
-// frame while it grows in, which left it blank until the growth finished. The
-// next flight's new panes appear in place; the flag clears when that flight is
-// planned.
+// Set before adding a pane that must paint at once (a tab dropped in): a page
+// resized every frame while it grows in stays blank until the growth finishes.
+// Cleared when the next flight is planned.
 inline constinit bool g_isNextEntryInPlace = false;
 
 inline std::map<void*, Flight>& Flights() {
@@ -53,9 +46,9 @@ inline std::map<void*, HostSize>& Hosts() {
   return hosts;
 }
 
-// Record the MCV's content size for this layout pass; true when it changed (a
-// window resize), which snaps instead of animating. Called for every bounded
-// pass, native ones included, so the first tiled pass knows the prior size.
+// True on a window resize, which snaps instead of animating. Called for every
+// bounded pass, native ones included, so the first tiled pass knows the prior
+// size.
 inline bool NoteHost(void* mcv, int width, int height) {
   // A 0x0 pass (Edge probes/hides the view mid-resize) is not a size to compare
   // against later; snap it and keep the last real size.
@@ -87,8 +80,7 @@ inline bool SameTargets(const std::vector<LeafRect>& targets,
   return true;
 }
 
-// Splits being resized live (a divider drag): their layout follows the
-// pointer exactly, with no easing.
+// Splits being resized by a divider drag follow the pointer with no easing.
 inline std::set<void*>& LiveSplits() {
   static std::set<void*> splits;
   return splits;
@@ -101,13 +93,9 @@ inline void SetLive(void* mcv, bool isLive) {
   }
 }
 
-// Rewrite `placed` (each visible leaf's target rect) to this frame's rects.
-// Starts a flight when the targets change, advances it otherwise, and ends it
-// (targets pass through untouched) once the duration has elapsed or on
-// `shouldSnap`.
-// Where each tab (by the WebContents it shows) was last drawn: where its next
-// move starts, even when Edge re-feeds it into a different container (closing a
-// pane shifts every later tab one container earlier).
+// Keyed by WebContents, so a tab's next move starts where it was drawn even when
+// Edge re-feeds it into a different container (closing a pane shifts every
+// later tab one container earlier).
 inline std::map<const void*, Rect>& LastDrawn() {
   static std::map<const void*, Rect> rects;
   return rects;
@@ -136,12 +124,10 @@ inline void Remember(const std::vector<const void*>& contents,
   }
 }
 
-// Rewrite `placed` (each visible leaf's target rect) to this frame's rects.
-// A flight starts when the targets change or a container now shows a different
-// tab; each pane starts where its tab was last drawn, else, in a container new
-// to the screen, grows in from the pane it was carved out of, else appears in
-// place. A flight ends when its duration has elapsed, or at once on
-// `shouldSnap` or a live resize.
+// Rewrites `placed` (each visible leaf's target rect) to this frame's rects.
+// Each pane starts where its tab was last drawn, else, in a container new to
+// the screen, grows in from the pane it was carved out of, else appears in
+// place.
 inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
   const std::vector<const void*> contents = ContentsOf(mcv, placed);
   auto flight = Flights().find(mcv);
@@ -160,8 +146,8 @@ inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
                                  flight->second.contents == contents;
   if (!isFlyingToTargets) {
     const int count = static_cast<int>(edge::McvCount(mcv));
-    // Every pane on screen now. A hidden container counts as empty: it keeps
-    // the bounds it last showed (a layout sets only visible children's).
+    // A hidden container counts as empty: it keeps the bounds it last showed
+    // (a layout sets only visible children's).
     std::vector<Rect> before;
     before.reserve(count);
     for (int i = 0; i < count; i++) {
@@ -219,11 +205,9 @@ inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
   Remember(contents, placed);
 }
 
-// WM_TIMER: re-run the layout of every MCV in flight; the detour calls Apply.
-// The final pass lands exactly on the targets and ends the flight, after which
-// the timer stops. The MCVs are copied out first because Apply erases a landed
-// flight mid-loop.
+// WM_TIMER.
 inline void Tick() {
+  // Copied out first: Apply erases a landed flight mid-loop.
   std::vector<void*> mcvs;
   for (const auto& [mcv, flight] : Flights()) {
     mcvs.push_back(mcv);

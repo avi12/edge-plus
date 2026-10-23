@@ -1,6 +1,5 @@
-// panes.h — building and growing the pane containers. One concern: turn a
-// 2-container MultiContentsView into an N-container one by replaying the ctor's
-// own per-pane block (docs/re/ctor.md). UI thread only.
+// panes.h — growing a MultiContentsView's pane containers by replaying the
+// ctor's own per-pane block (docs/re/ctor.md). UI thread only.
 #pragma once
 #include <utility>
 #include "edge.h"
@@ -10,9 +9,7 @@ namespace fixedge::panes {
 // Edge's own ctor builds panes 0 and 1; every pane from this index on is ours.
 inline constexpr int kFirstGrownPane = 2;
 
-// Allocate + construct one EdgeContentsContainerView, parent it under the MCV and
-// append it to the container vector — exactly as the ctor builds panes 0 and 1.
-// Returns false on a poisoned allocation.
+// Exactly as the ctor builds panes 0 and 1.
 inline bool AddContainer(void* mcv) {
   void* container = edge::NewView(edge155::off::EdgeContentsContainerView_size);
   if (!container) {
@@ -34,10 +31,8 @@ inline bool AddContainer(void* mcv) {
   return true;
 }
 
-// Give pane `index` (a grown one) its hover bar (X / ⋯) if it has none,
-// mirroring pane 1. Skipped when pane 0 has no bar either (the new toolbar draws
-// no per-pane bars). Containers are reused across collapse/regrow, so this runs
-// once each.
+// Skipped when pane 0 has no bar either (the new toolbar draws no per-pane
+// bars). Containers are reused across collapse/regrow.
 inline void EnsureControlButtons(void* mcv, int index) {
   const bool isGrownPane =
       index >= kFirstGrownPane && std::cmp_less(index, edge::McvCount(mcv));

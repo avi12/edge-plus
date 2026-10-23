@@ -1,7 +1,5 @@
 // Minimal LoadLibrary injector for testing fixedge-split.dll against an Edge
-// instance we launched ourselves. Usage: inject.exe <pid> <abs\path\to.dll>
-// (The shipping path is the companion app injecting into the browser process;
-// this is the dev harness.)
+// instance we launched ourselves (the dev harness; the panel injects in use).
 #include <windows.h>
 #include <cstdio>
 #include <cstdlib>
@@ -12,7 +10,6 @@ namespace {
 
 using fixedge::handles::UniqueHandle;
 
-// argv positions: inject.exe <pid> <dll path>
 constexpr int kPidArgument = 1;
 constexpr int kDllPathArgument = 2;
 constexpr int kArgumentCount = 3;

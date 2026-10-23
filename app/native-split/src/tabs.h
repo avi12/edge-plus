@@ -1,16 +1,12 @@
-// tabs.h — wiring real web content into a pane. One concern: attach a tab's
-// WebContents to a container's ContentsWebView (docs/re/tab-wiring.md). The
-// directional-add flow will later hand a freshly opened tab here; for now the
-// growth path feeds background tabs so grown panes aren't blank. UI thread only.
+// tabs.h — attaching a tab's WebContents to a pane's ContentsWebView
+// (docs/re/tab-wiring.md). UI thread only.
 #pragma once
 #include "edge.h"
 
 namespace fixedge::tabs {
 
-// Attach the WebContents of strip tab `tabIndex` to `container`'s pane. Returns
-// false (no-op) if the index is out of range or there is no such tab. The caller
-// must pass a genuine *background* tab index — never the active one or a tab
-// already shown in another pane, or its content would be stolen from there.
+// `tabIndex` must be a background tab, never the active one or one shown in
+// another pane, or its content would be stolen from there.
 inline bool FillPane(void* browserView, void* container, int tabIndex) {
   void* tsm = edge::TabStripModelOf(edge::BrowserOf(browserView));
   if (!tsm) {

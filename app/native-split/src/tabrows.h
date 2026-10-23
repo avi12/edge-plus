@@ -1,12 +1,8 @@
-// tabrows.h — how the tab list shows a split's tabs. One concern: Edge's tab
-// strip layout (TabStripLayoutHelper, shared by the horizontal strip and the
-// vertical list) draws a split as ONE row of two tabs side by side. With three
-// or more members, every member after the pair is given the second half's rect
-// and they pile up there. After the helper computes the ideal bounds, a split of
-// more than two members is spread out: as many slots to a row as fit, the rest
-// on new rows below (and every later tab pushed down). Also here: a hit-test
-// dump of the views under a point (channel kDumpTabRows), for finding which
-// class draws a part of the tab list. UI thread only.
+// tabrows.h — how the tab list shows a split's tabs. Edge's tab strip layout
+// (TabStripLayoutHelper, shared by the horizontal strip and the vertical list)
+// draws a split as ONE row of two tabs; every member after the pair is given the
+// second half's rect and they pile up there. Also a hit-test dump of the views
+// under a point (channel kDumpTabRows). UI thread only.
 #pragma once
 #include <windows.h>
 #include <algorithm>
@@ -16,26 +12,16 @@
 
 namespace fixedge::tabrows {
 
-// A tab row pairs only exactly two members; anything bigger is shown unpaired.
 inline constexpr int kPairedMembers = 2;
 
 // --- the ideal bounds of a split bigger than a pair -------------------------
 
-// TabStripLayoutHelper::CalculateIdealBounds returns one Rect per slot. A
-// split's first two tabs get half a row each and every further member is given
-// the second half's rect, so they pile up there. This spreads such a split over
-// as many rows as it needs: as many slots to a row as fit at kMinSlotWidth, rows
-// stacked at the strip's own row pitch, and every later tab pushed down by the
-// extra rows. Both the layout and the container's preferred height are computed
-// from this result, so fixing it here fixes both.
-// A pane's slot is never narrower than this (icon, a few letters, the close
-// button); a row holds as many slots as fit, and the rest go on a new row.
+// Room for the icon, a few letters and the close button.
 inline constexpr int kMinSlotWidth = 100;
 // The gap between rows when nothing follows the split to measure it from.
 inline constexpr int kDefaultRowGap = 4;
 
-// The rects of one layout pass, with the tab view of each slot (null for a slot
-// that holds no tab).
+// One layout pass's rects; a slot that holds no tab has a null tab view.
 struct BoundsList {
   void* helper = nullptr;
   Rect* rects = nullptr;
@@ -56,7 +42,6 @@ inline bool Overlaps(const Rect& first, const Rect& second) {
          second.y < first.y + first.height;
 }
 
-// The run of entries from `start` that belong to the same split as it.
 inline size_t SplitRunLength(const BoundsList& list, size_t start) {
   void* first = list.TabAt(start);
   const bool isSplitTab = first && edge::IsTabViewInSplit(first);
@@ -75,7 +60,6 @@ inline size_t SplitRunLength(const BoundsList& list, size_t start) {
   return length;
 }
 
-// Whether any two of the run's rects lie on top of each other (the pile-up).
 inline bool IsPiledUp(const BoundsList& list, size_t start, size_t length) {
   for (size_t i = start; i < start + length; i++) {
     for (size_t j = i + 1; j < start + length; j++) {
@@ -87,7 +71,6 @@ inline bool IsPiledUp(const BoundsList& list, size_t start, size_t length) {
   return false;
 }
 
-// Lay `length` tabs out over rows of `perRow` slots filling `rowLeft`..`rowRight`.
 inline void SpreadRun(const BoundsList& list, size_t start, size_t length,
                       int rowLeft, int rowRight, int perRow, int rowPitch) {
   const Rect first = list.RectAt(start);
@@ -109,7 +92,9 @@ inline void SpreadRun(const BoundsList& list, size_t start, size_t length,
   }
 }
 
-// Fix every piled-up split among `result` (CalculateIdealBounds's rects).
+// Spreads a piled-up split over as many rows as it needs, at the strip's own row
+// pitch, and pushes every later tab down. The container's preferred height is
+// computed from these rects too, so this fixes both.
 inline void SpreadPiledSplits(void* helper, void* result) {
   const BoundsList list{helper, edge::IdealBoundsRects(result),
                         edge::IdealBoundsCount(result)};
@@ -130,8 +115,6 @@ inline void SpreadPiledSplits(void* helper, void* result) {
       index += length;
       continue;
     }
-    // Everything of the run is laid in the strip's own row: its left edge and
-    // the right edge of its rightmost tab give the row.
     int rowLeft = list.RectAt(index).x;
     int rowRight = rowLeft;
     for (size_t i = index; i < index + length; i++) {
@@ -163,20 +146,19 @@ inline void SpreadPiledSplits(void* helper, void* result) {
 // While it is set, the tab list is laid out as if that tab had already left its
 // split: the split's other tabs close up and the tab stands on its own.
 inline constinit int g_previewTabIndex = -1;
-// The view whose children are the tab views of the last layout pass; relaid out
-// when the preview starts or ends. Only ever used within one drag.
+// The parent of the last layout pass's tab views. Only ever used within one
+// drag.
 inline constinit void* g_listView = nullptr;
 // The gap between a split and a tab of its own in a horizontal strip.
 inline constexpr int kPreviewGapDip = 10;
 
-// Where a tab that leaves its split stands, and what moves for it.
 struct DetachLayout {
-  size_t slot = 0;      // the leaving tab's slot
+  size_t slot = 0;
   size_t runStart = 0;  // its split's slots: [runStart, runEnd)
   size_t runEnd = 0;
 };
 
-// The slot of the `tabIndex`th tab, or the slot count if there is none.
+// The slot count when there is no such tab.
 inline size_t SlotOfTab(const BoundsList& list, int tabIndex) {
   int tabsSeen = 0;
   for (size_t index = 0; index < list.count; index++) {
@@ -196,7 +178,6 @@ inline int ReachOf(const Rect& rect, bool isVertical) {
   return isVertical ? rect.y : rect.x + rect.width;
 }
 
-// The split's rects as the layout gave them, and the span they cover.
 struct RunRects {
   std::vector<Rect> before;
   int left = 0;
@@ -219,8 +200,6 @@ inline RunRects MeasureRun(const BoundsList& list, const DetachLayout& detach,
   return run;
 }
 
-// The split's other tabs take the split's first rects, in order, closing up the
-// place the leaving tab held.
 inline void CloseUp(const BoundsList& list, const DetachLayout& detach,
                     const RunRects& run) {
   size_t next = 0;
@@ -231,8 +210,7 @@ inline void CloseUp(const BoundsList& list, const DetachLayout& detach,
   }
 }
 
-// Move the split's other tabs by `offset` along the list's axis; returns how far
-// they then reach, starting from `reach`.
+// Returns how far the shifted tabs then reach, starting from `reach`.
 inline int ShiftRemaining(const BoundsList& list, const DetachLayout& detach,
                           int offset, bool isVertical, int reach) {
   for (size_t slot = detach.runStart; slot < detach.runEnd; slot++) {
@@ -286,11 +264,9 @@ inline int PlaceDetachedHorizontal(const BoundsList& list,
   return ShiftRemaining(list, detach, offset, false, first.x + first.width);
 }
 
-// The tabs of the leaving tab's split other than it close up. The leaving tab
-// then stands on its own: after the others if it was the split's last tab, else
-// before them (the tab list sizes itself from the last tab's rect, so that tab
-// must stay the furthest on). Tabs after the split make room for what the split
-// now takes.
+// The leaving tab stands after the others if it was the split's last tab, else
+// before them: the tab list sizes itself from the last tab's rect, so that tab
+// must stay the furthest on.
 inline void LayOutDetached(const BoundsList& list, const DetachLayout& detach,
                            bool isVertical) {
   const RunRects run = MeasureRun(list, detach, isVertical);
@@ -307,8 +283,7 @@ inline void LayOutDetached(const BoundsList& list, const DetachLayout& detach,
   }
 }
 
-// Apply the preview of a pane leaving its split, if one is shown and its tab is
-// in a split of more than a pair (a pair is Edge's to take apart).
+// A pair is Edge's to take apart, so only a grown split gets the preview.
 inline void ApplyDetachPreview(void* helper, void* result) {
   const BoundsList list{helper, edge::IdealBoundsRects(result),
                         edge::IdealBoundsCount(result)};
@@ -344,9 +319,8 @@ inline void ApplyDetachPreview(void* helper, void* result) {
   LayOutDetached(list, detach, edge::IsVerticalTabView(tab));
 }
 
-// Start or end the preview for the tab at strip index `tabIndex` (-1 to end),
-// and lay the tab list out again to show it, unless `isRelayoutWanted` is false
-// (the real change is about to do it).
+// `tabIndex` -1 ends the preview. Pass `isRelayoutWanted` false when the real
+// change is about to relayout anyway.
 inline void SetDetachPreview(int tabIndex, bool isRelayoutWanted = true) {
   if (tabIndex == g_previewTabIndex) {
     return;
@@ -364,8 +338,7 @@ inline void SetDetachPreview(int tabIndex, bool isRelayoutWanted = true) {
 }
 
 // TabStripLayoutHelper::CalculateIdealBounds(this, out, optional<int> width):
-// fills `out` with every slot's ideal bounds and returns it. Fix them up before
-// the helper stores them or sizes the container from them.
+// fixed up before the helper stores the bounds or sizes the container from them.
 using CalculateIdealBounds_t = void*(__fastcall*)(void*, void*, uint64_t);
 inline constinit CalculateIdealBounds_t o_calculate_ideal_bounds = nullptr;
 inline void* __fastcall h_calculate_ideal_bounds(void* helper, void* out,
@@ -384,8 +357,7 @@ inline constexpr size_t kMaxChildrenListed = 12;
 inline constexpr int kProbeX = 60;
 inline constexpr int kProbeY = 104;
 
-// Log every view whose bounds contain `probe` (root coordinates), outermost
-// first, with its vtable (name it with tools/re/symbols.py), so the class that
+// Logs each view's vtable (name it with tools/re/symbols.py), so the class that
 // draws a row can be found without RTTI. `origin` is `view`'s parent's position.
 inline void Walk(void* view, int depth, Point origin, Point probe, int* found) {
   if (depth > kMaxDepth) {
@@ -418,7 +390,6 @@ inline void Walk(void* view, int depth, Point origin, Point probe, int* found) {
   }
 }
 
-// Log the views under the probe point in `anyView`'s widget.
 inline void Dump(void* anyView) {
   if (!anyView) {
     return;

@@ -1,12 +1,7 @@
-// links.h — where a split pane's new-tab links open. One concern: Edge's ⋯
-// toggle "Open left links to the right" (one per split) now decides what a
-// link that would open a new tab (target=_blank, no opener) does in a pane:
-//   - off: the pane itself goes there; no tab is made;
-//   - on: it opens in a new pane to the right of that pane.
-// Edge's own split handling of such links (built for two panes) and its
-// navigation throttle that sent the first pane's same-tab links to the last
-// pane are replaced. Modifier clicks, popups and pages outside a split are
-// Edge's own. UI thread only. docs/re/split-links.md.
+// links.h — where a split pane's new-tab links (target=_blank, no opener) open:
+// Edge's per-split ⋯ toggle "Open left links to the right" now means off: the
+// pane itself goes there; on: a new pane to its right. Edge's two-pane handling
+// of such links is replaced. UI thread. docs/re/split-links.md.
 #pragma once
 #include <utility>
 #include "channel.h"
@@ -17,26 +12,20 @@
 
 namespace fixedge::links {
 
-// The toggle's label, saying what it does now (Edge's says "Open left links to
-// the right"); pane_menu.h puts it on the ⋯ menu.
 inline constexpr char kToggleLabel[] = "Open new-tab links in a new pane";
 
-// Where a page's new-tab link goes.
 enum class LinkTarget : uint8_t {
-  kEdge,          // not a split pane of this window: Edge's own handling
-  kSamePane,      // the toggle is off
-  kNewPaneRight,  // the toggle is on
+  kEdge,  // not a split pane of this window
+  kSamePane,
+  kNewPaneRight,
 };
 
-// A link opening a foreground tab (Edge's split variant included).
 inline bool IsForegroundTab(int disposition) {
   return disposition == edge155::off::DISPOSITION_new_foreground_tab ||
          disposition == edge155::off::DISPOSITION_split_foreground_tab;
 }
 
-// A plain new-tab link: clicked (a user gesture), for a foreground tab, and
-// with no opener to keep (a page that opens a window to script it keeps
-// Edge's handling).
+// A page that opens a window to script it (an opener) keeps Edge's handling.
 inline bool IsNewTabLink(int disposition, bool hasUserGesture,
                          bool isOpenerSuppressed) {
   return IsForegroundTab(disposition) && hasUserGesture && isOpenerSuppressed;
@@ -53,22 +42,19 @@ inline LinkTarget LinkTargetFor(void* sourceContents) {
                                             : LinkTarget::kSamePane;
 }
 
-// A link's new tab, waiting to become a pane once Edge has added it (channel
-// kLinkPane).
+// Waits to become a pane once Edge has added the tab (channel kLinkPane).
 struct NewPaneLink {
-  void* source = nullptr;       // the pane's WebContents
-  void* newContents = nullptr;  // the new tab's
+  void* source = nullptr;
+  void* newContents = nullptr;
 };
 inline constinit NewPaneLink g_newPaneLink;
 
 // --- the detours -------------------------------------------------------------
 
-// BrowserWebContentsDelegate::ShouldOverrideNewWindowCreation: Edge's own
-// split hook, asked before any window is made. Edge hands a foreground-tab
-// link from the split's active tab to its SplitWindowController, built for two
-// panes. Instead: with the toggle off the pane goes to the link itself and the
-// request is claimed (no window); with it on the request is left to make its
-// tab, which AddNewContents below turns into a pane.
+// BrowserWebContentsDelegate::ShouldOverrideNewWindowCreation: asked before any
+// window is made; Edge hands the link to its two-pane SplitWindowController.
+// With the toggle on the request is left to make its tab, which AddNewContents
+// below turns into a pane.
 using ShouldOverride_t = bool(__fastcall*)(void*, void*, void*, int, bool,
                                            void*);
 inline constinit ShouldOverride_t o_should_override = nullptr;
@@ -94,9 +80,8 @@ inline bool __fastcall h_should_override(void* delegate, void* source,
   }
 }
 
-// BrowserWebContentsDelegate::AddNewContents: with the toggle on, the link's
-// tab goes in quietly (in the background, which also places it right after
-// the split), and becomes a pane once Edge is done adding it.
+// BrowserWebContentsDelegate::AddNewContents: a background tab also lands right
+// after the split.
 using AddNewContents_t = void*(__fastcall*)(void*, void*, void**, const void*,
                                             int, const void*, bool, bool*);
 inline constinit AddNewContents_t o_add_new_contents = nullptr;
@@ -134,9 +119,8 @@ inline void** __fastcall h_link_throttle(void** outThrottle,
   return outThrottle;
 }
 
-// SplitWindowControllerImplV2::UpdateLinkedModeState: the toggle now only
-// means what this header says, read from the split when a link is clicked, so
-// Edge's two-pane wiring of it is skipped.
+// SplitWindowControllerImplV2::UpdateLinkedModeState: skipped; the toggle is
+// read from the split when a link is clicked.
 using UpdateLinkedMode_t = void(__fastcall*)(void*, bool);
 inline constinit UpdateLinkedMode_t o_update_linked_mode = nullptr;
 inline void __fastcall h_update_linked_mode(void* /*controller*/,

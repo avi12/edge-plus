@@ -1,7 +1,5 @@
-// verify.h — fail-safe self-checks run before any hook is installed. One concern:
-// confirm the loaded msedge.dll is the exact build offsets.h was reversed against,
-// and that the critical addresses look like code. Offsets are build-specific, so
-// applying them to a different Edge build would corrupt memory — refuse instead.
+// verify.h — fail-safe self-checks run before any hook is installed: offsets are
+// build-specific, and applied to another Edge build they would corrupt memory.
 #pragma once
 #include <windows.h>
 #include <cstdint>
@@ -16,7 +14,6 @@ namespace fixedge::verify {
 // VerQueryValueW's sub-block for the VS_FIXEDFILEINFO root.
 inline constexpr wchar_t kFixedFileInfoBlock[] = L"\\";
 
-// True only if the running msedge.dll is exactly the build offsets.h names.
 [[nodiscard]] inline bool BuildMatches() {
   wchar_t path[MAX_PATH];
   HMODULE module = GetModuleHandleW(edge155::kModule);
@@ -57,8 +54,8 @@ inline constexpr wchar_t kFixedFileInfoBlock[] = L"\\";
          revision == edge155::kVersionRevision;
 }
 
-// A hooked function should begin with a plausible x64 prologue byte and sit inside
-// the module image — a cheap guard against a stale RVA landing on data/padding.
+// A plausible x64 prologue byte: a cheap guard against a stale RVA landing on
+// data or padding.
 [[nodiscard]] inline bool LooksLikeCode(uintptr_t rva) {
   const uint8_t firstByte = *reinterpret_cast<uint8_t*>(edge::At(rva));
   switch (firstByte) {
@@ -83,7 +80,6 @@ inline constexpr wchar_t kFixedFileInfoBlock[] = L"\\";
   }
 }
 
-// True when the bytes at `rva` are exactly `expected`.
 [[nodiscard]] inline bool BytesAre(uintptr_t rva,
                                    std::span<const uint8_t> expected) {
   const auto* actual = reinterpret_cast<const uint8_t*>(edge::At(rva));
@@ -121,8 +117,7 @@ inline constexpr wchar_t kFixedFileInfoBlock[] = L"\\";
   return isGuardIntact && isLabelCheckIntact && isActiveIndexCheckIntact;
 }
 
-// The critical hook sites (a subset of what hooks.h installs). If any fails, we
-// do not install.
+// A subset of what hooks.h installs.
 [[nodiscard]] inline bool HookSitesLookSane() {
   const uintptr_t sites[] = {
       edge155::rva::MultiContentsView_SetWebContentsAtIndex,
@@ -161,7 +156,6 @@ inline constexpr wchar_t kFixedFileInfoBlock[] = L"\\";
   return true;
 }
 
-// The one gate Init calls before touching anything.
 [[nodiscard]] inline bool Ok() {
   return BuildMatches() && HookSitesLookSane();
 }

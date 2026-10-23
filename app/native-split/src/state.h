@@ -1,7 +1,5 @@
-// state.h — per-MultiContentsView split tree registry. One concern: owning the
-// live tree for each split so directional-add and drag can reshape it between
-// layout passes. Until the UI mutates a tree, the geometry synthesizes a flat
-// equal split from the live pane count, preserving the proven behaviour.
+// state.h — the live split tree of each MultiContentsView. Until the UI edits a
+// tree, the geometry uses a flat equal split of the live pane count.
 #pragma once
 #include <map>
 #include "pane_tree.h"
@@ -13,22 +11,18 @@ inline std::map<void*, Node>& Trees() {
   return trees;
 }
 
-// The MultiContentsView of the split most recently laid out — the target for a
-// directional-add command (the menu doesn't carry the MCV; the active split
-// does). Set by the layout detour, read by the menu action.
+// The split most recently laid out: the target of a directional-add command,
+// since the menu doesn't carry the MCV.
 inline constinit void* g_activeMcv = nullptr;
 
-// Whether the split feature is switched on. The DLL can be loaded for theming
-// alone, so every user-facing split action checks this first; the panel pushes
-// it (config.h). Defaults on: a DLL loaded before the panel's first config, or
-// for the split alone, behaves as it always has.
+// The DLL can be loaded for theming alone, so every user-facing split action
+// checks this. On by default, for a DLL loaded before the panel's first config.
 inline constinit bool g_splitActive = true;
 
 inline bool SplitActive() {
   return g_splitActive;
 }
 
-// The tree for `mcv`, or nullptr if none has been set yet.
 inline const Node* TreeFor(void* mcv) {
   const auto entry = Trees().find(mcv);
   return entry == Trees().end() ? nullptr : &entry->second;

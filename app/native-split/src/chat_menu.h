@@ -1,12 +1,10 @@
-// chat_menu.h — the chevron beside the chat button. One concern: find the
-// dropdown button (EdgeCopilotDropdownMenuButton) that sits next to Edge's
-// toolbar chat pill. UI thread only.
+// chat_menu.h — the chevron (EdgeCopilotDropdownMenuButton) beside Edge's
+// toolbar chat button. UI thread only.
 #pragma once
 #include "edge.h"
 
 namespace fixedge::chat_menu {
 
-// The chevron next to chat button `button`: a sibling in the same container.
 inline void* DropdownBeside(void* button) {
   void* container = edge::ViewParent(button);
   if (!container) {

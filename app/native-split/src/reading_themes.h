@@ -1,8 +1,6 @@
-// reading_themes.h — the reading mode's page themes. One concern, all of it pure
-// (no Edge, no Win32; unit-tested in test/reading_themes_test.cpp): the twelve
-// swatches Edge's reading mode offers under Appearance settings > Themes, their
-// pref values, their names, the theme picked for each Windows mode, and that
-// choice's file and page-answer forms.
+// reading_themes.h — the twelve page themes Edge's reading mode offers, the one
+// picked for each Windows mode, and that choice's file and page-answer forms.
+// Pure.
 //
 // The values are Edge's own: the reading_view.theme pref and dom_distiller::Theme
 // index learning_tools.dll's theme table ("0":"Sepia" ... "22":"DarkGrey", 23
@@ -18,7 +16,7 @@
 
 namespace fixedge::reading_themes {
 
-// Edge's own numbers for each swatch, in the grid's order (row one, then two).
+// In the grid's order.
 enum class ReadingTheme : int32_t {
   kSepia = 0,
   kLight = 1,
@@ -55,9 +53,7 @@ inline constexpr std::array<ThemeInfo, 12> kThemes = {{
     {ReadingTheme::kDarkGrey, "DarkGrey"},
 }};
 
-// The theme a number from the wire names, or false when it is not one of the
-// twelve (anything else is ignored). Looked up, never cast, so no other number
-// ever becomes a ReadingTheme.
+// Looked up, never cast, so no other number ever becomes a ReadingTheme.
 [[nodiscard]] constexpr bool ThemeOf(int32_t value,
                                      ReadingTheme* theme) noexcept {
   for (const ThemeInfo& info : kThemes) {
@@ -74,8 +70,6 @@ inline constexpr std::array<ThemeInfo, 12> kThemes = {{
   return ThemeOf(value, &ignored);
 }
 
-// The theme picked for each Windows mode, in reading mode's own Appearance
-// settings (reading_mode.h keeps them in a file of their own).
 struct Choices {
   ReadingTheme light = ReadingTheme::kSepia;
   ReadingTheme dark = ReadingTheme::kBlack;
@@ -87,8 +81,7 @@ struct Choices {
   return isDark ? choices.dark : choices.light;
 }
 
-// The file: the light theme's number, then the dark one's, each a
-// little-endian int32.
+// The light theme's number, then the dark one's, each a little-endian int32.
 inline constexpr size_t kChoicesFileSize = 8;
 inline constexpr int kByteBits = 8;
 inline constexpr uint32_t kByteMask = 0xff;
@@ -107,8 +100,7 @@ inline constexpr uint32_t kByteMask = 0xff;
   return bytes;
 }
 
-// The choices a file holds; a file of another size, or a number that is not
-// one of the twelve, leaves that side at its default.
+// A file of another size, or an unknown number, leaves that side at its default.
 [[nodiscard]] constexpr Choices ChoicesFromBytes(
     std::span<const uint8_t> bytes) noexcept {
   Choices choices;
@@ -132,8 +124,6 @@ inline constexpr uint32_t kByteMask = 0xff;
   return choices;
 }
 
-// The choices the page answered as two numbers in text; false unless both are
-// among the twelve.
 [[nodiscard]] inline bool ChoicesFromFields(std::string_view light,
                                             std::string_view dark,
                                             Choices* choices) noexcept {

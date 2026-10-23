@@ -1,8 +1,7 @@
-// icons.h — the vector icons the DLL draws in Edge's own buttons. One concern:
-// build gfx::VectorIcon data in Edge's heap (never freed, so a button that
-// outlives this DLL never points into unloaded memory): the pane grip's six
-// dots, and the ⋯ row's arrows — Edge's own ↑ and ↓, and ← → as quarter turns
-// of its ↑, so all four come from one icon family.
+// icons.h — the vector icons the DLL draws in Edge's own buttons, built in
+// Edge's heap and never freed, so a button that outlives this DLL never points
+// into unloaded memory. ← → are quarter turns of Edge's ↑, so all four arrows
+// come from one icon family.
 #pragma once
 #include <cmath>
 #include <cstdint>
@@ -45,8 +44,7 @@ inline float ArgumentOf(PathElement element) noexcept {
   return value;
 }
 
-// One single-representation icon, copied into one Edge-heap block: the two
-// structs, then the path, then the name.
+// One block: the two structs, then the path, then the name.
 inline const VectorIcon* Build(const char* name,
                                const std::vector<PathElement>& path) {
   const size_t nameSize = strlen(name) + 1;
@@ -66,8 +64,7 @@ inline const VectorIcon* Build(const char* name,
   return vectorIcon;
 }
 
-// The 6-dot grip (two columns, three rows of r=1 dots on a 16 canvas), drawn
-// like Edge's ⋯ icon.
+// Drawn like Edge's ⋯ icon.
 inline const VectorIcon* Grip() {
   static const VectorIcon* icon = [] {
     constexpr int kRows = 3;
@@ -105,10 +102,7 @@ inline const VectorIcon* Grip() {
   return icon;
 }
 
-// --- the arrows --------------------------------------------------------------
-
-// How many arguments a path command takes, for the commands Edge's arrow icon
-// uses; -1 for any other, which the quarter turn refuses.
+// Only the commands Edge's arrow icon uses; -1 for any other.
 inline constexpr int ArgumentCount(int command) noexcept {
   switch (command) {
     case edge155::off::ICON_NEW_PATH:
@@ -128,10 +122,9 @@ inline constexpr int ArgumentCount(int command) noexcept {
   }
 }
 
-// `source` (an up arrow) turned a quarter to point `direction` (left or right)
-// on its square canvas: absolute points turn about the canvas, relative moves
-// turn without the offset, and a vertical line is written as an absolute line
-// to its end point. Null if the source uses a command this does not know.
+// An up arrow turned to point left or right: absolute points turn about the
+// canvas, relative moves turn without the offset, and a vertical line becomes
+// an absolute line to its end point. Null on an unknown command.
 inline const VectorIcon* QuarterTurn(const VectorIcon* source,
                                      Direction direction, const char* name) {
   const IconRepresentation& representation = source->representations[0];
@@ -225,8 +218,7 @@ inline const VectorIcon* QuarterTurn(const VectorIcon* source,
   return Build(name, out);
 }
 
-// The arrow for adding a pane in `direction`: Edge's ↑ / ↓, and its ↑ turned
-// for ← / → (Edge's own back / forward arrows if the turn is refused).
+// Edge's back / forward arrows if the turn is refused.
 inline const void* Arrow(Direction direction) {
   const auto* upArrow =
       static_cast<const VectorIcon*>(edge::At(edge155::rva::Icon_ArrowUp));

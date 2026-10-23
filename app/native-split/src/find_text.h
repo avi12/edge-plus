@@ -1,9 +1,6 @@
-// find_text.h — the text side of the enhanced find. One concern, all of it pure
-// (no Edge, no Win32; unit-tested in test/find_text_test.cpp): telling from what
-// the user typed into Edge's find bar whether it is a RegExp or a question for
-// the browser assistant, turning a RegExp into what the page script runs,
-// checking it before it reaches a page, stepping through the matches, and
-// reading what the page script reports back.
+// find_text.h — the text side of the enhanced find: parsing the find bar's box,
+// checking a RegExp, stepping through matches and reading the page script's
+// answer. Pure; tested in test/find_text_test.cpp.
 #pragma once
 #include <cctype>
 #include <cstddef>
@@ -15,18 +12,14 @@
 
 namespace fixedge::find_text {
 
-// What Edge's find bar is asked for. Plain text is Edge's own search, untouched;
-// the other two are ours.
 enum class Mode {
-  kText,    // the words typed: Edge's find
-  kRegExp,  // /pattern/flags: a JavaScript regular expression
-  kAsk,     // ? question: a question for the browser assistant (ask_text.h)
+  kText,    // Edge's own find, untouched
+  kRegExp,  // /pattern/flags
+  kAsk,     // ? question, for the browser assistant (ask_text.h)
 };
 
-// The one name of the regular-expression mode in everything the user reads.
 inline constexpr char kRegExpName[] = "RegExp";
 
-// What a question is introduced by, and the delimiter of a RegExp.
 inline constexpr char kAskMark = '?';
 inline constexpr char kRegExpDelimiter = '/';
 // The flags `/pattern/flags` takes: all eight of JavaScript's (find_flags.h says
@@ -58,7 +51,7 @@ struct Query {
   return std::string(text.substr(start, end - start));
 }
 
-// Whether `flags` are RegExp flags we take, each at most once.
+// Each flag at most once.
 [[nodiscard]] inline constexpr bool AreRegExpFlags(
     std::string_view flags) noexcept {
   for (size_t i = 0; i < flags.size(); i++) {
@@ -72,10 +65,8 @@ struct Query {
   return true;
 }
 
-// Read what is in the find bar's box. `? question` (a question mark and a space
-// first) is a question; `/pattern/flags` (a slash, a pattern, the last slash,
-// then only known flags) is a RegExp; anything else, including a RegExp not yet
-// closed, is plain text for Edge.
+// Anything not a complete `? question` or `/pattern/flags`, including a RegExp
+// not yet closed, is plain text for Edge.
 [[nodiscard]] inline Query ParseQuery(std::string_view typed) {
   Query query;
   const bool isQuestion =
@@ -123,8 +114,6 @@ inline constexpr char kIgnoreCaseFlag[] = "i";
   return title + " (Enter)";
 }
 
-// Read the box with a switch on: what is typed is the pattern (case sensitive
-// unless it starts with "(?i)") or the question. An empty box asks nothing.
 [[nodiscard]] inline Query ParseQuery(std::string_view typed, Option option) {
   if (option == Option::kNone) {
     return ParseQuery(typed);
@@ -147,10 +136,8 @@ inline constexpr char kIgnoreCaseFlag[] = "i";
   return query;
 }
 
-// What the box shows around its text while the RegExp switch is on, as in a
-// JavaScript literal: a slash before the pattern, and after it a slash and the
-// flags the search really runs with (the typed (?i) and the flag switches,
-// merged as the search merges them). Shown beside the text, never part of it.
+// Shown around the box's text while the RegExp switch is on, never part of it:
+// the slashes of a JavaScript literal and the flags the search really runs with.
 struct LiteralDecoration {
   std::string prefix;
   std::string suffix;
@@ -169,8 +156,6 @@ struct LiteralDecoration {
 // as a real one.
 inline constexpr char kEscapedNewline[] = "\\n";
 
-// Text pasted into the box with its line breaks (CR, LF or CRLF, each one break)
-// written as \n.
 [[nodiscard]] inline std::string EscapeLineBreaks(std::string_view pasted) {
   std::string escaped;
   for (size_t i = 0; i < pasted.size(); i++) {
@@ -191,16 +176,12 @@ inline constexpr char kEscapedNewline[] = "\\n";
   return escaped;
 }
 
-// Limits: a pattern longer than this is refused, and a page script stops
-// marking after this many matches (it says so).
 inline constexpr size_t kMaxPatternChars = 500;
 inline constexpr int kMaxMatches = 5000;
 
 // --- which pages the bar can search ------------------------------------------------
 
-// Web pages and local files whose text is in the page. An Edge page (settings, a
-// new tab) and a PDF (Edge's viewer draws it; its own find searches it) are left
-// to Edge's stock find.
+// A PDF is drawn by Edge's viewer, whose own find searches it.
 [[nodiscard]] inline bool IsSearchableUrl(std::string_view url) {
   if (!web_text::IsWebPageUrl(url)) {
     return false;
@@ -329,7 +310,6 @@ struct Search {
                            find_flags::FlagSet{});
 }
 
-// The search a RegExp query runs, or why it cannot.
 [[nodiscard]] inline Search BuildSearch(const Query& query) {
   Search search;
   search.problem = CheckRegex(query.pattern);
@@ -350,8 +330,7 @@ enum class Step {
 
 inline constexpr int kNoMatch = -1;
 
-// The match to go to from `current` (kNoMatch before the first step) among
-// `count`, wrapping at both ends.
+// Wraps at both ends; `current` is kNoMatch before the first step.
 [[nodiscard]] inline constexpr int StepMatch(int current, int count,
                                              Step step) noexcept {
   if (count <= 0) {
@@ -378,7 +357,7 @@ struct SearchResult {
   std::string error;
 };
 
-// The most digits read as a count: any more could overflow an int.
+// Any more could overflow an int.
 inline constexpr size_t kMaxCountDigits = 9;
 
 [[nodiscard]] inline constexpr bool IsDigits(std::string_view text) noexcept {

@@ -1,15 +1,8 @@
-// reading_mode.h — reading mode's page theme follows Windows light and dark. One
-// concern: with the panel's switch on, the theme picked for each Windows mode
-// (in reading mode's own Appearance settings, through the switch
-// reading_scripts.h adds there) is kept in a file of the DLL's own, and the one
-// for the current mode is set through dom_distiller's own setter
-// (edge::SetReadingTheme), which persists it for every later reading view and
-// switches the open ones live (docs/re/reading-mode-theme.md). It is set when the
-// switch comes on, on each Windows light/dark flip (control.h's kApplyTheme,
-// whose walk over the browser windows calls ApplyTo), and when the person picks
-// a new theme for the current mode. While on, a window timer runs the page
-// script in every reading view: it adds the switch when the flyout shows and
-// answers the picks. UI thread only.
+// reading_mode.h — reading mode's page theme follows Windows light and dark. The
+// theme picked for each mode is kept in a file of the DLL's own; the current
+// one is set through dom_distiller's own setter, which persists it for later
+// reading views and switches the open ones live (docs/re/reading-mode-theme.md).
+// While on, a window timer runs the page script in every reading view. UI thread.
 #pragma once
 #include <windows.h>
 #include <string>
@@ -26,12 +19,9 @@
 
 namespace fixedge::reading_mode {
 
-// The two choices' one home, beside the config file.
 inline constexpr char kChoicesRelativePath[] = "\\FixEdge\\reading-themes.bin";
-// A reading view's URL (read://<site>/?url=...).
 inline constexpr char kReadingViewPrefix[] = "read://";
-// How often open reading views are visited: often enough that the switch is in
-// the flyout as it opens.
+// Often enough that the switch is in the flyout as it opens.
 inline constexpr UINT kPollIntervalMs = 400;
 
 inline constinit bool g_isActive = false;
@@ -70,7 +60,6 @@ inline void SaveChoices(const reading_themes::Choices& choices) {
             &written, nullptr);
 }
 
-// The open reading views whose page can run a script.
 [[nodiscard]] inline std::vector<void*> ReadingViews() {
   std::vector<void*> views;
   for (void* contents : edge::AllWebContents()) {
@@ -84,8 +73,6 @@ inline void SaveChoices(const reading_themes::Choices& choices) {
   return views;
 }
 
-// Set the theme for the current Windows mode in the profile behind
-// `browserContext` (a no-op while off).
 inline void ApplyTo(void* browserContext) {
   if (!g_isActive || !browserContext) {
     return;
@@ -98,8 +85,6 @@ inline void ApplyTo(void* browserContext) {
       static_cast<int32_t>(theme));
 }
 
-// A reading view answered the poll: take a new pick, keep it, and set it at
-// once when it is the current mode's.
 inline void OnAnswer(void* browserContext, const edge::ScriptResult& result) {
   if (!g_isActive || !result.isString) {
     return;
@@ -126,7 +111,6 @@ inline void OnAnswer(void* browserContext, const edge::ScriptResult& result) {
   }
 }
 
-// The timer's tick (control.h): visit every open reading view.
 inline void Poll() {
   if (!g_isActive) {
     return;
@@ -147,8 +131,6 @@ inline void StartPolling(HWND window) {
            kPollIntervalMs, nullptr);
 }
 
-// Stop visiting the reading views and take the switch out of every one, so the
-// flyout is exactly Edge's own again.
 inline void Stop(HWND window) {
   KillTimer(window, channel::TimerIdOf(channel::WindowTimer::kReadingPoll));
   const std::string script = reading_scripts::RemoveScript();
@@ -157,8 +139,8 @@ inline void Stop(HWND window) {
   }
 }
 
-// Take the panel's switch; true when it has just come on (control.h then sets
-// the theme in every window and starts the polling).
+// True when it has just come on (control.h then sets the theme in every window
+// and starts the polling).
 [[nodiscard]] inline bool ApplyConfig(const config::Wire& wire) {
   const bool wasActive = g_isActive;
   g_isActive = wire.readingThemeActive != 0;

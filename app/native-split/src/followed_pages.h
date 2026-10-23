@@ -1,13 +1,11 @@
-// followed_pages.h — which pages follow the theme's light or dark. One concern:
-// the pure test of a page's URL against the two Edge pages (settings and
-// extensions) that theme_follow.h drives; every other page, ordinary or WebUI,
-// keeps what Edge decides. No Edge, no Win32.
+// followed_pages.h — which pages theme_follow.h makes follow the theme's light
+// or dark; every other page keeps what Edge decides. Pure.
 #pragma once
 #include <string_view>
 
 namespace fixedge::followed_pages {
 
-// The pages, by the address Edge shows (and keeps as the committed URL).
+// As Edge shows them and keeps them as the committed URL.
 inline constexpr std::string_view kSettings = "edge://settings";
 inline constexpr std::string_view kExtensions = "edge://extensions";
 
@@ -26,7 +24,6 @@ inline constexpr std::string_view kExtensions = "edge://extensions";
   return url.starts_with(page) && IsHostEnd(url.substr(page.size()));
 }
 
-// Whether the page at `url` follows the theme.
 [[nodiscard]] inline bool Follows(std::string_view url) {
   return IsPageOf(url, kSettings) || IsPageOf(url, kExtensions);
 }
