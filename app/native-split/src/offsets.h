@@ -752,6 +752,23 @@ inline constexpr uintptr_t CopilotUtils_IsUndersideChatVisible = 0x26b848d;
 // closes the side panel, as the panel page's own close message does (it passes
 // true: OnPostMessageClosePane).
 inline constexpr uintptr_t CopilotUtils_CloseUndersideChat = 0x93d99bf;
+// The request the side panel's chat page is sent, and the function that delivers
+// it with no panel UI: IframelessPromptDispatcher::DispatchAskCopilotToDocument(
+// RenderFrameHost* chatFrame, const AskCopilotRequest&) checks the frame is
+// live and active and the request has a prompt and a type, then raises the
+// extension event OnAskCopilot in that document. SendPageContextualPromptToChat
+// builds the request with exactly these calls. [infer from its disassembly; run]
+// AskCopilotRequest::AskCopilotRequest(this) / ~AskCopilotRequest(this)
+inline constexpr uintptr_t AskCopilotRequest_ctor = 0xc1c8bb4;
+inline constexpr uintptr_t AskCopilotRequest_dtor = 0xc1c8c24;
+// std::string::operator=(std::string& dest, const std::string& source)
+inline constexpr uintptr_t StdString_assign = 0x1039d94;
+// std::optional<std::string>::operator=(optional&, const std::string&)
+inline constexpr uintptr_t OptionalString_assignString = 0x110c750;
+// std::optional<std::string>::operator=(optional&, const char (&)[1])
+inline constexpr uintptr_t OptionalString_assignEmpty = 0x622b9c6;
+inline constexpr uintptr_t
+    IframelessPromptDispatcher_DispatchAskCopilotToDocument = 0x93e442a;
 // static content::WebContentsImpl::GetAllWebContents(out): hidden return pointer
 // in rcx. What it fills is not a begin/end vector: its first word points at the
 // WebContents pointers and its second is their count. The panel is the one whose
@@ -837,6 +854,15 @@ inline constexpr uintptr_t base_i18n_IsRTL = 0xfd20a0;
 
 // --- struct field offsets ---
 namespace off {
+// AskCopilotRequest (0x140 bytes): the prompt string at +0, the type string
+// ("text") at +0x18, a flag byte at +0x30 (SendPageContextualPromptToChat's last
+// argument), the page text as an optional<string> at +0x38 and an optional
+// empty string at +0xd8.
+inline constexpr uintptr_t ASKREQUEST_size = 0x140;
+inline constexpr uintptr_t ASKREQUEST_type = 0x18;
+inline constexpr uintptr_t ASKREQUEST_flag = 0x30;
+inline constexpr uintptr_t ASKREQUEST_text = 0x38;
+inline constexpr uintptr_t ASKREQUEST_trailing = 0xd8;
 // --- MultiContentsView : public views::View, public views::LayoutManagerBase ---
 // The View base is at +0; the LayoutManagerBase subobject is embedded at +0x340
 // (verified: CalculateProposedLayout's `this` is that subobject, and it recovers

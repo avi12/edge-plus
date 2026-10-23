@@ -54,6 +54,10 @@ struct Chat {
   // The panel was closed when the first question went in, so ReleasePanel
   // closes it again once the whole ask is over.
   bool isOurPanel = false;
+  // The chat page was already alive (hidden), so the question goes straight to
+  // it and the panel never opens; `isSent` once it has.
+  bool isHeadless = false;
+  bool isSent = false;
   std::string prompt;
   DoneFn onDone;
   NoticeFn onNotice;
@@ -115,7 +119,11 @@ inline void Fail(Chat& chat, const std::string& why) {
 }
 
 inline void Dispatch(Chat& chat) {
-  edge::SendPromptToSidePanel(chat.browser, chat.prompt, kPanelTitle);
+  chat.isHeadless = edge::CopilotChatFrame() != nullptr;
+  chat.isSent = false;
+  if (!chat.isHeadless) {
+    edge::SendPromptToSidePanel(chat.browser, chat.prompt, kPanelTitle);
+  }
   chat.phase = Phase::kWaitingForPanel;
   chat.phaseStartedAt = GetTickCount64();
   chat.nextTryAt = 0;
@@ -184,6 +192,16 @@ inline void OnArmed(void* mcv, unsigned long long token,
                                             chat_scripts::ScriptAnswer::kArmed);
   if (!isArmed) {
     return;
+  }
+  if (chat->isHeadless && !chat->isSent) {
+    void* chatFrame = edge::CopilotChatFrame();
+    chat->isSent =
+        chatFrame && edge::AskChatFrame(chatFrame, chat->prompt, kPanelTitle);
+    if (!chat->isSent) {
+      Log("[chat] the hidden chat refused the question; opening the panel");
+      chat->isHeadless = false;
+      edge::SendPromptToSidePanel(chat->browser, chat->prompt, kPanelTitle);
+    }
   }
   Log("[chat] panel armed");
   chat->phase = Phase::kWaitingForReply;

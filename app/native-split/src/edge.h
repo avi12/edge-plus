@@ -1502,6 +1502,43 @@ inline void SendPromptToSidePanel(void* browser, const std::string& text,
       browser, &page, &noContext, &asked, false);
 }
 
+// Hand `text` (as the page the question is about) and `title` (the prompt) to
+// the Copilot chat page in `frame`, as SendPageContextualPromptToChat does after
+// it has opened the side panel, but without opening it: the chat page lives on
+// hidden once it has been opened. False when Edge refused (the frame is not live
+// or active).
+inline bool AskChatFrame(void* frame, const std::string& text,
+                         const std::string& title) {
+  using ConstructFn = void(__fastcall*)(void*);
+  using AssignFn = void*(__fastcall*)(void*, const void*);
+  using DispatchFn = bool(__fastcall*)(void*, const void*);
+  alignas(16) uint8_t request[edge155::off::ASKREQUEST_size] = {};
+  constexpr char kTextType[] = "text";
+  constexpr char kEmpty[] = "";
+  const StdStringView prompt = MakeStdStringView(title);
+  const StdStringView page = MakeStdStringView(text);
+  reinterpret_cast<ConstructFn>(At(edge155::rva::AskCopilotRequest_ctor))(
+      request);
+  reinterpret_cast<AssignFn>(At(edge155::rva::StdString_assign))(request,
+                                                                 &prompt);
+  std::memcpy(request + edge155::off::ASKREQUEST_type, kTextType,
+              sizeof(kTextType));
+  request[edge155::off::ASKREQUEST_type + edge155::off::U16STRING_short_size] =
+      sizeof(kTextType) - 1;
+  request[edge155::off::ASKREQUEST_flag] = 0;
+  request[edge155::off::ASKREQUEST_flag + 1] = 0;
+  reinterpret_cast<AssignFn>(At(edge155::rva::OptionalString_assignString))(
+      request + edge155::off::ASKREQUEST_text, &page);
+  reinterpret_cast<AssignFn>(At(edge155::rva::OptionalString_assignEmpty))(
+      request + edge155::off::ASKREQUEST_trailing, kEmpty);
+  const bool isDelivered = reinterpret_cast<DispatchFn>(At(
+      edge155::rva::IframelessPromptDispatcher_DispatchAskCopilotToDocument))(
+      frame, request);
+  reinterpret_cast<ConstructFn>(At(edge155::rva::AskCopilotRequest_dtor))(
+      request);
+  return isDelivered;
+}
+
 inline bool IsCopilotPanelVisible(void* browser) {
   using Fn = bool(__fastcall*)(void*);
   return reinterpret_cast<Fn>(
