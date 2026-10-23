@@ -39,8 +39,6 @@ internal sealed class PanelView : IDisposable {
   // A section header's gap to its first card, and its inset to line up with
   // the cards' text, as Windows Settings sets them.
   private static readonly Thickness s_sectionHeaderMargin = new(4, 0, 0, 4);
-  // How far a card that needs another sits in from that one.
-  private const double DependentIndent = 28;
 
   private readonly Window _window;
   private readonly ContentControl _slot;
@@ -176,11 +174,7 @@ internal sealed class PanelView : IDisposable {
       Margin = s_sectionHeaderMargin,
     });
     foreach (CardSlot slot in cards) {
-      FrameworkElement view = CardView(slot);
-      if (slot.Needs is not null) {
-        view.Margin = new Thickness(DependentIndent, 0, 0, 0);
-      }
-      stack.Children.Add(view);
+      stack.Children.Add(CardView(slot));
     }
     Motion.Animate(stack, Motion.Reposition);
     return stack;
