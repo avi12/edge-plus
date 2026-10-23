@@ -247,6 +247,14 @@ inline constexpr uintptr_t EdgeTabStyleViews_GetPath_topRightArc_return =
     0x27d3cc6;
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_rightFoot_return =
     0x27d3d44;
+// A vertical tab's outline: GetPath builds an SkRRect (setRectXY, above) and adds
+// it to the path with SkPath::addRRect(this, const SkRRect&, direction,
+// startIndex), whose call returns to EdgeTabStyleViews_GetPath_addRRect_return.
+inline constexpr uintptr_t EdgeTabStyleViews_GetPath_addRRect_return =
+    0x27d3e03;
+inline constexpr uintptr_t SkPath_addRRect = 0x27d4230;
+// SkPath& SkPath::moveTo(this, SkPoint).
+inline constexpr uintptr_t SkPath_moveTo = 0x1205660;
 // SkPath& SkPath::lineTo(this, SkPoint): the call in GetPath, returning to
 // EdgeTabStyleViews_GetPath_topEdge_return, draws the top edge from the top-left
 // corner to where the top-right arc begins.
@@ -271,16 +279,6 @@ inline constexpr uintptr_t Canvas_DrawRect = 0x27d2f44;
 // SkRRect::setRectRadii(this, const SkRect*, const SkVector radii[4]): the
 // radii run upper-left, upper-right, lower-right, lower-left.
 inline constexpr uintptr_t SkRRect_setRectRadii = 0x2cee20;
-// (view, std::unique_ptr<views::Background>*): takes the background out of *it.
-inline constexpr uintptr_t View_SetBackground = 0x109d6dc;
-// std::unique_ptr<Background>* views::CreateSolidBackground(out, ColorVariant):
-// the 8-byte variant goes by value in one register.
-inline constexpr uintptr_t CreateSolidBackground = 0x2d27382;
-// (view, bool): false lets every pointer event through the view and its subtree.
-inline constexpr uintptr_t View_SetCanProcessEventsWithinSubtree = 0x105a522;
-// ViewAccessibility& View::GetViewAccessibility(view); then (it, bool).
-inline constexpr uintptr_t View_GetViewAccessibility = 0x1054f1c;
-inline constexpr uintptr_t ViewAccessibility_SetIsIgnored = 0x10a0358;
 // (view, const std::optional<gfx::Size>*): {int width, int height, bool}.
 inline constexpr uintptr_t View_SetPreferredSize = 0x2bd10f6;
 // (view, const gfx::Rect&)
@@ -983,14 +981,6 @@ inline constexpr uintptr_t EDGETAB_layout_controller = 0x548;
 inline constexpr size_t LAYOUT_mode_slot = 7;
 inline constexpr uint32_t LAYOUT_vertical_first = 2;
 inline constexpr uint32_t LAYOUT_vertical_count = 3;
-// The deleting destructor in a view's vtable: (view, 1) destroys and frees it
-// (views::View::AddChildView deletes a view it cannot add through this slot).
-inline constexpr uintptr_t VIEW_vtbl_DeletingDestructor = 0x48;
-// ui::ColorVariant holding an SkColor: the ARGB in the low 4 bytes, then a tag
-// byte, 1 for an SkColor (0 is a ui::ColorId, ColorVariant_ctor), so the whole
-// variant fits one 64-bit register.
-inline constexpr uint64_t COLORVARIANT_sk_color_tag = 1;
-inline constexpr int COLORVARIANT_tag_shift = 32;
 // sizeof(a FocusableViewsMap): a base::flat_map, i.e. a vector {data, size,
 // capacity}; all zero is empty.
 inline constexpr size_t FocusableViewsMap_size = 0x18;

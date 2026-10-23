@@ -1,13 +1,15 @@
-// tab_shape.h — the vertical tab's outline. One concern: Edge outlines a
-// vertical tab (its fill, hover and press) as one rounded rectangle, and a
-// split's members' shared fill as another (SplitTabView::OnPaint). While the
-// spine is on, both get a straight leading edge (the left one, the right one in
-// a right-to-left UI) on every tab and split. Changing the outline is what makes
-// the edge straight in whatever colour Edge paints the tab, so nothing is
-// painted over the fill. Within a split's row the members' seams are straight
-// too, so the row reads as one shape with one round trailing end. Nothing here
-// paints, except the group fill: Edge's own drawing, plus the same paint over
-// the corners it rounded. UI thread only.
+// tab_shape.h — the tab's outline. One concern: Edge outlines a tab (its fill,
+// hover and press) in EdgeTabStyleViews::GetPath, as one rounded rectangle for a
+// vertical tab and as four arcs for a horizontal one, and a split's members'
+// shared fill as another rounded rectangle (SplitTabView::OnPaint). While the
+// tab shape is on, every tab gets a straight leading edge (the left one, the
+// right one in a right-to-left UI) and a 45 degree cut on its trailing top
+// corner, the chamfer of the skin's cards and buttons; a horizontal tab also
+// loses its flared feet. Changing the outline is what shapes the tab in whatever
+// colour Edge paints it, so nothing is painted over the fill. Within a split's
+// row the members' seams are straight too, so the row reads as one shape with
+// one round trailing end. Nothing here paints, except the group fill: Edge's own
+// drawing, plus the same paint over the corners it rounded. UI thread only.
 #pragma once
 #include <windows.h>
 #include <intrin.h>
@@ -113,6 +115,12 @@ inline constinit float g_cornerRadius = 0;
 inline float TrailingCut() {
   return g_cornerRadius * kTrailingCutRatio;
 }
+// The length of a chamfer's two legs for a corner of `radius`: the corner's own
+// radius plus the cut, the same on a horizontal tab (arc plus h_line_to) and a
+// vertical one (h_add_rrect).
+inline float ChamferLeg(float radius) {
+  return radius * (1 + kTrailingCutRatio);
+}
 
 // SkPath::arcTo, for the calls in GetPath that round a horizontal tab's outline.
 // With no radius an arc is a straight line to its end, so the feet (the flared
@@ -173,6 +181,60 @@ inline void* __fastcall h_line_to(void* path, uint64_t point) {
   SkPoint target = std::bit_cast<SkPoint>(point);
   target.x -= TrailingCut();
   return o_line_to(path, std::bit_cast<uint64_t>(target));
+}
+
+// How a vertical tab's outline, an SkRRect from h_set_rect_xy, is turned into a
+// path: SkPath::addRRect(this, const SkRRect&, direction, startIndex).
+using AddRRect_t = void*(__fastcall*)(void*, const void*, int, unsigned);
+inline constinit AddRRect_t o_add_rrect = nullptr;
+using MoveTo_t = void*(__fastcall*)(void*, uint64_t);
+
+// An SkRRect's layout: its rect (left, top, right, bottom), then each corner's
+// radii in Skia's order (tab_edge::Corner).
+inline constexpr uintptr_t kRRectRect = 0x0;
+inline constexpr uintptr_t kRRectRadii = 0x10;
+
+// The vertical tab's outline: the call in GetPath that adds the rounded
+// rectangle becomes a polygon with the same bounds, whose trailing top corner,
+// the one h_set_rect_xy left round, is cut 45 degrees as a horizontal tab's is
+// (TrailingCut). A tab with a split neighbour on its trailing side had no round
+// corner there, so it stays a rectangle. Every other caller is Skia's own use,
+// unchanged.
+inline void* __fastcall h_add_rrect(void* path, const void* roundedRect,
+                                    int direction, unsigned startIndex) {
+  const bool isTabOutline =
+      g_outlinedTab &&
+      _ReturnAddress() ==
+          edge::At(edge155::rva::EdgeTabStyleViews_GetPath_addRRect_return);
+  if (!isTabOutline) {
+    return o_add_rrect(path, roundedRect, direction, startIndex);
+  }
+  const float left = edge::Field<float>(roundedRect, kRRectRect);
+  const float top = edge::Field<float>(roundedRect, kRRectRect + 4);
+  const float right = edge::Field<float>(roundedRect, kRRectRect + 8);
+  const float bottom = edge::Field<float>(roundedRect, kRRectRect + 12);
+  const bool isLeftToRight = !edge::IsUiRightToLeft();
+  const tab_edge::Corner trailingTop = isLeftToRight
+                                           ? tab_edge::Corner::kUpperRight
+                                           : tab_edge::Corner::kUpperLeft;
+  const float radius = edge::Field<float>(
+      roundedRect,
+      kRRectRadii + static_cast<uintptr_t>(trailingTop) * sizeof(SkPoint));
+  const float leg = ChamferLeg(radius);
+  const float trailingX = isLeftToRight ? right : left;
+  const float leadingX = isLeftToRight ? left : right;
+  const float legX = isLeftToRight ? -leg : leg;
+  const auto point = [](float x, float y) {
+    return std::bit_cast<uint64_t>(SkPoint{x, y});
+  };
+  const auto moveTo =
+      reinterpret_cast<MoveTo_t>(edge::At(edge155::rva::SkPath_moveTo));
+  moveTo(path, point(leadingX, top));
+  o_line_to(path, point(trailingX + legX, top));
+  o_line_to(path, point(trailingX, top + leg));
+  o_line_to(path, point(trailingX, bottom));
+  o_line_to(path, point(leadingX, bottom));
+  return o_line_to(path, point(leadingX, top));
 }
 
 using DrawRoundRect_t = void(__fastcall*)(void*, const Rect*, int, const void*);

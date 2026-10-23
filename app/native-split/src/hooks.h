@@ -593,6 +593,9 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   Install(edge155::rva::SkPath_arcTo,
           reinterpret_cast<void*>(tab_shape::h_arc_to), &tab_shape::o_arc_to,
           "SkPath::arcTo");
+  Install(edge155::rva::SkPath_addRRect,
+          reinterpret_cast<void*>(tab_shape::h_add_rrect),
+          &tab_shape::o_add_rrect, "SkPath::addRRect (vertical tab outline)");
   Install(edge155::rva::SkPath_lineTo,
           reinterpret_cast<void*>(tab_shape::h_line_to), &tab_shape::o_line_to,
           "SkPath::lineTo");

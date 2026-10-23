@@ -1,28 +1,15 @@
-// tab_edge.h — where the selected vertical tab's spine goes and how a tab's
-// leading edge is shaped. One concern: the pure geometry of the stripe spine.h
-// lays along the selected tab's leading edge (the left one, the right one when
-// Edge's UI runs right to left), the corner radii that keep that edge straight
-// on every tab (tab_shape.h), and the stripe's colour for the theme's tone. No
-// Edge, no Win32.
+// tab_edge.h — how a tab's leading edge is shaped. One concern: the pure
+// geometry behind the tab outline (tab_shape.h): the corner radii that keep the
+// leading edge (the left one, the right one when Edge's UI runs right to left)
+// straight on every tab, the seam between members of a split, and the strip
+// that squares a split group's fill. No Edge, no Win32.
 #pragma once
 #include <cstddef>
 #include "geom.h"
-#include "theme_tone.h"
 
 namespace fixedge::tab_edge {
 
-// The stripe's neon magenta on a dark rail, and a deep magenta on a light one,
-// where the neon would read at only 2.5:1.
-inline constexpr theme_tone::Argb kStripeOnDark = 0xffff2bd6;
-inline constexpr theme_tone::Argb kStripeOnLight = 0xffc8008f;
-
-// A theme that says nothing of its tone gets the neon, as before there were two.
-[[nodiscard]] constexpr theme_tone::Argb StripeColorFor(
-    theme_tone::Tone tone) noexcept {
-  return tone == theme_tone::Tone::kLight ? kStripeOnLight : kStripeOnDark;
-}
-
-// The side of the tab the spine marks: its leading edge, where the favicon is.
+// The side of the tab that leads: where the favicon is.
 enum class Side {
   kLeft,
   kRight,
@@ -30,15 +17,6 @@ enum class Side {
 
 [[nodiscard]] constexpr Side LeadingSide(bool isRightToLeft) noexcept {
   return isRightToLeft ? Side::kRight : Side::kLeft;
-}
-
-// The stripe, in the same units as `tab`: the row's full height, flush on its
-// leading edge.
-[[nodiscard]] constexpr Rect StripeFor(Rect tab, Side side,
-                                       int stripeWidth) noexcept {
-  const int stripeX =
-      side == Side::kLeft ? tab.x : tab.x + tab.width - stripeWidth;
-  return Rect{stripeX, tab.y, stripeWidth, tab.height};
 }
 
 // One corner's radius, as Skia takes it (SkVector).
@@ -63,24 +41,21 @@ struct CornerRadii {
   CornerRadius corners[kCornerCount];
 };
 
-// A tab's corners with its leading side straight. Its trailing side is round,
-// unless another member of a split sits against it in the same row: then the
-// seam between the two is straight too.
+// A tab's corners with its leading side and its trailing bottom corner straight.
+// Its trailing top corner keeps the radius, which tab_shape.h's outline turns
+// into a cut, unless another member of a split sits against it in the same row:
+// then the seam between the two is straight too.
 [[nodiscard]] constexpr CornerRadii RadiiFor(
     Side leading, float radius, bool hasTrailingNeighbor) noexcept {
   const CornerRadius round{radius, radius};
   const CornerRadius square{};
-  const CornerRadius trailing = hasTrailingNeighbor ? square : round;
+  const CornerRadius trailingTop = hasTrailingNeighbor ? square : round;
   const bool isLeadingOnLeft = leading == Side::kLeft;
   CornerRadii radii;
   radii.corners[static_cast<size_t>(Corner::kUpperLeft)] =
-      isLeadingOnLeft ? square : trailing;
-  radii.corners[static_cast<size_t>(Corner::kLowerLeft)] =
-      isLeadingOnLeft ? square : trailing;
+      isLeadingOnLeft ? square : trailingTop;
   radii.corners[static_cast<size_t>(Corner::kUpperRight)] =
-      isLeadingOnLeft ? trailing : square;
-  radii.corners[static_cast<size_t>(Corner::kLowerRight)] =
-      isLeadingOnLeft ? trailing : square;
+      isLeadingOnLeft ? trailingTop : square;
   return radii;
 }
 

@@ -11,7 +11,6 @@
 #include "config.h"
 #include "edge.h"
 #include "geometry.h"
-#include "spine.h"
 #include "split_ops.h"
 #include "split_data.h"
 #include "state.h"
@@ -25,7 +24,9 @@
 #include "overlay.h"
 #include "protocol_handlers.h"
 #include "tabdrag.h"
+#include "tab_shape.h"
 #include "tabrows.h"
+#include "tab_views.h"
 #include "theme.h"
 #include "theme_follow.h"
 #include "live_preview.h"
@@ -177,30 +178,26 @@ inline BOOL CALLBACK RefreshWindowFollowedPages(HWND hwnd, LPARAM lparam) {
   return TRUE;
 }
 
-// EnumWindows callback: one spine tick (spine.h) for each of this process's
-// browser windows, so every window marks its own selected tab, or the tab being
-// dragged; a drag's own moves and its end tick the window too (tabdrag.h).
-inline BOOL CALLBACK TickWindowSpine(HWND hwnd, LPARAM /*unused*/) {
+// EnumWindows callback: queue a repaint of every tab in each of this process's
+// browser windows, so a change of tab outline (tab_shape.h) shows at once.
+inline BOOL CALLBACK RepaintWindowTabs(HWND hwnd, LPARAM /*unused*/) {
   if (!IsOurBrowserClassWindow(hwnd)) {
     return TRUE;
   }
-  void* tsm = edge::TsmForWindow(hwnd);
-  if (tsm) {
-    spine::TickWindow(hwnd, tabdrag::DraggedTabViewIn(tsm));
+  void* anyView = edge::McvForWindow(hwnd);
+  if (anyView) {
+    tab_views::RepaintTabs(edge::ViewRoot(anyView));
   }
   return TRUE;
 }
 
-// The spine's timer callback (a thread timer, spine::Start): tick every browser
-// window. Runs on the UI thread that started it.
-inline void CALLBACK TickSpines(HWND /*unused*/, UINT /*unused*/,
-                                UINT_PTR /*unused*/, DWORD /*unused*/) {
-  if (spine::g_isStopRequested) {
-    spine::Remove();
+// Switch the cut-corner tab outline (tab_shape.h) on or off, and repaint.
+inline void ApplyTabShape(bool isOn) {
+  if (tab_shape::g_isSquared == isOn) {
     return;
   }
-  spine::BeginTick();
-  EnumWindows(TickWindowSpine, 0);
+  tab_shape::g_isSquared = isOn;
+  EnumWindows(RepaintWindowTabs, 0);
 }
 
 // EnumWindows callback: set the reading mode theme (reading_mode.h) in the
@@ -255,7 +252,7 @@ inline void Teardown(HWND hwnd) {
   drag::Cancel();
   tabdrag::Cancel();
   overlay::Remove();
-  spine::Remove();
+  ApplyTabShape(false);
   grip::RemoveAll();
   dividers::RemoveAll();
   anim::Remove();
@@ -392,14 +389,9 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
     }
   }
   theme::ApplyConfig(hwnd, wire);
-  // The spine has its own switch, and needs theming: it is the theme that gives
-  // the tab a fill the spine stands out against.
-  const bool isSpineWanted = theme::g_isActive && wire.tabSpineActive != 0;
-  if (isSpineWanted && !spine::g_isActive) {
-    spine::Start(TickSpines);
-  } else if (!isSpineWanted && spine::g_isActive) {
-    spine::Remove();
-  }
+  // The tab outline has its own switch, and needs theming: it is the theme that
+  // gives the tab the fill the cut corners are cut from.
+  ApplyTabShape(theme::g_isActive && wire.tabShapeActive != 0);
   const bool isFollowChanged = theme_follow::ApplyConfig(wire);
   if (isFollowChanged) {
     RefreshThemeColors();
@@ -712,17 +704,6 @@ inline void Remove() {
                         SMTO_BLOCK, kTeardownTimeoutMs, nullptr);
     SetWindowLongPtrW(hwnd, GWLP_WNDPROC,
                       reinterpret_cast<LONG_PTR>(g_originalProc));
-  }
-  // The spine's thread timer runs this DLL's code; when the teardown could not
-  // stop it (the window above has closed), have its next tick stop it.
-  if (spine::g_isTimerRunning) {
-    spine::g_isStopRequested = true;
-    const ULONGLONG deadline = GetTickCount64() + kTeardownTimeoutMs;
-    while (spine::g_isTimerRunning && GetTickCount64() < deadline) {
-      Sleep(spine::kTickIntervalMs);
-    }
-    Log("[spine] timer stopped by its own tick: %s",
-        spine::g_isTimerRunning ? "no" : "yes");
   }
   g_hasHotKeys = false;
   channel::g_window = nullptr;

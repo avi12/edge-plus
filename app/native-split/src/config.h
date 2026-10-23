@@ -36,15 +36,14 @@ struct Wire {
   uint32_t webUiFollowsThemeActive;  // 1 = settings and extensions pages follow
                                      // the theme's light or dark
   uint32_t livePreviewActive;        // 1 = a hovered tab shows a live preview
-  uint32_t tabSpineActive;  // 1 = the selected tab gets a square leading edge
-                            // and the neon spine (with theming on)
+  uint32_t tabShapeActive;      // 1 = tabs get cut corners (with theming on)
   uint32_t readingThemeActive;  // 1 = reading mode follows Windows light/dark
                                 // (the two themes are chosen in reading mode
                                 // itself and kept by reading_mode.h)
 };
 // ConfigWire.cs writes exactly WIRE_SIZE bytes and LoadFromFile wants all of
 // them, so the struct must stay packed: five u32 fields, the two ids, then the
-// reserved field, the find, WebUI, live-preview, tab-spine and reading-theme
+// reserved field, the find, WebUI, live-preview, tab-shape and reading-theme
 // switches (u32s). A panel that still writes the two reading themes after the
 // switch (180 bytes) is read for its first sizeof(Wire) bytes.
 // @share WireFieldCount
@@ -57,7 +56,7 @@ static_assert(sizeof(Wire) == kWireFieldCount * sizeof(uint32_t) +
 
 // The sizes of the files a panel wrote before `reserved`, before
 // `enhancedFindActive`, before `webUiFollowsThemeActive`, before
-// `livePreviewActive`, before `tabSpineActive` and before `readingThemeActive`
+// `livePreviewActive`, before `tabShapeActive` and before `readingThemeActive`
 // existed.
 inline constexpr DWORD kLegacyWireSize = offsetof(Wire, reserved);
 inline constexpr DWORD kBeforeFindWireSize = offsetof(Wire, enhancedFindActive);
@@ -65,7 +64,7 @@ inline constexpr DWORD kBeforeWebUiWireSize =
     offsetof(Wire, webUiFollowsThemeActive);
 inline constexpr DWORD kBeforeLivePreviewWireSize =
     offsetof(Wire, livePreviewActive);
-inline constexpr DWORD kBeforeTabSpineWireSize = offsetof(Wire, tabSpineActive);
+inline constexpr DWORD kBeforeTabShapeWireSize = offsetof(Wire, tabShapeActive);
 inline constexpr DWORD kBeforeReadingThemeWireSize =
     offsetof(Wire, readingThemeActive);
 
@@ -104,7 +103,7 @@ inline constexpr char kFileRelativePath[] = "\\FixEdge\\fixedge-config.bin";
   const bool isKnownSize =
       isRead &&
       (read == sizeof(Wire) || read == kBeforeReadingThemeWireSize ||
-       read == kBeforeTabSpineWireSize || read == kBeforeLivePreviewWireSize ||
+       read == kBeforeTabShapeWireSize || read == kBeforeLivePreviewWireSize ||
        read == kBeforeWebUiWireSize || read == kBeforeFindWireSize ||
        read == kLegacyWireSize);
   return isKnownSize;
