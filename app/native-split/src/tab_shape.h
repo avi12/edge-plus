@@ -20,25 +20,19 @@ namespace fixedge::tab_shape {
 
 inline constinit bool g_isSquared = false;
 
-// The vertical tab EdgeTabStyleViews::GetPath is outlining right now, or null.
+// The tab EdgeTabStyleViews::GetPath is outlining right now, or null.
 inline constinit void* g_outlinedTab = nullptr;
 
 using GetPath_t = void*(__fastcall*)(void*, void*, int, float, const int*);
 inline constinit GetPath_t o_get_path = nullptr;
 
-// EdgeTabStyleViews::GetPath: notes which vertical tab it is for, so the
+// EdgeTabStyleViews::GetPath: notes which tab it is for, so the
 // rounded rectangle it builds can be told from every other (h_set_rect_xy).
 inline void* __fastcall h_get_path(void* styleViews, void* outPath,
                                    int pathType, float scale,
                                    const int* isUnscaled) {
-  void* tabBase = edge::Field<void*>(styleViews, edge155::off::STYLEVIEWS_tab);
-  void* tab = tabBase ? static_cast<uint8_t*>(tabBase) +
-                            edge155::off::EDGETAB_view_offset
-                      : nullptr;
-  const bool isVerticalTab =
-      g_isSquared && tab &&
-      edge::VtableRva(tab) == edge155::rva::VerticalTab_vftable;
-  g_outlinedTab = isVerticalTab ? tab : nullptr;
+  g_outlinedTab =
+      g_isSquared ? edge::TabOfStyleViews(styleViews).view : nullptr;
   void* result = o_get_path(styleViews, outPath, pathType, scale, isUnscaled);
   g_outlinedTab = nullptr;
   return result;

@@ -20,6 +20,7 @@
 #include "dividers.h"
 #include "tabrows.h"
 #include "tab_shape.h"
+#include "active_tabs.h"
 #include "drag.h"
 #include "grip.h"
 #include "state.h"
@@ -490,26 +491,39 @@ inline void __fastcall h_update_foreground(void* tab) {
 // EdgeTabStyleViews::EdgeGetTabBackgroundColor: a horizontal active tab takes
 // the same bright fill as the vertical one, so both tab layouts read alike. The
 // ink for it is h_getuicolor's, switched by the same g_isLabelLight.
-inline constexpr uint32_t kTabActiveState = 1;
+// The TabActive value of the active tab's fill (PaintTabBackgroundFill passes
+// 0 for an active tab and 2 for an inactive one).
+inline constexpr int kTabActiveState = 0;
 using GetTabBackground_t = uint32_t(__fastcall*)(void*, int, int);
 inline constinit GetTabBackground_t o_get_tab_background = nullptr;
 inline uint32_t __fastcall h_get_tab_background(void* styleViews, int tabActive,
                                                 int frameState) {
-  const bool isThemedActive =
-      theme::g_isActive && std::cmp_equal(tabActive, kTabActiveState);
-  if (isThemedActive) {
-    void* tabBase =
-        edge::Field<void*>(styleViews, edge155::off::STYLEVIEWS_tab);
-    void* tab = tabBase ? static_cast<uint8_t*>(tabBase) +
-                              edge155::off::EDGETAB_view_offset
-                        : nullptr;
-    const bool isHorizontalTab =
-        tab && edge::VtableRva(tab) != edge155::rva::VerticalTab_vftable;
-    if (isHorizontalTab) {
-      return kVTabSelectedFill;
-    }
+  const bool isThemedActive = theme::g_isActive && tabActive == kTabActiveState;
+  if (!isThemedActive) {
+    return o_get_tab_background(styleViews, tabActive, frameState);
   }
-  return o_get_tab_background(styleViews, tabActive, frameState);
+  const edge::StyledTab tab = edge::TabOfStyleViews(styleViews);
+  const bool isHorizontalTab = tab.view && !edge::IsVerticalTabView(tab.view);
+  if (!isHorizontalTab) {
+    return o_get_tab_background(styleViews, tabActive, frameState);
+  }
+  // The hover blend asks for the active fill on every tab, so only the tab that
+  // really is active is remembered.
+  const bool isTabActive = reinterpret_cast<bool(__fastcall*)(void*)>(
+      edge::At(edge155::rva::Tab_IsActive))(tab.object);
+  if (isTabActive) {
+    active_tabs::Note(tab.view);
+  }
+  const bool isFrameActive = frameState != 0;
+  if (isFrameActive) {
+    return kVTabSelectedFill;
+  }
+  // An unfocused window dims the fill toward the tab's own, as the vertical tab
+  // does toward its rail.
+  return theme_tone::Blend(
+      kVTabSelectedFill,
+      o_get_tab_background(styleViews, tabActive, frameState),
+      kVTabInactiveRailPercent);
 }
 
 template <class T>

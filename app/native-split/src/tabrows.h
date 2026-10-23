@@ -341,9 +341,7 @@ inline void ApplyDetachPreview(void* helper, void* result) {
   if (!isGrownSplit) {
     return;
   }
-  const bool isVertical =
-      edge::VtableRva(tab) == edge155::rva::VerticalTab_vftable;
-  LayOutDetached(list, detach, isVertical);
+  LayOutDetached(list, detach, edge::IsVerticalTabView(tab));
 }
 
 // Start or end the preview for the tab at strip index `tabIndex` (-1 to end),

@@ -15,6 +15,7 @@
 #include <windows.h>
 #include <atomic>
 #include <vector>
+#include "active_tabs.h"
 #include "edge.h"
 #include "geom.h"
 #include "log.h"
@@ -177,6 +178,10 @@ inline void TickWindow(HWND browser, void* draggedTab) {
   void* selectedTab = tsm && anyView && isWindowShown
                           ? vtab_views::SelectedTab(tsm, anyView)
                           : nullptr;
+  const bool isHorizontalStrip = anyView && isWindowShown && !selectedTab;
+  if (isHorizontalStrip) {
+    selectedTab = active_tabs::NewestIn(edge::ViewRoot(anyView));
+  }
   void* tab = draggedTab && selectedTab ? draggedTab : selectedTab;
   const float scale =
       static_cast<float>(GetDpiForWindow(browser)) / USER_DEFAULT_SCREEN_DPI;
@@ -187,7 +192,8 @@ inline void TickWindow(HWND browser, void* draggedTab) {
   const bool isInVerticalList =
       top - windowRect.top > static_cast<int>(kVerticalListTopDip * scale);
   const bool isVisibleRow = bounds.width > 0 && bounds.height > 0;
-  const bool isMarkable = tab && isInVerticalList && isVisibleRow;
+  const bool isMarkable =
+      tab && (isInVerticalList || isHorizontalStrip) && isVisibleRow;
   if (!isMarkable) {
     for (WindowSet& set : g_sets) {
       if (set.browser == browser && anyView) {
@@ -199,6 +205,7 @@ inline void TickWindow(HWND browser, void* draggedTab) {
   WindowSet& set = SetFor(browser);
   if (!set.isShapeShown) {
     vtab_views::RepaintTabRows(edge::ViewRoot(anyView));
+    edge::SchedulePaint(tab);
     set.isShapeShown = true;
   }
   const bool hasDragEnded = set.isDragging && !draggedTab;

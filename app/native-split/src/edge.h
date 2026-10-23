@@ -2092,6 +2092,25 @@ inline void* CopilotChatFrame() {
 // The bounds of the other tabs in the split row `tab` is in (its parent is the
 // SplitTabView that holds a split's members), in the parent's coordinates; none
 // for a tab on a row of its own.
+// The tab an EdgeTabStyleViews styles: the EdgeTab object (what Tab::IsActive
+// takes) and its view, or both null before it has one.
+struct StyledTab {
+  void* object = nullptr;
+  void* view = nullptr;
+};
+inline StyledTab TabOfStyleViews(void* styleViews) {
+  void* object = Field<void*>(styleViews, edge155::off::STYLEVIEWS_tab);
+  if (!object) {
+    return {};
+  }
+  return {object,
+          static_cast<uint8_t*>(object) + edge155::off::EDGETAB_view_offset};
+}
+
+inline bool IsVerticalTabView(void* view) {
+  return VtableRva(view) == edge155::rva::VerticalTab_vftable;
+}
+
 inline std::vector<Rect> SplitSiblingBounds(void* tab) {
   std::vector<Rect> siblings;
   void* row = ViewParent(tab);

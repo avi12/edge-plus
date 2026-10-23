@@ -20,7 +20,7 @@ struct Search {
 };
 
 inline bool IsTabRow(void* view) {
-  return edge::VtableRva(view) == edge155::rva::VerticalTab_vftable;
+  return edge::IsVerticalTabView(view);
 }
 
 inline void Walk(void* view, int depth, Search* search) {
