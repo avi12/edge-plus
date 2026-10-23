@@ -27,17 +27,8 @@ internal static class PanelActions {
     }
   }
 
-  // In a dev build this points boot at the dev executable, which is what a
-  // developer running the panel from source expects.
   public static PanelState SetStartWithWindows(bool isOn) {
-    if (isOn) {
-      string executable = Environment.ProcessPath
-          ?? throw new InvalidOperationException("The panel cannot name its own executable.");
-      StartupEntry.Enable(StartupKeys.User, StartupEntry.Name,
-                          StartupEntry.RunCommand(executable));
-    } else {
-      StartupEntry.Disable(StartupKeys.User, StartupEntry.Name);
-    }
+    StartWithWindows.Set(isOn);
     return Load();
   }
 
@@ -78,7 +69,7 @@ internal static class PanelActions {
         Theming: settings.Theming,
         EdgeThemes: ThemeLibrary.EdgeThemesNotIn(settings.Theming),
         IsEdgeRunning: EdgeProcesses.BrowserPids().Length > 0,
-        IsStartWithWindows: StartupEntry.IsEnabled(StartupKeys.User, StartupEntry.Name),
+        IsStartWithWindows: StartWithWindows.IsEnabled(),
         IsSplitLoaded: DllChannel.IsLoaded(),
         EdgeBuild: EdgeWatch.CurrentBuild(),
         SupportedEdgeBuild: EdgeBuild.Pinned);

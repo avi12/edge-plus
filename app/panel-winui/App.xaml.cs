@@ -45,7 +45,11 @@ public partial class App : Application {
     _loader.Start();
     // A second launch redirected here (Program) shows the window.
     AppInstance.GetCurrent().Activated += (_, _) => dispatcher.TryEnqueue(ShowWindow);
-    bool isBootLaunch = Switches.IsPresent(Environment.GetCommandLineArgs(), Switches.Background);
+    // The plain exe boots with the Run entry's switch; the Store package's
+    // startup task passes no arguments, only its activation kind.
+    bool isBootLaunch =
+        Switches.IsPresent(Environment.GetCommandLineArgs(), Switches.Background)
+        || AppInstance.GetCurrent().GetActivatedEventArgs().Kind == ExtendedActivationKind.StartupTask;
     if (isBootLaunch) {
       TrimWhenSettled(dispatcher);
     } else {

@@ -13,9 +13,7 @@
   the product name is reserved in Partner Center (see docs\STORE-SUBMISSION.md);
   the package builds and packs with it, and Partner Center refuses it.
 
-  Known gaps, unchanged by this script: the panel's "start with Windows" writes
-  a Run entry, which a packaged app's uninstall would leave behind (the Store
-  route wants a startupTask extension instead), and nothing has been installed
+  Known gap, unchanged by this script: nothing has been installed
   from this package and run end to end.
 
 .PARAMETER CertificateThumbprint

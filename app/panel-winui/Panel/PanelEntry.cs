@@ -34,8 +34,12 @@ public static class PanelEntry {
   }
 
   // A sign-in entry the retired Tauri panel left now starts this panel as
-  // the windowless listener, so the Edge update watch runs from sign-in.
+  // the windowless listener, so the Edge update watch runs from sign-in. A
+  // packaged panel leaves it alone: it starts through its own startup task.
   private static void MigrateStartupEntry() {
+    if (StartWithWindows.IsPackaged) {
+      return;
+    }
     if (Environment.ProcessPath is not string executable) {
       return;
     }
@@ -51,8 +55,7 @@ public static class PanelEntry {
 
   // Whether the process stays when its window closes: while Edge+ starts with
   // Windows it is the always-on listener for Edge updates.
-  public static bool IsResident() =>
-      StartupEntry.IsEnabled(StartupKeys.User, StartupEntry.Name);
+  public static bool IsResident() => StartWithWindows.IsEnabled();
 
   // The headless launch (Switches.DevModeWaiter): wait for Edge to exit, snooze
   // its developer-mode prompt, return.

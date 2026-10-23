@@ -65,6 +65,16 @@
           Square150x150Logo="Assets\Square150x150Logo.png"
           Square44x44Logo="Assets\Square44x44Logo.png"
           BackgroundColor="transparent" />
+      <!-- "Start with Windows" in the packaged build (Setup\StartWithWindows.cs,
+           which names this TaskId): off until the panel's switch asks for it,
+           and removed with the package. Launched this way the panel gets no
+           arguments, so App reads the StartupTask activation as a boot launch. -->
+      <Extensions>
+        <desktop:Extension Category="windows.startupTask" Executable="edgeplus.exe"
+                           EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="EdgePlusStartup" Enabled="false" DisplayName="Plus for Edge" />
+        </desktop:Extension>
+      </Extensions>
     </Application>
   </Applications>
 
