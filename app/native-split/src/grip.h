@@ -8,6 +8,7 @@
 #include <map>
 #include "edge.h"
 #include "icons.h"
+#include "split_data.h"
 
 namespace fixedge::grip {
 
@@ -28,7 +29,7 @@ inline constexpr char kTooltip[] = "Drag to move this pane";
 
 inline void EnsureGrips(void* mcv) {
   const int count = static_cast<int>(edge::McvCount(mcv));
-  const bool isStockSplit = count <= 2;
+  const bool isStockSplit = count <= split_data::kMinSplitMembers;
   if (isStockSplit) {
     return;
   }

@@ -7,11 +7,12 @@
 #include "anim.h"
 #include "edge.h"
 #include "pane_tree.h"
+#include "split_data.h"
 #include "state.h"
 
 namespace fixedge::dividers {
 
-inline constexpr int kStockContainerCount = 2;
+inline constexpr int kStockContainerCount = split_data::kMinSplitMembers;
 
 struct Pool {
   std::vector<void*> views;

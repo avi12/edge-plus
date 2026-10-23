@@ -92,7 +92,7 @@ inline void Cancel() {
   const bool wasDragging = g_session.isDragging;
   g_session = Session{};
   overlay::Hide();
-  tabrows::SetDetachPreview(-1);
+  tabrows::SetDetachPreview(tabrows::kNoDetachPreview);
   if (wasDragging) {
     Log("[drag] cancelled");
   }
@@ -157,7 +157,7 @@ inline void Release() {
   overlay::Hide();
   const bool isDetaching = isDropping && plan.zone == dock::Zone::kDetach;
   // A real detach lays the list out itself; any other end puts it back now.
-  tabrows::SetDetachPreview(-1, !isDetaching);
+  tabrows::SetDetachPreview(tabrows::kNoDetachPreview, !isDetaching);
   if (!isDropping) {
     Log("[drag] released pane %d with no drop target", pane);
     return;

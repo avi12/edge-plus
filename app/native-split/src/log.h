@@ -14,6 +14,8 @@ inline constexpr int kLogMessageCapacity =
 inline constexpr wchar_t kLogFileUnderLocalAppData[] =
     L"\\FixEdge\\split-native.log";
 
+inline constexpr wchar_t kLocalAppDataVariable[] = L"LOCALAPPDATA";
+
 inline void Log(const char* format, ...) noexcept {
   char line[kLogLineCapacity];
   va_list arguments{};
@@ -36,7 +38,7 @@ inline void Log(const char* format, ...) noexcept {
 
   wchar_t path[MAX_PATH];
   const bool hasLocalAppData =
-      GetEnvironmentVariableW(L"LOCALAPPDATA", path, MAX_PATH) != 0;
+      GetEnvironmentVariableW(kLocalAppDataVariable, path, MAX_PATH) != 0;
   if (!hasLocalAppData) {
     return;
   }

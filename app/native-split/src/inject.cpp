@@ -14,6 +14,8 @@ constexpr int kPidArgument = 1;
 constexpr int kDllPathArgument = 2;
 constexpr int kArgumentCount = 3;
 
+constexpr wchar_t kKernelModule[] = L"kernel32.dll";
+constexpr char kLoadLibraryExport[] = "LoadLibraryW";
 constexpr int kDecimalBase = 10;
 constexpr int kUsageExitCode = 2;
 
@@ -84,7 +86,7 @@ int wmain(int argc, wchar_t** argv) {
   // kernel32 is mapped at the same address in every process, so our
   // LoadLibraryW is a valid start address in the target too.
   auto loadLibrary = reinterpret_cast<LPTHREAD_START_ROUTINE>(
-      GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "LoadLibraryW"));
+      GetProcAddress(GetModuleHandleW(kKernelModule), kLoadLibraryExport));
   const UniqueHandle thread{
       CreateRemoteThread(process.Get(), nullptr, 0, loadLibrary,
                          remotePath.Address(), 0, nullptr)};

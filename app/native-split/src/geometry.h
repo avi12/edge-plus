@@ -6,6 +6,7 @@
 #include <vector>
 #include "edge.h"
 #include "pane_tree.h"
+#include "split_data.h"
 #include "state.h"
 #include "anim.h"
 #include "dividers.h"
@@ -13,8 +14,10 @@
 namespace fixedge::geometry {
 
 // SplitTabLayout: 0 is one axis, any other value the other.
+inline constexpr int kHorizontalOrientation = 0;
 inline Axis SplitAxis(void* mcv) {
-  return edge::McvOrientation(mcv) != 0 ? Axis::kVertical : Axis::kHorizontal;
+  return edge::McvOrientation(mcv) == kHorizontalOrientation ? Axis::kHorizontal
+                                                             : Axis::kVertical;
 }
 
 // The live tree only when it tiles that many panes: a plain tab or another split
@@ -95,7 +98,8 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
 // next stock layout (e.g. a theme change's frame relayout) crashed Edge.
 inline void RestoreStockVisibility(void* mcv) {
   const int count = static_cast<int>(edge::McvCount(mcv));
-  const bool isSplitShown = edge::McvActiveSplitPanes(mcv) >= 2;
+  const bool isSplitShown =
+      edge::McvActiveSplitPanes(mcv) >= split_data::kMinSplitMembers;
   void* const* containers = edge::McvContainers(mcv);
   for (int i = 0; i < count; i++) {
     const bool isShownPane = i == 0 || (i == 1 && isSplitShown);

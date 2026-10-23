@@ -9,10 +9,12 @@
 #include <vector>
 #include "edge.h"
 #include "log.h"
+#include "split_data.h"
 
 namespace fixedge::tabrows {
 
-inline constexpr int kPairedMembers = 2;
+inline constexpr int kPairedMembers = split_data::kMinSplitMembers;
+inline constexpr int kNoDetachPreview = -1;
 
 // --- the ideal bounds of a split bigger than a pair -------------------------
 
@@ -145,7 +147,7 @@ inline void SpreadPiledSplits(void* helper, void* result) {
 // The strip index of the tab of the pane being dragged out of its split, or -1.
 // While it is set, the tab list is laid out as if that tab had already left its
 // split: the split's other tabs close up and the tab stands on its own.
-inline constinit int g_previewTabIndex = -1;
+inline constinit int g_previewTabIndex = kNoDetachPreview;
 // The parent of the last layout pass's tab views. Only ever used within one
 // drag.
 inline constinit void* g_listView = nullptr;
@@ -319,7 +321,7 @@ inline void ApplyDetachPreview(void* helper, void* result) {
   LayOutDetached(list, detach, edge::IsVerticalTabView(tab));
 }
 
-// `tabIndex` -1 ends the preview. Pass `isRelayoutWanted` false when the real
+// `kNoDetachPreview` ends the preview. Pass `isRelayoutWanted` false when the real
 // change is about to relayout anyway.
 inline void SetDetachPreview(int tabIndex, bool isRelayoutWanted = true) {
   if (tabIndex == g_previewTabIndex) {

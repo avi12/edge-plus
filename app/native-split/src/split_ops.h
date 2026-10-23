@@ -241,7 +241,8 @@ inline bool RemovePaneFromSplit(void* mcv, int pane,
                                 split_data::MemberFate fate) {
   void* tsm = edge::McvTabStripModel(mcv);
   const int memberCount = mcv ? edge::McvActiveSplitPanes(mcv) : 0;
-  const bool isGrownSplit = tsm && memberCount > 2 && pane < memberCount;
+  const bool isGrownSplit =
+      tsm && memberCount > split_data::kMinSplitMembers && pane < memberCount;
   if (!isGrownSplit) {
     return false;
   }

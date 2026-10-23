@@ -47,6 +47,7 @@ inline constinit bool g_hasHotKeys = false;
 inline constinit bool g_isTornDown = false;
 
 inline constexpr wchar_t kBrowserWindowClass[] = L"Chrome_WidgetWin_1";
+inline constexpr wchar_t kColorSchemeSetting[] = L"ImmersiveColorSet";
 inline constexpr int kClassNameLength = 64;
 inline constexpr UINT kTeardownTimeoutMs = 5000;
 
@@ -499,7 +500,7 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
       ApplyTabShape(true);
       return;
     case Command::kEndPreviewDetach:
-      tabrows::SetDetachPreview(-1);
+      tabrows::SetDetachPreview(tabrows::kNoDetachPreview);
       return;
     case Command::kTeardown:
       Teardown(hwnd);
@@ -595,7 +596,7 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   // message first (it updates its own native theme), so defer via the channel.
   const bool isColorSchemeChange =
       message == WM_SETTINGCHANGE && lparam != 0 &&
-      wcscmp(reinterpret_cast<const wchar_t*>(lparam), L"ImmersiveColorSet") ==
+      wcscmp(reinterpret_cast<const wchar_t*>(lparam), kColorSchemeSetting) ==
           0;
   if (isColorSchemeChange) {
     channel::Post(CodeOf(Command::kApplyTheme));

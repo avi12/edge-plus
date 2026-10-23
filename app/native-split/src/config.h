@@ -60,11 +60,13 @@ inline constexpr DWORD kBeforeReadingThemeWireSize =
 // @share ConfigFileRelativePath
 inline constexpr char kFileRelativePath[] = "\\FixEdge\\fixedge-config.bin";
 
+inline constexpr char kLocalAppDataVariable[] = "LOCALAPPDATA";
+
 // Empty when %LOCALAPPDATA% is unset.
 [[nodiscard]] inline std::string LocalAppDataPath(const char* relativePath) {
   char localAppData[MAX_PATH] = {};
   const DWORD length =
-      GetEnvironmentVariableA("LOCALAPPDATA", localAppData, MAX_PATH);
+      GetEnvironmentVariableA(kLocalAppDataVariable, localAppData, MAX_PATH);
   if (length == 0 || length >= MAX_PATH) {
     return std::string();
   }
