@@ -4,30 +4,16 @@ using System.Linq;
 
 namespace EdgePlus;
 
-// A newly seen Edge build, and which of the user's features it pauses (often
-// none).
 internal sealed record BuildChange(
     FileVersion EdgeBuild,
     FileVersion? PreviousBuild,
     FileVersion SupportedBuild,
     IReadOnlyList<Feature> Paused);
 
-// Which Edge build the DLL is made for, and which features another build rules
-// out. Pure: what is running is handed in (EdgeWatch reads it).
-//
-// The split DLL is pinned to one msedge.dll build: every RVA and struct offset
-// in app/native-split/src/offsets.h belongs to it. The build comes from
-// offsets.h itself (Shared), so the panel compares against exactly what the
-// embedded DLL was reversed against — there is no second copy to drift.
-//
-// What each feature depends on:
-//
-// * The split, the theming, the link handlers, the find bar, the WebUI theme
-//   colours, the live preview, the tab shape and the reading theme all run
-//   inside the injected DLL and call into
-//   msedge.dll by RVA, so a different msedge.dll breaks every one of them.
-// * The developer-mode prompt only edits a key in each profile's Preferences
-//   (DevModePrompt) and touches no Edge binary, so an update leaves it alone.
+// The pinned build comes from offsets.h itself (via Shared), so the panel
+// compares against exactly what the embedded DLL was reversed against. Every
+// DLL feature calls into msedge.dll by RVA, so any other build breaks them all;
+// the developer-mode prompt only edits Preferences and survives an update.
 internal static class EdgeBuild {
   public static FileVersion Pinned {
     get;
@@ -43,10 +29,8 @@ internal static class EdgeBuild {
     _ => throw new ArgumentOutOfRangeException(nameof(feature)),
   };
 
-  // The build running Edge is judged by, given each browser process's build:
-  // any build other than the pinned one if a process runs one (the DLL must not
-  // go into it), else the pinned one; null when none could be read (Edge is not
-  // running).
+  // Any process on a build other than the pinned one decides (the DLL must not
+  // go into it); null when none could be read (Edge is not running).
   public static FileVersion? Judged(IReadOnlyList<FileVersion> builds, FileVersion pinned) {
     if (builds.Count == 0) {
       return null;

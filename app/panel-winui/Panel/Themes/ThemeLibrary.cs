@@ -6,13 +6,11 @@ using System.Threading;
 
 namespace EdgePlus;
 
-// A theme action that could not be done, with the reason worded for the user.
+// The message is worded for the user.
 internal sealed class ThemeException(string message) : Exception(message);
 
-// What the user does with themes: add one from a store link or a local folder,
-// .zip or .crx, remove one, and pick one per Windows mode. Each change is
-// installed through Edge's own loader (ExternalExtensions), persisted, and
-// pushed to the running Edge (DllSync), so switching needs no restart.
+// Each change is installed through Edge's own loader, persisted, and pushed to
+// the running Edge, so switching needs no restart.
 internal static class ThemeLibrary {
   private const string CrxExtension = ".crx";
   private const string IdentityChanged = "The theme's identity changed; add it again.";
@@ -35,7 +33,7 @@ internal static class ThemeLibrary {
     }));
   }
 
-  // A folder, .zip or .crx at `path`.
+  // A folder, .zip or .crx.
   public static void AddLocal(string path) {
     (string id, string version, byte[] crx) = LocalThemeCrx(path);
     string stored = StoredCrx(id);
@@ -56,16 +54,14 @@ internal static class ThemeLibrary {
     Change(theming => theming.Remove(id));
   }
 
-  // Put the library in the order `ids` gives; the pickers follow it.
   public static void Reorder(IReadOnlyList<string> ids) =>
       Change(theming => theming.Reorder(ids));
 
   public static void Assign(ColorMode mode, string id) =>
       Change(theming => theming.Assign(mode, id));
 
-  // Re-install a local theme whose source changed on disk, then have Edge show
-  // the new copy. A theme that fails its checks is refused with the reason,
-  // and what Edge has installed is left as it was.
+  // A theme that fails its checks throws before anything is installed, so what
+  // Edge has is left as it was.
   public static void RefreshLocal(string id, string origin) {
     (string packedId, string version, byte[] crx) = LocalThemeCrx(origin);
     if (packedId != id) {
@@ -85,10 +81,8 @@ internal static class ThemeLibrary {
 
   private static string StoredCrx(string id) => Path.Combine(Paths.ThemesRoot, id + CrxExtension);
 
-  // A local theme's id, version and .crx bytes: a .crx is used as it is, a
-  // folder or .zip is packed and signed first. A theme that fails its checks
-  // says why (those sentences are written for the user, in ThemeManifest and
-  // Crx); a file the system cannot read or write is logged and said plainly.
+  // InvalidDataException messages from ThemeManifest and Crx are written for the
+  // user; an I/O failure is logged and said plainly.
   private static (string Id, string Version, byte[] Crx) LocalThemeCrx(string source) {
     try {
       bool isCrx = string.Equals(Path.GetExtension(source), CrxExtension,
@@ -120,13 +114,11 @@ internal static class ThemeLibrary {
     }
   }
 
-  // The themes Edge has installed that the panel did not add (the panel's own
-  // are installed in Edge too; each is listed once).
-  // The name Edge shows for theme `id` (its manifest's), when Edge already has
-  // it installed: a store link without a slug names nothing itself.
+  // A store link without a slug names nothing itself.
   private static string? InstalledName(string id) =>
       InstalledThemes.Scan(EdgeUserData.Default).FirstOrDefault(theme => theme.Id == id)?.Name;
 
+  // The panel's own themes are installed in Edge too; each is listed once.
   public static InstalledTheme[] EdgeThemesNotIn(Theming theming) =>
       InstalledThemes.Scan(EdgeUserData.Default)
           .Where(theme => !theming.Themes.Any(own => own.Id == theme.Id))

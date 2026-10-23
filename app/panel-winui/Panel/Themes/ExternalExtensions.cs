@@ -2,12 +2,9 @@ using Microsoft.Win32;
 
 namespace EdgePlus;
 
-// Adding a theme through Edge's external-extension loader.
-//
-// A theme is added without touching Edge's ABI: an entry under Edge's own
-// per-user external-extensions key, and Edge's loader installs it. A store
-// theme points at the store's update URL (Edge installs it as a trusted theme,
-// no developer mode); a local theme points at a .crx on disk.
+// A theme is added without touching Edge's ABI: an entry under Edge's per-user
+// external-extensions key, and Edge's loader installs it. A store theme points
+// at the store's update URL, so Edge trusts it without developer mode.
 internal static class ExternalExtensions {
   private const string ExtensionsKey = @"Software\Microsoft\Edge\Extensions";
   private const string ChromeStoreUpdateUrl = "https://clients2.google.com/service/update2/crx";
@@ -24,16 +21,13 @@ internal static class ExternalExtensions {
                  store == ThemeStore.Edge ? EdgeStoreUpdateUrl : ChromeStoreUpdateUrl);
   }
 
-  // By the path to its .crx and the version from its manifest, so Edge's loader
-  // installs it from disk.
   public static void InstallLocal(string extensionId, string crxPath, string version) {
     using RegistryKey key = CreateKey(extensionId);
     key.SetValue(PathValue, crxPath);
     key.SetValue(VersionValue, version);
   }
 
-  // Drop a theme's entry (best effort); Edge removes the extension on its next
-  // start.
+  // Edge removes the extension on its next start.
   public static void Uninstall(string extensionId) {
     try {
       Registry.CurrentUser.DeleteSubKeyTree(KeyPath(extensionId), throwOnMissingSubKey: false);

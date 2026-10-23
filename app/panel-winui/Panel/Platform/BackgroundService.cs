@@ -2,12 +2,9 @@ using System;
 
 namespace EdgePlus;
 
-// What the panel does whether or not its window is open, for the life of the
-// process: watch Edge for a new build (EdgeWatch) and local themes for edits
-// (ThemeWatch). A window, when open, listens to it rather than running watchers
-// of its own, so there is one watcher of each, and a boot launch with no window
-// is still the listener. When a new build pauses features while no window is
-// open, the user is told once by toast (PausedToast).
+// Runs whether or not the window is open. A window listens to it rather than
+// running watchers of its own, so there is one watcher of each and a boot
+// launch with no window is still the listener.
 internal sealed class BackgroundService : IDisposable {
   private readonly EdgeWatch _edgeWatch = new();
   private readonly ThemeWatch _themeWatch = new();
@@ -19,7 +16,6 @@ internal sealed class BackgroundService : IDisposable {
     _themeWatch.Refreshed += refresh => ThemeRefreshed?.Invoke(refresh);
   }
 
-  // The service of this process (of this panel load), while it runs.
   public static BackgroundService? Current {
     get; private set;
   }
@@ -29,8 +25,7 @@ internal sealed class BackgroundService : IDisposable {
 
   public event Action<ThemeRefresh>? ThemeRefreshed;
 
-  // Whether a window shows the panel now (PanelView says so); a toast is only
-  // for when none does.
+  // Set by PanelView; a toast is only for when no window is open.
   public bool IsWindowOpen {
     get; set;
   }

@@ -1,13 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!--
-    The panel itself: every feature, the settings, the Edge and DLL work, and the
-    window's content, built in C# (no XAML). The host exe (..\EdgePlus.csproj)
-    owns the process and the window and loads this assembly into a collectible
-    AssemblyLoadContext, so a rebuild of this project alone is swapped into the
-    running window (PanelLoader). Nothing here may subclass a WinRT type or
-    carry compiled XAML: those register with WinUI process-wide and would pin
-    the context so it never unloads.
-  -->
+  <!-- Loaded by the host into a collectible context and swapped live. Nothing
+       here may subclass a WinRT type or carry compiled XAML: those register
+       with WinUI process-wide and pin the context so it never unloads. -->
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
@@ -18,17 +12,14 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
-    <!-- A plugin: its WinUI and BCL references resolve to the host's copies
-         (the default context), which is what lets WinRT objects cross. -->
+    <!-- WinUI and BCL references resolve to the host's copies, which is what
+         lets WinRT objects cross. -->
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <!-- CsWinRT's AOT optimizer emits a [ModuleInitializer] that registers
-         this assembly's vtable and class-name lookups in WinRT.Runtime's
-         process-wide lists (ComWrappersSupport.RegisterType...Lookup). Those
-         lists live in the host's context and never let go, so with it on no
-         panel context ever unloaded (found with dotnet-dump gcroot: the old
-         LoaderAllocator rooted by Object._comWrappersLock). The panel creates
-         no WinRT wrappers for its own types — only WinUI's delegates — so it
-         loses nothing. -->
+    <!-- CsWinRT's AOT optimizer registers this assembly's lookups in
+         WinRT.Runtime's process-wide lists, which never let go, so no panel
+         context ever unloaded (dotnet-dump gcroot: the LoaderAllocator rooted
+         by Object._comWrappersLock). The panel wraps none of its own types, so
+         it loses nothing. -->
     <CsWinRTAotOptimizerEnabled>false</CsWinRTAotOptimizerEnabled>
   </PropertyGroup>
 
@@ -37,17 +28,9 @@
     <SplitDll>$(NativeSplitDir)build\fixedge-split.dll</SplitDll>
   </PropertyGroup>
 
-  <!--
-    The native split DLL, carried inside the panel as a resource and unpacked by
-    Payload.cs beside the settings, so the switch always injects the DLL that
-    matches this build. The DLL has its own build (build.cmd, MSVC + ninja),
-    run here whenever any of its sources is newer than the built DLL (or it is
-    missing), not only when it is missing: a DLL built before a source change
-    was once carried silently, and at start the panel
-    ejected Edge's current DLL for it (it read the config without the
-    tab-spine field, so the spine switch did nothing). Fails with a sentence
-    naming the file rather than producing a panel that cannot do anything.
-  -->
+  <!-- The embedded split DLL is rebuilt whenever any source is newer, not only
+       when it is missing: a stale one, carried silently, once replaced Edge's
+       current DLL at panel start (the spine switch then did nothing). -->
   <ItemGroup>
     <EmbeddedResource Include="$(SplitDll)" LogicalName="payload/fixedge-split.dll" />
     <NativeSplitSource Include="$(NativeSplitDir)src\**\*.h;$(NativeSplitDir)src\**\*.cpp" />
@@ -62,13 +45,8 @@
            Text="edgeplus carries fixedge-split.dll inside itself and cannot find it at $(SplitDll). Build it first: app\native-split\build.cmd" />
   </Target>
 
-  <!--
-    Platform\Shared.g.cs — the values the panel shares with the DLL (event
-    names, the config file and its sizes, the pinned msedge.dll build),
-    regenerated from the @share markers in app\native-split\src before every
-    build so the two cannot drift. The file is checked in and tools\lint.ps1
-    fails when the committed copy is stale.
-  -->
+  <!-- Regenerates Platform\Shared.g.cs from the DLL's @share markers so the two
+       cannot drift; tools\lint.ps1 fails a stale committed copy. -->
   <Target Name="ExportSharedConstants" BeforeTargets="BeforeBuild">
     <Exec Command="pwsh -NoProfile -File &quot;$(RepositoryRoot)tools\Export-SharedConstants.ps1&quot;" />
   </Target>

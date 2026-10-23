@@ -4,10 +4,8 @@ using System.Security.Cryptography;
 
 namespace EdgePlus;
 
-// An extension's id: 32 characters of a..p, the first 16 bytes of the SHA-256
-// of its public key with each nibble spelled as a letter. One home for the
-// shape, read by the store-link parser, the CRX reader, the packer and the
-// installed-theme scan alike.
+// 32 characters of a..p: the first 16 bytes of the SHA-256 of the extension's
+// public key, each nibble spelled as a letter.
 internal static class ExtensionId {
   public const int Length = 32;
   private const int HashBytes = Length / 2;

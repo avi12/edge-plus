@@ -5,10 +5,8 @@ using System.IO;
 
 namespace EdgePlus;
 
-// A binary's four-part file version (major.minor.build.revision), compared part
-// by part. Read from the version resource's fixed info, as the DLL's own
-// self-check does (verify.h), so the panel and the DLL agree on what "the same
-// build" means.
+// Read from the version resource's fixed info, as the DLL's self-check does
+// (verify.h), so the panel and the DLL agree on what "the same build" means.
 internal readonly record struct FileVersion(ushort Major, ushort Minor, ushort Build,
                                             ushort Revision) : IComparable<FileVersion> {
   private const int PartCount = 4;
@@ -52,8 +50,6 @@ internal readonly record struct FileVersion(ushort Major, ushort Minor, ushort B
     return new FileVersion(numbers[0], numbers[1], numbers[2], numbers[3]);
   }
 
-  // The file version of the binary at `path`, or null when it has none or
-  // cannot be read.
   public static FileVersion? Of(string path) {
     try {
       FileVersionInfo info = FileVersionInfo.GetVersionInfo(path);

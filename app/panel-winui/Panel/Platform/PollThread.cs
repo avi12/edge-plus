@@ -3,12 +3,10 @@ using System.Threading;
 
 namespace EdgePlus;
 
-// A background thread that runs `first` once, then `poll` every interval until
-// stopped. Both watchers run on one: a thread still running code of this
-// assembly would keep the host from unloading it on a live swap, so every
-// thread here can be stopped.
+// A thread still running code of this assembly would keep the host from
+// unloading it on a live swap, so every thread here can be stopped.
 internal sealed class PollThread(string name, TimeSpan interval) {
-  // How long Stop waits for a poll in progress (an injection can take seconds).
+  // An injection in progress can take seconds.
   private static readonly TimeSpan s_stopWait = TimeSpan.FromSeconds(15);
 
   private readonly CancellationTokenSource _stop = new();

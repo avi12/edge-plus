@@ -5,12 +5,8 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace EdgePlus;
 
-// One feature's card: icon, title, description, an optional note saying why its
-// switch is locked, and the switch — the Windows Settings card, built by hand
-// from WinUI's own controls rather than a toolkit's SettingsCard (no UI
-// library, to keep the supply chain small). Its look is App.xaml's card
-// styles. A card may carry a body below the header (the theming card's
-// library).
+// The Windows Settings card, built by hand from WinUI's own controls rather
+// than a toolkit's SettingsCard (no UI library, to keep the supply chain small).
 internal sealed class FeatureCard {
   private const double IconSize = 20;
   private const double IconGap = 16;
@@ -22,7 +18,7 @@ internal sealed class FeatureCard {
   private readonly ToggleSwitch _toggle;
   private readonly TextBlock _note;
   private readonly Grid _layout;
-  // Set while Update writes the switch, so the write is not taken for a click.
+  // So Update's write to the switch is not taken for a click.
   private bool _isUpdating;
 
   public FeatureCard(CardWording wording) {
@@ -80,14 +76,12 @@ internal sealed class FeatureCard {
     View = new Border { Style = StyleKeys.Get(StyleKeys.Card), Child = _layout };
   }
 
-  // Raised with the switch's new state when the user flips it.
   public event Action<bool>? Toggled;
 
   public FrameworkElement View {
     get;
   }
 
-  // Show the stored state. A locked switch says why in `note`.
   public void Update(bool isOn, bool isLocked, string note) {
     _isUpdating = true;
     _toggle.IsOn = isOn;
@@ -97,7 +91,6 @@ internal sealed class FeatureCard {
     _note.Visibility = note.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
   }
 
-  // A body under the header, spanning the text and the switch.
   public void SetBody(FrameworkElement body) {
     _layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
     Grid.SetRow(body, 1);

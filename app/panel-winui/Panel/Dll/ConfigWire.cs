@@ -4,8 +4,7 @@ using System.Text;
 
 namespace EdgePlus;
 
-// What the DLL should do: which of its features are on, and the theme for each
-// Windows mode (an extension id, or empty for the default theme).
+// A theme id is an extension id, or empty for the default theme.
 internal readonly record struct DllConfig(
     bool IsSplitActive,
     bool IsThemingActive,
@@ -19,8 +18,7 @@ internal readonly record struct DllConfig(
     bool IsReadingThemeActive) {
   public static DllConfig From(Settings settings) => From(settings, settings.Features);
 
-  // With the switches as they apply on the current Edge build (a paused
-  // feature off), rather than as the user chose them.
+  // `features` as they apply on the current Edge build (a paused feature off).
   public static DllConfig From(Settings settings, Features features) => new(
       IsSplitActive: features.NativeSplit,
       IsThemingActive: features.Theming,
@@ -34,13 +32,9 @@ internal readonly record struct DllConfig(
       IsReadingThemeActive: features.ReadingTheme);
 }
 
-// The bytes of the config file the DLL reads. The layout mirrors struct Wire in
-// app/native-split/src/config.h field for field: five u32s, the two ids, then a
-// reserved u32 (once the chosen assistant; written as zero, never read), the
-// find switch, the WebUI-follows-theme switch, the live-preview switch, the
-// tab-shape switch, and the reading-theme switch (its light and dark themes are
-// picked in reading mode itself and kept by the DLL). Every u32 is
-// little-endian, as the DLL reads it on x64.
+// Mirrors struct Wire in app/native-split/src/config.h field for field, every
+// u32 little-endian as the DLL reads it on x64. The reserved u32 was once the
+// chosen assistant: written as zero, never read.
 internal static class ConfigWire {
   private const int FieldBytes = sizeof(uint);
 
@@ -59,7 +53,7 @@ internal static class ConfigWire {
   public const int ReadingThemeActiveOffset = TabShapeActiveOffset + FieldBytes;
   public const int Size = ReadingThemeActiveOffset + FieldBytes;
 
-  // The size config.h static_asserts, from its own counts.
+  // What config.h static_asserts, from its own counts.
   public const int SizeConfigHExpects =
       Shared.WireFieldCount * FieldBytes + Shared.WireIdCount * Shared.WireIdCapacity;
 
@@ -81,7 +75,6 @@ internal static class ConfigWire {
   private static void WriteFlag(byte[] wire, int offset, bool isOn) =>
       BinaryPrimitives.WriteUInt32LittleEndian(wire.AsSpan(offset), isOn ? 1u : 0u);
 
-  // An id longer than the field is cut to it.
   private static void WriteId(byte[] wire, int lengthOffset, int idOffset, string id) {
     byte[] bytes = Encoding.UTF8.GetBytes(id);
     int length = Math.Min(bytes.Length, Shared.WireIdCapacity);

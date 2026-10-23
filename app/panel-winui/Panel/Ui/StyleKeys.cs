@@ -2,8 +2,7 @@ using Microsoft.UI.Xaml;
 
 namespace EdgePlus;
 
-// The keys of App.xaml's styles, as the code-built cards ask for them; each
-// must match an x:Key there.
+// Each must match an x:Key in App.xaml.
 internal static class StyleKeys {
   public const string Card = "FeatureCardStyle";
   public const string CardTitle = "CardTitleStyle";
@@ -17,7 +16,7 @@ internal static class StyleKeys {
   public const string DropVeilFrame = "DropVeilFrameStyle";
   // WinUI's own.
   public const string AccentButton = "AccentButtonStyle";
-  // The header over a group of cards, as Windows Settings sets it.
+  // WinUI's own, as Windows Settings sets a section header.
   public const string SectionHeader = "BodyStrongTextBlockStyle";
 
   public static Style Get(string key) => (Style)Application.Current.Resources[key];

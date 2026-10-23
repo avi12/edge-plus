@@ -5,10 +5,8 @@ using Microsoft.Windows.AppNotifications.Builder;
 
 namespace EdgePlus;
 
-// The one Windows toast that says which features an Edge build paused, raised
-// while no window shows the panel, once per build (EdgeSupport.ShouldNotify).
-// The host registers the process for notifications at launch and opens the
-// window when the toast is clicked; this only builds and shows it.
+// The host registers the process for notifications and opens the window when
+// the toast is clicked; this only builds and shows it.
 internal static class PausedToast {
   // A simulation (EdgeInstall) remembers in memory only, so the real record
   // stays as it was.

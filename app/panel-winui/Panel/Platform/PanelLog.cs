@@ -3,9 +3,8 @@ using System.IO;
 
 namespace EdgePlus;
 
-// The panel's log, beside its settings: where a failure's details go, so the
-// window only ever says a plain sentence (Wording) and never a raw exception
-// message.
+// Where a failure's details go, so the window only ever shows a plain sentence
+// (Wording), never a raw exception message.
 internal static class PanelLog {
   private const string FileName = "panel.log";
 

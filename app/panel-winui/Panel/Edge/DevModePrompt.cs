@@ -6,15 +6,10 @@ using System.Threading;
 
 namespace EdgePlus;
 
-// Snoozing Edge's "turn off extensions in developer mode" prompt.
-//
-// Edge keeps the snooze in each profile's Preferences as
-// extensions.ui.dev_mode_warning_snooze_end_time (microseconds since 1601).
-// Edge rewrites Preferences from memory while it runs, so the edit only sticks
-// once Edge has fully exited — which is exactly when the prompt is next
-// checked. The panel re-runs itself headless with a switch to do the waiting
-// (Program), so the wait survives the panel window closing. A named mutex
-// keeps it to one waiter at a time.
+// Snoozes Edge's "turn off extensions in developer mode" prompt. Edge rewrites
+// Preferences from memory while it runs, so the edit only sticks once Edge has
+// fully exited (exactly when the prompt is next checked). The waiting runs in a
+// headless re-run of the panel so it survives the window closing.
 internal static class DevModePrompt {
   private const string WaiterMutex = @"Local\fix-edge.dev-mode-prompt";
   private const string LockfileName = "lockfile";
@@ -28,14 +23,9 @@ internal static class DevModePrompt {
   private const long FileTimeTicksPerMicrosecond = 10;
   private static readonly TimeSpan s_pollInterval = TimeSpan.FromSeconds(2);
 
-  // The command line that re-runs `executable` headless as the waiter; started
-  // detached (DetachedProcess) so it outlives the panel window.
   public static string WaiterCommandLine(string executable) =>
       $"\"{executable}\" {Switches.DevModeWaiter}";
 
-  // Wait until the Edge at `userData` has fully exited, then write the snooze
-  // into every one of its profiles — unless the user switched the feature off
-  // meanwhile. A no-op if another waiter already holds the mutex.
   public static void WaitForEdgeExitThenSnooze(string userData) {
     using var waiter = new Mutex(initiallyOwned: true, WaiterMutex, out bool isOnlyWaiter);
     if (!isOnlyWaiter) {
@@ -53,13 +43,12 @@ internal static class DevModePrompt {
     }
   }
 
-  // When the snooze ends, in Edge's units: microseconds since 1601, as text.
+  // In Edge's units: microseconds since 1601, as text.
   public static string SnoozeEnd(DateTime nowUtc) =>
       (nowUtc.ToFileTimeUtc() / FileTimeTicksPerMicrosecond + SnoozeMicroseconds).ToString(
           System.Globalization.CultureInfo.InvariantCulture);
 
-  // Set the snooze in a parsed Preferences, creating the objects on its path
-  // (and replacing any that are not objects).
+  // Creates the objects on the path, replacing any that are not objects.
   public static void SetSnooze(JsonObject preferences, string snoozeEnd) {
     JsonObject parent = preferences;
     foreach (string key in s_snoozeKeyPath[..^1]) {
@@ -101,7 +90,6 @@ internal static class DevModePrompt {
     }
   }
 
-  // Local State lists every profile Edge knows, by folder name.
   private static string[] ProfileFolders(string userData) =>
       EdgeUserData.ReadJson(Path.Combine(userData, LocalStateFileName))?["profile"]?["info_cache"]
           is JsonObject profiles

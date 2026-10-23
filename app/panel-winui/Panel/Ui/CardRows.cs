@@ -4,15 +4,11 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace EdgePlus;
 
-// The rows the cards' bodies are made of, built one way for every card.
 internal static class CardRows {
   private const double ColumnGap = 8;
-  // A picker wide enough for the longest choice it offers.
+  // Wide enough for the longest choice a picker offers.
   public const double PickerMinWidth = 200;
 
-  // A picker for one Windows mode ("When Windows is light"), the label on the
-  // left, the picker on the right; the picker is named after the label for a
-  // screen reader unless it has a name already.
   public static Grid Picker(string label, ComboBox picker) {
     var row = new Grid { ColumnSpacing = ColumnGap };
     row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });

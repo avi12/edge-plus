@@ -8,19 +8,14 @@ using System.Text;
 
 namespace EdgePlus;
 
-// A theme ready to hand to Edge's external-extension loader.
 internal sealed record PackedTheme(string Id, string Version, byte[] Crx);
 
-// Turning a local theme folder or .zip into a signed .crx.
-//
-// Edge's external-extension loader installs only a .crx, so a theme given as an
-// unpacked folder or a ZIP is packed here: zipped, signed with an RSA key and
-// wrapped in a CRX3 header. The key is kept per source path, so adding the same
-// theme again keeps its extension id.
+// Edge's external-extension loader installs only a .crx. The signing key is
+// kept per source path, so adding the same theme again keeps its extension id.
 //
 // The key file holds Windows CNG's RSAPRIVATEBLOB, the format the earlier Tauri
-// panel wrote into the same folder, so a theme it packed keeps its id when this
-// panel packs it again; keep the format and the file names.
+// panel wrote into the same folder, so a theme it packed keeps its id; keep the
+// format and the file names.
 internal static class ThemePacker {
   private const int KeyBits = 2048;
   private const int CrxIdBytes = 16;
@@ -30,9 +25,7 @@ internal static class ThemePacker {
   private const string KeyLengthProperty = "Length";
   private static readonly CngKeyBlobFormat s_privateBlob = new("RSAPRIVATEBLOB");
 
-  // Pack the theme at `source` (an unpacked folder, or a .zip with its
-  // manifest.json at the top) into a signed CRX3. `keyDirectory` holds the
-  // per-theme signing keys. Throws InvalidDataException for a broken theme.
+  // `source` is a folder, or a .zip with its manifest.json at the top.
   public static PackedTheme Pack(string source, string keyDirectory) {
     byte[] zipBytes = Directory.Exists(source) ? ZipFolder(source) : File.ReadAllBytes(source);
     ThemeManifest.Validate(zipBytes);
@@ -64,15 +57,14 @@ internal static class ThemePacker {
       [.. Crx.SignedDataPrefix, .. LittleEndian((uint)signedHeaderData.Length),
        .. signedHeaderData, .. zip];
 
-  // The key's file name: a hash of the lower-cased source path.
   public static string KeyFileName(string source) {
     byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(source.ToLowerInvariant()));
     ulong prefix = BinaryPrimitives.ReadUInt64BigEndian(hash.AsSpan(0, KeyFileNameBytes));
     return prefix.ToString("x16", CultureInfo.InvariantCulture) + KeyExtension;
   }
 
-  // The theme's pack count, kept beside its key: each pack gets a higher
-  // version, which is what makes Edge replace the installed copy.
+  // Each pack gets a higher version, which is what makes Edge replace the
+  // installed copy.
   private static ushort NextRevision(string keyFile) {
     string counterFile = Path.ChangeExtension(keyFile, RevisionExtension);
     ushort previous = 0;
@@ -99,7 +91,6 @@ internal static class ThemePacker {
     return new RSACng(key);
   }
 
-  // Every file under `root`, named by its path relative to it with '/'.
   private static byte[] ZipFolder(string root) {
     using var output = new MemoryStream();
     using (var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true)) {

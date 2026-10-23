@@ -3,14 +3,10 @@ using System.Threading;
 
 namespace EdgePlus;
 
-// The one place that brings the running Edge in line with what the user wants:
-// write the config the DLL reads, load or unload the DLL, then signal a live
-// re-read. The DLL only ever goes into a browser process running the build it
-// was made for, and is sent the features as they apply on the current build
-// (EdgeSupport.Effective): a paused feature goes as off, so on an unsupported
-// build nothing is injected and a loaded copy unloads. In a simulation
-// (EdgeInstall) nothing here runs, so the Edge that is running is never
-// touched.
+// The one place that brings the running Edge in line with the settings. The DLL
+// only goes into a process on the pinned build and is sent the effective
+// features (a paused one as off), so on an unsupported build nothing is injected
+// and a loaded copy unloads. A simulation (EdgeInstall) never touches Edge.
 internal static class DllSync {
   private const int UnloadPolls = 40;
   private const int UnloadPollMilliseconds = 100;
@@ -44,9 +40,8 @@ internal static class DllSync {
     DllChannel.SignalConfigChanged();
   }
 
-  // At startup: if the DLL loaded in Edge is not this build's, eject it and let
-  // Apply inject the fresh one, so a rebuilt panel takes effect with no Edge
-  // restart.
+  // A loaded DLL that is not this build's is ejected so Apply injects the fresh
+  // one: a rebuilt panel takes effect with no Edge restart.
   public static void SyncOnStart() {
     if (EdgeInstall.IsSimulated) {
       return;

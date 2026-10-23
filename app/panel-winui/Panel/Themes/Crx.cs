@@ -8,18 +8,14 @@ using System.Text.Json;
 
 namespace EdgePlus;
 
-// A local theme's identity, read from its .crx.
 internal sealed record CrxInfo(string Id, string Version);
 
-// The RSA proof a CRX3 header carries, and the signed header data beside it.
 internal sealed record CrxProof(byte[] PublicKey, byte[] Signature, byte[] SignedHeaderData);
 
-// The CRX3 format, both what ThemePacker writes and what Crx reads.
-//
-// A CRX3 file is a "Cr24" magic, the format version, the header's length, a
-// CrxFileHeader protobuf carrying the RSA public key, then a ZIP. The
-// extension id is derived from that public key (ExtensionId); the version is
-// the "version" of the ZIP's manifest.json.
+// A CRX3 file (read here, written by ThemePacker) is a "Cr24" magic, the format
+// version, the header's length, a CrxFileHeader protobuf carrying the RSA
+// public key, then a ZIP. The extension id is derived from that public key; the
+// version is the "version" of the ZIP's manifest.json.
 internal static class Crx {
   public static readonly byte[] Magic = "Cr24"u8.ToArray();
   public const uint FormatVersion = 3;
@@ -39,13 +35,12 @@ internal static class Crx {
   private const string ManifestName = "manifest.json";
   private const string VersionKey = "version";
 
-  // The extension id and version of CRX3 `bytes`.
   public static CrxInfo Read(byte[] bytes) {
     CrxProof proof = ReadProof(bytes);
     return new CrxInfo(ExtensionId.FromPublicKey(proof.PublicKey), ReadZipVersion(Zip(bytes)));
   }
 
-  // The first RSA proof and the signed header data of CRX3 `bytes`.
+  // Only the first RSA proof is read.
   public static CrxProof ReadProof(byte[] bytes) {
     int headerEnd = PreambleLength + HeaderLength(bytes);
     var header = Protobuf.ReadFields(bytes, PreambleLength, headerEnd);
@@ -63,10 +58,8 @@ internal static class Crx {
     return new CrxProof(Slice(bytes, key), Slice(bytes, signature), Slice(bytes, signed));
   }
 
-  // The ZIP a CRX3 carries after its header.
   public static byte[] Zip(byte[] bytes) => bytes[(PreambleLength + HeaderLength(bytes))..];
 
-  // The "version" in the manifest.json of ZIP `zipBytes`.
   public static string ReadZipVersion(byte[] zipBytes) {
     using var archive = OpenZip(zipBytes, "bad .crx ZIP");
     ZipArchiveEntry manifest = archive.GetEntry(ManifestName)

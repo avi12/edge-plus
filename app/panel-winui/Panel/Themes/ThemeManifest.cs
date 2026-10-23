@@ -9,14 +9,9 @@ using System.Text.Json.Nodes;
 
 namespace EdgePlus;
 
-// Checking a local theme before Edge ever sees it, and stamping its version.
-//
 // A theme the user edits live is re-installed into the running Edge, so a
-// broken edit must be caught here rather than hot-swapped in. Validate rejects
-// what Edge's theme loader would trip over (a manifest that is not a theme, a
-// missing or non-image file, colours out of range); Revise gives every re-pack a
-// higher four-part version, because Edge only replaces an installed extension
-// with a newer one. Its messages are the user's.
+// broken edit must be caught here rather than hot-swapped in. Its messages are
+// the user's.
 internal static class ThemeManifest {
   public const string ManifestName = "manifest.json";
   private const long MaxThemeBytes = 64L * 1024 * 1024;
@@ -32,8 +27,7 @@ internal static class ThemeManifest {
   private static readonly byte[] s_pngMagic = [0x89, (byte)'P', (byte)'N', (byte)'G'];
   private static readonly byte[] s_jpegMagic = [0xff, 0xd8, 0xff];
 
-  // Throws InvalidDataException saying what is wrong, worded for the user,
-  // unless the theme in `zipBytes` is one Edge can load safely.
+  // Rejects what Edge's theme loader would trip over.
   public static void Validate(byte[] zipBytes) {
     using ZipArchive archive = Open(zipBytes);
     long total = archive.Entries.Sum(entry => entry.Length);
@@ -70,8 +64,8 @@ internal static class ThemeManifest {
     }
   }
 
-  // A copy of the theme ZIP whose manifest version ends in `revision`, and that
-  // version. Only the first three parts of the original are kept.
+  // Every re-pack needs a higher version: Edge only replaces an installed
+  // extension with a newer one. The original's first three parts are kept.
   public static (byte[] Zip, string Version) Revise(byte[] zipBytes, ushort revision) {
     using ZipArchive source = Open(zipBytes);
     JsonObject manifest = ReadManifest(source);
@@ -176,8 +170,7 @@ internal static class ThemeManifest {
     }
   }
 
-  // A JSON number as a whole number, or null for a fraction or anything else
-  // (255.0 is not a channel).
+  // Null for a fraction: 255.0 is not a channel.
   private static long? AsInteger(JsonNode? node) {
     bool isNumber = node is JsonValue value && value.GetValueKind() == JsonValueKind.Number;
     if (!isNumber) {

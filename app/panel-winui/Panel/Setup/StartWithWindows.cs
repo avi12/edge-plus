@@ -4,9 +4,8 @@ using Windows.ApplicationModel;
 
 namespace EdgePlus;
 
-// The plain exe starts through the Run key (StartupEntry). The Store package
-// uses its manifest's startup task instead, because an uninstall would leave a
-// Run entry pointing at a deleted exe.
+// The Store package uses its manifest's startup task, not the Run key, because
+// an uninstall would leave a Run entry pointing at a deleted exe.
 internal static class StartWithWindows {
   // Package.appxmanifest's desktop:StartupTask TaskId.
   private const string PackagedTaskId = "EdgePlusStartup";

@@ -4,30 +4,25 @@ using System.Linq;
 
 namespace EdgePlus;
 
-// Which store a theme came from, so the matching update URL is used.
 internal enum ThemeStore {
   Chrome,
   Edge,
 }
 
-// A theme parsed from a store URL. `Name` is the link's slug as a title, or
-// null when the link has no slug (the caller names it otherwise).
+// `Name` is the link's slug as a title, or null when the link has none.
 internal sealed record ParsedStoreTheme(string Id, string? Name, ThemeStore Store);
 
-// Pulling a theme's identity out of a pasted store URL. Only the real stores
-// are recognised, each by its exact host and the path before the theme
-// (StoreSite): <prefix>/<slug>/<id> or <prefix>/<id>. Pure string logic, no
-// network.
+// Only the real stores are recognised, each by its exact host and the path
+// before the theme: <prefix>/<slug>/<id> or <prefix>/<id>. No network.
 internal static class StoreUrl {
   private const string HttpsPrefix = "https://";
   private const string SchemeSeparator = "://";
   private const string WwwPrefix = "www.";
   private static readonly char[] s_slugSeparators = ['-', '_'];
 
-  // A store's host and the path segments in front of a theme's slug and id.
+  // `Prefix` is the path segments in front of a theme's slug and id.
   private sealed record StoreSite(string Host, string[] Prefix, ThemeStore Store);
 
-  // The one table of the sites a theme link may come from.
   private static readonly StoreSite[] s_sites = [
     new("chromewebstore.google.com", ["detail"], ThemeStore.Chrome),
     // The Chrome Web Store's old address, still in links people keep.
@@ -35,9 +30,8 @@ internal static class StoreUrl {
     new("microsoftedge.microsoft.com", ["addons", "detail"], ThemeStore.Edge),
   ];
 
-  // A theme link from the Chrome Web Store or Edge Add-ons, or null for any
-  // other text. Surrounding space, http, a missing scheme, "www.", a trailing
-  // slash, a query (such as ?hl=en) and a fragment are all tolerated.
+  // Null for any other text. Surrounding space, http, a missing scheme, "www.",
+  // a trailing slash, a query (such as ?hl=en) and a fragment are tolerated.
   public static ParsedStoreTheme? Parse(string url) {
     string trimmed = url.Trim();
     string absolute = trimmed.Contains(SchemeSeparator, StringComparison.Ordinal)

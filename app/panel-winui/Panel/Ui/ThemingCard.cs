@@ -13,32 +13,25 @@ using Windows.System;
 
 namespace EdgePlus;
 
-// What a local theme is picked from: a .crx or .zip file, or an unpacked folder.
+// A .crx or .zip file, or an unpacked folder.
 internal enum LocalThemeKind {
   File,
   Folder,
 }
 
-// The theming feature's card: its switch, then the library — add a theme from a
-// store link or a local file or folder, pick one for Windows' light mode and one
-// for dark, and the list of themes (the panel's own, removable, then those Edge
-// already had). Every change goes through PanelActions, so switching a theme
-// needs no restart.
 internal sealed class ThemingCard {
   private const double RowSpacing = 8;
   private const double ColumnGap = 8;
   private const double DimmedOpacity = 0.5;
   private const int RemoveGlyph = 0xE711;
   private const double RemoveGlyphSize = 12;
-  // Segoe Fluent's gripper: the row is draggable.
   private const int GripGlyph = 0xE76F;
   private const double GripGlyphSize = 12;
   private const double GripWidth = 16;
   // Inside a row, so the list's rows and Edge's rows line up.
   private const double RowInset = 4;
-  // Each list item is a slot the row is put into. Parsed at run time, not
-  // compiled XAML, so nothing of it registers with WinUI for the life of the
-  // process (the panel is swapped live).
+  // Parsed at run time, not compiled XAML, so nothing of it registers with
+  // WinUI for the life of the process (the panel is swapped live).
   private const string RowSlotTemplate =
       "<DataTemplate xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\">" +
       "<ContentControl IsTabStop=\"False\" HorizontalContentAlignment=\"Stretch\" " +
@@ -47,7 +40,7 @@ internal sealed class ThemingCard {
   // Runs a panel action off the UI thread and renders the state it returns;
   // returns why it failed, or null.
   private readonly Func<Func<PanelState>, Task<string?>> _run;
-  // Asks the user for a local theme; null when they cancel.
+  // Null when the user cancels.
   private readonly Func<LocalThemeKind, Task<string?>> _pick;
 
   private readonly FeatureCard _card = new(Wording.For(Feature.Theming));
@@ -62,12 +55,9 @@ internal sealed class ThemingCard {
   };
   private readonly ComboBox _lightPicker = new();
   private readonly ComboBox _darkPicker = new();
-  // The panel's own themes, in the library's order, which the user can drag or
-  // key into a new one; then Edge's own themes, which are not the panel's to
-  // order.
-  // No selection: a row is never "chosen" here, and with selection on, each
-  // dragged row kept the accent bar, so two drags looked like two selected
-  // themes. Alt+Up / Alt+Down act on the focused row instead.
+  // No selection: with it on, each dragged row kept the accent bar, so two
+  // drags looked like two selected themes. Alt+Up / Alt+Down act on the
+  // focused row instead.
   private readonly ListView _ownThemes = new() {
     SelectionMode = ListViewSelectionMode.None,
     IsItemClickEnabled = false,
@@ -84,7 +74,7 @@ internal sealed class ThemingCard {
   private readonly ObservableCollection<string> _ownKeys = [];
   private Dictionary<string, Func<FrameworkElement>> _ownRowFactories = [];
   private readonly StackPanel _edgeThemes = new() { Spacing = RowSpacing / 2 };
-  // Set while the pickers are refilled, so a refill is not taken for a choice.
+  // So a refill of the pickers is not taken for a choice.
   private bool _isUpdating;
 
   public ThemingCard(Func<Func<PanelState>, Task<string?>> run,
@@ -131,9 +121,6 @@ internal sealed class ThemingCard {
     _body.Children.Add(_ownThemes);
     _body.Children.Add(_edgeThemes);
     _card.SetBody(_body);
-    // A theme added or removed slides in or out, and the rows after it move to
-    // make room (as they do while one is dragged); the card grows or shrinks
-    // with it.
     Motion.AnimateItems(_ownThemes, Motion.ListItems);
     Motion.Animate(_edgeThemes, Motion.AddDelete);
     Motion.Animate(_body, Motion.Reposition);
@@ -154,8 +141,8 @@ internal sealed class ThemingCard {
     Fill(_darkPicker, options, state.Theming.Dark);
     _isUpdating = false;
 
-    // Each row keyed by everything it shows, so a row that changed is replaced
-    // and one that did not is left alone (and does not re-animate).
+    // Keyed by everything a row shows, so an unchanged row is left alone (and
+    // does not re-animate).
     var own = new RowSet();
     foreach (ThemeEntry theme in state.Theming.Themes) {
       string badge = theme.Source == ThemeSource.Store ? Wording.StoreBadge : Wording.LocalBadge;
@@ -187,7 +174,6 @@ internal sealed class ThemingCard {
   private const string EmptyRowKey = "empty";
   private const char RowKeySeparator = '\n';
 
-  // A row's key starts with its theme's id.
   private static string RowKey(string id, string name, string[] badges) =>
       string.Join(RowKeySeparator, [id, name, string.Join(',', badges)]);
 
@@ -195,13 +181,11 @@ internal sealed class ThemingCard {
 
   private static string NameOf(string rowKey) => rowKey.Split(RowKeySeparator)[1];
 
-  // The panel's themes in the order the list shows them now.
   private List<string> CurrentOrder() => _ownKeys.Select(IdOf).ToList();
 
-  // A container being shown for a key gets a freshly built row for it, in the
-  // slot its template made. Setting the container's own Content instead does
-  // not hold: the list writes the item over it (or, told the content is
-  // handled, leaves it hidden).
+  // The row goes in the slot its template made. Setting the container's own
+  // Content instead does not hold: the list writes the item over it (or, told
+  // the content is handled, leaves it hidden).
   private void OnOwnRowContainerChanging(ListViewBase sender,
                                          ContainerContentChangingEventArgs args) {
     bool hasRow = !args.InRecycleQueue && args.Item is string key
@@ -211,12 +195,10 @@ internal sealed class ThemingCard {
     }
     string rowKey = (string)args.Item;
     slot.Content = _ownRowFactories[rowKey]();
-    // A screen reader names the item by its theme, not by its key.
     AutomationProperties.SetName(args.ItemContainer, NameOf(rowKey));
   }
 
-  // Alt+Up / Alt+Down moves the focused theme one place, for whoever does not
-  // drag; focus stays on it.
+  // Alt+Up / Alt+Down: a reorder for whoever does not drag.
   private void OnThemeListKeyDown(object sender, KeyRoutedEventArgs e) {
     bool isMoveKey = e.Key == VirtualKey.Up || e.Key == VirtualKey.Down;
     bool isMove = isMoveKey && e.KeyStatus.IsMenuKeyDown;
@@ -240,8 +222,7 @@ internal sealed class ThemingCard {
     }
   }
 
-  // The key of the row holding keyboard focus: the list item itself, or an
-  // element inside it (its remove button).
+  // Focus is on the list item itself or on its remove button.
   private string? FocusedRowKey(object? focused) {
     var element = focused as DependencyObject;
     while (element is not null && element is not ListViewItem) {
@@ -263,7 +244,7 @@ internal sealed class ThemingCard {
     }
   }
 
-  // The rows one list should show, in order, each made only if missing.
+  // The rows one list should show, in order, each built only if missing.
   private sealed class RowSet {
     private readonly Dictionary<string, Func<FrameworkElement>> _create =
         new(StringComparer.Ordinal);
@@ -307,9 +288,8 @@ internal sealed class ThemingCard {
     return row;
   }
 
-  // One theme: a drag grip (the panel's own themes only; Edge's keep the space
-  // so every row lines up), the name, its badges and, for the panel's own,
-  // the remove button.
+  // Edge's own themes get an invisible grip and remove button, so every row's
+  // columns line up.
   private Grid ThemeRow(string id, string name, string[] badges, bool isOwn) {
     var row = new Grid { ColumnSpacing = ColumnGap, Padding = new Thickness(RowInset, 0, RowInset, 0) };
     row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(GripWidth) });
@@ -342,7 +322,6 @@ internal sealed class ThemingCard {
     Grid.SetColumn(badgeList, 2);
     row.Children.Add(badgeList);
 
-    // Edge's own themes keep the column, so every row's badges line up.
     var remove = new Button {
       Content = new FontIcon {
         Glyph = char.ConvertFromUtf32(RemoveGlyph),
@@ -358,14 +337,10 @@ internal sealed class ThemingCard {
     return row;
   }
 
-  // Bring a picker in line with the options, in their order, and keep its
-  // choice. Rebuilt only when the themes or their order or names changed, and
-  // then with new items: moving a ComboBoxItem by removing and re-inserting
-  // the same element throws (E_INVALIDARG, "Value does not fall within the
-  // expected range"), which put an error line on the card and shifted the
-  // rows under it on every reorder. Runs under _isUpdating, so neither the
-  // rebuild nor the re-selection is taken for a choice, and no theme is
-  // re-applied.
+  // Rebuilt only when the options changed, and then with new items: moving a
+  // ComboBoxItem by removing and re-inserting the same element throws
+  // (E_INVALIDARG), which put an error line on the card on every reorder.
+  // Runs under _isUpdating, so the re-selection re-applies no theme.
   private static void Fill(ComboBox picker, List<(string Id, string Label)> options,
                            string selectedId) {
     var shown = picker.Items.Cast<ComboBoxItem>()
@@ -378,8 +353,7 @@ internal sealed class ThemingCard {
         picker.Items.Add(new ComboBoxItem { Content = label, Tag = id });
       }
     }
-    // An id no option has (a theme removed meanwhile) falls back to the
-    // default theme, the first option.
+    // A theme removed meanwhile falls back to the default theme, the first option.
     object? wanted = picker.Items.Cast<ComboBoxItem>()
                          .FirstOrDefault(item => (string)item.Tag == selectedId)
         ?? picker.Items.FirstOrDefault();
@@ -415,10 +389,8 @@ internal sealed class ThemingCard {
     }
   }
 
-  // A reorder: saved and rendered (only the list and the pickers change), with
-  // a failure shown on the card, but none of RunAsync's busy state — holding
-  // the add buttons for the save disabled and re-enabled File… and Folder…
-  // on every drop.
+  // None of RunAsync's busy state: holding the add buttons for the save
+  // flickered File… and Folder… on every drop.
   private async Task ReorderAsync(IReadOnlyList<string> order) {
     string? error = await _run(() => PanelActions.ReorderThemes(order));
     if (error is not null) {
@@ -426,8 +398,6 @@ internal sealed class ThemingCard {
     }
   }
 
-  // An action with the add buttons held while it runs, and its failure shown
-  // on the card. Returns whether it succeeded.
   private async Task<bool> RunAsync(Func<PanelState> action) {
     ShowError("");
     SetBusy(true);

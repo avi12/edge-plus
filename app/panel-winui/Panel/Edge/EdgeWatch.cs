@@ -5,26 +5,17 @@ using System.Threading;
 
 namespace EdgePlus;
 
-// Watching for Edge to (re)start, which is when an update lands.
-//
-// Edge installs an update into a new version folder and swaps it in when it
-// restarts, so the build only changes when a new browser process appears or
-// the launcher is swapped. At start, whenever a browser process appears that
-// was not there on the previous (cheap, 2 s) window poll, and whenever the
-// install folder's launcher changes, the build is checked (Reconcile) before
-// anything is injected; features a different msedge.dll would break are
-// paused (EdgeSupport) and the UI is told.
+// Edge swaps an update in only when it restarts, so the build can only change
+// when a new browser process appears or the launcher is swapped: both trigger a
+// build check before anything is injected.
 internal sealed class EdgeWatch {
   private static readonly TimeSpan s_pollInterval = TimeSpan.FromSeconds(2);
 
-  // Raised on the watch thread with each newly seen build (and what it pauses,
-  // often nothing). BackgroundService subscribes before Start, so no change
-  // can be missed.
+  // Raised on the watch thread. Subscribe before Start, or a change is missed.
   public event Action<BuildChange>? BuildChanged;
 
   private readonly PollThread _thread = new("Edge watch", s_pollInterval);
-  // The browser processes seen on the last poll.
-  private HashSet<int> _known = [];
+  private HashSet<int> _knownBrowserPids = [];
 
   private System.IO.FileSystemWatcher? _installWatch;
 
@@ -36,15 +27,11 @@ internal sealed class EdgeWatch {
     _thread.Stop();
   }
 
-  // The msedge.dll build browser process `pid` loaded, or null when it cannot
-  // be read.
   public static FileVersion? BuildOf(int pid) =>
       EdgeProcesses.ModulePath(pid, Shared.EdgeModule) is string path
           ? FileVersion.Of(path)
           : null;
 
-  // The build the running Edge is judged by (EdgeBuild.Judged), or null when
-  // Edge is not running.
   public static FileVersion? RunningBuild() {
     FileVersion[] builds = EdgeProcesses.BrowserPids()
                                .Select(BuildOf)
@@ -53,10 +40,7 @@ internal sealed class EdgeWatch {
     return EdgeBuild.Judged(builds, EdgeBuild.Pinned);
   }
 
-  // The build Edge is on now: the running one when Edge runs (any process on a
-  // build other than the pinned one decides), else the installed one, which is
-  // what Edge will run when it next starts. In a simulation (EdgeInstall) only
-  // the fake install counts.
+  // The running build, else the installed one Edge will run when it next starts.
   public static FileVersion? CurrentBuild() {
     if (EdgeInstall.SimulatedDirectory is string simulated) {
       return EdgeInstall.InstalledBuild(simulated);
@@ -64,11 +48,8 @@ internal sealed class EdgeWatch {
     return RunningBuild() ?? EdgeInstall.InstalledBuild(EdgeInstall.ApplicationDirectory);
   }
 
-  // Look at the Edge build: remember it, and when it is a new one say which of
-  // the user's features it pauses (EdgeSupport). The user's choice is never
-  // rewritten; the DLL is brought in line, which on an unsupported build means
-  // nothing is injected and a loaded copy is unloaded. Returns the change when
-  // the build is a new one.
+  // Records a new build and brings the DLL in line with it; null when the build
+  // is unchanged.
   public static BuildChange? Reconcile() {
     if (CurrentBuild() is not FileVersion build) {
       return null;
@@ -80,7 +61,6 @@ internal sealed class EdgeWatch {
       if (!isNewBuild) {
         return null;
       }
-      // A simulation writes nothing: the settings and the DLL stay as they are.
       if (!EdgeInstall.IsSimulated) {
         settings.LastEdgeBuild = build.ToString();
         settings.Save();
@@ -95,12 +75,11 @@ internal sealed class EdgeWatch {
   private void Begin() {
     Check();
     DllSync.SyncOnStart();
-    _known = new HashSet<int>(EdgeProcesses.BrowserPids());
+    _knownBrowserPids = new HashSet<int>(EdgeProcesses.BrowserPids());
     WatchInstall();
   }
 
-  // An update applied while Edge is closed (its launcher swapped) is seen
-  // without polling: a watch on the install folder's launcher.
+  // Catches an update applied while Edge is closed.
   private void WatchInstall() {
     string? folder = EdgeInstall.ApplicationDirectory;
     if (folder is null || !System.IO.Directory.Exists(folder)) {
@@ -118,11 +97,11 @@ internal sealed class EdgeWatch {
 
   private void Poll() {
     var current = new HashSet<int>(EdgeProcesses.BrowserPids());
-    bool hasNewProcess = !current.IsSubsetOf(_known);
+    bool hasNewProcess = !current.IsSubsetOf(_knownBrowserPids);
     if (hasNewProcess) {
       Check();
     }
-    _known = current;
+    _knownBrowserPids = current;
   }
 
   // A settings file that cannot be written is tried again on the next new

@@ -4,27 +4,21 @@ using System.Linq;
 
 namespace EdgePlus;
 
-// What a card says: its title, its description, and its icon (a Segoe Fluent
-// Icons glyph, Windows' own icon font — no image assets). The glyph is held as
-// its code point: a private-use character in a string literal is invisible in
-// an editor, and dotnet format rewrites a \u escape into exactly that.
+// The glyph (Segoe Fluent Icons) is held as its code point: a private-use
+// character in a string literal is invisible in an editor, and dotnet format
+// rewrites a \u escape into exactly that.
 internal sealed record CardWording(string Title, string Description, int GlyphCodePoint) {
   public string Glyph => char.ConvertFromUtf32(GlyphCodePoint);
 }
 
-// Every sentence the window shows, in one place: each card's wording, and what
-// the panel says when Edge runs a build the split DLL was not made for.
 internal static class Wording {
-  // The browser assistant's name; the DLL has its own copy (chat_target.h),
-  // which must match.
+  // Must match the DLL's copy (chat_target.h).
   private const string AssistantName = "Copilot";
-  // The regular-expression mode, as the user reads it; the DLL's kRegExpName
-  // is the same word.
+  // Must match the DLL's kRegExpName.
   private const string RegExpName = "RegExp";
 
   public const string OpenEdgeHint = "Open Edge to apply changes.";
 
-  // A section's header (PanelLayout).
   public static string SectionName(Section section) => section switch {
     Section.TabsAndWindows => "Tabs and windows",
     Section.LookAndThemes => "Look and themes",
@@ -33,14 +27,13 @@ internal static class Wording {
     _ => throw new ArgumentOutOfRangeException(nameof(section)),
   };
 
-  // What a card that needs another feature says while that one is off.
   public static string NeedsFeature(Feature needed) => $"Turn on {For(needed).Title} to use this.";
   // The footer's "by Avi".
   public const string By = "by";
+  // The footer version's tooltip.
   public const string WhatsNew = "What's new";
   public const string DropHint = "Drop a theme folder, .zip or .crx to add it";
 
-  // The theming card's own words.
   public const string NotAStoreLink =
       "That is not a theme link from the Chrome Web Store or Edge Add-ons.";
   public const string StoreLinkPlaceholder = "Paste a Chrome Web Store or Edge Add-ons link";
@@ -61,8 +54,6 @@ internal static class Wording {
 
   public static string RemoveTheme(string name) => $"Remove {name}";
 
-  // What a failure says. The details go to the panel's log (PanelLog), never
-  // into the window.
   public const string ActionFailed =
       "That did not work. Edge+ wrote the details to its log (panel.log in %LOCALAPPDATA%\\FixEdge).";
   public const string ThemeFilesUnreadable =
@@ -137,14 +128,9 @@ internal static class Wording {
     _ => throw new ArgumentOutOfRangeException(nameof(feature)),
   };
 
-  // How a build other than the supported one is introduced: newer is an
-  // update, older a version Edge+ does not know.
   public static string EdgeLead(FileVersion edge, FileVersion supported) =>
       edge > supported ? $"Edge updated to {edge}." : $"Edge is on version {edge}.";
 
-  // What one card says about its feature on this build; empty when the build
-  // holds nothing back. "Edge updated to 156.0.1.0. Split into any grid is
-  // paused until Edge+ supports this version."
   public static string DescribeFeature(PanelState state, Feature feature) {
     FeatureState featureState = state.StateOf(feature);
     bool isHeld = featureState is FeatureState.Paused or FeatureState.Unavailable;
@@ -156,7 +142,6 @@ internal static class Wording {
            "Edge+ supports this version.";
   }
 
-  // The features a build pauses, as one sentence; empty when it pauses none.
   // The panel's notice and the toast's body.
   public static string DescribePaused(FileVersion edge, FileVersion supported,
                                       IReadOnlyList<Feature> paused) {
@@ -167,11 +152,9 @@ internal static class Wording {
            $"{JoinTitles(paused)}.";
   }
 
-  // The toast's title.
   public const string PausedToastTitle = "Edge+ paused features for this Edge version";
 
-  // By card title, apart by semicolons: some titles carry commas of their own
-  // ("Ask to handle links, like Chrome").
+  // Not commas: some titles carry their own ("Ask to handle links, like Chrome").
   private const string TitleSeparator = "; ";
 
   private static string JoinTitles(IReadOnlyList<Feature> features) =>

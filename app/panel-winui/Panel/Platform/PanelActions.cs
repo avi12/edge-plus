@@ -3,8 +3,8 @@ using System.Collections.Generic;
 
 namespace EdgePlus;
 
-// Everything the window can ask for, each returning the state to render next.
-// The UI never touches settings, Edge or the DLL itself. Each can block (an injection waits for Edge), so the window calls
+// Everything the window can ask for; the UI never touches settings, Edge or the
+// DLL itself. Each can block (an injection waits for Edge), so the window calls
 // them off the UI thread.
 internal static class PanelActions {
   public static PanelState Load() => Read(Settings.Load());
@@ -14,8 +14,6 @@ internal static class PanelActions {
       Settings settings = Settings.Load();
       settings.Features.Set(feature, isOn);
       settings.Save();
-      // Hiding the developer-mode prompt is the panel's own: it arms the
-      // after-exit waiter rather than anything in Edge.
       if (feature == Feature.QuietDevMode) {
         if (isOn) {
           ArmDevModeWaiter();

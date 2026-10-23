@@ -3,16 +3,12 @@ using System.Collections.Generic;
 
 namespace EdgePlus;
 
-// Brings a list in line with a wanted order of keys by touching only what
-// changed: items whose key is gone are removed, missing keys are created, and
-// items already there stay the same objects. A panel's add/delete transition
-// then plays for exactly the rows that came or went, instead of for every row a
-// clear-and-refill would recreate.
+// Syncs a list to a wanted key order touching only what changed, so a panel's
+// add/delete transition plays for exactly the rows that came or went, not for
+// every row a clear-and-refill would recreate.
 internal static class KeyedList {
-  // `move(from, to)`, when given, moves an existing item in one step (an
-  // ObservableCollection's Move, which a list animates as a reposition rather
-  // than as a removal and an addition); without it a move is a remove then an
-  // insert.
+  // `move` (an ObservableCollection's Move) lets a list animate a move as a
+  // reposition rather than as a removal and an addition.
   public static void Sync<T>(IList<T> items, IReadOnlyList<string> wantedKeys,
                              Func<T, string> keyOf, Func<string, T> create,
                              Action<int, int>? move = null) {

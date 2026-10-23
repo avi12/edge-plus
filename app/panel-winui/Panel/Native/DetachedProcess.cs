@@ -3,10 +3,9 @@ using System.Runtime.InteropServices;
 
 namespace EdgePlus;
 
-// Starting a process that outlives this one: detached, with no window, and
-// broken away from any job this panel runs in (a terminal, an IDE, Edge's own
-// job when Edge launched it), which would otherwise end it with the panel.
-// Process.Start cannot ask for CREATE_BREAKAWAY_FROM_JOB.
+// Breaks away from any job the panel runs in (a terminal, an IDE, Edge's own),
+// which would otherwise end the child with the panel. Process.Start cannot ask
+// for CREATE_BREAKAWAY_FROM_JOB.
 internal static class DetachedProcess {
   public static bool Start(string commandLine) =>
       Create(commandLine, CreationFlags.BreakawayFromJob) || Create(commandLine, CreationFlags.None);

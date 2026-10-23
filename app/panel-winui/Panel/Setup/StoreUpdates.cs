@@ -7,11 +7,10 @@ using Windows.Services.Store;
 
 namespace EdgePlus;
 
-// Installs Store updates at a moment Edge+ picks rather than Windows: the
-// install ends this process, so it waits until no window is open. A mandatory
-// update (set on the Partner Center submission, which Windows itself ignores)
-// does not wait: it is how a release for a new Edge build is marked, and every
-// feature stays paused until it lands. The plain exe has no Store to ask.
+// The install ends this process, so it waits until no window is open. A
+// mandatory update (a Partner Center flag Windows itself ignores) does not
+// wait: it marks a release for a new Edge build, and every feature stays paused
+// until it lands.
 internal sealed class StoreUpdates : IDisposable {
   private static readonly TimeSpan s_firstCheckDelay = TimeSpan.FromMinutes(3);
   private static readonly TimeSpan s_checkInterval = TimeSpan.FromHours(6);

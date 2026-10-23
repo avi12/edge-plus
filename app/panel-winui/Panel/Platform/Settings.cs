@@ -6,32 +6,24 @@ using System.Text.Json.Serialization;
 
 namespace EdgePlus;
 
-// One feature the panel owns.
 internal enum Feature {
   NativeSplit,
   Theming,
   QuietDevMode,
-  // A site's request to handle a link type is only blocked when the user says
-  // so (the DLL's protocol_handlers.h).
+  // protocol_handlers.h
   ProtocolHandlers,
-  // Edge's own Ctrl+F bar also takes /pattern/flags and "? question" (find.h).
+  // find.h
   EnhancedFind,
-  // edge://settings and edge://extensions take the theme's light or dark
-  // (theme_follow.h).
+  // theme_follow.h
   WebUiFollowsTheme,
-  // A hovered tab shows a live preview instead of a frozen snapshot
-  // (live_preview.h).
+  // live_preview.h
   LivePreview,
-  // Tabs, vertical and horizontal, get a square leading edge and a cut trailing
-  // corner, while theming is on (tab_shape.h).
+  // tab_shape.h
   TabShape,
-  // Reading mode's page theme follows Windows light and dark (reading_mode.h);
-  // the two themes are picked in reading mode itself and kept by the DLL.
+  // reading_mode.h; the two themes are picked in reading mode itself and kept by the DLL.
   ReadingTheme,
 }
 
-// Where a theme came from, so the installer knows how to add it to Edge. Stored
-// lower-case.
 [JsonConverter(typeof(JsonStringEnumConverter<ThemeSource>))]
 internal enum ThemeSource {
   [JsonStringEnumMemberName("store")]
@@ -40,15 +32,13 @@ internal enum ThemeSource {
   Local,
 }
 
-// The two Windows appearance modes a theme can be assigned to.
 internal enum ColorMode {
   Light,
   Dark,
 }
 
-// The feature switches, with their defaults (the split and the tab shape on,
-// the rest off). A settings file written when a removed switch existed still
-// loads: an unknown field is ignored.
+// A settings file written when a removed switch existed still loads: an unknown
+// field is ignored.
 internal sealed class Features {
   public bool NativeSplit { get; set; } = true;
   public bool Theming {
@@ -70,7 +60,7 @@ internal sealed class Features {
     get; set;
   }
   // On by default: it was part of the theming until it got a switch of its own.
-  // Saved as "tabSpine", the name it has always had, so a saved choice carries over.
+  // Saved under its old name so a saved choice carries over.
   [JsonPropertyName("tabSpine")]
   public bool TabShape { get; set; } = true;
   public bool ReadingTheme {
@@ -124,15 +114,13 @@ internal sealed class Features {
     }
   }
 
-  // Whether any switch that lives in the injected DLL is on, so the DLL must be
-  // loaded. Hiding the developer-mode prompt is the panel's own.
+  // QuietDevMode is the panel's own, not the DLL's.
   [JsonIgnore]
   public bool NeedsDll =>
       NativeSplit || Theming || ProtocolHandlers || EnhancedFind || WebUiFollowsTheme
       || LivePreview || TabShape || ReadingTheme;
 }
 
-// One theme the user added: an installed Edge theme extension by id.
 internal sealed class ThemeEntry {
   public string Id { get; init; } = "";
   public string Name { get; init; } = "";
@@ -143,8 +131,7 @@ internal sealed class ThemeEntry {
   public string Origin { get; init; } = "";
 }
 
-// The theme library and which theme to use in each Windows mode (an empty id
-// means the default theme).
+// An empty Light / Dark id means Edge's default theme.
 internal sealed class Theming {
   public List<ThemeEntry> Themes { get; set; } = [];
   public string Light { get; set; } = "";
@@ -169,10 +156,8 @@ internal sealed class Theming {
     }
   }
 
-  // Put the themes in the order `ids` gives (ThemeOrder.Ordered).
   public void Reorder(IReadOnlyList<string> ids) => Themes = ThemeOrder.Ordered(Themes, ids);
 
-  // Drop a theme, and any assignment to it falls back to the default theme.
   public void Remove(string id) {
     Themes.RemoveAll(theme => theme.Id == id);
     if (Light == id) {
@@ -184,28 +169,21 @@ internal sealed class Theming {
   }
 }
 
-// The user's persisted choices: which switches are on, and the theme library
-// with the light/dark assignment. Stored as settings.json in the data folder,
-// in exactly the shape the earlier Tauri panel wrote, so an existing file
-// carries over; keep it so. Only this file is the panel's own; every other file
-// is a contract with Edge or the DLL.
+// settings.json keeps exactly the shape the earlier Tauri panel wrote, so an
+// existing file carries over; keep it so.
 internal sealed class Settings {
 
-  // Every load-change-save-apply sequence holds this, so the UI's actions and
-  // the background watchers (EdgeWatch, ThemeWatch) never interleave on the
-  // file or on the DLL.
+  // Held by every load-change-save-apply sequence, so the UI's actions and the
+  // background watchers never interleave on the file or on the DLL.
   public static object Gate { get; } = new();
 
   public Features Features { get; set; } = new();
   public Theming Theming { get; set; } = new();
-  // The msedge.dll build last seen running, so a different one is recognized
-  // as an Edge update.
+  // A different build than this one running is recognized as an Edge update.
   public string? LastEdgeBuild {
     get; set;
   }
 
-  // Read the settings file, falling back to defaults when it is missing or
-  // unreadable.
   public static Settings Load() => Load(Paths.Settings);
 
   public static Settings Load(string path) {
@@ -244,10 +222,9 @@ internal sealed class Settings {
   public void Save(string path) => Paths.WriteAtomically(path, ToJson());
 }
 
-// The settings file's serializer, generated at build time rather than built by
-// reflection at run time: System.Text.Json's reflection path keeps a
-// process-wide cache of the members it emitted accessors for, which would hold
-// this assembly and stop the host unloading it on a live swap.
+// Source-generated, not reflection-based: System.Text.Json's reflection path
+// keeps a process-wide accessor cache that would pin this assembly and stop the
+// host unloading it on a live swap.
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
                              WriteIndented = true)]
 [JsonSerializable(typeof(Settings))]

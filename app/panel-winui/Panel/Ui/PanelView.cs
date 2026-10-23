@@ -12,16 +12,14 @@ using Windows.Storage.Pickers;
 
 namespace EdgePlus;
 
-// The window's content: a card per feature, grouped into titled sections
-// (PanelLayout), the notices above them and the footer under them. It renders whatever
-// PanelState the last action returned and never touches settings, Edge or the
-// DLL itself (PanelActions does).
+// The window's content. It renders the PanelState the last action returned and
+// never touches settings, Edge or the DLL itself (PanelActions does).
 //
 // Built in C#, not XAML, and composed from WinUI's controls rather than
 // subclassing them: this assembly is swapped live in a collectible load
-// context (the host's PanelLoader), and compiled XAML or a WinRT subclass
-// would register with WinUI for the life of the process. Dispose undoes every
-// tie to the host's window so the context can unload.
+// context, and compiled XAML or a WinRT subclass would register with WinUI for
+// the life of the process. Dispose undoes every tie to the host's window so
+// the context can unload.
 internal sealed class PanelView : IDisposable {
   private const double VeilShown = 1;
   private const double VeilHidden = 0;
@@ -34,10 +32,8 @@ internal sealed class PanelView : IDisposable {
   private static readonly DoubleCollection s_veilDashes = [4, 3];
   private static readonly TimeSpan s_veilFade = TimeSpan.FromMilliseconds(120);
 
-  // Between one section's last card and the next section's header.
   private const double SectionSpacing = 20;
-  // A section header's gap to its first card, and its inset to line up with
-  // the cards' text, as Windows Settings sets them.
+  // Lines the header up with the cards' text, as Windows Settings does.
   private static readonly Thickness s_sectionHeaderMargin = new(4, 0, 0, 4);
 
   private readonly Window _window;
@@ -78,8 +74,6 @@ internal sealed class PanelView : IDisposable {
     foreach ((Section section, CardSlot[] cards) in PanelLayout.Sections) {
       _sectionList.Children.Add(SectionView(section, cards));
     }
-    // The cards and sections under the theming card glide as its list grows
-    // or shrinks.
     Motion.Animate(_sectionList, Motion.Reposition);
 
     var page = new StackPanel {
@@ -102,30 +96,21 @@ internal sealed class PanelView : IDisposable {
     _root.Drop += OnDrop;
     _slot.Content = _root;
 
-    // Turning Windows' "Animation effects" off or on applies at once.
     _hostSubscriptions.Add(settingChanged.Subscribe(new Observer(Motion.Refresh)));
-    // Launching Edge+ again brings the panel back, re-read: a window that was
-    // already active gets no new Activated to refresh it.
+    // A window that was already active gets no new Activated to refresh it.
     _hostSubscriptions.Add(broughtBack.Subscribe(new Observer(Refresh)));
-    // Coming back to the panel picks up themes installed in Edge meanwhile.
+    // Picks up themes installed in Edge meanwhile.
     _window.Activated += OnActivated;
-    // The watchers run in the background service, window or not; the window
-    // listens while it is open (and the service then raises no toast).
     _service = BackgroundService.Current;
     if (_service is not null) {
+      // The service raises no toast while the window is open.
       _service.IsWindowOpen = true;
-      // Edge came up on a build not seen before; features that depend on the
-      // old msedge.dll may be paused now, or back.
       _service.BuildChanged += OnBuildChanged;
-      // A local theme edited on disk was re-checked and re-installed (or refused).
       _service.ThemeRefreshed += OnThemeRefreshed;
     }
     Refresh();
   }
 
-  // Undo every tie to the host's window and to the background service, so
-  // nothing of this view is left referenced once the window closes or the host
-  // unloads the panel.
   public void Dispose() {
     if (_isDisposed) {
       return;
@@ -157,7 +142,6 @@ internal sealed class PanelView : IDisposable {
     }
   }
 
-  // A watcher's news, handled on the UI thread unless the view is gone.
   private void OnUiThread(Action action) =>
       _window.DispatcherQueue.TryEnqueue(() => {
         if (!_isDisposed) {
@@ -165,7 +149,6 @@ internal sealed class PanelView : IDisposable {
         }
       });
 
-  // A section: its header over its cards (PanelLayout), as in Windows Settings.
   private StackPanel SectionView(Section section, CardSlot[] cards) {
     var stack = new StackPanel { Spacing = CardSpacing };
     stack.Children.Add(new TextBlock {
@@ -193,11 +176,9 @@ internal sealed class PanelView : IDisposable {
     return card.View;
   }
 
-  // Run a panel action off the UI thread (an injection can wait on Edge) and
-  // render the state it returns. Returns why it failed, or null. Only a
-  // ThemeException carries a sentence written for the user (a theme that
-  // fails its checks says why); anything else is logged and said plainly,
-  // never as a raw exception message.
+  // Off the UI thread: an injection can wait on Edge. Returns why it failed,
+  // or null. Only a ThemeException carries a sentence written for the user;
+  // anything else is logged, never shown as a raw exception message.
   private async Task<string?> RunAsync(Func<PanelState> action) {
     try {
       PanelState state = await Task.Run(action);
@@ -223,7 +204,6 @@ internal sealed class PanelView : IDisposable {
   private void Render(PanelState state) {
     _state = state;
     _openEdgeHint.Visibility = state.IsEdgeRunning ? Visibility.Collapsed : Visibility.Visible;
-    // The features this Edge build pauses, together; each card also says it.
     string buildNotice = state.EdgeBuild is FileVersion edge
         ? Wording.DescribePaused(edge, state.SupportedEdgeBuild, state.Paused)
         : "";
@@ -236,7 +216,7 @@ internal sealed class PanelView : IDisposable {
       if (slot.Feature is not Feature feature) {
         continue;
       }
-      // The theming card renders itself below.
+      // The theming card is not in _switchCards; it renders itself below.
       if (!_switchCards.TryGetValue(feature, out FeatureCard? card)) {
         continue;
       }
@@ -257,7 +237,6 @@ internal sealed class PanelView : IDisposable {
     _actionNotice.IsOpen = message.Length > 0;
   }
 
-  // "by Avi" on the left, the version on the right.
   private static Grid Footer() {
     var footer = new Grid { Margin = new Thickness(4, 14, 4, 0) };
     footer.ColumnDefinitions.Add(new ColumnDefinition {
@@ -287,7 +266,6 @@ internal sealed class PanelView : IDisposable {
     return footer;
   }
 
-  // Shown while a theme is dragged over the window.
   private static Grid DropVeil() {
     var veil = new Grid {
       Style = StyleKeys.Get(StyleKeys.DropVeil),
@@ -338,8 +316,8 @@ internal sealed class PanelView : IDisposable {
     _dropVeil.Opacity = VeilShown;
   }
 
-  // Every dropped folder, .zip or .crx becomes a theme (ThemeLibrary tells
-  // them apart); the last failure is the one shown.
+  // ThemeLibrary tells a folder, .zip and .crx apart; the last failure is the
+  // one shown.
   private async void OnDrop(object sender, DragEventArgs e) {
     _dropVeil.Opacity = VeilHidden;
     bool isFiles = e.DataView.Contains(StandardDataFormats.StorageItems);
@@ -357,7 +335,6 @@ internal sealed class PanelView : IDisposable {
     }
   }
 
-  // A host signal handled by one action.
   private sealed class Observer(Action onNext) : IObserver<EventArgs> {
     public void OnNext(EventArgs value) => onNext();
 

@@ -5,10 +5,8 @@ using Microsoft.Win32;
 
 namespace EdgePlus;
 
-// The pair of registry keys Windows reads a startup entry from: the command
-// line under Run, and Task Manager's on/off flag under StartupApproved\Run.
+// Approved holds Task Manager's on/off flag; tests point at a throwaway pair.
 internal readonly record struct StartupKeys(string Run, string Approved) {
-  // The real per-user keys; tests point at a throwaway pair instead.
   public static StartupKeys User {
     get;
   } = new(
@@ -16,32 +14,23 @@ internal readonly record struct StartupKeys(string Run, string Approved) {
       @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run");
 }
 
-// Starting the panel when Windows starts, through the per-user Run key.
-//
-// The Run key itself is the one source of truth: whether the entry exists is
-// read from it, never remembered elsewhere. Task Manager's "Startup apps"
-// switch does not touch the Run value; it writes a flag under the sibling
-// StartupApproved\Run key, so that flag is honoured too. The entry's name is
-// the one the retired Tauri panel used, so its entry is this one, and
-// MigrateFromTauri points it at this panel.
+// The Run key is the one source of truth, never remembered elsewhere. Task
+// Manager's "Startup apps" switch leaves the Run value alone and writes a flag
+// under StartupApproved\Run, so that flag is honoured too.
 internal static class StartupEntry {
-  // As Task Manager's "Startup apps" lists it.
+  // The retired Tauri panel's name too, so MigrateFromTauri can take its entry over.
   public const string Name = "Edge+";
-  // Bit 0 of the first byte of a StartupApproved value is set when Task
-  // Manager has turned the entry off (0x02 / 0x06 on, 0x03 / 0x07 off).
+  // Set in the first byte when Task Manager turned the entry off (0x02 / 0x06
+  // on, 0x03 / 0x07 off).
   private const byte ApprovedDisabledBit = 1;
-  // The retired Tauri panel's executables, from source and installed.
+  // From source and installed.
   private static readonly string[] s_tauriLaunchers = ["fix-edge-panel.exe", "Edge+.exe"];
 
-  // What Windows runs at sign-in: the quoted panel path, then the switch that
-  // starts it as the windowless listener.
   public static string RunCommand(string executable) => $"\"{executable}\" {Switches.Background}";
 
   public static bool IsDisabledFlag(byte[]? approved) =>
       approved is { Length: > 0 } && (approved[0] & ApprovedDisabledBit) != 0;
 
-  // Whether Windows will run the entry at sign-in: the Run value exists and
-  // Task Manager has not switched it off.
   public static bool IsEnabled(StartupKeys keys, string name) {
     using RegistryKey? run = Registry.CurrentUser.OpenSubKey(keys.Run);
     if (run?.GetValue(name) is null) {
@@ -51,8 +40,7 @@ internal static class StartupEntry {
     return !IsDisabledFlag(approved?.GetValue(name) as byte[]);
   }
 
-  // Make Windows run `command` at sign-in, replacing an earlier entry and
-  // clearing any Task Manager "disabled" flag so the switch really means on.
+  // Clears any Task Manager "disabled" flag, so the switch really means on.
   public static void Enable(StartupKeys keys, string name, string command) {
     using (RegistryKey run = Registry.CurrentUser.CreateSubKey(keys.Run)) {
       run.SetValue(name, command);
@@ -60,9 +48,7 @@ internal static class StartupEntry {
     DeleteValue(keys.Approved, name);
   }
 
-  // Point an entry the retired Tauri panel left at `executable` instead,
-  // keeping Task Manager's on/off flag as the user set it. Any other entry,
-  // or none, is left alone. Returns whether it rewrote the entry.
+  // Keeps Task Manager's on/off flag as the user set it.
   public static bool MigrateFromTauri(StartupKeys keys, string name, string executable) {
     using RegistryKey? run = Registry.CurrentUser.OpenSubKey(keys.Run, writable: true);
     if (run?.GetValue(name) is not string command) {
@@ -75,14 +61,11 @@ internal static class StartupEntry {
     return true;
   }
 
-  // Whether a Run command launches the retired Tauri panel: its source build
-  // (fix-edge-panel.exe) or its installed copy (Edge+.exe).
   public static bool IsTauriCommand(string command) {
     string launcher = Path.GetFileName(LauncherOf(command));
     return s_tauriLaunchers.Contains(launcher, StringComparer.OrdinalIgnoreCase);
   }
 
-  // The program a command line runs: its quoted first part, or its first word.
   private static string LauncherOf(string command) {
     string trimmed = command.Trim();
     if (trimmed.StartsWith('"')) {

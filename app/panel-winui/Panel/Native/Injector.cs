@@ -5,12 +5,8 @@ using System.Text;
 
 namespace EdgePlus;
 
-// Loading the native-split DLL into Edge's browser processes, and freeing a
-// stale copy, live.
-//
-// Turning a feature on injects the DLL with the classic LoadLibraryW-on-a-
-// remote-thread move; turning everything off is not done here but by the DLL
-// itself, on its unload event (DllChannel).
+// LoadLibraryW on a remote thread. Unloading is the DLL's own job, on its
+// unload event (DllChannel).
 internal static class Injector {
   private const uint LoadLibraryTimeoutMilliseconds = 10_000;
   // A DLL that unloaded itself but was re-injected meanwhile can hold several
@@ -20,9 +16,7 @@ internal static class Injector {
   private const string LoadLibraryExport = "LoadLibraryW";
   private const string FreeLibraryExport = "FreeLibrary";
 
-  // Load `dllPath` into each of `pids`. Returns how many injections were
-  // issued. Injecting into a process that already has the module only bumps its
-  // reference count, so a re-inject is harmless.
+  // A re-inject only bumps the module's reference count, so it is harmless.
   public static int InjectInto(IEnumerable<int> pids, string dllPath) {
     byte[] pathBytes = Encoding.Unicode.GetBytes(dllPath + "\0");
     int injected = 0;
@@ -34,11 +28,9 @@ internal static class Injector {
     return injected;
   }
 
-  // Drop every remaining reference to `moduleName` in `pid`. A DLL that
-  // unloaded itself but was re-injected meanwhile keeps an extra reference:
-  // its hooks are gone and its unload event is closed, yet the module stays
-  // mapped, so LoadLibrary would only bump the count and never run DllMain
-  // again.
+  // A DLL that unloaded itself but was re-injected meanwhile keeps an extra
+  // reference: hooks gone, unload event closed, yet still mapped, so LoadLibrary
+  // would only bump the count and never run DllMain again.
   public static void FreeModule(int pid, string moduleName) {
     for (int i = 0; i < MaxReferences; i++) {
       IntPtr? moduleBase = EdgeProcesses.ModuleBase(pid, moduleName);
@@ -90,9 +82,8 @@ internal static class Injector {
     }
   }
 
-  // Run one kernel32 export with one pointer-sized argument on a new thread in
-  // `process`, and wait for it. kernel32 is mapped at the same address in every
-  // process of a boot, so this process's export address is the remote one too.
+  // kernel32 is mapped at the same address in every process of a boot, so this
+  // process's export address is the remote one too.
   private static bool RunRemoteThread(IntPtr process, string export, IntPtr argument) {
     IntPtr start = GetProcAddress(GetModuleHandleW(Kernel32), export);
     if (start == IntPtr.Zero) {
@@ -115,9 +106,7 @@ internal static class Injector {
     VmRead = 0x0010,
     VmWrite = 0x0020,
     QueryInformation = 0x0400,
-    // What starting a thread in the process needs.
     Thread = CreateThread | QueryInformation | VmOperation,
-    // What writing the DLL's path into it needs on top.
     Memory = VmWrite | VmRead,
   }
 

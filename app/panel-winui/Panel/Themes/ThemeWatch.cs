@@ -6,17 +6,11 @@ using System.Threading;
 
 namespace EdgePlus;
 
-// What happened to a local theme that changed on disk: Error says why the edit
-// was not applied, null when it was.
+// Error is null when the edit was applied.
 internal sealed record ThemeRefresh(string Id, string? Error);
 
-// Watching local themes for edits.
-//
-// A theme added from a folder, .zip or .crx is polled for changes while theming
-// is on. When one settles (the same new fingerprint on two polls in a row, so a
-// save that writes several files is taken once) the theme is re-checked and
-// re-installed (ThemeLibrary.RefreshLocal); a broken edit is reported and the
-// theme Edge is showing is left alone.
+// A change is taken once it settles (the same new fingerprint on two polls in a
+// row), so a save that writes several files is re-installed once.
 internal sealed class ThemeWatch {
   private static readonly TimeSpan s_pollInterval = TimeSpan.FromSeconds(1);
 
@@ -77,8 +71,7 @@ internal sealed class ThemeWatch {
     }
   }
 
-  // A hash of every file's path, size and modified time under `path`, or of
-  // the file itself; null when it is gone (a moved folder is not an edit).
+  // Null when it is gone: a moved folder is not an edit.
   private static int? Fingerprint(string path) {
     try {
       var hash = new HashCode();

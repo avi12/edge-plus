@@ -7,12 +7,9 @@ using System.Text;
 
 namespace EdgePlus;
 
-// Finding Edge's browser processes, and what each has loaded.
-//
-// Edge runs one browser process per profile plus many renderer, GPU and utility
-// children, all named msedge.exe. Only the browser process owns a top-level
-// window, so the browser processes are the msedge.exe pids that own a visible,
-// titled top-level window.
+// Of all the msedge.exe processes (one browser per profile plus renderer, GPU
+// and utility children), only a browser process owns a visible, titled
+// top-level window: that is how the browser processes are told apart.
 internal static class EdgeProcesses {
   private const string EdgeImageName = "msedge.exe";
   private const uint ProcessQueryLimitedInformation = 0x1000;
@@ -22,8 +19,6 @@ internal static class EdgeProcesses {
   private const int MaxPath = 260;
   private static readonly IntPtr s_invalidHandle = new(-1);
 
-  // The pids of Edge's browser processes (one per open profile), or none when
-  // Edge is not running.
   public static int[] BrowserPids() {
     var candidates = new HashSet<int>();
     EnumWindowsProc collect = (window, context) => {
@@ -41,23 +36,19 @@ internal static class EdgeProcesses {
     return candidates.Where(IsEdgeProcess).ToArray();
   }
 
-  // The browser processes that have a module named `moduleName` loaded.
   public static int[] PidsWithModule(string moduleName) =>
       BrowserPids().Where(pid => FindModule(pid, moduleName) is not null).ToArray();
 
-  // The browser processes that do NOT have `moduleName` loaded — the ones an
-  // injection still has to reach. Per process, so a second profile opened
-  // after the DLL loaded is still injected.
+  // Per process, so a second profile opened after the DLL loaded is still
+  // injected.
   public static int[] PidsMissingModule(string moduleName) =>
       BrowserPids().Where(pid => FindModule(pid, moduleName) is null).ToArray();
 
-  // The full path `pid` loaded `moduleName` from, or null when it is not
-  // loaded. Edge keeps each version in its own folder, so this names the build
-  // the process is actually running, not whatever is installed now.
+  // Edge keeps each version in its own folder, so this names the build the
+  // process is actually running, not whatever is installed now.
   public static string? ModulePath(int pid, string moduleName) =>
       FindModule(pid, moduleName)?.ExePath;
 
-  // Where `moduleName` is loaded in `pid`, or null when it is not.
   public static IntPtr? ModuleBase(int pid, string moduleName) =>
       FindModule(pid, moduleName)?.BaseAddress;
 

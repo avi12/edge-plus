@@ -4,9 +4,8 @@ using System.IO;
 
 namespace EdgePlus;
 
-// The slice of the protobuf wire format a CRX3 header uses: varints, and
-// length-delimited fields (wire type 2). One home for both directions, read by
-// Crx and written by ThemePacker.
+// The slice of the protobuf wire format a CRX3 header uses: varints and
+// length-delimited fields.
 internal static class Protobuf {
   public const int LengthDelimited = 2;
   private const int WireTypeBits = 3;
@@ -16,11 +15,8 @@ internal static class Protobuf {
   private const byte VarintContinues = 0x80;
   private const int MaxVarintShift = 63;
 
-  // One field read out of a message: its number, wire type, and where its
-  // length-delimited payload lies (meaningless for other wire types).
   public readonly record struct Field(ulong Number, int WireType, int Start, int Length);
 
-  // A varint at `offset`, and the offset just past it.
   public static (ulong Value, int Next) ReadVarint(ReadOnlySpan<byte> data, int offset) {
     ulong value = 0;
     int shift = 0;
@@ -39,8 +35,7 @@ internal static class Protobuf {
     }
   }
 
-  // Every length-delimited field of the message in data[start..end]; any other
-  // wire type is refused, as nothing a CRX header carries uses one.
+  // Any wire type but length-delimited is refused: nothing a CRX header carries uses one.
   public static List<Field> ReadFields(ReadOnlySpan<byte> data, int start, int end) {
     var fields = new List<Field>();
     int offset = start;
@@ -74,7 +69,6 @@ internal static class Protobuf {
     }
   }
 
-  // A length-delimited field: tag, length, payload.
   public static byte[] LengthDelimitedField(ulong number, ReadOnlySpan<byte> payload) {
     byte[] tag = Varint((number << WireTypeBits) | LengthDelimited);
     byte[] length = Varint((ulong)payload.Length);

@@ -7,14 +7,10 @@ using System.Text.Json.Nodes;
 
 namespace EdgePlus;
 
-// A theme Edge has installed in one of its profiles; IsActive when Edge is
-// showing it right now.
 internal sealed record InstalledTheme(string Id, string Name, bool IsActive);
 
-// The themes Edge already has installed (from Edge Add-ons or the Chrome Web
-// Store), read straight from its profiles on disk, read-only. A theme is an
-// extension whose manifest has a "theme" key; the DLL applies it by id exactly
-// like one the panel installed, so nothing here writes anything.
+// Read-only, straight from Edge's profiles on disk: the DLL applies an
+// installed theme by id exactly like one the panel installed.
 internal static class InstalledThemes {
   private const string MessagePrefix = "__MSG_";
   private const string MessageSuffix = "__";
@@ -26,8 +22,7 @@ internal static class InstalledThemes {
   private const string PreferencesFile = "Preferences";
   private const string SecurePreferencesFile = "Secure Preferences";
 
-  // The name of the theme a manifest describes, or null when it is not a theme.
-  // `messages` is its resolved messages.json, for a __MSG_key__ name.
+  // Null when the manifest is not a theme's. `messages` resolves a __MSG_key__ name.
   public static string? ThemeName(JsonNode? manifest, JsonNode? messages) {
     bool isTheme = manifest?["theme"] is JsonObject;
     string? name = AsString(manifest?["name"]);
@@ -37,8 +32,7 @@ internal static class InstalledThemes {
     return ResolveMessage(name, messages);
   }
 
-  // A __MSG_key__ placeholder looked up in `messages` (keys matched ignoring
-  // case, as Chromium does); anything else is returned as is.
+  // Keys match ignoring case, as Chromium does.
   public static string ResolveMessage(string text, JsonNode? messages) {
     bool isPlaceholder = text.StartsWith(MessagePrefix, StringComparison.Ordinal)
         && text.EndsWith(MessageSuffix, StringComparison.Ordinal)
@@ -57,25 +51,21 @@ internal static class InstalledThemes {
     return text;
   }
 
-  // The id of the theme a profile's Preferences says is in use.
   public static string? ActiveThemeId(JsonNode? preferences) =>
       AsString(preferences?["extensions"]?["theme"]?["id"]);
 
-  // A JSON string's text, or null for anything else.
   private static string? AsString(JsonNode? node) =>
       node is JsonValue value && value.GetValueKind() == JsonValueKind.String
           ? value.GetValue<string>()
           : null;
 
-  // The extension ids a profile's Secure Preferences still registers, so a
-  // folder left behind by an uninstall is not listed; null when unknown.
+  // So a folder left behind by an uninstall is not listed; null when unknown.
   public static HashSet<string>? RegisteredIds(JsonNode? securePreferences) =>
       securePreferences?["extensions"]?["settings"] is JsonObject settings
           ? settings.Select(entry => entry.Key).ToHashSet()
           : null;
 
-  // Every installed theme across all profiles under `userData`, each id once
-  // (active if it is active in any profile), sorted by name.
+  // Each id once, active if it is active in any profile.
   public static List<InstalledTheme> Scan(string userData) {
     var found = new List<InstalledTheme>();
     foreach (string profile in ProfileFolders(userData)) {
@@ -133,7 +123,6 @@ internal static class InstalledThemes {
     return themes;
   }
 
-  // The highest <version>_<n> folder of an extension.
   private static string? NewestVersionFolder(string extension) {
     try {
       return Directory.GetDirectories(extension)

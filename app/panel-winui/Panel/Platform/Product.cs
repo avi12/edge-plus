@@ -3,8 +3,8 @@ using System.Reflection;
 
 namespace EdgePlus;
 
-// What the product calls itself, written once in the csproj and read back off
-// the assembly, so the exe's file properties and the panel never disagree.
+// Written once in the csproj and read back off the assembly, so the exe's file
+// properties and the panel never disagree.
 internal static class Product {
   private static readonly Assembly s_assembly = typeof(Product).Assembly;
 
