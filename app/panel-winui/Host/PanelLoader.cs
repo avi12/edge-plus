@@ -9,24 +9,15 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace EdgePlus;
 
-// Loads the panel (Panel\EdgePlus.Panel.csproj) for the life of the process,
-// shows it in a window when there is one, and in a dev run swaps each rebuild
-// in live — the panel's version of the split DLL's hot reload: tear the old
-// panel down, unload its context, load a fresh timestamped copy, start it again
-// from the current settings. The window, the process and the single-instance
-// handling stay the host's throughout.
+// Loads the panel for the life of the process and, in a dev run, swaps each
+// rebuild in live (the panel's version of the split DLL's hot reload). Its
+// background service starts at load, so a windowless boot launch is the
+// always-on listener and a window is mounted on the same running panel.
 //
-// The panel runs without a window too: its background service (the Edge and
-// theme watchers, the toast) is started at load, so a boot launch with no
-// window is the always-on listener, and a window, when shown, is mounted on the
-// same running panel.
-//
-// The panel lives in a collectible AssemblyLoadContext that resolves nothing
-// itself: every WinUI, WinRT and framework reference falls through to the
-// host's default context, so WinUI objects cross freely and only the panel's
-// own code is unloaded. That holds because the panel carries no compiled XAML
-// and subclasses no WinRT type (both register with WinUI for the life of the
-// process); it builds its UI in C# from the host's App.xaml styles.
+// The panel's collectible context resolves nothing itself: WinUI, WinRT and the
+// framework fall through to the default context, so only the panel's own code
+// unloads. That holds only while the panel has no compiled XAML and subclasses
+// no WinRT type (both register with WinUI for the life of the process).
 internal sealed class PanelLoader {
   private const string ResourceName = "panel/edgeplus-panel.dll";
   private const string EntryTypeName = "EdgePlus.PanelEntry";
@@ -39,7 +30,6 @@ internal sealed class PanelLoader {
   // A build writes the output in several steps; a swap waits this long after
   // the last change before reading it.
   private static readonly TimeSpan s_settleDelay = TimeSpan.FromMilliseconds(800);
-  // How often, and how many times, to look for the old context to be gone.
   private static readonly TimeSpan s_unloadPoll = TimeSpan.FromMilliseconds(250);
   private const int UnloadPolls = 20;
   private const string LogName = "swap.log";
@@ -53,7 +43,6 @@ internal sealed class PanelLoader {
   private PanelContext? _context;
   private IDisposable? _service;
   private byte[] _loadedBytes = [];
-  // The window the panel is shown in, while there is one.
   private WindowView? _view;
   private IDisposable? _mounted;
 
@@ -65,10 +54,10 @@ internal sealed class PanelLoader {
     _settle.Tick += (_, _) => SwapIfNewBuild();
   }
 
-  // Raised on the UI thread after a swap, with a line for the window to show.
+  // Raised on the UI thread, with a line for the window to show.
   public event Action<string>? Swapped;
 
-  // The panel's build output this run watches, or null outside a dev run.
+  // Null outside a dev run.
   public static string? DevBuildOutput {
     get {
       string? output = Metadata(PanelBuildOutputKey);
@@ -78,8 +67,6 @@ internal sealed class PanelLoader {
     }
   }
 
-  // Load the panel and start its background service, and in a dev run start
-  // watching its build output.
   public void Start() {
     RemoveOldCopies();
     if (!TryLoad(ReadCurrentBuild())) {
@@ -90,14 +77,13 @@ internal sealed class PanelLoader {
     }
   }
 
-  // Show the panel in `window`'s slot.
   public void Show(Window window, ContentControl slot, HostSignal settingChanged,
                    HostSignal broughtBack) {
     _view = new WindowView(window, slot, settingChanged, broughtBack);
     _ = TryMount();
   }
 
-  // The window is closing: take the panel out of it; the panel keeps running.
+  // The panel keeps running without its window.
   public void Hide() {
     _mounted?.Dispose();
     _mounted = null;
@@ -107,8 +93,8 @@ internal sealed class PanelLoader {
     _view = null;
   }
 
-  // Whether the process stays when its window closes: the panel decides (it
-  // does while Edge+ starts with Windows, so the listener keeps listening).
+  // Whether the process outlives its window: the panel decides (it does while
+  // Edge+ starts with Windows, so the listener keeps listening).
   public bool IsResident() {
     try {
       return _context is not null
@@ -119,7 +105,7 @@ internal sealed class PanelLoader {
     }
   }
 
-  // The headless dev-mode waiter, run from the same panel code, never unloaded.
+  // Never unloaded.
   public static void RunDevModeWaiter() {
     PanelContext context = LoadCopy(ReadCurrentBuild());
     context.EntryMethod(WaiterMethod).Invoke(null, null);
@@ -129,8 +115,7 @@ internal sealed class PanelLoader {
     _watcher = new FileSystemWatcher(Path.GetDirectoryName(output)!, Path.GetFileName(output)) {
       NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName,
     };
-    // Each event restarts the settle timer, so a build's burst of writes
-    // becomes one swap once it has finished.
+    // Restarting the timer on each event turns a build's burst of writes into one swap.
     void OnChange(object sender, FileSystemEventArgs e) =>
         _dispatcher.TryEnqueue(() => {
           _settle.Stop();
@@ -147,7 +132,7 @@ internal sealed class PanelLoader {
     try {
       candidate = ReadExclusively(DevBuildOutput!);
     } catch (IOException) {
-      // Still being written: look again once it settles.
+      // Still being written.
       _settle.Start();
       return;
     }
@@ -156,8 +141,7 @@ internal sealed class PanelLoader {
     }
     byte[] previous = _loadedBytes;
     WeakReference oldContext = Unload();
-    // A build that fails to load must not take the window with it: the
-    // previous panel goes back, and the next build is tried as usual.
+    // A build that fails to load must not take the window with it.
     if (!TryLoad(candidate) || !TryMount()) {
       Unload();
       _ = TryLoad(previous);
@@ -167,8 +151,6 @@ internal sealed class PanelLoader {
     WatchUnload(oldContext);
   }
 
-  // Load a panel build and start its background service; false (and the
-  // reason in the log and the title bar) when it throws.
   private bool TryLoad(byte[] assembly) =>
       TryRun(() => {
         _context = LoadCopy(assembly);
@@ -176,7 +158,6 @@ internal sealed class PanelLoader {
         _service = (IDisposable)_context.EntryMethod(StartMethod).Invoke(null, null)!;
       });
 
-  // Mount the loaded panel in the window, when there is one.
   private bool TryMount() {
     if (_view is null || _context is null) {
       return true;
@@ -205,10 +186,8 @@ internal sealed class PanelLoader {
     Swapped?.Invoke($"This panel build failed to load; the reason is in {LogName}.");
   }
 
-  // Tear the panel down (its window view, then its service) and drop every
-  // reference into it, then unload its context. Returns a weak reference to
-  // watch it go: unloading only begins here, and completes when nothing reaches
-  // the context any more.
+  // Unloading only begins here and completes once nothing reaches the context,
+  // hence the weak reference. NoInlining keeps this frame's locals from pinning it.
   [MethodImpl(MethodImplOptions.NoInlining)]
   private WeakReference Unload() {
     _mounted?.Dispose();
@@ -224,8 +203,6 @@ internal sealed class PanelLoader {
     return weak;
   }
 
-  // Look for the old context to be collected, report the swap, and delete
-  // the copies nothing holds any more.
   private void WatchUnload(WeakReference oldContext) {
     int polls = 0;
     DispatcherQueueTimer timer = _dispatcher.CreateTimer();
@@ -250,12 +227,10 @@ internal sealed class PanelLoader {
     timer.Start();
   }
 
-  // The window the panel is shown in, and the host's signals for it.
   private sealed record WindowView(Window Window, ContentControl Slot, HostSignal SettingChanged,
                                    HostSignal BroughtBack);
 
-  // The panel this run should load: the dev build output in a dev run (newer
-  // than anything carried), else the copy carried inside the exe.
+  // A dev run's build output is newer than the copy embedded in the exe.
   private static byte[] ReadCurrentBuild() {
     if (DevBuildOutput is string output) {
       return ReadExclusively(output);
@@ -267,8 +242,7 @@ internal sealed class PanelLoader {
     return bytes.ToArray();
   }
 
-  // The whole file, opened unshared, so a build still writing it is refused
-  // rather than read half-written.
+  // Unshared, so a build still writing it is refused rather than read half-written.
   private static byte[] ReadExclusively(string path) {
     using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
     using var bytes = new MemoryStream();
@@ -286,7 +260,7 @@ internal sealed class PanelLoader {
     return context;
   }
 
-  // The dev build's .pdb beside the copy, so a crash log still has lines.
+  // So a crash log still has line numbers.
   private static void CopySymbols(string copy) {
     if (DevBuildOutput is not string output) {
       return;
@@ -297,7 +271,7 @@ internal sealed class PanelLoader {
     }
   }
 
-  // Copies no context holds any more; one still loaded is locked and stays.
+  // A copy still loaded is locked, so its delete fails and it stays.
   private static void RemoveOldCopies() {
     if (!Directory.Exists(s_copiesDirectory)) {
       return;
@@ -333,8 +307,7 @@ internal sealed class PanelLoader {
     return null;
   }
 
-  // A context of the panel assembly alone: every other reference resolves in
-  // the default context (Load returns null), which holds WinUI and the host.
+  // Load returns null, so every other reference resolves in the default context.
   private sealed class PanelContext() : AssemblyLoadContext("Edge+ panel", isCollectible: true) {
     public MethodInfo EntryMethod(string name) {
       foreach (Assembly assembly in Assemblies) {

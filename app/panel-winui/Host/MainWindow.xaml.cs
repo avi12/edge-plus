@@ -6,12 +6,9 @@ using Windows.Graphics;
 
 namespace EdgePlus;
 
-// The host's window: its size, chrome and single-instance return, and the slot
-// the panel fills. The panel itself — every card and notice — is loaded and,
-// in a dev run, swapped live by PanelLoader; nothing of it is compiled in here.
+// Nothing of the panel is compiled in here: PanelLoader fills PanelSlot.
 public sealed partial class MainWindow : Window {
-  // In device-independent pixels: the width is fixed
-  // and only the height is the user's.
+  // In device-independent pixels; only the height is the user's.
   private const int WindowWidth = 560;
   private const int WindowHeight = 640;
   private const int MinimumHeight = 420;
@@ -25,8 +22,6 @@ public sealed partial class MainWindow : Window {
   private readonly PanelLoader _loader;
   private readonly DispatcherQueueTimer _statusTimer;
 
-  // `loader` is the process's running panel; the window shows it while open
-  // and hands it back when it closes (the panel keeps running).
   internal MainWindow(PanelLoader loader) {
     InitializeComponent();
     WindowChrome.Apply(this, AppTitleBar);
@@ -50,7 +45,7 @@ public sealed partial class MainWindow : Window {
     };
   }
 
-  // Launching Edge+ again brings the running panel back, and the panel re-reads.
+  // Launching Edge+ again lands here.
   public void BringBack() {
     if (AppWindow.Presenter is OverlappedPresenter presenter) {
       presenter.Restore();
@@ -59,7 +54,6 @@ public sealed partial class MainWindow : Window {
     _broughtBack.Raise();
   }
 
-  // The swap, said for a few seconds in the title bar.
   private void ShowSwapStatus(string line) {
     SwapStatus.Text = line;
     SwapStatus.Opacity = StatusShown;
@@ -77,8 +71,7 @@ public sealed partial class MainWindow : Window {
       presenter.PreferredMaximumWidth = width;
       presenter.PreferredMinimumHeight = (int)Math.Round(MinimumHeight * scale);
     }
-    // The width is fixed, so offer no horizontal resize handle either (and
-    // hear about Windows setting changes).
+    // Hides the horizontal resize cursor, and reports Windows setting changes.
     _ = WindowSubclass.Attach(this);
   }
 }

@@ -1,12 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!--
-    The host: a thin, stable exe that owns the process, the single-instance
-    handling and the window (title bar, size, chrome), and loads the panel —
-    every feature and the window's content — from Panel\EdgePlus.Panel.csproj
-    into a collectible AssemblyLoadContext (Host\PanelLoader.cs). In a repo
-    checkout a rebuild of the panel alone is swapped into the running window;
-    the host itself changes rarely and needs a restart when it does.
-  -->
+  <!-- The thin host: process, single instance and window. The panel is loaded
+       from Panel\EdgePlus.Panel.csproj and swapped live on rebuild; a host
+       change needs a restart. -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
@@ -16,29 +11,21 @@
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>
-    <!-- Suppress the Windows App SDK's generated entry point so Program.Main can
-         decide, before WinUI is ever touched, whether this launch is the
-         headless dev-mode waiter or the panel. -->
+    <!-- Program.Main decides the kind of launch before WinUI is touched. -->
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <ApplicationIcon>Assets\edgeplus.ico</ApplicationIcon>
-    <!-- Unpackaged, self-contained, as any-stt is: a plain .exe with the
-         runtime beside it, so it runs full-trust (and can inject) with nothing
-         to pre-install. -->
+    <!-- Unpackaged and self-contained: full trust (so it can inject) with
+         nothing to pre-install. -->
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SelfContained>true</SelfContained>
-    <!-- Needed by PublishSingleFile below: it generates the resources.pri the
-         single exe embeds. -->
+    <!-- Generates the resources.pri the single-file exe embeds. -->
     <EnableMsixTooling>true</EnableMsixTooling>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
-  <!--
-    What `dotnet publish` produces: one edgeplus.exe and nothing beside it.
-    Unpackaged + self-contained is what makes PublishSingleFile legal for WinUI
-    3. None of this touches `dotnet build`, which still emits the loose folder
-    the dev loop runs from.
-  -->
+  <!-- `dotnet publish` only: one edgeplus.exe. Unpackaged + self-contained is
+       what makes PublishSingleFile legal for WinUI 3. -->
   <PropertyGroup>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
@@ -46,9 +33,8 @@
     <DebugType>embedded</DebugType>
   </PropertyGroup>
 
-  <!-- The panel and the tests are their own projects; the SDK's default glob
-       would otherwise pull their sources in. Product, Packaging and Switches
-       are the files both sides compile. -->
+  <!-- The panel and the tests are their own projects; the links below are the
+       files both sides compile. -->
   <ItemGroup>
     <Compile Remove="Panel\**;test\**" />
     <None Remove="Panel\**;test\**" />
@@ -58,14 +44,9 @@
     <Compile Include="Panel\Platform\Switches.cs" Link="Shared\Switches.cs" />
   </ItemGroup>
 
-  <!--
-    The panel assembly, built first and carried inside the exe as a resource:
-    a published edgeplus.exe loads it from there. A build in the repo also
-    records where the panel project writes its output, so the host can watch it
-    and swap a rebuilt panel in live (PanelLoader). The host does not reference
-    the panel's types — only its entry point, by name — so nothing of the panel
-    is ever loaded into the default context, where it could not be unloaded.
-  -->
+  <!-- The panel is embedded, not referenced: a referenced type would load into
+       the default context, where it could never unload. The metadata tells a
+       dev run which build output to watch. -->
   <ItemGroup>
     <ProjectReference Include="Panel\EdgePlus.Panel.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
@@ -98,15 +79,7 @@
     </Content>
   </ItemGroup>
 
-  <!--
-    The repo's verbs, here because this csproj is the manifest a task runner
-    reads its list from (as any-stt's is). Each is the script it names and
-    nothing more:
-
-      dotnet build app\panel-winui -t:BuildNative   the C++ split DLL
-      dotnet build app\panel-winui -t:Lint          the C++ and C# lint gate
-      dotnet build app\panel-winui -t:Test          the panel's pure-logic tests
-  -->
+  <!-- The repo's verbs, for task runners: dotnet build app\panel-winui -t:<name>. -->
   <PropertyGroup>
     <NativeSplitDir>$(RepositoryRoot)app\native-split\</NativeSplitDir>
   </PropertyGroup>

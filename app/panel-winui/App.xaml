@@ -8,12 +8,10 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- The panel's look: the Windows Settings card, hand-built from
-                 WinUI's own theme brushes (no toolkit). Every colour is a
-                 ThemeResource, so light and dark follow Windows live. The
-                 panel builds its content in code (Panel\Ui) and takes these by
-                 key (StyleKeys): they live here, in the host, because the
-                 panel is swapped live and carries no XAML of its own. -->
+            <!-- The panel's styles live in the host because the panel is
+                 swapped live and carries no XAML of its own (StyleKeys).
+                 Every colour is a ThemeResource so light and dark follow
+                 Windows live. -->
             <Style x:Key="FeatureCardStyle" TargetType="Border">
                 <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
                 <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
@@ -29,32 +27,28 @@
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
                 <Setter Property="TextWrapping" Value="Wrap"/>
             </Style>
-            <!-- Why a switch is locked. -->
             <Style x:Key="CardNoteStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
                 <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCautionBrush}"/>
                 <Setter Property="TextWrapping" Value="Wrap"/>
             </Style>
-            <!-- An action that failed, in the user's words. -->
             <Style x:Key="CardErrorStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
                 <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}"/>
                 <Setter Property="TextWrapping" Value="Wrap"/>
             </Style>
-            <!-- A theme's small labels: Store, Local, In use, Installed in Edge. -->
             <Style x:Key="BadgeStyle" TargetType="Border">
                 <Setter Property="Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}"/>
                 <Setter Property="CornerRadius" Value="{ThemeResource ControlCornerRadius}"/>
                 <Setter Property="Padding" Value="6,1,6,1"/>
                 <Setter Property="VerticalAlignment" Value="Center"/>
             </Style>
-            <!-- A row of the reorderable theme list: the row draws its own
-                 padding, so it lines up with Edge's own themes listed under it. -->
+            <!-- The row draws its own padding, so it lines up with Edge's own
+                 themes listed under it. -->
             <Style x:Key="ThemeListItemStyle" TargetType="ListViewItem"
                    BasedOn="{StaticResource DefaultListViewItemStyle}">
                 <Setter Property="Padding" Value="0"/>
                 <Setter Property="MinHeight" Value="36"/>
                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             </Style>
-            <!-- Shown while a theme is dragged over the window. -->
             <Style x:Key="DropVeilStyle" TargetType="Grid">
                 <Setter Property="Background" Value="{ThemeResource SolidBackgroundFillColorBaseBrush}"/>
             </Style>

@@ -1,22 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The MSIX manifest, used only by the packaging publish that
-  tools\Package-Msix.ps1 runs (WindowsPackageType=MSIX). The ordinary build and
-  the single-file publish ignore it.
+  Used only by tools\Package-Msix.ps1's packaging publish, which also rewrites
+  Version from the built exe.
 
   Identity/Name, Identity/Publisher and Properties/PublisherDisplayName must
-  match Partner Center EXACTLY, character for character: copy them from
-  "Product identity" there once the name is reserved. Publisher is the account's
-  publisher ID (a GUID, as CN=<guid>), not the account name, and the package
-  family name is a hash of it, so one wrong field fails twice. The values below
-  are placeholders that build a package which installs for testing and that
-  Partner Center will refuse until they are replaced. See
-  docs/STORE-SUBMISSION.md.
+  match Partner Center's "Product identity" character for character. Publisher
+  is the publisher ID (CN=<guid>), not the account name. The values below are
+  placeholders Partner Center refuses (docs/STORE-SUBMISSION.md).
 
-  Version is rewritten by the script from the built exe (four parts, the last 0).
-
-  EntryPoint is Windows.FullTrustApplication and the one capability is
-  runFullTrust: the panel loads a DLL into Edge's browser process, which no
+  Full trust: the panel loads a DLL into Edge's browser process, which no
   sandboxed app can do.
 -->
 <Package
@@ -38,16 +30,13 @@
     <PublisherDisplayName>avi12</PublisherDisplayName>
     <Description>Live feature switches for Microsoft Edge.</Description>
     <Logo>Assets\StoreLogo.png</Logo>
-    <!-- The panel writes %LOCALAPPDATA%\FixEdge (settings, the config file, the
-         DLL), and Edge, which is not packaged, must read the very same files.
-         Without these two a packaged app's writes are redirected into its
-         private package folder, where Edge never looks. -->
+    <!-- Without these, the panel's writes to %LOCALAPPDATA%\FixEdge are
+         redirected into its private package folder, where Edge never looks. -->
     <desktop6:FileSystemWriteVirtualization>disabled</desktop6:FileSystemWriteVirtualization>
     <desktop6:RegistryWriteVirtualization>disabled</desktop6:RegistryWriteVirtualization>
   </Properties>
 
-  <!-- 19041 is Windows 10 version 2004, the same floor as
-       TargetPlatformMinVersion in EdgePlus.csproj. -->
+  <!-- Same floor as TargetPlatformMinVersion in EdgePlus.csproj. -->
   <Dependencies>
     <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0"
                         MaxVersionTested="10.0.26100.0" />
@@ -65,10 +54,8 @@
           Square150x150Logo="Assets\Square150x150Logo.png"
           Square44x44Logo="Assets\Square44x44Logo.png"
           BackgroundColor="transparent" />
-      <!-- "Start with Windows" in the packaged build (Setup\StartWithWindows.cs,
-           which names this TaskId): off until the panel's switch asks for it,
-           and removed with the package. Launched this way the panel gets no
-           arguments, so App reads the StartupTask activation as a boot launch. -->
+      <!-- Setup\StartWithWindows.cs names this TaskId. Launched this way the
+           panel gets no arguments; Program reads the activation kind instead. -->
       <Extensions>
         <desktop:Extension Category="windows.startupTask" Executable="edgeplus.exe"
                            EntryPoint="Windows.FullTrustApplication">

@@ -1,6 +1,6 @@
 namespace EdgePlus;
 
-// The WM_NCHITTEST answers this cares about (winuser.h's HT* codes).
+// winuser.h's HT* codes, the WM_NCHITTEST answers.
 internal enum HitTest {
   Left = 10,
   Right = 11,
@@ -13,10 +13,8 @@ internal enum HitTest {
   Border = 18,
 }
 
-// The panel's width is fixed, so its side borders and corners must not offer a
-// horizontal resize cursor either. Windows picks that cursor from the
-// WM_NCHITTEST answer, which WindowSubclass rewrites with this: side borders
-// become plain border, corners become the top / bottom edges.
+// Windows picks the resize cursor from the WM_NCHITTEST answer, so rewriting
+// it is how a fixed-width window stops offering a horizontal one.
 internal static class ResizeHandles {
   public static int VerticalOnly(int hit) => (HitTest)hit switch {
     HitTest.Left or HitTest.Right => (int)HitTest.Border,

@@ -1,10 +1,6 @@
 <Project>
-  <!--
-    The product's identity, written once for every project here: the host exe
-    (EdgePlus.csproj) and the swappable panel (Panel\EdgePlus.Panel.csproj) both
-    stamp it, and Product.cs reads it back off whichever assembly it is compiled
-    into, so a rename or a version bump is this block and nothing else.
-  -->
+  <!-- The product's one identity: both assemblies stamp it and Product.cs reads
+       it back, so a rename or a version bump is this block alone. -->
   <PropertyGroup>
     <Version>0.1.0</Version>
     <Product>Edge+</Product>
@@ -12,14 +8,10 @@
     <Company>Avi</Company>
     <Authors>Avi</Authors>
     <Copyright>© 2026 Avi</Copyright>
-    <!-- Keep AssemblyInformationalVersion equal to <Version>: the SDK appends
-         +<commit sha> by default, and Product.Version is what the footer shows. -->
+    <!-- Otherwise the SDK appends +<commit sha> to the version the footer shows. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <!-- No unsafe code: every Win32 call is a [DllImport] in a Native\ folder,
-         which needs no unsafe block; tools\lint.ps1 fails a [DllImport]
-         anywhere else. -->
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <RepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))</RepositoryRoot>
   </PropertyGroup>

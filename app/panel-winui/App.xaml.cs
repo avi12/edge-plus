@@ -8,20 +8,14 @@ using Microsoft.Windows.AppNotifications;
 
 namespace EdgePlus;
 
-// The process: one per user (Program), running the panel for its whole life.
-//
-// A boot launch (--background, from the start-at-sign-in entry) opens no
-// window: the process is the always-on listener — the panel's background
-// service watches Edge for updates and says by toast what an unsupported build
-// paused. Launching Edge+ again (or clicking the toast) opens the window on the
-// same running panel. Closing the window keeps the listener while Edge+ starts
-// with Windows, and ends the process otherwise.
+// A boot launch opens no window: the process is the always-on listener that
+// watches Edge for updates. Closing the window keeps the listener while Edge+
+// starts with Windows, and ends the process otherwise.
 public partial class App : Application {
   private const string CrashLogName = "edgeplus_error.log";
   private static readonly TimeSpan s_trimDelay = TimeSpan.FromSeconds(5);
 
   private PanelLoader? _loader;
-  // The one window, while it is open.
   private MainWindow? _window;
 
   public App() {
@@ -33,8 +27,7 @@ public partial class App : Application {
       } catch (IOException) {
       }
     };
-    // The process ends when the panel says so (OnWindowClosed), not when the
-    // last window closes: a boot launch has no window at all.
+    // A boot launch has no window at all, so the panel decides when to exit.
     DispatcherShutdownMode = DispatcherShutdownMode.OnExplicitShutdown;
   }
 
@@ -43,7 +36,7 @@ public partial class App : Application {
     RegisterForToasts(dispatcher);
     _loader = new PanelLoader(dispatcher);
     _loader.Start();
-    // A second launch redirected here (Program) shows the window.
+    // A second launch, redirected here by Program.
     AppInstance.GetCurrent().Activated += (_, _) => dispatcher.TryEnqueue(ShowWindow);
     if (Packaging.IsPackaged) {
       AppRestart.RegisterForUpdates(Switches.Background);
@@ -61,8 +54,6 @@ public partial class App : Application {
     TrimWhenSettled(dispatcher);
   }
 
-  // Give memory back once the startup (or the closed window's teardown) has
-  // settled, unless a window opened meanwhile.
   private void TrimWhenSettled(DispatcherQueue dispatcher) {
     DispatcherQueueTimer timer = dispatcher.CreateTimer();
     timer.Interval = s_trimDelay;
@@ -75,7 +66,6 @@ public partial class App : Application {
     timer.Start();
   }
 
-  // Open the window, or bring the open one back.
   public void ShowWindow() {
     if (_window is not null) {
       _window.BringBack();
@@ -86,10 +76,7 @@ public partial class App : Application {
     _window.Activate();
   }
 
-  // The panel's toast (PausedToast) needs the process registered; clicking it
-  // opens the window. A toast clicked while no Edge+ runs starts a new one,
-  // which opens its window as any plain launch does. The handler is attached
-  // before Register, as the Windows App SDK requires.
+  // The Windows App SDK requires the handler attached before Register.
   private void RegisterForToasts(DispatcherQueue dispatcher) {
     try {
       AppNotificationManager.Default.NotificationInvoked +=

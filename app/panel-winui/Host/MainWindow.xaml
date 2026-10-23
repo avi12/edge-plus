@@ -4,9 +4,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:EdgePlus">
 
-    <!-- The host's shell: the title bar, and the slot the panel fills
-         (PanelLoader). Everything under the title bar is the panel's, swapped
-         live in a dev run. -->
     <Grid RowDefinitions="Auto,*">
 
         <Grid x:Name="AppTitleBar" Grid.Row="0" Height="40" Padding="14,0,0,0"
@@ -15,7 +12,6 @@
                    Source="ms-appx:///Assets/edgeplus.ico"/>
             <TextBlock Grid.Column="1" Text="{x:Bind local:Product.Name}" VerticalAlignment="Center"
                        Margin="10,0,0,0" Style="{StaticResource CaptionTextBlockStyle}"/>
-            <!-- A live swap of the panel, said briefly. -->
             <TextBlock x:Name="SwapStatus" Grid.Column="2" VerticalAlignment="Center"
                        Margin="12,0,0,0" Opacity="0" Style="{StaticResource CaptionTextBlockStyle}"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>

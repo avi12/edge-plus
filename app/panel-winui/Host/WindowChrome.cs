@@ -6,10 +6,9 @@ using Windows.Graphics;
 
 namespace EdgePlus;
 
-// Dressed the way any-stt's panel is, so the two tools read as one family:
-// acrylic, the content drawn into the title bar, the product name as the title.
+// Dressed like any-stt's panel, so the two tools read as one family.
 internal static class WindowChrome {
-  // Copied beside the exe by the build (EdgePlus.csproj's Content item).
+  // Copied beside the exe by EdgePlus.csproj's Content item.
   private static readonly string s_icon =
       Path.Combine(System.AppContext.BaseDirectory, "Assets", "edgeplus.ico");
 
@@ -23,8 +22,6 @@ internal static class WindowChrome {
     }
   }
 
-  // Centre on the work area of the monitor the window landed on, clear of the
-  // taskbar.
   public static void CenterOnScreen(AppWindow appWindow) {
     var display = DisplayArea.GetFromWindowId(appWindow.Id, DisplayAreaFallback.Nearest);
     if (display is null) {

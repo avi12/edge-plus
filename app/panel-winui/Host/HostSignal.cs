@@ -3,11 +3,9 @@ using System.Collections.Generic;
 
 namespace EdgePlus;
 
-// Something the host tells the panel (a Windows setting changed; the window
-// was brought back). An IObservable, because the panel is loaded in its own
-// context and may share only framework types with the host; each
-// subscription is disposed when the panel is torn down, so the host keeps no
-// reference into an unloaded panel.
+// An IObservable because the panel, in its own load context, may share only
+// framework types with the host. The panel disposes each subscription at
+// teardown, so the host keeps no reference into an unloaded panel.
 internal sealed class HostSignal : IObservable<EventArgs> {
   private readonly List<IObserver<EventArgs>> _observers = [];
 

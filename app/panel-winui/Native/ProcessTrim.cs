@@ -4,11 +4,10 @@ using System.Runtime.InteropServices;
 
 namespace EdgePlus;
 
-// Hands memory back while the process has no window: the always-on listener
-// only watches Edge, so the pages a window (or startup) touched go back to
-// Windows, and come back on demand if a window opens again.
+// The windowless listener only watches Edge, so the pages a window or startup
+// touched go back to Windows until a window opens again.
 internal static class ProcessTrim {
-  // The values that tell SetProcessWorkingSetSize to empty the working set.
+  // (-1, -1) tells SetProcessWorkingSetSize to empty the working set.
   private static readonly IntPtr s_trimAll = new(-1);
 
   public static void Run() {
