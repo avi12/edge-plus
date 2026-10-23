@@ -479,7 +479,12 @@ inline void __fastcall h_update_foreground(void* tab) {
   void* const outerTab = g_foregroundTab;
   const bool wasOuterActive = g_isForegroundTabActive;
   g_foregroundTab = tab;
+  // Only a vertical tab gets the bright fill the ink is for; a horizontal
+  // active tab keeps the theme's own title colour on the theme's own tab.
+  const bool isVerticalTab =
+      edge::VtableRva(tab) == edge155::rva::VerticalTab_vftable;
   g_isForegroundTabActive =
+      isVerticalTab &&
       reinterpret_cast<IsActive_t>(edge::At(edge155::rva::Tab_IsActive))(tab);
   o_update_foreground(tab);
   g_foregroundTab = outerTab;
