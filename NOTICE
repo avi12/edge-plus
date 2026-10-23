@@ -1,0 +1,24 @@
+Edge+
+Copyright 2026 Avi (https://avi12.com)
+
+This product includes software developed by Avi (https://avi12.com).
+
+Licensed under the Apache License, Version 2.0. A work that is derived from
+this one, in source or binary form, must keep this NOTICE file (or its text, in
+a NOTICE file or in the documentation or about screen the work ships with), so
+that the credit above stays with it. See section 4(d) of the LICENSE.
+
+Third-party software
+--------------------
+
+MinHook - The Minimalistic API Hooking Library for x64/x86
+Copyright (C) 2009-2017 Tsuda Kageyu. All rights reserved.
+BSD 2-Clause license. The source and its license are in
+app/native-split/external/minhook/ and are linked into the injected DLL.
+
+Windows App SDK and the .NET runtime, which the panel links or bundles, are
+Microsoft's and are used under their own licenses.
+
+"Microsoft Edge" and "Microsoft Store" are trademarks of Microsoft Corporation.
+Edge+ is an independent project and is not affiliated with or endorsed by
+Microsoft.
