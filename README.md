@@ -3,6 +3,17 @@
 Live feature switches for Microsoft Edge. A desktop panel turns each feature on
 or off, and Edge picks the change up the moment it is made — no restart, ever.
 
+![The Edge+ panel](docs/images/panel.png)
+
+## Requirements
+
+- Windows 10 version 2004 (build 19041) or later, 64-bit.
+- Microsoft Edge (Stable, 64-bit) 155.0.4283.62, the one build the DLL is
+  pinned to (`app/native-split/src/offsets.h`). On any other build every
+  feature that calls into `msedge.dll` pauses itself and Edge is left
+  untouched; see *Setup*.
+- Run the panel as the same Windows user that runs Edge.
+
 ## Features
 
 - **Split into any grid** — grows Edge's *own* split view past two panes, side by
@@ -17,6 +28,13 @@ or off, and Edge picks the change up the moment it is made — no restart, ever.
   restart. Add themes from a Chrome Web Store / Edge Add-ons link or a local
   `.crx`; Edge's own theming engine paints them (the injected DLL only picks and
   applies the right one).
+- **Cut-corner tabs** — with Theming on, every tab, in the vertical list and in
+  the horizontal strip, gets a straight leading edge and a 45° cut on its
+  trailing top corner, the selected tab is filled in the theme's neon, and a
+  horizontal tab loses its flared feet. Edge's own outline is reshaped by the
+  injected DLL, so nothing is painted over the tab (`app/native-split/src/tab_shape.h`).
+
+  ![A vertical tab with a cut corner](docs/images/cut-corner-tab.png)
 - **Settings and extensions pages follow the theme** — `edge://settings` and
   `edge://extensions` take their light or dark from Windows or Edge's
   Appearance setting, never from the theme, so a dark theme on a light Windows
@@ -108,3 +126,14 @@ app\native-split\build.cmd       # -> build\fixedge-split.dll and inject.exe
 app\native-split\test\run.cmd    # the pure-logic unit tests
 pwsh tools\lint.ps1              # clang-format/-tidy for the C++
 ```
+
+## License
+
+Edge+ is free and open source under the [Apache License 2.0](LICENSE).
+
+You may use, change and redistribute it, including in a fork or a product, as
+long as you keep the [NOTICE](NOTICE) file, which credits the author, Avi
+(<https://avi12.com>), and say what you changed. It comes with no warranty.
+
+It reverse-engineers one build of a Microsoft product and is not affiliated
+with Microsoft. "Microsoft Edge" is a trademark of Microsoft Corporation.
