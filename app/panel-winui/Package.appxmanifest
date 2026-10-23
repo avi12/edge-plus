@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The MSIX manifest, used only by the packaging publish that
+  tools\Package-Msix.ps1 runs (WindowsPackageType=MSIX). The ordinary build and
+  the single-file publish ignore it.
+
+  Identity/Name, Identity/Publisher and Properties/PublisherDisplayName must
+  match Partner Center EXACTLY, character for character: copy them from
+  "Product identity" there once the name is reserved. Publisher is the account's
+  publisher ID (a GUID, as CN=<guid>), not the account name, and the package
+  family name is a hash of it, so one wrong field fails twice. The values below
+  are placeholders that build a package which installs for testing and that
+  Partner Center will refuse until they are replaced. See
+  docs/STORE-SUBMISSION.md.
+
+  Version is rewritten by the script from the built exe (four parts, the last 0).
+
+  EntryPoint is Windows.FullTrustApplication and the one capability is
+  runFullTrust: the panel loads a DLL into Edge's browser process, which no
+  sandboxed app can do.
+-->
+<Package
+    xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+    xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+    xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+    xmlns:desktop6="http://schemas.microsoft.com/appx/manifest/desktop/windows10/6"
+    xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+    IgnorableNamespaces="uap desktop desktop6 rescap">
+
+  <Identity
+      Name="avi12.PlusForEdge"
+      Publisher="CN=00000000-0000-0000-0000-000000000000"
+      Version="0.1.0.0"
+      ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>Plus for Edge</DisplayName>
+    <PublisherDisplayName>avi12</PublisherDisplayName>
+    <Description>Live feature switches for Microsoft Edge.</Description>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <!-- The panel writes %LOCALAPPDATA%\FixEdge (settings, the config file, the
+         DLL), and Edge, which is not packaged, must read the very same files.
+         Without these two a packaged app's writes are redirected into its
+         private package folder, where Edge never looks. -->
+    <desktop6:FileSystemWriteVirtualization>disabled</desktop6:FileSystemWriteVirtualization>
+    <desktop6:RegistryWriteVirtualization>disabled</desktop6:RegistryWriteVirtualization>
+  </Properties>
+
+  <!-- 19041 is Windows 10 version 2004, the same floor as
+       TargetPlatformMinVersion in EdgePlus.csproj. -->
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0"
+                        MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+
+  <Applications>
+    <Application Id="EdgePlus" Executable="edgeplus.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+          DisplayName="Plus for Edge"
+          Description="Live feature switches for Microsoft Edge."
+          Square150x150Logo="Assets\Square150x150Logo.png"
+          Square44x44Logo="Assets\Square44x44Logo.png"
+          BackgroundColor="transparent" />
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <rescap:Capability Name="unvirtualizedResources" />
+  </Capabilities>
+</Package>

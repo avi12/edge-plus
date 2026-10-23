@@ -16,3 +16,4 @@ app/panel-winui/Panel/obj/
 /app/panel/
 /extension/
 node_modules/
+dist/
