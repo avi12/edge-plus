@@ -11,8 +11,10 @@ namespace EdgePlus;
 internal sealed class BackgroundService : IDisposable {
   private readonly EdgeWatch _edgeWatch = new();
   private readonly ThemeWatch _themeWatch = new();
+  private readonly StoreUpdates _storeUpdates;
 
   private BackgroundService() {
+    _storeUpdates = new StoreUpdates(() => IsWindowOpen);
     _edgeWatch.BuildChanged += OnBuildChanged;
     _themeWatch.Refreshed += refresh => ThemeRefreshed?.Invoke(refresh);
   }
@@ -44,12 +46,18 @@ internal sealed class BackgroundService : IDisposable {
   public void Dispose() {
     _edgeWatch.Stop();
     _themeWatch.Stop();
+    _storeUpdates.Dispose();
     if (Current == this) {
       Current = null;
     }
   }
 
+  // A build that pauses features is fixed by the Edge+ release made for it,
+  // so look for one now rather than at the next scheduled check.
   private void OnBuildChanged(BuildChange change) {
+    if (change.Paused.Count > 0) {
+      _storeUpdates.CheckNow();
+    }
     if (!IsWindowOpen) {
       PausedToast.ShowOncePerBuild(change);
     }
