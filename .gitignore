@@ -13,3 +13,6 @@ app/panel-winui/test/bin/
 app/panel-winui/test/obj/
 app/panel-winui/Panel/bin/
 app/panel-winui/Panel/obj/
+/app/panel/
+/extension/
+node_modules/
