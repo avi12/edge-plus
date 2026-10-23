@@ -340,6 +340,9 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     // Nor is the selected tab's ink: theming too.
     MH_EnableHook(edge::At(edge155::rva::ColorProvider_GetColor));
     MH_EnableHook(edge::At(edge155::rva::EdgeTab_UpdateForegroundColors));
+    // Nor is the horizontal active tab's fill: theming too.
+    MH_EnableHook(
+        edge::At(edge155::rva::EdgeTabStyleViews_EdgeGetTabBackgroundColor));
     // Nor are the link-handler detours (they pass through while that feature
     // is off).
     protocol_handlers::EnableHooks();

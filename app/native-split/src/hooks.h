@@ -6,6 +6,7 @@
 #pragma once
 #include <cstdint>
 #include <cstring>
+#include <utility>
 #include "MinHook.h"
 #include "edge.h"
 #include "focus.h"
@@ -479,16 +480,36 @@ inline void __fastcall h_update_foreground(void* tab) {
   void* const outerTab = g_foregroundTab;
   const bool wasOuterActive = g_isForegroundTabActive;
   g_foregroundTab = tab;
-  // Only a vertical tab gets the bright fill the ink is for; a horizontal
-  // active tab keeps the theme's own title colour on the theme's own tab.
-  const bool isVerticalTab =
-      edge::VtableRva(tab) == edge155::rva::VerticalTab_vftable;
   g_isForegroundTabActive =
-      isVerticalTab &&
       reinterpret_cast<IsActive_t>(edge::At(edge155::rva::Tab_IsActive))(tab);
   o_update_foreground(tab);
   g_foregroundTab = outerTab;
   g_isForegroundTabActive = wasOuterActive;
+}
+
+// EdgeTabStyleViews::EdgeGetTabBackgroundColor: a horizontal active tab takes
+// the same bright fill as the vertical one, so both tab layouts read alike. The
+// ink for it is h_getuicolor's, switched by the same g_isLabelLight.
+inline constexpr uint32_t kTabActiveState = 1;
+using GetTabBackground_t = uint32_t(__fastcall*)(void*, int, int);
+inline constinit GetTabBackground_t o_get_tab_background = nullptr;
+inline uint32_t __fastcall h_get_tab_background(void* styleViews, int tabActive,
+                                                int frameState) {
+  const bool isThemedActive =
+      theme::g_isActive && std::cmp_equal(tabActive, kTabActiveState);
+  if (isThemedActive) {
+    void* tabBase =
+        edge::Field<void*>(styleViews, edge155::off::STYLEVIEWS_tab);
+    void* tab = tabBase ? static_cast<uint8_t*>(tabBase) +
+                              edge155::off::EDGETAB_view_offset
+                        : nullptr;
+    const bool isHorizontalTab =
+        tab && edge::VtableRva(tab) != edge155::rva::VerticalTab_vftable;
+    if (isHorizontalTab) {
+      return kVTabSelectedFill;
+    }
+  }
+  return o_get_tab_background(styleViews, tabActive, frameState);
 }
 
 template <class T>
@@ -653,6 +674,9 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   Install(edge155::rva::EdgeTab_UpdateForegroundColors,
           reinterpret_cast<void*>(h_update_foreground), &o_update_foreground,
           "EdgeTab::UpdateForegroundColors (selected-tab ink)");
+  Install(edge155::rva::EdgeTabStyleViews_EdgeGetTabBackgroundColor,
+          reinterpret_cast<void*>(h_get_tab_background), &o_get_tab_background,
+          "EdgeTabStyleViews::EdgeGetTabBackgroundColor (horizontal fill)");
   // Asking to handle links: pass-through until the feature is switched on
   // (protocol_handlers.h).
   Install(edge155::rva::ContentSettingRPHBubbleModel_CommitChanges,

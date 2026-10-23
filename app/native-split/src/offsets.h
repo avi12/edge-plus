@@ -571,6 +571,13 @@ inline constexpr uintptr_t
     EdgeTabStyleViews_CalculateTargetColors_active_return = 0x28a924d;
 inline constexpr uintptr_t
     EdgeTabStyleViews_CalculateTargetColors_inactive_return = 0x28a925f;
+// SkColor EdgeTabStyleViews::EdgeGetTabBackgroundColor(this, TabActive active,
+// BrowserFrameActiveState frameState): the fill of a horizontal tab (a vertical
+// one reads the theme pack's VTABCOLOR ids instead). `active` is 1 for the
+// active tab's fill, 0 for an inactive one's. `this + 0x10` is the EdgeTab, whose
+// view is at EDGETAB_view_offset.
+inline constexpr uintptr_t EdgeTabStyleViews_EdgeGetTabBackgroundColor =
+    0x28a9450;
 // EdgeTabStyleViews::PaintTab's cold part: after a SaveLayerAlpha at the tab's
 // hover (throb) value it paints the tab as active (PaintTabBackground, active =
 // true); 0x4716481 is that call's return address.
