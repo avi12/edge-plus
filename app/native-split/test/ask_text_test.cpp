@@ -1,5 +1,4 @@
-// Unit tests for the pure text side of "Ask Copilot" (ask_text.h). No Edge/Win32
-// deps. Run via test\run.cmd.
+// Unit tests for ask_text.h.
 #include <cstdio>
 #include <string>
 #include <vector>

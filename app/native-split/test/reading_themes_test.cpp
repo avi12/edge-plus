@@ -1,5 +1,4 @@
-// Unit tests for the reading mode's page themes (reading_themes.h). No
-// Edge/Win32 deps. Run via test\run.cmd.
+// Unit tests for reading_themes.h.
 #include <cstdio>
 #include <cstring>
 #include "../src/reading_themes.h"

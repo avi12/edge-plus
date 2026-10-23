@@ -1,5 +1,4 @@
-// Unit tests for the assistant chat table (chat_target.h). No Edge/Win32 deps.
-// Run via test\run.cmd.
+// Unit tests for chat_target.h.
 #include <cstdio>
 #include <cstring>
 #include "../src/chat_target.h"

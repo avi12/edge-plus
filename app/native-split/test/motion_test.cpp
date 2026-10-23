@@ -1,5 +1,4 @@
-// Unit tests for the pure pane-transition math (motion.h). No Edge/Win32 deps.
-// Run via test\run.cmd.
+// Unit tests for motion.h.
 #include <cstdio>
 #include <vector>
 #include "../src/motion.h"
@@ -21,15 +20,12 @@ void Check(bool ok, const char* what) {
   }
 }
 
-// The curve is constexpr: its ends hold at compile time.
 static_assert(Ease(0.0) == 0.0 && Ease(1.0) == 1.0);
 static_assert(Same(Rect{1, 2, 3, 4}, Rect{1, 2, 3, 4}));
 
-// How many evenly spaced points the easing curve is sampled at, and how far a
-// sample may dip below the previous one before it counts as non-monotonic.
 constexpr int kEaseSamples = 100;
+// How far a sample may dip below the previous one and still be monotonic.
 constexpr double kEaseSlack = 1e-9;
-// How many steps a transition is checked at.
 constexpr int kLerpSteps = 10;
 
 void RunChecks() {

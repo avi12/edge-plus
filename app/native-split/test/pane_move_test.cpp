@@ -1,6 +1,4 @@
-// Unit tests for the drag-and-drop tree edits in pane_tree.h (MovePane,
-// MovePaneToRootEdge, SwapLeaves, Normalize). No Edge/Win32 deps. Run via
-// test\run.cmd.
+// Unit tests for the drag-and-drop tree edits in pane_tree.h.
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -58,11 +56,9 @@ std::string Layout(const Node& root, int width, int height) {
   return text;
 }
 
-// How far a split's weights may sum from its child count and still be
-// canonical: float rounding, not a real drift.
+// Float rounding, not a real drift.
 constexpr float kWeightSumTolerance = 1e-3f;
 
-// The canonical form every edit must leave behind.
 bool Canonical(const Node& node) {
   if (node.isLeaf) {
     return true;
@@ -105,13 +101,13 @@ Node Weighted(int count, Axis axis, std::vector<float> weights) {
   return tree;
 }
 
-// The random-edit run. The seed is fixed so a failure reproduces.
+// Fixed so a failure reproduces.
 constexpr unsigned kRandomSeed = 12345;
 constexpr int kRandomRuns = 200;
 constexpr int kEditsPerRun = 60;
-constexpr int kMaxPanes = 9;  // a split stops adding panes here
+constexpr int kMaxPanes = 9;
 
-// The edits a random step can make, drawn uniformly.
+// Drawn uniformly.
 enum class Edit : uint8_t {
   kSplit,
   kMove,

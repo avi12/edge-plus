@@ -1,5 +1,4 @@
-// Unit tests for the RegExp flag switches (find_flags.h). No Edge/Win32 deps.
-// Run via test\run.cmd.
+// Unit tests for find_flags.h.
 #include <cstdio>
 #include <string>
 #include "../src/find_flags.h"
@@ -20,7 +19,6 @@ void Check(bool ok, const char* what) {
   }
 }
 
-// The flag set is constexpr: a bar's first switches hold at compile time.
 static_assert(IsDefaultOn(Flag::kMultiline) && !IsDefaultOn(Flag::kSticky));
 
 void CheckTable() {

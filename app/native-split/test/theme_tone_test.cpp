@@ -1,5 +1,4 @@
-// Unit tests for the pure theme-tone decision (theme_tone.h). No Edge/Win32
-// deps. Run via test\run.cmd.
+// Unit tests for theme_tone.h.
 #include <cstdio>
 #include "../src/theme_tone.h"
 

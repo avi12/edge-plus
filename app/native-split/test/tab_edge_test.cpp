@@ -1,5 +1,4 @@
-// Unit tests for the tab's corner geometry (tab_edge.h). No Edge/Win32 deps.
-// Run via test\run.cmd.
+// Unit tests for tab_edge.h.
 #include <cstdio>
 #include "../src/tab_edge.h"
 

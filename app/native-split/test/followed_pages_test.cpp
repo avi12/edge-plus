@@ -1,5 +1,4 @@
-// Unit tests for the pure followed-page test (followed_pages.h). No Edge/Win32
-// deps. Run via test\run.cmd.
+// Unit tests for followed_pages.h.
 #include <cstdio>
 #include "../src/followed_pages.h"
 

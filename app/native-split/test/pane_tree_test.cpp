@@ -1,5 +1,4 @@
-// Unit tests for the pure split-tree model (pane_tree.h). No Edge/Win32 deps, so
-// this builds and runs on the host. Run via test\run.cmd.
+// Unit tests for pane_tree.h.
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -21,7 +20,6 @@ void Check(bool ok, const char* what) {
   }
 }
 
-// Render leaf order + each leaf's rect as a string, for stable assertions.
 std::string Layout(const Node& root, int width, int height) {
   std::vector<LeafRect> leaves;
   LayoutTree(root, Rect{0, 0, width, height}, 0, leaves);

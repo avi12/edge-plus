@@ -1,5 +1,4 @@
-// Unit tests for the drop-zone resolver (dock.h). No Edge/Win32 deps. Run via
-// test\run.cmd.
+// Unit tests for dock.h.
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -22,7 +21,6 @@ void Check(bool ok, const char* what) {
   }
 }
 
-// The edge geometry is constexpr: the diagonals hold at compile time.
 static_assert(DiagonalEdge(0.1f, 0.5f) == Direction::kLeft);
 static_assert(DiagonalEdge(0.5f, 0.9f) == Direction::kDown);
 

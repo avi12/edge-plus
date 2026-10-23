@@ -1,5 +1,4 @@
-// Unit tests for the pure page/script text helpers (web_text.h). No Edge/Win32
-// deps. Run via test\run.cmd.
+// Unit tests for web_text.h.
 #include <cstdio>
 #include <string>
 #include "../src/web_text.h"

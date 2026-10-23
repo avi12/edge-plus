@@ -1,5 +1,4 @@
-// Unit tests for the pure text side of the enhanced find (find_text.h). No Edge/Win32
-// deps. Run via test\run.cmd.
+// Unit tests for find_text.h.
 #include <cstdio>
 #include <string>
 #include "../src/find_text.h"
@@ -20,7 +19,6 @@ void Check(bool ok, const char* what) {
   }
 }
 
-// Stepping and the flag check are constexpr: they hold at compile time.
 static_assert(StepMatch(kNoMatch, 3, Step::kNext) == 0);
 static_assert(StepMatch(0, 3, Step::kPrevious) == 2);
 static_assert(AreRegExpFlags("gim") && !AreRegExpFlags("gg"));
