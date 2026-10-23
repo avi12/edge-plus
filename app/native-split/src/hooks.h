@@ -476,14 +476,16 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
                                          kVTabInactiveRailPercent);
   }
   const bool isInkable = theme::g_isActive && g_isLabelLight;
-  if (isInkable) {
-    const bool isTabForeground =
-        colorId >= edge155::off::UICOLOR_tab_foreground_first &&
-        colorId <= edge155::off::UICOLOR_tab_foreground_last;
-    const bool isActiveTabTitle = isTabForeground && g_isForegroundTabActive;
-    if (isActiveTabTitle || IsActiveTabAlert(colorId)) {
-      return kSelectedTabInk;
-    }
+  if (!isInkable) {
+    return o_getuicolor(provider, colorId);
+  }
+  const bool isTabForeground =
+      colorId >= edge155::off::UICOLOR_tab_foreground_first &&
+      colorId <= edge155::off::UICOLOR_tab_foreground_last;
+  const bool isActiveTabTitle = isTabForeground && g_isForegroundTabActive;
+  const bool isInkedOnFill = isActiveTabTitle || IsActiveTabAlert(colorId);
+  if (isInkedOnFill) {
+    return kSelectedTabInk;
   }
   return o_getuicolor(provider, colorId);
 }

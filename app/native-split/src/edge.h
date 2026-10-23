@@ -2074,8 +2074,9 @@ inline bool IsVerticalTabView(void* view) {
   void* const* const vtable = *static_cast<void***>(controller);
   const uint32_t mode = reinterpret_cast<Mode_t>(
       vtable[edge155::off::LAYOUT_mode_slot])(controller);
-  return mode - edge155::off::LAYOUT_vertical_first <
-         edge155::off::LAYOUT_vertical_count;
+  const bool isVerticalMode = mode - edge155::off::LAYOUT_vertical_first <
+                              edge155::off::LAYOUT_vertical_count;
+  return isVerticalMode;
 }
 
 // Whether an EdgeTab object (not its view) is the strip's active tab.

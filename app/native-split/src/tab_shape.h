@@ -197,7 +197,10 @@ using MoveTo_t = void*(__fastcall*)(void*, uint64_t);
 
 // An SkRRect's layout: its rect (left, top, right, bottom), then each corner's
 // radii in Skia's order (tab_edge::Corner).
-inline constexpr uintptr_t kRRectRect = 0x0;
+inline constexpr uintptr_t kRRectLeft = 0x0;
+inline constexpr uintptr_t kRRectTop = 0x4;
+inline constexpr uintptr_t kRRectRight = 0x8;
+inline constexpr uintptr_t kRRectBottom = 0xc;
 inline constexpr uintptr_t kRRectRadii = 0x10;
 
 // The vertical tab's outline: the call in GetPath that adds the rounded
@@ -215,10 +218,10 @@ inline void* __fastcall h_add_rrect(void* path, const void* roundedRect,
   if (!isTabOutline) {
     return o_add_rrect(path, roundedRect, direction, startIndex);
   }
-  const float left = edge::Field<float>(roundedRect, kRRectRect);
-  const float top = edge::Field<float>(roundedRect, kRRectRect + 4);
-  const float right = edge::Field<float>(roundedRect, kRRectRect + 8);
-  const float bottom = edge::Field<float>(roundedRect, kRRectRect + 12);
+  const float left = edge::Field<float>(roundedRect, kRRectLeft);
+  const float top = edge::Field<float>(roundedRect, kRRectTop);
+  const float right = edge::Field<float>(roundedRect, kRRectRight);
+  const float bottom = edge::Field<float>(roundedRect, kRRectBottom);
   const bool isLeftToRight = !edge::IsUiRightToLeft();
   const tab_edge::Corner trailingTop = isLeftToRight
                                            ? tab_edge::Corner::kUpperRight
