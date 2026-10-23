@@ -131,17 +131,35 @@ inline void Attach(WindowSet& set, void* anyView, void* draggedTab, void* tab) {
   edge::AddChildViewAt(tab, set.stripe, edge::ViewChildCount(tab));
   set.host = tab;
   const Rect bounds = edge::ViewBounds(tab);
-  Log("[spine] on a %s tab %p, %d,%d %dx%d",
+  const Rect onScreen = edge::ViewBoundsInScreen(tab);
+  Log("[spine] on a %s tab %p, %d,%d %dx%d, screen %d,%d visible=%d, "
+      "children %zu",
       edge::IsHorizontalTabView(tab) ? "horizontal" : "vertical", tab, bounds.x,
-      bounds.y, bounds.width, bounds.height);
+      bounds.y, bounds.width, bounds.height, onScreen.x, onScreen.y,
+      edge::ViewGetVisible(tab) ? 1 : 0, edge::ViewChildCount(tab));
+}
+
+// A horizontal tab's view is wider than the chip Edge draws in it: the flared
+// feet and the strip's top padding lie outside the shape, and children are
+// clipped to the shape, so the stripe is placed inside it.
+inline constexpr int kHorizontalChipSideDip = 10;
+inline constexpr int kHorizontalChipTopDip = 4;
+
+// The part of `tab`'s view that holds its fill, in the view's own coordinates.
+inline Rect ChipOf(void* tab) {
+  const Rect bounds = edge::ViewBounds(tab);
+  if (!edge::IsHorizontalTabView(tab)) {
+    return Rect{0, 0, bounds.width, bounds.height};
+  }
+  return Rect{kHorizontalChipSideDip, kHorizontalChipTopDip,
+              bounds.width - 2 * kHorizontalChipSideDip,
+              bounds.height - kHorizontalChipTopDip};
 }
 
 // Size and colour the stripe for `tab`, in its own coordinates.
 inline void Lay(WindowSet& set, void* tab, theme_tone::Argb stripeColor) {
-  const Rect bounds = edge::ViewBounds(tab);
-  edge::SetViewBounds(
-      set.stripe, tab_edge::StripeFor(Rect{0, 0, bounds.width, bounds.height},
-                                      set.side, kWidthDip));
+  edge::SetViewBounds(set.stripe,
+                      tab_edge::StripeFor(ChipOf(tab), set.side, kWidthDip));
   if (set.stripeColor != stripeColor) {
     edge::SetViewSolidBackground(set.stripe, stripeColor);
     set.stripeColor = stripeColor;
