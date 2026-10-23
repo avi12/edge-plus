@@ -150,12 +150,23 @@ read. So a question takes the same path as a person's:
    prompt), then reads it every 0.7 s until the answer stops growing, and
    `assistant_chat.h` hands it back. `ParseAnswer` reads labels **only if they
    were offered in that prompt**.
-6. The panel stays out of the way afterwards: when the question found it
-   closed, `assistant_chat::ReleasePanel` closes it again with
-   `edge_copilot::utils::CloseUndersideChat(browser, true)` (`0x93d99bf`, what
-   the panel page's own close message runs) once the ask is over, so the page
-   gets its width back. It is still open while the question is answered: the
-   chat has to be on screen for Edge to run it. [run]
+6. **No panel when the chat is already alive.** Once the chat page has been
+   opened in a window, Edge keeps its WebContents alive when the panel closes
+   (`edge://copilot-sidepane-overlay/` and the chat page both stayed `live` 3 s
+   after a close). A later question then skips `SendPageContextualPromptToChat`
+   altogether: `edge::AskChatFrame` builds the same `AskCopilotRequest` it builds
+   (the constructor, the prompt string at +0, the type "text" at +0x18, the page
+   text as an `optional<string>` at +0x38, an empty one at +0xd8) and hands it to
+   `IframelessPromptDispatcher::DispatchAskCopilotToDocument(chatFrame, request)`
+   (`0x93e442a`), which raises the `OnAskCopilot` extension event in that
+   document. No panel opens; the hidden page (`visibilityState` hidden) still
+   answers and `ReplyScript` reads it. [run: the panel never appeared, the answer
+   was marked.] The question that finds no chat page opens the panel once, as
+   before; `assistant_chat::ReleasePanel` closes it afterwards with
+   `edge_copilot::utils::CloseUndersideChat(browser, true)` (`0x93d99bf`, what the
+   panel page's own close message runs), and the chat page stays alive for the
+   next one. If Edge refuses the hidden dispatch (the frame is not live or
+   active) the question falls back to the panel.
 
 With the panel's first-use notice ("Navigate the Web with Copilot ... Continue")
 showing, the composer is covered and the question waits behind it: the label says
@@ -186,8 +197,11 @@ question sent while a conversation is open is appended to it.
   "It adds unlimited websites, daily backups and priority support by phone."
   and `? what is the refund policy and when can I reach support` marked a
   sentence in one paragraph and a whole other paragraph; the panel closed
-  itself afterwards. Not run: a panel that was already open before the
-  question (it must stay open), and a page long enough for several prompts.
+  itself afterwards. With the chat page already alive and the panel closed, the
+  same questions were answered with the panel never opening (a screenshot five
+  seconds in showed the page alone; the highlights followed). Not run: a panel
+  that was already open before the question (it must stay open), and a page
+  long enough for several prompts.
 - **Copilot** [run, anonymous InPrivate profile, earlier]: `copilot.com` now answers a
   signed-out profile with a sign-in page; the driver found no box, said
   "Needs you" and showed the page (screenshot). **A real Copilot answer was
