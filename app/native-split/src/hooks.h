@@ -20,7 +20,6 @@
 #include "dividers.h"
 #include "tabrows.h"
 #include "tab_shape.h"
-#include "active_tabs.h"
 #include "drag.h"
 #include "grip.h"
 #include "state.h"
@@ -492,20 +491,10 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
 using UpdateForeground_t = void(__fastcall*)(void*);
 inline constinit UpdateForeground_t o_update_foreground = nullptr;
 inline void __fastcall h_update_foreground(void* tab) {
-  using IsActive_t = bool(__fastcall*)(void*);
   void* const outerTab = g_foregroundTab;
   const bool wasOuterActive = g_isForegroundTabActive;
   g_foregroundTab = tab;
-  g_isForegroundTabActive =
-      reinterpret_cast<IsActive_t>(edge::At(edge155::rva::Tab_IsActive))(tab);
-  // The spine finds a horizontal strip's active tab among these.
-  void* const tabView =
-      static_cast<uint8_t*>(tab) + edge155::off::EDGETAB_view_offset;
-  const bool isActiveHorizontalTab =
-      g_isForegroundTabActive && !edge::IsVerticalTabView(tabView);
-  if (isActiveHorizontalTab) {
-    active_tabs::Note(tabView);
-  }
+  g_isForegroundTabActive = edge::IsTabObjectActive(tab);
   o_update_foreground(tab);
   g_foregroundTab = outerTab;
   g_isForegroundTabActive = wasOuterActive;

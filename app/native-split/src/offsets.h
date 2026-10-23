@@ -651,9 +651,11 @@ inline constexpr uintptr_t CopilotButton_vftables[] = {
     0x113635e8, 0x11363600, 0x11363630, 0x113636e0, 0x11363700, 0x11363740,
     0x11363758, 0x11363770, 0x113637a0, 0x113637b8, 0x115b6220, 0x1173fd10};
 
-// The vftable of a tab row in the vertical tab list (found by tabrows::Dump: one
-// per tab, children of the list's container, in the model's order).
-inline constexpr uintptr_t VerticalTab_vftable = 0x1166fd70;
+// The vftable of an EdgeTab's view. One class serves both layouts: a row of the
+// vertical tab list and a tab of the horizontal strip share it (found by
+// tabrows::Dump), so only the tab's layout mode (EDGETAB_layout_controller)
+// tells them apart.
+inline constexpr uintptr_t EdgeTab_vftable = 0x1166fd70;
 // EdgeCopilotDropdownMenuButton: the chevron beside the chat pill (a sibling in
 // EdgeCopilotToolbarSplitButtonContainer). Its constructor sets both its tooltip
 // and its accessible name from the formatted string "$1 menu"; the vftables
@@ -954,6 +956,14 @@ inline constexpr size_t View_size = 0x338;
 // starts EDGETAB_view_offset further on.
 inline constexpr uintptr_t STYLEVIEWS_tab = 0x10;
 inline constexpr uintptr_t EDGETAB_view_offset = 0x18;
+// EdgeTab + 0x548: the tab's layout controller. Its virtual at LAYOUT_mode_slot
+// returns the tab layout mode; EdgeTabStyleViews::UseVerticalStyle (rva
+// 0x1140320) calls the tab vertical for modes LAYOUT_vertical_first through
+// LAYOUT_vertical_first + LAYOUT_vertical_count - 1.
+inline constexpr uintptr_t EDGETAB_layout_controller = 0x548;
+inline constexpr size_t LAYOUT_mode_slot = 7;
+inline constexpr uint32_t LAYOUT_vertical_first = 2;
+inline constexpr uint32_t LAYOUT_vertical_count = 3;
 // The deleting destructor in a view's vtable: (view, 1) destroys and frees it
 // (views::View::AddChildView deletes a view it cannot add through this slot).
 inline constexpr uintptr_t VIEW_vtbl_DeletingDestructor = 0x48;

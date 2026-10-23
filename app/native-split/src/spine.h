@@ -15,7 +15,6 @@
 #include <windows.h>
 #include <atomic>
 #include <vector>
-#include "active_tabs.h"
 #include "edge.h"
 #include "geom.h"
 #include "log.h"
@@ -131,6 +130,10 @@ inline void Attach(WindowSet& set, void* anyView, void* draggedTab, void* tab) {
   }
   edge::AddChildViewAt(tab, set.stripe, edge::ViewChildCount(tab));
   set.host = tab;
+  const Rect bounds = edge::ViewBounds(tab);
+  Log("[spine] on a %s tab %p, %d,%d %dx%d",
+      edge::IsHorizontalTabView(tab) ? "horizontal" : "vertical", tab, bounds.x,
+      bounds.y, bounds.width, bounds.height);
 }
 
 // Size and colour the stripe for `tab`, in its own coordinates.
@@ -167,21 +170,34 @@ inline void BeginTick() {
   });
 }
 
-// One browser window's step of a tick: put the spine on its selected vertical
-// tab, or take it off. While a tab of this window is dragged, `draggedTab` is
+// A window's selected tab view and which tab layout it is in. Edge keeps the
+// vertical list's views while the horizontal strip is in use, so a live
+// horizontal active tab decides first; the vertical list is the fallback.
+struct SelectedTab {
+  void* view = nullptr;
+  bool isHorizontal = false;
+};
+inline SelectedTab FindSelectedTab(void* tsm, void* anyView) {
+  void* horizontal = vtab_views::ActiveHorizontalTab(edge::ViewRoot(anyView));
+  if (horizontal) {
+    return {horizontal, true};
+  }
+  return {vtab_views::SelectedTab(tsm, anyView), false};
+}
+
+// One browser window's step of a tick: put the spine on its selected tab (the
+// vertical list's or the horizontal strip's), or take it off. While a tab of this window is dragged, `draggedTab` is
 // its view, and the spine rides it instead of the selected tab's row, which
 // stays in the list.
 inline void TickWindow(HWND browser, void* draggedTab) {
   void* tsm = edge::TsmForWindow(browser);
   const bool isWindowShown = IsWindowVisible(browser) && !IsIconic(browser);
   void* anyView = edge::McvForWindow(browser);
-  void* selectedTab = tsm && anyView && isWindowShown
-                          ? vtab_views::SelectedTab(tsm, anyView)
-                          : nullptr;
-  const bool isHorizontalStrip = anyView && isWindowShown && !selectedTab;
-  if (isHorizontalStrip) {
-    selectedTab = active_tabs::NewestIn(edge::ViewRoot(anyView));
-  }
+  const SelectedTab selected = tsm && anyView && isWindowShown
+                                   ? FindSelectedTab(tsm, anyView)
+                                   : SelectedTab{};
+  void* selectedTab = selected.view;
+  const bool isHorizontalStrip = selected.isHorizontal;
   void* tab = draggedTab && selectedTab ? draggedTab : selectedTab;
   const float scale =
       static_cast<float>(GetDpiForWindow(browser)) / USER_DEFAULT_SCREEN_DPI;

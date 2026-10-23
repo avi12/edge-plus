@@ -56,6 +56,27 @@ inline void* SelectedTab(void* tsm, void* anyView) {
   return search.found;
 }
 
+// The horizontal strip's active tab view under `view`, or null (also when the
+// strip has no tabs, as with the vertical list in use).
+inline void* ActiveHorizontalTab(void* view, int depth = 0) {
+  if (depth > kMaxDepth) {
+    return nullptr;
+  }
+  if (edge::IsHorizontalTabView(view)) {
+    const bool isActive = edge::IsTabObjectActive(
+        static_cast<uint8_t*>(view) - edge155::off::EDGETAB_view_offset);
+    return isActive ? view : nullptr;
+  }
+  const size_t count = edge::ViewChildCount(view);
+  for (size_t i = 0; i < count; i++) {
+    void* found = ActiveHorizontalTab(edge::ViewChildAt(view, i), depth + 1);
+    if (found) {
+      return found;
+    }
+  }
+  return nullptr;
+}
+
 // What a walk looks for: the tab row whose top is nearest a screen y (DIPs).
 struct NearestSearch {
   int screenY = 0;

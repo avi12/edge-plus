@@ -2107,8 +2107,39 @@ inline StyledTab TabOfStyleViews(void* styleViews) {
           static_cast<uint8_t*>(object) + edge155::off::EDGETAB_view_offset};
 }
 
+inline bool IsEdgeTabView(void* view) {
+  return VtableRva(view) == edge155::rva::EdgeTab_vftable;
+}
+
+// Whether an EdgeTab view is laid out as a row of the vertical tab list, as
+// EdgeTabStyleViews::UseVerticalStyle asks the tab's layout controller.
 inline bool IsVerticalTabView(void* view) {
-  return VtableRva(view) == edge155::rva::VerticalTab_vftable;
+  if (!IsEdgeTabView(view)) {
+    return false;
+  }
+  void* const controller = Field<void*>(
+      static_cast<uint8_t*>(view) - edge155::off::EDGETAB_view_offset,
+      edge155::off::EDGETAB_layout_controller);
+  if (!controller) {
+    return false;
+  }
+  using Mode_t = uint32_t(__fastcall*)(void*);
+  void* const* const vtable = *static_cast<void***>(controller);
+  const uint32_t mode = reinterpret_cast<Mode_t>(
+      vtable[edge155::off::LAYOUT_mode_slot])(controller);
+  return mode - edge155::off::LAYOUT_vertical_first <
+         edge155::off::LAYOUT_vertical_count;
+}
+
+inline bool IsHorizontalTabView(void* view) {
+  return IsEdgeTabView(view) && !IsVerticalTabView(view);
+}
+
+// Whether an EdgeTab object (not its view) is the strip's active tab.
+inline bool IsTabObjectActive(void* tabObject) {
+  using IsActive_t = bool(__fastcall*)(void*);
+  return reinterpret_cast<IsActive_t>(At(edge155::rva::Tab_IsActive))(
+      tabObject);
 }
 
 inline std::vector<Rect> SplitSiblingBounds(void* tab) {
@@ -2122,8 +2153,7 @@ inline std::vector<Rect> SplitSiblingBounds(void* tab) {
   const size_t count = ViewChildCount(row);
   for (size_t i = 0; i < count; i++) {
     void* child = ViewChildAt(row, i);
-    const bool isOtherTab =
-        child != tab && VtableRva(child) == edge155::rva::VerticalTab_vftable;
+    const bool isOtherTab = child != tab && IsEdgeTabView(child);
     if (isOtherTab) {
       siblings.push_back(ViewBounds(child));
     }
