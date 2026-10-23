@@ -571,13 +571,6 @@ inline constexpr uintptr_t
     EdgeTabStyleViews_CalculateTargetColors_active_return = 0x28a924d;
 inline constexpr uintptr_t
     EdgeTabStyleViews_CalculateTargetColors_inactive_return = 0x28a925f;
-// SkColor EdgeTabStyleViews::EdgeGetTabBackgroundColor(this, TabActive active,
-// BrowserFrameActiveState frameState): the fill of a horizontal tab (a vertical
-// one reads the theme pack's VTABCOLOR ids instead). `active` is 1 for the
-// active tab's fill, 0 for an inactive one's. `this + 0x10` is the EdgeTab, whose
-// view is at EDGETAB_view_offset.
-inline constexpr uintptr_t EdgeTabStyleViews_EdgeGetTabBackgroundColor =
-    0x28a9450;
 // EdgeTabStyleViews::PaintTab's cold part: after a SaveLayerAlpha at the tab's
 // hover (throb) value it paints the tab as active (PaintTabBackground, active =
 // true); 0x4716481 is that call's return address.
@@ -876,6 +869,12 @@ inline constexpr int VTABCOLOR_selected_foreground_inactive = 0x2c;
 // above). A tab's title and close colour: TabStyle::GetTabForegroundColor picks
 // one of four from a [state][window focus] table at rva 0x12631428; a vertical
 // tab always uses the active-state pair, so every title shares it.
+// The active horizontal tab's fill, for a focused and an unfocused window:
+// EdgeTabStyle::GetTabBackgroundColor (rva 0x28a9600) reads 0xac5 + 2 * !focused
+// for the active tab (an inactive tab reads 0xac8 / 0xac9). A vertical tab
+// reads the theme pack's VTABCOLOR ids instead.
+inline constexpr int UICOLOR_active_tab_background_focused = 0xac5;
+inline constexpr int UICOLOR_active_tab_background_unfocused = 0xac7;
 inline constexpr int UICOLOR_tab_foreground_first = 0xad6;
 inline constexpr int UICOLOR_tab_foreground_last = 0xad9;
 // The audio/alert icon of the ACTIVE tab: tabs::GetAlertIndicatorColor (rva

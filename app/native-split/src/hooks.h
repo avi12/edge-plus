@@ -461,6 +461,21 @@ inline bool IsActiveTabAlert(int colorId) {
 using GetUiColor_t = uint32_t(__fastcall*)(void*, int);
 inline constinit GetUiColor_t o_getuicolor = nullptr;
 inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
+  // A horizontal active tab takes the vertical one's bright fill. An unfocused
+  // window dims it toward the fill Edge would have used, as the vertical tab
+  // dims toward its rail.
+  const bool isActiveTabFill =
+      theme::g_isActive &&
+      (colorId == edge155::off::UICOLOR_active_tab_background_focused ||
+       colorId == edge155::off::UICOLOR_active_tab_background_unfocused);
+  if (isActiveTabFill) {
+    const bool isFocused =
+        colorId == edge155::off::UICOLOR_active_tab_background_focused;
+    return isFocused ? kVTabSelectedFill
+                     : theme_tone::Blend(kVTabSelectedFill,
+                                         o_getuicolor(provider, colorId),
+                                         kVTabInactiveRailPercent);
+  }
   const bool isInkable = theme::g_isActive && g_isLabelLight;
   if (isInkable) {
     const bool isTabForeground =
@@ -483,47 +498,17 @@ inline void __fastcall h_update_foreground(void* tab) {
   g_foregroundTab = tab;
   g_isForegroundTabActive =
       reinterpret_cast<IsActive_t>(edge::At(edge155::rva::Tab_IsActive))(tab);
+  // The spine finds a horizontal strip's active tab among these.
+  void* const tabView =
+      static_cast<uint8_t*>(tab) + edge155::off::EDGETAB_view_offset;
+  const bool isActiveHorizontalTab =
+      g_isForegroundTabActive && !edge::IsVerticalTabView(tabView);
+  if (isActiveHorizontalTab) {
+    active_tabs::Note(tabView);
+  }
   o_update_foreground(tab);
   g_foregroundTab = outerTab;
   g_isForegroundTabActive = wasOuterActive;
-}
-
-// EdgeTabStyleViews::EdgeGetTabBackgroundColor: a horizontal active tab takes
-// the same bright fill as the vertical one, so both tab layouts read alike. The
-// ink for it is h_getuicolor's, switched by the same g_isLabelLight.
-// The TabActive value of the active tab's fill (PaintTabBackgroundFill passes
-// 0 for an active tab and 2 for an inactive one).
-inline constexpr int kTabActiveState = 0;
-using GetTabBackground_t = uint32_t(__fastcall*)(void*, int, int);
-inline constinit GetTabBackground_t o_get_tab_background = nullptr;
-inline uint32_t __fastcall h_get_tab_background(void* styleViews, int tabActive,
-                                                int frameState) {
-  const bool isThemedActive = theme::g_isActive && tabActive == kTabActiveState;
-  if (!isThemedActive) {
-    return o_get_tab_background(styleViews, tabActive, frameState);
-  }
-  const edge::StyledTab tab = edge::TabOfStyleViews(styleViews);
-  const bool isHorizontalTab = tab.view && !edge::IsVerticalTabView(tab.view);
-  if (!isHorizontalTab) {
-    return o_get_tab_background(styleViews, tabActive, frameState);
-  }
-  // The hover blend asks for the active fill on every tab, so only the tab that
-  // really is active is remembered.
-  const bool isTabActive = reinterpret_cast<bool(__fastcall*)(void*)>(
-      edge::At(edge155::rva::Tab_IsActive))(tab.object);
-  if (isTabActive) {
-    active_tabs::Note(tab.view);
-  }
-  const bool isFrameActive = frameState != 0;
-  if (isFrameActive) {
-    return kVTabSelectedFill;
-  }
-  // An unfocused window dims the fill toward the tab's own, as the vertical tab
-  // does toward its rail.
-  return theme_tone::Blend(
-      kVTabSelectedFill,
-      o_get_tab_background(styleViews, tabActive, frameState),
-      kVTabInactiveRailPercent);
 }
 
 template <class T>
@@ -688,9 +673,6 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   Install(edge155::rva::EdgeTab_UpdateForegroundColors,
           reinterpret_cast<void*>(h_update_foreground), &o_update_foreground,
           "EdgeTab::UpdateForegroundColors (selected-tab ink)");
-  Install(edge155::rva::EdgeTabStyleViews_EdgeGetTabBackgroundColor,
-          reinterpret_cast<void*>(h_get_tab_background), &o_get_tab_background,
-          "EdgeTabStyleViews::EdgeGetTabBackgroundColor (horizontal fill)");
   // Asking to handle links: pass-through until the feature is switched on
   // (protocol_handlers.h).
   Install(edge155::rva::ContentSettingRPHBubbleModel_CommitChanges,
