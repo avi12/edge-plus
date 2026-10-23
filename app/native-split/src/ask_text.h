@@ -61,7 +61,7 @@ struct PageParagraphs {
     return page;
   }
   page.isOk = true;
-  page.isCut = fields[1] == "1";
+  page.isCut = web_text::IsTrueField(fields[1]);
   const std::string& joined = fields[2];
   if (!joined.empty()) {
     page.texts = web_text::Split(joined, kParagraphSeparator);

@@ -245,6 +245,12 @@ inline bool IsFlagToggleId(int toggleId) {
   return FlagOfToggleId(toggleId) != nullptr;
 }
 
+inline bool IsOurToggleId(int toggleId) {
+  return toggleId == edge155::off::FINDTOGGLE_id_regexp ||
+         toggleId == edge155::off::FINDTOGGLE_id_ask ||
+         IsFlagToggleId(toggleId);
+}
+
 inline find_flags::FlagSet FlagsOn(void* findBarView) {
   find_flags::FlagSet set;
   for (const find_flags::FlagInfo& info : find_flags::kFlags) {
@@ -1142,10 +1148,7 @@ inline void __fastcall h_toggle_options(void* findBarView, void* argument) {
 // One of the switches was clicked; Edge's three go on as Edge has them.
 inline void __fastcall h_button_toggled(void* toggle) {
   const int toggleId = edge::FindToggleId(toggle);
-  const bool isOurs =
-      g_isEnabled &&
-      (toggleId == edge155::off::FINDTOGGLE_id_regexp ||
-       toggleId == edge155::off::FINDTOGGLE_id_ask || IsFlagToggleId(toggleId));
+  const bool isOurs = g_isEnabled && IsOurToggleId(toggleId);
   void* findBarView = isOurs ? edge::FindBarViewOfToggle(toggle) : nullptr;
   if (!findBarView) {
     o_button_toggled(toggle);
@@ -1183,10 +1186,7 @@ inline void __fastcall h_button_toggled(void* toggle) {
 // slashes still showed. Ours keep the state that lives in the switch.
 inline void __fastcall h_active_contents_changed(void* toggle) {
   const int toggleId = edge::FindToggleId(toggle);
-  const bool isOurs =
-      g_isEnabled &&
-      (toggleId == edge155::off::FINDTOGGLE_id_regexp ||
-       toggleId == edge155::off::FINDTOGGLE_id_ask || IsFlagToggleId(toggleId));
+  const bool isOurs = g_isEnabled && IsOurToggleId(toggleId);
   if (!isOurs) {
     o_active_contents_changed(toggle);
   }

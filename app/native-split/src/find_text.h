@@ -390,7 +390,7 @@ inline constexpr size_t kMaxCountDigits = 9;
   }
   result.isOk = true;
   result.count = std::stoi(fields[1]);
-  result.isCapped = fields[2] == "1";
+  result.isCapped = web_text::IsTrueField(fields[2]);
   result.current = std::stoi(fields[3]);
   return result;
 }

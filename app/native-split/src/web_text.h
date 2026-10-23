@@ -88,6 +88,14 @@ inline constexpr char kErrorTag[] = "err";
 inline constexpr char kUnreadableAnswer[] =
     "The page gave an answer Edge could not read.";
 
+// A yes/no field of an answer.
+inline constexpr char kTrueField[] = "1";
+inline constexpr char kFalseField[] = "0";
+
+[[nodiscard]] inline bool IsTrueField(std::string_view field) {
+  return field == kTrueField;
+}
+
 // An empty text is one empty piece.
 [[nodiscard]] inline std::vector<std::string> Split(std::string_view text,
                                                     char separator) {
@@ -122,6 +130,12 @@ inline constexpr char kUnreadableAnswer[] =
   }
   return fields + "].join(" + JsStringLiteral(std::string(1, kFieldSeparator)) +
          ")";
+}
+
+// The field expression of a JavaScript boolean variable.
+[[nodiscard]] inline std::string JsBoolField(std::string_view variable) {
+  return std::string(variable) + " ? " + JsStringLiteral(kTrueField) + " : " +
+         JsStringLiteral(kFalseField);
 }
 
 [[nodiscard]] inline std::string JsErrorAnswerFrom(

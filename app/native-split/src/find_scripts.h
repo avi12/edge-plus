@@ -18,6 +18,13 @@ inline constexpr int kMaxSearchChars = 4000000;
 
 inline constexpr char kMatchHighlight[] = "fixedge-find";
 inline constexpr char kCurrentHighlight[] = "fixedge-find-current";
+inline constexpr char kMatchColor[] = "#ffe14d";
+inline constexpr char kCurrentColor[] = "#ff8a1f";
+inline constexpr char kPdfContentType[] = "application/pdf";
+
+// Pixels kept clear above and below the current match when it scrolls into view.
+inline constexpr int kScrollTopMargin = 110;
+inline constexpr int kScrollBottomMargin = 40;
 
 // Defined once per page. `collect` walks the visible text into one string (a
 // newline between blocks, whitespace squeezed as the page shows it) with a map
@@ -34,8 +41,12 @@ inline std::string Helpers() {
   script += kCurrentHighlight;
   script += R"JS(";
     var skipTags = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEMPLATE: 1 };
-    var css = "::highlight(" + matchName + "){background-color:#ffe14d;color:#000}" +
-              "::highlight(" + currentName + "){background-color:#ff8a1f;color:#000}";
+    var css = "::highlight(" + matchName + "){background-color:)JS";
+  script += kMatchColor;
+  script += R"JS(;color:#000}" +
+              "::highlight(" + currentName + "){background-color:)JS";
+  script += kCurrentColor;
+  script += R"JS(;color:#000}";
 
     fx.ensureStyle = function () {
       if (fx.sheet || fx.styleElement) {
@@ -90,8 +101,11 @@ inline std::string Helpers() {
       current.priority = 1;
       CSS.highlights.set(currentName, current);
       var box = range.getBoundingClientRect();
-      var margin = 110;
-      var isClear = box.top >= margin && box.bottom <= window.innerHeight - 40;
+      var isClear = box.top >= )JS";
+  script += std::to_string(kScrollTopMargin);
+  script += R"JS( && box.bottom <= window.innerHeight - )JS";
+  script += std::to_string(kScrollBottomMargin);
+  script += R"JS(;
       if (!isClear) {
         var node = range.startContainer;
         var element = node.nodeType === 1 ? node : node.parentElement;
@@ -256,7 +270,7 @@ inline std::string Wrap(const std::string& body) {
 inline std::string ShownAnswer() {
   return "return " +
          web_text::JsOkAnswer({"String(fx.ranges.length)",
-                               R"JS(isCapped ? "1" : "0")JS",
+                               web_text::JsBoolField("isCapped"),
                                "String(current)"}) +
          ";";
 }
@@ -357,7 +371,9 @@ inline std::string ClearScript() {
 // marked later.
 inline std::string ReadParagraphsScript() {
   std::string body = R"JS(
-    if (document.contentType === "application/pdf") {
+    if (document.contentType === )JS";
+  body += web_text::JsStringLiteral(kPdfContentType);
+  body += R"JS() {
       return )JS";
   body += web_text::JsErrorAnswer("PDF pages cannot be read yet.");
   body += R"JS(;
@@ -390,8 +406,8 @@ inline std::string ReadParagraphsScript() {
     return )JS";
   const std::string paragraphSeparator =
       web_text::JsStringLiteral(std::string(1, ask_text::kParagraphSeparator));
-  body += web_text::JsOkAnswer(
-      {R"JS(isCut ? "1" : "0")JS", "texts.join(" + paragraphSeparator + ")"});
+  body += web_text::JsOkAnswer({web_text::JsBoolField("isCut"),
+                                "texts.join(" + paragraphSeparator + ")"});
   body += ";";
   return Wrap(body);
 }
