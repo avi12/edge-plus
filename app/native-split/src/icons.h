@@ -102,7 +102,29 @@ inline const VectorIcon* Grip() {
   return icon;
 }
 
-// Only the commands Edge's arrow icon uses; -1 for any other.
+// R_ARC_TO's arguments, in order.
+enum class ArcArgument : size_t {
+  kRadiusX,
+  kRadiusY,
+  kRotation,
+  kIsLargeArc,
+  kIsSweep,
+  kDeltaX,
+  kDeltaY,
+  kCount,
+};
+inline constexpr size_t kArcArgumentCount =
+    static_cast<size_t>(ArcArgument::kCount);
+inline constexpr size_t kArcLeadingArguments =
+    static_cast<size_t>(ArcArgument::kDeltaX);
+
+inline constexpr size_t ArcArgumentIndex(ArcArgument argument) noexcept {
+  return static_cast<size_t>(argument);
+}
+
+inline constexpr int kUnknownArgumentCount = -1;
+
+// Only the commands Edge's arrow icon uses.
 inline constexpr int ArgumentCount(int command) noexcept {
   switch (command) {
     case edge155::off::ICON_NEW_PATH:
@@ -116,9 +138,9 @@ inline constexpr int ArgumentCount(int command) noexcept {
     case edge155::off::ICON_R_LINE_TO:
       return 2;
     case edge155::off::ICON_R_ARC_TO:
-      return 7;
+      return static_cast<int>(kArcArgumentCount);
     default:
-      return -1;
+      return kUnknownArgumentCount;
   }
 }
 
@@ -151,7 +173,7 @@ inline const VectorIcon* QuarterTurn(const VectorIcon* source,
     const int command = static_cast<int>(elements[i]);
     const int argumentCount = ArgumentCount(command);
     const bool isKnownCommand =
-        argumentCount >= 0 &&
+        argumentCount != kUnknownArgumentCount &&
         i + static_cast<size_t>(argumentCount) < representation.pathSize;
     if (!isKnownCommand) {
       return nullptr;
@@ -191,15 +213,17 @@ inline const VectorIcon* QuarterTurn(const VectorIcon* source,
         break;
       }
       case edge155::off::ICON_R_ARC_TO: {
-        const float deltaX = ArgumentOf(arguments[5]);
-        const float deltaY = ArgumentOf(arguments[6]);
+        const float deltaX =
+            ArgumentOf(arguments[ArcArgumentIndex(ArcArgument::kDeltaX)]);
+        const float deltaY =
+            ArgumentOf(arguments[ArcArgumentIndex(ArcArgument::kDeltaY)]);
         currentX += deltaX;
         currentY += deltaY;
         float turnedX = 0.f;
         float turnedY = 0.f;
         turnedDelta(deltaX, deltaY, &turnedX, &turnedY);
         out.push_back(elements[i]);
-        out.insert(out.end(), arguments, arguments + 5);  // radii and flags
+        out.insert(out.end(), arguments, arguments + kArcLeadingArguments);
         out.push_back(ArgumentElement(turnedX));
         out.push_back(ArgumentElement(turnedY));
         break;

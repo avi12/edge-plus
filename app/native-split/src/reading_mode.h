@@ -24,6 +24,14 @@ inline constexpr char kReadingViewPrefix[] = "read://";
 // Often enough that the switch is in the flyout as it opens.
 inline constexpr UINT kPollIntervalMs = 400;
 
+// The page script's answer: ok, then the light and the dark pick.
+enum class PickField : size_t {
+  kTag,
+  kLight,
+  kDark,
+  kCount,
+};
+
 inline constinit bool g_isActive = false;
 inline constinit reading_themes::Choices g_choices{};
 
@@ -90,12 +98,15 @@ inline void OnAnswer(void* browserContext, const edge::ScriptResult& result) {
     return;
   }
   const std::vector<std::string> fields = web_text::SplitFields(result.text);
-  constexpr size_t kPickFieldCount = 3;  // ok, light, dark
-  const bool isPick =
-      fields.size() == kPickFieldCount && fields[0] == web_text::kOkTag;
+  const auto field = [&](PickField which) -> const std::string& {
+    return fields[static_cast<size_t>(which)];
+  };
+  const bool isPick = fields.size() == static_cast<size_t>(PickField::kCount) &&
+                      field(PickField::kTag) == web_text::kOkTag;
   reading_themes::Choices picked;
-  const bool isValid = isPick && reading_themes::ChoicesFromFields(
-                                     fields[1], fields[2], &picked);
+  const bool isValid =
+      isPick && reading_themes::ChoicesFromFields(
+                    field(PickField::kLight), field(PickField::kDark), &picked);
   if (!isValid || picked == g_choices) {
     return;
   }

@@ -19,6 +19,21 @@ namespace fixedge::theme_follow {
 
 inline constinit bool g_isActive = false;
 
+// Blink's PreferredColorScheme; the scrollbar scheme is the other way round.
+enum class BlinkScheme : int32_t {
+  kDark = 0,
+  kLight = 1,
+};
+
+[[nodiscard]] constexpr int32_t PageSchemeOf(bool isDark) noexcept {
+  return static_cast<int32_t>(isDark ? BlinkScheme::kDark
+                                     : BlinkScheme::kLight);
+}
+
+[[nodiscard]] constexpr int32_t ScrollbarSchemeOf(bool isDark) noexcept {
+  return PageSchemeOf(!isDark);
+}
+
 // A page keeps the colors it loaded with, so the first computation that sees a
 // new tone asks for a redraw (control.h), at most once per cooldown so a page
 // that cannot take the tone is not reloaded forever.
@@ -74,12 +89,10 @@ inline void* __fastcall h_preferred(void* out, const void* siteInfo,
     g_lastRedrawAskedAt = GetTickCount64();
     channel::Post(channel::CodeOf(channel::Command::kRedrawFollowedPages));
   }
-  // Blink's PreferredColorScheme is 0 for dark and 1 for light; the scrollbar
-  // scheme is the other way round.
   edge::Field<int32_t>(out, edge155::off::PREFERREDSCHEME_color_scheme) =
-      isDark ? 0 : 1;
+      PageSchemeOf(isDark);
   edge::Field<int32_t>(out, edge155::off::PREFERREDSCHEME_scrollbar_scheme) =
-      isDark ? 1 : 0;
+      ScrollbarSchemeOf(isDark);
   return result;
 }
 

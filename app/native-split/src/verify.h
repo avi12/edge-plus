@@ -54,26 +54,49 @@ inline constexpr wchar_t kFixedFileInfoBlock[] = L"\\";
          revision == edge155::kVersionRevision;
 }
 
+// The x64 bytes the checks below look for.
+enum class Opcode : uint8_t {
+  kRexPrefix = 0x40,
+  kRexPrefixB = 0x41,
+  kRexPrefixW = 0x48,
+  kRexPrefixWR = 0x4c,
+  kPushRbx = 0x53,
+  kPushRbp = 0x55,
+  kPushRsi = 0x56,
+  kPushRdi = 0x57,
+  kMovLoad = 0x8b,
+  kXor = 0x33,
+  kJmpRel32 = 0xe9,
+  kCallGroup = 0xff,
+  kTwoByteEscape = 0x0f,
+  kJaeRel32Second = 0x83,
+  kJneRel32Second = 0x85,
+};
+
+[[nodiscard]] constexpr uint8_t ByteOf(Opcode opcode) noexcept {
+  return static_cast<uint8_t>(opcode);
+}
+
+// The `2` in `cmp r8d, 2`.
+inline constexpr uint8_t kStockIndexCap = 2;
+
 // A plausible x64 prologue byte: a cheap guard against a stale RVA landing on
 // data or padding.
 [[nodiscard]] inline bool LooksLikeCode(uintptr_t rva) {
   const uint8_t firstByte = *reinterpret_cast<uint8_t*>(edge::At(rva));
-  switch (firstByte) {
-    // REX prefixes
-    case 0x40:
-    case 0x41:
-    case 0x48:
-    case 0x4c:
-    // push rbx / rbp / rsi / rdi
-    case 0x53:
-    case 0x55:
-    case 0x56:
-    case 0x57:
-    // mov / xor / jmp / call-group
-    case 0x8b:
-    case 0x33:
-    case 0xe9:
-    case 0xff:
+  switch (static_cast<Opcode>(firstByte)) {
+    case Opcode::kRexPrefix:
+    case Opcode::kRexPrefixB:
+    case Opcode::kRexPrefixW:
+    case Opcode::kRexPrefixWR:
+    case Opcode::kPushRbx:
+    case Opcode::kPushRbp:
+    case Opcode::kPushRsi:
+    case Opcode::kPushRdi:
+    case Opcode::kMovLoad:
+    case Opcode::kXor:
+    case Opcode::kJmpRel32:
+    case Opcode::kCallGroup:
       return true;
     default:
       return false;
@@ -98,10 +121,12 @@ inline constexpr wchar_t kFixedFileInfoBlock[] = L"\\";
 // unloads (hooks.h), so a DLL loaded again (hot-reload) finds them already made:
 // the lifted cap, or the NOPs, count as holding the instruction too.
 [[nodiscard]] inline bool PatchSitesHoldTheirInstructions() {
-  constexpr uint8_t kIndexCapImmediate[] = {0x02};
+  constexpr uint8_t kIndexCapImmediate[] = {kStockIndexCap};
   constexpr uint8_t kLiftedCapImmediate[] = {edge::kLiftedIndexCap};
-  constexpr uint8_t kJneRel32[] = {0x0f, 0x85};
-  constexpr uint8_t kJaeRel32[] = {0x0f, 0x83};
+  constexpr uint8_t kJneRel32[] = {ByteOf(Opcode::kTwoByteEscape),
+                                   ByteOf(Opcode::kJneRel32Second)};
+  constexpr uint8_t kJaeRel32[] = {ByteOf(Opcode::kTwoByteEscape),
+                                   ByteOf(Opcode::kJaeRel32Second)};
   constexpr uint8_t kNopedJump[] = {edge::kNopOpcode, edge::kNopOpcode};
   const bool isGuardIntact =
       BytesAre(edge155::rva::SetWebContentsAtIndex_guard_imm,

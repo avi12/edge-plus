@@ -31,6 +31,7 @@ namespace fixedge::hooks {
 // offset; see offsets.h).
 inline constexpr size_t kCheckJumpLength = 6;
 using edge::kLiftedIndexCap;
+inline constexpr int kDoubleClickCount = 2;
 
 // MultiContentsView::SetWebContentsAtIndex — the feeder's one call. Its index<2
 // guard is lifted at install (the safety patches in InstallAll).
@@ -81,7 +82,10 @@ inline void* __fastcall h_calc(void* self, void* out, void* sizeBounds) {
   // On every pass, native too, so a resize snaps.
   const bool isResized = isBounded && anim::NoteHost(mcv, width, height);
   const bool isNativeLayout =
-      !SplitActive() || edge::McvCount(mcv) <= 2 || !isBounded;
+      !SplitActive() ||
+      edge::McvCount(mcv) <=
+          static_cast<size_t>(dividers::kStockContainerCount) ||
+      !isBounded;
   if (isNativeLayout) {
     return o_calc(self, out, sizeBounds);
   }
@@ -97,7 +101,7 @@ using SetActive_t = void(__fastcall*)(void*, int);
 inline constinit SetActive_t o_set_active = nullptr;
 inline void __fastcall h_set_active(void* mcv, int index) {
   const int count = static_cast<int>(edge::McvCount(mcv));
-  const bool isStockSplit = count <= 2;
+  const bool isStockSplit = count <= dividers::kStockContainerCount;
   if (isStockSplit) {
     return o_set_active(mcv, index);
   }
@@ -139,7 +143,7 @@ using SplitUkm_t = void(__fastcall*)(void*, void*);
 inline constinit SplitUkm_t o_split_created_ukm = nullptr;
 inline constinit SplitUkm_t o_split_updated_ukm = nullptr;
 inline bool IsTwoTabSplit(void* tsm, void* splitId) {
-  return edge::SplitMembers(tsm, splitId).Count() == 2;
+  return edge::SplitMembers(tsm, splitId).Count() == tabrows::kPairedMembers;
 }
 inline void __fastcall h_split_created_ukm(void* tsm, void* splitId) {
   if (IsTwoTabSplit(tsm, splitId)) {
@@ -206,7 +210,7 @@ inline void __fastcall h_divider_released(void* view, const void* event) {
   }
   dividers::End();
   // As Edge's own handle does for its two panes.
-  const bool isDoubleClick = edge::MouseClickCount(event) == 2;
+  const bool isDoubleClick = edge::MouseClickCount(event) == kDoubleClickCount;
   if (isDoubleClick) {
     dividers::ResetToEqual(
         mcv, seam, geometry::LiveTree(mcv, edge::McvActiveSplitPanes(mcv)));
