@@ -2,7 +2,6 @@
 // tree (read-only) to ask every tab to paint again, so a change of tab outline
 // (tab_shape.h) shows at once. UI thread only.
 #pragma once
-#include <windows.h>
 #include "edge.h"
 
 namespace fixedge::tab_views {

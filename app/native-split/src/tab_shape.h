@@ -35,8 +35,7 @@ inline constinit GetPath_t o_get_path = nullptr;
 inline void* __fastcall h_get_path(void* styleViews, void* outPath,
                                    int pathType, float scale,
                                    const int* isUnscaled) {
-  g_outlinedTab =
-      g_isSquared ? edge::TabOfStyleViews(styleViews).view : nullptr;
+  g_outlinedTab = g_isSquared ? edge::TabViewOfStyleViews(styleViews) : nullptr;
   void* result = o_get_path(styleViews, outPath, pathType, scale, isUnscaled);
   g_outlinedTab = nullptr;
   return result;
