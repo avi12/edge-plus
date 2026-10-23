@@ -2,6 +2,7 @@
 // matching gfx::Rect's, gfx::Point's and gfx::Size's in-memory layouts so a
 // pointer to one can be handed straight to Edge.
 #pragma once
+#include <bit>
 #include <cstdint>
 
 namespace fixedge {
@@ -20,6 +21,22 @@ struct Point {
   int32_t x = 0;
   int32_t y = 0;
 };
+
+// SkPoint, and SkVector (a corner's radii): two floats {x, y}. Skia takes one by
+// value in a single register, so a call passes it packed (PackPoint).
+struct PointF {
+  float x = 0;
+  float y = 0;
+  bool operator==(const PointF& other) const = default;
+};
+
+[[nodiscard]] inline constexpr uint64_t PackPoint(PointF point) noexcept {
+  return std::bit_cast<uint64_t>(point);
+}
+
+[[nodiscard]] inline constexpr PointF UnpackPoint(uint64_t packed) noexcept {
+  return std::bit_cast<PointF>(packed);
+}
 
 // gfx::Size is two int32s {width, height}.
 struct Size {

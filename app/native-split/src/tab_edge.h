@@ -19,13 +19,8 @@ enum class Side {
   return isRightToLeft ? Side::kRight : Side::kLeft;
 }
 
-// One corner's radius, as Skia takes it (SkVector).
-struct CornerRadius {
-  float x = 0;
-  float y = 0;
-
-  [[nodiscard]] constexpr bool operator==(const CornerRadius&) const = default;
-};
+// One corner's radii, as Skia takes it (SkVector).
+using CornerRadius = PointF;
 
 // The corners of a rounded rectangle, in Skia's order.
 enum class Corner {

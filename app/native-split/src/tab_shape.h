@@ -71,15 +71,9 @@ using ArcTo_t = void*(__fastcall*)(void*, uint64_t, float, int, uint8_t,
                                    uint64_t);
 inline constinit ArcTo_t o_arc_to = nullptr;
 
-// An SkPoint, as arcTo takes it by value in one register.
-struct SkPoint {
-  float x = 0;
-  float y = 0;
-};
-
 // The four arcs of a horizontal tab's outline in EdgeTabStyleViews::GetPath, in
 // the order it draws them (offsets.h), told apart by their return address.
-enum class Corner {
+enum class OutlineArc {
   kNone,
   kLeftFoot,
   kTopLeft,
@@ -88,24 +82,24 @@ enum class Corner {
   kBottomRight
 };
 
-inline Corner CornerOfCaller(const void* caller) {
-  const std::pair<uintptr_t, Corner> corners[] = {
+inline OutlineArc ArcOfCaller(const void* caller) {
+  const std::pair<uintptr_t, OutlineArc> arcs[] = {
       {edge155::rva::EdgeTabStyleViews_GetPath_leftFoot_return,
-       Corner::kLeftFoot},
+       OutlineArc::kLeftFoot},
       {edge155::rva::EdgeTabStyleViews_GetPath_topLeftArc_return,
-       Corner::kTopLeft},
+       OutlineArc::kTopLeft},
       {edge155::rva::EdgeTabStyleViews_GetPath_topRightArc_return,
-       Corner::kTopRight},
+       OutlineArc::kTopRight},
       {edge155::rva::EdgeTabStyleViews_GetPath_rightFoot_return,
-       Corner::kRightFoot},
+       OutlineArc::kRightFoot},
       {edge155::rva::EdgeTabStyleViews_GetPath_bottomRightArc_return,
-       Corner::kBottomRight}};
-  for (const auto& [rva, corner] : corners) {
+       OutlineArc::kBottomRight}};
+  for (const auto& [rva, arc] : arcs) {
     if (caller == edge::At(rva)) {
-      return corner;
+      return arc;
     }
   }
-  return Corner::kNone;
+  return OutlineArc::kNone;
 }
 
 // How far the trailing top corner's cut reaches, as a share of the corner's
@@ -134,39 +128,39 @@ inline float ChamferLeg(float radius) {
 // leading corner is the right one, built from different calls.
 inline void* __fastcall h_arc_to(void* path, uint64_t radii, float rotation,
                                  int arcSize, uint8_t direction, uint64_t end) {
-  const Corner corner =
-      g_outlinedTab ? CornerOfCaller(_ReturnAddress()) : Corner::kNone;
+  const OutlineArc corner =
+      g_outlinedTab ? ArcOfCaller(_ReturnAddress()) : OutlineArc::kNone;
   const bool isHandled =
-      corner != Corner::kNone &&
-      (!edge::IsUiRightToLeft() || corner == Corner::kLeftFoot ||
-       corner == Corner::kRightFoot);
+      corner != OutlineArc::kNone &&
+      (!edge::IsUiRightToLeft() || corner == OutlineArc::kLeftFoot ||
+       corner == OutlineArc::kRightFoot);
   if (!isHandled) {
     return o_arc_to(path, radii, rotation, arcSize, direction, end);
   }
-  const SkPoint radius = std::bit_cast<SkPoint>(radii);
+  const PointF radius = UnpackPoint(radii);
   g_cornerRadius = radius.x;
-  SkPoint target = std::bit_cast<SkPoint>(end);
+  PointF target = UnpackPoint(end);
   switch (corner) {
-    case Corner::kLeftFoot:
+    case OutlineArc::kLeftFoot:
       target.y += radius.y;
       break;
-    case Corner::kTopLeft:
+    case OutlineArc::kTopLeft:
       target.x -= radius.x;
       break;
-    case Corner::kTopRight:
+    case OutlineArc::kTopRight:
       target.y += TrailingCut();
       break;
-    case Corner::kRightFoot:
+    case OutlineArc::kRightFoot:
       target.x -= radius.x;
       break;
-    case Corner::kBottomRight:
+    case OutlineArc::kBottomRight:
       target.x += radius.x;
       break;
-    case Corner::kNone:
+    case OutlineArc::kNone:
       break;
   }
-  return o_arc_to(path, std::bit_cast<uint64_t>(SkPoint{}), rotation, arcSize,
-                  direction, std::bit_cast<uint64_t>(target));
+  return o_arc_to(path, PackPoint(PointF{}), rotation, arcSize, direction,
+                  PackPoint(target));
 }
 
 using LineTo_t = void*(__fastcall*)(void*, uint64_t);
@@ -183,9 +177,9 @@ inline void* __fastcall h_line_to(void* path, uint64_t point) {
   if (!isTopEdge) {
     return o_line_to(path, point);
   }
-  SkPoint target = std::bit_cast<SkPoint>(point);
+  PointF target = UnpackPoint(point);
   target.x -= TrailingCut();
-  return o_line_to(path, std::bit_cast<uint64_t>(target));
+  return o_line_to(path, PackPoint(target));
 }
 
 // How a vertical tab's outline, an SkRRect from h_set_rect_xy, is turned into a
@@ -227,13 +221,13 @@ inline void* __fastcall h_add_rrect(void* path, const void* roundedRect,
                                            : tab_edge::Corner::kUpperLeft;
   const float radius = edge::Field<float>(
       roundedRect,
-      kRRectRadii + static_cast<uintptr_t>(trailingTop) * sizeof(SkPoint));
+      kRRectRadii + static_cast<uintptr_t>(trailingTop) * sizeof(PointF));
   const float leg = ChamferLeg(radius);
   const float trailingX = isLeftToRight ? right : left;
   const float leadingX = isLeftToRight ? left : right;
   const float legX = isLeftToRight ? -leg : leg;
   const auto point = [](float x, float y) {
-    return std::bit_cast<uint64_t>(SkPoint{x, y});
+    return PackPoint(PointF{x, y});
   };
   const auto moveTo =
       reinterpret_cast<MoveTo_t>(edge::At(edge155::rva::SkPath_moveTo));
