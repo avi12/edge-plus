@@ -1,40 +1,26 @@
 using System;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
 
 namespace EdgePlus;
 
-// The panel's one answer to "does Edge+ start with Windows", for both ways it
-// ships. The plain exe writes the per-user Run key (StartupEntry). The Store
-// package cannot: an uninstall would leave that entry behind pointing at a
-// deleted exe, so it switches the startupTask its manifest declares instead,
-// which Windows removes with the package and lists in Task Manager the same
-// way.
+// The plain exe starts through the Run key (StartupEntry). The Store package
+// uses its manifest's startup task instead, because an uninstall would leave a
+// Run entry pointing at a deleted exe.
 internal static class StartWithWindows {
-  // The manifest's desktop:StartupTask TaskId (Package.appxmanifest).
+  // Package.appxmanifest's desktop:StartupTask TaskId.
   private const string PackagedTaskId = "EdgePlusStartup";
 
-  // Whether this process runs from an installed package: only a packaged
-  // process has a Package.Current, and asking an unpackaged one throws.
-  public static bool IsPackaged {
-    get;
-  } = ReadIsPackaged();
-
   public static bool IsEnabled() {
-    if (!IsPackaged) {
+    if (!Packaging.IsPackaged) {
       return StartupEntry.IsEnabled(StartupKeys.User, StartupEntry.Name);
     }
     StartupTaskState state = PackagedTask().State;
     return state is StartupTaskState.Enabled or StartupTaskState.EnabledByPolicy;
   }
 
-  // In a dev build this points boot at the dev executable, which is what a
-  // developer running the panel from source expects. A packaged task the user
-  // switched off in Task Manager stays off: Windows lets only the user turn it
-  // back on there, and IsEnabled then reads it as off.
   public static void Set(bool isOn) {
-    if (IsPackaged) {
+    if (Packaging.IsPackaged) {
       SetPackaged(isOn);
       return;
     }
@@ -47,6 +33,7 @@ internal static class StartWithWindows {
     }
   }
 
+  // Windows lets only the user re-enable a task switched off in Task Manager.
   private static void SetPackaged(bool isOn) {
     StartupTask task = PackagedTask();
     if (!isOn) {
@@ -59,17 +46,8 @@ internal static class StartWithWindows {
     }
   }
 
-  // Awaited off the calling thread: the window's UI thread is an STA, and a
-  // WinRT call must not block a thread it may need to complete on.
+  // Blocking on the UI thread's STA could deadlock the WinRT call, so it runs
+  // on the thread pool.
   private static StartupTask PackagedTask() =>
       Task.Run(() => StartupTask.GetAsync(PackagedTaskId).AsTask()).Result;
-
-  private static bool ReadIsPackaged() {
-    try {
-      _ = Package.Current.Id;
-      return true;
-    } catch (Exception error) when (error is InvalidOperationException or COMException) {
-      return false;
-    }
-  }
 }

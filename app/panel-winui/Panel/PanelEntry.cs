@@ -37,7 +37,7 @@ public static class PanelEntry {
   // the windowless listener, so the Edge update watch runs from sign-in. A
   // packaged panel leaves it alone: it starts through its own startup task.
   private static void MigrateStartupEntry() {
-    if (StartWithWindows.IsPackaged) {
+    if (Packaging.IsPackaged) {
       return;
     }
     if (Environment.ProcessPath is not string executable) {

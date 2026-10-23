@@ -47,12 +47,13 @@
   </PropertyGroup>
 
   <!-- The panel and the tests are their own projects; the SDK's default glob
-       would otherwise pull their sources in. Product and Switches are the two
-       files both sides compile. -->
+       would otherwise pull their sources in. Product, Packaging and Switches
+       are the files both sides compile. -->
   <ItemGroup>
     <Compile Remove="Panel\**;test\**" />
     <None Remove="Panel\**;test\**" />
     <Page Remove="Panel\**;test\**" />
+    <Compile Include="Panel\Platform\Packaging.cs" Link="Shared\Packaging.cs" />
     <Compile Include="Panel\Platform\Product.cs" Link="Shared\Product.cs" />
     <Compile Include="Panel\Platform\Switches.cs" Link="Shared\Switches.cs" />
   </ItemGroup>
