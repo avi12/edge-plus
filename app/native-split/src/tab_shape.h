@@ -12,6 +12,7 @@
 #include <windows.h>
 #include <intrin.h>
 #include <bit>
+#include <utility>
 #include <vector>
 #include "edge.h"
 #include "geom.h"
@@ -75,43 +76,103 @@ struct SkPoint {
   float y = 0;
 };
 
-// SkPath::arcTo, for three of the four calls in GetPath that round a horizontal
-// tab's outline (offsets.h). With no radius an arc is a straight line to its
-// end, so: the feet (the flared tails either side of the tab) end level with
-// the tab's bottom, which makes the sides straight, and the top-left corner is
-// cut at 45 degrees, the chamfer of the skin's cards and buttons. The trailing
-// top corner, by the close button, stays as Edge draws it. Every other caller
-// is Skia's own use, unchanged. In a right-to-left UI the chamfer is left off:
-// its leading corner is the right one, a different call.
+// The four arcs of a horizontal tab's outline in EdgeTabStyleViews::GetPath, in
+// the order it draws them (offsets.h), told apart by their return address.
+enum class Corner {
+  kNone,
+  kLeftFoot,
+  kTopLeft,
+  kTopRight,
+  kRightFoot
+};
+
+inline Corner CornerOfCaller(const void* caller) {
+  const std::pair<uintptr_t, Corner> corners[] = {
+      {edge155::rva::EdgeTabStyleViews_GetPath_leftFoot_return,
+       Corner::kLeftFoot},
+      {edge155::rva::EdgeTabStyleViews_GetPath_topLeftArc_return,
+       Corner::kTopLeft},
+      {edge155::rva::EdgeTabStyleViews_GetPath_topRightArc_return,
+       Corner::kTopRight},
+      {edge155::rva::EdgeTabStyleViews_GetPath_rightFoot_return,
+       Corner::kRightFoot}};
+  for (const auto& [rva, corner] : corners) {
+    if (caller == edge::At(rva)) {
+      return corner;
+    }
+  }
+  return Corner::kNone;
+}
+
+// How far the trailing top corner's cut reaches, as a share of the corner's
+// radius: enough to read as a chamfer, short of the close button beside it.
+inline constexpr float kTrailingCutRatio = 0.75f;
+// The corner radius GetPath is using (the arcs before the top-right one set it).
+inline constinit float g_cornerRadius = 0;
+// The cut at the top-right corner, in the units of the path.
+inline float TrailingCut() {
+  return g_cornerRadius * kTrailingCutRatio;
+}
+
+// SkPath::arcTo, for the calls in GetPath that round a horizontal tab's outline.
+// With no radius an arc is a straight line to its end, so the feet (the flared
+// tails either side of the tab) end level with the tab's bottom and the sides
+// run straight; the top-left corner is square; and the top-right corner, by the
+// close button, becomes a 45 degree cut, the chamfer of the skin's cards and
+// buttons (h_line_to starts it earlier along the top). Every other caller is
+// Skia's own use, unchanged. A right-to-left UI keeps Edge's corners: its
+// leading corner is the right one, built from different calls.
 inline void* __fastcall h_arc_to(void* path, uint64_t radii, float rotation,
                                  int arcSize, uint8_t direction, uint64_t end) {
-  const void* const caller = _ReturnAddress();
-  const bool isHorizontalOutline = g_outlinedTab != nullptr;
-  const bool isLeftFoot =
-      isHorizontalOutline &&
-      caller ==
-          edge::At(edge155::rva::EdgeTabStyleViews_GetPath_leftFoot_return);
-  const bool isRightFoot =
-      isHorizontalOutline &&
-      caller ==
-          edge::At(edge155::rva::EdgeTabStyleViews_GetPath_rightFoot_return);
-  const bool isTopLeftCorner =
-      isHorizontalOutline && !edge::IsUiRightToLeft() &&
-      caller ==
-          edge::At(edge155::rva::EdgeTabStyleViews_GetPath_topLeftArc_return);
-  if (!isLeftFoot && !isRightFoot && !isTopLeftCorner) {
+  const Corner corner =
+      g_outlinedTab ? CornerOfCaller(_ReturnAddress()) : Corner::kNone;
+  const bool isHandled =
+      corner != Corner::kNone &&
+      (!edge::IsUiRightToLeft() || corner == Corner::kLeftFoot ||
+       corner == Corner::kRightFoot);
+  if (!isHandled) {
     return o_arc_to(path, radii, rotation, arcSize, direction, end);
   }
   const SkPoint radius = std::bit_cast<SkPoint>(radii);
+  g_cornerRadius = radius.x;
   SkPoint target = std::bit_cast<SkPoint>(end);
-  if (isLeftFoot) {
-    target.y += radius.y;
-  }
-  if (isRightFoot) {
-    target.x -= radius.x;
+  switch (corner) {
+    case Corner::kLeftFoot:
+      target.y += radius.y;
+      break;
+    case Corner::kTopLeft:
+      target.x -= radius.x;
+      break;
+    case Corner::kTopRight:
+      target.y += TrailingCut();
+      break;
+    case Corner::kRightFoot:
+      target.x -= radius.x;
+      break;
+    case Corner::kNone:
+      break;
   }
   return o_arc_to(path, std::bit_cast<uint64_t>(SkPoint{}), rotation, arcSize,
                   direction, std::bit_cast<uint64_t>(target));
+}
+
+using LineTo_t = void*(__fastcall*)(void*, uint64_t);
+inline constinit LineTo_t o_line_to = nullptr;
+
+// SkPath::lineTo, for the one call in GetPath that draws the tab's top edge up
+// to its top-right corner: it stops a cut's length short, where the chamfer
+// starts. Every other caller is Skia's own use, unchanged.
+inline void* __fastcall h_line_to(void* path, uint64_t point) {
+  const bool isTopEdge =
+      g_outlinedTab && !edge::IsUiRightToLeft() &&
+      _ReturnAddress() ==
+          edge::At(edge155::rva::EdgeTabStyleViews_GetPath_topEdge_return);
+  if (!isTopEdge) {
+    return o_line_to(path, point);
+  }
+  SkPoint target = std::bit_cast<SkPoint>(point);
+  target.x -= TrailingCut();
+  return o_line_to(path, std::bit_cast<uint64_t>(target));
 }
 
 using DrawRoundRect_t = void(__fastcall*)(void*, const Rect*, int, const void*);

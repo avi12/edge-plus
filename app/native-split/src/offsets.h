@@ -243,8 +243,15 @@ inline constexpr uintptr_t EdgeTabStyleViews_GetPath_leftFoot_return =
     0x27d3bec;
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_topLeftArc_return =
     0x27d3c59;
+inline constexpr uintptr_t EdgeTabStyleViews_GetPath_topRightArc_return =
+    0x27d3cc6;
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_rightFoot_return =
     0x27d3d44;
+// SkPath& SkPath::lineTo(this, SkPoint): the call in GetPath, returning to
+// EdgeTabStyleViews_GetPath_topEdge_return, draws the top edge from the top-left
+// corner to where the top-right arc begins.
+inline constexpr uintptr_t SkPath_lineTo = 0x12078e0;
+inline constexpr uintptr_t EdgeTabStyleViews_GetPath_topEdge_return = 0x27d3c91;
 // SkRRect::setRectXY(this, const SkRect*, float rx, float ry): zeroes the rest
 // of `this` itself when the rect is valid; one radius on every corner.
 inline constexpr uintptr_t SkRRect_setRectXY = 0x1012760;
