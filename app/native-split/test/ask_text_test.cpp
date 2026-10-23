@@ -59,7 +59,7 @@ void CheckPageParagraphs() {
 }
 
 void CheckPrepare() {
-  const std::vector<Paragraph> kept =
+  const std::vector<Sentence> kept =
       Prepare({"Home", "Pricing starts at ten dollars\na month.", "",
                std::string(2000, 'x')});
   Check(kept.size() == 2, "short entries are dropped");
@@ -72,9 +72,9 @@ void CheckPrepare() {
 }
 
 void CheckPlan() {
-  std::vector<Paragraph> paragraphs;
-  paragraphs.push_back(Paragraph{0, "Alpha paragraph about nothing."});
-  paragraphs.push_back(Paragraph{4, "Beta paragraph about pricing."});
+  std::vector<Sentence> paragraphs;
+  paragraphs.push_back(Sentence{0, 0, "Alpha paragraph about nothing."});
+  paragraphs.push_back(Sentence{4, 1, "Beta paragraph about pricing."});
   Plan plan = PlanQuestion("where do they discuss pricing?", paragraphs);
   Check(plan.chunks.size() == 1 && !plan.isCut, "a short page is one prompt");
   const Chunk& chunk = plan.chunks[0];
@@ -90,7 +90,7 @@ void CheckPlan() {
 
   paragraphs.clear();
   for (int i = 0; i < 100; i++) {
-    paragraphs.push_back(Paragraph{i, std::string(kMaxParagraphChars, 'a')});
+    paragraphs.push_back(Sentence{i, i, std::string(kMaxParagraphChars, 'a')});
   }
   plan = PlanQuestion("q", paragraphs);
   Check(plan.chunks.size() == kMaxChunks && plan.isCut,
@@ -104,10 +104,30 @@ void CheckPlan() {
   plan = PlanQuestion("q", {});
   Check(plan.chunks.empty() && !plan.isCut, "no paragraphs, no prompts");
   plan = PlanQuestion(std::string(kMaxQuestionChars * 3, 'q'),
-                      {Paragraph{1, "some text here ok"}});
+                      {Sentence{1, 1, "some text here ok"}});
   Check(plan.chunks[0].prompt.find(std::string(kMaxQuestionChars + 1, 'q')) ==
             std::string::npos,
         "a long question is cut");
+}
+
+void CheckSentences() {
+  const std::string paragraph = std::string("Plans start at five dollars.") +
+                                kSentenceSeparator +
+                                "The Business plan adds daily backups.";
+  const PageParagraphs page = ParsePageParagraphs(
+      Fields({"ok", "0", Joined({paragraph, "Refunds take thirty days."})}));
+  Check(page.isOk && page.texts.size() == 3 && page.paragraphs.size() == 3 &&
+            page.paragraphs[0] == 0 && page.paragraphs[1] == 0 &&
+            page.paragraphs[2] == 1,
+        "sentences keep their paragraph");
+  const std::vector<Sentence> sentences = Prepare(page.texts, page.paragraphs);
+  Check(sentences.size() == 3 && sentences[1].index == 1, "all kept");
+  const Plan plan = PlanQuestion("q", sentences);
+  Check(plan.chunks[0].prompt.find(
+            "[P0] Plans start at five dollars. [P1] The Business plan adds "
+            "daily backups.\n[P2] Refunds") != std::string::npos,
+        "sentences of one paragraph share a line, the next paragraph starts "
+        "another");
 }
 
 void CheckReply() {
@@ -128,6 +148,12 @@ void CheckAnswer() {
         "labels in order");
   Check(answer.note == "The pricing table and the FAQ.",
         "the sentence after the labels");
+  answer = ParseAnswer("P2-P3, P12", offered);
+  Check(answer.indices == std::vector<int>({2, 3, 12}),
+        "a run names its members");
+  answer = ParseAnswer("P2 – P7", offered);
+  Check(answer.indices == std::vector<int>({2, 3, 7}),
+        "a run skips what was not offered");
   answer = ParseAnswer("[P12] and [P2]", offered);
   Check(answer.indices.size() == 2 && answer.indices[0] == 12,
         "bracketed labels");
@@ -189,6 +215,7 @@ int main() {
   try {
     CheckPageParagraphs();
     CheckPrepare();
+    CheckSentences();
     CheckPlan();
     CheckReply();
     CheckAnswer();

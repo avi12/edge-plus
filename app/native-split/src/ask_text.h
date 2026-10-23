@@ -1,7 +1,7 @@
-// ask_text.h — the text side of "Ask" in the find bar: the page's paragraphs,
-// the prompts that carry them to Copilot, and reading its reply into paragraphs
+// ask_text.h — the text side of "Ask" in the find bar: the page's sentences,
+// the prompts that carry them to Copilot, and reading its reply into sentences
 // to highlight. Pure; tested in test/ask_text_test.cpp. Copilot only names
-// paragraphs by label, checked against the labels sent, so a reply can never
+// sentences by label, checked against the labels sent, so a reply can never
 // highlight something that was not offered.
 #pragma once
 #include <cctype>
@@ -15,37 +15,42 @@
 
 namespace fixedge::ask_text {
 
-// Paragraphs cross from the page script as one string, between these.
+// Paragraphs cross from the page script as one string, between these; the
+// sentences of one paragraph are between the second.
 inline constexpr char kParagraphSeparator = '\x1e';
+inline constexpr char kSentenceSeparator = '\x1d';
 
 // A paragraph shorter than this is a label or a menu entry, not an answer.
 inline constexpr size_t kMinParagraphChars = 12;
-// What one paragraph may cost in a prompt; the rest of a long one is cut.
+// What one paragraph may cost in a prompt; its later sentences are left out and
+// a longer sentence is cut.
 inline constexpr size_t kMaxParagraphChars = 600;
 inline constexpr size_t kChunkChars = 6000;
 inline constexpr size_t kMaxQuestionChars = 300;
 inline constexpr size_t kMaxChunks = 4;
 inline constexpr size_t kMaxHighlights = 8;
-inline constexpr int kMaxLabelsPerReply = 5;
+inline constexpr int kMaxLabelsPerReply = 8;
 
 inline constexpr char kNoneWord[] = "NONE";
 
-// --- the page's paragraphs -----------------------------------------------------------
+// --- the page's sentences ------------------------------------------------------------
 
-struct Paragraph {
+struct Sentence {
   int index = 0;  // its place in the page script's list: what gets highlighted
+  int paragraph = 0;
   std::string text;
 };
 
 struct PageParagraphs {
   bool isOk = false;
   std::string error;
-  bool isCut = false;  // the page held more text than was read
-  std::vector<std::string> texts;
+  bool isCut = false;              // the page held more text than was read
+  std::vector<std::string> texts;  // every sentence of the page, in order
+  std::vector<int> paragraphs;     // the paragraph each of them belongs to
 };
 
 // The page script answers `ok US isCut(0|1) US paragraph RS paragraph ...` or
-// `err US message`. A paragraph is already one trimmed run of text.
+// `err US message`, a paragraph being its trimmed sentences between GS.
 [[nodiscard]] inline PageParagraphs ParsePageParagraphs(std::string_view raw) {
   PageParagraphs page;
   const std::vector<std::string> fields = web_text::SplitFields(raw);
@@ -63,8 +68,17 @@ struct PageParagraphs {
   page.isOk = true;
   page.isCut = web_text::IsTrueField(fields[1]);
   const std::string& joined = fields[2];
-  if (!joined.empty()) {
-    page.texts = web_text::Split(joined, kParagraphSeparator);
+  if (joined.empty()) {
+    return page;
+  }
+  const std::vector<std::string> paragraphs =
+      web_text::Split(joined, kParagraphSeparator);
+  for (size_t paragraph = 0; paragraph < paragraphs.size(); paragraph++) {
+    for (const std::string& sentence :
+         web_text::Split(paragraphs[paragraph], kSentenceSeparator)) {
+      page.texts.push_back(sentence);
+      page.paragraphs.push_back(static_cast<int>(paragraph));
+    }
   }
   return page;
 }
@@ -100,18 +114,53 @@ struct PageParagraphs {
   return flat;
 }
 
-[[nodiscard]] inline std::vector<Paragraph> Prepare(
-    const std::vector<std::string>& texts) {
-  std::vector<Paragraph> kept;
-  for (size_t i = 0; i < texts.size(); i++) {
-    std::string flat = Flatten(texts[i]);
-    if (flat.size() < kMinParagraphChars) {
+// `paragraphs` says which paragraph each text belongs to; without it every text
+// is a paragraph of its own.
+[[nodiscard]] inline int ParagraphOf(const std::vector<int>& paragraphs,
+                                     size_t index) {
+  return index < paragraphs.size() ? paragraphs[index]
+                                   : static_cast<int>(index);
+}
+
+inline void AppendParagraph(const std::vector<std::string>& texts, size_t first,
+                            size_t last, int paragraph,
+                            std::vector<Sentence>* kept) {
+  std::vector<std::string> flats;
+  size_t paragraphChars = 0;
+  for (size_t i = first; i < last; i++) {
+    flats.push_back(Flatten(texts[i]));
+    paragraphChars += flats.back().size();
+  }
+  if (paragraphChars < kMinParagraphChars) {
+    return;
+  }
+  size_t keptChars = 0;
+  for (size_t i = first; i < last && keptChars < kMaxParagraphChars; i++) {
+    std::string& flat = flats[i - first];
+    if (flat.empty()) {
       continue;
     }
     if (flat.size() > kMaxParagraphChars) {
       flat = web_text::TruncateUtf8(flat, kMaxParagraphChars) + "...";
     }
-    kept.push_back(Paragraph{static_cast<int>(i), flat});
+    keptChars += flat.size();
+    kept->push_back(Sentence{static_cast<int>(i), paragraph, flat});
+  }
+}
+
+[[nodiscard]] inline std::vector<Sentence> Prepare(
+    const std::vector<std::string>& texts,
+    const std::vector<int>& paragraphs = {}) {
+  std::vector<Sentence> kept;
+  size_t first = 0;
+  while (first < texts.size()) {
+    const int paragraph = ParagraphOf(paragraphs, first);
+    size_t last = first + 1;
+    while (last < texts.size() && ParagraphOf(paragraphs, last) == paragraph) {
+      last++;
+    }
+    AppendParagraph(texts, first, last, paragraph, &kept);
+    first = last;
   }
   return kept;
 }
@@ -135,44 +184,51 @@ struct Plan {
 };
 
 [[nodiscard]] inline std::string PromptHead(std::string_view question) {
-  return "I am searching a web page. Below are paragraphs from it, each "
-         "starting with its label in square brackets.\n"
+  return "I am searching a web page. Below is text from it, one paragraph per "
+         "line, each sentence starting with its label in square brackets.\n"
          "Question: \"" +
          std::string(question) +
-         "\"\nReply with the labels of the paragraphs that answer the "
-         "question, "
-         "most relevant first, separated by commas, like: P3, P7. Use at "
-         "most " +
+         "\"\nReply with the labels of only the sentences that answer the "
+         "question, most relevant first, separated by commas, like: P3, P7. "
+         "Name just the sentences that hold the answer, not whole paragraphs; "
+         "they may be in different paragraphs, and a run of neighbouring "
+         "sentences can be written P3-P5. Use at most " +
          std::to_string(kMaxLabelsPerReply) +
-         " labels. If no paragraph answers it, reply " + kNoneWord +
+         " labels. If no sentence answers it, reply " + kNoneWord +
          ". After the labels, add one short sentence on what you found.\n\n";
 }
 
-[[nodiscard]] inline Plan PlanQuestion(
-    std::string_view typedQuestion, const std::vector<Paragraph>& paragraphs) {
+[[nodiscard]] inline Plan PlanQuestion(std::string_view typedQuestion,
+                                       const std::vector<Sentence>& sentences) {
   const std::string question =
       Flatten(web_text::TruncateUtf8(typedQuestion, kMaxQuestionChars));
   const std::string head = PromptHead(question);
   Plan plan;
   Chunk current;
   current.prompt = head;
-  for (const Paragraph& paragraph : paragraphs) {
-    const std::string line =
-        LabelOf(paragraph.index) + " " + paragraph.text + "\n";
+  int previousParagraph = -1;
+  for (const Sentence& sentence : sentences) {
+    const std::string labelled = LabelOf(sentence.index) + " " + sentence.text;
     const bool isChunkFull =
         !current.indices.empty() &&
-        current.prompt.size() - head.size() + line.size() > kChunkChars;
+        current.prompt.size() - head.size() + labelled.size() + 1 > kChunkChars;
     if (isChunkFull) {
       plan.chunks.push_back(current);
       current = Chunk{};
       current.prompt = head;
+      previousParagraph = -1;
       if (plan.chunks.size() == kMaxChunks) {
         plan.isCut = true;
         return plan;
       }
     }
-    current.indices.push_back(paragraph.index);
-    current.prompt += line;
+    const bool isSameParagraph = sentence.paragraph == previousParagraph;
+    if (isSameParagraph) {
+      current.prompt.back() = ' ';
+    }
+    previousParagraph = sentence.paragraph;
+    current.indices.push_back(sentence.index);
+    current.prompt += labelled + "\n";
   }
   if (!current.indices.empty()) {
     plan.chunks.push_back(current);
@@ -208,8 +264,8 @@ struct Reply {
 }
 
 struct Answer {
-  std::vector<int> indices;  // the offered paragraphs it named, in its order
-  bool isNone = false;       // it said no paragraph answers
+  std::vector<int> indices;  // the offered sentences it named, in its order
+  bool isNone = false;       // it said no sentence answers
   std::string note;          // its sentence on what it found
 };
 
@@ -300,10 +356,44 @@ inline constexpr size_t kMaxNoteChars = 200;
   return FirstSentence(Trim(text.substr(cursor)));
 }
 
-// A label it invented, or from another prompt, is ignored.
+// The label that closes a run such as "P3-P5" (a hyphen or dash between two
+// labels), or -1 when the label at `end` is not the start of one.
+[[nodiscard]] inline int RunEndAt(std::string_view text, size_t end,
+                                  size_t* runEnd) {
+  size_t cursor = end;
+  while (cursor < text.size() && text[cursor] == ' ') {
+    cursor++;
+  }
+  const std::string_view dashes[] = {"-", "\xE2\x80\x93", "\xE2\x80\x94"};
+  size_t dashLength = 0;
+  for (const std::string_view dash : dashes) {
+    if (text.substr(cursor, dash.size()) == dash) {
+      dashLength = dash.size();
+    }
+  }
+  if (dashLength == 0) {
+    return -1;
+  }
+  cursor += dashLength;
+  while (cursor < text.size() && text[cursor] == ' ') {
+    cursor++;
+  }
+  return LabelAt(text, cursor, runEnd);
+}
+
+// A label it invented, or from another prompt, is ignored. A run P3-P5 names
+// every offered sentence from 3 to 5.
 [[nodiscard]] inline Answer ParseAnswer(std::string_view reply,
                                         const std::vector<int>& offered) {
   Answer answer;
+  const auto add = [&](int number) {
+    const bool isNew =
+        Contains(offered, number) && !Contains(answer.indices, number);
+    if (isNew &&
+        answer.indices.size() < static_cast<size_t>(kMaxLabelsPerReply)) {
+      answer.indices.push_back(number);
+    }
+  };
   for (size_t i = 0; i < reply.size(); i++) {
     size_t end = 0;
     const int number = LabelAt(reply, i, &end);
@@ -311,12 +401,17 @@ inline constexpr size_t kMaxNoteChars = 200;
       continue;
     }
     i = end - 1;
-    const bool isNew =
-        Contains(offered, number) && !Contains(answer.indices, number);
-    if (isNew &&
-        answer.indices.size() < static_cast<size_t>(kMaxLabelsPerReply)) {
-      answer.indices.push_back(number);
+    size_t runEnd = 0;
+    const int last = RunEndAt(reply, end, &runEnd);
+    const bool isRun = last > number;
+    if (!isRun) {
+      add(number);
+      continue;
     }
+    for (int member = number; member <= last; member++) {
+      add(member);
+    }
+    i = runEnd - 1;
   }
   const std::string head = Trim(reply).substr(0, sizeof(kNoneWord) - 1);
   bool isHeadNone = head.size() == sizeof(kNoneWord) - 1;

@@ -834,9 +834,9 @@ inline void OnParagraphsRead(void* mcv, void* view, unsigned long long askId,
     FailAsk(*session, page.error.empty() ? kNoAnswerMessage : page.error);
     return;
   }
-  const std::vector<ask_text::Paragraph> paragraphs =
-      ask_text::Prepare(page.texts);
-  session->ask.plan = ask_text::PlanQuestion(session->ask.question, paragraphs);
+  const std::vector<ask_text::Sentence> sentences =
+      ask_text::Prepare(page.texts, page.paragraphs);
+  session->ask.plan = ask_text::PlanQuestion(session->ask.question, sentences);
   session->ask.isPageCut = page.isCut;
   if (session->ask.plan.chunks.empty()) {
     FailAsk(*session, kNoTextMessage);

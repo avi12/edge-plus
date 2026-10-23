@@ -33,7 +33,7 @@ inline std::string Helpers() {
   std::string script = R"JS(
   var fx = window.__fxFind;
   if (!fx) {
-    fx = window.__fxFind = { ranges: [], paragraphs: [], sheet: null, styleElement: null };
+    fx = window.__fxFind = { ranges: [], units: [], sheet: null, styleElement: null };
     var matchName = ")JS";
   script += kMatchHighlight;
   script += R"JS(";
@@ -80,7 +80,7 @@ inline std::string Helpers() {
         fx.styleElement = null;
       }
       fx.ranges = [];
-      fx.paragraphs = [];
+      fx.units = [];
     };
 
     fx.show = function (ranges) {
@@ -367,8 +367,8 @@ inline std::string ClearScript() {
          web_text::JsOkAnswer() + "; })()";
 }
 
-// One paragraph per block of text, remembered so the ones Copilot names can be
-// marked later.
+// The page's paragraphs, each split into sentences; every sentence is
+// remembered as a live Range so the ones Copilot names can be marked later.
 inline std::string ReadParagraphsScript() {
   std::string body = R"JS(
     if (document.contentType === )JS";
@@ -379,7 +379,7 @@ inline std::string ReadParagraphsScript() {
   body += R"JS(;
     }
     var map = fx.collect();
-    fx.paragraphs = [];
+    fx.units = [];
     var texts = [];
     var total = 0;
     var isCut = false;
@@ -387,10 +387,12 @@ inline std::string ReadParagraphsScript() {
       var group = map.groups[i];
       var from = map.starts[group.from];
       var to = map.starts[group.to] + map.lens[group.to];
-      var text = map.text.slice(from, to).trim();
+      var raw = map.text.slice(from, to);
+      var text = raw.trim();
       if (!text) {
         continue;
       }
+      var textStart = from + raw.search(/\S/);
       if (total + text.length > )JS";
   body += std::to_string(kMaxReadChars);
   body += R"JS() {
@@ -398,10 +400,26 @@ inline std::string ReadParagraphsScript() {
         break;
       }
       total += text.length;
-      fx.paragraphs.push({ first: map.nodes[group.from], last: map.nodes[group.to] });
-      texts.push(text.slice(0, )JS";
+      var sentences = [];
+      var pattern = /[^.!?]+(?:[.!?]+["')\]]*(?=\s|$)|$)/g;
+      var match;
+      while ((match = pattern.exec(text)) !== null) {
+        var sentence = match[0].trim();
+        var begin = textStart + match.index + match[0].search(/\S/);
+        var range = sentence ? fx.rangeFor(map, begin, begin + sentence.length) : null;
+        if (range) {
+          fx.units.push(range);
+          sentences.push(sentence.slice(0, )JS";
   body += std::to_string(kMaxParagraphCarryChars);
   body += R"JS());
+        }
+      }
+      if (sentences.length) {
+        texts.push(sentences.join()JS";
+  body +=
+      web_text::JsStringLiteral(std::string(1, ask_text::kSentenceSeparator));
+  body += R"JS());
+      }
     }
     return )JS";
   const std::string paragraphSeparator =
@@ -412,23 +430,19 @@ inline std::string ReadParagraphsScript() {
   return Wrap(body);
 }
 
-// `indices` are positions in the list ReadParagraphsScript answered; a
-// paragraph whose text has left the page is skipped.
+// `indices` are positions in the sentence list ReadParagraphsScript answered; a
+// sentence whose text has left the page is skipped.
 inline std::string HighlightParagraphsScript(std::span<const int> indices) {
   std::string body = RequireHighlights();
   body += R"JS(
     var wanted = [)JS";
   body += ask_text::IndexList(indices);
   body += R"JS(];
-    var paragraphs = fx.paragraphs;
     var ranges = [];
     wanted.forEach(function (index) {
-      var paragraph = paragraphs[index];
-      if (paragraph && paragraph.first.isConnected && paragraph.last.isConnected) {
-        var range = document.createRange();
-        range.setStart(paragraph.first, 0);
-        range.setEnd(paragraph.last, paragraph.last.nodeValue.length);
-        ranges.push(range);
+      var unit = fx.units[index];
+      if (unit && !unit.collapsed) {
+        ranges.push(unit.cloneRange());
       }
     });
     fx.show(ranges);
