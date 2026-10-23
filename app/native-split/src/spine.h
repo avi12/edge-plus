@@ -142,7 +142,7 @@ inline void Attach(WindowSet& set, void* anyView, void* draggedTab, void* tab) {
 // A horizontal tab's view is wider than the chip Edge draws in it: the flared
 // feet and the strip's top padding lie outside the shape, and children are
 // clipped to the shape, so the stripe is placed inside it.
-inline constexpr int kHorizontalChipSideDip = 10;
+inline constexpr int kHorizontalChipSideDip = 8;
 inline constexpr int kHorizontalChipTopDip = 4;
 
 // The part of `tab`'s view that holds its fill, in the view's own coordinates.

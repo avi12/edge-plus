@@ -590,6 +590,9 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   Install(edge155::rva::EdgeTabStyleViews_GetPath,
           reinterpret_cast<void*>(tab_shape::h_get_path),
           &tab_shape::o_get_path, "EdgeTabStyleViews::GetPath");
+  Install(edge155::rva::SkPath_arcTo,
+          reinterpret_cast<void*>(tab_shape::h_arc_to), &tab_shape::o_arc_to,
+          "SkPath::arcTo");
   Install(edge155::rva::SkRRect_setRectXY,
           reinterpret_cast<void*>(tab_shape::h_set_rect_xy),
           &tab_shape::o_set_rect_xy, "SkRRect::setRectXY");

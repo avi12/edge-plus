@@ -11,6 +11,7 @@
 #pragma once
 #include <windows.h>
 #include <intrin.h>
+#include <bit>
 #include <vector>
 #include "edge.h"
 #include "geom.h"
@@ -62,6 +63,55 @@ inline void __fastcall h_set_rect_xy(void* roundedRect, const void* skRect,
   edge::SetRoundedRectRadii(
       roundedRect, skRect,
       tab_edge::RadiiFor(leading, radiusX, hasTrailingNeighbor));
+}
+
+using ArcTo_t = void*(__fastcall*)(void*, uint64_t, float, int, uint8_t,
+                                   uint64_t);
+inline constinit ArcTo_t o_arc_to = nullptr;
+
+// An SkPoint, as arcTo takes it by value in one register.
+struct SkPoint {
+  float x = 0;
+  float y = 0;
+};
+
+// SkPath::arcTo, for three of the four calls in GetPath that round a horizontal
+// tab's outline (offsets.h). With no radius an arc is a straight line to its
+// end, so: the feet (the flared tails either side of the tab) end level with
+// the tab's bottom, which makes the sides straight, and the top-left corner is
+// cut at 45 degrees, the chamfer of the skin's cards and buttons. The trailing
+// top corner, by the close button, stays as Edge draws it. Every other caller
+// is Skia's own use, unchanged. In a right-to-left UI the chamfer is left off:
+// its leading corner is the right one, a different call.
+inline void* __fastcall h_arc_to(void* path, uint64_t radii, float rotation,
+                                 int arcSize, uint8_t direction, uint64_t end) {
+  const void* const caller = _ReturnAddress();
+  const bool isHorizontalOutline = g_outlinedTab != nullptr;
+  const bool isLeftFoot =
+      isHorizontalOutline &&
+      caller ==
+          edge::At(edge155::rva::EdgeTabStyleViews_GetPath_leftFoot_return);
+  const bool isRightFoot =
+      isHorizontalOutline &&
+      caller ==
+          edge::At(edge155::rva::EdgeTabStyleViews_GetPath_rightFoot_return);
+  const bool isTopLeftCorner =
+      isHorizontalOutline && !edge::IsUiRightToLeft() &&
+      caller ==
+          edge::At(edge155::rva::EdgeTabStyleViews_GetPath_topLeftArc_return);
+  if (!isLeftFoot && !isRightFoot && !isTopLeftCorner) {
+    return o_arc_to(path, radii, rotation, arcSize, direction, end);
+  }
+  const SkPoint radius = std::bit_cast<SkPoint>(radii);
+  SkPoint target = std::bit_cast<SkPoint>(end);
+  if (isLeftFoot) {
+    target.y += radius.y;
+  }
+  if (isRightFoot) {
+    target.x -= radius.x;
+  }
+  return o_arc_to(path, std::bit_cast<uint64_t>(SkPoint{}), rotation, arcSize,
+                  direction, std::bit_cast<uint64_t>(target));
 }
 
 using DrawRoundRect_t = void(__fastcall*)(void*, const Rect*, int, const void*);

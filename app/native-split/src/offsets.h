@@ -233,6 +233,18 @@ inline constexpr uintptr_t View_ctor = 0x105a54a;
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath = 0x27d3710;
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_setRectXY_return =
     0x27d3dea;
+// SkPath& SkPath::arcTo(this, SkPoint radii, float rotation, ArcSize, Direction,
+// SkPoint end): how GetPath rounds each corner of a horizontal tab's outline. It
+// makes four arcs, in order: the left foot (a concave tail from the bottom, one
+// radius out from the left side), the top-left corner, the top-right corner and
+// the right foot. Their return addresses are below.
+inline constexpr uintptr_t SkPath_arcTo = 0x10dfdc0;
+inline constexpr uintptr_t EdgeTabStyleViews_GetPath_leftFoot_return =
+    0x27d3bec;
+inline constexpr uintptr_t EdgeTabStyleViews_GetPath_topLeftArc_return =
+    0x27d3c59;
+inline constexpr uintptr_t EdgeTabStyleViews_GetPath_rightFoot_return =
+    0x27d3d44;
 // SkRRect::setRectXY(this, const SkRect*, float rx, float ry): zeroes the rest
 // of `this` itself when the rect is valid; one radius on every corner.
 inline constexpr uintptr_t SkRRect_setRectXY = 0x1012760;
