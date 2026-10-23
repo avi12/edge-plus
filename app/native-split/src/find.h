@@ -670,6 +670,7 @@ inline void StepBy(void* mcv, Session& session, find_text::Step step) {
 
 inline void EndAsk(Session& session) {
   session.ask = AskRun{};
+  assistant_chat::ReleasePanel(edge::McvForWindow(session.window));
 }
 
 inline void FailAsk(Session& session, const std::string& why) {

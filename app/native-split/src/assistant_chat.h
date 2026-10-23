@@ -51,6 +51,9 @@ struct Chat {
   bool isNeedingUser = false;
   ULONGLONG blockedSince = 0;  // when a dialog first waited for the person
   int resendCount = 0;
+  // The panel was closed when the first question went in, so ReleasePanel
+  // closes it again once the whole ask is over.
+  bool isOurPanel = false;
   std::string prompt;
   DoneFn onDone;
   NoticeFn onNotice;
@@ -136,11 +139,25 @@ inline bool Ask(HWND window, void* mcv, const std::string& prompt,
   chat.isNeedingUser = false;
   chat.blockedSince = 0;
   chat.resendCount = 0;
+  if (!chat.isOurPanel) {
+    chat.isOurPanel = !edge::IsCopilotPanelVisible(browser);
+  }
   chat.prompt = prompt;
   chat.onDone = std::move(onDone);
   chat.onNotice = std::move(onNotice);
   Dispatch(chat);
   return true;
+}
+
+// The ask is over (answered, failed or cancelled): close the side panel if it
+// was this ask that opened it, so the page gets its width back.
+inline void ReleasePanel(void* mcv) {
+  Chat* chat = ChatFor(mcv);
+  if (!chat || !chat->isOurPanel) {
+    return;
+  }
+  chat->isOurPanel = false;
+  edge::CloseCopilotPanel(chat->browser);
 }
 
 // Without telling anyone (the bar closed).
