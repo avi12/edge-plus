@@ -64,4 +64,28 @@ function Get-VcVarsPath {
     return $vcvars
 }
 
-Export-ModuleMember -Function Get-RepoRoot, Get-BuildScriptPath, Get-BuildSetting, Get-VcVarsPath
+function Invoke-Checked([string] $what, [scriptblock] $command) {
+    & $command
+    if ($LASTEXITCODE -ne 0) {
+        throw "$what failed with exit code $LASTEXITCODE"
+    }
+}
+
+function Write-Step([string] $text) {
+    Write-Host "==> $text" -ForegroundColor Cyan
+}
+
+# The product version: <Version> in Directory.Build.props, the one place it is
+# written.
+function Get-ProductVersion {
+    $props = Join-Path (Get-RepoRoot) 'app\panel-winui\Directory.Build.props'
+    $version = ([xml](Get-Content $props -Raw)).Project.PropertyGroup.Version |
+        Where-Object { $_ } | Select-Object -First 1
+    if (-not $version) {
+        throw "No <Version> in $props."
+    }
+    return $version
+}
+
+Export-ModuleMember -Function Get-RepoRoot, Get-BuildScriptPath, Get-BuildSetting, Get-VcVarsPath,
+    Invoke-Checked, Write-Step, Get-ProductVersion

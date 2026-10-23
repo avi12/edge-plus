@@ -51,13 +51,6 @@ function Find-SdkTool([string] $name) {
     return $tool.FullName
 }
 
-function Invoke-Checked([string] $what, [scriptblock] $command) {
-    & $command
-    if ($LASTEXITCODE -ne 0) {
-        throw "$what failed with exit code $LASTEXITCODE"
-    }
-}
-
 # The manifest's logos, scaled from the icon's largest frame: 44 and 150 are the
 # two VisualElements logos, 50 is the Store listing's logo.
 $logoSizes = @{ 'Square44x44Logo.png' = 44; 'Square150x150Logo.png' = 150; 'StoreLogo.png' = 50 }

@@ -117,9 +117,8 @@ browser tools
 
 ### What's new in this version
 
-```text
-First release.
-```
+The version's section of `CHANGELOG.md`; `tools/Deploy-Store.ps1` fills it in
+(see `docs/RELEASING.md`).
 
 ## Notes for certification (paste verbatim)
 
@@ -165,3 +164,6 @@ msstore publish <path-to-msix-folder-or-msix> -id <productId> --noCommit
 
 `--noCommit` creates the submission as a draft without submitting it; review it
 in Partner Center, then commit it there or with `msstore submission publish`.
+
+Every release after the first goes through `tools/Deploy-Store.ps1` instead
+(`docs/RELEASING.md`), which also sets "What's new" and the mandatory flag.
