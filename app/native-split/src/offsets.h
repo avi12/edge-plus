@@ -745,6 +745,13 @@ inline constexpr uintptr_t FindBarController_EndFindSession = 0xa068e66;
 // be empty or it takes another path.
 inline constexpr uintptr_t CopilotUtils_SendPageContextualPromptToChat =
     0x93dc691;
+// bool edge_copilot::utils::IsUndersideChatVisible(BrowserWindowInterface*):
+// whether Copilot's side panel is open in that window.
+inline constexpr uintptr_t CopilotUtils_IsUndersideChatVisible = 0x26b848d;
+// void edge_copilot::utils::CloseUndersideChat(BrowserWindowInterface*, bool):
+// closes the side panel, as the panel page's own close message does (it passes
+// true: OnPostMessageClosePane).
+inline constexpr uintptr_t CopilotUtils_CloseUndersideChat = 0x93d99bf;
 // static content::WebContentsImpl::GetAllWebContents(out): hidden return pointer
 // in rcx. What it fills is not a begin/end vector: its first word points at the
 // WebContents pointers and its second is their count. The panel is the one whose

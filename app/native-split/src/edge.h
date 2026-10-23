@@ -11,6 +11,7 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <utility>
 #include "offsets.h"
@@ -1492,11 +1493,25 @@ inline void SendPromptToSidePanel(void* browser, const std::string& text,
                                   const std::string& title) {
   const StdStringView page = MakeStdStringView(text);
   const StdStringView asked = MakeStdStringView(title);
+  static const std::string kEmpty;
+  const StdStringView noContext = MakeStdStringView(kEmpty);
   using Fn =
       void(__fastcall*)(void*, const void*, const void*, const void*, bool);
   reinterpret_cast<Fn>(
       At(edge155::rva::CopilotUtils_SendPageContextualPromptToChat))(
-      browser, &page, nullptr, &asked, false);
+      browser, &page, &noContext, &asked, false);
+}
+
+inline bool IsCopilotPanelVisible(void* browser) {
+  using Fn = bool(__fastcall*)(void*);
+  return reinterpret_cast<Fn>(
+      At(edge155::rva::CopilotUtils_IsUndersideChatVisible))(browser);
+}
+
+inline void CloseCopilotPanel(void* browser) {
+  using Fn = void(__fastcall*)(void*, bool);
+  reinterpret_cast<Fn>(At(edge155::rva::CopilotUtils_CloseUndersideChat))(
+      browser, true);
 }
 
 // Every WebContents of the browser process (tabs, side panels, hidden pages).
@@ -1965,30 +1980,40 @@ inline void FindBarRelayoutOptions(void* findBarView) {
   FindBarPreferredSizeChanged(findBarView);
 }
 
-// The page of Copilot's side panel, or null while it is not open: the
-// WebContents whose URL is the panel's.
+// Where Copilot's chat lives. The panel is either a shell page around an iframe
+// of Copilot's web app, or (the iframeless panel, 155.0.4283.62) the web app's
+// own WebContents on its Edge-only host.
+inline constexpr char kPanelShellUrl[] = "edge://discover-chat-v2/";
+inline constexpr char kIframelessPanelUrl[] =
+    "https://cr.m365copilotapp.svc.cloud.microsoft/";
+inline constexpr std::string_view kChatHosts[] = {
+    "copilot.microsoft.com", "cr.m365copilotapp.svc.cloud.microsoft"};
+
+// The page of Copilot's side panel, or null while it is not open.
 inline void* CopilotSidePanelContents() {
-  constexpr char kPanelUrl[] = "edge://discover-chat-v2/";
   for (void* contents : AllWebContents()) {
     const std::string url = IsPageLive(contents) ? TabUrl(contents) : "";
-    if (url.starts_with(kPanelUrl)) {
+    const bool isPanel =
+        url.starts_with(kPanelShellUrl) || url.starts_with(kIframelessPanelUrl);
+    if (isPanel) {
       return contents;
     }
   }
   return nullptr;
 }
 
-// The frame of Copilot's side panel that holds the chat (the panel's own page is
-// a shell around an iframe of Copilot's web app), or null.
+// The frame of Copilot's side panel that holds the chat, or null.
 inline void* CopilotChatFrame() {
-  constexpr char kChatHost[] = "copilot.microsoft.com";
   void* panel = CopilotSidePanelContents();
   if (!panel) {
     return nullptr;
   }
   for (void* frame : FramesOf(panel)) {
-    if (FrameUrl(frame).find(kChatHost) != std::string::npos) {
-      return frame;
+    const std::string url = FrameUrl(frame);
+    for (const std::string_view host : kChatHosts) {
+      if (url.find(host) != std::string::npos) {
+        return frame;
+      }
     }
   }
   return nullptr;
