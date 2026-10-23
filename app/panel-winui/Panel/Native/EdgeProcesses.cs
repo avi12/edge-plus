@@ -13,8 +13,6 @@ namespace EdgePlus;
 internal static class EdgeProcesses {
   private const string EdgeImageName = "msedge.exe";
   private const uint ProcessQueryLimitedInformation = 0x1000;
-  private const uint SnapModule = 0x00000008;
-  private const uint SnapModule32 = 0x00000010;
   private const int MaxModuleName = 256;
   private const int MaxPath = 260;
   private static readonly IntPtr s_invalidHandle = new(-1);
@@ -53,7 +51,7 @@ internal static class EdgeProcesses {
       FindModule(pid, moduleName)?.BaseAddress;
 
   private static ModuleEntry? FindModule(int pid, string moduleName) {
-    IntPtr snapshot = CreateToolhelp32Snapshot(SnapModule | SnapModule32, (uint)pid);
+    IntPtr snapshot = CreateToolhelp32Snapshot(SnapshotFlags.Module | SnapshotFlags.Module32, (uint)pid);
     if (snapshot == s_invalidHandle) {
       return null;
     }
@@ -94,6 +92,12 @@ internal static class EdgeProcesses {
     }
   }
 
+  [Flags]
+  private enum SnapshotFlags : uint {
+    Module = 0x00000008,
+    Module32 = 0x00000010,
+  }
+
   private delegate bool EnumWindowsProc(IntPtr window, IntPtr lParam);
 
   // MODULEENTRY32W.
@@ -128,7 +132,7 @@ internal static class EdgeProcesses {
   private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
 
   [DllImport("kernel32.dll", SetLastError = true)]
-  private static extern IntPtr CreateToolhelp32Snapshot(uint flags, uint processId);
+  private static extern IntPtr CreateToolhelp32Snapshot(SnapshotFlags flags, uint processId);
 
   [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
   [return: MarshalAs(UnmanagedType.Bool)]

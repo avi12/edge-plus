@@ -12,6 +12,8 @@ internal static class EdgeUserData {
       Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
       "Microsoft", "Edge", "User Data");
 
+  public const string PreferencesFile = "Preferences";
+  public const string LocalStateFile = "Local State";
   private const char ByteOrderMark = (char)0xFEFF;
 
   // Edge writes some of these with a UTF-8 byte-order mark.

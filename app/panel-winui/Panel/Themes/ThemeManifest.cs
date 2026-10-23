@@ -9,6 +9,17 @@ using System.Text.Json.Nodes;
 
 namespace EdgePlus;
 
+// The keys of an extension manifest that a theme is read through.
+internal static class ManifestKeys {
+  public const string Name = "name";
+  public const string Version = "version";
+  public const string Theme = "theme";
+  public const string Images = "images";
+  public const string Colors = "colors";
+  public const string Tints = "tints";
+  public const string DefaultLocale = "default_locale";
+}
+
 // A theme the user edits live is re-installed into the running Edge, so a
 // broken edit must be caught here rather than hot-swapped in. Its messages are
 // the user's.
@@ -35,15 +46,15 @@ internal static class ThemeManifest {
       throw Invalid("the theme is too large");
     }
     JsonObject manifest = ReadManifest(archive);
-    bool hasName = manifest["name"] is JsonValue name && name.GetValueKind() == JsonValueKind.String;
+    bool hasName = manifest[ManifestKeys.Name] is JsonValue name && name.GetValueKind() == JsonValueKind.String;
     if (!hasName) {
       throw Invalid("manifest.json has no name");
     }
     ParseVersion(manifest);
-    if (manifest["theme"] is not JsonObject theme) {
+    if (manifest[ManifestKeys.Theme] is not JsonObject theme) {
       throw Invalid("manifest.json has no \"theme\" section");
     }
-    if (theme["images"] is JsonObject images) {
+    if (theme[ManifestKeys.Images] is JsonObject images) {
       foreach ((string key, JsonNode? value) in images) {
         bool isPath = value is JsonValue path && path.GetValueKind() == JsonValueKind.String;
         if (!isPath) {
@@ -52,12 +63,12 @@ internal static class ThemeManifest {
         CheckImage(archive, key, value!.GetValue<string>());
       }
     }
-    if (theme["colors"] is JsonObject colors) {
+    if (theme[ManifestKeys.Colors] is JsonObject colors) {
       foreach ((string key, JsonNode? value) in colors) {
         CheckColor(key, value);
       }
     }
-    if (theme["tints"] is JsonObject tints) {
+    if (theme[ManifestKeys.Tints] is JsonObject tints) {
       foreach ((string key, JsonNode? value) in tints) {
         CheckTint(key, value);
       }
@@ -73,7 +84,7 @@ internal static class ThemeManifest {
     ushort[] revised = [.. parts.Concat(Enumerable.Repeat((ushort)0, RevisionPart)).Take(RevisionPart),
                         revision];
     string version = string.Join('.', revised);
-    manifest["version"] = version;
+    manifest[ManifestKeys.Version] = version;
 
     using var output = new MemoryStream();
     using (var writer = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true)) {
@@ -185,12 +196,12 @@ internal static class ThemeManifest {
   }
 
   private static ushort[] ParseVersion(JsonObject manifest) {
-    bool hasVersion = manifest["version"] is JsonValue value
+    bool hasVersion = manifest[ManifestKeys.Version] is JsonValue value
         && value.GetValueKind() == JsonValueKind.String;
     if (!hasVersion) {
       throw Invalid("manifest.json has no version");
     }
-    string text = manifest["version"]!.GetValue<string>();
+    string text = manifest[ManifestKeys.Version]!.GetValue<string>();
     string[] pieces = text.Split('.');
     if (pieces.Length > MaxVersionParts) {
       throw Invalid($"\"{text}\" is not a valid version");

@@ -37,14 +37,14 @@ internal static class ThemePacker {
     string id = ExtensionId.FromPublicKey(publicKey);
 
     byte[] crxId = SHA256.HashData(publicKey)[..CrxIdBytes];
-    byte[] signedHeaderData = Protobuf.LengthDelimitedField(Crx.CrxIdField, crxId);
+    byte[] signedHeaderData = Protobuf.LengthDelimitedField(SignedDataField.CrxId, crxId);
     byte[] signature = signer.SignData(SignedPayload(signedHeaderData, zip),
                                        HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
-    byte[] proof = [.. Protobuf.LengthDelimitedField(Crx.PublicKeyField, publicKey),
-                    .. Protobuf.LengthDelimitedField(Crx.SignatureField, signature)];
-    byte[] header = [.. Protobuf.LengthDelimitedField(Crx.RsaProofField, proof),
-                     .. Protobuf.LengthDelimitedField(Crx.SignedHeaderDataField,
+    byte[] proof = [.. Protobuf.LengthDelimitedField(KeyProofField.PublicKey, publicKey),
+                    .. Protobuf.LengthDelimitedField(KeyProofField.Signature, signature)];
+    byte[] header = [.. Protobuf.LengthDelimitedField(CrxHeaderField.RsaProof, proof),
+                     .. Protobuf.LengthDelimitedField(CrxHeaderField.SignedHeaderData,
                                                       signedHeaderData)];
     byte[] crx = [.. Crx.Magic, .. LittleEndian(Crx.FormatVersion),
                   .. LittleEndian((uint)header.Length), .. header, .. zip];

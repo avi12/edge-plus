@@ -13,8 +13,6 @@ namespace EdgePlus;
 internal static class DevModePrompt {
   private const string WaiterMutex = @"Local\fix-edge.dev-mode-prompt";
   private const string LockfileName = "lockfile";
-  private const string PreferencesFileName = "Preferences";
-  private const string LocalStateFileName = "Local State";
   private const string TemporaryExtension = ".fixedge-tmp";
   private static readonly string[] s_snoozeKeyPath =
       ["extensions", "ui", "dev_mode_warning_snooze_end_time"];
@@ -39,7 +37,7 @@ internal static class DevModePrompt {
     }
     string snoozeEnd = SnoozeEnd(DateTime.UtcNow);
     foreach (string profile in ProfileFolders(userData)) {
-      WriteSnooze(Path.Combine(userData, profile, PreferencesFileName), snoozeEnd);
+      WriteSnooze(Path.Combine(userData, profile, EdgeUserData.PreferencesFile), snoozeEnd);
     }
   }
 
@@ -91,7 +89,7 @@ internal static class DevModePrompt {
   }
 
   private static string[] ProfileFolders(string userData) =>
-      EdgeUserData.ReadJson(Path.Combine(userData, LocalStateFileName))?["profile"]?["info_cache"]
+      EdgeUserData.ReadJson(Path.Combine(userData, EdgeUserData.LocalStateFile))?["profile"]?["info_cache"]
           is JsonObject profiles
           ? profiles.Select(profile => profile.Key).ToArray()
           : [];

@@ -12,6 +12,22 @@ internal sealed record CrxInfo(string Id, string Version);
 
 internal sealed record CrxProof(byte[] PublicKey, byte[] Signature, byte[] SignedHeaderData);
 
+// The fields of CrxFileHeader, of its AsymmetricKeyProof and of its
+// SignedData, as protobuf field numbers.
+internal enum CrxHeaderField : ulong {
+  RsaProof = 2,
+  SignedHeaderData = 10_000,
+}
+
+internal enum KeyProofField : ulong {
+  PublicKey = 1,
+  Signature = 2,
+}
+
+internal enum SignedDataField : ulong {
+  CrxId = 1,
+}
+
 // A CRX3 file (read here, written by ThemePacker) is a "Cr24" magic, the format
 // version, the header's length, a CrxFileHeader protobuf carrying the RSA
 // public key, then a ZIP. The extension id is derived from that public key; the
@@ -21,19 +37,11 @@ internal static class Crx {
   public const uint FormatVersion = 3;
   // The magic, the format version and the header length, each four bytes.
   public const int PreambleLength = 12;
-  // The fields of CrxFileHeader and of its AsymmetricKeyProof.
-  public const ulong RsaProofField = 2;
-  public const ulong SignedHeaderDataField = 10_000;
-  public const ulong PublicKeyField = 1;
-  public const ulong SignatureField = 2;
-  public const ulong CrxIdField = 1;
   // What every CRX3 signature covers, ahead of the signed header data.
   public static readonly byte[] SignedDataPrefix = "CRX3 SignedData\0"u8.ToArray();
 
   private const int VersionOffset = 4;
   private const int HeaderLengthOffset = 8;
-  private const string ManifestName = "manifest.json";
-  private const string VersionKey = "version";
 
   public static CrxInfo Read(byte[] bytes) {
     CrxProof proof = ReadProof(bytes);
@@ -44,17 +52,18 @@ internal static class Crx {
   public static CrxProof ReadProof(byte[] bytes) {
     int headerEnd = PreambleLength + HeaderLength(bytes);
     var header = Protobuf.ReadFields(bytes, PreambleLength, headerEnd);
-    Protobuf.Field proofField = header.FirstOrDefault(field => field.Number == RsaProofField);
+    Protobuf.Field proofField = header.FirstOrDefault(field => field.Is(CrxHeaderField.RsaProof));
     if (proofField.Length == 0) {
       throw new InvalidDataException("no public key in CRX header");
     }
     var proof = Protobuf.ReadFields(bytes, proofField.Start, proofField.Start + proofField.Length);
-    Protobuf.Field key = proof.FirstOrDefault(field => field.Number == PublicKeyField);
+    Protobuf.Field key = proof.FirstOrDefault(field => field.Is(KeyProofField.PublicKey));
     if (key.Length == 0) {
       throw new InvalidDataException("no public key in key proof");
     }
-    Protobuf.Field signature = proof.FirstOrDefault(field => field.Number == SignatureField);
-    Protobuf.Field signed = header.FirstOrDefault(field => field.Number == SignedHeaderDataField);
+    Protobuf.Field signature = proof.FirstOrDefault(field => field.Is(KeyProofField.Signature));
+    Protobuf.Field signed =
+        header.FirstOrDefault(field => field.Is(CrxHeaderField.SignedHeaderData));
     return new CrxProof(Slice(bytes, key), Slice(bytes, signature), Slice(bytes, signed));
   }
 
@@ -62,18 +71,18 @@ internal static class Crx {
 
   public static string ReadZipVersion(byte[] zipBytes) {
     using var archive = OpenZip(zipBytes, "bad .crx ZIP");
-    ZipArchiveEntry manifest = archive.GetEntry(ManifestName)
+    ZipArchiveEntry manifest = archive.GetEntry(ThemeManifest.ManifestName)
         ?? throw new InvalidDataException("no manifest.json in .crx");
     using var reader = new StreamReader(manifest.Open(), Encoding.UTF8);
     try {
       using JsonDocument parsed = JsonDocument.Parse(reader.ReadToEnd());
       bool hasVersion = parsed.RootElement.ValueKind == JsonValueKind.Object
-          && parsed.RootElement.TryGetProperty(VersionKey, out JsonElement version)
+          && parsed.RootElement.TryGetProperty(ManifestKeys.Version, out JsonElement version)
           && version.ValueKind == JsonValueKind.String;
       if (!hasVersion) {
         throw new InvalidDataException("no version in manifest.json");
       }
-      return parsed.RootElement.GetProperty(VersionKey).GetString()!;
+      return parsed.RootElement.GetProperty(ManifestKeys.Version).GetString()!;
     } catch (JsonException) {
       throw new InvalidDataException("bad manifest.json");
     }

@@ -13,8 +13,6 @@ internal static class Injector {
   // references; this many FreeLibrary calls clears any real count.
   private const int MaxReferences = 16;
   private const string Kernel32 = "kernel32.dll";
-  private const string LoadLibraryExport = "LoadLibraryW";
-  private const string FreeLibraryExport = "FreeLibrary";
 
   // A re-inject only bumps the module's reference count, so it is harmless.
   public static int InjectInto(IEnumerable<int> pids, string dllPath) {
@@ -37,7 +35,7 @@ internal static class Injector {
       if (moduleBase is null) {
         return;
       }
-      if (!CallRemote(pid, FreeLibraryExport, moduleBase.Value, ProcessAccess.Thread)) {
+      if (!CallRemote(pid, RemoteFunction.FreeLibrary, moduleBase.Value, ProcessAccess.Thread)) {
         return;
       }
     }
@@ -61,7 +59,7 @@ internal static class Injector {
         if (!isPathWritten) {
           return false;
         }
-        return RunRemoteThread(process, LoadLibraryExport, remotePath);
+        return RunRemoteThread(process, RemoteFunction.LoadLibrary, remotePath);
       } finally {
         VirtualFreeEx(process, remotePath, UIntPtr.Zero, FreeType.Release);
       }
@@ -70,13 +68,13 @@ internal static class Injector {
     }
   }
 
-  private static bool CallRemote(int pid, string export, IntPtr argument, ProcessAccess access) {
+  private static bool CallRemote(int pid, RemoteFunction function, IntPtr argument, ProcessAccess access) {
     IntPtr process = OpenProcess(access, false, (uint)pid);
     if (process == IntPtr.Zero) {
       return false;
     }
     try {
-      return RunRemoteThread(process, export, argument);
+      return RunRemoteThread(process, function, argument);
     } finally {
       CloseHandle(process);
     }
@@ -84,8 +82,8 @@ internal static class Injector {
 
   // kernel32 is mapped at the same address in every process of a boot, so this
   // process's export address is the remote one too.
-  private static bool RunRemoteThread(IntPtr process, string export, IntPtr argument) {
-    IntPtr start = GetProcAddress(GetModuleHandleW(Kernel32), export);
+  private static bool RunRemoteThread(IntPtr process, RemoteFunction function, IntPtr argument) {
+    IntPtr start = GetProcAddress(GetModuleHandleW(Kernel32), ExportName(function));
     if (start == IntPtr.Zero) {
       return false;
     }
@@ -97,6 +95,18 @@ internal static class Injector {
     WaitForSingleObject(thread, LoadLibraryTimeoutMilliseconds);
     CloseHandle(thread);
     return true;
+  }
+
+  private static string ExportName(RemoteFunction function) => function switch {
+    RemoteFunction.LoadLibrary => "LoadLibraryW",
+    RemoteFunction.FreeLibrary => "FreeLibrary",
+    _ => throw new ArgumentOutOfRangeException(nameof(function)),
+  };
+
+  // The kernel32 exports a remote thread is started on.
+  private enum RemoteFunction {
+    LoadLibrary,
+    FreeLibrary,
   }
 
   [Flags]

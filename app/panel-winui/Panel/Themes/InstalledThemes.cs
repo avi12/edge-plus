@@ -17,15 +17,13 @@ internal static class InstalledThemes {
   private const string FallbackLocale = "en";
   private const string ExtensionsFolder = "Extensions";
   private const string LocalesFolder = "_locales";
-  private const string ManifestFile = "manifest.json";
   private const string MessagesFile = "messages.json";
-  private const string PreferencesFile = "Preferences";
   private const string SecurePreferencesFile = "Secure Preferences";
 
   // Null when the manifest is not a theme's. `messages` resolves a __MSG_key__ name.
   public static string? ThemeName(JsonNode? manifest, JsonNode? messages) {
-    bool isTheme = manifest?["theme"] is JsonObject;
-    string? name = AsString(manifest?["name"]);
+    bool isTheme = manifest?[ManifestKeys.Theme] is JsonObject;
+    string? name = AsString(manifest?[ManifestKeys.Name]);
     if (!isTheme || name is null) {
       return null;
     }
@@ -97,7 +95,8 @@ internal static class InstalledThemes {
   }
 
   private static List<InstalledTheme> ScanProfile(string profile) {
-    string? active = ActiveThemeId(EdgeUserData.ReadJson(Path.Combine(profile, PreferencesFile)));
+    string? active =
+        ActiveThemeId(EdgeUserData.ReadJson(Path.Combine(profile, EdgeUserData.PreferencesFile)));
     HashSet<string>? registered =
         RegisteredIds(EdgeUserData.ReadJson(Path.Combine(profile, SecurePreferencesFile)));
     var themes = new List<InstalledTheme>();
@@ -126,7 +125,7 @@ internal static class InstalledThemes {
   private static string? NewestVersionFolder(string extension) {
     try {
       return Directory.GetDirectories(extension)
-          .Where(folder => File.Exists(Path.Combine(folder, ManifestFile)))
+          .Where(folder => File.Exists(Path.Combine(folder, ThemeManifest.ManifestName)))
           .OrderBy(VersionKey, VersionComparer.Instance)
           .LastOrDefault();
     } catch (IOException) {
@@ -141,7 +140,8 @@ internal static class InstalledThemes {
           .ToArray();
 
   private static string? ThemeNameIn(string versionFolder) {
-    JsonNode? manifest = EdgeUserData.ReadJson(Path.Combine(versionFolder, ManifestFile));
+    JsonNode? manifest =
+        EdgeUserData.ReadJson(Path.Combine(versionFolder, ThemeManifest.ManifestName));
     return ThemeName(manifest, ReadMessages(versionFolder, manifest));
   }
 
@@ -149,7 +149,7 @@ internal static class InstalledThemes {
   // English, else whichever locale exists.
   private static JsonNode? ReadMessages(string versionFolder, JsonNode? manifest) {
     string locales = Path.Combine(versionFolder, LocalesFolder);
-    string? defaultLocale = AsString(manifest?["default_locale"]);
+    string? defaultLocale = AsString(manifest?[ManifestKeys.DefaultLocale]);
     foreach (string? preferred in new[] { defaultLocale, FallbackLocale }) {
       if (preferred is null) {
         continue;
