@@ -12,6 +12,13 @@ internal static class Program {
   // finds the first and hands its activation over instead of opening a window.
   private const string InstanceKey = "edgeplus.panel";
 
+  // A launch at sign-in or after an update, which opens no window: the plain
+  // exe's Run entry and the restart registration pass the switch, the Store
+  // package's startup task passes only its activation kind.
+  public static bool IsBootLaunch {
+    get; private set;
+  }
+
   [STAThread]
   private static void Main(string[] args) {
     // Armed with this switch the panel is its own dev-mode waiter: it waits for
@@ -21,6 +28,8 @@ internal static class Program {
       return;
     }
 
+    IsBootLaunch = Switches.IsPresent(args, Switches.Background)
+        || AppInstance.GetCurrent().GetActivatedEventArgs().Kind == ExtendedActivationKind.StartupTask;
     if (IsRedirectedToRunningPanel()) {
       return;
     }
@@ -44,6 +53,11 @@ internal static class Program {
     AppInstance registered = AppInstance.FindOrRegisterForKey(InstanceKey);
     if (registered.IsCurrent) {
       return false;
+    }
+    // A boot launch finding a panel already running has nothing to add, and
+    // redirecting it would open that panel's window.
+    if (IsBootLaunch) {
+      return true;
     }
     AppActivationArguments activation = AppInstance.GetCurrent().GetActivatedEventArgs();
     Task.Run(() => registered.RedirectActivationToAsync(activation).AsTask()).Wait();

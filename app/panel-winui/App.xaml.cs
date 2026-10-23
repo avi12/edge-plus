@@ -45,16 +45,20 @@ public partial class App : Application {
     _loader.Start();
     // A second launch redirected here (Program) shows the window.
     AppInstance.GetCurrent().Activated += (_, _) => dispatcher.TryEnqueue(ShowWindow);
-    // The plain exe boots with the Run entry's switch; the Store package's
-    // startup task passes no arguments, only its activation kind.
-    bool isBootLaunch =
-        Switches.IsPresent(Environment.GetCommandLineArgs(), Switches.Background)
-        || AppInstance.GetCurrent().GetActivatedEventArgs().Kind == ExtendedActivationKind.StartupTask;
-    if (isBootLaunch) {
-      TrimWhenSettled(dispatcher);
-    } else {
-      ShowWindow();
+    if (Packaging.IsPackaged) {
+      AppRestart.RegisterForUpdates(Switches.Background);
     }
+    if (!Program.IsBootLaunch) {
+      ShowWindow();
+      return;
+    }
+    // A relaunch after an update is a boot launch too, and needs no listener
+    // when Edge+ no longer starts with Windows.
+    if (!_loader.IsResident()) {
+      Exit();
+      return;
+    }
+    TrimWhenSettled(dispatcher);
   }
 
   // Give memory back once the startup (or the closed window's teardown) has
