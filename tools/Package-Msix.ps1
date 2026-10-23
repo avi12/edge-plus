@@ -3,21 +3,18 @@
   Build the Microsoft Store package: dist\EdgePlus-<version>-x64.msix.
 
 .DESCRIPTION
-  Publishes the panel as a packaged (WindowsPackageType=MSIX) loose layout,
-  renders the three Store logos from Assets\edgeplus.ico, stamps the version of
-  the built exe into the manifest and packs it with makeappx. The package is
-  left UNSIGNED, which is what the Store wants: Partner Center signs it on
-  upload. Pass -CertificateThumbprint only to sideload it for testing.
+  Left UNSIGNED, which is what the Store wants: Partner Center signs it on
+  upload.
 
   The identity in app\panel-winui\Package.appxmanifest is a placeholder until
   the product name is reserved in Partner Center (see docs\STORE-SUBMISSION.md);
   the package builds and packs with it, and Partner Center refuses it.
 
-  Known gap, unchanged by this script: nothing has been installed
-  from this package and run end to end.
+  Known gap: nothing has been installed from this package and run end to end.
 
 .PARAMETER CertificateThumbprint
-  Sign the package with this certificate from Cert:\CurrentUser\My.
+  Sign with this certificate from Cert:\CurrentUser\My, only to sideload for
+  testing.
 
 .EXAMPLE
   pwsh tools\Package-Msix.ps1
@@ -51,8 +48,7 @@ function Find-SdkTool([string] $name) {
     return $tool.FullName
 }
 
-# The manifest's logos, scaled from the icon's largest frame: 44 and 150 are the
-# two VisualElements logos, 50 is the Store listing's logo.
+# Scaled from the icon's largest frame.
 $logoSizes = @{ 'Square44x44Logo.png' = 44; 'Square150x150Logo.png' = 150; 'StoreLogo.png' = 50 }
 function New-MsixLogos([string] $iconPath, [string] $targetDir) {
     New-Item -ItemType Directory -Force $targetDir | Out-Null
@@ -85,8 +81,8 @@ Invoke-Checked 'dotnet publish (msix layout)' {
 
 New-MsixLogos -iconPath (Join-Path $app 'Assets\edgeplus.ico') -targetDir (Join-Path $layout 'Assets')
 
-# The version in the package is the exe's, so the two cannot disagree. The
-# manifest's four-part version ends in 0, which the Store requires.
+# The exe's version, so the two cannot disagree; the Store requires the fourth
+# part to be 0.
 $version = (Get-Item (Join-Path $layout 'edgeplus.exe')).VersionInfo.ProductVersion
 if ($version -notmatch '^\d+\.\d+\.\d+') {
     throw "Expected a version that starts with three numbers, got '$version'"

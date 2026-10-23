@@ -3,31 +3,24 @@
   Ship the current version to the Microsoft Store in one command.
 
 .DESCRIPTION
-  Ported from avi/any-stt's store-deploy.ps1. It drives the Microsoft Store
-  submission API:
+  Builds the package, clones the last published submission into a draft, swaps
+  in the new package with "What's new" from the version's CHANGELOG.md section,
+  uploads and commits it. Committing starts certification.
 
-    1. build dist\EdgePlus-<version>-x64.msix (tools\Package-Msix.ps1)
-    2. sign in to Partner Center with an Entra (Azure AD) application
-    3. clone the last published submission into a new draft
-    4. swap the old package for the new one, and set "What's new" to the
-       version's section of CHANGELOG.md
-    5. upload the package, commit, and wait for the commit to be accepted
-
-  Committing starts certification; the verdict lands in Partner Center and by
-  email. The version is <Version> in app\panel-winui\Directory.Build.props, so
-  bump it there (and add its CHANGELOG.md section) first.
+  Bump <Version> in app\panel-winui\Directory.Build.props, and add its
+  CHANGELOG.md section, first.
 
 .PARAMETER Mandatory
-  Mark the update mandatory. Every installed panel then installs it as soon as
-  it is downloaded, even with its window open (Panel\Setup\StoreUpdates.cs).
-  Use it for a release that supports a new Edge build: until it lands, every
-  feature that calls into msedge.dll stays paused.
+  Every installed panel then installs it as soon as it is downloaded, even with
+  its window open (Panel\Setup\StoreUpdates.cs). Use it for a release that
+  supports a new Edge build: until it lands, every feature that calls into
+  msedge.dll stays paused.
 
 .PARAMETER CredentialsFile
-  JSON with tenantId, clientId, clientSecret and appId. Defaults to
+  JSON with tenantId, clientId, clientSecret and appId; defaults to
   tools\store-credentials.json (gitignored). Each may instead come from
   AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET or STORE_APP_ID. appId
-  is the 12-character Store ID from Partner Center, not the package name.
+  is the 12-character Store ID, not the package name.
 
 .PARAMETER SkipBuild
   Upload the package already in dist\ instead of rebuilding.
@@ -81,7 +74,6 @@ function Get-Credentials([string] $path) {
     return $resolved
 }
 
-# The body of CHANGELOG.md's "## <version>" section, up to the next heading.
 function Get-ReleaseNotes([string] $version) {
     $changelog = Join-Path $repo 'CHANGELOG.md'
     $lines = Get-Content $changelog

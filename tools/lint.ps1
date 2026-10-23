@@ -1,24 +1,16 @@
-# lint.ps1 — the repo's lint gate, the same shape as avi/any-stt's tools/lint.ps1
-# (which is itself the C++ equivalent of youtube-time-manager's `pnpm dev:lint`).
-#
-#   pwsh tools/lint.ps1              check everything, non-zero exit on any finding
-#   pwsh tools/lint.ps1 -Fix         apply what can be applied (clang-format -i,
-#                                    clang-tidy --fix, dotnet format), then re-check
-#   pwsh tools/lint.ps1 -Staged      only files staged for commit (what the
-#                                    pre-commit hook runs)
-#   pwsh tools/lint.ps1 -InstallHook point git at .githooks so commits are gated
-#
-# Six passes, over the DLL's C++ and the panel's C#:
-#   clang-format (.clang-format)   C++ layout    <- eslint @stylistic
-#   clang-tidy   (.clang-tidy)     correctness   <- oxlint categories.correctness
-#   $restrictedSyntax (below)      house rules   <- eslint no-restricted-syntax
-#   $csharpRules (below)           the same, for the WinUI panel's C#
-#   Export-SharedConstants -Check  the generated C# matches the C++ it reads
-#   dotnet format (app\.editorconfig)  C# layout and style, Google C# style
-#
-# clang-tidy parses with clang-cl so it sees the SAME headers and defines the
-# MSVC build uses — the flags are read out of fixedge-split.buildscript, the one
-# description of how the native split compiles.
+<#
+.SYNOPSIS
+The repo's lint gate over the DLL's C++ and the panel's C#; non-zero exit on any finding.
+.DESCRIPTION
+Passes: clang-format, clang-tidy, C++ restricted syntax, C# house rules,
+Shared.g.cs freshness, dotnet format (app\.editorconfig).
+.PARAMETER Fix
+Apply clang-format -i, clang-tidy --fix and dotnet format, then re-check.
+.PARAMETER Staged
+Only files staged for commit (what the pre-commit hook runs).
+.PARAMETER InstallHook
+Point git at .githooks so commits are gated.
+#>
 [CmdletBinding()]
 param(
     [switch]$Fix,
@@ -36,9 +28,7 @@ if ($InstallHook) {
     exit 0
 }
 
-# --- which files -----------------------------------------------------------
-# The native split's own code and its tests. external\ (MinHook) is vendored and
-# stays close to upstream, so linting it would only report other people's opinions.
+# external\ (MinHook) is vendored and stays close to upstream, so it is not linted.
 $nativeRoot = 'app/native-split'
 function Select-Sources {
     param([string[]]$Paths)
@@ -61,7 +51,6 @@ if (-not $hasCppInScope) {
 }
 
 if ($hasCppInScope) {
-    # --- pass 1: formatting ------------------------------------------------
     Write-Host "[lint] clang-format ($($full.Count) files)"
     if ($Fix) {
         & clang-format -i --style=file $full
@@ -69,11 +58,9 @@ if ($hasCppInScope) {
     & clang-format --dry-run --Werror --style=file $full 2>&1 | ForEach-Object { Write-Host $_ }
     $formatOk = $LASTEXITCODE -eq 0
 
-    # --- pass 2: correctness -----------------------------------------------
-    # Headers are analysed through the translation units that include them, so
-    # only .cpp files are handed to clang-tidy (HeaderFilterRegex decides what it
-    # reports). A staged header alone still needs its includers analysed, so
-    # -Staged analyses every unit whenever any C++ is staged.
+    # Headers are analysed through the units that include them (HeaderFilterRegex
+    # decides what is reported), so a staged header alone still needs every unit.
+    # clang-cl reads the MSVC build's own flags from fixedge-split.buildscript.
     $units = @(Select-Sources (git -C $root ls-files '*.cpp') |
         ForEach-Object { Join-Path $root $_ })
     $vcvars = Get-VcVarsPath
@@ -97,10 +84,8 @@ if ($hasCppInScope) {
         }
     }
 
-    # --- pass 3: restricted syntax -----------------------------------------
-    # eslint's `no-restricted-syntax`: legal constructs that are not how this
-    # codebase is written. One row per rule — what finds it, and the sentence its
-    # author needs to read. No fixer on purpose: each is the author's judgement.
+    # Legal constructs that are not how this codebase is written. No fixer on
+    # purpose: each is the author's judgement.
     $restrictedSyntax = @(
         @{
             Pattern = 'for\s*\(\s*;\s*;\s*\)'
@@ -130,12 +115,8 @@ if ($hasCppInScope) {
     }
 }
 
-# The panel (app\panel-winui) is linted here too, as any-stt lints its C# app.
-
-# --- pass 4: C# house rules ------------------------------------------------
-# The C# counterpart of pass 3, and C#'s form of forbidding `unsafe`: every
-# Win32 call is a [DllImport] in Native\, so a [DllImport] anywhere else is a
-# Win32 call that escaped its one home.
+# Every Win32 call is a [DllImport] in a Native\ folder, so one anywhere else
+# escaped its one home.
 $panelRoot = 'app/panel-winui'
 $csharpRules = @(
     @{
@@ -170,26 +151,19 @@ foreach ($file in $csharpFiles) {
     }
 }
 
-# --- pass 5: the generated C# is current -----------------------------------
-# app\panel-winui\Panel\Platform\Shared.g.cs is produced from the @share markers in
-# the DLL's sources, and the C# build regenerates it on every run — so a
-# checked-in copy that disagrees means a C++ value moved and the commit carries
-# a stale generated file. Skipped under -Staged, which lints a subset.
+# A checked-in Shared.g.cs that disagrees with the @share markers means a C++
+# value moved and the commit carries a stale generated file.
 $sharedOk = $true
 if (-not $Staged) {
     & pwsh -NoProfile -File (Join-Path $PSScriptRoot 'Export-SharedConstants.ps1') -Check
     $sharedOk = $LASTEXITCODE -eq 0
 }
 
-# --- pass 6: C# formatting and style ---------------------------------------
-# app\.editorconfig is the Google C# Style Guide the way .clang-format is the
-# Google C++ one, and dotnet format is what reads it. Skipped under -Staged:
-# dotnet format works on a project, not a file list, so it would judge unstaged
-# files too.
+# Skipped under -Staged: dotnet format works on a project, not a file list.
 #
 # The flag is written out twice rather than splatted in: a conditional array
-# unrolls to a bare string, and `@v` on a string drops it — which silently turns
-# the check into a FIX (any-stt hit exactly this).
+# unrolls to a bare string, and `@v` on a string drops it, which silently turns
+# the check into a fix.
 $csharpOk = $true
 if (-not $Staged) {
     $csharpProjects = @(

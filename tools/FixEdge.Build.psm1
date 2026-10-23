@@ -1,27 +1,20 @@
-# FixEdge.Build.psm1 — the plumbing the repo's PowerShell tools share, so each
-# script holds only its own concern. Modelled on avi/any-stt's AnyStt.Build.psm1.
-#
-# Import from a sibling script with:
-#   Import-Module (Join-Path $PSScriptRoot 'FixEdge.Build.psm1') -Force
+# The plumbing the repo's PowerShell tools share.
 
 Set-StrictMode -Version Latest
 
-# The repository root, from this module's own home in tools\ — so a script does
-# not re-derive it and they cannot disagree.
 function Get-RepoRoot {
     return Split-Path -Parent $PSScriptRoot
 }
 
-# The native split's buildscript: what actually builds the C++ tree, and so the
-# only description of how it is compiled.
+# What actually builds the C++ tree, and so the only description of how it is
+# compiled.
 function Get-BuildScriptPath {
     return Join-Path (Get-RepoRoot) 'app\native-split\fixedge-split.buildscript'
 }
 
-# One setting out of the buildscript. A tool that needs a compiler flag — the
-# standard, the defines, the include path — reads it from there instead of
-# keeping a copy that drifts silently. The format is INI-shaped: `[section]`,
-# then `key = value`.
+# A tool that needs a compiler flag reads it from the buildscript instead of
+# keeping a copy that drifts. The format is INI-shaped: `[section]`, then
+# `key = value`.
 function Get-BuildSetting([string] $section, [string] $key) {
     $isInSection = $false
     foreach ($line in Get-Content (Get-BuildScriptPath)) {
@@ -40,9 +33,9 @@ function Get-BuildSetting([string] $section, [string] $key) {
     throw "fixedge-split.buildscript has no '$key' under [$section]."
 }
 
-# Where vcvars64.bat is, asked of vswhere rather than spelled out: the path
-# carries the Visual Studio version and edition, so a literal one goes stale.
-# Build Tools is hidden from vswhere's default filter, so every product is named.
+# Asked of vswhere: the path carries the Visual Studio version and edition, so a
+# literal one goes stale. Build Tools is hidden from vswhere's default filter, so
+# every product is named.
 function Get-VcVarsPath {
     $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
     if (-not (Test-Path $vswhere)) {
@@ -75,8 +68,7 @@ function Write-Step([string] $text) {
     Write-Host "==> $text" -ForegroundColor Cyan
 }
 
-# The product version: <Version> in Directory.Build.props, the one place it is
-# written.
+# Directory.Build.props is the one place the version is written.
 function Get-ProductVersion {
     $props = Join-Path (Get-RepoRoot) 'app\panel-winui\Directory.Build.props'
     $version = ([xml](Get-Content $props -Raw)).Project.PropertyGroup.Version |

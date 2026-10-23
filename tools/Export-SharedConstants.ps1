@@ -4,26 +4,15 @@
   native split's C++ sources.
 
 .DESCRIPTION
-  The WinUI panel (C#) and the injected DLL (C++) have to agree on a handful of
-  facts: the named events the panel signals, the config file the DLL reads and
-  the size of its id fields, and the msedge.dll build the DLL was reversed
-  against. C# cannot include a C++ header, so this makes the C++ side the source
-  and the C# side a build output — avi/any-stt's Export-SharedConstants.ps1,
-  pointed at app\native-split\src.
+  C# cannot include a C++ header, so the values the panel and the DLL must agree
+  on have the C++ side as their source and the C# side as a build output.
 
-  A marker comment
+  `// @share <Name>` exports a value as `EdgePlus.Shared.<Name>`: the first
+  string literal (L"" ignored) or `= <integer>;` on the marker's line, or, for a
+  marker on its own line, the statement under it (strings joined, else its
+  integer).
 
-      // @share <Name>
-
-  exports a value as `EdgePlus.Shared.<Name>`. On a line that carries a value,
-  the value is the first string literal on it (an L"" prefix is ignored), or
-  the first `= <integer>;`. A marker on a line of its own takes the statement
-  under it instead — its string literals joined, or else its integer — which
-  keeps the declaration line itself free of the marker.
-
-  Run by the csproj before every C# build, so the generated file cannot go
-  stale, and by tools\lint.ps1 with -Check, so a committed copy that disagrees
-  with the headers fails the gate rather than shipping.
+  Run by the csproj before every C# build, and by tools\lint.ps1 with -Check.
 
 .PARAMETER Check
   Compare against the file on disk instead of writing it. Exits 1 when they
@@ -42,13 +31,11 @@ $sourceRoot = Join-Path $repoRoot 'app\native-split\src'
 $outputPath = Join-Path $repoRoot 'app\panel-winui\Panel\Platform\Shared.g.cs'
 $outputName = 'app/panel-winui/Panel/Platform/Shared.g.cs'
 
-# The marker, and the two value shapes it can sit on.
 $markerPattern = '//\s*@share\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*$'
 $stringPattern = 'L?"(?<value>(?:[^"\\]|\\.)*)"'
 $integerPattern = '=\s*(?<value>-?\d+)\s*;'
 
-# C++ source escapes, undone, so the C# literal holds the same characters the
-# compiler put in the C++ one. Only the escapes these values actually use.
+# Only the escapes these values actually use.
 function ConvertFrom-CppEscapes([string]$text) {
     $text -replace '\\\\', "`u{1}" -replace '\\"', '"' -replace "`u{1}", '\'
 }
@@ -57,7 +44,6 @@ function ConvertTo-CSharpLiteral([string]$text) {
     '"' + ($text -replace '\\', '\\' -replace '"', '\"') + '"'
 }
 
-# The value one piece of C++ carries: its first string, else its integer.
 function Read-Value([string]$code) {
     $asString = [regex]::Match($code, $stringPattern)
     if ($asString.Success) {
@@ -93,8 +79,7 @@ foreach ($file in $files) {
         $value = Read-Value $line.Substring(0, $marker.Index)
         $origin = "${relative}:$lineNumber"
         if (-not $value) {
-            # A marker on its own line: the statement under it, which C++
-            # spreads over as many lines as it needs.
+            # The statement under the marker may span several lines.
             $statement = ''
             for ($index = $lineNumber; $index -lt $lines.Count; $index++) {
                 $statement += ' ' + ($lines[$index] -replace '//.*$', '')
@@ -142,7 +127,6 @@ foreach ($name in $constants.Keys) {
     $lines.Add("  public const $($constant.Type) $name = $($constant.Value);")
 }
 $lines.Add('}')
-# CRLF, and a trailing newline, to match everything else the tree checks in.
 $generated = ($lines -join "`r`n") + "`r`n"
 
 $outputs = @(
@@ -167,8 +151,7 @@ if ($Check) {
     exit 0
 }
 
-# Only when it changed, so an unchanged header does not make every build
-# recompile the panel.
+# Only when it changed, so every build does not recompile the panel.
 foreach ($output in $outputs) {
     $current = if (Test-Path -LiteralPath $output.Path) { [IO.File]::ReadAllText($output.Path) } else { '' }
     if ($current -ne $output.Text) {
