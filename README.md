@@ -55,7 +55,7 @@ or off, and Edge picks the change up the moment it is made — no restart, ever.
   bar gets two modes, chosen by what you type in its box: `/pattern/i` is a
   RegExp search (every match highlighted, counted in the bar's own n/m, Enter
   steps), and `? where do they discuss pricing?` asks Copilot and
-  highlights the paragraphs it names. Anything else
+  highlights just the sentences that answer, wherever they are on the page. Anything else
   is Edge's own find, as are Edge pages and PDFs (`docs/re/find-bar.md`). Runs in
   the injected DLL.
 

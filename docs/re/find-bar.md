@@ -10,7 +10,7 @@ wire, `config.h`, carries it as the last u32):
 | typed | what happens |
 |---|---|
 | `/pattern/flags` (flags from `gimsu`) | a RegExp search of the page: every match highlighted, counted in the bar's own "n/m", Enter / Shift+Enter / the arrows step through them |
-| `? your question` (a question mark, a space) | the page's paragraphs go to the **browser assistant** (Copilot), which names the ones that answer; they are highlighted and stepped through the same way |
+| `? your question` (a question mark, a space) | the page's text goes to the **browser assistant** (Copilot), which names the sentences that answer, from one paragraph or several; they are highlighted and stepped through the same way |
 | anything else | Edge's own search, untouched (so is every Edge page and PDF) |
 
 A RegExp that is not closed yet (`/pri`) is plain text until its closing slash
@@ -30,7 +30,7 @@ reasoned from disassembly, not run.
 | piece | file | tested |
 |---|---|---|
 | what a typed box means, RegExp shape check, match stepping, script answers | `find_text.h` | [unit] |
-| paragraph labels, prompts that fit a chat, reading its reply | `ask_text.h` | [unit] |
+| sentence labels, prompts that fit a chat, reading its reply | `ask_text.h` | [unit] |
 | each assistant's name, page and selectors (one table) | `chat_target.h` | [unit] |
 | the scripts that arm and read the side panel's chat | `chat_scripts.h` | [run] |
 | a question's steps: side panel, arm, read the answer | `assistant_chat.h` | [run] |
@@ -112,13 +112,20 @@ Edge exposes no API that returns Copilot's answer, but it does have the function
 the page's "Ask Copilot" menu runs, and Copilot's answer is in a page we can
 read. So a question takes the same path as a person's:
 
-1. The page script splits the page into one paragraph per block of text.
-2. `ask_text.h` drops short labels, cuts long paragraphs, and plans up to four
-   prompts of about 6000 characters, each paragraph under a `[P12]` label. The
-   prompt asks for labels only, most relevant first, `NONE` when nothing
-   answers, plus one sentence.
+1. The page script splits the page into one paragraph per block of text and
+   each paragraph into sentences, keeping every sentence as a live DOM `Range`.
+2. `ask_text.h` drops short labels, cuts long sentences, and plans up to four
+   prompts of about 6000 characters: one line per paragraph, each sentence
+   under its own `[P12]` label. The prompt asks for labels only (a run of
+   neighbours may be written `P3-P5`), most relevant first, `NONE` when nothing
+   answers, plus one sentence. Only the named sentences are highlighted, so an
+   answer inside a paragraph marks just that part, and an answer spread over
+   several paragraphs marks each sentence.
 3. `assistant_chat.h` calls `edge_copilot::utils::SendPageContextualPromptToChat`
-   (`0x93dc691`: `browser`, the text, unused, a title, a bool; `edge::SendPromptToSidePanel`).
+   (`0x93dc691`: `browser`, the text, a context string, a title, a bool;
+   `edge::SendPromptToSidePanel`). The context string must be a valid, empty
+   string: in 155.0.4283.62 a null one is read on the non-iframeless path and
+   crashed the browser (`msedge.dll+0x93e2bf6`, read of address 0x17). [run]
    It builds an `AskCopilotRequest` and dispatches it to the **side panel**, which
    opens with the prompt as the user's message. (The first argument after the
    browser is the text that appears as the user's message; passing the prompt
@@ -126,7 +133,10 @@ read. So a question takes the same path as a person's:
    are libc++ long-form `std::string`s over our buffers, which the callee only
    copies.) [run: the panel opened and its chat showed our whole prompt as "You
    said"]
-4. The panel's WebContents is the one whose URL is `edge://discover-chat-v2/`,
+4. In 155.0.4283.62 the panel is *iframeless*: its WebContents is the Copilot
+   web app itself, at `https://cr.m365copilotapp.svc.cloud.microsoft/chat/...`,
+   so its main frame is the chat (`edge::CopilotChatFrame` accepts that or the
+   shell below). [run] The older shell's WebContents is the one whose URL is `edge://discover-chat-v2/`,
    found in `WebContentsImpl::GetAllWebContents` (`0x28282c6`; it fills a record
    whose first word points at the WebContents pointers and whose second is their
    count, not a begin/end vector). `CopilotSidePanelController::GetHostManagerForBrowser`
@@ -140,6 +150,12 @@ read. So a question takes the same path as a person's:
    prompt), then reads it every 0.7 s until the answer stops growing, and
    `assistant_chat.h` hands it back. `ParseAnswer` reads labels **only if they
    were offered in that prompt**.
+6. The panel stays out of the way afterwards: when the question found it
+   closed, `assistant_chat::ReleasePanel` closes it again with
+   `edge_copilot::utils::CloseUndersideChat(browser, true)` (`0x93d99bf`, what
+   the panel page's own close message runs) once the ask is over, so the page
+   gets its width back. It is still open while the question is answered: the
+   chat has to be on screen for Edge to run it. [run]
 
 With the panel's first-use notice ("Navigate the Web with Copilot ... Continue")
 showing, the composer is covered and the question waits behind it: the label says
@@ -162,7 +178,17 @@ question sent while a conversation is open is appended to it.
   has been removed; see `docs/re/removed-gemini-integration.md`). A real question
   came back as `P2, P5, P1` plus a sentence, was parsed, and three paragraphs were
   highlighted with "1/3" in the bar.
-- **Copilot** [run, anonymous InPrivate profile]: `copilot.com` now answers a
+- **Copilot, signed in** [run 2026-10-24, throwaway profile signed in to the
+  OS account, `--disable-sync`]: `? which plan includes daily backups` on a
+  six-paragraph page: the panel opened, Copilot answered `P3. The Business plan
+  includes daily backups.`, the paragraph was highlighted and the bar said 1/1.
+  After the sentence split, `? does any plan include phone support` marked only
+  "It adds unlimited websites, daily backups and priority support by phone."
+  and `? what is the refund policy and when can I reach support` marked a
+  sentence in one paragraph and a whole other paragraph; the panel closed
+  itself afterwards. Not run: a panel that was already open before the
+  question (it must stay open), and a page long enough for several prompts.
+- **Copilot** [run, anonymous InPrivate profile, earlier]: `copilot.com` now answers a
   signed-out profile with a sign-in page; the driver found no box, said
   "Needs you" and showed the page (screenshot). **A real Copilot answer was
   never read in this profile** (earlier, against a mock chat page and a real page
