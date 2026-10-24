@@ -243,8 +243,8 @@ with the tools in `docs/re/`.
 
 - **No extension.** An extension cannot change Edge's split view, its tab
   strip or its theme engine. A DLL runs inside Edge's process, so it can
-  change them. The old extension approach is documented in
-  [`docs/edge-split-view.md`](docs/edge-split-view.md), which is out of date.
+  change them. Edge+ began as an extension that drew panes as frames in a page;
+  panes in that page could not use Edge's own tab strip, split view or theme.
 - **Live switches, not a restart.** Each switch sends the DLL its state
   through a config file and an event. Turning a feature off undoes its hooks
   and restores Edge's own behaviour.

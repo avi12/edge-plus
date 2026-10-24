@@ -3,8 +3,7 @@
 Grows Microsoft Edge's built-in split view past its two-pane limit by injecting a
 DLL into the browser process and reshaping `MultiContentsView`'s geometry. This is
 the "no extension, hot-swappable DLL" path (see `docs/re/split-view-abi.md` for the
-reverse-engineered ABI, and `docs/edge-split-view.md` for why the two-pane cap
-exists). Authorized personal customization of the user's own Edge.
+reverse-engineered ABI). Authorized personal customization of the user's own Edge.
 
 ## Status
 
