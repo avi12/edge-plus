@@ -1,6 +1,7 @@
 // geom.h — geometry value types laid out as gfx::Rect, gfx::Point and gfx::Size
 // are, so a pointer to one can be handed straight to Edge.
 #pragma once
+#include <algorithm>
 #include <bit>
 #include <cstdint>
 
@@ -49,6 +50,27 @@ struct Size {
 
 [[nodiscard]] inline constexpr bool Empty(const Rect& rect) noexcept {
   return rect.width <= 0 || rect.height <= 0;
+}
+
+// The smallest rect holding both; an empty one adds nothing.
+[[nodiscard]] inline constexpr Rect Union(const Rect& rect,
+                                          const Rect& other) noexcept {
+  if (Empty(rect)) {
+    return other;
+  }
+  if (Empty(other)) {
+    return rect;
+  }
+  const int32_t left = std::min(rect.x, other.x);
+  const int32_t top = std::min(rect.y, other.y);
+  const int32_t right = std::max(rect.x + rect.width, other.x + other.width);
+  const int32_t bottom = std::max(rect.y + rect.height, other.y + other.height);
+  return Rect{left, top, right - left, bottom - top};
+}
+
+[[nodiscard]] inline constexpr Rect GrowVertically(const Rect& rect,
+                                                   int32_t reach) noexcept {
+  return Rect{rect.x, rect.y - reach, rect.width, rect.height + 2 * reach};
 }
 
 }  // namespace fixedge

@@ -118,20 +118,55 @@ inline PaneOrigin* PaneDraggedBy(const void* context) {
   return isPaneDrag ? &g_paneOrigin.value() : nullptr;
 }
 
-// Skips the dragged tab itself; -1 if none.
-inline int TabUnder(void* context, void* tsm, void* draggedContents,
-                    Point screenPoint) {
+// How far above and below its rows a split's tabs still take a drop, in DIPs.
+// Edge's drag moves the dragged tab past a neighbour by its middle, so a split
+// right beside the dragged tab would otherwise be reached only at its edge.
+inline constexpr int kSplitRowsReach = 12;
+
+// The rows of the split whose member is at strip `first`: every member's tab
+// as one box (a split spread over rows may leave one half empty), the dragged
+// tab aside. `next` is set past the split's last member.
+inline Rect SplitRowsAt(void* context, void* tsm, void* draggedContents,
+                        int first, int& next) {
+  void* firstTab = edge::TabModelAt(tsm, first);
   const int tabCount = edge::TabCount(tsm);
-  for (int i = 0; i < tabCount; i++) {
-    void* contents = edge::TabWebContentsAt(tsm, i);
+  Rect rows{};
+  next = first;
+  while (next < tabCount &&
+         edge::IsSameSplit(firstTab, edge::TabModelAt(tsm, next))) {
+    void* contents = edge::TabWebContentsAt(tsm, next);
     void* tabView = contents == draggedContents
                         ? nullptr
                         : edge::DragContextTabFor(context, contents);
+    if (tabView) {
+      rows = Union(rows, edge::ViewBoundsInScreen(tabView));
+    }
+    next++;
+  }
+  return rows;
+}
+
+// The strip index of a member of the split whose rows hold the point; -1 if
+// none.
+inline int SplitUnder(void* context, void* tsm, void* draggedContents,
+                      Point screenPoint) {
+  const int tabCount = edge::TabCount(tsm);
+  int i = 0;
+  while (i < tabCount) {
+    void* tab = edge::TabModelAt(tsm, i);
+    if (!edge::TabIsSplit(tab)) {
+      i++;
+      continue;
+    }
+    int next = i;
+    const Rect rows = SplitRowsAt(context, tsm, draggedContents, i, next);
     const bool isUnderPointer =
-        tabView && Contains(edge::ViewBoundsInScreen(tabView), screenPoint);
+        !Empty(rows) &&
+        Contains(GrowVertically(rows, kSplitRowsReach), screenPoint);
     if (isUnderPointer) {
       return i;
     }
+    i = std::max(next, i + 1);
   }
   return -1;
 }
@@ -148,15 +183,13 @@ inline void ShowSplitAt(int index) {
   Log("[tabdrag] showing the split of tab %d", index);
 }
 
-// Every move over the tab list: a split's tab under the pointer is picked, and
+// Every move over the tab list: a split under the pointer is picked, and
 // returned; null over any other tab.
 inline void* PickSplitUnder(void* controller, void* context, void* tsm,
                             Point screenPoint) {
   void* draggedContents = edge::DraggedContents(controller, 0);
-  const int index = TabUnder(context, tsm, draggedContents, screenPoint);
-  void* tab = index >= 0 ? edge::TabModelAt(tsm, index) : nullptr;
-  const bool isSplitTab = tab && edge::TabIsSplit(tab);
-  if (!isSplitTab) {
+  const int index = SplitUnder(context, tsm, draggedContents, screenPoint);
+  if (index < 0) {
     return nullptr;
   }
   void* splitContents = edge::TabWebContentsAt(tsm, index);

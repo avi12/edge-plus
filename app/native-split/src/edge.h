@@ -237,6 +237,23 @@ inline void TabGetSplit(void* tab, void* outOptionalSplitId) {
   reinterpret_cast<Fn>(VirtualFunction(
       tab, edge155::off::TABMODEL_vtbl_GetSplit))(tab, outOptionalSplitId);
 }
+struct OptionalSplitId {
+  uint8_t token[16];
+  uint8_t hasValue;
+  uint8_t padding[7];
+};
+inline OptionalSplitId TabSplitId(void* tab) {
+  OptionalSplitId splitId = {};
+  TabGetSplit(tab, &splitId);
+  return splitId;
+}
+inline bool IsSameSplit(void* tab, void* otherTab) {
+  const OptionalSplitId splitId = TabSplitId(tab);
+  const OptionalSplitId otherSplitId = TabSplitId(otherTab);
+  const bool isBothInSplits = splitId.hasValue && otherSplitId.hasValue;
+  return isBothInSplits && std::memcmp(splitId.token, otherSplitId.token,
+                                       sizeof(splitId.token)) == 0;
+}
 
 inline void* GetSplitData(void* tsm, void* splitId) {
   using Fn = void*(__fastcall*)(void*, void*);
@@ -1114,12 +1131,7 @@ inline int McvActiveSplitPanes(void* mcv) {
   if (!isActiveTabInSplit) {
     return 1;
   }
-  struct {
-    uint8_t token[16];
-    uint8_t hasValue;
-    uint8_t padding[7];
-  } optionalSplitId = {};
-  TabGetSplit(activeTab, &optionalSplitId);
+  OptionalSplitId optionalSplitId = TabSplitId(activeTab);
   if (!optionalSplitId.hasValue) {
     return 1;
   }
