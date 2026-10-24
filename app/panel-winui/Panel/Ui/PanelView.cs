@@ -54,6 +54,7 @@ internal sealed class PanelView : IDisposable {
   private readonly ThemingCard _themingCard;
   private readonly Dictionary<OwnCard, FeatureCard> _ownCards = [];
   private readonly InjectCard _injectCard = new();
+  private readonly UpdateCard _updateCard = new();
   // The Inject automatically card, with the Inject card under it while offered;
   // its add/delete transition slides the Inject card in and out.
   private readonly StackPanel _autoInjectGroup = new() { Spacing = CardSpacing };
@@ -75,6 +76,7 @@ internal sealed class PanelView : IDisposable {
     };
     _themingCard = new ThemingCard(RunAsync, PickLocalThemeAsync);
     _injectCard.Clicked += () => _ = InjectAsync();
+    _updateCard.Clicked += () => _ = RestartToUpdateAsync();
     Motion.Animate(_autoInjectGroup, Motion.AddDelete);
     foreach ((Section section, CardSlot[] cards) in PanelLayout.Sections) {
       _sectionList.Children.Add(SectionView(section, cards));
@@ -85,6 +87,7 @@ internal sealed class PanelView : IDisposable {
       Padding = new Thickness(ContentPadding, CardSpacing, ContentPadding, ContentPadding),
       Spacing = CardSpacing,
     };
+    page.Children.Add(_updateCard.View);
     page.Children.Add(_openEdgeHint);
     page.Children.Add(_buildNotice);
     page.Children.Add(_actionNotice);
@@ -113,6 +116,8 @@ internal sealed class PanelView : IDisposable {
       _service.BuildChanged += OnBuildChanged;
       _service.ThemeRefreshed += OnThemeRefreshed;
       _service.BrowsersChanged += OnBrowsersChanged;
+      _service.UpdateReady += OnUpdateReady;
+      ShowUpdate(_service.PendingUpdate);
     }
     Refresh();
   }
@@ -130,6 +135,7 @@ internal sealed class PanelView : IDisposable {
       _service.BuildChanged -= OnBuildChanged;
       _service.ThemeRefreshed -= OnThemeRefreshed;
       _service.BrowsersChanged -= OnBrowsersChanged;
+      _service.UpdateReady -= OnUpdateReady;
       _service.IsWindowOpen = false;
     }
     Motion.Forget();
@@ -140,6 +146,33 @@ internal sealed class PanelView : IDisposable {
 
   // Edge restarted: with auto-inject off, it may want the Inject button again.
   private void OnBrowsersChanged() => OnUiThread(Refresh);
+
+  private void OnUpdateReady(ReadyUpdate update) => OnUiThread(() => ShowUpdate(update));
+
+  private void ShowUpdate(ReadyUpdate? update) {
+    if (update is not null) {
+      _updateCard.Show(update.Offer.Version);
+    }
+  }
+
+  // The swap and the relaunch are file and process work, so off the UI thread;
+  // the new exe waits for this process to end, which is done here.
+  private async Task RestartToUpdateAsync() {
+    try {
+      await Task.Run(PanelActions.RestartToUpdate);
+    } catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException
+                                        or System.IO.InvalidDataException
+                                        or InvalidOperationException
+                                        or System.ComponentModel.Win32Exception) {
+      PanelLog.Write("restarting into the update failed", error);
+      if (!_isDisposed) {
+        _updateCard.Reset();
+        ShowActionNotice(Wording.UpdateFailed);
+      }
+      return;
+    }
+    Application.Current.Exit();
+  }
 
   private void OnThemeRefreshed(ThemeRefresh refresh) =>
       OnUiThread(() => ShowActionNotice(refresh.Error ?? ""));
@@ -225,12 +258,14 @@ internal sealed class PanelView : IDisposable {
   private static PanelState SetOwnCard(OwnCard own, bool isOn) => own switch {
     OwnCard.StartWithWindows => PanelActions.SetStartWithWindows(isOn),
     OwnCard.AutoInject => PanelActions.SetAutoInject(isOn),
+    OwnCard.AutoUpdate => PanelActions.SetAutoUpdate(isOn),
     _ => throw new ArgumentOutOfRangeException(nameof(own)),
   };
 
   private static bool IsOn(OwnCard own, PanelState state) => own switch {
     OwnCard.StartWithWindows => state.IsStartWithWindows,
     OwnCard.AutoInject => state.IsAutoInject,
+    OwnCard.AutoUpdate => state.IsAutoUpdate,
     _ => throw new ArgumentOutOfRangeException(nameof(own)),
   };
 

@@ -82,7 +82,7 @@ internal static class InjectOfferTests {
   // Auto-inject off, Edge open on a supported build, a switch wanting the DLL.
   private static PanelState Missing() =>
       new(new Features(), new Theming(), [], IsEdgeRunning: true, IsStartWithWindows: false,
-          IsSplitLoaded: false, IsSplitWanted: true, IsAutoInject: false, s_supported,
+          IsSplitLoaded: false, IsSplitWanted: true, IsAutoInject: false, IsAutoUpdate: true, s_supported,
           s_supported);
 
   private static PanelState Loaded() => Missing() with { IsSplitLoaded = true };

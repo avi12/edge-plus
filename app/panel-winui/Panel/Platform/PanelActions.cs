@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace EdgePlus;
 
@@ -42,6 +43,35 @@ internal static class PanelActions {
       }
       return Read(settings);
     }
+  }
+
+  // Turning it on looks for a newer release at once, so the card can appear
+  // without waiting for the next scheduled check.
+  public static PanelState SetAutoUpdate(bool isOn) {
+    lock (Settings.Gate) {
+      Settings settings = Settings.Load();
+      settings.AutoUpdate = isOn;
+      settings.Save();
+      if (isOn) {
+        BackgroundService.Current?.CheckForUpdateSoon();
+      }
+      return Read(settings);
+    }
+  }
+
+  // Puts the downloaded release's exe in place of the running one and starts
+  // it, which waits for this process to exit; the window then ends this
+  // process. The new exe swaps its own DLL into Edge, so no Edge restart.
+  public static void RestartToUpdate() {
+    ReadyUpdate update = BackgroundService.Current?.PendingUpdate
+        ?? throw new InvalidOperationException("No update is ready to install.");
+    string running = Environment.ProcessPath
+        ?? throw new InvalidOperationException("The panel cannot name its own executable.");
+    UpdateInstall.Install(update.File, running, update.Offer.Sha256, DateTime.UtcNow);
+    Process.Start(new ProcessStartInfo(running) {
+      UseShellExecute = false,
+      ArgumentList = { Switches.RestartedFrom, Environment.ProcessId.ToString() },
+    });
   }
 
   // The Inject button: the DLL into every Edge browser process missing it. The
@@ -95,6 +125,7 @@ internal static class PanelActions {
         IsSplitLoaded: DllChannel.IsLoaded(),
         IsSplitWanted: DllSync.IsWanted(settings),
         IsAutoInject: settings.AutoInject,
+        IsAutoUpdate: settings.AutoUpdate,
         EdgeBuild: EdgeWatch.CurrentBuild(),
         SupportedEdgeBuild: EdgeBuild.Pinned);
   }

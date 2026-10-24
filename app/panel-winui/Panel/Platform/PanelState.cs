@@ -15,6 +15,7 @@ internal sealed record PanelState(
     // The switches on want the DLL in Edge (DllSync.IsWanted).
     bool IsSplitWanted,
     bool IsAutoInject,
+    bool IsAutoUpdate,
     // The running build, else the installed one; null when it cannot be read.
     FileVersion? EdgeBuild,
     FileVersion SupportedEdgeBuild) {

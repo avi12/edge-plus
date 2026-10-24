@@ -79,6 +79,18 @@ internal static class Wording {
       "Injected. When Edge next starts, Edge+ offers this button again.",
       0xE73E);
 
+  public const string UpdateButton = "Restart to update";
+  public const string UpdateRestarting = "Restarting";
+  public const string UpdateFailed =
+      "Edge+ could not replace itself where it is installed. Get the new version from its " +
+      "GitHub releases page instead.";
+
+  public static CardWording UpdateReady(Version version) => new(
+      $"Edge+ {version} is ready",
+      "Restart Edge+ to finish updating. Edge keeps running, and your splits and themes stay " +
+          "as they are.",
+      0xE777);
+
   public static CardWording For(OwnCard card) => card switch {
     OwnCard.StartWithWindows => new(
         "Start Edge+ when Windows starts",
@@ -91,6 +103,11 @@ internal static class Wording {
         "Puts Edge+ into Edge each time Edge starts. Off, Edge starts without it and Edge+ " +
             "offers an Inject button.",
         0xE945),
+    OwnCard.AutoUpdate => new(
+        "Check for updates",
+        "Looks for a new Edge+ release on GitHub and offers to restart into it. Off, Edge+ " +
+            "never contacts GitHub.",
+        0xE895),
     _ => throw new ArgumentOutOfRangeException(nameof(card)),
   };
 
