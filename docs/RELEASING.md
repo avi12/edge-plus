@@ -1,28 +1,24 @@
 # Releasing an update
 
 1. Bump `<Version>` in `app/panel-winui/Directory.Build.props`. It is the only
-   place the version is written: the exe, the panel's footer and the MSIX
-   manifest all read it from there.
+   place the version is written: the exe and the panel's footer both read it
+   from there.
 2. Commit it as `chore(release): <version>`.
-3. Write the release notes on the GitHub release, for users: plain sentences, no
-   file names. The footer's version links to the releases page.
-4. `pwsh tools/Deploy-Store.ps1 -WhatIf` builds the MSIX and leaves a draft in
-   Partner Center. Drop `-WhatIf` to send it to certification.
+3. Build the exe: `dotnet publish app\panel-winui -c Release`. It is one
+   `edgeplus.exe` under `app\panel-winui\bin\Release\...\win-x64\publish\`.
+4. Create a GitHub release `v<version>` with the exe attached. The release
+   notes are the changelog: plain sentences for users, no file names. The
+   footer's version links to the releases page.
 
 ## A release for a new Edge build
 
 When Edge updates, every feature that calls into `msedge.dll` pauses until
 `app/native-split/src/offsets.h` is re-pinned to the new build. Ship that
-release with `-Mandatory`: installed panels then install it as soon as it is
-downloaded, even with the window open, instead of waiting for it to close.
+release as soon as it is ready, and say in its notes which Edge build it
+supports.
 
 ## How installed copies update
 
-- **Store package:** `Panel/Setup/StoreUpdates.cs` asks the Store 3 minutes
-  after start, every 6 hours, and at once when a new Edge build pauses
-  features. It downloads silently (only with the user's consent to automatic
-  updates) and installs once the window is closed, or right away when the
-  update is mandatory. The host registers for restart (`Native/AppRestart.cs`),
-  so the panel comes back as the windowless listener after the install.
-- **Plain exe:** updates by running a newer `edgeplus.exe`. At start it swaps
-  its own DLL into Edge in place of an older one.
+Installed copies do not update themselves. A user installs a newer
+`edgeplus.exe` by running it; at start it swaps its own DLL into Edge in place
+of an older one.

@@ -38,9 +38,6 @@ public partial class App : Application {
     _loader.Start();
     // A second launch, redirected here by Program.
     AppInstance.GetCurrent().Activated += (_, _) => dispatcher.TryEnqueue(ShowWindow);
-    if (Packaging.IsPackaged) {
-      AppRestart.RegisterForUpdates(Switches.Background);
-    }
     if (!Program.IsBootLaunch) {
       ShowWindow();
       return;
