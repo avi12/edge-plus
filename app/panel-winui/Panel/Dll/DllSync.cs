@@ -13,7 +13,23 @@ internal static class DllSync {
   private const int LoadPolls = 30;
   private const int LoadPollMilliseconds = 100;
 
+  // Which browser processes an Apply may inject into.
+  private enum Reach {
+    EveryBrowser,
+    Holders,
+  }
+
+  // A settings change: with auto-inject off it reaches only the processes that
+  // already hold the DLL, and an Edge without one waits for the Inject button.
   public static void Apply(Settings settings) {
+    if (settings.AutoInject) {
+      Apply(settings, Reach.EveryBrowser, []);
+      return;
+    }
+    Apply(settings, Reach.Holders, EdgeProcesses.PidsWithModule(Paths.SplitDllName));
+  }
+
+  private static void Apply(Settings settings, Reach reach, int[] holders) {
     if (EdgeInstall.IsSimulated) {
       return;
     }
@@ -35,6 +51,7 @@ internal static class DllSync {
     Payload.Unpack();
     int[] missing = EdgeProcesses.PidsMissingModule(Paths.SplitDllName)
                         .Where(pid => EdgeWatch.BuildOf(pid) == EdgeBuild.Pinned)
+                        .Where(pid => reach == Reach.EveryBrowser || holders.Contains(pid))
                         .ToArray();
     if (missing.Length > 0) {
       Injector.InjectInto(missing, Paths.SplitDll);
@@ -53,16 +70,18 @@ internal static class DllSync {
     lock (Settings.Gate) {
       Settings settings = Settings.Load();
       bool isEnabled = IsWanted(settings);
-      bool isLoaded = DllChannel.IsLoaded();
-      bool isStale = isLoaded && !Payload.IsUnpackedCurrent();
-      if (isEnabled && isStale) {
+      if (!isEnabled) {
+        return;
+      }
+      // Taken before a stale DLL unloads, so its processes get the fresh one.
+      int[] holders = EdgeProcesses.PidsWithModule(Paths.SplitDllName);
+      bool isStale = DllChannel.IsLoaded() && !Payload.IsUnpackedCurrent();
+      if (isStale) {
         DllChannel.SignalUnload();
         WaitForUnload();
       }
-      bool shouldApply = isEnabled && (settings.AutoInject || isLoaded);
-      if (shouldApply) {
-        Apply(settings);
-      }
+      Reach reach = settings.AutoInject ? Reach.EveryBrowser : Reach.Holders;
+      Apply(settings, reach, holders);
     }
   }
 
@@ -71,7 +90,7 @@ internal static class DllSync {
   // up. DllMain creates the unload event before LoadLibrary returns, so the wait
   // is normally over at the first poll.
   public static void ApplyAndWaitForLoad(Settings settings) {
-    Apply(settings);
+    Apply(settings, Reach.EveryBrowser, []);
     bool isLoadExpected = !EdgeInstall.IsSimulated && IsWanted(settings)
         && PinnedBrowserPids().Length > 0;
     if (isLoadExpected) {
