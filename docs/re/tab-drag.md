@@ -69,6 +69,93 @@ mid-drag ends the drag. It:
    index;
 3. commits the planned tree, in which the tab is the newest leaf.
 
+## A pane's drag handed to the tab list
+
+Target: `msedge.dll` 156.0.4314.42. Code: `TakeOverPaneDrag` and the detours in
+`src/tabdrag.h`; the hand-off point in `drag.h` (`IsReadyForTabList`).
+
+**What the user does:** drags a pane of a grown split by its grip onto the
+vertical tab list. The pane's tab leaves the split's row at once and follows
+the pointer through the list, the other tabs making room, exactly as a tab
+dragged within the list (or in from another window) does. Releasing there
+leaves it a tab of its own at that place. Back over the split the drag docks
+as an Alt drag does (the split shows again, the preview follows the pointer,
+releasing adds the tab as a pane there); back over the list it is Edge's drag
+again. Esc puts the pane back where it was.
+
+**How a press on a tab starts Edge's drag.** `Tab::OnMousePressed` (`0xa772d50`)
+selects the tab, takes the selection (`TabSlotController` vtable `+0x178`,
+`GetSelectionModel`, by value), rebuilds the press as a `ui::MouseEvent` in
+the tab's coordinates and calls `TabSlotController::MaybeStartDrag` (vtable
+`+0x220`) with the tab view, that event and the selection by value (the callee
+destroys it). The tab view's `controller_` is at `+0x530`; for a tab of the
+list it is the window's `EdgeTabStrip` (its `TabSlotController` base, at
+`TabStrip+0x538`). `EdgeTabStrip::MaybeStartDrag` (`0xc9021d0`) adds Edge's
+split handling and calls `TabStrip::MaybeStartDrag` (`0xa779350`), which
+returns without a drag while:
+
+- the strip animates: `TabStrip::IsAnimatingInTabStrip` (`0x1023c20`), the tab
+  container's `BoundsAnimator` or the context's drag-end animation. It always
+  does right after the pane's tab left the split's row and was activated, so
+  `TabStrip::StopAnimating` (`0x2afe282`, the container's
+  `CompleteAnimationAndLayout`) runs first; that also puts the tab where it is
+  going;
+- `BrowserTabStripController::HasAvailableDragActions` is 0.
+
+It then calls the context's `MaybeStartDrag` (`TabDragContext` vtable
+`+0x418`), which creates the `EdgeTabDragController` and `Init`s it. The
+event's location is the grab point inside the tab; `Init` turns it into the
+drag's start point in screen DIPs, so the first move past the drag threshold
+puts the tab under the pointer. The context keeps the controller at `+0x478`
+(vtable `+0x3c8`, `GetDragController`).
+
+**The objects.** `BrowserView::tabstrip` (`0x2930564`, `BrowserView+0x670`,
+then `+0x5d8`) is the strip of the vertical list too: its
+`TabStrip::GetDragContext` (`0x30ba8ee`, `*(TabStrip+0x570)`) is the context
+the list's tab views report, and `GetTabForContents` (`+0x3a0`) finds the
+pane's tab view. Its bounds in screen DIPs are the tab rows only (in the
+throwaway: 249 × 212 DIP for six tabs), not the empty column below them.
+
+**Handing over the mouse.** The grip holds views' mouse capture.
+`TabDragController::SetCapture(this, context)` (`0xa783232`) calls
+`Widget::SetCapture(context)`, as the attach of a tab dragged in from another
+window does; views then sends the strip the moves and the release:
+
+| strip handler | calls |
+|---|---|
+| `TabDragContextImpl::OnMouseDragged` (`0xa77a270`) | `ContinueDrag`: the event in screen DIPs → `TabDragController::Drag` (`0xa783486`) |
+| `EdgeTabDragContextImpl::OnMouseReleased` (`0xa77a290`) | `EndDrag(kComplete)` (vtable `+0x420`) |
+| `TabDragContextImpl::OnMouseCaptureLost` (`0xa77a2f0`) | `EndDrag(kCaptureLost)` |
+
+`EndDragReason` is 0 complete, 1 cancel (Escape), 2 capture lost.
+`Widget::SetCapture` notifies no one, so the grip's button is told it lost the
+capture by hand (`views::Button::OnMouseCaptureLost`), or it would stay drawn
+pressed.
+
+**Off the tab list.** Edge's drag tears the tab off into a new window once the
+pointer leaves `EdgeTabDragController::DoesTabStripContain` (`0xc9097d0`): the
+strip's screen bounds (`GetTabstripScreenBounds`) grown by 15 DIP, or 100 in
+some modes. The `ContinueDragging` detour treats any point outside the strip's
+plain bounds as docking and does not call the original, so Edge never sees a
+point that would tear the tab off. Docking activates the split again (one of
+its remaining panes' tabs), as an Alt drag over a split's tab does; going back
+over the list re-activates the dragged tab first, since Edge moves the
+selected tabs.
+
+**The end.** `EndDrag` complete over a dock target queues the drop (channel
+`kTabDrop`) with the planned tree; complete anywhere else leaves the tab where
+Edge has it (as releasing a pane outside its split always did); cancel or a
+lost capture queues a drop with the split's tree from before, the pane's leaf
+renumbered as the newest (`RenumberAsNewest`, since `GrowSplit` appends it),
+which puts it back in place.
+
+**Building the press.** `ui::MouseEvent(this, type, const Point* location,
+const Point* root_location, TimeTicks, flags, changed_button_flags, const
+PointerDetails*)` (`0x2c312e2`, 0x118 bytes, `PointerDetails` 0x48 bytes at
+its end, default-built by `0xb78e19a`), `TimeTicks::Now` (`0xfe1850`), type 1
+(pressed), flags `0x800` (left button); `ui::Event::~Event` (`0x109ad5a`) ends
+it, as `Tab::OnMousePressed` ends its own.
+
 ## A crash this exposed
 
 **The crash.** Activating a tab whose pane is one of ours (pane 3 or later)

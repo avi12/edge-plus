@@ -54,13 +54,17 @@ The two scenarios this was built for:
 
 **Zones** (`dock.h`), all lengths in DIPs of the split:
 
-1. A pointer up to 48 DIP outside the split is clamped in; farther out (over
-   the tab list, say) takes the pane out of the split as a tab of its own. That
-   is previewed by the outcome itself, with no outline: the split closes up
-   without the pane (`g_heldOut`, laid out by `geometry::TilePanes`, the pane
-   shrunk to nothing but left visible since its grip holds the mouse capture)
-   and the tab list shows it as its own tab. Coming back over the split or Esc
-   puts it back; releasing makes it real.
+1. A pointer up to 48 DIP outside the split is clamped in; farther out takes
+   the pane out of the split as a tab of its own. That is previewed by the
+   outcome itself, with no outline: the split closes up without the pane
+   (`g_heldOut`, laid out by `geometry::TilePanes`, the pane shrunk to nothing
+   but left visible since its grip holds the mouse capture) and the tab list
+   shows it as its own tab. Coming back over the split or Esc puts it back;
+   releasing makes it real.
+   Over the tab list itself (its tab strip's bounds) the pane really leaves the
+   split and the drag goes on as **Edge's own drag of its tab**: it follows the
+   pointer through the list and the other tabs make room. See "A pane's drag
+   handed to the tab list" in `tab-drag.md`.
 2. The split's outer band first: within 8% of the split's extent of an outer
    edge (at least 24, at most 72 DIP; nearest edge wins), held 32 DIP deeper.
    The libraries use 10-16 px; this is deliberately deeper, so dragging "far
@@ -130,8 +134,13 @@ on unload crashed a still-grown split as soon as Edge built a label for pane
 `fixedge.addpane` wParam `500 + i` shows pane *i*'s bar via Edge's own
 `SplitWindowController::ShowControlButton`, and a posted `WM_LBUTTONDOWN` on
 its grip reaches the press handler. Posted moves, however, do not turn into
-views drag events, so the drag itself is covered by the pure tests
-(`dock_test`, `pane_move_test`) and verified with a real mouse.
+views drag events. So the channel has a stand-in for the mouse on a grip,
+each point in window DIPs packed into the lParam (`channel::PointOf`):
+`930 + i` presses pane *i*'s grip, `950` moves the pointer, `951` lets go and
+`952` is Escape. They call what the real events reach: the grip's handlers
+while the pane's own drag runs, then `TabDragController::Drag` and the strip's
+`EndDrag` once the tab list has taken the drag over. The zones themselves are
+also covered by the pure tests (`dock_test`, `pane_move_test`).
 
 A test window covered by another window is treated as occluded and its pages
 stop painting; launch it with `--disable-features=CalculateNativeWinOcclusion`.
