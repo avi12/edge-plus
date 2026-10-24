@@ -202,7 +202,7 @@ void CheckAccumulate() {
   SortAscending(&highlights);
   Check(IndexList(highlights) == "1,5,9", "reading order");
   Answer many;
-  for (int i = 0; i < 20; i++) {
+  for (int i = 0; i < static_cast<int>(kMaxHighlights) + 5; i++) {
     many.indices.push_back(100 + i);
   }
   Accumulate(&highlights, many);

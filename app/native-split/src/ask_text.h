@@ -28,8 +28,9 @@ inline constexpr size_t kMaxParagraphChars = 600;
 inline constexpr size_t kChunkChars = 6000;
 inline constexpr size_t kMaxQuestionChars = 300;
 inline constexpr size_t kMaxChunks = 4;
-inline constexpr size_t kMaxHighlights = 8;
-inline constexpr int kMaxLabelsPerReply = 8;
+// A question about a whole list (the features, the steps) names every item.
+inline constexpr size_t kMaxHighlights = 60;
+inline constexpr int kMaxLabelsPerReply = 60;
 
 inline constexpr char kNoneWord[] = "NONE";
 
@@ -188,13 +189,16 @@ struct Plan {
          "line, each sentence starting with its label in square brackets.\n"
          "Question: \"" +
          std::string(question) +
-         "\"\nReply with the labels of only the sentences that answer the "
-         "question, most relevant first, separated by commas, like: P3, P7. "
-         "Name just the sentences that hold the answer, not whole paragraphs; "
-         "they may be in different paragraphs, and a run of neighbouring "
-         "sentences can be written P3-P5. Use at most " +
+         "\"\nReply with the labels of every sentence that is part of the "
+         "answer, separated by commas, like: P3, P7. A question about a whole "
+         "list (the features, the steps, the prices) needs every item of it. "
+         "Name just the sentences that belong to the answer, not unrelated "
+         "ones beside them; they may be in different paragraphs, and a run of "
+         "neighbouring sentences can be written P3-P9. Use at most " +
          std::to_string(kMaxLabelsPerReply) +
-         " labels. If no sentence answers it, reply " + kNoneWord +
+         " labels (a run counts each of its sentences). If no sentence "
+         "answers it, reply " +
+         kNoneWord +
          ". After the labels, add one short sentence on what you found.\n\n";
 }
 
