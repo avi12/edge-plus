@@ -67,8 +67,9 @@ struct HeldOutPane {
 };
 inline constinit HeldOutPane g_heldOut;
 
-// The tree of the split `mcv` shows; a pending tree passes to the split once
-// it exists.
+// The tree of the split `mcv` shows. A pending tree passes to the first split
+// shown with none of its own: one being created, or the same split under the
+// new id Edge gives it when it grows (HandOverTree).
 inline const Node* TreeFor(void* mcv) {
   const std::optional<SplitKey> key = ShownSplit(mcv);
   const auto pending = PendingTrees().find(mcv);
@@ -76,11 +77,12 @@ inline const Node* TreeFor(void* mcv) {
   if (!key) {
     return hasPending ? &pending->second : nullptr;
   }
-  if (hasPending) {
-    Trees()[*key] = std::move(pending->second);
+  auto entry = Trees().find(*key);
+  const bool isAdopting = hasPending && entry == Trees().end();
+  if (isAdopting) {
+    entry = Trees().insert_or_assign(*key, std::move(pending->second)).first;
     PendingTrees().erase(pending);
   }
-  const auto entry = Trees().find(*key);
   return entry == Trees().end() ? nullptr : &entry->second;
 }
 
@@ -92,6 +94,21 @@ inline void SetTree(void* mcv, Node tree) {
   } else {
     PendingTrees()[mcv] = std::move(tree);
   }
+}
+
+// Before an edit that rebuilds the split: AddToSplitImpl gives the grown split
+// a new id, so the tree is set under the id it has now and also waits for the
+// new one (TreeFor). EndTreeHandOver closes the hand-over once the edit is done.
+inline void HandOverTree(void* mcv, const Node& tree) {
+  SetTree(mcv, tree);
+  PendingTrees()[mcv] = tree;
+}
+
+// The rebuilt split has read its tree by now (the grow's relayout); a hand-over
+// left pending would pass to the next split shown without a tree.
+inline void EndTreeHandOver(void* mcv) {
+  TreeFor(mcv);
+  PendingTrees().erase(mcv);
 }
 
 // The split view is being destroyed. Its splits' trees stay: they are the

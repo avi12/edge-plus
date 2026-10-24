@@ -68,8 +68,9 @@ inline bool GrowWithTree(void* mcv, void* tsm, Node tree, void* newTab) {
   const Node* existing = IsActiveTabSplit(tsm) ? TreeFor(mcv) : nullptr;
   const std::optional<Node> previousTree =
       existing ? std::optional<Node>(*existing) : std::nullopt;
-  SetTree(mcv, std::move(tree));
+  HandOverTree(mcv, tree);
   const bool hasGrown = split_data::GrowSplit(tsm, newTab);
+  EndTreeHandOver(mcv);
   if (!hasGrown) {
     if (previousTree) {
       SetTree(mcv, *previousTree);
