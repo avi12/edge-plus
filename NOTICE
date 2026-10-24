@@ -19,6 +19,6 @@ app/native-split/external/minhook/ and are linked into the injected DLL.
 Windows App SDK and the .NET runtime, which the panel links or bundles, are
 Microsoft's and are used under their own licenses.
 
-"Microsoft Edge" and "Microsoft Store" are trademarks of Microsoft Corporation.
+"Microsoft Edge" is a trademark of Microsoft Corporation.
 Edge+ is an independent project and is not affiliated with or endorsed by
 Microsoft.

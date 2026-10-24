@@ -18,5 +18,3 @@ app/panel-winui/Panel/obj/
 node_modules/
 dist/
 
-# Microsoft Store submission API credentials (tools/Deploy-Store.ps1)
-tools/store-credentials.json

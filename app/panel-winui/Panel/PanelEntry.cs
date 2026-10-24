@@ -24,11 +24,7 @@ public static class PanelEntry {
     return BackgroundService.Start();
   }
 
-  // A packaged panel starts through its own startup task instead.
   private static void MigrateStartupEntry() {
-    if (Packaging.IsPackaged) {
-      return;
-    }
     if (Environment.ProcessPath is not string executable) {
       return;
     }

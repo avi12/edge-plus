@@ -23,9 +23,9 @@ There is one Edge+ process per user (`Program`, `AppInstance`), and it runs
 the panel for its whole life. The panel's `BackgroundService` owns the Edge and
 theme watchers; the window, while open, only listens to it.
 
-- A **boot launch** (`--background` from the Run entry, or the Store package's
-  startup task; `Setup/StartWithWindows` picks which) opens no window. It is the always-on listener, trimmed to about 19 MB of working set
-  (`ProcessTrim`).
+- A **boot launch** (`--background`, from the Run entry that
+  `Setup/StartWithWindows` writes) opens no window. It is the always-on
+  listener, trimmed to about 19 MB of working set (`ProcessTrim`).
 - Launching Edge+ again, or clicking its toast, opens the window on that same
   process.
 - Closing the window keeps the listener while Edge+ starts with Windows

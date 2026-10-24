@@ -9,9 +9,7 @@ namespace EdgePlus;
 internal static class Program {
   private const string InstanceKey = "edgeplus.panel";
 
-  // At sign-in or after an update. The Run entry and the restart registration
-  // pass the switch; the Store package's startup task passes only its
-  // activation kind.
+  // At sign-in: the Run entry passes the switch.
   public static bool IsBootLaunch {
     get; private set;
   }
@@ -23,8 +21,7 @@ internal static class Program {
       return;
     }
 
-    IsBootLaunch = Switches.IsPresent(args, Switches.Background)
-        || AppInstance.GetCurrent().GetActivatedEventArgs().Kind == ExtendedActivationKind.StartupTask;
+    IsBootLaunch = Switches.IsPresent(args, Switches.Background);
     if (IsRedirectedToRunningPanel()) {
       return;
     }

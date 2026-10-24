@@ -6,8 +6,7 @@ Edge+ ("the app") is open source software by Avi (<https://avi12.com>).
 
 **The app collects no personal data and sends no data anywhere.** It has no
 accounts, no analytics, no telemetry and no crash reporting, and its own code
-makes no network requests. The Microsoft Store copy asks the Store, through
-Windows, whether a newer version of the app exists, under the Store's own terms.
+makes no network requests.
 
 ## What it stores on your device
 
