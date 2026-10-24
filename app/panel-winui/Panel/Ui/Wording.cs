@@ -64,14 +64,15 @@ internal static class Wording {
   public const string ReorderHelp =
       "Drag a theme, or press Alt+Up or Alt+Down, to move it in this list and in the pickers.";
 
-  public static CardWording StartWithWindows {
-    get;
-  } = new(
-      "Start Edge+ when Windows starts",
-      "Runs Edge+ in the background, with no window, from when you sign in to Windows: your " +
-          "settings apply and an Edge update that needs a newer Edge+ is caught. Launch Edge+ " +
-          "to open its window.",
-      0xE7E8);
+  public static CardWording For(OwnCard card) => card switch {
+    OwnCard.StartWithWindows => new(
+        "Start Edge+ when Windows starts",
+        "Runs Edge+ in the background, with no window, from when you sign in to Windows: your " +
+            "settings apply and an Edge update that needs a newer Edge+ is caught. Launch " +
+            "Edge+ to open its window.",
+        0xE7E8),
+    _ => throw new ArgumentOutOfRangeException(nameof(card)),
+  };
 
   public static CardWording For(Feature feature) => feature switch {
     Feature.NativeSplit => new(

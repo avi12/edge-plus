@@ -9,13 +9,17 @@ internal enum Section {
   EdgePlusItself,
 }
 
-// A null Feature is the start-with-Windows card, Edge+'s own. A card that only
-// works while another feature is on names it in `Needs`, and is held, with a
-// short hint, while that one is off.
-internal readonly record struct CardSlot(Feature? Feature, Feature? Needs = null) {
-  public static CardSlot StartWithWindows => new(null);
+// Edge+'s own cards: about Edge+ itself, not a feature it adds to Edge.
+internal enum OwnCard {
+  StartWithWindows,
+}
 
-  public bool IsStartWithWindows => Feature is null;
+// A card is either a feature's switch or one of Edge+'s own, never both. A
+// feature card that only works while another feature is on names it in
+// `Needs`, and is held, with a short hint, while that one is off.
+internal readonly record struct CardSlot(Feature? Feature, Feature? Needs = null,
+                                         OwnCard? Own = null) {
+  public static CardSlot Of(OwnCard own) => new(null, Own: own);
 }
 
 internal static class PanelLayout {
@@ -38,7 +42,7 @@ internal static class PanelLayout {
       new(Feature.QuietDevMode),
     ]),
     (Section.EdgePlusItself, [
-      CardSlot.StartWithWindows,
+      CardSlot.Of(OwnCard.StartWithWindows),
     ]),
   ];
 

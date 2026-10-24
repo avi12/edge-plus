@@ -52,7 +52,7 @@ internal sealed class PanelView : IDisposable {
   private readonly Grid _dropVeil;
   private readonly Dictionary<Feature, FeatureCard> _switchCards = [];
   private readonly ThemingCard _themingCard;
-  private readonly FeatureCard _startupCard = new(Wording.StartWithWindows);
+  private readonly Dictionary<OwnCard, FeatureCard> _ownCards = [];
   private readonly BackgroundService? _service;
   private readonly List<IDisposable> _hostSubscriptions = [];
   private PanelState? _state;
@@ -69,8 +69,6 @@ internal sealed class PanelView : IDisposable {
       Visibility = Visibility.Collapsed,
     };
     _themingCard = new ThemingCard(RunAsync, PickLocalThemeAsync);
-    _startupCard.Toggled += isOn => _ = RunAndReportAsync(
-        () => PanelActions.SetStartWithWindows(isOn));
     foreach ((Section section, CardSlot[] cards) in PanelLayout.Sections) {
       _sectionList.Children.Add(SectionView(section, cards));
     }
@@ -164,9 +162,10 @@ internal sealed class PanelView : IDisposable {
   }
 
   private FrameworkElement CardView(CardSlot slot) {
-    if (slot.Feature is not Feature feature) {
-      return _startupCard.View;
+    if (slot.Own is OwnCard own) {
+      return OwnCardView(own);
     }
+    Feature feature = slot.Feature!.Value;
     if (feature == Feature.Theming) {
       return _themingCard.View;
     }
@@ -175,6 +174,23 @@ internal sealed class PanelView : IDisposable {
     _switchCards[feature] = card;
     return card.View;
   }
+
+  private FrameworkElement OwnCardView(OwnCard own) {
+    var card = new FeatureCard(Wording.For(own));
+    card.Toggled += isOn => _ = RunAndReportAsync(() => SetOwnCard(own, isOn));
+    _ownCards[own] = card;
+    return card.View;
+  }
+
+  private static PanelState SetOwnCard(OwnCard own, bool isOn) => own switch {
+    OwnCard.StartWithWindows => PanelActions.SetStartWithWindows(isOn),
+    _ => throw new ArgumentOutOfRangeException(nameof(own)),
+  };
+
+  private static bool IsOn(OwnCard own, PanelState state) => own switch {
+    OwnCard.StartWithWindows => state.IsStartWithWindows,
+    _ => throw new ArgumentOutOfRangeException(nameof(own)),
+  };
 
   // Off the UI thread: an injection can wait on Edge. Returns why it failed,
   // or null. Only a ThemeException carries a sentence written for the user;
@@ -229,7 +245,9 @@ internal sealed class PanelView : IDisposable {
     }
     _themingCard.Update(state, state.IsLocked(Feature.Theming),
                         Wording.DescribeFeature(state, Feature.Theming));
-    _startupCard.Update(state.IsStartWithWindows, isLocked: false, note: "");
+    foreach ((OwnCard own, FeatureCard card) in _ownCards) {
+      card.Update(IsOn(own, state), isLocked: false, note: "");
+    }
   }
 
   private void ShowActionNotice(string message) {

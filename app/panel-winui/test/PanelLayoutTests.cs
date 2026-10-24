@@ -9,7 +9,12 @@ internal static class PanelLayoutTests {
     foreach (Feature feature in Enum.GetValues<Feature>()) {
       Expect.Equal(1, cards.Count(card => card.Feature == feature), $"{feature} has one card");
     }
-    Expect.Equal(1, cards.Count(card => card.IsStartWithWindows), "one start-with-Windows card");
+    foreach (OwnCard own in Enum.GetValues<OwnCard>()) {
+      Expect.Equal(1, cards.Count(card => card.Own == own), $"{own} has one card");
+      Expect.That(Wording.For(own).Title.Length > 0, $"{own} has words");
+    }
+    Expect.That(cards.All(card => card.Feature.HasValue != card.Own.HasValue),
+                "each card is a feature's or Edge+'s own, not both");
 
     Section[] sections = PanelLayout.Sections.Select(each => each.Section).ToArray();
     Expect.That(sections.SequenceEqual(sections.Distinct()), "each section appears once");
