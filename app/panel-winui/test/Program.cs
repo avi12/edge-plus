@@ -23,6 +23,8 @@ internal static class Program {
     ("panel layout", PanelLayoutTests.Run),
     ("inject offer", InjectOfferTests.Run),
     ("legacy data", LegacyDataTests.Run),
+    ("update feed", UpdateFeedTests.Run),
+    ("update install", UpdateInstallTests.Run),
   ];
 
   private static int Main() {
