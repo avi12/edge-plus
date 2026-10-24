@@ -69,7 +69,11 @@ internal sealed class EdgeWatch {
       if (!EdgeInstall.IsSimulated) {
         settings.LastEdgeBuild = build.ToString();
         settings.Save();
-        DllSync.Apply(settings);
+        // A new build only shows once Edge restarted, so nothing is loaded: with
+        // auto-inject off the DLL waits for the Inject button.
+        if (settings.AutoInject) {
+          DllSync.Apply(settings);
+        }
       }
       IReadOnlyList<Feature> paused = EdgeSupport.Paused(settings.Features, build,
                                                          EdgeBuild.Pinned);

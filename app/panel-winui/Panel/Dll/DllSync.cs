@@ -43,7 +43,9 @@ internal static class DllSync {
   }
 
   // A loaded DLL that is not this build's is ejected so Apply injects the fresh
-  // one: a rebuilt panel takes effect with no Edge restart.
+  // one: a rebuilt panel takes effect with no Edge restart. With auto-inject off
+  // a DLL already loaded is still replaced, but an Edge without one waits for
+  // the Inject button.
   public static void SyncOnStart() {
     if (EdgeInstall.IsSimulated) {
       return;
@@ -51,12 +53,14 @@ internal static class DllSync {
     lock (Settings.Gate) {
       Settings settings = Settings.Load();
       bool isEnabled = IsWanted(settings);
-      bool isStale = DllChannel.IsLoaded() && !Payload.IsUnpackedCurrent();
+      bool isLoaded = DllChannel.IsLoaded();
+      bool isStale = isLoaded && !Payload.IsUnpackedCurrent();
       if (isEnabled && isStale) {
         DllChannel.SignalUnload();
         WaitForUnload();
       }
-      if (isEnabled) {
+      bool shouldApply = isEnabled && (settings.AutoInject || isLoaded);
+      if (shouldApply) {
         Apply(settings);
       }
     }
