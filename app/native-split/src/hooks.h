@@ -122,6 +122,22 @@ inline void __fastcall h_set_active(void* mcv, int index) {
   Log("[active] pane %d of %d", index, count);
 }
 
+// MultiContentsView::~MultiContentsView: every pointer we keep to the view goes
+// first. A flight still animating it relaid out the destroyed view on the next
+// tick (seen: tearing a split off into its own window crashed Edge).
+using McvDtor_t = void(__fastcall*)(void*);
+inline constinit McvDtor_t o_mcv_dtor = nullptr;
+inline void __fastcall h_mcv_dtor(void* mcv) {
+  anim::ForgetSplitView(mcv);
+  dividers::ForgetSplitView(mcv);
+  grip::ForgetSplitView(mcv);
+  drag::ForgetSplitView(mcv);
+  tabdrag::ForgetSplitView(mcv);
+  ForgetSplitView(mcv);
+  Log("[mcv] a split view is going: forgot it");
+  o_mcv_dtor(mcv);
+}
+
 // MultiContentsView::CloseSplitView: Edge empties pane 1 as the split closes;
 // our panes are emptied with it. Every way a split shrinks or goes (a pane
 // closed or dragged out, the split dissolved, another tab shown) comes through
@@ -523,6 +539,9 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   Install(edge155::rva::MultiContentsView_SetActiveIndex,
           reinterpret_cast<void*>(h_set_active), &o_set_active,
           "SetActiveIndex");
+  Install(edge155::rva::MultiContentsView_dtor,
+          reinterpret_cast<void*>(h_mcv_dtor), &o_mcv_dtor,
+          "MultiContentsView::~MultiContentsView");
   Install(edge155::rva::MultiContentsView_CloseSplitView,
           reinterpret_cast<void*>(h_close_split_view), &o_close_split_view,
           "MultiContentsView::CloseSplitView");

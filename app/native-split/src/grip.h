@@ -25,6 +25,13 @@ inline GripMap& Grips() {
   return grips;
 }
 
+// The split view is being destroyed, and its panes' hover bars with it.
+inline void ForgetSplitView(void* mcv) {
+  std::erase_if(Grips(), [mcv](const auto& entry) {
+    return entry.second.mcv == mcv;
+  });
+}
+
 inline constexpr char kTooltip[] = "Drag to move this pane";
 
 inline void EnsureGrips(void* mcv) {

@@ -78,6 +78,10 @@ inline constexpr uintptr_t View_GetVisible = 0x0fe0542;  // bool (this)
 // its cached ChildLayout still pointed at it, and ReleaseInternal CHECKed
 // (seen: a window with a grown split closed or torn off crashed Edge).
 inline constexpr uintptr_t Containers_emplace_back = 0x2b0c7f8;
+// MultiContentsView::~MultiContentsView(this), the complete destructor (the
+// deleting one, 0x32232e0, calls it): the window closing, a torn-off tab's
+// window included.
+inline constexpr uintptr_t MultiContentsView_dtor = 0x3223318;
 // base::internal::RawPtrBackupRefImpl<0>::AcquireInternal(uintptr_t), and the
 // test raw_ptr's constructor makes before calling it: the address masked by
 // BRP_pool_mask equals the BRP pool's base, a uint64 global at

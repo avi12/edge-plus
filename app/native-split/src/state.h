@@ -94,6 +94,15 @@ inline void SetTree(void* mcv, Node tree) {
   }
 }
 
+// The split view is being destroyed. Its splits' trees stay: they are the
+// splits' own, and a split torn off lives on in another window.
+inline void ForgetSplitView(void* mcv) {
+  PendingTrees().erase(mcv);
+  if (g_activeMcv == mcv) {
+    g_activeMcv = nullptr;
+  }
+}
+
 inline void ForgetTree(void* mcv) {
   const std::optional<SplitKey> key = ShownSplit(mcv);
   if (key) {

@@ -56,6 +56,10 @@ struct PaneOrigin {
 };
 inline constinit std::optional<PaneOrigin> g_paneOrigin;
 
+// The split view of the window whose tab list a script pressed a tab of
+// (SimulateTabPress).
+inline constinit void* g_scriptedTabDragMcv = nullptr;
+
 // The split a drag would dock into once off the tab list: the last split tab
 // the pointer crossed there, or a pane's own split. It outlives the switches
 // between Edge's drag and docking, which reset g_session.
@@ -260,6 +264,25 @@ inline void LeaveDockMode() {
   }
   g_session = Session{};
   Log("[tabdrag] Edge's drag again");
+}
+
+// The split view is being destroyed: nothing still queued may reach it.
+inline void ForgetSplitView(void* mcv) {
+  if (g_session.mcv == mcv) {
+    overlay::Hide();
+    g_session = Session{};
+  }
+  const bool isDropForIt = g_drop && g_drop->mcv == mcv;
+  if (isDropForIt) {
+    g_drop.reset();
+  }
+  const bool isPaneFromIt = g_paneOrigin && g_paneOrigin->mcv == mcv;
+  if (isPaneFromIt) {
+    g_paneOrigin.reset();
+  }
+  if (g_scriptedTabDragMcv == mcv) {
+    g_scriptedTabDragMcv = nullptr;
+  }
 }
 
 inline void Cancel() {
@@ -481,9 +504,6 @@ inline void ApplyDrop() {
 // Points are window DIPs. Each calls what the real event reaches: the grip's
 // handlers while the pane's drag runs, then what the strip's OnMouseDragged
 // and OnMouseReleased call once the tab list runs the drag.
-
-// The split view of the window whose tab list a script pressed a tab of.
-inline constinit void* g_scriptedTabDragMcv = nullptr;
 
 // The split view of the window whose tab list runs a scripted drag, or null.
 inline void* ScriptedTabDragMcv() {

@@ -31,6 +31,17 @@ inline bool IsActive() {
   return g_session.isPressed || g_session.isDragging;
 }
 
+// The split view is being destroyed: its drag ends with it, laying nothing out.
+inline void ForgetSplitView(void* mcv) {
+  if (g_session.mcv == mcv) {
+    g_session = Session{};
+    overlay::Hide();
+  }
+  if (g_heldOut.mcv == mcv) {
+    g_heldOut = HeldOutPane{};
+  }
+}
+
 inline float Scale() {
   return static_cast<float>(GetDpiForWindow(channel::g_window)) /
          USER_DEFAULT_SCREEN_DPI;

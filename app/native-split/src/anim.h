@@ -93,6 +93,14 @@ inline void SetLive(void* mcv, bool isLive) {
   }
 }
 
+// The split view is being destroyed: a flight still in the air would lay it
+// out on the next tick (hooks.h h_mcv_destroyed).
+inline void ForgetSplitView(void* mcv) {
+  Flights().erase(mcv);
+  Hosts().erase(mcv);
+  LiveSplits().erase(mcv);
+}
+
 // Keyed by WebContents, so a tab's next move starts where it was drawn even when
 // Edge re-feeds it into a different container (closing a pane shifts every
 // later tab one container earlier).

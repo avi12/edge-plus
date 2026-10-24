@@ -151,6 +151,14 @@ inline void ResetToEqual(void* mcv, const Seam& seam, Node tree) {
   Log("[divider] reset a split to equal sizes");
 }
 
+// The split view is being destroyed, and its divider views with it.
+inline void ForgetSplitView(void* mcv) {
+  if (g_drag.mcv == mcv) {
+    g_drag = Drag{};
+  }
+  Pools().erase(mcv);
+}
+
 // The views are left unparented rather than deleted, like the grips.
 inline void RemoveAll() {
   End();
