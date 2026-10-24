@@ -34,8 +34,14 @@ enum class Command : WPARAM {
   kEndPreviewDetach = 909,   // end the preview below
   kPreviewDetachBase = 910,  // + i: the tab list shows pane i out of its split
                              // (a script's stand-in for dragging it there)
-  kApplyTheme = 800,   // apply the theme for the current OS light/dark mode
-  kApplyConfig = 801,  // apply the config read from disk, on the UI thread
+  // A script's stand-in for the mouse on a grip (tabdrag.h), each point in
+  // window DIPs packed into the lParam (PointOf):
+  kGripPressBase = 930,  // + i: press pane i's grip at the point
+  kGripMoveTo = 950,     // the held grip's pointer moves to the point
+  kGripRelease = 951,    // let go
+  kGripEscape = 952,     // Escape
+  kApplyTheme = 800,     // apply the theme for the current OS light/dark mode
+  kApplyConfig = 801,    // apply the config read from disk, on the UI thread
   kRedrawFollowedPages = 803,  // a theme swap changed a followed page's tone
   kReloadConfig = 802,  // re-read the config file and apply it (a script's
                         // stand-in for the config event, which wakes only
@@ -62,6 +68,19 @@ static_assert(CodeOf(Command::kShowBarBase) + kShowBarPaneLimit <=
 static_assert(CodeOf(Command::kMenuArrowBase) + kDirectionCount <=
                   CodeOf(Command::kTabDrop),
               "the menu-arrow range overlaps the next code");
+static_assert(CodeOf(Command::kPreviewDetachBase) + kShowBarPaneLimit <=
+                  CodeOf(Command::kGripPressBase),
+              "the preview range overlaps the grip press range");
+static_assert(CodeOf(Command::kGripPressBase) + kShowBarPaneLimit <=
+                  CodeOf(Command::kGripMoveTo),
+              "the grip press range overlaps the next code");
+
+// A point packed into a command's lParam as signed 16-bit x and y.
+[[nodiscard]] inline constexpr Point PointOf(LPARAM lparam) noexcept {
+  const auto bits = static_cast<uint32_t>(lparam);
+  return Point{static_cast<int16_t>(bits & 0xffff),
+               static_cast<int16_t>(bits >> 16)};
+}
 
 [[nodiscard]] inline constexpr WPARAM CodeOf(Command base,
                                              Direction direction) noexcept {

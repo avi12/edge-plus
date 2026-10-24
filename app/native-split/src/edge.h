@@ -708,6 +708,12 @@ inline void* DragContextController(void* context) {
   return reinterpret_cast<ControllerFn>(VirtualFunction(
       context, edge155::off::DRAGCONTEXT_vtbl_GetDragController))(context);
 }
+// Ends the strip's drag as its own mouse handlers do; frees the controller.
+inline void DragContextEndDrag(void* context, int reason) {
+  using EndFn = void(__fastcall*)(void*, int);
+  reinterpret_cast<EndFn>(VirtualFunction(
+      context, edge155::off::DRAGCONTEXT_vtbl_EndDrag))(context, reason);
+}
 
 // The TabStrip of a window's tab list, vertical or not.
 inline void* BrowserViewTabStrip(void* browserView) {
@@ -770,6 +776,14 @@ inline void TabDragSetCapture(void* controller, void* context) {
   using CaptureFn = bool(__fastcall*)(void*, void*);
   reinterpret_cast<CaptureFn>(At(edge155::rva::TabDragController_SetCapture))(
       controller, context);
+}
+
+// A pointer move of the drag, in screen DIPs, as the strip's OnMouseDragged
+// delivers it.
+inline void TabDragMoveTo(void* controller, Point screenPoint) {
+  using DragFn = int(__fastcall*)(void*, const Point*);
+  reinterpret_cast<DragFn>(At(edge155::rva::TabDragController_Drag))(
+      controller, &screenPoint);
 }
 
 // --- the tab list's layout (TabStripLayoutHelper) ------------------------------

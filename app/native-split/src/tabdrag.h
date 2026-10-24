@@ -359,4 +359,51 @@ inline void ApplyDrop() {
   Log("[tabdrag] drop: %s", hasGrown ? "the tab is a new pane" : "failed");
 }
 
+// --- a script's stand-in for the mouse on a grip ------------------------------
+// (channel kGripPressBase, kGripMoveTo, kGripRelease, kGripEscape). Points are
+// window DIPs. Each calls what the real event reaches: the grip's handlers
+// while the pane's drag runs, then what the strip's OnMouseDragged and
+// OnMouseReleased call once the tab list has taken it over.
+
+inline const PaneOrigin* RunningPaneDrag() {
+  return g_paneOrigin.has_value() ? &g_paneOrigin.value() : nullptr;
+}
+
+inline void SimulateGripPress(void* mcv, int pane, Point rootLocation) {
+  const bool hasPane = mcv && std::cmp_less(pane, edge::McvCount(mcv));
+  if (hasPane) {
+    drag::Begin(mcv, pane, rootLocation);
+  }
+}
+
+inline void SimulateGripMove(Point rootLocation) {
+  if (drag::IsActive()) {
+    OnGripDragged(rootLocation);
+    return;
+  }
+  const PaneOrigin* pane = RunningPaneDrag();
+  void* controller =
+      pane ? edge::DragContextController(pane->context) : nullptr;
+  if (controller) {
+    edge::TabDragMoveTo(controller,
+                        drag::RootToScreen(pane->mcv, rootLocation));
+  }
+}
+
+// `reason`: TABDRAG_end_complete (let go) or TABDRAG_end_cancel (Escape).
+inline void SimulateGripEnd(int reason) {
+  if (drag::IsActive()) {
+    if (reason == edge155::off::TABDRAG_end_complete) {
+      drag::Release();
+    } else {
+      drag::Cancel();
+    }
+    return;
+  }
+  const PaneOrigin* pane = RunningPaneDrag();
+  if (pane) {
+    edge::DragContextEndDrag(pane->context, reason);
+  }
+}
+
 }  // namespace fixedge::tabdrag

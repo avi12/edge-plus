@@ -430,6 +430,11 @@ inline constexpr uintptr_t TabDragController_EndDrag = 0xa782ec0;
 // void EventTracker::OnEvent(this, const ui::Event&): the drag's key watcher.
 // Escape cancels the drag; ANY other key press or release ends it in place.
 inline constexpr uintptr_t EventTracker_OnEvent = 0xa78bc10;
+// int TabDragController::Drag(this, const gfx::Point* screen DIPs): what the
+// strip's OnMouseDragged reaches (TabDragContextImpl::ContinueDrag converts the
+// event to screen DIPs and calls it); starts the drag past the drag threshold,
+// then runs ContinueDragging.
+inline constexpr uintptr_t TabDragController_Drag = 0xa783486;
 // bool TabDragController::SetCapture(this, TabDragContext*): hands the mouse
 // capture to that strip (its widget's Widget::SetCapture(context)), as the
 // attach of a tab dragged in from another window does. From then on views
@@ -1183,12 +1188,17 @@ inline constexpr size_t TABDRAGDATA_size = 0x70;
 inline constexpr uintptr_t TABDRAGDATA_contents = 0x10;  // WebContents*
 // EndDragReason::kComplete (the pointer was released).
 inline constexpr int TABDRAG_end_complete = 0;
+// EndDragReason::kCancel (Escape).
+inline constexpr int TABDRAG_end_cancel = 1;
 // TabDragContext virtuals: Tab* GetTabForContents(this, WebContents*) and
 // TabStripModel* GetTabStripModel(this).
 inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetTabForContents = 0x3a0;
 inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetTabStripModel = 0x3c0;
-// TabDragController* GetDragController(this), null when no drag runs.
+// TabDragController* GetDragController(this), null when no drag runs, and
+// void EndDrag(this, EndDragReason): what the strip's OnMouseReleased (reason
+// complete) and OnMouseCaptureLost (capture lost) call.
 inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetDragController = 0x3c8;
+inline constexpr uintptr_t DRAGCONTEXT_vtbl_EndDrag = 0x420;
 
 // --- a press on a tab, as Tab::OnMousePressed makes it (docs/re/tab-drag.md) ---
 // A tab view's TabSlotController* (its TabStrip, seen through that base).

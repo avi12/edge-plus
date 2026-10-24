@@ -454,7 +454,7 @@ inline void CreateOrGrowByCommand(HWND hwnd, WPARAM wparam) {
   split_data::GrowSplit(tsm);
 }
 
-inline void RunCommand(HWND hwnd, WPARAM wparam) {
+inline void RunCommand(HWND hwnd, WPARAM wparam, LPARAM lparam) {
   if (wparam == CodeOf(Command::kRedrawFollowedPages)) {
     RefreshThemeColors();
     return;
@@ -514,6 +514,15 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
     case Command::kTabDrop:
       tabdrag::ApplyDrop();
       return;
+    case Command::kGripMoveTo:
+      tabdrag::SimulateGripMove(channel::PointOf(lparam));
+      return;
+    case Command::kGripRelease:
+      tabdrag::SimulateGripEnd(edge155::off::TABDRAG_end_complete);
+      return;
+    case Command::kGripEscape:
+      tabdrag::SimulateGripEnd(edge155::off::TABDRAG_end_cancel);
+      return;
     case Command::kLinkPane:
       links::OpenLinkPane();
       return;
@@ -532,6 +541,14 @@ inline void RunCommand(HWND hwnd, WPARAM wparam) {
     drag::ShowDetachInTabList(edge::McvForWindow(hwnd),
                               OperandOf(wparam, Command::kPreviewDetachBase),
                               dock::Zone::kDetach);
+    return;
+  }
+  const bool isGripPress =
+      IsInRange(wparam, Command::kGripPressBase, channel::kShowBarPaneLimit);
+  if (isGripPress) {
+    tabdrag::SimulateGripPress(edge::McvForWindow(hwnd),
+                               OperandOf(wparam, Command::kGripPressBase),
+                               channel::PointOf(lparam));
     return;
   }
   const bool isShowBar =
@@ -594,7 +611,7 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   const bool isCommand =
       message == channel::g_message && channel::g_message != 0;
   if (isCommand) {
-    RunCommand(hwnd, wparam);
+    RunCommand(hwnd, wparam, lparam);
     return 0;
   }
   // Windows broadcasts WM_SETTINGCHANGE with "ImmersiveColorSet" when the user
