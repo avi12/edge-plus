@@ -1146,6 +1146,23 @@ inline void __fastcall h_toggle_options(void* findBarView, void* argument) {
   SyncToggles(findBarView);
 }
 
+// A question means nothing to Match case, Match whole word or Match diacritics:
+// switch off the ones that are on. Edge's own callback follows the move, so the
+// find parameters it keeps for them stay in step with what the bar shows.
+inline void SwitchOffEdgeToggles(void* findBarView) {
+  const int edgeIds[] = {edge155::off::FINDTOGGLE_id_match_case,
+                         edge155::off::FINDTOGGLE_id_whole_word,
+                         edge155::off::FINDTOGGLE_id_diacritics};
+  for (const int toggleId : edgeIds) {
+    void* toggle = edge::FindToggle(findBarView, toggleId);
+    const bool isOn = toggle && edge::FindToggleIsOn(toggle);
+    if (isOn) {
+      edge::FindToggleSetOn(toggle, false);
+      o_button_toggled(toggle);
+    }
+  }
+}
+
 // One of the switches was clicked; Edge's three go on as Edge has them.
 inline void __fastcall h_button_toggled(void* toggle) {
   const int toggleId = edge::FindToggleId(toggle);
@@ -1175,6 +1192,11 @@ inline void __fastcall h_button_toggled(void* toggle) {
     if (excludedToggle) {
       edge::FindToggleSetOn(excludedToggle, false);
     }
+  }
+  const bool isTurningAskOn =
+      isTurningOn && toggleId == edge155::off::FINDTOGGLE_id_ask;
+  if (isTurningAskOn) {
+    SwitchOffEdgeToggles(findBarView);
   }
   SyncToggles(findBarView);
   const edge::U16View typed = edge::FindBarText(findBarView);
