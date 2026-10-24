@@ -30,14 +30,14 @@ internal static class Shared {
   public const string EdgeModule = "msedge.dll";
 
   // app/native-split/src/offsets.h:17
-  public const int EdgeVersionMajor = 155;
+  public const int EdgeVersionMajor = 156;
 
   // app/native-split/src/offsets.h:19
   public const int EdgeVersionMinor = 0;
 
   // app/native-split/src/offsets.h:21
-  public const int EdgeVersionBuild = 4283;
+  public const int EdgeVersionBuild = 4314;
 
   // app/native-split/src/offsets.h:23
-  public const int EdgeVersionRevision = 62;
+  public const int EdgeVersionRevision = 42;
 }

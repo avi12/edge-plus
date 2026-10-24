@@ -37,8 +37,9 @@ inline Rect SplitArea(void* mcv) {
   return Rect{0, 0, bounds.width, bounds.height};
 }
 
-// The bytes a ProposedLayout occupies (its constructor only zeroes these).
-inline constexpr size_t kProposedLayoutBytes = 0x20;
+// The bytes a ProposedLayout occupies, its 8 inline ChildLayouts included (as
+// CalculateProposedLayout clears it).
+inline constexpr size_t kProposedLayoutBytes = 0x190;
 
 // `panes` is the live split's member count (1 when collapsed). The container
 // vector only grows, so surplus containers are hidden with a zero rect rather

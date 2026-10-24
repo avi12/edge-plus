@@ -149,7 +149,8 @@ inline void LayoutImmediately(void* view) {
   reinterpret_cast<Fn>(At(edge155::rva::View_LayoutImmediately))(view);
 }
 
-// std::vector<ChildLayout>::emplace_back<View*, bool, const gfx::Rect&>.
+// absl::InlinedVector<ChildLayout, 8>::emplace_back<View*, bool, const
+// gfx::Rect&>.
 // `viewSlot` -> View*, `visibleSlot` -> bool, `rectSlot` -> gfx::Rect (our Rect).
 inline void EmplaceChildLayout(void* vector, void* viewSlot, void* visibleSlot,
                                void* rectSlot) {
@@ -849,10 +850,14 @@ inline int ProposedHostHeight(void* proposedLayout) {
 
 // The bounds a views::ProposedLayout gives `child`, or null if it has none.
 inline Rect* ProposedChildBounds(void* proposedLayout, const void* child) {
-  auto* entries =
-      Field<uint8_t*>(proposedLayout, edge155::off::PL_child_layouts);
-  const auto count =
-      Field<uint64_t>(proposedLayout, edge155::off::PL_child_count);
+  const auto sizeWord =
+      Field<uint64_t>(proposedLayout, edge155::off::PL_child_size_word);
+  const bool isOnHeap = (sizeWord & edge155::off::PL_child_on_heap) != 0;
+  const uint64_t count = sizeWord >> edge155::off::PL_child_count_shift;
+  uint8_t* inlineEntries =
+      static_cast<uint8_t*>(proposedLayout) + edge155::off::PL_child_entries;
+  uint8_t* entries =
+      isOnHeap ? *reinterpret_cast<uint8_t**>(inlineEntries) : inlineEntries;
   for (size_t i = 0; i < count; i++) {
     uint8_t* entry = entries + i * edge155::off::CL_stride;
     const bool isChildEntry =
@@ -1495,11 +1500,12 @@ inline void SendPromptToSidePanel(void* browser, const std::string& text,
   const StdStringView asked = MakeStdStringView(title);
   static const std::string kEmpty;
   const StdStringView noContext = MakeStdStringView(kEmpty);
-  using Fn =
-      void(__fastcall*)(void*, const void*, const void*, const void*, bool);
+  const StdStringView noAccount = MakeStdStringView(kEmpty);
+  using Fn = void(__fastcall*)(void*, const void*, const void*, const void*,
+                               const void*, bool);
   reinterpret_cast<Fn>(
-      At(edge155::rva::CopilotUtils_SendPageContextualPromptToChat))(
-      browser, &page, &noContext, &asked, false);
+      At(edge155::rva::CopilotUtils_SendPageContextualPromptToChatImpl))(
+      browser, &page, &noContext, &asked, &noAccount, false);
 }
 
 // Hand `text` (as the page the question is about) and `title` (the prompt) to
