@@ -12,7 +12,7 @@ inline constexpr size_t kLogLineCapacity = 512;
 inline constexpr int kLogMessageCapacity =
     static_cast<int>(kLogLineCapacity) - 2;
 inline constexpr wchar_t kLogFileUnderLocalAppData[] =
-    L"\\FixEdge\\split-native.log";
+    L"\\EdgePlus\\split-native.log";
 
 inline constexpr wchar_t kLocalAppDataVariable[] = L"LOCALAPPDATA";
 

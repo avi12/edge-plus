@@ -9,7 +9,7 @@ namespace EdgePlus;
 // the fresh one.
 internal static class Payload {
   // Must match the LogicalName in EdgePlus.csproj.
-  private const string ResourceName = "payload/fixedge-split.dll";
+  private const string ResourceName = "payload/edgeplus-split.dll";
 
   private static readonly Lazy<byte[]> s_dll = new(ReadEmbedded);
 

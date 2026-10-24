@@ -58,7 +58,7 @@ inline constexpr DWORD kBeforeReadingThemeWireSize =
 // A DLL injected into an already-open Edge reads the current state here at
 // load; on a change the panel rewrites it and signals kConfigEvent.
 // @share ConfigFileRelativePath
-inline constexpr char kFileRelativePath[] = "\\FixEdge\\fixedge-config.bin";
+inline constexpr char kFileRelativePath[] = "\\EdgePlus\\edgeplus-config.bin";
 
 inline constexpr char kLocalAppDataVariable[] = "LOCALAPPDATA";
 

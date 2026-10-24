@@ -18,13 +18,13 @@ internal static class Shared {
   public const int WireIdCount = 2;
 
   // app/native-split/src/config.h:61
-  public const string ConfigFileRelativePath = "\\FixEdge\\fixedge-config.bin";
+  public const string ConfigFileRelativePath = "\\EdgePlus\\edgeplus-config.bin";
 
   // app/native-split/src/dllmain.cpp:20
-  public const string UnloadEvent = "Local\\fixedge-split-unload";
+  public const string UnloadEvent = "Local\\edgeplus-split-unload";
 
   // app/native-split/src/dllmain.cpp:23
-  public const string ConfigEvent = "Local\\fixedge-config-changed";
+  public const string ConfigEvent = "Local\\edgeplus-config-changed";
 
   // app/native-split/src/offsets.h:15
   public const string EdgeModule = "msedge.dll";

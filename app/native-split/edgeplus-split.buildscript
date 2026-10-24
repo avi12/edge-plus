@@ -1,9 +1,9 @@
 # sighmake build for the native split: a static MinHook lib, the injected DLL,
-# and the injector. Generate with `sighmake fixedge-split.buildscript -g vcxproj`
+# and the injector. Generate with `sighmake edgeplus-split.buildscript -g vcxproj`
 # then `sighmake --build build --config Release` (see build.cmd).
 
 [solution]
-name = fixedge-split
+name = edgeplus-split
 configurations = Release
 platforms = x64
 
@@ -17,7 +17,7 @@ runtime_library = MultiThreaded
 # The injected payload. C++20, no RTTI/EH frills, static CRT so it needs nothing
 # installed in Edge. Links MinHook + version.lib (the build-guard reads the Edge
 # version resource).
-[project:fixedge-split]
+[project:edgeplus-split]
 type = dll
 sources = src/dllmain.cpp
 includes = src, external/minhook/include

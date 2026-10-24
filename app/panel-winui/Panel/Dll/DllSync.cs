@@ -51,6 +51,7 @@ internal static class DllSync {
     Payload.Unpack();
     int[] missing = EdgeProcesses.PidsMissingModule(Paths.SplitDllName)
                         .Where(pid => EdgeWatch.BuildOf(pid) == EdgeBuild.Pinned)
+                        .Where(pid => !LegacyInstall.IsDllLoadedIn(pid))
                         .Where(pid => reach == Reach.EveryBrowser || holders.Contains(pid))
                         .ToArray();
     if (missing.Length > 0) {

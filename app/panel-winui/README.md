@@ -1,7 +1,7 @@
 # The panel
 
 Edge+'s panel, WinUI 3 / C#, modelled on `avi/any-stt`'s app. It keeps the
-user's choices in `%LOCALAPPDATA%\FixEdge\settings.json`, in the same place and
+user's choices in `%LOCALAPPDATA%\EdgePlus\settings.json`, in the same place and
 shape the earlier Tauri panel used, so an existing install carries over; on its
 first start it also moves that panel's start-at-sign-in entry to itself.
 
@@ -49,7 +49,7 @@ every DLL feature is paused. `EdgeSupport` is the one place that decides this.
   version." Once Edge+ supports the build again, the choice applies by itself.
 - **Telling.** If no window is open, one Windows toast
   (`AppNotification`) lists the paused features, once per build. The build it
-  last reported is kept in `%LOCALAPPDATA%\FixEdge\paused-toast-build.txt`.
+  last reported is kept in `%LOCALAPPDATA%\EdgePlus\paused-toast-build.txt`.
 
 **Simulating an update** without touching Edge: point
 `EDGEPLUS_SIMULATE_EDGE_DIR` at a folder that holds a fake `msedge.exe` with

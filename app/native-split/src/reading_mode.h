@@ -19,7 +19,7 @@
 
 namespace edgeplus::reading_mode {
 
-inline constexpr char kChoicesRelativePath[] = "\\FixEdge\\reading-themes.bin";
+inline constexpr char kChoicesRelativePath[] = "\\EdgePlus\\reading-themes.bin";
 inline constexpr char kReadingViewPrefix[] = "read://";
 // Often enough that the switch is in the flyout as it opens.
 inline constexpr UINT kPollIntervalMs = 400;

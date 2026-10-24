@@ -1,6 +1,6 @@
 @echo off
 REM Build the native split with sighmake (github.com/CitroenGames/sighmake):
-REM it reads fixedge-split.buildscript and generates CMake, which the Build
+REM it reads edgeplus-split.buildscript and generates CMake, which the Build
 REM Tools' bundled cmake + ninja compile. Outputs land in build\.
 REM (sighmake's vcxproj generator rejects VS Build Tools, so we use its cmake
 REM  generator, which the bundled cmake drives fine.)
@@ -30,7 +30,7 @@ if not exist "%CM%" set "CM=cmake"
 cd /d "%ROOT%"
 
 echo [1/4] sighmake -^> CMake
-"%SIGHMAKE%" fixedge-split.buildscript -g cmake || goto :err
+"%SIGHMAKE%" edgeplus-split.buildscript -g cmake || goto :err
 echo [2/4] cmake configure
 "%CM%" -G Ninja -S . -B smninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM="%NJ%" || goto :err
 echo [3/4] cmake build
@@ -38,11 +38,11 @@ echo [3/4] cmake build
 
 echo [4/4] stage outputs
 if not exist "%ROOT%build" mkdir "%ROOT%build"
-copy /y "%ROOT%smninja\fixedge-split\fixedge-split.dll" "%ROOT%build\fixedge-split.dll" >nul || goto :err
+copy /y "%ROOT%smninja\edgeplus-split\edgeplus-split.dll" "%ROOT%build\edgeplus-split.dll" >nul || goto :err
 copy /y "%ROOT%smninja\inject\inject.exe" "%ROOT%build\inject.exe" >nul || goto :err
 
 echo.
-echo built: %ROOT%build\fixedge-split.dll  and  %ROOT%build\inject.exe
+echo built: %ROOT%build\edgeplus-split.dll  and  %ROOT%build\inject.exe
 exit /b 0
 :err
 echo BUILD FAILED

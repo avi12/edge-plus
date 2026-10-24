@@ -22,6 +22,7 @@ internal static class Program {
     ("edge support", EdgeSupportTests.Run),
     ("panel layout", PanelLayoutTests.Run),
     ("inject offer", InjectOfferTests.Run),
+    ("legacy data", LegacyDataTests.Run),
   ];
 
   private static int Main() {

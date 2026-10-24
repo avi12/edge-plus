@@ -27,6 +27,7 @@
     <Compile Include="..\Panel\Edge\EdgeSupport.cs" Link="Panel\EdgeSupport.cs" />
     <Compile Include="..\Panel\Edge\EdgeUserData.cs" Link="Panel\EdgeUserData.cs" />
     <Compile Include="..\Panel\Edge\FileVersion.cs" Link="Panel\FileVersion.cs" />
+    <Compile Include="..\Panel\Edge\LegacyData.cs" Link="Panel\LegacyData.cs" />
     <Compile Include="..\Panel\Platform\InjectOffer.cs" Link="Panel\InjectOffer.cs" />
     <Compile Include="..\Panel\Platform\PanelState.cs" Link="Panel\PanelState.cs" />
     <Compile Include="..\Panel\Platform\Paths.cs" Link="Panel\Paths.cs" />

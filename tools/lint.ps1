@@ -19,7 +19,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-Import-Module (Join-Path $PSScriptRoot 'FixEdge.Build.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'EdgePlus.Build.psm1') -Force
 $root = Get-RepoRoot
 
 if ($InstallHook) {
@@ -60,16 +60,16 @@ if ($hasCppInScope) {
 
     # Headers are analysed through the units that include them (HeaderFilterRegex
     # decides what is reported), so a staged header alone still needs every unit.
-    # clang-cl reads the MSVC build's own flags from fixedge-split.buildscript.
+    # clang-cl reads the MSVC build's own flags from edgeplus-split.buildscript.
     $units = @(Select-Sources (git -C $root ls-files '*.cpp') |
         ForEach-Object { Join-Path $root $_ })
     $vcvars = Get-VcVarsPath
 
     $nativeDir = Join-Path $root ($nativeRoot -replace '/', '\')
-    $standard = Get-BuildSetting 'project:fixedge-split' 'std'
-    $defines = (Get-BuildSetting 'project:fixedge-split' 'defines') -split ',' |
+    $standard = Get-BuildSetting 'project:edgeplus-split' 'std'
+    $defines = (Get-BuildSetting 'project:edgeplus-split' 'defines') -split ',' |
         ForEach-Object { '/D' + $_.Trim() }
-    $includes = (Get-BuildSetting 'project:fixedge-split' 'includes') -split ',' |
+    $includes = (Get-BuildSetting 'project:edgeplus-split' 'includes') -split ',' |
         ForEach-Object { '/I"' + (Join-Path $nativeDir ($_.Trim() -replace '/', '\')) + '"' }
     $clangArgs = "--driver-mode=cl /EHsc /std:c++$standard " + (($defines + $includes) -join ' ')
     $tidyFlags = if ($Fix) { '--fix --fix-errors' } else { '' }

@@ -4,11 +4,11 @@ using System.IO;
 namespace EdgePlus;
 
 // The data folder is a contract with the DLL (config.h, log.h), so its location
-// comes from the DLL's own constant (Shared). The earlier Tauri panel used the
-// same folder and files, so an install of it carries over.
+// comes from the DLL's own constant (Shared). Earlier panels kept it in a folder
+// of the project's old name; LegacyInstall carries that over.
 internal static class Paths {
   private const string SettingsFileName = "settings.json";
-  private const string SplitDllFileName = "fixedge-split.dll";
+  private const string SplitDllFileName = "edgeplus-split.dll";
   private const string ThemesFolderName = "themes";
   private const string ThemeKeysFolderName = "keys";
   private const string TemporarySuffix = ".tmp";

@@ -9,6 +9,6 @@ build/
 .sighmake_cache
 /CMakeLists.txt
 /minhook/
-/fixedge-split/
+/edgeplus-split/
 /inject/
 /smninja/

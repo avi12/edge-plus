@@ -1,4 +1,4 @@
-// fixedge-split.dll — injected into Edge's browser process to grow the native
+// edgeplus-split.dll — injected into Edge's browser process to grow the native
 // split beyond two panes; this file is the DLL lifecycle only. Everything N-pane
 // is gated on count > 2, so a stock two-pane split is untouched.
 #include <windows.h>
@@ -17,10 +17,10 @@ constinit HANDLE g_unloadEvent = nullptr;
 constinit HANDLE g_configEvent = nullptr;
 
 // @share UnloadEvent
-constexpr wchar_t kUnloadEvent[] = L"Local\\fixedge-split-unload";
+constexpr wchar_t kUnloadEvent[] = L"Local\\edgeplus-split-unload";
 
 // @share ConfigEvent
-constexpr wchar_t kConfigEvent[] = L"Local\\fixedge-config-changed";
+constexpr wchar_t kConfigEvent[] = L"Local\\edgeplus-config-changed";
 
 // In the order of the main loop's handle array.
 enum class WaitedEvent : size_t {
@@ -56,7 +56,7 @@ DWORD WINAPI Init(LPVOID) {
     return 0;
   }
   edge::Bind(edgeModule);
-  Log("[init] fixedge-split loaded. %ls base=%p", edge155::kModule,
+  Log("[init] edgeplus-split loaded. %ls base=%p", edge155::kModule,
       reinterpret_cast<void*>(edge::g_base));
 
   if (!verify::Ok()) {
@@ -93,7 +93,7 @@ DWORD WINAPI Init(LPVOID) {
     Log("[unload] script replies still pending; staying loaded");
     return 0;
   }
-  Log("[unload] fixedge-split detached");
+  Log("[unload] edgeplus-split detached");
   FreeLibraryAndExitThread(g_self, 0);
   return 0;
 }

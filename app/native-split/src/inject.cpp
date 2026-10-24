@@ -1,4 +1,4 @@
-// Minimal LoadLibrary injector for testing fixedge-split.dll against an Edge
+// Minimal LoadLibrary injector for testing edgeplus-split.dll against an Edge
 // instance we launched ourselves (the dev harness; the panel injects in use).
 #include <windows.h>
 #include <cstdio>

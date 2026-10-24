@@ -17,7 +17,9 @@ public static class PanelEntry {
 
   public static IDisposable StartBackground() {
     // Idempotent, so a live swap runs them again harmlessly. The DLL is
-    // unpacked before the watcher can inject it.
+    // unpacked before the watcher can inject it, and the pre-rename install is
+    // out of the way first.
+    LegacyInstall.Run();
     LegacyCleanup.Run();
     Payload.Unpack();
     MigrateStartupEntry();

@@ -10,7 +10,7 @@ namespace edgeplus::channel {
 inline constinit HWND g_window = nullptr;  // the subclassed browser window
 inline constinit UINT g_message = 0;
 
-inline constexpr wchar_t kMessageName[] = L"fixedge.addpane";
+inline constexpr wchar_t kMessageName[] = L"edgeplus.addpane";
 
 // The wParam. A `...Base` starts a range and the offset from it is the operand. A code no command claims falls
 // through: from kCreatePanesBase up it creates a split of (code -

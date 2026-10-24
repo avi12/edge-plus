@@ -1,4 +1,4 @@
-# fixedge-split — native N-pane split for Edge
+# edgeplus-split — native N-pane split for Edge
 
 Grows Microsoft Edge's built-in split view past its two-pane limit by injecting a
 DLL into the browser process and reshaping `MultiContentsView`'s geometry. This is
@@ -10,7 +10,7 @@ reverse-engineered ABI). Authorized personal customization of the user's own Edg
 - [x] **Reverse-engineering** — Microsoft's public PDB for `msedge.dll` gives full
       symbols; the split engine, its struct offsets and the exact two-pane cap
       sites are mapped (`docs/re/`).
-- [x] **Feasibility proven** — `fixedge-split.dll` injects into Edge's browser
+- [x] **Feasibility proven** — `edgeplus-split.dll` injects into Edge's browser
       process (no Code Integrity Guard there), locates `msedge.dll`, and MinHook
       installs on the verified RVAs; offsets resolve correctly live. The DLL reads
       the split's live pane count through the hooks.
@@ -40,7 +40,7 @@ reverse-engineered ABI). Authorized personal customization of the user's own Edg
 ## Build
 
 ```powershell
-.\build.cmd      # -> build\fixedge-split.dll and build\inject.exe (MSVC Build Tools)
+.\build.cmd      # -> build\edgeplus-split.dll and build\inject.exe (MSVC Build Tools)
 ```
 
 ## Test against your own Edge (never your main windows)
@@ -48,11 +48,11 @@ reverse-engineered ABI). Authorized personal customization of the user's own Edg
 Launch an isolated instance, then inject:
 
 ```powershell
-$prof = "$env:TEMP\fixedge-split-test"
+$prof = "$env:TEMP\edgeplus-split-test"
 Start-Process 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' `
   "--user-data-dir=$prof","--new-window","https://example.com"
 # find the browser pid (msedge.exe with that profile, no --type=), then:
-.\build\inject.exe <browser-pid> "$PWD\build\fixedge-split.dll"
+.\build\inject.exe <browser-pid> "$PWD\build\edgeplus-split.dll"
 ```
 
-The DLL logs to `%LOCALAPPDATA%\FixEdge\split-native.log`.
+The DLL logs to `%LOCALAPPDATA%\EdgePlus\split-native.log`.

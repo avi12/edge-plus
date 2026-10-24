@@ -25,16 +25,16 @@
 
   <PropertyGroup>
     <NativeSplitDir>$(RepositoryRoot)app\native-split\</NativeSplitDir>
-    <SplitDll>$(NativeSplitDir)build\fixedge-split.dll</SplitDll>
+    <SplitDll>$(NativeSplitDir)build\edgeplus-split.dll</SplitDll>
   </PropertyGroup>
 
   <!-- The embedded split DLL is rebuilt whenever any source is newer, not only
        when it is missing: a stale one, carried silently, once replaced Edge's
        current DLL at panel start (the spine switch then did nothing). -->
   <ItemGroup>
-    <EmbeddedResource Include="$(SplitDll)" LogicalName="payload/fixedge-split.dll" />
+    <EmbeddedResource Include="$(SplitDll)" LogicalName="payload/edgeplus-split.dll" />
     <NativeSplitSource Include="$(NativeSplitDir)src\**\*.h;$(NativeSplitDir)src\**\*.cpp" />
-    <NativeSplitSource Include="$(NativeSplitDir)fixedge-split.buildscript;$(NativeSplitDir)build.cmd" />
+    <NativeSplitSource Include="$(NativeSplitDir)edgeplus-split.buildscript;$(NativeSplitDir)build.cmd" />
   </ItemGroup>
   <Target Name="BuildNativeSplit" BeforeTargets="BeforeBuild"
           Inputs="@(NativeSplitSource)" Outputs="$(SplitDll)">
@@ -42,7 +42,7 @@
   </Target>
   <Target Name="VerifyNativeSplit" AfterTargets="BuildNativeSplit" BeforeTargets="BeforeBuild">
     <Error Condition="!Exists('$(SplitDll)')"
-           Text="edgeplus carries fixedge-split.dll inside itself and cannot find it at $(SplitDll). Build it first: app\native-split\build.cmd" />
+           Text="edgeplus carries edgeplus-split.dll inside itself and cannot find it at $(SplitDll). Build it first: app\native-split\build.cmd" />
   </Target>
 
   <!-- Regenerates Platform\Shared.g.cs from the DLL's @share markers so the two

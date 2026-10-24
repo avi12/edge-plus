@@ -55,7 +55,7 @@ internal static class Wording {
   public static string RemoveTheme(string name) => $"Remove {name}";
 
   public const string ActionFailed =
-      "That did not work. Edge+ wrote the details to its log (panel.log in %LOCALAPPDATA%\\FixEdge).";
+      "That did not work. Edge+ wrote the details to its log (panel.log in %LOCALAPPDATA%\\EdgePlus).";
   public const string ThemeFilesUnreadable =
       "Edge+ could not read or write that theme's files. Check the folder still exists and is not open elsewhere.";
   public const string ManifestNotJson = "manifest.json is not valid JSON";

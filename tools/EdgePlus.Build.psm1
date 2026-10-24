@@ -9,7 +9,7 @@ function Get-RepoRoot {
 # What actually builds the C++ tree, and so the only description of how it is
 # compiled.
 function Get-BuildScriptPath {
-    return Join-Path (Get-RepoRoot) 'app\native-split\fixedge-split.buildscript'
+    return Join-Path (Get-RepoRoot) 'app\native-split\edgeplus-split.buildscript'
 }
 
 # A tool that needs a compiler flag reads it from the buildscript instead of
@@ -30,7 +30,7 @@ function Get-BuildSetting([string] $section, [string] $key) {
             return $Matches[2].Trim()
         }
     }
-    throw "fixedge-split.buildscript has no '$key' under [$section]."
+    throw "edgeplus-split.buildscript has no '$key' under [$section]."
 }
 
 # Asked of vswhere: the path carries the Visual Studio version and edition, so a
