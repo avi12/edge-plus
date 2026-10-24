@@ -14,9 +14,10 @@ internal sealed class EdgeWatch {
   // Raised on the watch thread. Subscribe before Start, or a change is missed.
   public event Action<BuildChange>? BuildChanged;
 
-  // Raised on the watch thread once a new Edge browser process has been
-  // brought in line (the DLL injected where it belongs).
-  public event Action? BrowserStarted;
+  // Raised on the watch thread whenever the set of Edge browser processes
+  // changes (one started or closed), after a new one has been brought in line:
+  // the state read then has the DLL's final IsSplitLoaded.
+  public event Action? BrowsersChanged;
 
   private readonly PollThread _thread = new("Edge watch", s_pollInterval);
   private HashSet<int> _knownBrowserPids = [];
@@ -104,12 +105,15 @@ internal sealed class EdgeWatch {
   private void Poll() {
     var current = new HashSet<int>(EdgeProcesses.BrowserPids());
     bool hasNewProcess = !current.IsSubsetOf(_knownBrowserPids);
+    bool hasChanged = !current.SetEquals(_knownBrowserPids);
     if (hasNewProcess) {
       Check();
       InjectIntoNewProcesses();
-      BrowserStarted?.Invoke();
     }
     _knownBrowserPids = current;
+    if (hasChanged) {
+      BrowsersChanged?.Invoke();
+    }
   }
 
   // Edge restarted on the same build: Reconcile sees no change, so nothing else
@@ -120,7 +124,7 @@ internal sealed class EdgeWatch {
       lock (Settings.Gate) {
         Settings settings = Settings.Load();
         if (settings.AutoInject) {
-          DllSync.Apply(settings);
+          DllSync.ApplyAndWaitForLoad(settings);
         }
       }
     } catch (System.IO.IOException) {

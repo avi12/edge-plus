@@ -13,7 +13,7 @@ internal sealed class BackgroundService : IDisposable {
   private BackgroundService() {
     _storeUpdates = new StoreUpdates(() => IsWindowOpen);
     _edgeWatch.BuildChanged += OnBuildChanged;
-    _edgeWatch.BrowserStarted += () => BrowserStarted?.Invoke();
+    _edgeWatch.BrowsersChanged += () => BrowsersChanged?.Invoke();
     _themeWatch.Refreshed += refresh => ThemeRefreshed?.Invoke(refresh);
   }
 
@@ -26,8 +26,9 @@ internal sealed class BackgroundService : IDisposable {
 
   public event Action<ThemeRefresh>? ThemeRefreshed;
 
-  // Raised on a watcher thread once a new Edge browser process got the DLL.
-  public event Action? BrowserStarted;
+  // Raised on a watcher thread when an Edge browser process starts (once it got
+  // the DLL, with auto-inject on) or closes: the window re-reads its state.
+  public event Action? BrowsersChanged;
 
   // Set by PanelView; a toast is only for when no window is open.
   public bool IsWindowOpen {
