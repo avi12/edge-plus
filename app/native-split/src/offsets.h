@@ -1216,18 +1216,15 @@ inline constexpr uintptr_t TABVIEW_controller = 0x530;
 // event's location is the grab point in the tab's coordinates.
 inline constexpr uintptr_t SLOTCONTROLLER_vtbl_GetSelectionModel = 0x178;
 inline constexpr uintptr_t SLOTCONTROLLER_vtbl_MaybeStartDrag = 0x220;
-// bool IsActiveTab(this, const Tab* view) — the strip's one active tab — and
-// Tab* GetAdjacentTab(this, Tab* object, int offset) (TabStrip::GetAdjacentTab
-// 0x33cc740: the tab object `offset` places away in the strip, or null). The
+// bool IsActiveTab(this, const Tab* view): the strip's one active tab. The
 // controller is the tab object's EDGETAB_layout_controller. Tab::IsActive
 // (0x1055540) asks TabStrip::GetTabsInSplit (0x1164d70) for a split tab, which
 // returns the tab and ONE neighbour of the same split (the previous, else the
-// next), and calls the tab active if either is: in a grown split only the
-// active tab's pair lit up.
+// next, through GetAdjacentTab at vtable +0x240), and calls the tab active if
+// either is: in a grown split a sliding pair lit up.
 inline constexpr uintptr_t SLOTCONTROLLER_vtbl_IsActiveTab = 0x208;
-inline constexpr uintptr_t SLOTCONTROLLER_vtbl_GetAdjacentTab = 0x240;
-// A tab object's optional<SplitTabId>: the 16-byte token, then has_value.
-inline constexpr uintptr_t TABOBJECT_split_id = 0x370;
+// A tab object's optional<SplitTabId>: the 16-byte token @0x370, then this
+// has_value byte.
 inline constexpr uintptr_t TABOBJECT_has_split_id = 0x380;
 inline constexpr size_t LISTSELECTIONMODEL_size = 0x38;
 // ui::MouseEvent: 0x118 bytes, its gfx::PointerDetails (0x48) at its end.

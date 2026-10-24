@@ -2216,32 +2216,9 @@ inline bool IsTheActiveTabObject(void* tabObject) {
       static_cast<uint8_t*>(tabObject) + edge155::off::EDGETAB_view_offset);
 }
 
-// The tab object `offset` places from `tabObject` in its strip, or null.
-inline void* AdjacentTabObject(void* tabObject, int offset) {
-  void* controller =
-      Field<void*>(tabObject, edge155::off::EDGETAB_layout_controller);
-  if (!controller) {
-    return nullptr;
-  }
-  using Fn = void*(__fastcall*)(void*, void*, int);
-  return reinterpret_cast<Fn>(VirtualFunction(
-      controller, edge155::off::SLOTCONTROLLER_vtbl_GetAdjacentTab))(
-      controller, tabObject, offset);
-}
-
 inline bool IsTabObjectInSplit(void* tabObject) {
   return (Field<uint8_t>(tabObject, edge155::off::TABOBJECT_has_split_id) &
           1) != 0;
-}
-
-inline bool IsSameSplitTabObject(void* tabObject, void* otherTabObject) {
-  const bool isBothInSplits =
-      IsTabObjectInSplit(tabObject) && IsTabObjectInSplit(otherTabObject);
-  return isBothInSplits && std::memcmp(static_cast<uint8_t*>(tabObject) +
-                                           edge155::off::TABOBJECT_split_id,
-                                       static_cast<uint8_t*>(otherTabObject) +
-                                           edge155::off::TABOBJECT_split_id,
-                                       sizeof(OptionalSplitId::token)) == 0;
 }
 
 // Whether an EdgeTab object (not its view) is the strip's active tab.
