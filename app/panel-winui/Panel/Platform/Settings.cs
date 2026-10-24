@@ -183,6 +183,9 @@ internal sealed class Settings {
   public string? LastEdgeBuild {
     get; set;
   }
+  // Puts the DLL into an Edge that (re)starts while the panel runs; off, the
+  // panel offers an Inject button instead. On by default, as it always did.
+  public bool AutoInject { get; set; } = true;
 
   public static Settings Load() => Load(Paths.Settings);
 

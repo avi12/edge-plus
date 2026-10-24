@@ -30,6 +30,28 @@ internal static class PanelActions {
     return Load();
   }
 
+  // Turning it on also injects into an Edge that is open without the DLL.
+  public static PanelState SetAutoInject(bool isOn) {
+    lock (Settings.Gate) {
+      Settings settings = Settings.Load();
+      settings.AutoInject = isOn;
+      settings.Save();
+      if (isOn) {
+        DllSync.Apply(settings);
+      }
+      return Read(settings);
+    }
+  }
+
+  // The Inject button: the DLL into every Edge browser process missing it.
+  public static PanelState Inject() {
+    lock (Settings.Gate) {
+      Settings settings = Settings.Load();
+      DllSync.Apply(settings);
+      return Read(settings);
+    }
+  }
+
   public static PanelState AddStoreTheme(string url) {
     ThemeLibrary.AddStore(url);
     return Load();
@@ -69,6 +91,8 @@ internal static class PanelActions {
         IsEdgeRunning: EdgeProcesses.BrowserPids().Length > 0,
         IsStartWithWindows: StartWithWindows.IsEnabled(),
         IsSplitLoaded: DllChannel.IsLoaded(),
+        IsSplitWanted: DllSync.IsWanted(settings),
+        IsAutoInject: settings.AutoInject,
         EdgeBuild: EdgeWatch.CurrentBuild(),
         SupportedEdgeBuild: EdgeBuild.Pinned);
   }

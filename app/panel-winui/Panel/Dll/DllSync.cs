@@ -48,7 +48,7 @@ internal static class DllSync {
     }
     lock (Settings.Gate) {
       Settings settings = Settings.Load();
-      bool isEnabled = Effective(settings).NeedsDll;
+      bool isEnabled = IsWanted(settings);
       bool isStale = DllChannel.IsLoaded() && !Payload.IsUnpackedCurrent();
       if (isEnabled && isStale) {
         DllChannel.SignalUnload();
@@ -59,6 +59,10 @@ internal static class DllSync {
       }
     }
   }
+
+  // Whether the settings want the DLL in Edge at all.
+  public static bool IsWanted(Settings settings) =>
+      Effective(settings).NeedsDll;
 
   private static void WaitForUnload() {
     for (int i = 0; i < UnloadPolls; i++) {

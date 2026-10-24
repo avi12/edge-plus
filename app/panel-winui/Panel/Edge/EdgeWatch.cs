@@ -14,6 +14,10 @@ internal sealed class EdgeWatch {
   // Raised on the watch thread. Subscribe before Start, or a change is missed.
   public event Action<BuildChange>? BuildChanged;
 
+  // Raised on the watch thread once a new Edge browser process has been
+  // brought in line (the DLL injected where it belongs).
+  public event Action? BrowserStarted;
+
   private readonly PollThread _thread = new("Edge watch", s_pollInterval);
   private HashSet<int> _knownBrowserPids = [];
 
@@ -95,13 +99,33 @@ internal sealed class EdgeWatch {
     _installWatch.EnableRaisingEvents = true;
   }
 
+  // A browser process only counts once it has its window (BrowserPids), which
+  // the DLL needs to find when it loads.
   private void Poll() {
     var current = new HashSet<int>(EdgeProcesses.BrowserPids());
     bool hasNewProcess = !current.IsSubsetOf(_knownBrowserPids);
     if (hasNewProcess) {
       Check();
+      InjectIntoNewProcesses();
+      BrowserStarted?.Invoke();
     }
     _knownBrowserPids = current;
+  }
+
+  // Edge restarted on the same build: Reconcile sees no change, so nothing else
+  // would put the DLL back. With auto-inject off the panel offers its Inject
+  // button instead.
+  private static void InjectIntoNewProcesses() {
+    try {
+      lock (Settings.Gate) {
+        Settings settings = Settings.Load();
+        if (settings.AutoInject) {
+          DllSync.Apply(settings);
+        }
+      }
+    } catch (System.IO.IOException) {
+    } catch (UnauthorizedAccessException) {
+    }
   }
 
   // A settings file that cannot be written is tried again on the next new

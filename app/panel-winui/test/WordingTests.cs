@@ -50,5 +50,6 @@ internal static class WordingTests {
 
   private static PanelState State(Features choice, FileVersion? edge) =>
       new(choice, new Theming(), [], IsEdgeRunning: edge is not null,
-          IsStartWithWindows: false, IsSplitLoaded: false, edge, s_supported);
+          IsStartWithWindows: false, IsSplitLoaded: false, IsSplitWanted: true,
+          IsAutoInject: true, edge, s_supported);
 }
