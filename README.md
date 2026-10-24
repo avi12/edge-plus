@@ -3,12 +3,12 @@
 Live feature switches for Microsoft Edge. A desktop panel turns each feature on
 or off, and Edge picks the change up the moment it is made — no restart, ever.
 
-![The Edge+ panel](docs/images/panel.png)
+![The Edge+ panel](https://github.com/user-attachments/assets/428c98e9-b675-4023-a4cb-77e4c2faa34b)
 
 ## Requirements
 
 - Windows 10 version 2004 (build 19041) or later, 64-bit.
-- Microsoft Edge (Stable, 64-bit) 155.0.4283.62, the one build the DLL is
+- Microsoft Edge (Stable, 64-bit) 156.0.4314.42, the one build the DLL is
   pinned to (`app/native-split/src/offsets.h`). On any other build every
   feature that calls into `msedge.dll` pauses itself and Edge is left
   untouched; see *Setup*.
