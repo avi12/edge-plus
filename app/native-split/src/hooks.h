@@ -70,6 +70,16 @@ inline constinit Calc_t o_calc = nullptr;
 inline void* __fastcall h_calc(void* self, void* out, void* sizeBounds) {
   void* mcv = edge::McvFromLayoutBase(self);
   g_activeMcv = mcv;
+  // A split torn off into another window leaves without CloseSplitView: the
+  // old window's grown panes kept its pages, now shown in the new window. A
+  // page under two windows' accessibility trees is the suspected cause of a
+  // hang seen in Edge's AXPosition walks once the old window was focused.
+  // With no split shown, no grown pane holds a page.
+  const bool isNoSplitShown =
+      edge::McvActiveSplitPanes(mcv) < split_data::kMinSplitMembers;
+  if (isNoSplitShown) {
+    panes::EmptyGrownContainers(mcv);
+  }
   tabdrag::OnLaidOut(mcv);
   const bool isBounded =
       edge::Field<uint8_t>(sizeBounds, edge155::off::SIZEBOUNDS_has_width) ==
