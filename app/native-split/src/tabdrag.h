@@ -217,13 +217,49 @@ inline void* PickSplitUnder(void* controller, void* context, void* tsm,
   return splitContents;
 }
 
+// Every move over the tab list with Alt held: a plain tab under the pointer is
+// picked, and returned; null over none. Edge's drag is paused while Alt is held
+// there (h_continue_dragging), so the tabs stay put under the pointer.
+inline void* PickPlainTabUnder(void* controller, void* context, void* tsm,
+                               Point screenPoint) {
+  const void* draggedContents = edge::DraggedContents(controller, 0);
+  const int tabCount = edge::TabCount(tsm);
+  for (int i = 0; i < tabCount; i++) {
+    void* contents = edge::TabWebContentsAt(tsm, i);
+    const bool isOtherPlainTab =
+        contents != draggedContents && !IsSplitPage(tsm, contents);
+    if (!isOtherPlainTab) {
+      continue;
+    }
+    void* tabView = edge::DragContextTabFor(context, contents);
+    const bool isUnderPointer =
+        tabView && Contains(edge::ViewBoundsInScreen(tabView), screenPoint);
+    if (!isUnderPointer) {
+      continue;
+    }
+    if (g_picked.splitContents != contents) {
+      Log("[tabdrag] picked plain tab %d", i);
+    }
+    g_picked = PickedSplit{controller, contents};
+    return contents;
+  }
+  return nullptr;
+}
+
 // The split or plain tab picked in this drag, or null. A new drag starts with
 // its pane's own split, or else the page shown when its tab was grabbed.
-inline void* PickedSplitFor(void* controller, const PaneOrigin* pane) {
+inline void* PickedSplitFor(void* controller, void* tsm,
+                            const PaneOrigin* pane) {
   if (g_picked.controller != controller) {
     void* splitContents =
         pane ? pane->splitContents : PageShownBefore(controller);
     g_picked = PickedSplit{controller, splitContents};
+    const char* picked = "nothing";
+    if (splitContents) {
+      picked = IsSplitPage(tsm, splitContents) ? "a split" : "a plain tab";
+    }
+    Log("[tabdrag] a drag starts with %s picked (Alt %s)", picked,
+        IsAltHeld() ? "held" : "up");
   }
   return g_picked.splitContents;
 }
@@ -242,11 +278,11 @@ inline void* DockTarget(void* tsm) {
   return isPlainTabWithoutAlt ? nullptr : contents;
 }
 
-// `isOverSplitTab`: the pointer is on the split's tab in the list, where the
-// tab joins at the split's right edge; over the split, the pointer places it.
-// A plain tab shown is a split of one pane, leaf 0, which the drop pairs with
-// the dragged tab.
-inline void PreviewDock(Point screenPoint, bool isOverSplitTab) {
+// `isOverTargetTab`: the pointer is on the target's tab in the list, where the
+// tab joins at the right edge; over the page, the pointer places it. A plain
+// tab shown is a split of one pane, leaf 0, which the drop pairs with the
+// dragged tab.
+inline void PreviewDock(Point screenPoint, bool isOverTargetTab) {
   void* mcv = edge::McvForWindow(channel::g_window);
   const bool isOwnWindowShown =
       mcv && edge::TsmForWindow(channel::g_window) == g_session.tsm;
@@ -260,7 +296,7 @@ inline void PreviewDock(Point screenPoint, bool isOverSplitTab) {
   const Node tree = isSplitShown ? geometry::LiveTree(mcv, panes) : MakeLeaf(0);
   const Rect splitArea = geometry::SplitArea(mcv);
   // The tab becomes the split's newest pane: leaf `panes` (GrowSplit).
-  if (isOverSplitTab) {
+  if (isOverTargetTab) {
     g_session.plan =
         dock::Finish(tree, splitArea, panes, dock::Source::kIncoming,
                      dock::Zone::kRootEdge, kNoLeaf, Direction::kRight);
@@ -418,17 +454,25 @@ inline int __fastcall h_continue_dragging(void* controller,
   void* tsm = context ? edge::DragContextTabStripModel(context) : nullptr;
   const bool canDock = tsm && CanDock(controller, tsm);
   if (canDock) {
-    PickedSplitFor(controller, PaneDraggedBy(context));
+    PickedSplitFor(controller, tsm, PaneDraggedBy(context));
   }
   const bool isOverTabList =
       canDock && drag::IsOverTabList(context, *screenPoint);
-  const bool isOverSplitTab =
-      isOverTabList &&
-      PickSplitUnder(controller, context, tsm, *screenPoint) != nullptr;
+  const bool isAltOverTabList = isOverTabList && IsAltHeld();
+  const void* tabUnder =
+      isOverTabList ? PickSplitUnder(controller, context, tsm, *screenPoint)
+                    : nullptr;
+  if (!tabUnder && isAltOverTabList) {
+    tabUnder = PickPlainTabUnder(controller, context, tsm, *screenPoint);
+  }
+  const bool isOverTargetTab = tabUnder != nullptr;
   void* splitContents = canDock ? DockTarget(tsm) : nullptr;
   const bool isOffTabListWithSplit =
       splitContents && !isOverTabList && IsInDragWindow(context, *screenPoint);
-  const bool isDock = isOverSplitTab || isOffTabListWithSplit;
+  // Alt over the list holds Edge's drag even between targets: its reordering
+  // would slide the next tab away from under the pointer.
+  const bool isDock =
+      isOverTargetTab || isAltOverTabList || isOffTabListWithSplit;
   if (!isDock) {
     if (g_session.isDocking) {
       LeaveDockMode();
@@ -442,8 +486,14 @@ inline int __fastcall h_continue_dragging(void* controller,
     g_session.draggedContents = edge::DraggedContents(controller, 0);
     Log("[tabdrag] dock mode");
   }
+  const bool isBetweenTargetTabs = isOverTabList && !isOverTargetTab;
+  if (isBetweenTargetTabs) {
+    g_session.plan = {};
+    overlay::Hide();
+    return 0;
+  }
   ShowTargetAt(edge::IndexOfWebContents(tsm, splitContents));
-  PreviewDock(*screenPoint, isOverSplitTab);
+  PreviewDock(*screenPoint, isOverTargetTab);
   return 0;
 }
 
