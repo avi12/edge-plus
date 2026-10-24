@@ -1,17 +1,23 @@
-# Alt + drag a tab into a split
+# Drag a tab into a split
 
 Target: `msedge.dll` 155.0.4283.45. All addresses are **RVAs**; their one home
 in code is `app/native-split/src/offsets.h`.
 
 **What the user does:**
 
-1. Drag one tab in the strip, holding Alt.
-2. Hover a split's tab: that split shows.
-3. Move down over its panes: the docking preview shows where the tab would
-   land.
+1. Drag one tab in the list. Over the list it is Edge's own drag: the tab
+   follows the pointer and the others make room.
+2. Cross a split's tab on the way: that split is *picked*.
+3. Move off the list, into the window: the picked split shows, and the docking
+   preview shows where the tab would land.
 4. Release: the tab becomes a new pane there.
 
-Without Alt, the drag is Edge's own. Code: `src/tabdrag.h`.
+A pane dragged out of its split by its grip is the same drag, its own split
+picked from the start. With no split picked, or out of the window, the drag is
+Edge's own (it tears the tab off). Alt changes nothing: until 2026-10-24 it was
+the switch to docking, and a pane's drag needed none, so the two drags behaved
+differently; its key events are still dropped so a held Alt never ends a drag.
+Code: `src/tabdrag.h`.
 
 ## Edge's tab drag
 
@@ -45,14 +51,14 @@ Three behaviours of `ContinueDragging` and its key watcher shape the feature:
 
 ## The detours
 
-| detour | Alt mode | otherwise |
+| detour | dock mode | otherwise |
 |---|---|---|
-| `EventTracker::OnEvent` | Alt's key events are dropped, so Alt never ends the drag | original |
-| `ContinueDragging` | Not called. We hit-test the strip's tabs; a hovered split tab is activated. Over the shown split, `dock::ResolveIncoming` drives the preview. Returns 0 (the drag lives on). | original; leaving Alt mode re-activates the dragged tab first |
+| `EventTracker::OnEvent` | Alt's key events are dropped, so Alt never ends the drag | same |
+| `ContinueDragging` | Not called. The picked split is activated; over it, `dock::ResolveIncoming` drives the preview. Returns 0 (the drag lives on). | original; over the list we hit-test its tabs to pick a split; leaving dock mode re-activates the dragged tab first |
 | `EndDrag` | A completed release over a drop target remembers the plan, runs the original, then **posts** the drop to the UI-thread channel (`kTabDrop`) | original |
 
-**Alt mode** means: Alt is down (`GetKeyState(VK_MENU)`), exactly one tab is
-dragged, and that tab is not in a split.
+**Dock mode** means: exactly one tab is dragged, that tab is not in a split, a
+split is picked, and the pointer is in the window but off the tab list.
 
 **The tab under the pointer** is found by asking the context for each model
 tab's view (`GetTabForContents`) and comparing that view's
@@ -79,7 +85,7 @@ vertical tab list. The pane's tab leaves the split's row at once and follows
 the pointer through the list, the other tabs making room, exactly as a tab
 dragged within the list (or in from another window) does. Releasing there
 leaves it a tab of its own at that place. Back over the split the drag docks
-as an Alt drag does (the split shows again, the preview follows the pointer,
+as any tab's drag does (the split shows again, the preview follows the pointer,
 releasing adds the tab as a pane there); back over the list it is Edge's drag
 again. Esc puts the pane back where it was.
 
@@ -135,12 +141,12 @@ pressed.
 **Off the tab list.** Edge's drag tears the tab off into a new window once the
 pointer leaves `EdgeTabDragController::DoesTabStripContain` (`0xc9097d0`): the
 strip's screen bounds (`GetTabstripScreenBounds`) grown by 15 DIP, or 100 in
-some modes. The `ContinueDragging` detour treats any point outside the strip's
-plain bounds as docking and does not call the original, so Edge never sees a
-point that would tear the tab off. Docking activates the split again (one of
-its remaining panes' tabs), as an Alt drag over a split's tab does; going back
-over the list re-activates the dragged tab first, since Edge moves the
-selected tabs.
+some modes. While a split is picked, the `ContinueDragging` detour treats any
+point in the window outside the strip's plain bounds as docking and does not
+call the original, so Edge never sees a point there that would tear the tab
+off; out of the window it does, and tears it off. Docking activates the picked
+split (one of its panes' tabs); going back over the list re-activates the
+dragged tab first, since Edge moves the selected tabs.
 
 **The end.** `EndDrag` complete over a dock target queues the drop (channel
 `kTabDrop`) with the planned tree; complete anywhere else leaves the tab where

@@ -65,7 +65,7 @@ The manifest's `TargetDeviceFamily` is `Windows.Desktop`, `MinVersion`
 Edge+ adds live switches to Microsoft Edge. Turn a feature on in the Edge+ panel and Edge picks it up at once. No restart, no extension to install.
 
 SPLIT VIEW WITHOUT THE LIMIT
-Edge's own split view stops at two panes. Edge+ grows it to as many as you like, side by side or stacked, inside the tab. Every pane has its own address bar, the dividers drag, and a pane's menu adds a pane above, below, left or right. Move between panes with Shift + Alt and an arrow key. Alt-drag a tab onto the split to add it.
+Edge's own split view stops at two panes. Edge+ grows it to as many as you like, side by side or stacked, inside the tab. Every pane has its own address bar, the dividers drag, and a pane's menu adds a pane above, below, left or right. Move between panes with Shift + Alt and an arrow key. Drag a tab over the split's tab, then onto the split, to add it.
 
 THEME BY WINDOWS LIGHT AND DARK
 Pick one Edge theme for Windows light mode and another for dark mode. They switch the moment Windows does. Add themes from a Chrome Web Store or Edge Add-ons link, or from a local file or folder. Edge's own theming paints them.
