@@ -91,6 +91,9 @@ app/
   native-split/  the C++ DLL the panel injects into Edge's browser process
 ```
 
+[ARCHITECTURE.md](ARCHITECTURE.md) has the full picture: the components, how a
+switch reaches the DLL, and how the split model works.
+
 The panel keeps the user's choices in `%LOCALAPPDATA%\FixEdge\settings.json` and
 drives each feature directly. Every Win32 action — enumerating Edge's browser
 processes, injecting (or ejecting) `fixedge-split.dll`, adding a theme through

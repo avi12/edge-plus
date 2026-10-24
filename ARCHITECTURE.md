@@ -1,0 +1,287 @@
+# Architecture
+
+Edge+ changes Microsoft Edge without an extension. A small desktop panel
+(the **host**) saves the user's choices and injects a DLL (the **split DLL**)
+into Edge's browser process. The DLL hooks Edge's own code, so changes apply
+live and are undone when the switch is turned off.
+
+This document describes how the pieces fit. For what the user sees, see the
+[README](README.md). For reverse-engineering notes on Edge's internals, see
+[`docs/re/`](docs/re/).
+
+## Contents
+
+- [Components](#components)
+- [Life of a change](#life-of-a-change)
+- [The panel](#the-panel)
+- [The split DLL](#the-split-dll)
+- [Split model](#split-model)
+- [Edge version pinning](#edge-version-pinning)
+- [Design decisions](#design-decisions)
+- [Where to start reading](#where-to-start-reading)
+
+## Components
+
+```mermaid
+flowchart LR
+  subgraph Panel["edgeplus.exe (the panel)"]
+    Host["Host<br/><i>window, single instance,<br/>title bar, PanelLoader</i>"]
+    PanelAsm["Panel assembly<br/><i>features, settings, Edge watch,<br/>theme library, injection</i>"]
+    Host -- "loads, swaps live" --> PanelAsm
+  end
+
+  Settings[("settings.json<br/>%LOCALAPPDATA%\\FixEdge")]
+  Config[("fixedge-config.bin<br/>172-byte config wire")]
+  DllFile[("fixedge-split.dll<br/>unpacked copy")]
+
+  subgraph Edge["msedge.exe, browser process"]
+    Dll["fixedge-split.dll<br/><i>hooks, control window,<br/>hotkeys, command channel</i>"]
+    EdgeCode["msedge.dll<br/><i>Edge's own split, tab,<br/>theme and find code</i>"]
+    Dll -- "MinHook detours" --> EdgeCode
+  end
+
+  PanelAsm -- "read / write" --> Settings
+  PanelAsm -- "write, then signal" --> Config
+  PanelAsm -- "unpack, then inject<br/>(LoadLibraryW, remote thread)" --> Dll
+  Config -- "read on load,<br/>re-read on config event" --> Dll
+  DllFile -. "copied from" .-> PanelAsm
+  PanelAsm -- "signal unload event" --> Dll
+  Dll -- "owns unload event<br/>while loaded" --> PanelAsm
+```
+
+*The panel writes the settings and the config file, then injects or signals
+the DLL. The DLL holds an unload event open for as long as it is loaded, so
+the panel can tell whether it is running without tracking any process.*
+
+| Part | Where | Language | Role |
+|---|---|---|---|
+| Host | `app/panel-winui/EdgePlus.csproj`, `Host/` | C# / WinUI 3 | Process, single instance, window, title bar. Loads the panel. |
+| Panel | `app/panel-winui/Panel/` | C# | Every feature, the settings, Edge watching, themes, injection, UI. |
+| Split DLL | `app/native-split/` | C++20 | Runs inside Edge. Hooks, control window, hotkeys, tab drags. |
+| Injector | `app/panel-winui/Panel/Native/Injector.cs`, `app/native-split/src/inject.cpp` | C# / C++ | Panel's injector; `inject.exe` is a development harness. |
+| Reverse-engineering notes | `docs/re/` | Markdown | How each Edge hook was found and why it is safe. |
+
+## Life of a change
+
+Turning a switch on, end to end:
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User
+  participant Card as Feature card (UI)
+  participant Actions as PanelActions
+  participant Settings as Settings file
+  participant Sync as DllSync
+  participant Edge as Edge browser process (split DLL)
+
+  User->>Card: flips a switch
+  Card->>Actions: SetFeature(feature, on)
+  Actions->>Settings: save the choice
+  Actions->>Sync: Apply(settings)
+  Sync->>Sync: effective features (paused ones off)
+  Sync->>Edge: write config file, signal config event
+  Edge->>Edge: ApplyConfig: install or remove hooks
+  alt DLL not loaded yet
+    Sync->>Edge: unpack DLL, inject into browser processes
+    Edge->>Edge: DllMain, then Init: verify build, install hooks
+  end
+  Edge-->>Card: UI refreshes from the new state
+```
+
+*A change is saved first, so it survives a restart. The DLL reads the same
+state from the config file whether it was injected just now or was already
+running.*
+
+## The panel
+
+### One process, a window only when asked
+
+The host is a single process per user. A boot launch (`--background`) opens
+no window and keeps the watchers running. Launching the app again, or clicking
+its notification, opens the window in that same process. See
+[`app/panel-winui/README.md`](app/panel-winui/README.md).
+
+### A panel that reloads live
+
+The panel is a separate assembly. The host loads it into a collectible
+`AssemblyLoadContext` from a timestamped copy, so a rebuild swaps the new
+panel in while the window stays open. The rules that make the panel unloadable
+are listed in the panel's README.
+
+### Watching Edge
+
+`Panel/Edge/EdgeWatch.cs` runs three checks:
+
+- At start, and whenever a new browser process gets a window: it reads the
+  `msedge.dll` build that process runs, and injects the DLL where the switches
+  need it.
+- Every two seconds: a process-list poll (`PollThread`).
+- When the installed `msedge.exe` changes: a file watch, no polling.
+
+### Features and their switches
+
+Each feature is a value of `Feature` (`Panel/Platform/Settings.cs`). Each one
+is either a switch in the DLL's config wire or something the panel does alone.
+
+| Feature | Runs in | Notes |
+|---|---|---|
+| `NativeSplit` | DLL | Multi-pane split view and tab drags. |
+| `Theming` | DLL + Edge | Picks the light or dark theme installed for Edge. |
+| `QuietDevMode` | Panel only | Edits Edge's `Preferences` to hide the developer-mode prompt. |
+| `ProtocolHandlers` | DLL | Lets a site's handler request be asked again. |
+| `EnhancedFind` | DLL | RegExp and Copilot modes in Edge's find bar. |
+| `WebUiFollowsTheme` | DLL | `edge://settings` and `edge://extensions` follow the theme. |
+| `LivePreview` | DLL | Tab preview on hover. |
+| `TabShape` | DLL | Cut-corner tabs. Needs `Theming`. |
+| `ReadingTheme` | DLL | Reading mode follows Windows light and dark. |
+
+### Themes
+
+A theme is an extension package. The panel packs or reads it (`Themes/`,
+`ThemePacker`, `Crx`) and records it under Edge's per-user external-extensions
+registry key, `HKCU\Software\Microsoft\Edge\Extensions`. Edge's own loader then
+installs it. No developer mode is needed. The DLL only chooses which installed
+theme applies for the current Windows mode.
+
+## The split DLL
+
+### Load and unload
+
+```mermaid
+flowchart TD
+  A["DllMain: create the unload and config events"] --> B["Init thread starts"]
+  B --> C{"msedge.dll loaded?"}
+  C -- no, after 100 tries --> Z["release events, stay unhooked"]
+  C -- yes --> D{"verify::Ok<br/>exact build and code bytes?"}
+  D -- no --> Z
+  D -- yes --> E["hooks::InstallAll (MinHook)"]
+  E --> F["wait on unload and config events"]
+  F -- config event --> G["control::OnConfigChanged<br/>re-read config, apply"]
+  G --> F
+  F -- unload event --> H["hooks::RemoveAll, drain script callbacks"]
+  H --> I["FreeLibraryAndExitThread"]
+```
+
+*The DLL refuses to hook any Edge build it does not know, before it changes
+any code. Unloading restores Edge's own code and frees the library only after
+Edge can no longer call into it.*
+
+The unload event exists exactly while a DLL is loaded. That is how the panel
+tells a live DLL from a stale one, so no per-process state is kept.
+
+### Hooks
+
+Each hook is a MinHook detour on a function in `msedge.dll`, placed by its
+address (an RVA, given in `src/offsets.h`). Every detour checks whether the
+split is active and calls Edge's original code otherwise. A tab that is not in
+a split runs exactly as Edge wrote it.
+
+Hook pairs are named `h_name` (the detour) and `o_name` (the original it
+calls). `hooks.h` installs them all in one place.
+
+### Commands into the UI thread
+
+Work that must run on Edge's UI thread is posted as a window message to a
+window the DLL subclasses (`control.h`, `channel.h`). Hotkeys
+(`Ctrl+Shift+Alt` + arrows) and the panel's config changes take the same path.
+A script can post the same codes, which is how the test harness drives drags
+and splits without clicks.
+
+### Module map
+
+| Area | Files | What it does |
+|---|---|---|
+| Edge access | `edge.h` | The only file that calls into `msedge.dll` or reads an Edge struct. |
+| ABI | `offsets.h` | Every RVA and struct offset, named after the PDB symbol. |
+| Build check | `verify.h` | Refuses any build the offsets were not reversed against. |
+| Split model | `pane_tree.h`, `dock.h`, `geom.h` | Pure logic: the layout tree, drop zones, rectangles. No Edge, no Win32. |
+| Split state | `state.h` | The tree of each split, keyed by its id. |
+| Split data | `split_data.h`, `split_ops.h` | Grows, shrinks and rebuilds Edge's split through its own calls. |
+| Geometry | `geometry.h`, `dividers.h`, `grip.h` | Lays out panes and their dividers and grips. |
+| Tab list | `tabrows.h`, `tab_list.h`, `tab_views.h` | Shows a split's tabs in rows that follow the panes. |
+| Tab drags | `tabdrag.h`, `drag.h` | Drags a tab into a split, Alt drops, and pane drags. |
+| Tab look | `tab_shape.h`, `tab_edge.h`, `theme.h`, `theme_tone.h` | Cut corners and the theme's colours. |
+| Find, links, handlers | `find.h`, `links.h`, `protocol_handlers.h` | The enhanced find bar, split links, handler prompts. |
+| Repaint and motion | `repaint.h`, `anim.h`, `motion.h` | Forces panes to paint after a move; eases pane changes. |
+
+## Split model
+
+Edge's split view only ever holds two panes. The DLL grows it past two:
+
+1. **The tree.** `pane_tree.h` keeps each split's layout as a tree of row and
+   column nodes with weights. It is pure, so `app/native-split/test/` can test
+   it without Edge.
+2. **Edge's data.** The split's member tabs are the source of truth Edge uses
+   to feed panes. `split_data.h` changes them through Edge's own
+   `AddToSplitImpl` and `RemoveSplitImpl`, creating a new split under a new id
+   each time, since Edge gives a changed split a new id.
+3. **Geometry.** The `CalculateProposedLayout` detour (`geometry.h`) lays out
+   the containers from the tree, so Edge places its own panes.
+4. **The tab list.** Edge lays out a two-tab split as one row. `tabrows.h`
+   spreads the rest over rows, ordered by where each pane sits on screen.
+
+A tree is keyed by its split's id, not by the window (`state.h`), so a split
+torn off into another window keeps its layout.
+
+## Edge version pinning
+
+Every hook is an address in one exact `msedge.dll`. So support is decided for
+the whole build, not per feature:
+
+- `offsets.h` pins the build the DLL was reversed against (currently
+  156.0.4314.42).
+- `verify.h` refuses to hook any other build.
+- The panel's `EdgeSupport` pauses DLL-backed features on any other build. The
+  user's choice is kept, and the features return by themselves once Edge+ is
+  updated for that build.
+
+When Edge updates, the work is to re-pin `offsets.h` and re-check each hook
+with the tools in `docs/re/`.
+
+## Design decisions
+
+- **No extension.** An extension cannot change Edge's split view, its tab
+  strip or its theme engine. A DLL runs inside Edge's process, so it can
+  change them. The old extension approach is documented in
+  [`docs/edge-split-view.md`](docs/edge-split-view.md), which is out of date.
+- **Live switches, not a restart.** Each switch sends the DLL its state
+  through a config file and an event. Turning a feature off undoes its hooks
+  and restores Edge's own behaviour.
+- **Small, unhooked failure.** A build the DLL does not know, a missing module
+  or a failed hook leaves Edge exactly as it was.
+- **The panel is replaceable.** The host's load context lets the panel's code
+  change while the window stays open, which speeds up development.
+- **Pure logic is separate.** The split model, the drop zones and the settings
+  format have no Edge or Win32 dependency, so they are unit-tested in
+  `test/` for both the panel and the DLL.
+- **One place per value.** Values shared by the panel and the DLL (event names,
+  the config layout, the data folder) are declared once on the DLL side, and
+  the panel's `Shared.g.cs` is generated from those markers
+  (`tools/Export-SharedConstants.ps1`).
+
+## Where to start reading
+
+| To understand | Read |
+|---|---|
+| What a switch does at startup | `app/panel-winui/Panel/Dll/DllSync.cs` |
+| How the panel finds Edge's build | `app/panel-winui/Panel/Edge/EdgeWatch.cs` |
+| How the DLL starts and stops | `app/native-split/src/dllmain.cpp` |
+| The config the panel writes | `app/native-split/src/config.h`, `Panel/Dll/ConfigWire.cs` |
+| Which Edge functions are hooked | `app/native-split/src/hooks.h` |
+| How a split changes | `app/native-split/src/split_ops.h` |
+| How a tab is dragged into a split | `app/native-split/src/tabdrag.h` |
+| How an Edge function was found | `docs/re/` |
+
+## Building and testing
+
+```powershell
+app\native-split\build.cmd              # the DLL (MSVC) -> build\fixedge-split.dll
+app\native-split\test\run.cmd           # the DLL's pure-logic tests
+dotnet build app\panel-winui            # the panel, with the DLL embedded
+app\panel-winui\test\run.cmd            # the panel's pure-logic tests
+pwsh tools\lint.ps1                     # clang-format, clang-tidy, C# rules
+```
+
+The panel's build embeds the DLL it was built with, so the DLL the panel injects
+always matches its own version.
