@@ -60,12 +60,58 @@ inline bool IsActiveTabSplit(void* tsm) {
   return active && edge::TabIsSplit(active);
 }
 
+// Every way a pane is added comes through here.
+inline void OnPaneAdded(void* mcv, void* newTab) {
+  edge::InvalidateLayout(mcv);
+  // The new pane's page was shown when it was fed, but Edge hides it again and
+  // its growth resizes it every frame: it stays blank until it is nudged once
+  // the layout has settled.
+  repaint::ScheduleAll();
+  // An open tab offer must no longer list a pane's tab.
+  if (newTab) {
+    edge::WithdrawFromStartingPages(
+        edge::SplitWindowControllerFor(
+            edge::BrowserOf(edge::McvBrowserView(mcv))),
+        edge::TabContents(newTab));
+  }
+}
+
+// A plain tab and `newTab` as a new split, as the two-leaf `tree` places them
+// (the tab leaf 0, `newTab` leaf 1). Edge lays out two panes itself, from the
+// split's layout and its member order, so the tree it keeps is in that order.
+inline bool CreatePair(void* mcv, void* tsm, const Node& tree, void* newTab) {
+  Pair pair;
+  const bool isPair = ReadPair(tree, pair);
+  if (!isPair) {
+    return false;
+  }
+  const split_data::SplitLayout layout = pair.axis == Axis::kHorizontal
+                                             ? split_data::SplitLayout::kColumns
+                                             : split_data::SplitLayout::kRows;
+  HandOverTree(mcv, FlatTree(split_data::kMinSplitMembers, pair.axis));
+  const bool isCreated =
+      split_data::CreateSplitWith(tsm, newTab, layout, pair.isSecondLeafFirst);
+  EndTreeHandOver(mcv);
+  if (!isCreated) {
+    ForgetTree(mcv);
+  }
+  return isCreated;
+}
+
 // `newTab` (a TabModel*; null: a free background tab) is `tree`'s newest leaf,
 // since GrowSplit appends it as the last container. The tree goes in first, so
 // the relayout the grow triggers already uses it.
 inline bool GrowWithTree(void* mcv, void* tsm, const Node& tree, void* newTab) {
+  const bool isNewSplit = !IsActiveTabSplit(tsm);
+  if (isNewSplit) {
+    const bool isCreated = CreatePair(mcv, tsm, tree, newTab);
+    if (isCreated) {
+      OnPaneAdded(mcv, newTab);
+    }
+    return isCreated;
+  }
   // A copy, not a pointer: the speculative edit below overwrites this entry.
-  const Node* existing = IsActiveTabSplit(tsm) ? TreeFor(mcv) : nullptr;
+  const Node* existing = TreeFor(mcv);
   const std::optional<Node> previousTree =
       existing ? std::optional<Node>(*existing) : std::nullopt;
   HandOverTree(mcv, tree);
@@ -80,18 +126,7 @@ inline bool GrowWithTree(void* mcv, void* tsm, const Node& tree, void* newTab) {
     Log("[grow] failed; tree reverted");
     return false;
   }
-  edge::InvalidateLayout(mcv);
-  // The new pane's page was shown when it was fed, but Edge hides it again and
-  // its growth resizes it every frame: it stays blank until it is nudged once
-  // the layout has settled. Every way a pane is added comes through here.
-  repaint::ScheduleAll();
-  // An open tab offer must no longer list a pane's tab.
-  if (newTab) {
-    edge::WithdrawFromStartingPages(
-        edge::SplitWindowControllerFor(
-            edge::BrowserOf(edge::McvBrowserView(mcv))),
-        edge::TabContents(newTab));
-  }
+  OnPaneAdded(mcv, newTab);
   return true;
 }
 

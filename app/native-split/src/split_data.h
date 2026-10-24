@@ -106,6 +106,18 @@ inline void SetEvenRatio(uint8_t* visual) {
   *reinterpret_cast<double*>(visual + 8) = kEvenSplitRatio;
 }
 
+// SplitTabLayout, the visual's layout and the split view's orientation
+// (MCV_orientation): 0 lays the members side by side, any other value one
+// above the other.
+enum class SplitLayout : int32_t {
+  kColumns = 0,
+  kRows = 1,
+};
+
+inline void SetLayout(uint8_t* visual, SplitLayout layout) {
+  *reinterpret_cast<int32_t*>(visual) = static_cast<int32_t>(layout);
+}
+
 // What a split keeps when it is re-created under a new id: its visual
 // (orientation and ratio, handed to AddToSplitImpl) and Edge's per-split
 // "open left links to the right" toggle, which a NEW split would take from a
@@ -291,6 +303,59 @@ inline void PlaceAfterMembers(void* tsm, void* root,
   edge::MoveTabTo(tsm, newTabIndex, afterMembers);
 }
 
+// The unsplit active tab and `newTab` (null: a free background tab) as a new
+// split laid out `layout`. Edge orders a split's members, and so its panes, by
+// strip index: `isNewTabFirst` puts the new tab before the active one, on the
+// left or on top.
+inline bool CreateSplitWith(void* tsm, void* newTab, SplitLayout layout,
+                            bool isNewTabFirst) {
+  void* root = tsm ? edge::RootCollection(tsm) : nullptr;
+  void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
+  const bool canCreateSplit = root && active && !edge::TabIsSplit(active);
+  if (!canCreateSplit) {
+    Log("[create] tsm=%p root=%p active=%p", tsm, root, active);
+    return false;
+  }
+  if (!newTab) {
+    newTab = edge::TabModelAt(tsm, FindFreeTab(tsm, root, active));
+  }
+  if (!IsFreeTab(newTab, active)) {
+    Log("[create] the new tab %p is not a free background tab", newTab);
+    return false;
+  }
+  const int newTabIndex = edge::GetIndexOfTabRecursive(root, newTab);
+  const int activeIndex = edge::GetIndexOfTabRecursive(root, active);
+  // Moving the new tab to the active tab's index puts it on the other side.
+  const bool isOnWrongSide = (newTabIndex < activeIndex) != isNewTabFirst;
+  if (isOnWrongSide) {
+    edge::MoveTabTo(tsm, newTabIndex, activeIndex);
+  }
+  int memberIndices[kMinSplitMembers] = {
+      edge::GetIndexOfTabRecursive(root, active),
+      edge::GetIndexOfTabRecursive(root, newTab)};
+  const bool areBothFound = memberIndices[0] >= 0 && memberIndices[1] >= 0;
+  if (!areBothFound) {
+    Log("[create] lost a tab after placing the new one");
+    return false;
+  }
+  std::sort(std::begin(memberIndices), std::end(memberIndices));
+  uint8_t splitId[16] = {};
+  edge::CreateRandomToken(splitId);
+  uint8_t visual[16] = {};
+  SetEvenRatio(visual);
+  SetLayout(visual, layout);
+  uint8_t outId[16] = {};
+  edge::SplitIndexVec splitIndices =
+      edge::MakeIndexVec(std::span(memberIndices));
+  const bool isAdded =
+      SafeAddToSplit(tsm, outId, splitId, &splitIndices, memberIndices[0],
+                     visual, AddToSplitFlag::kNewSplit);
+  Log("[create] AddToSplitImpl [%d,%d] layout %d, new tab %s: %s",
+      memberIndices[0], memberIndices[1], static_cast<int>(layout),
+      isNewTabFirst ? "first" : "second", isAdded ? "done" : "FAILED");
+  return isAdded;
+}
+
 // Add `newTab` (a TabModel*; null: a free background tab) to the active split,
 // or make a 2-pane split if the active tab is not in one. Edge has no append
 // (UpdateTabInSplit only replaces a member), so the split is dissolved and
@@ -308,6 +373,9 @@ inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
   edge::TabGetSplit(active, &split);
   if (!split.hasValue) {
     Log("[grow] active tab not split yet - creating a 2-pane split");
+    if (newTab) {
+      return CreateSplitWith(tsm, newTab, SplitLayout::kColumns, false);
+    }
     return CreateSplitN(tsm, kMinSplitMembers);
   }
 

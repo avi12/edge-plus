@@ -13,11 +13,11 @@
 
 namespace fixedge::geometry {
 
-// SplitTabLayout: 0 is one axis, any other value the other.
-inline constexpr int kHorizontalOrientation = 0;
 inline Axis SplitAxis(void* mcv) {
-  return edge::McvOrientation(mcv) == kHorizontalOrientation ? Axis::kHorizontal
-                                                             : Axis::kVertical;
+  const bool isColumns =
+      edge::McvOrientation(mcv) ==
+      static_cast<uint32_t>(split_data::SplitLayout::kColumns);
+  return isColumns ? Axis::kHorizontal : Axis::kVertical;
 }
 
 // The live tree only when it tiles that many panes: a plain tab or another split
