@@ -3,7 +3,11 @@
 Live feature switches for Microsoft Edge. A desktop panel turns each feature on
 or off, and Edge picks the change up the moment it is made — no restart, ever.
 
-![The Edge+ panel](https://github.com/user-attachments/assets/428c98e9-b675-4023-a4cb-77e4c2faa34b)
+![One Edge tab split into four panes, its tabs in the vertical list cut at the corner](https://github.com/user-attachments/assets/20801c50-e3d8-4bbd-9983-b39fb0e00302)
+
+*One tab split into a 2 × 2 grid. In the tab list on the left, its four tabs sit
+in two rows, just like the panes, and the focused pane's tab is the one filled
+and cut at the corner.*
 
 ## Requirements
 
@@ -16,17 +20,28 @@ or off, and Edge picks the change up the moment it is made — no restart, ever.
 
 ## Features
 
+Everything below runs inside Edge from one DLL the panel injects — no
+extension (`app/native-split`, reverse-engineered in `docs/re/`) — except
+hiding the developer-mode prompt, which only edits Edge's `Preferences`.
+
+### Split view
+
 - **Split into any grid** — grows Edge's *own* split view past two panes, side by
   side or stacked, inside the tab itself; each tab keeps its own layout, the way
   Arc does it. Every pane has its own address bar, dividers drag, and a pane's ⋯
-  menu adds a pane above / below / left / right. Loaded straight into Edge as a
-  DLL — no extension (`app/native-split`, reverse-engineered in `docs/re/`).
+  menu adds a pane above / below / left / right.
 - **Drag a tab into a split** — drag a tab from the list onto a split and a
   preview shows where it lands as a new pane. Hold `Alt` while dragging a tab
   onto another tab, in the list or onto its page, to make the two a split: the
   dragged tab goes left, right, above or below as the preview shows.
+- **The tab list mirrors the panes** — a split's tabs are spread over rows in
+  the list in the order their panes read on screen, top to bottom and left to
+  right, and follow along when panes are moved or swapped.
 - **Move between panes** — `Shift + Alt` + an arrow key focuses the pane on that
   side, in the split you are on.
+
+### Looks
+
 - **Theme by Windows light and dark** — use one theme when Windows is in light
   mode and another when it is in dark, switched live when Windows flips, with no
   restart. Add themes from a Chrome Web Store / Edge Add-ons link or a local
@@ -34,34 +49,33 @@ or off, and Edge picks the change up the moment it is made — no restart, ever.
   applies the right one).
 - **Cut-corner tabs** — with Theming on, every tab, in the vertical list and in
   the horizontal strip, gets a straight leading edge and a 45° cut on its
-  trailing bottom corner, the selected tab is filled in the theme's neon, and a
-  horizontal tab loses its flared feet. Edge's own outline is reshaped by the
-  injected DLL, so nothing is painted over the tab (`app/native-split/src/tab_shape.h`).
-
-  ![A vertical tab with a cut corner](docs/images/cut-corner-tab.png)
+  trailing bottom corner (in a split, only the focused pane's tab), the
+  selected tab is filled in the theme's neon, and a horizontal tab loses its
+  flared feet. Edge's own outline is reshaped, so nothing is painted over the
+  tab (`app/native-split/src/tab_shape.h`).
 - **Settings and extensions pages follow the theme** — `edge://settings` and
   `edge://extensions` take their light or dark from Windows or Edge's
   Appearance setting, never from the theme, so a dark theme on a light Windows
   leaves them white. With this on they follow the theme's own colors, live
   (including Theming's swap); a default-theme profile still follows Edge's
   Appearance setting. Only those two pages change; websites and every other
-  Edge page keep what Edge decides (`docs/re/webui-color-scheme.md`). Runs in
-  the injected DLL.
-- **Hide the developer-mode prompt** — stops Edge asking to turn off
-  developer-mode extensions at startup.
+  Edge page keep what Edge decides (`docs/re/webui-color-scheme.md`).
+
+### Fixes to Edge
+
+- **Enhanced find: RegExp and Ask Copilot** — Edge's own `Ctrl + F`
+  bar gets two modes, chosen by what you type in its box: `/pattern/i` is a
+  RegExp search (every match highlighted, counted in the bar's own n/m, Enter
+  steps), and `? where do they discuss pricing?` asks Copilot and highlights
+  just the sentences that answer, wherever they are on the page. Anything else
+  is Edge's own find, as are Edge pages and PDFs (`docs/re/find-bar.md`).
 - **Ask to handle links, like Chrome** — when a site such as Gmail offers to
   open email or calendar links, Edge's address-bar handler icon stays an open
   question: closing its bubble or answering "Just this time" no longer blocks
   the site for good, and turning it on lifts the blocks already on record
-  (Edge has no page for them) (`docs/re/protocol-handlers.md`). Runs in the
-  injected DLL.
-- **Enhanced find: RegExp and Ask Copilot** — Edge's own `Ctrl + F`
-  bar gets two modes, chosen by what you type in its box: `/pattern/i` is a
-  RegExp search (every match highlighted, counted in the bar's own n/m, Enter
-  steps), and `? where do they discuss pricing?` asks Copilot and
-  highlights just the sentences that answer, wherever they are on the page. Anything else
-  is Edge's own find, as are Edge pages and PDFs (`docs/re/find-bar.md`). Runs in
-  the injected DLL.
+  (Edge has no page for them) (`docs/re/protocol-handlers.md`).
+- **Hide the developer-mode prompt** — stops Edge asking to turn off
+  developer-mode extensions at startup.
 
 Removed for now: the Gemini integration (Gemini in a side panel from the
 toolbar chat button, with tab sharing). Copilot is the only assistant. The code
@@ -99,6 +113,8 @@ dotnet publish app\panel-winui -c Release    # one self-contained edgeplus.exe
 
 Open the panel, open Edge, and flip the switches. There is no extension to load
 and nothing to pre-install.
+
+![The Edge+ panel](https://github.com/user-attachments/assets/428c98e9-b675-4023-a4cb-77e4c2faa34b)
 
 The split DLL is pinned to one `msedge.dll` build (`app/native-split/src/offsets.h`);
 on any other build it refuses to hook and the split simply does nothing, so it is
