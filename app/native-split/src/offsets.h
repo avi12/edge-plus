@@ -290,6 +290,10 @@ inline constexpr uintptr_t SkPath_moveTo = 0x12073f0;
 // corner to where the top-right arc begins.
 inline constexpr uintptr_t SkPath_lineTo = 0x1209670;
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_topEdge_return = 0x27bbf4d;
+// The lineTo after the top-right arc draws the right side down to where the
+// right foot (or a vertical tab's bottom-right arc) begins.
+inline constexpr uintptr_t EdgeTabStyleViews_GetPath_rightEdge_return =
+    0x27bbfb4;
 // EdgeTabStrip::UpdateDropShadow (rva 0x2954850) shadows the horizontal strip's
 // active tab, outlined by GetPath (pathType 1) through the call returning to
 // EdgeTabStrip_UpdateDropShadow_activeTabPath_return. When that tab is in a

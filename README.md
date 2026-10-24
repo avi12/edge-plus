@@ -34,7 +34,7 @@ or off, and Edge picks the change up the moment it is made — no restart, ever.
   applies the right one).
 - **Cut-corner tabs** — with Theming on, every tab, in the vertical list and in
   the horizontal strip, gets a straight leading edge and a 45° cut on its
-  trailing top corner, the selected tab is filled in the theme's neon, and a
+  trailing bottom corner, the selected tab is filled in the theme's neon, and a
   horizontal tab loses its flared feet. Edge's own outline is reshaped by the
   injected DLL, so nothing is painted over the tab (`app/native-split/src/tab_shape.h`).
 

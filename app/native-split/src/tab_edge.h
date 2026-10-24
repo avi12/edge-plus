@@ -42,19 +42,19 @@ struct CornerRadii {
   return !isSplitMember || isFocusedPane;
 }
 
-// The trailing top corner keeps the radius (tab_shape.h turns it into a cut)
+// The trailing bottom corner keeps the radius (tab_shape.h turns it into a cut)
 // only when it is cut.
 [[nodiscard]] constexpr CornerRadii RadiiFor(Side leading, float radius,
                                              bool isTrailingCut) noexcept {
   const CornerRadius round{radius, radius};
   const CornerRadius square{};
-  const CornerRadius trailingTop = isTrailingCut ? round : square;
+  const CornerRadius trailingBottom = isTrailingCut ? round : square;
   const bool isLeadingOnLeft = leading == Side::kLeft;
   CornerRadii radii;
-  radii.corners[static_cast<size_t>(Corner::kUpperLeft)] =
-      isLeadingOnLeft ? square : trailingTop;
-  radii.corners[static_cast<size_t>(Corner::kUpperRight)] =
-      isLeadingOnLeft ? trailingTop : square;
+  radii.corners[static_cast<size_t>(Corner::kLowerLeft)] =
+      isLeadingOnLeft ? square : trailingBottom;
+  radii.corners[static_cast<size_t>(Corner::kLowerRight)] =
+      isLeadingOnLeft ? trailingBottom : square;
   return radii;
 }
 

@@ -31,20 +31,21 @@ void RunChecks() {
   Check(onLeft.corners[static_cast<size_t>(Corner::kUpperLeft)] == square &&
             onLeft.corners[static_cast<size_t>(Corner::kLowerLeft)] == square,
         "a left-leading tab is straight on its left");
-  Check(onLeft.corners[static_cast<size_t>(Corner::kUpperRight)] == round &&
-            onLeft.corners[static_cast<size_t>(Corner::kLowerRight)] == square,
-        "a left-leading tab keeps the radius on its trailing top corner only");
+  Check(onLeft.corners[static_cast<size_t>(Corner::kLowerRight)] == round &&
+            onLeft.corners[static_cast<size_t>(Corner::kUpperRight)] == square,
+        "a left-leading tab keeps the radius on its trailing bottom corner "
+        "only");
   const CornerRadii onRight = RadiiFor(Side::kRight, kRadius, true);
   Check(
       onRight.corners[static_cast<size_t>(Corner::kUpperRight)] == square &&
           onRight.corners[static_cast<size_t>(Corner::kLowerRight)] == square &&
-          onRight.corners[static_cast<size_t>(Corner::kUpperLeft)] == round &&
-          onRight.corners[static_cast<size_t>(Corner::kLowerLeft)] == square,
+          onRight.corners[static_cast<size_t>(Corner::kUpperLeft)] == square &&
+          onRight.corners[static_cast<size_t>(Corner::kLowerLeft)] == round,
       "a right-leading tab mirrors it");
   const CornerRadii uncut = RadiiFor(Side::kLeft, kRadius, false);
   Check(uncut.corners[static_cast<size_t>(Corner::kUpperRight)] == square &&
             uncut.corners[static_cast<size_t>(Corner::kLowerRight)] == square &&
-            uncut.corners[static_cast<size_t>(Corner::kUpperLeft)] == square,
+            uncut.corners[static_cast<size_t>(Corner::kLowerLeft)] == square,
         "an uncut tab is straight on both sides");
 
   Check(IsTrailingCornerCut(false, false),

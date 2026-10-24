@@ -1,5 +1,5 @@
 // tab_shape.h — the tab's outline: a straight leading edge and a 45 degree cut
-// on the trailing top corner. Edge outlines a tab (fill, hover, press) in
+// on the trailing bottom corner. Edge outlines a tab (fill, hover, press) in
 // EdgeTabStyleViews::GetPath, as one rounded rectangle for a vertical tab and
 // four arcs for a horizontal one; changing the outline shapes the tab in
 // whatever colour Edge paints it, so nothing is painted over the fill except a
@@ -23,7 +23,7 @@ inline constinit bool g_isSquared = false;
 // The tab GetPath is outlining right now, so the Skia calls it makes can be told
 // from every other.
 inline constinit void* g_outlinedTab = nullptr;
-// Whether that tab's trailing top corner is cut (tab_edge::IsTrailingCornerCut);
+// Whether that tab's trailing bottom corner is cut (tab_edge::IsTrailingCornerCut);
 // square when not. Every way GetPath outlines it follows this.
 inline constinit bool g_isTrailingCut = true;
 
@@ -153,10 +153,10 @@ inline OutlineArc ArcOfCaller(const void* caller) {
   return OutlineArc::kNone;
 }
 
-// How far the trailing top corner's cut reaches, as a share of the corner's
-// radius: enough to read as a chamfer, short of the close button beside it.
+// How far the trailing bottom corner's cut reaches past the corner's radius, as
+// a share of it: enough to read as a chamfer, short of the close button.
 inline constexpr float kTrailingCutRatio = 0.75f;
-// Set by the arcs before the top-right one.
+// Set by the arcs before the right side.
 inline constinit float g_cornerRadius = 0;
 inline float TrailingCut() {
   return g_cornerRadius * kTrailingCutRatio;
@@ -169,10 +169,10 @@ inline float ChamferLeg(float radius) {
 
 // SkPath::arcTo, for the calls in GetPath that round a horizontal tab's outline.
 // With no radius an arc is a straight line to its end, so the flared feet end
-// level with the tab's bottom, the top-left corner is square and the top-right
-// one becomes the cut (h_line_to starts it earlier along the top). A
-// right-to-left UI keeps Edge's corners: its leading corner is built from
-// different calls.
+// level with the tab's bottom, the top corners are square and the right foot
+// (or a vertical tab's bottom-right arc) becomes the cut, from where h_line_to
+// stops the right side. A right-to-left UI keeps Edge's corners: its leading
+// corner is built from different calls.
 inline void* __fastcall h_arc_to(void* path, uint64_t radii, float rotation,
                                  int arcSize, uint8_t direction, uint64_t end) {
   const OutlineArc corner =
@@ -195,17 +195,16 @@ inline void* __fastcall h_arc_to(void* path, uint64_t radii, float rotation,
       target.x -= radius.x;
       break;
     case OutlineArc::kTopRight:
-      // Uncut, the top edge already reached the corner (h_line_to): this is
-      // the straight drop down the trailing side.
-      if (g_isTrailingCut) {
-        target.y += TrailingCut();
-      }
+      // The top edge already reached the corner (h_line_to): this is the
+      // straight start of the drop down the trailing side.
       break;
     case OutlineArc::kRightFoot:
-      target.x -= radius.x;
+      // The foot flares one radius out past the right side.
+      target.x -= g_isTrailingCut ? radius.x + ChamferLeg(radius.x) : radius.x;
       break;
     case OutlineArc::kBottomRight:
-      target.x += radius.x;
+      // The arc ends one radius in from the right side.
+      target.x += g_isTrailingCut ? -TrailingCut() : radius.x;
       break;
     case OutlineArc::kNone:
       break;
@@ -217,19 +216,29 @@ inline void* __fastcall h_arc_to(void* path, uint64_t radii, float rotation,
 using LineTo_t = void*(__fastcall*)(void*, uint64_t);
 inline constinit LineTo_t o_line_to = nullptr;
 
-// SkPath::lineTo, for the one call in GetPath that draws the tab's top edge up
-// to where its top-right arc starts: it stops a cut's length short, or runs on
-// to the corner itself when the corner is square.
+// SkPath::lineTo, for two calls in GetPath: the top edge, which runs on to the
+// square top-right corner instead of stopping where its arc would start, and
+// the right side, which stops a cut's length above where the bottom corner's
+// arc would start when that corner is cut.
 inline void* __fastcall h_line_to(void* path, uint64_t point) {
+  const void* caller = _ReturnAddress();
+  const bool isShaped = g_outlinedTab && !edge::IsUiRightToLeft();
   const bool isTopEdge =
-      g_outlinedTab && !edge::IsUiRightToLeft() &&
-      _ReturnAddress() ==
+      isShaped &&
+      caller ==
           edge::At(edge155::rva::EdgeTabStyleViews_GetPath_topEdge_return);
-  if (!isTopEdge) {
+  const bool isCutRightEdge =
+      isShaped && g_isTrailingCut &&
+      caller ==
+          edge::At(edge155::rva::EdgeTabStyleViews_GetPath_rightEdge_return);
+  PointF target = UnpackPoint(point);
+  if (isTopEdge) {
+    target.x += g_cornerRadius;
+  } else if (isCutRightEdge) {
+    target.y -= TrailingCut();
+  } else {
     return o_line_to(path, point);
   }
-  PointF target = UnpackPoint(point);
-  target.x += g_isTrailingCut ? -TrailingCut() : g_cornerRadius;
   return o_line_to(path, PackPoint(target));
 }
 
@@ -247,7 +256,7 @@ inline constexpr uintptr_t kRRectBottom = 0xc;
 inline constexpr uintptr_t kRRectRadii = 0x10;
 
 // The vertical tab's rounded rectangle becomes a polygon with the same bounds,
-// its trailing top corner (the one h_set_rect_xy left round) cut. A tab with a
+// its trailing bottom corner (the one h_set_rect_xy left round) cut. A tab with a
 // split neighbour on its trailing side has no radius there, so stays a
 // rectangle.
 inline void* __fastcall h_add_rrect(void* path, const void* roundedRect,
@@ -264,12 +273,12 @@ inline void* __fastcall h_add_rrect(void* path, const void* roundedRect,
   const float right = edge::Field<float>(roundedRect, kRRectRight);
   const float bottom = edge::Field<float>(roundedRect, kRRectBottom);
   const bool isLeftToRight = !edge::IsUiRightToLeft();
-  const tab_edge::Corner trailingTop = isLeftToRight
-                                           ? tab_edge::Corner::kUpperRight
-                                           : tab_edge::Corner::kUpperLeft;
+  const tab_edge::Corner trailingBottom = isLeftToRight
+                                              ? tab_edge::Corner::kLowerRight
+                                              : tab_edge::Corner::kLowerLeft;
   const float radius = edge::Field<float>(
       roundedRect,
-      kRRectRadii + static_cast<uintptr_t>(trailingTop) * sizeof(PointF));
+      kRRectRadii + static_cast<uintptr_t>(trailingBottom) * sizeof(PointF));
   const float leg = ChamferLeg(radius);
   const float trailingX = isLeftToRight ? right : left;
   const float leadingX = isLeftToRight ? left : right;
@@ -280,9 +289,9 @@ inline void* __fastcall h_add_rrect(void* path, const void* roundedRect,
   const auto moveTo =
       reinterpret_cast<MoveTo_t>(edge::At(edge155::rva::SkPath_moveTo));
   moveTo(path, point(leadingX, top));
-  o_line_to(path, point(trailingX + legX, top));
-  o_line_to(path, point(trailingX, top + leg));
-  o_line_to(path, point(trailingX, bottom));
+  o_line_to(path, point(trailingX, top));
+  o_line_to(path, point(trailingX, bottom - leg));
+  o_line_to(path, point(trailingX + legX, bottom));
   o_line_to(path, point(leadingX, bottom));
   return o_line_to(path, point(leadingX, top));
 }
