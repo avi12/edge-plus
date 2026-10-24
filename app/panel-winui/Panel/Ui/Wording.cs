@@ -30,8 +30,6 @@ internal static class Wording {
   public static string NeedsFeature(Feature needed) => $"Turn on {For(needed).Title} to use this.";
   // The footer's "by Avi".
   public const string By = "by";
-  // The footer version's tooltip.
-  public const string WhatsNew = "What's new";
   public const string DropHint = "Drop a theme folder, .zip or .crx to add it";
 
   public const string NotAStoreLink =

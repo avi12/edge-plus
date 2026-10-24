@@ -7,8 +7,7 @@
 3. Build the exe: `dotnet publish app\panel-winui -c Release`. It is one
    `edgeplus.exe` under `app\panel-winui\bin\Release\...\win-x64\publish\`.
 4. Create a GitHub release `v<version>` with the exe attached. The release
-   notes are the changelog: plain sentences for users, no file names. The
-   footer's version links to the releases page.
+   notes are the changelog: plain sentences for users, no file names.
 
 ## A release for a new Edge build
 

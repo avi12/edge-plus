@@ -22,8 +22,6 @@ internal static class Product {
 
   public static Uri AuthorUri { get; } = new("https://avi12.com");
 
-  public static Uri ReleasesUri { get; } = new("https://github.com/avi12/edge-plus/releases");
-
   private static string Read<TAttribute>(Func<TAttribute, string> value)
       where TAttribute : Attribute =>
       s_assembly.GetCustomAttribute<TAttribute>() is TAttribute attribute

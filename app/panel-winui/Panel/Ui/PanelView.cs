@@ -316,12 +316,11 @@ internal sealed class PanelView : IDisposable {
       NavigateUri = Product.AuthorUri,
       Padding = new Thickness(2, 0, 2, 0),
     });
-    var version = new HyperlinkButton {
-      Content = Product.Version,
-      NavigateUri = Product.ReleasesUri,
-      Padding = new Thickness(2, 0, 2, 0),
+    var version = new TextBlock {
+      Text = Product.Version,
+      Style = StyleKeys.Get(StyleKeys.CardDescription),
+      VerticalAlignment = VerticalAlignment.Center,
     };
-    ToolTipService.SetToolTip(version, Wording.WhatsNew);
     Grid.SetColumn(version, 1);
     footer.Children.Add(byline);
     footer.Children.Add(version);
