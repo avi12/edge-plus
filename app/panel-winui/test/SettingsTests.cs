@@ -14,6 +14,20 @@ internal static class SettingsTests {
     RemovingAThemeClearsItsAssignments();
     TheSwitchesMapOneToOne();
     ReadingModeIsOnlyItsSwitch();
+    AutoInjectDefaultsOnAndIsSavedCamelCase();
+  }
+
+  // A file from before the switch existed keeps the old behaviour: inject.
+  private static void AutoInjectDefaultsOnAndIsSavedCamelCase() {
+    Expect.That(new Settings().AutoInject, "auto-inject defaults on");
+    Expect.That(Settings.Parse("""{"features":{"nativeSplit":true}}""").AutoInject,
+                "a file without autoInject loads with it on");
+    Expect.That(!Settings.Parse("""{"autoInject":false}""").AutoInject, "autoInject off is read");
+    var settings = new Settings { AutoInject = false };
+    string json = settings.ToJson();
+    Expect.That(json.Contains("\"autoInject\": false", StringComparison.Ordinal),
+                "it is written camelCase");
+    Expect.That(!Settings.Parse(json).AutoInject, "off survives a round trip");
   }
 
   // The reading themes are now picked in reading mode itself, so the old
