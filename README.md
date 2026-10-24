@@ -94,9 +94,9 @@ app/
 [ARCHITECTURE.md](ARCHITECTURE.md) has the full picture: the components, how a
 switch reaches the DLL, and how the split model works.
 
-The panel keeps the user's choices in `%LOCALAPPDATA%\FixEdge\settings.json` and
+The panel keeps the user's choices in `%LOCALAPPDATA%\EdgePlus\settings.json` and
 drives each feature directly. Every Win32 action — enumerating Edge's browser
-processes, injecting (or ejecting) `fixedge-split.dll`, adding a theme through
+processes, injecting (or ejecting) `edgeplus-split.dll`, adding a theme through
 Edge's external-extension loader, snoozing the developer-mode prompt — lives in
 a `Native\` folder, the only place with a `[DllImport]`. The split DLL travels
 inside the panel binary and is unpacked beside the settings, so the DLL always
@@ -104,7 +104,7 @@ matches the build. Started with Windows, the panel runs with no window and
 watches for an Edge update (see `app/panel-winui/README.md`).
 
 The split and the theming share one injected DLL, driven by a small config file
-(`fixedge-config.bin`) the DLL re-reads whenever a named event is signalled.
+(`edgeplus-config.bin`) the DLL re-reads whenever a named event is signalled.
 Turning the split off breaks any split of three or more panes back into
 standalone tabs first, so nothing Edge can't render on its own is left behind.
 
@@ -145,7 +145,7 @@ pwsh tools\lint.ps1                          # includes dotnet format + the C# h
 The native split DLL:
 
 ```powershell
-app\native-split\build.cmd       # -> build\fixedge-split.dll and inject.exe
+app\native-split\build.cmd       # -> build\edgeplus-split.dll and inject.exe
 app\native-split\test\run.cmd    # the pure-logic unit tests
 pwsh tools\lint.ps1              # clang-format/-tidy for the C++
 ```

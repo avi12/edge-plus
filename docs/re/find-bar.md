@@ -20,7 +20,7 @@ words the user reads are one source per side: `find_text::kRegExpName`
 (the card's title and description follow the Browser assistant card).
 
 Evidence: **[run]** observed in a throwaway Edge (own `--user-data-dir` marker
-`fixedge-askg-live`, `--inprivate --disable-sync --disable-extensions`, the bar
+`edgeplus-askg-live`, `--inprivate --disable-sync --disable-extensions`, the bar
 and the page captured with `PrintWindow`, keys posted to the throwaway's own
 windows); **[unit]** a host unit test under `app/native-split/test/`; **[infer]**
 reasoned from disassembly, not run.

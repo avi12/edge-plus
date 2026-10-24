@@ -1,6 +1,6 @@
 > **Removed feature.** The Gemini integration this note describes (the glic
 > host, the share strip and picker, the chat-button reskin and the "Browser
-> assistant" choice in the panel) was taken out of fix-edge on 2026-10-19.
+> assistant" choice in the panel) was taken out of Edge+ on 2026-10-19.
 > Copilot is the only assistant. The code lives in git history: the last
 > commit that still has it is `4ee5113`, so `git show 4ee5113:app/native-split/src/gemini.h`
 > (and `glic.h`, `share.h`, `glic_host_script.h`, ...) reads it. The reverse
@@ -34,7 +34,7 @@ multi-tab sharing Gemini gets in Chrome?
   only starts its in-browser mode on a message from origin `chrome://glic`,
   and Google's server then decides whether the account may use it (signed
   out it shows "Gemini isn't available right now"). Section 9 works out what
-  that takes and what fix-edge now provides (a JavaScript host for Chrome's own
+  that takes and what Edge+ now provides (a JavaScript host for Chrome's own
   client library); section 6 is the fallback, the regular web app.
 - Edge's chat button is `EdgeCopilotToolbarLabelButton`, driven by an
   "action" object, `EdgeDiscoverToolbarButtonActionEdgeCopilot`, that supplies
@@ -262,7 +262,7 @@ Through the WebUI's `edge::copilot::page_context::PageContextUIBase`
 These answer the Copilot WebUI's mojo pipes only; nothing exposes them to
 another origin.
 
-## 6. What this allows, and the design fix-edge uses
+## 6. What this allows, and the design Edge+ uses
 
 Enabling dormant glic is impossible (section 4), and the Copilot pane's
 plumbing is bound to its WebUI and origin. Chrome's in-browser Gemini mode
@@ -367,7 +367,7 @@ loaded as a `data:` URL in a second `views::WebView` above Gemini's page) holds
 
 ## 9. The real glic host: what is feasible [src] [run] [disasm]
 
-Question: can fix-edge host Chrome's glic client (`gemini.google.com/glic`) so the
+Question: can Edge+ host Chrome's glic client (`gemini.google.com/glic`) so the
 Gemini panel is the same as Chrome's?
 
 **What the client checks.** Only this, in the Gemini page's bundle: a `message`
@@ -391,7 +391,7 @@ one: `InFrameGlicBoot` builds the `GlicApiHost`, which speaks mojo
 Chrome's browser process. Edge has no such service (section 4) and a web page has no
 `Mojo` global. [src] [run]
 
-**What fix-edge does instead** (`glic_host_script.h`). The patcher renames the
+**What Edge+ does instead** (`glic_host_script.h`). The patcher renames the
 library's generated mojo `*Remote` / `*Receiver` classes and puts stand-ins first
 (the handler remote becomes a JavaScript object answering the handler's methods; a
 receiver just hands its implementation to whoever asks for its pipe). The host
@@ -516,7 +516,7 @@ in the same page. With no Chrome installed it never tries glic.
   chosen it calls Edge's own answer. It is read when a toolbar is built, so it
   applies to windows opened after the DLL has the setting (an already-built toolbar
   is not rebuilt).
-- **Verification.** Live in a throwaway Edge (marker `fixedge-chev-`, Copilot Mode
+- **Verification.** Live in a throwaway Edge (marker `edgeplus-chev-`, Copilot Mode
   prefs set, Gemini chosen via the config file, DLL injected): the first window
   keeps its bare button; a new window (`IDC_NEW_WINDOW`) shows "Ask Gemini" with its
   chevron. Captured with `PrintWindow`.
@@ -546,7 +546,7 @@ in the same page. With no Chrome installed it never tries glic.
   a separate window; the audio is Copilot's reply there. The selection items go
   through `EdgeExecCopilotItem` (`0xaed0ec6`) and `QuickSearchClientImpl::OpenChat`
   with the command id.
-- **What fix-edge does with Gemini chosen** (`page_menu.h` is the one table).
+- **What Edge+ does with Gemini chosen** (`page_menu.h` is the one table).
   After each of the three builders runs (hooks in `assistant.h`), the top-level
   items are relabelled ("Ask Gemini", "Summarize with Gemini") or removed (the
   selection submenus). `SendPageContextualPromptToChat` is hooked: Summarize runs
@@ -555,7 +555,7 @@ in the same page. With no Chrome installed it never tries glic.
   same path with the prompt "Create a podcast (an Audio Overview) of this page" (a
   `chat_action.h` constant). The submenu's children keep Edge's text (it names no
   assistant). With Copilot chosen every hook calls Edge's own code.
-- **Verified live** (throwaway Edge, marker `fixedge-ctx-`, own `LOCALAPPDATA` with
+- **Verified live** (throwaway Edge, marker `edgeplus-ctx-`, own `LOCALAPPDATA` with
   Gemini chosen, DLL injected; right-click posted to the page's render widget, items
   read through UIA): the page menu shows "Summarize with Gemini" (L1 variant); invoking
   it opened the Gemini panel, shared the page and Gemini answered with a summary

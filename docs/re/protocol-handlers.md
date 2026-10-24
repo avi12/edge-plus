@@ -374,8 +374,8 @@ had the DLL loaded, and the event would have reached it). It takes the same
 - Testing the DLL next to a real Edge that may have it loaded: launch the
   throwaway Edge with `LOCALAPPDATA` pointed at a scratch folder, so the DLL
   reads its config from (and logs to) there, and write the config before
-  injecting. Never signal `Local\fixedge-config-changed` /
-  `Local\fixedge-split-unload` from a test: they are session-wide, so they
+  injecting. Never signal `Local\edgeplus-config-changed` /
+  `Local\edgeplus-split-unload` from a test: they are session-wide, so they
   would reach the real Edge's DLL too. Kill the test Edge by marker instead of
   unloading.
 - The bubble is a separate `Chrome_WidgetWin_1` window (344 x 284); posted

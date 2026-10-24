@@ -6,7 +6,7 @@ Appearance settings flyout whose **Themes** grid offers twelve page colours. The
 DLL's `reading_mode.h` sets one of them for Windows light and another for dark.
 
 Evidence: **[static]** from the public PDB and the binaries; **[run]** in a
-throwaway Edge (own `--user-data-dir` marker `fixedge-readtheme-3b9d`, its
+throwaway Edge (own `--user-data-dir` marker `edgeplus-readtheme-3b9d`, its
 `LOCALAPPDATA` redirected so its DLL read a private config, a Wikipedia article
 opened as `read://https_en.wikipedia.org/?url=...`, inspected over its own
 `--remote-debugging-port`); **[unit]** `test/reading_themes_test.cpp`.
@@ -108,7 +108,7 @@ DLL; the page's main world never saw its state object]
   keeps its theme; the page's checkmark is hidden and a clone of it marks that
   side's choice.
 - Each visit answers `ok`, or `ok US light US dark` after a pick. The DLL keeps
-  the pair in `%LOCALAPPDATA%\FixEdge\reading-themes.bin` (two little-endian
+  the pair in `%LOCALAPPDATA%\EdgePlus\reading-themes.bin` (two little-endian
   int32s, light first; `reading_themes::ChoicesFromBytes`), and sets the theme at
   once when the current mode's choice changed.
 - Switched off (or on unload), `RemoveScript` takes the switch, its style and its

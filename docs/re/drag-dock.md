@@ -131,7 +131,7 @@ on unload crashed a still-grown split as soon as Edge built a label for pane
 
 ## Testing without a mouse
 
-`fixedge.addpane` wParam `500 + i` shows pane *i*'s bar via Edge's own
+`edgeplus.addpane` wParam `500 + i` shows pane *i*'s bar via Edge's own
 `SplitWindowController::ShowControlButton`, and a posted `WM_LBUTTONDOWN` on
 its grip reaches the press handler. Posted moves, however, do not turn into
 views drag events. So the channel has a stand-in for the mouse on a grip,

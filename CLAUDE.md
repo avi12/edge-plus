@@ -1,4 +1,4 @@
-# fix-edge
+# Edge+
 
 Live feature switches for Microsoft Edge (see `README.md`):
 
@@ -141,9 +141,13 @@ and above all any comment that no longer matches it.
 
 WinUI 3 / C#, modelled on `avi/any-stt`'s app: unpackaged and self-contained,
 its own `Program.Main`, Google C# style from `app/.editorconfig`. It keeps
-`%LOCALAPPDATA%\FixEdge\settings.json` in the place and shape the earlier Tauri
-panel used, so existing settings carry over; keep that path and format as they
-are. A value the panel and the DLL both need (event names, the config wire
+`%LOCALAPPDATA%\EdgePlus\settings.json` in the shape the earlier Tauri panel
+used, so existing settings carry over; keep that path and format as they are.
+The folder was named for the project's old name (`FixEdge`) until the rename;
+`Panel/Edge/LegacyInstall.cs` carries it over and holds the old names it has to
+match (that folder, `fixedge-split.dll`, `Local\fixedge-split-unload`). The only
+other old names left are what `LegacyCleanup` and `StartupEntry` match from the
+extension and Tauri days. A value the panel and the DLL both need (event names, the config wire
 layout, data-folder paths) has one home per side and must match the DLL's
 (`app/native-split/src/{config.h,dllmain.cpp,log.h}`).
 
@@ -197,13 +201,13 @@ layout, data-folder paths) has one home per side and must match the DLL's
 - Test only against a throwaway Edge launched with its own `--user-data-dir`
   marker, and select it **only by that marker** — never by process name, start
   time or "the oldest msedge" (Avi's real Edge is running). Kill it the same way.
-- Iterate by hot-reload — signal `Local\fixedge-split-unload`, rebuild, re-inject
+- Iterate by hot-reload — signal `Local\edgeplus-split-unload`, rebuild, re-inject
   into the same pid — not by relaunching Edge.
-- Inject timestamped copies (`fixedge-split-<ticks>.dll`, a loaded DLL can't be
+- Inject timestamped copies (`edgeplus-split-<ticks>.dll`, a loaded DLL can't be
   overwritten) from `out/`, never from temp/scratchpad. Each new hash triggers a
   Defender cloud scan; `out/` is the one folder Avi excluded from Defender.
 - Capture the test window with `PrintWindow`, never the screen.
-- The DLL's control channel (`fixedge.addpane`, codes in `src/control.h`) drives
+- The DLL's control channel (`edgeplus.addpane`, codes in `src/control.h`) drives
   every pane action from a script, so changes can be verified without clicks.
 
 # Commits

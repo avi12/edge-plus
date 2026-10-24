@@ -119,15 +119,15 @@ special cases. Keep it this way: no absolute coordinates in the geometry path.
 
 ## MILESTONE (2026-10-13): N-pane render proven live
 
-A throwaway Edge, DLL injected with `FIXEDGE_PANES=3`: a normal 2-tab split was
+A throwaway Edge, DLL injected with `EDGEPLUS_PANES=3`: a normal 2-tab split was
 grown to **3 containers** and the `CalculateProposedLayout` detour tiled **3 panes
 (1889×2004, cols)** across repeated relayouts and user interaction with **no
 crash**. The view-side cap is broken. The 3rd pane is blank (no WebContents wired
-to index 2 yet). Evidence: `%LOCALAPPDATA%\FixEdge\split-native.log`.
+to index 2 yet). Evidence: `%LOCALAPPDATA%\EdgePlus\split-native.log`.
 
 ## Target UX (Arc-style) and the revised model
 
-The flat equal-columns model (`FIXEDGE_PANES`) is a proof, not the product. The
+The flat equal-columns model (`EDGEPLUS_PANES`) is a proof, not the product. The
 product is a **binary split tree**: each pane carries a 3-dot menu with **add
 pane above / below / left / right**; each action splits that pane's tree node, so
 the layout is an arbitrary grid. The native pieces this maps onto:

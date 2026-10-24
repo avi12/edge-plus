@@ -30,12 +30,12 @@ flowchart LR
     Host -- "loads, swaps live" --> PanelAsm
   end
 
-  Settings[("settings.json<br/>%LOCALAPPDATA%\\FixEdge")]
-  Config[("fixedge-config.bin<br/>172-byte config wire")]
-  DllFile[("fixedge-split.dll<br/>unpacked copy")]
+  Settings[("settings.json<br/>%LOCALAPPDATA%\\EdgePlus")]
+  Config[("edgeplus-config.bin<br/>172-byte config wire")]
+  DllFile[("edgeplus-split.dll<br/>unpacked copy")]
 
   subgraph Edge["msedge.exe, browser process"]
-    Dll["fixedge-split.dll<br/><i>hooks, control window,<br/>hotkeys, command channel</i>"]
+    Dll["edgeplus-split.dll<br/><i>hooks, control window,<br/>hotkeys, command channel</i>"]
     EdgeCode["msedge.dll<br/><i>Edge's own split, tab,<br/>theme and find code</i>"]
     Dll -- "MinHook detours" --> EdgeCode
   end
@@ -108,6 +108,16 @@ The panel is a separate assembly. The host loads it into a collectible
 `AssemblyLoadContext` from a timestamped copy, so a rebuild swaps the new
 panel in while the window stays open. The rules that make the panel unloadable
 are listed in the panel's README.
+
+### Upgrading from before the rename
+
+The project was called fix-edge before it was Edge+. An install from then has
+its split DLL loaded in Edge, listening on an event of the old name, and its
+data in `%LOCALAPPDATA%\FixEdge`. At start, before anything is injected or read,
+`LegacyInstall` signals the old event and waits for the DLL to unload, then
+carries the data folder over (`LegacyData`; the settings are copied last, so a
+copy cut short is retried). An Edge process the old DLL is still hooked in is
+left alone until Edge restarts, since two DLLs would hook the same code.
 
 ### Watching Edge
 
@@ -276,7 +286,7 @@ with the tools in `docs/re/`.
 ## Building and testing
 
 ```powershell
-app\native-split\build.cmd              # the DLL (MSVC) -> build\fixedge-split.dll
+app\native-split\build.cmd              # the DLL (MSVC) -> build\edgeplus-split.dll
 app\native-split\test\run.cmd           # the DLL's pure-logic tests
 dotnet build app\panel-winui            # the panel, with the DLL embedded
 app\panel-winui\test\run.cmd            # the panel's pure-logic tests

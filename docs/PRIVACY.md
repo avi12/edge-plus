@@ -10,11 +10,11 @@ makes no network requests.
 
 ## What it stores on your device
 
-Only in `%LOCALAPPDATA%\FixEdge`:
+Only in `%LOCALAPPDATA%\EdgePlus`:
 
 - `settings.json`: which features you turned on, and which themes you chose for
   Windows light and dark mode.
-- `fixedge-config.bin` and the app's own DLL: the same choices, in the form the
+- `edgeplus-config.bin` and the app's own DLL: the same choices, in the form the
   DLL reads.
 - `themes\`: the theme files you added, as you added them.
 - `panel.log` and `split-native.log`: a log of what the app did, kept on your
