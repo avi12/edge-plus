@@ -13,6 +13,8 @@ namespace EdgePlus;
 internal static class LegacyInstall {
   private const string DataFolderName = "FixEdge";
   private const string DllName = "fixedge-split.dll";
+  // Files the old install left that nothing reads any more.
+  private static readonly string[] s_unusedFiles = [DllName, "fixedge-config.bin"];
   private const string UnloadEvent = @"Local\fixedge-split-unload";
   private const int UnloadPolls = 40;
   private const int UnloadPollMilliseconds = 100;
@@ -67,7 +69,7 @@ internal static class LegacyInstall {
     string legacyRoot = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), DataFolderName);
     bool isCarried = LegacyData.Carry(legacyRoot, Paths.DataRoot, Path.GetFileName(Paths.Settings),
-                                      DllName);
+                                      s_unusedFiles);
     if (isCarried) {
       PanelLog.Write($"data carried over from {legacyRoot}");
     }
