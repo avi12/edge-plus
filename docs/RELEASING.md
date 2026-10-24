@@ -3,10 +3,9 @@
 1. Bump `<Version>` in `app/panel-winui/Directory.Build.props`. It is the only
    place the version is written: the exe, the panel's footer and the MSIX
    manifest all read it from there.
-2. Add a `## <version>` section to the top of `CHANGELOG.md`, written for
-   users. It becomes the Store's "What's new", and the footer's version links
-   to it.
-3. Commit both as `chore(release): <version>`.
+2. Commit it as `chore(release): <version>`.
+3. Write the release notes on the GitHub release, for users: plain sentences, no
+   file names. The footer's version links to the releases page.
 4. `pwsh tools/Deploy-Store.ps1 -WhatIf` builds the MSIX and leaves a draft in
    Partner Center. Drop `-WhatIf` to send it to certification.
 

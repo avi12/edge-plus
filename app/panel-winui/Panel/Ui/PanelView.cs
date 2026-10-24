@@ -318,7 +318,7 @@ internal sealed class PanelView : IDisposable {
     });
     var version = new HyperlinkButton {
       Content = Product.Version,
-      NavigateUri = Product.ChangelogUri,
+      NavigateUri = Product.ReleasesUri,
       Padding = new Thickness(2, 0, 2, 0),
     };
     ToolTipService.SetToolTip(version, Wording.WhatsNew);
