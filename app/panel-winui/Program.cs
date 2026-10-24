@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Windows.AppLifecycle;
 
@@ -8,6 +9,7 @@ namespace EdgePlus;
 // of launch before any WinUI runs.
 internal static class Program {
   private const string InstanceKey = "edgeplus.panel";
+  private const int ReplacedExitMilliseconds = 30_000;
 
   // At sign-in: the Run entry passes the switch.
   public static bool IsBootLaunch {
@@ -21,6 +23,7 @@ internal static class Program {
       return;
     }
 
+    WaitForReplacedProcess(args);
     IsBootLaunch = Switches.IsPresent(args, Switches.Background);
     if (IsRedirectedToRunningPanel()) {
       return;
@@ -35,6 +38,22 @@ internal static class Program {
       System.Threading.SynchronizationContext.SetSynchronizationContext(context);
       _ = new App();
     });
+  }
+
+  // After an update the new exe starts before the old one has ended, and the
+  // old one holds the single-instance key until it does: waiting here, rather
+  // than finding it and handing the launch over, is what lets the new one run.
+  private static void WaitForReplacedProcess(string[] args) {
+    bool isRestart = int.TryParse(Switches.ValueOf(args, Switches.RestartedFrom), out int pid);
+    if (!isRestart) {
+      return;
+    }
+    try {
+      using Process replaced = Process.GetProcessById(pid);
+      replaced.WaitForExit(ReplacedExitMilliseconds);
+    } catch (ArgumentException) {
+      // Already gone.
+    }
   }
 
   // The redirect is awaited off this STA thread: the activation is a COM call
