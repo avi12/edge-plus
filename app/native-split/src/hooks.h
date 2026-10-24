@@ -121,6 +121,17 @@ inline void __fastcall h_set_active(void* mcv, int index) {
   Log("[active] pane %d of %d", index, count);
 }
 
+// MultiContentsView::CloseSplitView: Edge empties pane 1 as the split closes;
+// our panes are emptied with it. Every way a split shrinks or goes (a pane
+// closed or dragged out, the split dissolved, another tab shown) comes through
+// here, since Edge only ever removes a member by dissolving the split.
+using CloseSplitView_t = void(__fastcall*)(void*);
+inline constinit CloseSplitView_t o_close_split_view = nullptr;
+inline void __fastcall h_close_split_view(void* mcv) {
+  o_close_split_view(mcv);
+  panes::EmptyGrownContainers(mcv);
+}
+
 // MultiContentsView::GetFocusableViewsMapFor: Edge keeps a focus map only for
 // the two containers it built, so for pane 3+ the lookup is null, and
 // switching to a tab whose pane is ours crashed in the caller. Our panes get
@@ -511,6 +522,9 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   Install(edge155::rva::MultiContentsView_SetActiveIndex,
           reinterpret_cast<void*>(h_set_active), &o_set_active,
           "SetActiveIndex");
+  Install(edge155::rva::MultiContentsView_CloseSplitView,
+          reinterpret_cast<void*>(h_close_split_view), &o_close_split_view,
+          "MultiContentsView::CloseSplitView");
   Install(edge155::rva::ResizeArea2D_OnMousePressed,
           reinterpret_cast<void*>(h_divider_pressed), &o_divider_pressed,
           "EdgeTwoDimensionalResizeArea::OnMousePressed");

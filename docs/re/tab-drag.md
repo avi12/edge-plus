@@ -171,6 +171,58 @@ focused before.
 **The fix.** It is that function's only caller, so the detour returns an
 empty map for our containers.
 
+## A pane left blank by the tab that came back
+
+Found and fixed on 156.0.4314.42 (RVAs below are that build's).
+
+**What Avi saw.** A split of three: two panes stacked on the left, one on the
+right. He dragged the bottom-left pane out onto the tab list, so it became a
+tab of its own. Then he Alt-dragged that tab back to the same place. The split
+re-formed, but the pane stayed blank until focus moved.
+
+**Why.** Pane 2 kept its old page after the page left the split:
+
+1. **The drag-out.** `CloseMember` dissolves the split (Edge has no
+   "remove one member"). `MultiContentsView::CloseSplitView` (`0xa66e4f8`)
+   then runs. It empties pane 1 with `ContentsWebView::SetWebContents(null)`
+   and hides it. It never touches panes 2 and up, which are ours. The split is
+   re-made from the two left, and Edge feeds panes 0 and 1. Pane 2 is laid out
+   hidden, but its web view still holds the page that left (`web_contents_`,
+   `CWV_web_contents`).
+2. **The Alt-drag.** Grabbing the tab activates it. Edge moves its page into
+   pane 0, a native view having one parent. Hovering the split then puts the
+   split's page back in pane 0, which takes the tab's page out again.
+3. **The drop.** `GrowSplit` re-makes the split with the tab as member 2, and
+   `BrowserView::ShowSplitView` feeds `SetWebContentsAtIndex(page, 2)`.
+   `views::WebView::SetWebContents` returns at once when handed the page it
+   already holds, so the page is never attached to pane 2's native view host.
+
+Before the fix the log read `index 2 <- 0x…F800 (was 0x…F800)`. At the drop the
+page's visibility was `2` (visible, `WebContentsImpl+0xdf0`) and its
+`RenderWidgetHostViewAura::IsShowing` was true. The page was live and visible;
+it was just in no pane. That is why showing it again (`WasShown`, the repaint
+nudge) could not help. Why a focus change then paints it was not traced.
+
+**The fix** (`hooks.h` `h_close_split_view`, `panes::EmptyGrownContainers`)
+does for panes 2+ what Edge does for pane 1. Once `CloseSplitView` has run,
+every grown pane is emptied. Every way a split shrinks or goes comes through
+there:
+
+- a pane closed or dragged out;
+- the split dissolved by Edge or by us;
+- another tab shown in its place.
+
+When a split is re-made, Edge feeds every member at once, so no live pane goes
+blank (checked live: 4 panes down to 3, then 2, and a plain tab and back). A
+pane's page is detached and re-attached on every re-split, as Edge already does
+for pane 1.
+
+**Rejected.** Forcing a detach in `h_setwc` whenever a pane is fed the page it
+holds. A stale web view's detach runs on the native view wherever it lives now
+(`NativeViewHost::Detach` clears its host-view and accessibility-parent
+properties). Emptying the pane while the page is still nowhere else avoids
+that.
+
 ## Testing it from a script
 
 **Posted mouse messages alone don't start a tab drag.** Edge:

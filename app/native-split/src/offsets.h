@@ -32,6 +32,12 @@ inline constexpr uintptr_t MultiContentsView_SetWebContentsAtIndex = 0xa66e296;
 inline constexpr uintptr_t SetWebContentsAtIndex_guard_imm = 0xa66e2a0;
 // CHECK(index < 2)
 inline constexpr uintptr_t MultiContentsView_SetActiveIndex = 0xa66e6fc;
+// void CloseSplitView(this): the view leaves split mode (BrowserView::
+// MaybeUpdateSplitView, once the active tab is in no split). Returns at once
+// unless the resize area (+0x3f0) is visible; else swaps the active pane's
+// page into pane 0, empties pane 1 (ContentsWebView::SetWebContents(null)) and
+// hides it and the resize area. Panes 2+ it never touches.
+inline constexpr uintptr_t MultiContentsView_CloseSplitView = 0xa66e4f8;
 // loops the vector
 inline constexpr uintptr_t MultiContentsView_UpdateContentsBorderAndOverlay =
     0x2e2654a;

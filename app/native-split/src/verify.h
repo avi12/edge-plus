@@ -147,6 +147,7 @@ inline constexpr uint8_t kStockIndexCap = 2;
   const uintptr_t sites[] = {
       edge155::rva::MultiContentsView_SetWebContentsAtIndex,
       edge155::rva::MultiContentsView_CalculateProposedLayout,
+      edge155::rva::MultiContentsView_CloseSplitView,
       edge155::rva::SplitWindowController_DoAction,
       edge155::rva::SplitTabMenuModel_ctor,
       edge155::rva::SplitTabMenuModel_ExecuteCommand,

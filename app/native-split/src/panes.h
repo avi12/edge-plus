@@ -31,6 +31,21 @@ inline bool AddContainer(void* mcv) {
   return true;
 }
 
+// As Edge empties pane 1 when the split closes (CloseSplitView). A page left in
+// a hidden pane is still that pane's to its web view, even once the tab is
+// shown elsewhere and its page moved out; fed back into the same pane, the web
+// view sees no change, never re-attaches the page, and the pane stays blank.
+inline void EmptyGrownContainers(void* mcv) {
+  const int count = static_cast<int>(edge::McvCount(mcv));
+  for (int i = kFirstGrownPane; i < count; i++) {
+    void* container = edge::McvContainerAt(mcv, i);
+    if (edge::ContainerWebContents(container)) {
+      edge::ContentsWebViewSetContents(edge::ContainerWebView(container),
+                                       nullptr);
+    }
+  }
+}
+
 // Skipped when pane 0 has no bar either (the new toolbar draws no per-pane
 // bars). Containers are reused across collapse/regrow.
 inline void EnsureControlButtons(void* mcv, int index) {
