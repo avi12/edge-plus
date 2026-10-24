@@ -25,9 +25,20 @@ does not go through `MultiContentsView::SetWebContentsAtIndex`, but a layout
 of the split view always follows, so the `CalculateProposedLayout` detour
 keeps the last two active pages (`tabdrag::OnLaidOut`).
 
-With no split picked, or out of the window, the drag is
-Edge's own (it tears the tab off). Alt changes nothing: until 2026-10-24 it was
-the switch to docking, and a pane's drag needed none, so the two drags behaved
+**A plain tab on screen at the grab** is picked too, but counts only while Alt
+is held (`tabdrag::DockTarget`): off the list the preview then splits that one
+page left / right / top / bottom (a one-leaf tree, `dock::ResolveIncoming`),
+and the drop makes the two tabs a new split. Without Alt the drag stays Edge's,
+so tearing a tab off is unchanged. Edge lays out a two-pane split itself, so
+the drop's two-leaf tree becomes the split's layout (`SplitTabVisualData` +0:
+0 side by side, 1 one above the other) and its member order (the strip order:
+the dragged tab is moved before the shown one for left or top), in
+`split_ops::CreatePair` and `split_data::CreateSplitWith`. A script holds Alt
+with channel 954 (lParam 1, then 0).
+
+With nothing picked, or out of the window, the drag is Edge's own (it tears the
+tab off). Into a split, Alt changes nothing: until 2026-10-24 it was the switch
+to docking, and a pane's drag needed none, so the two drags behaved
 differently; its key events are still dropped so a held Alt never ends a drag.
 Code: `src/tabdrag.h`.
 

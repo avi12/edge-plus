@@ -21,6 +21,10 @@ or off, and Edge picks the change up the moment it is made — no restart, ever.
   Arc does it. Every pane has its own address bar, dividers drag, and a pane's ⋯
   menu adds a pane above / below / left / right. Loaded straight into Edge as a
   DLL — no extension (`app/native-split`, reverse-engineered in `docs/re/`).
+- **Drag a tab into a split** — drag a tab from the list onto a split and a
+  preview shows where it lands as a new pane. On a plain tab, hold `Alt` while
+  dragging another tab onto its page to make the two a split, the dragged tab
+  left, right, above or below as the preview shows.
 - **Move between panes** — `Shift + Alt` + an arrow key focuses the pane on that
   side, in the split you are on.
 - **Theme by Windows light and dark** — use one theme when Windows is in light
