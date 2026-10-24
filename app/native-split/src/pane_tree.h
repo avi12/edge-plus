@@ -166,6 +166,26 @@ inline void LayoutTree(const Node& node, const Rect& bounds, int gap,
   return root;
 }
 
+// A two-pane split as Edge lays it out itself: one axis, and its members in
+// order along it.
+struct Pair {
+  Axis axis = Axis::kHorizontal;
+  bool isSecondLeafFirst = false;  // leaf 1 left of (or above) leaf 0
+};
+
+// Whether `tree` is two panes side by side or one above the other, and in
+// which order; false for any other tree.
+[[nodiscard]] inline bool ReadPair(const Node& tree, Pair& pair) {
+  const bool isTwoLeaves = !tree.isLeaf && tree.children.size() == 2 &&
+                           tree.children[0].isLeaf && tree.children[1].isLeaf;
+  if (!isTwoLeaves) {
+    return false;
+  }
+  pair.axis = tree.axis;
+  pair.isSecondLeafFirst = tree.children[0].leaf == 1;
+  return true;
+}
+
 enum class Direction : uint8_t {
   kUp,
   kDown,

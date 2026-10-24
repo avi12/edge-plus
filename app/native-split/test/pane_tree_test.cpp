@@ -184,6 +184,27 @@ void RunChecks() {
               "3:[600,0,300,600] ",
           "the rects it started from");
   }
+  {
+    Node tree = MakeLeaf(0);
+    SplitPane(tree, 0, Direction::kUp, 1);
+    Pair pair;
+    Check(ReadPair(tree, pair), "a pane added above makes a pair");
+    Check(pair.axis == Axis::kVertical && pair.isSecondLeafFirst,
+          "the new pane on top, one above the other");
+  }
+  {
+    Node tree = MakeLeaf(0);
+    SplitPane(tree, 0, Direction::kRight, 1);
+    Pair pair;
+    Check(ReadPair(tree, pair), "a pane added right makes a pair");
+    Check(pair.axis == Axis::kHorizontal && !pair.isSecondLeafFirst,
+          "the new pane second, side by side");
+  }
+  {
+    const Node tree = FlatTree(3, Axis::kHorizontal);
+    Pair pair;
+    Check(!ReadPair(tree, pair), "three panes are no pair");
+  }
 }
 
 }  // namespace
