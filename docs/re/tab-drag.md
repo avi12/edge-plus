@@ -36,6 +36,13 @@ the dragged tab is moved before the shown one for left or top), in
 `split_ops::CreatePair` and `split_data::CreateSplitWith`. A script holds Alt
 with channel 954 (lParam 1, then 0).
 
+**Alt over the tab list** holds Edge's drag there too, between targets as well
+(its reordering would slide the next tab away from under the pointer), and a
+plain tab under the pointer is picked (`tabdrag::PickPlainTabUnder`): its page
+shows, and letting go there puts the dragged tab on its right; moving on onto
+the page picks the side. Each drag logs what it starts with picked and whether
+Alt was held.
+
 With nothing picked, or out of the window, the drag is Edge's own (it tears the
 tab off). Into a split, Alt changes nothing: until 2026-10-24 it was the switch
 to docking, and a pane's drag needed none, so the two drags behaved
