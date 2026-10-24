@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 #include "MinHook.h"
+#include "anim.h"
 #include "ask_text.h"
 #include "assistant.h"
 #include "assistant_chat.h"
@@ -32,11 +33,20 @@ inline constexpr UINT_PTR kTimerId =
 inline constexpr UINT kTickIntervalMs = 100;
 
 // The bar's label is small, so each status is a short label plus, for the
-// tooltip, the sentence behind it.
+// tooltip, the sentence behind it. A busy status has no words in the label, only
+// a spinner: words there read as part of the question and take the box's room.
 struct Status {
   std::string label;
   std::string detail;
+  bool isBusy = false;
 };
+
+// Braille dots turning, one frame per tick; a still ellipsis with Windows'
+// animation effects off. Code points, since the source is not read as UTF-8.
+inline constexpr char16_t kSpinnerFrames[] = {0x280B, 0x2819, 0x2839, 0x2838,
+                                              0x283C, 0x2834, 0x2826, 0x2827,
+                                              0x2807, 0x280F};
+inline constexpr char16_t kStillBusyMark = 0x2026;
 
 // No label, so the box keeps its room.
 inline Status HintStatus() {
@@ -44,19 +54,18 @@ inline Status HintStatus() {
                   " about this page."};
 }
 inline Status ReadingStatus() {
-  return {"Reading page...", "Reading the page's paragraphs."};
+  return {"", "Reading the page's paragraphs...", true};
 }
 inline Status AskingStatus(size_t part, size_t partCount) {
-  const std::string progress =
-      partCount > 1
-          ? " (" + std::to_string(part) + "/" + std::to_string(partCount) + ")"
-          : std::string();
-  return {"Asking" + progress + "...",
-          "Asking " + std::string(assistant::Name()) + "..."};
+  const std::string progress = partCount > 1
+                                   ? " (part " + std::to_string(part) + " of " +
+                                         std::to_string(partCount) + ")"
+                                   : std::string();
+  return {"", "Asking " + std::string(assistant::Name()) + progress + "...",
+          true};
 }
 inline Status WaitingStatus() {
-  return {"Waiting...",
-          "Waiting for " + std::string(assistant::Name()) + "..."};
+  return {"", "Waiting for " + std::string(assistant::Name()) + "...", true};
 }
 inline Status NeedsUserStatus() {
   return {"Accept notice",
@@ -113,6 +122,7 @@ struct Session {
   bool isCapped = false;
   int stockBarWidth = 0;
   int widenedBarWidth = 0;  // 0 = not widened
+  bool isBusy = false;      // the label shows the spinner
   std::string askedText;    // the box text the last question was asked for
   AskRun ask;
 };
@@ -167,13 +177,38 @@ inline std::u16string Utf16FromUtf8(const std::string& utf8) {
   return text;
 }
 
-inline void ShowStatus(void* findBarView, const Status& status) {
-  const std::u16string label = Utf16FromUtf8(status.label);
-  edge::FindBarSetLabel(findBarView, Utf16Of(label));
-  edge::ViewSetTooltip(edge::FindBarLabel(findBarView), status.detail.c_str());
+inline std::u16string SpinnerFrame() {
+  if (!anim::g_isEnabled) {
+    return std::u16string(1, kStillBusyMark);
+  }
+  const ULONGLONG tick = GetTickCount64() / kTickIntervalMs;
+  return std::u16string(1, kSpinnerFrames[tick % std::size(kSpinnerFrames)]);
 }
 
-inline void ShowCount(const Session& session) {
+inline void ShowStatus(void* findBarView, const Status& status) {
+  const std::u16string label =
+      status.isBusy ? SpinnerFrame() : Utf16FromUtf8(status.label);
+  edge::FindBarSetLabel(findBarView, Utf16Of(label));
+  edge::ViewSetTooltip(edge::FindBarLabel(findBarView), status.detail.c_str());
+  for (auto& [mcv, session] : Sessions()) {
+    if (session.findBarView == findBarView) {
+      session.isBusy = status.isBusy;
+    }
+  }
+}
+
+// The timer's tick turns the spinner of every busy bar.
+inline void TurnSpinners() {
+  for (const auto& [mcv, session] : Sessions()) {
+    const bool isSpinning = session.isBusy && session.findBarView;
+    if (isSpinning) {
+      edge::FindBarSetLabel(session.findBarView, Utf16Of(SpinnerFrame()));
+    }
+  }
+}
+
+inline void ShowCount(Session& session) {
+  session.isBusy = false;
   const edge::U16View boxText = edge::FindBarText(session.findBarView);
   const int ordinal = session.current < 0 ? 0 : session.current + 1;
   edge::FindBarShowResult(session.findBarView, session.count, ordinal, boxText);
@@ -182,7 +217,7 @@ inline void ShowCount(const Session& session) {
                        tooltip.detail.c_str());
 }
 
-inline void ClearLabel(const Session& session) {
+inline void ClearLabel(Session& session) {
   ShowStatus(session.findBarView, Status{});
 }
 
@@ -679,6 +714,11 @@ inline void StepBy(void* mcv, Session& session, find_text::Step step) {
 inline void EndAsk(Session& session) {
   session.ask = AskRun{};
   assistant_chat::ReleasePanel(edge::McvForWindow(session.window));
+  // The timer stops with the ask, so a spinner left up would freeze.
+  const bool isSpinnerLeft = session.isBusy && session.findBarView;
+  if (isSpinnerLeft) {
+    ShowStatus(session.findBarView, Status{});
+  }
 }
 
 inline void FailAsk(Session& session, const std::string& why) {
@@ -1306,6 +1346,7 @@ inline void Tick() {
                     OptionOf(session.findBarView) == find_text::Option::kAsk);
     }
   }
+  TurnSpinners();
   assistant_chat::Tick();
   StopTimerIfIdle();
 }
