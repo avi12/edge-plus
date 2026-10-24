@@ -835,6 +835,11 @@ inline bool IsTabViewInSplit(void* tabView) {
   return (Field<uint8_t>(tabView, edge155::off::TABVIEW_split_has_value) & 1) !=
          0;
 }
+// The SplitTabId token of the split a tab view is in (IsTabViewInSplit).
+inline const uint8_t* TabViewSplitToken(void* tabView) {
+  return static_cast<const uint8_t*>(tabView) +
+         edge155::off::TABVIEW_split_token;
+}
 inline bool IsTabViewInSameSplit(void* tabView, void* other) {
   const bool isSameClass = Field<void*>(other, 0) == Field<void*>(tabView, 0);
   return isSameClass && IsTabViewInSplit(other) &&

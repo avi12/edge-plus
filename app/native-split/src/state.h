@@ -16,6 +16,9 @@ namespace fixedge {
 // per window was lost, a 2x2 coming out as a row), and two grown splits shown
 // in turn in one window keep theirs.
 using SplitKey = std::array<uint8_t, sizeof(edge::OptionalSplitId::token)>;
+static_assert(std::tuple_size_v<SplitKey> ==
+                  edge155::off::TABVIEW_split_token_size,
+              "a tab view holds the same SplitTabId token");
 
 inline std::map<SplitKey, Node>& Trees() {
   static std::map<SplitKey, Node> trees;
@@ -83,6 +86,15 @@ inline const Node* TreeFor(void* mcv) {
     entry = Trees().insert_or_assign(*key, std::move(pending->second)).first;
     PendingTrees().erase(pending);
   }
+  return entry == Trees().end() ? nullptr : &entry->second;
+}
+
+// The tree of the split whose SplitTabId token is `token`, shown or not; null
+// while it has none of its own (a flat split).
+inline const Node* TreeOfSplit(const uint8_t* token) {
+  SplitKey key{};
+  std::memcpy(key.data(), token, key.size());
+  const auto entry = Trees().find(key);
   return entry == Trees().end() ? nullptr : &entry->second;
 }
 

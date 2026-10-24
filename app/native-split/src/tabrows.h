@@ -9,7 +9,9 @@
 #include <vector>
 #include "edge.h"
 #include "log.h"
+#include "pane_tree.h"
 #include "split_data.h"
+#include "state.h"
 
 namespace fixedge::tabrows {
 
@@ -73,8 +75,21 @@ inline bool IsPiledUp(const BoundsList& list, size_t start, size_t length) {
   return false;
 }
 
+// The members of the split whose first tab view is `tabView`, by where their
+// panes are on screen (ReadingOrder); empty, for strip order, while the split
+// has no layout of its own: a flat split's panes already follow it. Member i
+// is pane i, since Edge feeds its panes in strip order.
+inline std::vector<int> PaneOrder(void* tabView, size_t length) {
+  const Node* tree = TreeOfSplit(edge::TabViewSplitToken(tabView));
+  const bool isTreeOfRun = tree && std::cmp_equal(LeafCount(*tree), length);
+  return isTreeOfRun ? ReadingOrder(*tree) : std::vector<int>{};
+}
+
+// `order`: which member each slot takes, in reading order of the slots (rows
+// top to bottom, slots left to right); empty for strip order.
 inline void SpreadRun(const BoundsList& list, size_t start, size_t length,
-                      int rowLeft, int rowRight, int perRow, int rowPitch) {
+                      int rowLeft, int rowRight, int perRow, int rowPitch,
+                      const std::vector<int>& order) {
   const Rect first = list.RectAt(start);
   const int rowWidth = rowRight - rowLeft;
   const int rows = (static_cast<int>(length) + perRow - 1) / perRow;
@@ -84,7 +99,9 @@ inline void SpreadRun(const BoundsList& list, size_t start, size_t length,
     const int remaining = static_cast<int>(length) - placed;
     const int slots = (remaining + (rows - row) - 1) / (rows - row);
     for (int slot = 0; slot < slots; slot++) {
-      Rect& rect = list.RectAt(start + static_cast<size_t>(placed + slot));
+      const int position = placed + slot;
+      const int member = order.empty() ? position : order[position];
+      Rect& rect = list.RectAt(start + static_cast<size_t>(member));
       rect.x = rowLeft + rowWidth * slot / slots;
       rect.width = rowLeft + rowWidth * (slot + 1) / slots - rect.x;
       rect.y = first.y + row * rowPitch;
@@ -134,7 +151,8 @@ inline void SpreadPiledSplits(void* helper, void* result) {
     const int fitting = std::max(1, (rowRight - rowLeft) / kMinSlotWidth);
     const int perRow = std::min(static_cast<int>(length), fitting);
     const int rows = (static_cast<int>(length) + perRow - 1) / perRow;
-    SpreadRun(list, index, length, rowLeft, rowRight, perRow, rowPitch);
+    SpreadRun(list, index, length, rowLeft, rowRight, perRow, rowPitch,
+              PaneOrder(list.TabAt(index), length));
     pushedDown += (rows - 1) * rowPitch;
     Log("[tabrows] spread a %zu-pane split over %d row(s), %d per row", length,
         rows, perRow);
@@ -192,7 +210,8 @@ inline void SpreadDraggedSplit(void* views, void* bounds) {
   list.RectAt(0).y = top;
   const int fitting = std::max(1, (rowRight - rowLeft) / kMinSlotWidth);
   const int perRow = std::min(static_cast<int>(count), fitting);
-  SpreadRun(list, 0, count, rowLeft, rowRight, perRow, rowPitch);
+  SpreadRun(list, 0, count, rowLeft, rowRight, perRow, rowPitch,
+            PaneOrder(tabViews[0], count));
 }
 
 using DraggedBounds_t = void*(__fastcall*)(void*, void*, void*);

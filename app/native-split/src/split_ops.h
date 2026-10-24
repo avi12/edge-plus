@@ -188,6 +188,15 @@ inline bool FocusNeighbour(void* mcv, Direction direction) {
   return true;
 }
 
+// After a pure tree edit: the tab list orders a split's tabs by where their
+// panes are (tabrows::PaneOrder), and nothing else would lay it out again.
+inline void RelayoutTabList(void* mcv) {
+  void* tabStrip = edge::BrowserViewTabStrip(edge::McvBrowserView(mcv));
+  if (tabStrip) {
+    edge::InvalidateLayout(tabStrip);
+  }
+}
+
 // A pure tree edit: the two leaves trade places on relayout; no Edge object
 // moves.
 inline void SwapActive(void* mcv) {
@@ -207,6 +216,7 @@ inline void SwapActive(void* mcv) {
     edge::InvalidateLayout(mcv);
     // No data-model change to trigger the re-tile.
     edge::LayoutImmediately(mcv);
+    RelayoutTabList(mcv);
     Log("[swap] swapped pane %d with its counterpart", activeLeaf);
   } else {
     Log("[swap] pane %d has no counterpart", activeLeaf);
