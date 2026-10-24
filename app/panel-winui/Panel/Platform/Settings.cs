@@ -187,6 +187,10 @@ internal sealed class Settings {
   // panel offers an Inject button instead. On by default, as it always did.
   public bool AutoInject { get; set; } = true;
 
+  // Looks for a newer Edge+ release (UpdateWatch) and offers to restart into
+  // it. On by default; off, Edge+ never contacts GitHub.
+  public bool AutoUpdate { get; set; } = true;
+
   public static Settings Load() => Load(Paths.Settings);
 
   public static Settings Load(string path) {

@@ -8,11 +8,13 @@ namespace EdgePlus;
 internal sealed class BackgroundService : IDisposable {
   private readonly EdgeWatch _edgeWatch = new();
   private readonly ThemeWatch _themeWatch = new();
+  private readonly UpdateWatch _updateWatch = new();
 
   private BackgroundService() {
     _edgeWatch.BuildChanged += OnBuildChanged;
     _edgeWatch.BrowsersChanged += () => BrowsersChanged?.Invoke();
     _themeWatch.Refreshed += refresh => ThemeRefreshed?.Invoke(refresh);
+    _updateWatch.Ready += ready => UpdateReady?.Invoke(ready);
   }
 
   public static BackgroundService? Current {
@@ -24,9 +26,15 @@ internal sealed class BackgroundService : IDisposable {
 
   public event Action<ThemeRefresh>? ThemeRefreshed;
 
+  // Raised on a watcher thread once a newer release is downloaded and checked.
+  public event Action<ReadyUpdate>? UpdateReady;
+
   // Raised on a watcher thread when an Edge browser process starts (once it got
   // the DLL, with auto-inject on) or closes: the window re-reads its state.
   public event Action? BrowsersChanged;
+
+  // The downloaded release waiting for a restart, if any.
+  public ReadyUpdate? PendingUpdate => _updateWatch.Pending;
 
   // Set by PanelView; a toast is only for when no window is open.
   public bool IsWindowOpen {
@@ -38,12 +46,17 @@ internal sealed class BackgroundService : IDisposable {
     Current = service;
     service._edgeWatch.Start();
     service._themeWatch.Start();
+    service._updateWatch.Start();
     return service;
   }
+
+  // The switch was turned on: look now rather than at the next scheduled check.
+  public void CheckForUpdateSoon() => _updateWatch.CheckSoon();
 
   public void Dispose() {
     _edgeWatch.Stop();
     _themeWatch.Stop();
+    _updateWatch.Stop();
     if (Current == this) {
       Current = null;
     }

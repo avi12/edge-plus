@@ -15,6 +15,19 @@ internal static class SettingsTests {
     TheSwitchesMapOneToOne();
     ReadingModeIsOnlyItsSwitch();
     AutoInjectDefaultsOnAndIsSavedCamelCase();
+    AutoUpdateDefaultsOnAndIsSavedCamelCase();
+  }
+
+  // A file from before the switch existed checks for updates.
+  private static void AutoUpdateDefaultsOnAndIsSavedCamelCase() {
+    Expect.That(new Settings().AutoUpdate, "auto-update defaults on");
+    Expect.That(Settings.Parse("""{"autoInject":true}""").AutoUpdate,
+                "a file without autoUpdate loads with it on");
+    Expect.That(!Settings.Parse("""{"autoUpdate":false}""").AutoUpdate, "autoUpdate off is read");
+    string json = new Settings { AutoUpdate = false }.ToJson();
+    Expect.That(json.Contains("\"autoUpdate\": false", StringComparison.Ordinal),
+                "it is written camelCase");
+    Expect.That(!Settings.Parse(json).AutoUpdate, "off survives a round trip");
   }
 
   // A file from before the switch existed keeps the old behaviour: inject.

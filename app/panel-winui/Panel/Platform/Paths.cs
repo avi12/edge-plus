@@ -13,6 +13,7 @@ internal static class Paths {
   private const string ThemeKeysFolderName = "keys";
   private const string TemporarySuffix = ".tmp";
   private const string PausedToastFileName = "paused-toast-build.txt";
+  private const string UpdateFolderName = "update";
 
   // The desired state the DLL reads at load and on every change.
   public static string ConfigFile {
@@ -32,6 +33,10 @@ internal static class Paths {
 
   // The build the paused-features toast last spoke of, so it is raised once per build.
   public static string PausedToastBuild { get; } = Path.Combine(DataRoot, PausedToastFileName);
+
+  // A new release's exe is downloaded and checked here until the user restarts
+  // into it.
+  public static string UpdateFolder { get; } = Path.Combine(DataRoot, UpdateFolderName);
 
   // Local theme .crx files are copied here to install by path.
   public static string ThemesRoot { get; } = Path.Combine(DataRoot, ThemesFolderName);

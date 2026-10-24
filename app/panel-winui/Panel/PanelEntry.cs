@@ -21,6 +21,10 @@ public static class PanelEntry {
     // out of the way first.
     LegacyInstall.Run();
     LegacyCleanup.Run();
+    if (Environment.ProcessPath is string executable) {
+      // What an update swapped out, now that nothing is running it.
+      UpdateInstall.DeleteLeftovers(executable);
+    }
     Payload.Unpack();
     MigrateStartupEntry();
     return BackgroundService.Start();
