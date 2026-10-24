@@ -21,6 +21,7 @@ internal static class Program {
     ("theme order", ThemeOrderTests.Run),
     ("edge support", EdgeSupportTests.Run),
     ("panel layout", PanelLayoutTests.Run),
+    ("inject offer", InjectOfferTests.Run),
   ];
 
   private static int Main() {
