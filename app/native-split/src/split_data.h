@@ -444,6 +444,9 @@ inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
       anchor, memberCount);
   uint8_t visual[16] = {};
   std::memcpy(visual, settings.visual, sizeof(visual));
+  // Past two panes the DLL lays them out; Edge faults building a split of
+  // more than two members one above the other (AddToSplitImpl).
+  SetLayout(visual, SplitLayout::kColumns);
   const bool isAdded =
       SafeAddToSplit(tsm, outId, splitId, &splitIndices, anchor, visual,
                      AddToSplitFlag::kNewSplit);
