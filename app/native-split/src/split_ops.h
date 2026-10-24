@@ -68,11 +68,11 @@ inline bool GrowWithTree(void* mcv, void* tsm, Node tree, void* newTab) {
   const Node* existing = IsActiveTabSplit(tsm) ? TreeFor(mcv) : nullptr;
   const std::optional<Node> previousTree =
       existing ? std::optional<Node>(*existing) : std::nullopt;
-  Trees()[mcv] = std::move(tree);
+  SetTree(mcv, std::move(tree));
   const bool hasGrown = split_data::GrowSplit(tsm, newTab);
   if (!hasGrown) {
     if (previousTree) {
-      Trees()[mcv] = *previousTree;
+      SetTree(mcv, *previousTree);
     } else {
       ForgetTree(mcv);
     }
@@ -167,7 +167,7 @@ inline void SwapActive(void* mcv) {
   Node tree = *existing;
   const bool hasSwapped = SwapWithCounterpart(tree, activeLeaf);
   if (hasSwapped) {
-    Trees()[mcv] = tree;
+    SetTree(mcv, tree);
     edge::InvalidateLayout(mcv);
     // No data-model change to trigger the re-tile.
     edge::LayoutImmediately(mcv);
@@ -260,7 +260,7 @@ inline bool RemovePaneFromSplit(void* mcv, int pane,
     return false;
   }
   RemovePane(tree, pane);
-  Trees()[mcv] = tree;
+  SetTree(mcv, tree);
   anim::ForgetTab(closingContents);
   // Laid out on Edge's own schedule, after it re-feeds the containers.
   edge::InvalidateLayout(mcv);

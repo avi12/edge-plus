@@ -246,7 +246,7 @@ inline void Release() {
         hasDetached ? "detached as a tab" : "could not be detached");
     return;
   }
-  Trees()[mcv] = std::move(plan.result);
+  SetTree(mcv, std::move(plan.result));
   edge::InvalidateLayout(mcv);
   // A pure tree edit: force the re-tile (and its animation).
   edge::LayoutImmediately(mcv);

@@ -126,7 +126,7 @@ inline void Move(Point rootLocation) {
   if (!ResizeSeam(tree, g_drag.seam, delta)) {
     return;
   }
-  Trees()[g_drag.mcv] = std::move(tree);
+  SetTree(g_drag.mcv, std::move(tree));
   edge::InvalidateLayout(g_drag.mcv);
   edge::LayoutImmediately(g_drag.mcv);
 }
@@ -145,7 +145,7 @@ inline void ResetToEqual(void* mcv, const Seam& seam, Node tree) {
   if (!EqualizeSplit(tree, seam.path)) {
     return;
   }
-  Trees()[mcv] = std::move(tree);
+  SetTree(mcv, std::move(tree));
   edge::InvalidateLayout(mcv);
   edge::LayoutImmediately(mcv);
   Log("[divider] reset a split to equal sizes");
