@@ -442,7 +442,15 @@ inline void SyncTogglesNow(void* findBarView) {
     edge::FindToggleSetTitle(ask, Utf16Of(title));
     edge::SetViewVisible(ask, g_isEnabled);
   }
-  const bool isEdgeLocked = OptionOf(findBarView) != find_text::Option::kNone;
+  // RegExp and Ask each grey out every other switch while on.
+  const find_text::Option option = OptionOf(findBarView);
+  if (regExp) {
+    edge::FindToggleSetEnabled(regExp, option != find_text::Option::kAsk);
+  }
+  if (ask) {
+    edge::FindToggleSetEnabled(ask, option != find_text::Option::kRegExp);
+  }
+  const bool isEdgeLocked = option != find_text::Option::kNone;
   const int edgeIds[] = {edge155::off::FINDTOGGLE_id_match_case,
                          edge155::off::FINDTOGGLE_id_whole_word,
                          edge155::off::FINDTOGGLE_id_diacritics};
@@ -1146,8 +1154,8 @@ inline void __fastcall h_toggle_options(void* findBarView, void* argument) {
   SyncToggles(findBarView);
 }
 
-// A question means nothing to Match case, Match whole word or Match diacritics:
-// switch off the ones that are on. Edge's own callback follows the move, so the
+// A pattern or a question means nothing to Match case, Match whole word or Match
+// diacritics: switch off the ones that are on. Edge's own callback follows the move, so the
 // find parameters it keeps for them stay in step with what the bar shows.
 inline void SwitchOffEdgeToggles(void* findBarView) {
   const int edgeIds[] = {edge155::off::FINDTOGGLE_id_match_case,
@@ -1193,9 +1201,8 @@ inline void __fastcall h_button_toggled(void* toggle) {
       edge::FindToggleSetOn(excludedToggle, false);
     }
   }
-  const bool isTurningAskOn =
-      isTurningOn && toggleId == edge155::off::FINDTOGGLE_id_ask;
-  if (isTurningAskOn) {
+  const bool isTurningModeOn = isTurningOn && !isFlag;
+  if (isTurningModeOn) {
     SwitchOffEdgeToggles(findBarView);
   }
   SyncToggles(findBarView);
