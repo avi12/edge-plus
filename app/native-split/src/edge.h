@@ -2070,6 +2070,12 @@ inline bool IsEdgeTabView(void* view) {
   return VtableRva(view) == edge155::rva::EdgeTab_vftable;
 }
 
+// The EdgeTab (its Tab base, the `this` of Tab and EdgeTab methods) whose view
+// is `view`; the inverse of TabViewOfStyleViews's step.
+inline void* TabObjectOfView(void* view) {
+  return static_cast<uint8_t*>(view) - edge155::off::EDGETAB_view_offset;
+}
+
 // Whether an EdgeTab view is laid out as a row of the vertical tab list, as
 // EdgeTabStyleViews::UseVerticalStyle asks the tab's layout controller.
 inline bool IsVerticalTabView(void* view) {
@@ -2077,8 +2083,7 @@ inline bool IsVerticalTabView(void* view) {
     return false;
   }
   void* const controller = Field<void*>(
-      static_cast<uint8_t*>(view) - edge155::off::EDGETAB_view_offset,
-      edge155::off::EDGETAB_layout_controller);
+      TabObjectOfView(view), edge155::off::EDGETAB_layout_controller);
   if (!controller) {
     return false;
   }

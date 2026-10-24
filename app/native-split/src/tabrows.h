@@ -151,8 +151,72 @@ inline constinit int g_previewTabIndex = kNoDetachPreview;
 // The parent of the last layout pass's tab views. Only ever used within one
 // drag.
 inline constinit void* g_listView = nullptr;
+// The tab view standing on its own in the preview. Every tab of the active split
+// is drawn as the active tab, so this one reports itself inactive (h_is_active)
+// and draws as a plain tab would.
+inline constinit void* g_previewTab = nullptr;
 // The gap between a split and a tab of its own in a horizontal strip.
 inline constexpr int kPreviewGapDip = 10;
+
+// Its colours (title ink included) and fill follow its new state at once. The
+// colours are the EdgeTab's, not its view's: passing the view as `this` crashed
+// Edge.
+inline void RepaintPreviewTab(void* tab) {
+  const bool isEdgeTab = tab && edge::IsEdgeTabView(tab);
+  if (!isEdgeTab) {
+    return;
+  }
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(edge::At(edge155::rva::EdgeTab_UpdateForegroundColors))(
+      edge::TabObjectOfView(tab));
+  edge::SchedulePaint(tab);
+}
+
+// A tab closed during the drag is gone: only a tab still in the list (directly,
+// or in a split's row) is touched.
+inline bool IsInList(void* tab) {
+  if (!g_listView) {
+    return false;
+  }
+  const size_t count = edge::ViewChildCount(g_listView);
+  for (size_t i = 0; i < count; i++) {
+    void* child = edge::ViewChildAt(g_listView, i);
+    if (child == tab) {
+      return true;
+    }
+    const size_t rowCount = edge::ViewChildCount(child);
+    for (size_t j = 0; j < rowCount; j++) {
+      if (edge::ViewChildAt(child, j) == tab) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+inline void SetPreviewTab(void* tab) {
+  if (tab == g_previewTab) {
+    return;
+  }
+  void* previous = g_previewTab;
+  g_previewTab = tab;
+  if (previous && IsInList(previous)) {
+    RepaintPreviewTab(previous);
+  }
+  RepaintPreviewTab(tab);
+}
+
+// bool Tab::IsActive(this): `this` is the tab object, not its view.
+using IsActive_t = bool(__fastcall*)(void*);
+inline constinit IsActive_t o_is_active = nullptr;
+inline bool __fastcall h_is_active(void* tab) {
+  const bool isPreviewTab =
+      g_previewTab && tab == edge::TabObjectOfView(g_previewTab);
+  if (isPreviewTab) {
+    return false;
+  }
+  return o_is_active(tab);
+}
 
 struct DetachLayout {
   size_t slot = 0;
@@ -319,6 +383,7 @@ inline void ApplyDetachPreview(void* helper, void* result) {
     return;
   }
   LayOutDetached(list, detach, edge::IsVerticalTabView(tab));
+  SetPreviewTab(edge::IsEdgeTabView(tab) ? tab : nullptr);
 }
 
 // `kNoDetachPreview` ends the preview. Pass `isRelayoutWanted` false when the real
@@ -336,6 +401,7 @@ inline void SetDetachPreview(int tabIndex, bool isRelayoutWanted = true) {
   }
   if (tabIndex < 0) {
     g_listView = nullptr;
+    SetPreviewTab(nullptr);
   }
 }
 

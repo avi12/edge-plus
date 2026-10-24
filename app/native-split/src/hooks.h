@@ -666,6 +666,9 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
           reinterpret_cast<void*>(tabrows::h_calculate_ideal_bounds),
           &tabrows::o_calculate_ideal_bounds,
           "TabStripLayoutHelper::CalculateIdealBounds");
+  Install(edge155::rva::Tab_IsActive,
+          reinterpret_cast<void*>(tabrows::h_is_active), &tabrows::o_is_active,
+          "Tab::IsActive (detach preview)");
   assistant::Install();
   find::Install();
   theme_follow::Install();
