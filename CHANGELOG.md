@@ -6,7 +6,7 @@ sends the section's text to the Microsoft Store as the release's
 "What's new", so write it for users: plain sentences, no file names, at most
 1500 characters.
 
-## 0.1.0
+## 0.0.1
 
 The first release.
 

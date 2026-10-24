@@ -2,7 +2,7 @@
   <!-- The product's one identity: both assemblies stamp it and Product.cs reads
        it back, so a rename or a version bump is this block alone. -->
   <PropertyGroup>
-    <Version>0.1.0</Version>
+    <Version>0.0.1</Version>
     <Product>Edge+</Product>
     <Description>Live feature switches for Microsoft Edge</Description>
     <Company>Avi</Company>

@@ -22,7 +22,7 @@
   <Identity
       Name="avi12.PlusForEdge"
       Publisher="CN=00000000-0000-0000-0000-000000000000"
-      Version="0.1.0.0"
+      Version="0.0.1.0"
       ProcessorArchitecture="x64" />
 
   <Properties>
