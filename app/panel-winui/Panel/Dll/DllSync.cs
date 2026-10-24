@@ -10,6 +10,8 @@ namespace EdgePlus;
 internal static class DllSync {
   private const int UnloadPolls = 40;
   private const int UnloadPollMilliseconds = 100;
+  private const int LoadPolls = 30;
+  private const int LoadPollMilliseconds = 100;
 
   public static void Apply(Settings settings) {
     if (EdgeInstall.IsSimulated) {
@@ -60,9 +62,34 @@ internal static class DllSync {
     }
   }
 
+  // For a caller that reports the outcome (the Inject button, auto-inject):
+  // returns once the DLL is live, or after a bounded wait when it never comes
+  // up. DllMain creates the unload event before LoadLibrary returns, so the wait
+  // is normally over at the first poll.
+  public static void ApplyAndWaitForLoad(Settings settings) {
+    Apply(settings);
+    bool isLoadExpected = !EdgeInstall.IsSimulated && IsWanted(settings)
+        && PinnedBrowserPids().Length > 0;
+    if (isLoadExpected) {
+      WaitForLoad();
+    }
+  }
+
   // Whether the settings want the DLL in Edge at all.
   public static bool IsWanted(Settings settings) =>
       Effective(settings).NeedsDll;
+
+  private static int[] PinnedBrowserPids() =>
+      EdgeProcesses.BrowserPids().Where(pid => EdgeWatch.BuildOf(pid) == EdgeBuild.Pinned).ToArray();
+
+  private static void WaitForLoad() {
+    for (int i = 0; i < LoadPolls; i++) {
+      if (DllChannel.IsLoaded()) {
+        return;
+      }
+      Thread.Sleep(LoadPollMilliseconds);
+    }
+  }
 
   private static void WaitForUnload() {
     for (int i = 0; i < UnloadPolls; i++) {
