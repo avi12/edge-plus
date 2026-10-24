@@ -12,6 +12,7 @@ internal enum Section {
 // Edge+'s own cards: about Edge+ itself, not a feature it adds to Edge.
 internal enum OwnCard {
   StartWithWindows,
+  AutoInject,
 }
 
 // A card is either a feature's switch or one of Edge+'s own, never both. A
@@ -43,6 +44,7 @@ internal static class PanelLayout {
     ]),
     (Section.EdgePlusItself, [
       CardSlot.Of(OwnCard.StartWithWindows),
+      CardSlot.Of(OwnCard.AutoInject),
     ]),
   ];
 

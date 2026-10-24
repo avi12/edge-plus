@@ -184,11 +184,13 @@ internal sealed class PanelView : IDisposable {
 
   private static PanelState SetOwnCard(OwnCard own, bool isOn) => own switch {
     OwnCard.StartWithWindows => PanelActions.SetStartWithWindows(isOn),
+    OwnCard.AutoInject => PanelActions.SetAutoInject(isOn),
     _ => throw new ArgumentOutOfRangeException(nameof(own)),
   };
 
   private static bool IsOn(OwnCard own, PanelState state) => own switch {
     OwnCard.StartWithWindows => state.IsStartWithWindows,
+    OwnCard.AutoInject => state.IsAutoInject,
     _ => throw new ArgumentOutOfRangeException(nameof(own)),
   };
 

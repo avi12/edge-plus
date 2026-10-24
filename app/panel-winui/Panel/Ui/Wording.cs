@@ -71,6 +71,11 @@ internal static class Wording {
             "settings apply and an Edge update that needs a newer Edge+ is caught. Launch " +
             "Edge+ to open its window.",
         0xE7E8),
+    OwnCard.AutoInject => new(
+        "Inject automatically",
+        "Puts Edge+ into Edge each time Edge starts. Off, Edge starts without it and Edge+ " +
+            "offers an Inject button.",
+        0xE945),
     _ => throw new ArgumentOutOfRangeException(nameof(card)),
   };
 
