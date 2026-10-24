@@ -34,12 +34,13 @@ enum class Command : WPARAM {
   kEndPreviewDetach = 909,   // end the preview below
   kPreviewDetachBase = 910,  // + i: the tab list shows pane i out of its split
                              // (a script's stand-in for dragging it there)
-  // A script's stand-in for the mouse on a grip (tabdrag.h), each point in
-  // window DIPs packed into the lParam (PointOf):
+  // A script's stand-in for the mouse on a grip or a tab (tabdrag.h), each
+  // point in window DIPs packed into the lParam (PointOf):
   kGripPressBase = 930,  // + i: press pane i's grip at the point
-  kGripMoveTo = 950,     // the held grip's pointer moves to the point
+  kGripMoveTo = 950,     // the held grip's or tab's pointer moves to the point
   kGripRelease = 951,    // let go
   kGripEscape = 952,     // Escape
+  kTabPress = 953,       // press the tab at the lParam's strip index
   kApplyTheme = 800,     // apply the theme for the current OS light/dark mode
   kApplyConfig = 801,    // apply the config read from disk, on the UI thread
   kRedrawFollowedPages = 803,  // a theme swap changed a followed page's tone

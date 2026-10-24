@@ -523,6 +523,10 @@ inline void RunCommand(HWND hwnd, WPARAM wparam, LPARAM lparam) {
     case Command::kGripEscape:
       tabdrag::SimulateGripEnd(edge155::off::TABDRAG_end_cancel);
       return;
+    case Command::kTabPress:
+      tabdrag::SimulateTabPress(edge::McvForWindow(hwnd),
+                                static_cast<int>(lparam));
+      return;
     case Command::kLinkPane:
       links::OpenLinkPane();
       return;
