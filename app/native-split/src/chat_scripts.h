@@ -20,6 +20,7 @@ enum class ScriptAnswer {
   kUser,  // a dialog (a security check, a consent page) waits for the person
   kReloaded,  // the side panel reloaded after the prompt went in: send it again
   kArmed,
+  kStopped,  // the stop button was clicked
 };
 
 inline const char* AnswerText(ScriptAnswer answer) {
@@ -32,6 +33,8 @@ inline const char* AnswerText(ScriptAnswer answer) {
       return "reloaded";
     case ScriptAnswer::kArmed:
       return "armed";
+    case ScriptAnswer::kStopped:
+      return "stopped";
   }
   return "";
 }
@@ -129,6 +132,25 @@ inline std::string ReplyScript(const Target& target) {
   return )JS";
   script += web_text::JsOkAnswer({"text"});
   script += R"JS(;
+})())JS";
+  return script;
+}
+
+// Clicks the button that stops the answer being written, if it shows.
+inline std::string StopScript(const Target& target) {
+  std::string script = R"JS((function () {
+  var stop = document.querySelector()JS";
+  script += web_text::JsStringLiteral(target.stopSelectors);
+  script += R"JS();
+  if (stop && stop.offsetWidth) {
+    stop.click();
+    return ")JS";
+  script += AnswerText(ScriptAnswer::kStopped);
+  script += R"JS(";
+  }
+  return ")JS";
+  script += AnswerText(ScriptAnswer::kWait);
+  script += R"JS(";
 })())JS";
   return script;
 }

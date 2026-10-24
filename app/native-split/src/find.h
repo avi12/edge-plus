@@ -908,7 +908,7 @@ inline bool IsAnyAsking() {
       return true;
     }
   }
-  return false;
+  return assistant_chat::IsAnyStopping();
 }
 
 inline void StopTimerIfIdle() {

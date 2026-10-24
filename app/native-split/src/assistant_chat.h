@@ -22,6 +22,9 @@ inline constexpr ULONGLONG kStepMs = 700;
 inline constexpr int kMaxResends = 2;
 // How long a dialog may wait for the person before the question is given up.
 inline constexpr ULONGLONG kUserWaitMs = 120000;
+// How long a cancelled question keeps looking for the stop button, which shows
+// only once the answer starts being written.
+inline constexpr ULONGLONG kStopWindowMs = 8000;
 
 inline constexpr char kPanelTitle[] = "Find the answer on this page";
 
@@ -34,6 +37,7 @@ enum class Phase {
   kIdle,
   kWaitingForPanel,
   kWaitingForReply,
+  kStopping,  // cancelled after the question went in: stop the answer
 };
 
 using DoneFn = std::function<void(const ask_text::Reply&)>;
@@ -95,8 +99,9 @@ inline Chat* ChatFor(void* mcv) {
 
 inline Chat* Current(void* mcv, unsigned long long token) {
   Chat* chat = ChatFor(mcv);
-  const bool isCurrent =
-      chat && chat->token == token && chat->phase != Phase::kIdle;
+  const bool isAsking = chat && (chat->phase == Phase::kWaitingForPanel ||
+                                 chat->phase == Phase::kWaitingForReply);
+  const bool isCurrent = isAsking && chat->token == token;
   return isCurrent ? chat : nullptr;
 }
 
@@ -168,16 +173,38 @@ inline void ReleasePanel(void* mcv) {
   edge::CloseCopilotPanel(chat->browser);
 }
 
-// Without telling anyone (the bar closed).
+// Without telling anyone (the bar closed, or a new search replaced the
+// question). A question the chat already has is stopped, so Copilot does not
+// go on writing an answer nobody reads.
 inline void Cancel(void* mcv) {
   Chat* chat = ChatFor(mcv);
-  if (!chat) {
+  const bool isAsking =
+      chat && chat->phase != Phase::kIdle && chat->phase != Phase::kStopping;
+  if (!isAsking) {
     return;
   }
-  chat->phase = Phase::kIdle;
+  const bool isSentToPanel =
+      chat->phase == Phase::kWaitingForPanel && !chat->isHeadless;
+  const bool isQuestionIn =
+      chat->phase == Phase::kWaitingForReply || isSentToPanel;
+  chat->phase = isQuestionIn ? Phase::kStopping : Phase::kIdle;
+  chat->phaseStartedAt = GetTickCount64();
+  chat->nextTryAt = 0;
+  // A reading script still out returns to a phase that is over and is dropped
+  // without clearing this, which would hold the stop script back.
+  chat->isScriptRunning = false;
   chat->onDone = nullptr;
   chat->onNotice = nullptr;
   chat->prompt.clear();
+}
+
+inline bool IsAnyStopping() {
+  for (const auto& [mcv, chat] : Chats()) {
+    if (chat.phase == Phase::kStopping) {
+      return true;
+    }
+  }
+  return false;
 }
 
 inline void OnArmed(void* mcv, unsigned long long token,
@@ -310,6 +337,45 @@ inline void StepWaitingForReply(void* mcv, Chat& chat, const void* frame,
   }
 }
 
+inline void OnStopAnswer(void* mcv, unsigned long long token,
+                         const edge::ScriptResult& result) {
+  Chat* chat = ChatFor(mcv);
+  const bool isStillStopping =
+      chat && chat->phase == Phase::kStopping && chat->token == token;
+  if (!isStillStopping) {
+    return;
+  }
+  chat->isScriptRunning = false;
+  chat->nextTryAt = GetTickCount64() + kStepMs;
+  const bool isStopped =
+      result.isString &&
+      result.text ==
+          chat_scripts::AnswerText(chat_scripts::ScriptAnswer::kStopped);
+  if (isStopped) {
+    Log("[chat] answer stopped");
+    chat->phase = Phase::kIdle;
+  }
+}
+
+inline void StepStopping(void* mcv, Chat& chat, const void* frame,
+                         ULONGLONG now) {
+  const bool isDue = !chat.isScriptRunning && now >= chat.nextTryAt;
+  if (!isDue) {
+    return;
+  }
+  chat.isScriptRunning = true;
+  const unsigned long long token = chat.token;
+  const bool isRunning = edge::RunScriptInFrame(
+      frame, chat_scripts::StopScript(chat_target::kCopilotTarget),
+      [mcv, token](const edge::ScriptResult& result) {
+        OnStopAnswer(mcv, token, result);
+      });
+  if (!isRunning) {
+    chat.isScriptRunning = false;
+    chat.nextTryAt = now + kStepMs;
+  }
+}
+
 // find.h's timer.
 inline void Tick() {
   DropStale();
@@ -320,6 +386,16 @@ inline void Tick() {
     }
     const void* frame = edge::CopilotChatFrame();
     const bool isPanelReady = frame != nullptr;
+    const bool isStopping = chat.phase == Phase::kStopping;
+    if (isStopping) {
+      const bool hasStoppedLooking = now - chat.phaseStartedAt > kStopWindowMs;
+      if (hasStoppedLooking) {
+        chat.phase = Phase::kIdle;
+      } else if (isPanelReady) {
+        StepStopping(mcv, chat, frame, now);
+      }
+      continue;
+    }
     if (!isPanelReady) {
       const bool hasWaitedTooLong = now - chat.phaseStartedAt > kPanelWaitMs;
       if (hasWaitedTooLong) {
