@@ -272,13 +272,29 @@ inline constexpr uintptr_t SkPath_moveTo = 0x12073f0;
 // EdgeTabStyleViews_GetPath_topEdge_return, draws the top edge from the top-left
 // corner to where the top-right arc begins.
 inline constexpr uintptr_t SkPath_lineTo = 0x1209670;
-// bool EdgeTabStyleViews::IsLeftSplitTab(const Tab*): GetPath asks it after the
-// top-left arc and again after the top-right one; when true it draws the top
-// edge on to a square right side by lineTo calls of its own, skipping the top
-// edge and top-right arc above. Edge's answer pairs the split's tabs two by
-// two, so in a grown split the first member alone came out square.
-inline constexpr uintptr_t EdgeTabStyleViews_IsLeftSplitTab = 0x10f654c;
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_topEdge_return = 0x27bbf4d;
+// EdgeTabStrip::UpdateDropShadow (rva 0x2954850) shadows the horizontal strip's
+// active tab, outlined by GetPath (pathType 1) through the call returning to
+// EdgeTabStrip_UpdateDropShadow_activeTabPath_return. When that tab is in a
+// split, it extends the outline by every other tab of TabStrip::GetTabsInSplit
+// (it and one neighbour), each through the call returning to
+// EdgeTabStrip_UpdateDropShadow_splitMemberPath_return; with none, it closes
+// the outline.
+inline constexpr uintptr_t EdgeTabStrip_UpdateDropShadow_activeTabPath_return =
+    0x2954bfe;
+inline constexpr uintptr_t
+    EdgeTabStrip_UpdateDropShadow_splitMemberPath_return = 0x47503b0;
+// bool EdgeTabStyleViews::IsLeftSplitTab / IsRightSplitTab(Tab*): the tab is
+// the first of its TabStrip::GetTabsInSplit / the last. GetPath asks after the
+// top-left arc and again after the top-right one; for a first member it draws
+// the top edge on to a square right side by lineTo calls of its own, skipping
+// the top edge and top-right arc above, and leaves a later one without its
+// left foot and top-left arc. Edge pairs a split's tabs two by two, so in a
+// grown split the first member alone came out square.
+inline constexpr uintptr_t EdgeTabStyleViews_IsLeftSplitTab = 0x10f654c;
+inline constexpr uintptr_t EdgeTabStyleViews_IsRightSplitTab = 0x10f6594;
+// SkPath::SkPath(this, SkPathFillType): an empty path.
+inline constexpr uintptr_t SkPath_ctor = 0x1021180;
 // SkRRect::setRectXY(this, const SkRect*, float rx, float ry): zeroes the rest
 // of `this` itself when the rect is valid; one radius on every corner.
 inline constexpr uintptr_t SkRRect_setRectXY = 0x1021e70;

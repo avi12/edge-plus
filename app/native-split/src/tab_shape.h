@@ -3,7 +3,8 @@
 // EdgeTabStyleViews::GetPath, as one rounded rectangle for a vertical tab and
 // four arcs for a horizontal one; changing the outline shapes the tab in
 // whatever colour Edge paints it, so nothing is painted over the fill except a
-// split group's (SplitTabView::OnPaint). UI thread only.
+// split group's (SplitTabView::OnPaint). The same outline, through GetPath,
+// is what the horizontal strip's drop shadow follows. UI thread only.
 #pragma once
 #include <windows.h>
 #include <intrin.h>
@@ -12,6 +13,7 @@
 #include <vector>
 #include "edge.h"
 #include "geom.h"
+#include "state.h"
 #include "tab_edge.h"
 
 namespace fixedge::tab_shape {
@@ -34,25 +36,65 @@ inline bool IsTrailingCutFor(void* tabView) {
 using GetPath_t = void*(__fastcall*)(void*, void*, int, float, const int*);
 inline constinit GetPath_t o_get_path = nullptr;
 
+// Whether GetPath is outlining the active tab for the horizontal strip's drop
+// shadow, which then outlines it as a tab of its own (h_is_left_split_tab,
+// h_is_right_split_tab).
+inline constinit bool g_isOutliningShadow = false;
+
+// Also the drop shadow (EdgeTabStrip::UpdateDropShadow). Edge shadows the
+// active tab's split as one outline: the active tab's open outline, the seam
+// side left off, extended by its split neighbour's (TabStrip::GetTabsInSplit,
+// one neighbour only), which in a split grown past two draws a stray diagonal
+// across both tabs. Only the focused pane's tab paints as active, so only it is
+// shadowed: the neighbour's outline comes back empty and the active tab's is
+// a whole tab's, which Edge closes.
 inline void* __fastcall h_get_path(void* styleViews, void* outPath,
                                    int pathType, float scale,
                                    const int* isUnscaled) {
+  const void* caller = _ReturnAddress();
+  const bool isSplitNeighbourShadow =
+      SplitActive() &&
+      caller ==
+          edge::At(edge155::rva::
+                       EdgeTabStrip_UpdateDropShadow_splitMemberPath_return);
+  if (isSplitNeighbourShadow) {
+    return edge::ConstructEmptyPath(outPath);
+  }
+  g_isOutliningShadow =
+      SplitActive() &&
+      caller ==
+          edge::At(
+              edge155::rva::EdgeTabStrip_UpdateDropShadow_activeTabPath_return);
   g_outlinedTab = g_isSquared ? edge::TabViewOfStyleViews(styleViews) : nullptr;
   g_isTrailingCut = !g_outlinedTab || IsTrailingCutFor(g_outlinedTab);
   void* result = o_get_path(styleViews, outPath, pathType, scale, isUnscaled);
   g_outlinedTab = nullptr;
+  g_isOutliningShadow = false;
   return result;
 }
 
-// EdgeTabStyleViews::IsLeftSplitTab: while we shape the outline, no tab takes
-// Edge's square-sided branch; g_isTrailingCut squares or cuts it instead.
-using IsLeftSplitTab_t = bool(__fastcall*)(void*);
-inline constinit IsLeftSplitTab_t o_is_left_split_tab = nullptr;
-inline bool __fastcall h_is_left_split_tab(void* tab) {
-  if (g_outlinedTab) {
+// EdgeTabStyleViews::IsLeftSplitTab / IsRightSplitTab(Tab*): whether GetPath
+// outlines a tab as its split's first member (no trailing arc, a square right
+// side) or a later one (no leading foot). Neither while it outlines the
+// shadowed tab; and while we shape the outline no tab takes the first member's
+// square-sided branch, since g_isTrailingCut squares or cuts every member.
+using IsSplitSide_t = bool(__fastcall*)(void*);
+inline constinit IsSplitSide_t o_is_left_split_tab = nullptr;
+inline constinit IsSplitSide_t o_is_right_split_tab = nullptr;
+
+inline bool __fastcall h_is_left_split_tab(void* tabObject) {
+  const bool isOwnOutline = g_isOutliningShadow || g_outlinedTab;
+  if (isOwnOutline) {
     return false;
   }
-  return o_is_left_split_tab(tab);
+  return o_is_left_split_tab(tabObject);
+}
+
+inline bool __fastcall h_is_right_split_tab(void* tabObject) {
+  if (g_isOutliningShadow) {
+    return false;
+  }
+  return o_is_right_split_tab(tabObject);
 }
 
 using SetRectXY_t = void(__fastcall*)(void*, const void*, float, float);

@@ -597,6 +597,10 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   Install(edge155::rva::Canvas_DrawRoundRect,
           reinterpret_cast<void*>(tab_shape::h_draw_round_rect),
           &tab_shape::o_draw_round_rect, "gfx::Canvas::DrawRoundRect");
+  Install(edge155::rva::EdgeTabStyleViews_IsRightSplitTab,
+          reinterpret_cast<void*>(tab_shape::h_is_right_split_tab),
+          &tab_shape::o_is_right_split_tab,
+          "EdgeTabStyleViews::IsRightSplitTab (drop shadow)");
   Install(edge155::rva::TabDragController_ContinueDragging,
           reinterpret_cast<void*>(tabdrag::h_continue_dragging),
           &tabdrag::o_continue_dragging, "TabDragController::ContinueDragging");

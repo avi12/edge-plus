@@ -2243,4 +2243,18 @@ inline void SetRoundedRectRadii(void* roundedRect, const void* skRect,
       roundedRect, skRect, radii.corners);
 }
 
+// SkPathFillType.
+enum class PathFillType : int {
+  kWinding = 0,
+};
+
+// Constructs an empty SkPath in `outPath` (uninitialised storage) and returns
+// it, as a function returning an SkPath through a hidden pointer does.
+inline void* ConstructEmptyPath(void* outPath) {
+  using ConstructFn = void(__fastcall*)(void*, PathFillType);
+  reinterpret_cast<ConstructFn>(At(edge155::rva::SkPath_ctor))(
+      outPath, PathFillType::kWinding);
+  return outPath;
+}
+
 }  // namespace fixedge::edge

@@ -162,6 +162,7 @@ inline constexpr uint8_t kStockIndexCap = 2;
       edge155::rva::EdgeTab_UpdateForegroundColors,
       edge155::rva::Tab_IsActive,
       edge155::rva::EdgeTabStyleViews_IsLeftSplitTab,
+      edge155::rva::EdgeTabStyleViews_IsRightSplitTab,
   };
   for (const uintptr_t rva : sites) {
     if (!LooksLikeCode(rva)) {
