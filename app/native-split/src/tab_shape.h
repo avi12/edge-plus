@@ -44,6 +44,17 @@ inline void* __fastcall h_get_path(void* styleViews, void* outPath,
   return result;
 }
 
+// EdgeTabStyleViews::IsLeftSplitTab: while we shape the outline, no tab takes
+// Edge's square-sided branch; g_isTrailingCut squares or cuts it instead.
+using IsLeftSplitTab_t = bool(__fastcall*)(void*);
+inline constinit IsLeftSplitTab_t o_is_left_split_tab = nullptr;
+inline bool __fastcall h_is_left_split_tab(void* tab) {
+  if (g_outlinedTab) {
+    return false;
+  }
+  return o_is_left_split_tab(tab);
+}
+
 using SetRectXY_t = void(__fastcall*)(void*, const void*, float, float);
 inline constinit SetRectXY_t o_set_rect_xy = nullptr;
 

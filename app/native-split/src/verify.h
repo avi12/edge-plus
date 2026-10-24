@@ -161,6 +161,7 @@ inline constexpr uint8_t kStockIndexCap = 2;
       edge155::rva::ColorProvider_GetColor,
       edge155::rva::EdgeTab_UpdateForegroundColors,
       edge155::rva::Tab_IsActive,
+      edge155::rva::EdgeTabStyleViews_IsLeftSplitTab,
   };
   for (const uintptr_t rva : sites) {
     if (!LooksLikeCode(rva)) {

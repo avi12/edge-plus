@@ -588,6 +588,9 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   Install(edge155::rva::SkPath_lineTo,
           reinterpret_cast<void*>(tab_shape::h_line_to), &tab_shape::o_line_to,
           "SkPath::lineTo");
+  Install(edge155::rva::EdgeTabStyleViews_IsLeftSplitTab,
+          reinterpret_cast<void*>(tab_shape::h_is_left_split_tab),
+          &tab_shape::o_is_left_split_tab, "EdgeTabStyleViews::IsLeftSplitTab");
   Install(edge155::rva::SkRRect_setRectXY,
           reinterpret_cast<void*>(tab_shape::h_set_rect_xy),
           &tab_shape::o_set_rect_xy, "SkRRect::setRectXY");
