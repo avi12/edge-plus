@@ -740,6 +740,31 @@ inline void CollectLeaves(const Node& node, std::vector<int>& out) {
   return count;
 }
 
+// A square big enough that every pane of a deep tree keeps a distinct rect.
+inline constexpr int kReadingOrderExtent = 10000;
+
+// The leaves as the panes read on screen: top to bottom, then left to right by
+// their top-left corners. Not the tree's own order, which reads a grid built as
+// columns down each column.
+[[nodiscard]] inline std::vector<int> ReadingOrder(const Node& tree) {
+  std::vector<LeafRect> leaves;
+  LayoutTree(tree, Rect{0, 0, kReadingOrderExtent, kReadingOrderExtent}, 0,
+             leaves);
+  std::stable_sort(leaves.begin(), leaves.end(),
+                   [](const LeafRect& first, const LeafRect& second) {
+                     if (first.rect.y != second.rect.y) {
+                       return first.rect.y < second.rect.y;
+                     }
+                     return first.rect.x < second.rect.x;
+                   });
+  std::vector<int> order;
+  order.reserve(leaves.size());
+  for (const LeafRect& leafRect : leaves) {
+    order.push_back(leafRect.leaf);
+  }
+  return order;
+}
+
 // The strip between child `index` and `index + 1` of the split at `path`
 // (child indices from the root). For a horizontal split it is a column from
 // x = `position`; for a vertical split, a row from y = `position`.

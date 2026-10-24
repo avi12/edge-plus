@@ -205,6 +205,21 @@ void RunChecks() {
     Pair pair;
     Check(!ReadPair(tree, pair), "three panes are no pair");
   }
+  {
+    Node columns = FlatTree(2, Axis::kHorizontal);
+    SplitPane(columns, 0, Direction::kDown, 2);
+    SplitPane(columns, 1, Direction::kDown, 3);  // H[V[0 2] V[1 3]]
+    Check(Order(columns) == std::vector<int>{0, 2, 1, 3},
+          "a grid built as columns reads down each column in the tree");
+    Check(ReadingOrder(columns) == std::vector<int>{0, 1, 2, 3},
+          "on screen it reads across each row");
+  }
+  {
+    Node tree = FlatTree(2, Axis::kHorizontal);
+    SplitPane(tree, 0, Direction::kUp, 2);  // H[V[2 0] 1]
+    Check(ReadingOrder(tree) == std::vector<int>{2, 1, 0},
+          "a pane added above comes first, beside the tall one");
+  }
 }
 
 }  // namespace
