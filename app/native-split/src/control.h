@@ -527,6 +527,9 @@ inline void RunCommand(HWND hwnd, WPARAM wparam, LPARAM lparam) {
       tabdrag::SimulateTabPress(edge::McvForWindow(hwnd),
                                 static_cast<int>(lparam));
       return;
+    case Command::kHoldAlt:
+      tabdrag::g_isScriptedAltHeld = lparam != 0;
+      return;
     case Command::kLinkPane:
       links::OpenLinkPane();
       return;

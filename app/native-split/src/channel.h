@@ -41,6 +41,8 @@ enum class Command : WPARAM {
   kGripRelease = 951,    // let go
   kGripEscape = 952,     // Escape
   kTabPress = 953,       // press the tab at the lParam's strip index
+  kHoldAlt = 954,        // lParam 1: Alt counts as held (tabdrag::IsAltHeld)
+                         // until lParam 0
   kApplyTheme = 800,     // apply the theme for the current OS light/dark mode
   kApplyConfig = 801,    // apply the config read from disk, on the UI thread
   kRedrawFollowedPages = 803,  // a theme swap changed a followed page's tone
