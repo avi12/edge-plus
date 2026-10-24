@@ -311,6 +311,12 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     MH_EnableHook(edge::At(edge155::rva::BrowserThemePack_GetColor));
     MH_EnableHook(edge::At(edge155::rva::ColorProvider_GetColor));
     MH_EnableHook(edge::At(edge155::rva::EdgeTab_UpdateForegroundColors));
+    // The cut-corner tab outline: its own switch, not the split's.
+    MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_GetPath));
+    MH_EnableHook(edge::At(edge155::rva::SkPath_arcTo));
+    MH_EnableHook(edge::At(edge155::rva::SkPath_addRRect));
+    MH_EnableHook(edge::At(edge155::rva::SkPath_lineTo));
+    MH_EnableHook(edge::At(edge155::rva::Canvas_DrawRoundRect));
     protocol_handlers::EnableHooks();
     assistant::EnableAll();
     find::EnableAll();
