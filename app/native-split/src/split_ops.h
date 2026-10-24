@@ -63,7 +63,7 @@ inline bool IsActiveTabSplit(void* tsm) {
 // `newTab` (a TabModel*; null: a free background tab) is `tree`'s newest leaf,
 // since GrowSplit appends it as the last container. The tree goes in first, so
 // the relayout the grow triggers already uses it.
-inline bool GrowWithTree(void* mcv, void* tsm, Node tree, void* newTab) {
+inline bool GrowWithTree(void* mcv, void* tsm, const Node& tree, void* newTab) {
   // A copy, not a pointer: the speculative edit below overwrites this entry.
   const Node* existing = IsActiveTabSplit(tsm) ? TreeFor(mcv) : nullptr;
   const std::optional<Node> previousTree =
