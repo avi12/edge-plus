@@ -1,6 +1,6 @@
 // tab_edge.h — the geometry behind tab_shape.h's tab outline: a straight
-// leading edge (the right one when Edge's UI runs right to left), the seam
-// between members of a split, and the strip that squares a split group's fill.
+// leading edge (the right one when Edge's UI runs right to left), which tabs
+// keep the trailing cut, and the strip that squares a split group's fill.
 // Pure.
 #pragma once
 #include <cstddef>
@@ -35,13 +35,20 @@ struct CornerRadii {
   CornerRadius corners[kCornerCount];
 };
 
+// The cut marks a tab of its own, and in a split the focused pane's tab only:
+// the split's other members stay square, however many there are.
+[[nodiscard]] constexpr bool IsTrailingCornerCut(bool isSplitMember,
+                                                 bool isFocusedPane) noexcept {
+  return !isSplitMember || isFocusedPane;
+}
+
 // The trailing top corner keeps the radius (tab_shape.h turns it into a cut)
-// unless another member of a split sits against it in the same row.
-[[nodiscard]] constexpr CornerRadii RadiiFor(
-    Side leading, float radius, bool hasTrailingNeighbor) noexcept {
+// only when it is cut.
+[[nodiscard]] constexpr CornerRadii RadiiFor(Side leading, float radius,
+                                             bool isTrailingCut) noexcept {
   const CornerRadius round{radius, radius};
   const CornerRadius square{};
-  const CornerRadius trailingTop = hasTrailingNeighbor ? square : round;
+  const CornerRadius trailingTop = isTrailingCut ? round : square;
   const bool isLeadingOnLeft = leading == Side::kLeft;
   CornerRadii radii;
   radii.corners[static_cast<size_t>(Corner::kUpperLeft)] =
@@ -49,28 +56,6 @@ struct CornerRadii {
   radii.corners[static_cast<size_t>(Corner::kUpperRight)] =
       isLeadingOnLeft ? trailingTop : square;
   return radii;
-}
-
-// How far apart two members of a split may be and still be one seam.
-inline constexpr int kSeamSlack = 2;
-
-[[nodiscard]] constexpr bool HasTrailingNeighbor(Rect tab, Side leading,
-                                                 const Rect* others,
-                                                 size_t count) noexcept {
-  const int seamX = leading == Side::kLeft ? tab.x + tab.width : tab.x;
-  for (size_t i = 0; i < count; i++) {
-    const Rect other = others[i];
-    const bool isInRow = other.y == tab.y && other.height == tab.height;
-    const int otherSeamX =
-        leading == Side::kLeft ? other.x : other.x + other.width;
-    const bool isTouching =
-        otherSeamX >= seamX - kSeamSlack && otherSeamX <= seamX + kSeamSlack;
-    const bool isOther = !(other == tab);
-    if (isOther && isInRow && isTouching) {
-      return true;
-    }
-  }
-  return false;
 }
 
 // Painted over a rounded rectangle, squares its leading corners.

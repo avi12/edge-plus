@@ -50,13 +50,12 @@ inline void __fastcall h_set_rect_xy(void* roundedRect, const void* skRect,
     return;
   }
   const tab_edge::Side leading = tab_edge::LeadingSide(edge::IsUiRightToLeft());
-  const std::vector<Rect> siblings = edge::SplitSiblingBounds(g_outlinedTab);
-  const bool hasTrailingNeighbor =
-      tab_edge::HasTrailingNeighbor(edge::ViewBounds(g_outlinedTab), leading,
-                                    siblings.data(), siblings.size());
+  void* tabObject = edge::TabObjectOfView(g_outlinedTab);
+  const bool isTrailingCut =
+      tab_edge::IsTrailingCornerCut(edge::IsTabObjectInSplit(tabObject),
+                                    edge::IsTheActiveTabObject(tabObject));
   edge::SetRoundedRectRadii(
-      roundedRect, skRect,
-      tab_edge::RadiiFor(leading, radiusX, hasTrailingNeighbor));
+      roundedRect, skRect, tab_edge::RadiiFor(leading, radiusX, isTrailingCut));
 }
 
 using ArcTo_t = void*(__fastcall*)(void*, uint64_t, float, int, uint8_t,

@@ -2251,28 +2251,6 @@ inline bool IsTabObjectActive(void* tabObject) {
       tabObject);
 }
 
-// The bounds of the other tabs in the split row `tab` is in (its parent is the
-// SplitTabView that holds a split's members), in the parent's coordinates; none
-// for a tab on a row of its own.
-inline std::vector<Rect> SplitSiblingBounds(void* tab) {
-  std::vector<Rect> siblings;
-  void* row = ViewParent(tab);
-  const bool isSplitRow =
-      row && VtableRva(row) == edge155::rva::SplitTabView_vftable;
-  if (!isSplitRow) {
-    return siblings;
-  }
-  const size_t count = ViewChildCount(row);
-  for (size_t i = 0; i < count; i++) {
-    void* child = ViewChildAt(row, i);
-    const bool isOtherTab = child != tab && IsEdgeTabView(child);
-    if (isOtherTab) {
-      siblings.push_back(ViewBounds(child));
-    }
-  }
-  return siblings;
-}
-
 inline void CanvasDrawRect(void* canvas, const Rect& rect, const void* flags) {
   using DrawRectFn = void(__fastcall*)(void*, const Rect*, const void*);
   reinterpret_cast<DrawRectFn>(At(edge155::rva::Canvas_DrawRect))(canvas, &rect,

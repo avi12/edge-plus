@@ -27,41 +27,31 @@ void RunChecks() {
 
   const CornerRadius round{kRadius, kRadius};
   const CornerRadius square{};
-  const CornerRadii onLeft = RadiiFor(Side::kLeft, kRadius, false);
+  const CornerRadii onLeft = RadiiFor(Side::kLeft, kRadius, true);
   Check(onLeft.corners[static_cast<size_t>(Corner::kUpperLeft)] == square &&
             onLeft.corners[static_cast<size_t>(Corner::kLowerLeft)] == square,
         "a left-leading tab is straight on its left");
   Check(onLeft.corners[static_cast<size_t>(Corner::kUpperRight)] == round &&
             onLeft.corners[static_cast<size_t>(Corner::kLowerRight)] == square,
         "a left-leading tab keeps the radius on its trailing top corner only");
-  const CornerRadii onRight = RadiiFor(Side::kRight, kRadius, false);
+  const CornerRadii onRight = RadiiFor(Side::kRight, kRadius, true);
   Check(
       onRight.corners[static_cast<size_t>(Corner::kUpperRight)] == square &&
           onRight.corners[static_cast<size_t>(Corner::kLowerRight)] == square &&
           onRight.corners[static_cast<size_t>(Corner::kUpperLeft)] == round &&
           onRight.corners[static_cast<size_t>(Corner::kLowerLeft)] == square,
       "a right-leading tab mirrors it");
-  const CornerRadii joined = RadiiFor(Side::kLeft, kRadius, true);
-  Check(
-      joined.corners[static_cast<size_t>(Corner::kUpperRight)] == square &&
-          joined.corners[static_cast<size_t>(Corner::kLowerRight)] == square &&
-          joined.corners[static_cast<size_t>(Corner::kUpperLeft)] == square,
-      "a split member with a neighbour is straight on both sides");
+  const CornerRadii uncut = RadiiFor(Side::kLeft, kRadius, false);
+  Check(uncut.corners[static_cast<size_t>(Corner::kUpperRight)] == square &&
+            uncut.corners[static_cast<size_t>(Corner::kLowerRight)] == square &&
+            uncut.corners[static_cast<size_t>(Corner::kUpperLeft)] == square,
+        "an uncut tab is straight on both sides");
 
-  // A split's row: two members side by side, 120 across each, in one row.
-  constexpr Rect kFirst{4, 0, 120, 32};
-  constexpr Rect kSecond{124, 0, 120, 32};
-  constexpr Rect kElsewhere{4, 40, 240, 32};
-  const Rect others[] = {kSecond, kElsewhere};
-  Check(HasTrailingNeighbor(kFirst, Side::kLeft, others, 2),
-        "the first member has the second against its right");
-  const Rect before[] = {kFirst, kElsewhere};
-  Check(!HasTrailingNeighbor(kSecond, Side::kLeft, before, 2),
-        "the last member has nothing against its right");
-  Check(HasTrailingNeighbor(kSecond, Side::kRight, before, 2),
-        "in a right-to-left row the trailing side is the left one");
-  Check(!HasTrailingNeighbor(kElsewhere, Side::kLeft, others, 1),
-        "a tab on a row of its own has no neighbour");
+  Check(IsTrailingCornerCut(false, false),
+        "a tab of its own is cut, focused or not");
+  Check(IsTrailingCornerCut(true, true), "the focused pane's tab is cut");
+  Check(!IsTrailingCornerCut(true, false),
+        "the split's other members are not, however many");
   Check(
       LeadingStrip(Rect{4, 0, 240, 32}, Side::kLeft, 7) == Rect{4, 0, 7, 32} &&
           LeadingStrip(Rect{4, 0, 240, 32}, Side::kRight, 7) ==
