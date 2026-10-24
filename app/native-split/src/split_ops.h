@@ -113,7 +113,7 @@ inline bool AddPane(void* mcv, Direction direction, int besideLeaf,
   if (!hasSplitActiveLeaf) {
     SplitPane(tree, 0, direction, newLeaf);
   }
-  const bool hasGrown = GrowWithTree(mcv, tsm, std::move(tree), newTab);
+  const bool hasGrown = GrowWithTree(mcv, tsm, tree, newTab);
   if (hasGrown) {
     Log("[dir-add] dir=%d active_leaf=%d new_leaf=%d -> %d panes",
         static_cast<int>(direction), activeLeaf, newLeaf, oldPanes + 1);

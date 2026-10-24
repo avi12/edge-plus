@@ -483,7 +483,7 @@ inline void ApplyDrop() {
   if (!g_drop) {
     return;
   }
-  Drop drop = std::move(*g_drop);
+  const Drop drop = std::move(*g_drop);
   g_drop.reset();
   const int splitIndex = edge::IndexOfWebContents(drop.tsm, drop.splitContents);
   void* draggedTab = edge::TabShowing(drop.tsm, drop.draggedContents);
@@ -494,8 +494,8 @@ inline void ApplyDrop() {
   }
   edge::ActivateTabAt(drop.tsm, splitIndex);
   anim::g_isNextEntryInPlace = true;
-  const bool hasGrown = split_ops::GrowWithTree(
-      drop.mcv, drop.tsm, std::move(drop.tree), draggedTab);
+  const bool hasGrown =
+      split_ops::GrowWithTree(drop.mcv, drop.tsm, drop.tree, draggedTab);
   Log("[tabdrag] drop: %s", hasGrown ? "the tab is a new pane" : "failed");
 }
 
