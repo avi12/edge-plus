@@ -64,6 +64,23 @@ internal static class Wording {
   public const string ReorderHelp =
       "Drag a theme, or press Alt+Up or Alt+Down, to move it in this list and in the pickers.";
 
+  public const string InjectButton = "Inject into Edge";
+
+  public static CardWording InjectReady {
+    get;
+  } = new(
+      "Edge is open without Edge+",
+      "Inject automatically is off, so this Edge started without Edge+. Inject it to turn " +
+          "your switches on.",
+      0xE768);
+
+  public static CardWording Injected {
+    get;
+  } = new(
+      "Edge+ is in Edge",
+      "Injected. When Edge next starts, Edge+ offers this button again.",
+      0xE73E);
+
   public static CardWording For(OwnCard card) => card switch {
     OwnCard.StartWithWindows => new(
         "Start Edge+ when Windows starts",

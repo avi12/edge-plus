@@ -53,9 +53,14 @@ internal sealed class PanelView : IDisposable {
   private readonly Dictionary<Feature, FeatureCard> _switchCards = [];
   private readonly ThemingCard _themingCard;
   private readonly Dictionary<OwnCard, FeatureCard> _ownCards = [];
+  private readonly InjectCard _injectCard = new();
+  // The Inject automatically card, with the Inject card under it while offered;
+  // its add/delete transition slides the Inject card in and out.
+  private readonly StackPanel _autoInjectGroup = new() { Spacing = CardSpacing };
   private readonly BackgroundService? _service;
   private readonly List<IDisposable> _hostSubscriptions = [];
   private PanelState? _state;
+  private InjectOffer _injectOffer = InjectOffer.Hidden;
   private bool _isDisposed;
 
   public PanelView(Window window, ContentControl slot, IObservable<EventArgs> settingChanged,
@@ -69,6 +74,8 @@ internal sealed class PanelView : IDisposable {
       Visibility = Visibility.Collapsed,
     };
     _themingCard = new ThemingCard(RunAsync, PickLocalThemeAsync);
+    _injectCard.Clicked += () => _ = InjectAsync();
+    Motion.Animate(_autoInjectGroup, Motion.AddDelete);
     foreach ((Section section, CardSlot[] cards) in PanelLayout.Sections) {
       _sectionList.Children.Add(SectionView(section, cards));
     }
@@ -105,6 +112,7 @@ internal sealed class PanelView : IDisposable {
       _service.IsWindowOpen = true;
       _service.BuildChanged += OnBuildChanged;
       _service.ThemeRefreshed += OnThemeRefreshed;
+      _service.BrowserStarted += OnBrowserStarted;
     }
     Refresh();
   }
@@ -121,6 +129,7 @@ internal sealed class PanelView : IDisposable {
     if (_service is not null) {
       _service.BuildChanged -= OnBuildChanged;
       _service.ThemeRefreshed -= OnThemeRefreshed;
+      _service.BrowserStarted -= OnBrowserStarted;
       _service.IsWindowOpen = false;
     }
     Motion.Forget();
@@ -128,6 +137,9 @@ internal sealed class PanelView : IDisposable {
   }
 
   private void OnBuildChanged(BuildChange change) => OnUiThread(Refresh);
+
+  // Edge restarted: with auto-inject off, it may want the Inject button again.
+  private void OnBrowserStarted() => OnUiThread(Refresh);
 
   private void OnThemeRefreshed(ThemeRefresh refresh) =>
       OnUiThread(() => ShowActionNotice(refresh.Error ?? ""));
@@ -179,7 +191,35 @@ internal sealed class PanelView : IDisposable {
     var card = new FeatureCard(Wording.For(own));
     card.Toggled += isOn => _ = RunAndReportAsync(() => SetOwnCard(own, isOn));
     _ownCards[own] = card;
-    return card.View;
+    if (own != OwnCard.AutoInject) {
+      return card.View;
+    }
+    _autoInjectGroup.Children.Add(card.View);
+    return _autoInjectGroup;
+  }
+
+  private async Task InjectAsync() {
+    await RunAndReportAsync(PanelActions.Inject);
+    // A failed injection renders no new state; the button the click disabled
+    // comes back as the last offer shown.
+    if (!_isDisposed) {
+      ShowInjectOffer(_injectOffer);
+    }
+  }
+
+  private void ShowInjectOffer(InjectOffer offer) {
+    FrameworkElement view = _injectCard.View;
+    bool isShown = _autoInjectGroup.Children.Contains(view);
+    if (offer == InjectOffer.Hidden) {
+      if (isShown) {
+        _autoInjectGroup.Children.Remove(view);
+      }
+      return;
+    }
+    _injectCard.Update(offer);
+    if (!isShown) {
+      _autoInjectGroup.Children.Add(view);
+    }
   }
 
   private static PanelState SetOwnCard(OwnCard own, bool isOn) => own switch {
@@ -250,6 +290,8 @@ internal sealed class PanelView : IDisposable {
     foreach ((OwnCard own, FeatureCard card) in _ownCards) {
       card.Update(IsOn(own, state), isLocked: false, note: "");
     }
+    _injectOffer = InjectOffers.Next(_injectOffer, state);
+    ShowInjectOffer(_injectOffer);
   }
 
   private void ShowActionNotice(string message) {
