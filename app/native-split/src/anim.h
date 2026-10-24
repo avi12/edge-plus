@@ -13,7 +13,7 @@
 #include "motion.h"
 #include "pane_tree.h"
 
-namespace fixedge::anim {
+namespace edgeplus::anim {
 
 struct Flight {
   std::vector<LeafRect> from;  // parallel to `to`
@@ -247,4 +247,4 @@ inline void Remove() {
   g_hwnd = nullptr;
 }
 
-}  // namespace fixedge::anim
+}  // namespace edgeplus::anim

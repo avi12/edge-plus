@@ -10,7 +10,7 @@
 #include "find_flags.h"
 #include "web_text.h"
 
-namespace fixedge::find_text {
+namespace edgeplus::find_text {
 
 enum class Mode {
   kText,    // Edge's own find, untouched
@@ -395,4 +395,4 @@ inline constexpr size_t kMaxCountDigits = 9;
   return result;
 }
 
-}  // namespace fixedge::find_text
+}  // namespace edgeplus::find_text

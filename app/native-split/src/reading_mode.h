@@ -17,7 +17,7 @@
 #include "theme.h"
 #include "web_text.h"
 
-namespace fixedge::reading_mode {
+namespace edgeplus::reading_mode {
 
 inline constexpr char kChoicesRelativePath[] = "\\FixEdge\\reading-themes.bin";
 inline constexpr char kReadingViewPrefix[] = "read://";
@@ -167,4 +167,4 @@ inline void Stop(HWND window) {
   return isTurningOn;
 }
 
-}  // namespace fixedge::reading_mode
+}  // namespace edgeplus::reading_mode

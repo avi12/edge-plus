@@ -12,7 +12,7 @@
 #include "anim.h"
 #include "repaint.h"
 
-namespace fixedge::split_ops {
+namespace edgeplus::split_ops {
 
 inline int LeafShowing(void* mcv, const void* webContents) {
   const int count = static_cast<int>(edge::McvCount(mcv));
@@ -325,4 +325,4 @@ inline bool DetachPane(void* mcv, int pane) {
   return RemovePaneFromSplit(mcv, pane, split_data::MemberFate::kKeepAsTab);
 }
 
-}  // namespace fixedge::split_ops
+}  // namespace edgeplus::split_ops

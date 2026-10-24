@@ -15,7 +15,7 @@
 #include <string>
 #include <string_view>
 
-namespace fixedge::find_flags {
+namespace edgeplus::find_flags {
 
 // In JavaScript's canonical flag order, which is also the order of the
 // switches in the bar and of the letters in the flags string.
@@ -129,4 +129,4 @@ inline constexpr char kSubGroupIndent[] = "\xE2\x80\x83\xE2\x80\x83";
   return std::string(kSubGroupIndent) + info.title + " (" + info.letter + ")";
 }
 
-}  // namespace fixedge::find_flags
+}  // namespace edgeplus::find_flags

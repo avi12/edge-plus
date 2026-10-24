@@ -14,7 +14,7 @@
 #include <string_view>
 #include <system_error>
 
-namespace fixedge::reading_themes {
+namespace edgeplus::reading_themes {
 
 // In the grid's order.
 enum class ReadingTheme : int32_t {
@@ -143,4 +143,4 @@ inline constexpr uint32_t kByteMask = 0xff;
   return true;
 }
 
-}  // namespace fixedge::reading_themes
+}  // namespace edgeplus::reading_themes

@@ -9,15 +9,15 @@
 #include "find_text.h"
 #include "web_text.h"
 
-namespace fixedge::find_scripts {
+namespace edgeplus::find_scripts {
 
 // ask_text.h cuts a carried paragraph further for the prompt.
 inline constexpr int kMaxReadChars = 60000;
 inline constexpr int kMaxParagraphCarryChars = 1200;
 inline constexpr int kMaxSearchChars = 4000000;
 
-inline constexpr char kMatchHighlight[] = "fixedge-find";
-inline constexpr char kCurrentHighlight[] = "fixedge-find-current";
+inline constexpr char kMatchHighlight[] = "edgeplus-find";
+inline constexpr char kCurrentHighlight[] = "edgeplus-find-current";
 inline constexpr char kMatchColor[] = "#ffe14d";
 inline constexpr char kCurrentColor[] = "#ff8a1f";
 inline constexpr char kPdfContentType[] = "application/pdf";
@@ -456,4 +456,4 @@ inline std::string HighlightParagraphsScript(std::span<const int> indices) {
   return Wrap(body);
 }
 
-}  // namespace fixedge::find_scripts
+}  // namespace edgeplus::find_scripts

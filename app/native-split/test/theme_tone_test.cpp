@@ -2,7 +2,7 @@
 #include <cstdio>
 #include "../src/theme_tone.h"
 
-using namespace fixedge::theme_tone;
+using namespace edgeplus::theme_tone;
 
 namespace {
 

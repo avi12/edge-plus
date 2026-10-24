@@ -20,7 +20,7 @@
 #include "tab_edge.h"
 #include "theme_tone.h"
 
-namespace fixedge::edge {
+namespace edgeplus::edge {
 
 // msedge.dll's load address, set once by Bind().
 inline constinit uintptr_t g_base = 0;
@@ -2290,4 +2290,4 @@ inline void* ConstructEmptyPath(void* outPath) {
   return outPath;
 }
 
-}  // namespace fixedge::edge
+}  // namespace edgeplus::edge

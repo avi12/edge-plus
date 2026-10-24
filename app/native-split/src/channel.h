@@ -5,7 +5,7 @@
 #include <windows.h>
 #include "pane_tree.h"
 
-namespace fixedge::channel {
+namespace edgeplus::channel {
 
 inline constinit HWND g_window = nullptr;  // the subclassed browser window
 inline constinit UINT g_message = 0;
@@ -121,4 +121,4 @@ enum class WindowTimer : UINT_PTR {
   return static_cast<UINT_PTR>(timer);
 }
 
-}  // namespace fixedge::channel
+}  // namespace edgeplus::channel

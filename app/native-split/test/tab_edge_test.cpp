@@ -2,8 +2,8 @@
 #include <cstdio>
 #include "../src/tab_edge.h"
 
-using namespace fixedge;
-using namespace fixedge::tab_edge;
+using namespace edgeplus;
+using namespace edgeplus::tab_edge;
 
 namespace {
 

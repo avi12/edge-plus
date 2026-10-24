@@ -3,7 +3,7 @@
 #include <string>
 #include "../src/web_text.h"
 
-using namespace fixedge::web_text;
+using namespace edgeplus::web_text;
 
 namespace {
 

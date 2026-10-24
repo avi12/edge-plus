@@ -13,7 +13,7 @@
 #include "find_text.h"
 #include "web_text.h"
 
-namespace fixedge::ask_text {
+namespace edgeplus::ask_text {
 
 // Paragraphs cross from the page script as one string, between these; the
 // sentences of one paragraph are between the second.
@@ -458,4 +458,4 @@ inline void SortAscending(std::vector<int>* indices) {
   return list;
 }
 
-}  // namespace fixedge::ask_text
+}  // namespace edgeplus::ask_text

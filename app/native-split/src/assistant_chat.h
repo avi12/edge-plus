@@ -13,7 +13,7 @@
 #include "chat_target.h"
 #include "edge.h"
 
-namespace fixedge::assistant_chat {
+namespace edgeplus::assistant_chat {
 
 inline constexpr ULONGLONG kPanelWaitMs = 20000;
 inline constexpr ULONGLONG kReplyTimeoutMs = 120000;
@@ -415,4 +415,4 @@ inline void RemoveAll() {
   Chats().clear();
 }
 
-}  // namespace fixedge::assistant_chat
+}  // namespace edgeplus::assistant_chat

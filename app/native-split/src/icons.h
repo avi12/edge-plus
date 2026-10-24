@@ -11,7 +11,7 @@
 #include "edge.h"
 #include "pane_tree.h"
 
-namespace fixedge::icons {
+namespace edgeplus::icons {
 
 // Edge's gfx::VectorIcon ABI — Chromium's VectorIcon {reps, reps_size, name},
 // each VectorIconRep {path, path_size}, each path element a 4-byte command id
@@ -97,7 +97,7 @@ inline const VectorIcon* Grip() {
         path.push_back(CommandElement(edge155::off::ICON_CLOSE));
       }
     }
-    return Build("kFixEdgePaneGripIcon", path);
+    return Build("kEdgePlusPaneGripIcon", path);
   }();
   return icon;
 }
@@ -253,15 +253,15 @@ inline const void* Arrow(Direction direction) {
       return edge::At(edge155::rva::Icon_ArrowDown);
     case Direction::kLeft: {
       static const VectorIcon* left =
-          QuarterTurn(upArrow, Direction::kLeft, "kFixEdgeArrowLeftIcon");
+          QuarterTurn(upArrow, Direction::kLeft, "kEdgePlusArrowLeftIcon");
       return left ? left : edge::At(edge155::rva::Icon_ArrowBack);
     }
     default: {
       static const VectorIcon* right =
-          QuarterTurn(upArrow, Direction::kRight, "kFixEdgeArrowRightIcon");
+          QuarterTurn(upArrow, Direction::kRight, "kEdgePlusArrowRightIcon");
       return right ? right : edge::At(edge155::rva::Icon_ArrowForward);
     }
   }
 }
 
-}  // namespace fixedge::icons
+}  // namespace edgeplus::icons

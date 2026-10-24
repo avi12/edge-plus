@@ -5,7 +5,7 @@
 #pragma once
 #include <cstdint>
 
-namespace fixedge::edge155 {
+namespace edgeplus::edge155 {
 
 // The build these offsets belong to (the module's file version,
 // major.minor.build.revision). verify.h refuses to hook anything else.
@@ -1483,4 +1483,4 @@ inline constexpr uintptr_t FINDDETAILS_active_ordinal = 0x18;
 inline constexpr uintptr_t FINDDETAILS_is_final = 0x1c;
 }  // namespace off
 
-}  // namespace fixedge::edge155
+}  // namespace edgeplus::edge155

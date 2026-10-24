@@ -25,7 +25,7 @@
 #include "theme_follow.h"
 #include "live_preview.h"
 
-namespace fixedge::hooks {
+namespace edgeplus::hooks {
 
 // Each 2-pane CHECK that InstallAll NOPs is a `jcc rel32` (0F 8x + a 4-byte
 // offset; see offsets.h).
@@ -747,4 +747,4 @@ inline void RemoveAll() {
   MH_Uninitialize();
 }
 
-}  // namespace fixedge::hooks
+}  // namespace edgeplus::hooks

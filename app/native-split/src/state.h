@@ -9,7 +9,7 @@
 #include "edge.h"
 #include "pane_tree.h"
 
-namespace fixedge {
+namespace edgeplus {
 
 // A split's id (its SplitTabId token). A layout is the split's own, kept under
 // it: it follows the split torn off into another window (where a layout kept
@@ -140,4 +140,4 @@ inline void ForgetTree(void* mcv) {
   PendingTrees().erase(mcv);
 }
 
-}  // namespace fixedge
+}  // namespace edgeplus

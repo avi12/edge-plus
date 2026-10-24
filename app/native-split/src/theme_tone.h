@@ -4,7 +4,7 @@
 #pragma once
 #include <cstdint>
 
-namespace fixedge::theme_tone {
+namespace edgeplus::theme_tone {
 
 // 0xAARRGGBB as Skia stores it (also a Windows BGRA pixel).
 using Argb = uint32_t;
@@ -72,4 +72,4 @@ struct OptionalColor {
   return Tone::kUnknown;
 }
 
-}  // namespace fixedge::theme_tone
+}  // namespace edgeplus::theme_tone

@@ -4,8 +4,8 @@
 #include <vector>
 #include "../src/dock.h"
 
-using namespace fixedge;
-using namespace fixedge::dock;
+using namespace edgeplus;
+using namespace edgeplus::dock;
 
 namespace {
 

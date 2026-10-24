@@ -4,7 +4,7 @@
 #include <utility>
 #include "edge.h"
 
-namespace fixedge::panes {
+namespace edgeplus::panes {
 
 // Edge's own ctor builds panes 0 and 1; every pane from this index on is ours.
 inline constexpr int kFirstGrownPane = 2;
@@ -74,4 +74,4 @@ inline void EnsureControlButtons(void* mcv, int index) {
   Log("[grow] pane %d got its control buttons", index);
 }
 
-}  // namespace fixedge::panes
+}  // namespace edgeplus::panes

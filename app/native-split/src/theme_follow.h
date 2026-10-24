@@ -15,7 +15,7 @@
 #include "log.h"
 #include "theme_tone.h"
 
-namespace fixedge::theme_follow {
+namespace edgeplus::theme_follow {
 
 inline constinit bool g_isActive = false;
 
@@ -194,4 +194,4 @@ inline bool ApplyConfig(const config::Wire& wire) {
   return isChanged;
 }
 
-}  // namespace fixedge::theme_follow
+}  // namespace edgeplus::theme_follow

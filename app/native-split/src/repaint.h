@@ -9,7 +9,7 @@
 #include "edge.h"
 #include "motion.h"
 
-namespace fixedge::repaint {
+namespace edgeplus::repaint {
 
 inline constexpr UINT_PTR kTimerId =
     channel::TimerIdOf(channel::WindowTimer::kRenderNudge);
@@ -55,4 +55,4 @@ inline void NudgeAll() {
   Log("[repaint] nudged %d pane(s) to paint", nudged);
 }
 
-}  // namespace fixedge::repaint
+}  // namespace edgeplus::repaint

@@ -11,7 +11,7 @@
 #include "edge.h"
 #include "log.h"
 
-namespace fixedge::live_preview {
+namespace edgeplus::live_preview {
 
 inline constinit bool g_isActive = false;
 // A bool, not a counter: Observe fires again when a hover retargets to another
@@ -93,4 +93,4 @@ inline void ApplyConfig(const config::Wire& wire) {
   }
 }
 
-}  // namespace fixedge::live_preview
+}  // namespace edgeplus::live_preview

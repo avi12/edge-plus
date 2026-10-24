@@ -5,7 +5,7 @@
 #include <windows.h>
 #include <utility>
 
-namespace fixedge::handles {
+namespace edgeplus::handles {
 
 template <class Traits>
 class Unique {
@@ -184,4 +184,4 @@ class GlobalMemoryLock {
   void* data = nullptr;
 };
 
-}  // namespace fixedge::handles
+}  // namespace edgeplus::handles

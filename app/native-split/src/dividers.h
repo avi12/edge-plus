@@ -10,7 +10,7 @@
 #include "split_data.h"
 #include "state.h"
 
-namespace fixedge::dividers {
+namespace edgeplus::dividers {
 
 inline constexpr int kStockContainerCount = split_data::kMinSplitMembers;
 
@@ -170,4 +170,4 @@ inline void RemoveAll() {
   Pools().clear();
 }
 
-}  // namespace fixedge::dividers
+}  // namespace edgeplus::dividers

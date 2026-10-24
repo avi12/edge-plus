@@ -3,7 +3,7 @@
 #pragma once
 #include <string_view>
 
-namespace fixedge::followed_pages {
+namespace edgeplus::followed_pages {
 
 // As Edge shows them and keeps them as the committed URL.
 inline constexpr std::string_view kSettings = "edge://settings";
@@ -28,4 +28,4 @@ inline constexpr std::string_view kExtensions = "edge://extensions";
   return IsPageOf(url, kSettings) || IsPageOf(url, kExtensions);
 }
 
-}  // namespace fixedge::followed_pages
+}  // namespace edgeplus::followed_pages

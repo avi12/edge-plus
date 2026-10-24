@@ -24,7 +24,7 @@
 #include "handles.h"
 #include "tab_list.h"
 
-namespace fixedge::find {
+namespace edgeplus::find {
 
 inline constinit bool g_isEnabled = false;
 
@@ -1391,4 +1391,4 @@ inline void Apply(bool isEnabled) {
   }
 }
 
-}  // namespace fixedge::find
+}  // namespace edgeplus::find

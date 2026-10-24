@@ -18,7 +18,7 @@
 #include "edge.h"
 #include "log.h"
 
-namespace fixedge::protocol_handlers {
+namespace edgeplus::protocol_handlers {
 
 // Chromium's PermissionDecision.
 enum class Decision : int32_t {
@@ -137,4 +137,4 @@ inline void Remove() {
   SetActive(false);
 }
 
-}  // namespace fixedge::protocol_handlers
+}  // namespace edgeplus::protocol_handlers

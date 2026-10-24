@@ -9,7 +9,7 @@
 
 #pragma comment(lib, "version.lib")
 
-namespace fixedge::verify {
+namespace edgeplus::verify {
 
 // VerQueryValueW's sub-block for the VS_FIXEDFILEINFO root.
 inline constexpr wchar_t kFixedFileInfoBlock[] = L"\\";
@@ -192,4 +192,4 @@ inline constexpr uint8_t kStockIndexCap = 2;
   return BuildMatches() && HookSitesLookSane();
 }
 
-}  // namespace fixedge::verify
+}  // namespace edgeplus::verify

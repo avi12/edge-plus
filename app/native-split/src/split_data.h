@@ -10,7 +10,7 @@
 #include <vector>
 #include "edge.h"
 
-namespace fixedge::split_data {
+namespace edgeplus::split_data {
 
 // Edge's CreateSplit rejects a member vector of size 1, so a split is at least
 // two tabs.
@@ -660,4 +660,4 @@ inline int BreakUpGrownSplits(void* tsm) {
   return static_cast<int>(grownSplits.size());
 }
 
-}  // namespace fixedge::split_data
+}  // namespace edgeplus::split_data

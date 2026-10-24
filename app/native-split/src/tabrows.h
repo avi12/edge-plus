@@ -13,7 +13,7 @@
 #include "split_data.h"
 #include "state.h"
 
-namespace fixedge::tabrows {
+namespace edgeplus::tabrows {
 
 inline constexpr int kPairedMembers = split_data::kMinSplitMembers;
 inline constexpr int kNoDetachPreview = -1;
@@ -556,4 +556,4 @@ inline void Dump(void* anyView) {
   Log("[tabrows] %d view(s) under %d,%d", found, kProbeX, kProbeY);
 }
 
-}  // namespace fixedge::tabrows
+}  // namespace edgeplus::tabrows

@@ -23,7 +23,7 @@
 #include "split_ops.h"
 #include "state.h"
 
-namespace fixedge::tabdrag {
+namespace edgeplus::tabdrag {
 
 struct Session {
   bool isDocking = false;  // the moves preview a dock, Edge's drag is paused
@@ -640,4 +640,4 @@ inline void SimulateGripEnd(int reason) {
   }
 }
 
-}  // namespace fixedge::tabdrag
+}  // namespace edgeplus::tabdrag

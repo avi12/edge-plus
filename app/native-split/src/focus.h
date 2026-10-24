@@ -3,7 +3,7 @@
 #pragma once
 #include <windows.h>
 
-namespace fixedge::focus {
+namespace edgeplus::focus {
 
 inline bool IsEdgeForeground() {
   DWORD foregroundProcess = 0;
@@ -11,4 +11,4 @@ inline bool IsEdgeForeground() {
   return foregroundProcess == GetCurrentProcessId();
 }
 
-}  // namespace fixedge::focus
+}  // namespace edgeplus::focus

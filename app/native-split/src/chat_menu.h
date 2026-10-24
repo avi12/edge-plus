@@ -3,7 +3,7 @@
 #pragma once
 #include "edge.h"
 
-namespace fixedge::chat_menu {
+namespace edgeplus::chat_menu {
 
 inline void* DropdownBeside(void* button) {
   void* container = edge::ViewParent(button);
@@ -20,4 +20,4 @@ inline void* DropdownBeside(void* button) {
   return nullptr;
 }
 
-}  // namespace fixedge::chat_menu
+}  // namespace edgeplus::chat_menu

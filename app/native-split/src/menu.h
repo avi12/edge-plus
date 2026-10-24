@@ -13,7 +13,7 @@
 #include "split_ops.h"
 #include "state.h"
 
-namespace fixedge::menu {
+namespace edgeplus::menu {
 
 // Just past Edge's own dense range 0x6a5..0x6ab (docs/re/split-menu.md).
 enum class MenuCommand : int {
@@ -291,4 +291,4 @@ inline void __fastcall h_control_exec(void* menu, int commandId,
   o_control_exec(menu, commandId, eventFlags);
 }
 
-}  // namespace fixedge::menu
+}  // namespace edgeplus::menu

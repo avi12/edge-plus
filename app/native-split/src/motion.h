@@ -4,7 +4,7 @@
 #include <span>
 #include "geom.h"
 
-namespace fixedge::motion {
+namespace edgeplus::motion {
 
 // cubic-bezier(0.16, 1, 0.3, 1), its control points named as CSS names them.
 inline constexpr unsigned kDurationMs = 220;
@@ -55,7 +55,7 @@ inline constexpr int kBisectionSteps = 40;
          first.width == second.width && first.height == second.height;
 }
 // anim.h calls it as motion::Empty.
-using fixedge::Empty;
+using edgeplus::Empty;
 
 [[nodiscard]] inline int Mix(int from, int to, double progress) noexcept {
   return from + static_cast<int>(std::lround((to - from) * progress));
@@ -108,4 +108,4 @@ using fixedge::Empty;
   return Rect{centre.x, centre.y, 0, 0};
 }
 
-}  // namespace fixedge::motion
+}  // namespace edgeplus::motion

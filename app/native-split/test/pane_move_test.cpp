@@ -8,7 +8,7 @@
 #include <vector>
 #include "../src/pane_tree.h"
 
-using namespace fixedge;
+using namespace edgeplus;
 
 namespace {
 

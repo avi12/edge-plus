@@ -8,7 +8,7 @@
 #include <string>
 #include "handles.h"
 
-namespace fixedge::config {
+namespace edgeplus::config {
 
 // An extension id (32 chars) with slack.
 // @share WireIdCapacity
@@ -96,4 +96,4 @@ inline constexpr char kLocalAppDataVariable[] = "LOCALAPPDATA";
   return isKnownSize;
 }
 
-}  // namespace fixedge::config
+}  // namespace edgeplus::config

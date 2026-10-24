@@ -8,7 +8,7 @@
 
 namespace {
 
-using fixedge::handles::UniqueHandle;
+using edgeplus::handles::UniqueHandle;
 
 constexpr int kPidArgument = 1;
 constexpr int kDllPathArgument = 2;

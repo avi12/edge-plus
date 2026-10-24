@@ -32,7 +32,7 @@
 #include "assistant.h"
 #include "find.h"
 
-namespace fixedge::control {
+namespace edgeplus::control {
 
 using channel::CodeOf;
 using channel::Command;
@@ -694,4 +694,4 @@ inline void Remove() {
   g_originalProc = nullptr;
 }
 
-}  // namespace fixedge::control
+}  // namespace edgeplus::control

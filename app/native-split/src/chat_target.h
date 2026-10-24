@@ -3,7 +3,7 @@
 // the one place to fix when it does. Pure.
 #pragma once
 
-namespace fixedge::chat_target {
+namespace edgeplus::chat_target {
 
 // Each selector is a CSS selector list.
 struct Target {
@@ -26,4 +26,4 @@ inline constexpr Target kCopilotTarget = {
     "Navigate the Web with Copilot",
 };
 
-}  // namespace fixedge::chat_target
+}  // namespace edgeplus::chat_target

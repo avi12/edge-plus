@@ -6,7 +6,7 @@
 #pragma once
 #include "edge.h"
 
-namespace fixedge::collapse {
+namespace edgeplus::collapse {
 
 // DoActionToSplitWindow(controller, WebContents*, SplitAction).
 using DoAction_t = void*(__fastcall*)(void*, void*, int);
@@ -24,4 +24,4 @@ inline void* __fastcall h_do_action(void* controller, void* webContents,
   return o_do_action(controller, webContents, action);
 }
 
-}  // namespace fixedge::collapse
+}  // namespace edgeplus::collapse

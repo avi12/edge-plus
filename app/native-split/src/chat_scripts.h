@@ -10,7 +10,7 @@
 #include "chat_target.h"
 #include "web_text.h"
 
-namespace fixedge::chat_scripts {
+namespace edgeplus::chat_scripts {
 
 using chat_target::Target;
 
@@ -155,4 +155,4 @@ inline std::string StopScript(const Target& target) {
   return script;
 }
 
-}  // namespace fixedge::chat_scripts
+}  // namespace edgeplus::chat_scripts

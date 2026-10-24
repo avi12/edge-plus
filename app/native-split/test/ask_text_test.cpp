@@ -4,7 +4,7 @@
 #include <vector>
 #include "../src/ask_text.h"
 
-using namespace fixedge::ask_text;
+using namespace edgeplus::ask_text;
 
 namespace {
 
@@ -27,7 +27,7 @@ std::string Fields(std::initializer_list<std::string> fields) {
   bool isFirst = true;
   for (const std::string& field : fields) {
     if (!isFirst) {
-      joined += fixedge::web_text::kFieldSeparator;
+      joined += edgeplus::web_text::kFieldSeparator;
     }
     isFirst = false;
     joined += field;

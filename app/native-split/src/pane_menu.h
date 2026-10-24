@@ -17,7 +17,7 @@
 #include "pane_tree.h"
 #include "split_data.h"
 
-namespace fixedge::pane_menu {
+namespace edgeplus::pane_menu {
 
 inline constexpr edge155::off::ControlMenuCommand kGrownSplitRepeats[] = {
     edge155::off::ControlMenuCommand::kSeparate,
@@ -105,4 +105,4 @@ inline bool RunItem(int command, void* mcv, int pane) {
   return true;
 }
 
-}  // namespace fixedge::pane_menu
+}  // namespace edgeplus::pane_menu

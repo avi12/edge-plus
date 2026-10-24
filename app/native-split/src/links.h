@@ -10,7 +10,7 @@
 #include "split_ops.h"
 #include "state.h"
 
-namespace fixedge::links {
+namespace edgeplus::links {
 
 inline constexpr char kToggleLabel[] = "Open new-tab links in a new pane";
 
@@ -145,4 +145,4 @@ inline void OpenLinkPane() {
   split_ops::AddPane(mcv, Direction::kRight, sourceLeaf, newTab);
 }
 
-}  // namespace fixedge::links
+}  // namespace edgeplus::links

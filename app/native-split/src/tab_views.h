@@ -3,7 +3,7 @@
 #pragma once
 #include "edge.h"
 
-namespace fixedge::tab_views {
+namespace edgeplus::tab_views {
 
 inline constexpr int kMaxDepth = 64;
 
@@ -28,4 +28,4 @@ inline void RepaintTabs(void* view, int depth = 0) {
   }
 }
 
-}  // namespace fixedge::tab_views
+}  // namespace edgeplus::tab_views

@@ -16,7 +16,7 @@
 #include "state.h"
 #include "tab_edge.h"
 
-namespace fixedge::tab_shape {
+namespace edgeplus::tab_shape {
 
 inline constinit bool g_isSquared = false;
 
@@ -317,4 +317,4 @@ inline void __fastcall h_draw_round_rect(void* canvas, const Rect* rect,
   }
 }
 
-}  // namespace fixedge::tab_shape
+}  // namespace edgeplus::tab_shape

@@ -6,7 +6,7 @@
 #include <cstddef>
 #include "geom.h"
 
-namespace fixedge::tab_edge {
+namespace edgeplus::tab_edge {
 
 // Where the favicon is.
 enum class Side {
@@ -67,4 +67,4 @@ struct CornerRadii {
   return Rect{stripX, rect.y, stripWidth, rect.height};
 }
 
-}  // namespace fixedge::tab_edge
+}  // namespace edgeplus::tab_edge

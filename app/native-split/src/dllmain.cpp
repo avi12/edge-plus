@@ -8,7 +8,7 @@
 #include "verify.h"
 #include "hooks.h"
 
-using namespace fixedge;
+using namespace edgeplus;
 
 namespace {
 

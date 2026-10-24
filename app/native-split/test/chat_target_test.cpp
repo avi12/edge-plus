@@ -3,8 +3,8 @@
 #include <cstring>
 #include "../src/chat_target.h"
 
-using namespace fixedge;
-using namespace fixedge::chat_target;
+using namespace edgeplus;
+using namespace edgeplus::chat_target;
 
 namespace {
 

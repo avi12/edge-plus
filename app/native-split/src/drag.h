@@ -15,7 +15,7 @@
 #include "tabrows.h"
 #include "state.h"
 
-namespace fixedge::drag {
+namespace edgeplus::drag {
 
 struct Session {
   bool isPressed = false;   // a grip is held, not yet past the drag threshold
@@ -268,4 +268,4 @@ inline void Release() {
       static_cast<int>(plan.direction));
 }
 
-}  // namespace fixedge::drag
+}  // namespace edgeplus::drag

@@ -2,7 +2,7 @@
 #include <cstdio>
 #include "../src/geom.h"
 
-using namespace fixedge;
+using namespace edgeplus;
 
 static_assert(Union(Rect{0, 0, 10, 10}, Rect{20, 5, 10, 10}) ==
                   Rect{0, 0, 30, 15},

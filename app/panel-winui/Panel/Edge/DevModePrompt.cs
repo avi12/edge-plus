@@ -11,9 +11,9 @@ namespace EdgePlus;
 // fully exited (exactly when the prompt is next checked). The waiting runs in a
 // headless re-run of the panel so it survives the window closing.
 internal static class DevModePrompt {
-  private const string WaiterMutex = @"Local\fix-edge.dev-mode-prompt";
+  private const string WaiterMutex = @"Local\edgeplus.dev-mode-prompt";
   private const string LockfileName = "lockfile";
-  private const string TemporaryExtension = ".fixedge-tmp";
+  private const string TemporaryExtension = ".edgeplus-tmp";
   private static readonly string[] s_snoozeKeyPath =
       ["extensions", "ui", "dev_mode_warning_snooze_end_time"];
   // A hundred years — "never ask again" in practice.

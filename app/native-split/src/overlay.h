@@ -10,7 +10,7 @@
 #include "motion.h"
 #include "theme_tone.h"
 
-namespace fixedge::overlay {
+namespace edgeplus::overlay {
 
 enum class Style : uint8_t {
   kPane,  // beside a pane
@@ -18,7 +18,7 @@ enum class Style : uint8_t {
   kSwap
 };
 
-inline constexpr wchar_t kWindowClass[] = L"FixEdgeDropPreview";
+inline constexpr wchar_t kWindowClass[] = L"EdgePlusDropPreview";
 inline constexpr UINT_PTR kTimerId = 1;
 inline constexpr unsigned kMoveMs = 90;
 inline constexpr UINT kFrameMs = 15;
@@ -238,4 +238,4 @@ inline void Remove() {
   UnregisterClassW(kWindowClass, ThisModule());
 }
 
-}  // namespace fixedge::overlay
+}  // namespace edgeplus::overlay

@@ -2,10 +2,10 @@ using Microsoft.Win32;
 
 namespace EdgePlus;
 
-// The registry checks write under a throwaway HKCU\Software\FixEdgeTest key,
+// The registry checks write under a throwaway HKCU\Software\EdgePlusTest key,
 // never the real Run key, and delete it afterwards.
 internal static class StartupEntryTests {
-  private const string TestRoot = @"Software\FixEdgeTest";
+  private const string TestRoot = @"Software\EdgePlusTest";
   private const string TestName = "Edge+ test";
 
   public static void Run() {

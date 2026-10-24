@@ -11,7 +11,7 @@
 #include "anim.h"
 #include "dividers.h"
 
-namespace fixedge::geometry {
+namespace edgeplus::geometry {
 
 inline Axis SplitAxis(void* mcv) {
   const bool isColumns =
@@ -125,4 +125,4 @@ inline void RestoreStockVisibility(void* mcv) {
   edge::InvalidateLayout(mcv);
 }
 
-}  // namespace fixedge::geometry
+}  // namespace edgeplus::geometry

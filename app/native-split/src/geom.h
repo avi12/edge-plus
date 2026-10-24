@@ -5,7 +5,7 @@
 #include <bit>
 #include <cstdint>
 
-namespace fixedge {
+namespace edgeplus {
 
 // docs/re/split-view-abi.md.
 struct Rect {
@@ -73,4 +73,4 @@ struct Size {
   return Rect{rect.x, rect.y - reach, rect.width, rect.height + 2 * reach};
 }
 
-}  // namespace fixedge
+}  // namespace edgeplus

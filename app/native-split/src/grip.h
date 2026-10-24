@@ -10,7 +10,7 @@
 #include "icons.h"
 #include "split_data.h"
 
-namespace fixedge::grip {
+namespace edgeplus::grip {
 
 struct Grip {
   void* button = nullptr;
@@ -103,4 +103,4 @@ inline void RemoveAll() {
   Grips().clear();
 }
 
-}  // namespace fixedge::grip
+}  // namespace edgeplus::grip

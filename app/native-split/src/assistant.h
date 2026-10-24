@@ -8,7 +8,7 @@
 #include "chat_target.h"
 #include "edge.h"
 
-namespace fixedge::assistant {
+namespace edgeplus::assistant {
 
 inline const char* Name() {
   return chat_target::kCopilotTarget.name;
@@ -88,4 +88,4 @@ inline void Apply(void* mcv) {
   edge::LayoutImmediately(edge::ViewRoot(mcv));
 }
 
-}  // namespace fixedge::assistant
+}  // namespace edgeplus::assistant

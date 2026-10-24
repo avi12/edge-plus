@@ -5,7 +5,7 @@
 #include <cstdio>
 #include "handles.h"
 
-namespace fixedge {
+namespace edgeplus {
 
 inline constexpr size_t kLogLineCapacity = 512;
 // The '\n' and terminator Log appends need the last two bytes.
@@ -53,4 +53,4 @@ inline void Log(const char* format, ...) noexcept {
   WriteFile(file.Get(), line, static_cast<DWORD>(length), &written, nullptr);
 }
 
-}  // namespace fixedge
+}  // namespace edgeplus

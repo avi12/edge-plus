@@ -8,7 +8,7 @@
 #include "geom.h"
 #include "pane_tree.h"
 
-namespace fixedge::dock {
+namespace edgeplus::dock {
 
 enum class Zone : uint8_t {
   kNone,      // nowhere to drop (over the dragged pane, or a no-op)
@@ -293,4 +293,4 @@ inline bool ApplyDrop(Node& tree, int pane, Source source, Zone zone,
   return ResolveDrop(tree, layout, point, incoming, Source::kIncoming, shown);
 }
 
-}  // namespace fixedge::dock
+}  // namespace edgeplus::dock

@@ -12,7 +12,7 @@
 #include "edge.h"
 #include "log.h"
 
-namespace fixedge::theme {
+namespace edgeplus::theme {
 
 // An extension id, or empty for the default theme.
 struct ThemeId {
@@ -161,4 +161,4 @@ inline void ApplyConfig(void* hwnd, const config::Wire& wire) {
   }
 }
 
-}  // namespace fixedge::theme
+}  // namespace edgeplus::theme

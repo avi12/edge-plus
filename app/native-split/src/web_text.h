@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-namespace fixedge::web_text {
+namespace edgeplus::web_text {
 
 [[nodiscard]] inline std::string TruncateUtf8(std::string_view text,
                                               size_t maxBytes) {
@@ -152,4 +152,4 @@ inline constexpr char kFalseField[] = "0";
   return JsStringLiteral(answer);
 }
 
-}  // namespace fixedge::web_text
+}  // namespace edgeplus::web_text

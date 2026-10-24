@@ -12,7 +12,7 @@
 #include "split_ops.h"
 #include "state.h"
 
-namespace fixedge::offer {
+namespace edgeplus::offer {
 
 // UpdateTabInSplit's flag as OpenTabInCurrentSplitWindow passes it: the picked
 // tab takes the member's place and the member's tab closes.
@@ -184,4 +184,4 @@ inline void CloseOfferPane() {
   }
 }
 
-}  // namespace fixedge::offer
+}  // namespace edgeplus::offer

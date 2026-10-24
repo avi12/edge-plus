@@ -3,7 +3,7 @@
 #pragma once
 #include "edge.h"
 
-namespace fixedge::tabs {
+namespace edgeplus::tabs {
 
 // `tabIndex` must be a background tab, never the active one or one shown in
 // another pane, or its content would be stolen from there.
@@ -33,4 +33,4 @@ inline bool FillPane(void* browserView, void* container, int tabIndex) {
   return true;
 }
 
-}  // namespace fixedge::tabs
+}  // namespace edgeplus::tabs

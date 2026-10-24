@@ -2,7 +2,7 @@
 #include <cstdio>
 #include "../src/followed_pages.h"
 
-using fixedge::followed_pages::Follows;
+using edgeplus::followed_pages::Follows;
 
 namespace {
 

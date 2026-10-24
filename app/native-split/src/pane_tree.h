@@ -10,7 +10,7 @@
 #include <vector>
 #include "geom.h"
 
-namespace fixedge {
+namespace edgeplus {
 
 enum class Axis : uint8_t {
   kHorizontal,
@@ -871,4 +871,4 @@ inline bool EqualizeSplit(Node& root, const std::vector<int>& path) {
   return true;
 }
 
-}  // namespace fixedge
+}  // namespace edgeplus

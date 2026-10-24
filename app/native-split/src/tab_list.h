@@ -3,7 +3,7 @@
 #include <string>
 #include "edge.h"
 
-namespace fixedge::tab_list {
+namespace edgeplus::tab_list {
 
 inline std::string TabIdOf(void* contents) {
   return std::to_string(reinterpret_cast<uintptr_t>(contents));
@@ -28,4 +28,4 @@ inline void* ActiveContents(void* mcv) {
   return tab ? edge::TabContents(tab) : nullptr;
 }
 
-}  // namespace fixedge::tab_list
+}  // namespace edgeplus::tab_list

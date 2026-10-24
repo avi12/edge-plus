@@ -3,8 +3,8 @@
 #include <vector>
 #include "../src/motion.h"
 
-using namespace fixedge;
-using namespace fixedge::motion;
+using namespace edgeplus;
+using namespace edgeplus::motion;
 
 namespace {
 

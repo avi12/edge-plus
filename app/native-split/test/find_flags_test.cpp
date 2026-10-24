@@ -4,7 +4,7 @@
 #include "../src/find_flags.h"
 #include "../src/find_text.h"
 
-using namespace fixedge::find_flags;
+using namespace edgeplus::find_flags;
 
 namespace {
 
@@ -25,7 +25,7 @@ void CheckTable() {
   std::string letters;
   for (const FlagInfo& info : kFlags) {
     letters.push_back(info.letter);
-    Check(fixedge::find_text::AreRegExpFlags(std::string(1, info.letter)),
+    Check(edgeplus::find_text::AreRegExpFlags(std::string(1, info.letter)),
           "every offered flag is one the typed form takes");
     const std::string title = SwitchTitle(info);
     const std::string ending = std::string(" (") + info.letter + ")";
@@ -103,7 +103,7 @@ void CheckMerge() {
 }
 
 void CheckScriptFlags() {
-  using fixedge::find_text::ScriptFlags;
+  using edgeplus::find_text::ScriptFlags;
   Check(ScriptFlags("") == "gm",
         "a typed /pattern/ is every match, line edges");
   Check(ScriptFlags("s") == "gms",
@@ -113,7 +113,7 @@ void CheckScriptFlags() {
 }
 
 void CheckDecoration() {
-  using fixedge::find_text::RegExpDecoration;
+  using edgeplus::find_text::RegExpDecoration;
   Check(RegExpDecoration("pric", DefaultFlags()).prefix == "/",
         "the pattern opens with a slash");
   Check(RegExpDecoration("pric", DefaultFlags()).suffix == "/gm",

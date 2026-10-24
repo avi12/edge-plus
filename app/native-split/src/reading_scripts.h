@@ -9,14 +9,14 @@
 #include "reading_themes.h"
 #include "web_text.h"
 
-namespace fixedge::reading_scripts {
+namespace edgeplus::reading_scripts {
 
 inline constexpr char kGroupLabel[] = "Themes for";
 inline constexpr char kLightLabel[] = "Light mode";
 inline constexpr char kDarkLabel[] = "Dark mode";
 
 // The page script's state between runs.
-inline constexpr char kStateKey[] = "__fixedgeReadingMode";
+inline constexpr char kStateKey[] = "__edgeplusReadingMode";
 
 // Null until reading mode has built the flyout.
 inline constexpr char kPaneJs[] = R"JS(
@@ -65,14 +65,14 @@ inline constexpr char kPaneJs[] = R"JS(
       if (!group) {
         return;
       }
-      group.setAttribute("data-fixedge-marks", "");
-      root.querySelectorAll(".fixedge-side").forEach(function (button) {
+      group.setAttribute("data-edgeplus-marks", "");
+      root.querySelectorAll(".edgeplus-side").forEach(function (button) {
         var isOn = button.dataset.side === state.side;
         button.setAttribute("aria-checked", String(isOn));
         button.tabIndex = isOn ? 0 : -1;
       });
-      root.querySelectorAll(".fixedge-check").forEach(function (mark) { mark.remove(); });
-      var source = root.querySelector(".checked-indicator:not(.fixedge-check)");
+      root.querySelectorAll(".edgeplus-check").forEach(function (mark) { mark.remove(); });
+      var source = root.querySelector(".checked-indicator:not(.edgeplus-check)");
       if (source) {
         state.markSource = source.cloneNode(true);
       }
@@ -80,7 +80,7 @@ inline constexpr char kPaneJs[] = R"JS(
       var box = radio && radio.closest("fluent-field").querySelector(".color-button-container");
       if (state.markSource && box) {
         var mark = state.markSource.cloneNode(true);
-        mark.classList.add("fixedge-check");
+        mark.classList.add("edgeplus-check");
         box.append(mark);
       }
     }
@@ -95,37 +95,37 @@ inline constexpr char kPaneJs[] = R"JS(
     }
 
     function addSwitch(root) {
-      if (!root.querySelector(".fixedge-style")) {
+      if (!root.querySelector(".edgeplus-style")) {
         var style = document.createElement("style");
-        style.className = "fixedge-style";
+        style.className = "edgeplus-style";
         style.textContent =
-          ".fixedge-mode-switch { display: inline-flex; padding: 2px; margin: 2px 0 6px;" +
+          ".edgeplus-mode-switch { display: inline-flex; padding: 2px; margin: 2px 0 6px;" +
           " border: var(--smtc-stroke-width-default, 1px) solid var(--smtc-stroke-ctrl-on-outline-rest);" +
           " border-radius: var(--smtc-corner-ctrl-rest); background: var(--smtc-background-ctrl-neutral-rest); }" +
-          ".fixedge-side { font: inherit; font-size: var(--smtc-text-global-caption1-font-size);" +
+          ".edgeplus-side { font: inherit; font-size: var(--smtc-text-global-caption1-font-size);" +
           " line-height: var(--smtc-text-global-caption1-line-height); padding: 2px var(--smtc-padding-ctrl-horizontal-default);" +
           " border: 0; border-radius: var(--smtc-corner-ctrl-sm-rest); cursor: pointer;" +
           " color: var(--smtc-foreground-ctrl-neutral-secondary-rest); background: transparent; }" +
-          ".fixedge-side:hover { background: var(--smtc-background-ctrl-subtle-hover); }" +
-          ".fixedge-side[aria-checked=\"true\"] { color: var(--smtc-foreground-ctrl-on-brand-rest);" +
+          ".edgeplus-side:hover { background: var(--smtc-background-ctrl-subtle-hover); }" +
+          ".edgeplus-side[aria-checked=\"true\"] { color: var(--smtc-foreground-ctrl-on-brand-rest);" +
           " background: var(--smtc-background-ctrl-brand-rest); font-weight: 600; }" +
-          ".fixedge-side:focus-visible { outline: var(--smtc-ctrl-focus-outer-stroke-width) solid" +
+          ".edgeplus-side:focus-visible { outline: var(--smtc-ctrl-focus-outer-stroke-width) solid" +
           " var(--smtc-ctrl-focus-outer-stroke); outline-offset: 1px; }" +
-          "[data-fixedge-marks] .checked-indicator:not(.fixedge-check) { display: none; }";
+          "[data-edgeplus-marks] .checked-indicator:not(.edgeplus-check) { display: none; }";
         root.append(style);
       }
       var title = root.querySelector(".themes-container .title-font");
-      if (!title || root.querySelector(".fixedge-mode-switch")) {
+      if (!title || root.querySelector(".edgeplus-mode-switch")) {
         return;
       }
       var bar = document.createElement("div");
-      bar.className = "fixedge-mode-switch";
+      bar.className = "edgeplus-mode-switch";
       bar.setAttribute("role", "radiogroup");
       bar.setAttribute("aria-label", config.group);
       ["light", "dark"].forEach(function (side) {
         var button = document.createElement("button");
         button.type = "button";
-        button.className = "fixedge-side";
+        button.className = "edgeplus-side";
         button.dataset.side = side;
         button.setAttribute("role", "radio");
         button.textContent = side === "light" ? config.lightLabel : config.darkLabel;
@@ -227,8 +227,8 @@ inline constexpr char kPaneJs[] = R"JS(
         }
         state.observedRoot = root;
         state.observer = new MutationObserver(function () {
-          var isMissing = !root.querySelector(".fixedge-mode-switch") ||
-              !root.querySelector(".fixedge-check");
+          var isMissing = !root.querySelector(".edgeplus-mode-switch") ||
+              !root.querySelector(".edgeplus-check");
           if (window[key] === state && state.side && isMissing) {
             ensure(root);
           }
@@ -257,11 +257,11 @@ inline constexpr char kPaneJs[] = R"JS(
   script += R"JS(
     var root = pane();
     if (root) {
-      root.querySelectorAll(".fixedge-mode-switch, .fixedge-style, .fixedge-check")
+      root.querySelectorAll(".edgeplus-mode-switch, .edgeplus-style, .edgeplus-check")
           .forEach(function (node) { node.remove(); });
       var group = root.querySelector("fluent-radio-group");
       if (group) {
-        group.removeAttribute("data-fixedge-marks");
+        group.removeAttribute("data-edgeplus-marks");
       }
     }
     if (window[key] && window[key].observer) {
@@ -274,4 +274,4 @@ inline constexpr char kPaneJs[] = R"JS(
   return script;
 }
 
-}  // namespace fixedge::reading_scripts
+}  // namespace edgeplus::reading_scripts

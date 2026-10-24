@@ -3,7 +3,7 @@
 #include <cstring>
 #include "../src/reading_themes.h"
 
-using namespace fixedge::reading_themes;
+using namespace edgeplus::reading_themes;
 
 namespace {
 
