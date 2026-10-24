@@ -21,6 +21,15 @@ inline constinit bool g_isSquared = false;
 // The tab GetPath is outlining right now, so the Skia calls it makes can be told
 // from every other.
 inline constinit void* g_outlinedTab = nullptr;
+// Whether that tab's trailing top corner is cut (tab_edge::IsTrailingCornerCut);
+// square when not. Every way GetPath outlines it follows this.
+inline constinit bool g_isTrailingCut = true;
+
+inline bool IsTrailingCutFor(void* tabView) {
+  void* tabObject = edge::TabObjectOfView(tabView);
+  return tab_edge::IsTrailingCornerCut(edge::IsTabObjectInSplit(tabObject),
+                                       edge::IsTheActiveTabObject(tabObject));
+}
 
 using GetPath_t = void*(__fastcall*)(void*, void*, int, float, const int*);
 inline constinit GetPath_t o_get_path = nullptr;
@@ -29,6 +38,7 @@ inline void* __fastcall h_get_path(void* styleViews, void* outPath,
                                    int pathType, float scale,
                                    const int* isUnscaled) {
   g_outlinedTab = g_isSquared ? edge::TabViewOfStyleViews(styleViews) : nullptr;
+  g_isTrailingCut = !g_outlinedTab || IsTrailingCutFor(g_outlinedTab);
   void* result = o_get_path(styleViews, outPath, pathType, scale, isUnscaled);
   g_outlinedTab = nullptr;
   return result;
@@ -50,12 +60,9 @@ inline void __fastcall h_set_rect_xy(void* roundedRect, const void* skRect,
     return;
   }
   const tab_edge::Side leading = tab_edge::LeadingSide(edge::IsUiRightToLeft());
-  void* tabObject = edge::TabObjectOfView(g_outlinedTab);
-  const bool isTrailingCut =
-      tab_edge::IsTrailingCornerCut(edge::IsTabObjectInSplit(tabObject),
-                                    edge::IsTheActiveTabObject(tabObject));
   edge::SetRoundedRectRadii(
-      roundedRect, skRect, tab_edge::RadiiFor(leading, radiusX, isTrailingCut));
+      roundedRect, skRect,
+      tab_edge::RadiiFor(leading, radiusX, g_isTrailingCut));
 }
 
 using ArcTo_t = void*(__fastcall*)(void*, uint64_t, float, int, uint8_t,
@@ -135,7 +142,11 @@ inline void* __fastcall h_arc_to(void* path, uint64_t radii, float rotation,
       target.x -= radius.x;
       break;
     case OutlineArc::kTopRight:
-      target.y += TrailingCut();
+      // Uncut, the top edge already reached the corner (h_line_to): this is
+      // the straight drop down the trailing side.
+      if (g_isTrailingCut) {
+        target.y += TrailingCut();
+      }
       break;
     case OutlineArc::kRightFoot:
       target.x -= radius.x;
@@ -154,7 +165,8 @@ using LineTo_t = void*(__fastcall*)(void*, uint64_t);
 inline constinit LineTo_t o_line_to = nullptr;
 
 // SkPath::lineTo, for the one call in GetPath that draws the tab's top edge up
-// to its top-right corner: it stops a cut's length short.
+// to where its top-right arc starts: it stops a cut's length short, or runs on
+// to the corner itself when the corner is square.
 inline void* __fastcall h_line_to(void* path, uint64_t point) {
   const bool isTopEdge =
       g_outlinedTab && !edge::IsUiRightToLeft() &&
@@ -164,7 +176,7 @@ inline void* __fastcall h_line_to(void* path, uint64_t point) {
     return o_line_to(path, point);
   }
   PointF target = UnpackPoint(point);
-  target.x -= TrailingCut();
+  target.x += g_isTrailingCut ? -TrailingCut() : g_cornerRadius;
   return o_line_to(path, PackPoint(target));
 }
 
