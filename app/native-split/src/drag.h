@@ -117,6 +117,48 @@ inline void Cancel() {
   }
 }
 
+// The window's tab list, where a pane's drag goes on as Edge's own tab drag
+// (tabdrag::TakeOverPaneDrag).
+inline bool IsOverTabList(void* context, Point screenPoint) {
+  return context && Contains(edge::ViewBoundsInScreen(context), screenPoint);
+}
+
+inline Point RootToScreen(void* mcv, Point point) {
+  edge::ConvertPointToScreen(edge::ViewRoot(mcv), &point);
+  return point;
+}
+
+// A grown split's pane dragged onto its window's tab list: a pair is Edge's to
+// take apart, so only a grown split's pane goes there.
+inline bool IsReadyForTabList(Point rootLocation) {
+  const bool isGrownSplitDrag =
+      g_session.isDragging &&
+      edge::McvActiveSplitPanes(g_session.mcv) > tabrows::kPairedMembers;
+  if (!isGrownSplitDrag) {
+    return false;
+  }
+  void* context =
+      edge::BrowserViewDragContext(edge::McvBrowserView(g_session.mcv));
+  return IsOverTabList(context, RootToScreen(g_session.mcv, rootLocation));
+}
+
+struct HandedOff {
+  void* mcv = nullptr;
+  int pane = -1;
+};
+
+// Ends the pane's drag with no drop and no relayout: the pane is about to
+// leave the split for real, which lays everything out anew.
+inline HandedOff HandOff() {
+  const HandedOff handedOff{g_session.mcv, g_session.pane};
+  g_session = Session{};
+  overlay::Hide();
+  g_heldOut = HeldOutPane{};
+  tabrows::SetDetachPreview(tabrows::kNoDetachPreview, false);
+  Log("[drag] pane %d handed to the tab list", handedOff.pane);
+  return handedOff;
+}
+
 inline void Begin(void* mcv, int pane, Point rootLocation) {
   g_session = Session{};
   g_session.isPressed = true;

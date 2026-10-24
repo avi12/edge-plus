@@ -296,6 +296,9 @@ inline constexpr uintptr_t View_GetBoundsInScreen = 0x28c8bc0;
 // static View::ConvertPointFromScreen(const View* to, gfx::Point* in out):
 // screen DIPs -> `to`'s coordinates.
 inline constexpr uintptr_t View_ConvertPointFromScreen = 0x2880252;
+// static View::ConvertPointToScreen(const View* from, gfx::Point* in out):
+// `from`'s coordinates -> screen DIPs.
+inline constexpr uintptr_t View_ConvertPointToScreen = 0x28c8ca6;
 // gfx::Size View::GetPreferredSize(this, const SizeBounds&) (returned through
 // the hidden out pointer); zeroed SizeBounds = unbounded.
 inline constexpr uintptr_t View_GetPreferredSize = 0x0ff4dc4;
@@ -427,6 +430,33 @@ inline constexpr uintptr_t TabDragController_EndDrag = 0xa782ec0;
 // void EventTracker::OnEvent(this, const ui::Event&): the drag's key watcher.
 // Escape cancels the drag; ANY other key press or release ends it in place.
 inline constexpr uintptr_t EventTracker_OnEvent = 0xa78bc10;
+// bool TabDragController::SetCapture(this, TabDragContext*): hands the mouse
+// capture to that strip (its widget's Widget::SetCapture(context)), as the
+// attach of a tab dragged in from another window does. From then on views
+// sends the strip the drags and the release.
+inline constexpr uintptr_t TabDragController_SetCapture = 0xa783232;
+// TabStrip* BrowserView::tabstrip(this): the strip the window's tab list
+// draws, vertical tabs included.
+inline constexpr uintptr_t BrowserView_tabstrip = 0x2930564;
+// TabDragContext* TabStrip::GetDragContext(this).
+inline constexpr uintptr_t TabStrip_GetDragContext = 0x30ba8ee;
+// void TabStrip::StopAnimating(this): its TabContainerImpl's
+// CompleteAnimationAndLayout. TabStrip::MaybeStartDrag starts nothing while the
+// strip animates (TabStrip::IsAnimatingInTabStrip), as it does right after a
+// tab moved or was activated.
+inline constexpr uintptr_t TabStrip_StopAnimating = 0x2afe282;
+// ui::MouseEvent::MouseEvent(this, EventType, const gfx::Point* location,
+// const gfx::Point* root_location, base::TimeTicks, int flags,
+// int changed_button_flags, const PointerDetails*).
+inline constexpr uintptr_t MouseEvent_ctor = 0x2c312e2;
+// ui::PointerDetails::PointerDetails(this): a mouse's.
+inline constexpr uintptr_t PointerDetails_ctor = 0xb78e19a;
+// ui::Event::~Event(this): all a MouseEvent needs (Tab::OnMousePressed ends
+// its own synthesized one so).
+inline constexpr uintptr_t Event_dtor = 0x109ad5a;
+// static base::TimeTicks base::TimeTicks::Now() (through the hidden out
+// pointer).
+inline constexpr uintptr_t TimeTicks_Now = 0xfe1850;
 
 // --- the dividers between panes (docs/re/close-pane.md) ---
 // EdgeMultiContentsResizeArea(this, MultiContentsView*): the 2-pane split's
@@ -1157,6 +1187,27 @@ inline constexpr int TABDRAG_end_complete = 0;
 // TabStripModel* GetTabStripModel(this).
 inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetTabForContents = 0x3a0;
 inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetTabStripModel = 0x3c0;
+// TabDragController* GetDragController(this), null when no drag runs.
+inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetDragController = 0x3c8;
+
+// --- a press on a tab, as Tab::OnMousePressed makes it (docs/re/tab-drag.md) ---
+// A tab view's TabSlotController* (its TabStrip, seen through that base).
+inline constexpr uintptr_t TABVIEW_controller = 0x530;
+// TabSlotController virtuals: ui::ListSelectionModel GetSelectionModel(this)
+// (through the hidden out pointer) and void MaybeStartDrag(this, TabSlotView*,
+// const ui::LocatedEvent&, ui::ListSelectionModel by value: the caller's copy,
+// which the callee destroys). MaybeStartDrag drags the SELECTED tabs; the
+// event's location is the grab point in the tab's coordinates.
+inline constexpr uintptr_t SLOTCONTROLLER_vtbl_GetSelectionModel = 0x178;
+inline constexpr uintptr_t SLOTCONTROLLER_vtbl_MaybeStartDrag = 0x220;
+inline constexpr size_t LISTSELECTIONMODEL_size = 0x38;
+// ui::MouseEvent: 0x118 bytes, its gfx::PointerDetails (0x48) at its end.
+inline constexpr size_t MOUSEEVENT_size = 0x118;
+inline constexpr size_t POINTERDETAILS_size = 0x48;
+inline constexpr int EVENT_type_mouse_pressed = 1;
+// ui::EF_LEFT_MOUSE_BUTTON, in an event's flags (+0x50) and as the changed
+// button.
+inline constexpr int EVENT_flag_left_mouse_button = 0x800;
 
 // --- the tab list's layout (tabrows.h) ---
 // TabStripLayoutHelper's slots, {data, count}: TABSLOT_size bytes each, a type

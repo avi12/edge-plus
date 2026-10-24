@@ -240,7 +240,13 @@ inline bool __fastcall h_pressed(void* button, const void* event) {
 
 inline bool __fastcall h_dragged(void* button, const void* event) {
   if (grip::IsGrip(button)) {
-    drag::Move(edge::EventRootLocation(event));
+    tabdrag::OnGripDragged(edge::EventRootLocation(event));
+    // Handed to the tab list, which now holds the capture: the grip sees no
+    // release, so it lets go here instead of staying drawn pressed.
+    if (!drag::IsActive()) {
+      o_capture_lost(button);
+      return true;
+    }
   }
   return o_dragged(button, event);
 }

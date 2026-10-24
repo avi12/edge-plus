@@ -1,8 +1,12 @@
-// tabdrag.h — Alt + drag one tab into a split: hovering a split's tab shows that
-// split, and over it the docking preview shows where the tab would land as a
-// new pane. Without Alt the drag is Edge's own. UI thread. docs/re/tab-drag.md.
+// tabdrag.h — tab drags and split panes. Alt + drag one tab into a split:
+// hovering a split's tab shows that split, and over it the docking preview
+// shows where the tab would land as a new pane. A pane dragged by its grip onto
+// the tab list goes on as Edge's own drag of its tab, and docks the same way
+// back over the split. Otherwise the drag is Edge's own. UI thread.
+// docs/re/tab-drag.md.
 #pragma once
 #include <windows.h>
+#include <algorithm>
 #include <optional>
 #include <utility>
 #include "channel.h"
@@ -17,10 +21,10 @@
 namespace fixedge::tabdrag {
 
 struct Session {
-  bool isAltMode = false;
+  bool isDocking = false;  // the moves preview a dock, Edge's drag is paused
   void* tsm = nullptr;
   void* draggedContents = nullptr;
-  void* splitContents = nullptr;  // the split tab hovered into view, if any
+  void* splitContents = nullptr;  // the split shown for the dock, if any
   void* mcv = nullptr;            // the split view the plan is for
   dock::Plan plan;                // what releasing now would do
 };
@@ -35,6 +39,19 @@ struct Drop {
   Node tree;  // the split's layout with the dragged tab as its newest pane
 };
 inline constinit std::optional<Drop> g_drop;
+
+// A pane whose grip drag reached the tab list: from there its tab is dragged by
+// Edge (TakeOverPaneDrag). Off the tab list the drag docks as an Alt drag does;
+// a cancelled drag puts the pane back.
+struct PaneOrigin {
+  void* tsm = nullptr;
+  void* mcv = nullptr;
+  void* context = nullptr;  // the tab strip running the drag
+  void* draggedContents = nullptr;
+  void* splitContents = nullptr;  // a pane that stayed: it shows the split
+  Node tree;  // the split as it was, the pane renumbered as its newest
+};
+inline constinit std::optional<PaneOrigin> g_paneOrigin;
 
 // A drag only advances on pointer moves, so Alt pressed or released while the
 // pointer rests would change nothing until it moved; the key event replays this.
@@ -63,6 +80,13 @@ inline bool CanDock(void* controller, void* tsm) {
   return tab && !edge::TabIsSplit(tab);
 }
 
+// The pane whose drag the strip `context` is running, or null.
+inline PaneOrigin* PaneDraggedBy(const void* context) {
+  const bool isPaneDrag =
+      g_paneOrigin.has_value() && context && g_paneOrigin->context == context;
+  return isPaneDrag ? &g_paneOrigin.value() : nullptr;
+}
+
 // Skips the dragged tab itself; -1 if none.
 inline int TabUnder(void* context, void* tsm, Point screenPoint) {
   const int tabCount = edge::TabCount(tsm);
@@ -80,8 +104,7 @@ inline int TabUnder(void* context, void* tsm, Point screenPoint) {
   return -1;
 }
 
-inline void ShowSplitUnder(void* context, Point screenPoint) {
-  const int index = TabUnder(context, g_session.tsm, screenPoint);
+inline void ShowSplitAt(int index) {
   void* tab = edge::TabModelAt(g_session.tsm, index);
   const bool isHiddenSplitTab =
       tab && edge::TabIsSplit(tab) && tab != edge::ActiveTab(g_session.tsm);
@@ -91,6 +114,10 @@ inline void ShowSplitUnder(void* context, Point screenPoint) {
   edge::ActivateTabAt(g_session.tsm, index);
   g_session.splitContents = edge::TabWebContentsAt(g_session.tsm, index);
   Log("[tabdrag] showing the split of tab %d", index);
+}
+
+inline void ShowSplitUnder(void* context, Point screenPoint) {
+  ShowSplitAt(TabUnder(context, g_session.tsm, screenPoint));
 }
 
 inline void PreviewDock(Point screenPoint) {
@@ -122,7 +149,7 @@ inline void PreviewDock(Point screenPoint) {
 }
 
 // Edge's drag expects the dragged tab active again.
-inline void LeaveAltMode() {
+inline void LeaveDockMode() {
   overlay::Hide();
   const int draggedIndex =
       edge::IndexOfWebContents(g_session.tsm, g_session.draggedContents);
@@ -131,7 +158,7 @@ inline void LeaveAltMode() {
     edge::ActivateTabAt(g_session.tsm, draggedIndex);
   }
   g_session = Session{};
-  Log("[tabdrag] Alt released: Edge's drag again");
+  Log("[tabdrag] Edge's drag again");
 }
 
 inline void Cancel() {
@@ -139,12 +166,80 @@ inline void Cancel() {
   g_session = Session{};
   g_lastMove = LastMove{};
   g_drop.reset();
+  g_paneOrigin.reset();
+}
+
+// --- a pane's grip drag that reaches the tab list -----------------------------
+
+// Takes the pane out of its split and starts Edge's own drag of its tab, as a
+// press on that tab would, then hands the strip the mouse capture as the
+// attach of a tab dragged in from another window does: from here views sends
+// the strip the moves and the release. Returns false if no drag started.
+inline bool TakeOverPaneDrag(void* mcv, int pane, Point rootLocation) {
+  void* tsm = edge::McvTabStripModel(mcv);
+  void* context = edge::BrowserViewDragContext(edge::McvBrowserView(mcv));
+  const int panes = edge::McvActiveSplitPanes(mcv);
+  const bool hasStrip = tsm && context && pane < panes;
+  if (!hasStrip) {
+    return false;
+  }
+  Node tree = geometry::LiveTree(mcv, panes);
+  RenumberAsNewest(tree, pane, panes - 1);
+  void* draggedContents =
+      edge::ContainerWebContents(edge::McvContainerAt(mcv, pane));
+  void* splitContents =
+      edge::ContainerWebContents(edge::McvContainerAt(mcv, pane == 0 ? 1 : 0));
+  if (!split_ops::DetachPane(mcv, pane)) {
+    return false;
+  }
+  // Like a press, which selects the tab: Edge drags the selected tabs.
+  edge::ActivateTabAt(tsm, edge::IndexOfWebContents(tsm, draggedContents));
+  void* tabView = edge::DragContextTabFor(context, draggedContents);
+  if (!tabView) {
+    Log("[tabdrag] pane %d left its split, but its tab has no view", pane);
+    return false;
+  }
+  // The tab list animates the tab out of the split's row, and no drag starts
+  // while it does. Ending that also puts the tab where it is going.
+  edge::TabStripStopAnimating(
+      edge::BrowserViewTabStrip(edge::McvBrowserView(mcv)));
+  Point grabPoint = rootLocation;
+  edge::ConvertPoint(edge::ViewRoot(tabView), tabView, &grabPoint);
+  const Rect tabBounds = edge::ViewBounds(tabView);
+  grabPoint.x = std::clamp(grabPoint.x, 0, std::max(tabBounds.width - 1, 0));
+  grabPoint.y = tabBounds.height / 2;
+  edge::StartTabDrag(tabView, grabPoint);
+  void* controller = edge::DragContextController(context);
+  if (!controller) {
+    Log("[tabdrag] pane %d left its split, but Edge started no drag", pane);
+    return false;
+  }
+  edge::TabDragSetCapture(controller, context);
+  g_paneOrigin = PaneOrigin{
+      tsm, mcv, context, draggedContents, splitContents, std::move(tree)};
+  const Rect listBounds = edge::ViewBoundsInScreen(context);
+  Log("[tabdrag] pane %d is a dragged tab now (grab %d,%d; list %d,%d %dx%d)",
+      pane, grabPoint.x, grabPoint.y, listBounds.x, listBounds.y,
+      listBounds.width, listBounds.height);
+  return true;
+}
+
+// A grip's every drag move (hooks.h): the pane's own drag until it reaches the
+// tab list, which then takes it over.
+inline void OnGripDragged(Point rootLocation) {
+  if (!drag::IsReadyForTabList(rootLocation)) {
+    drag::Move(rootLocation);
+    return;
+  }
+  const drag::HandedOff handedOff = drag::HandOff();
+  TakeOverPaneDrag(handedOff.mcv, handedOff.pane, rootLocation);
 }
 
 // --- the detours -------------------------------------------------------------
 
-// TabDragController::ContinueDragging: in Alt mode we take the move (Edge's
-// would reorder or tear off the tab), else Edge's own.
+// TabDragController::ContinueDragging: docking (Alt held, or a pane's drag off
+// the tab list) we take the move, since Edge's would reorder or tear off the
+// tab; otherwise Edge's own.
 using ContinueDragging_t = int(__fastcall*)(void*, const Point*);
 inline constinit ContinueDragging_t o_continue_dragging = nullptr;
 inline int __fastcall h_continue_dragging(void* controller,
@@ -152,21 +247,29 @@ inline int __fastcall h_continue_dragging(void* controller,
   g_lastMove = LastMove{controller, *screenPoint};
   void* context = edge::DragContext(controller);
   void* tsm = context ? edge::DragContextTabStripModel(context) : nullptr;
-  const bool isAltDock = tsm && IsAltHeld() && CanDock(controller, tsm);
-  if (!isAltDock) {
-    if (g_session.isAltMode) {
-      LeaveAltMode();
+  const PaneOrigin* pane = PaneDraggedBy(context);
+  const bool isPaneOffTabList =
+      pane && !drag::IsOverTabList(context, *screenPoint);
+  const bool isDock =
+      tsm && (IsAltHeld() || isPaneOffTabList) && CanDock(controller, tsm);
+  if (!isDock) {
+    if (g_session.isDocking) {
+      LeaveDockMode();
     }
     return o_continue_dragging(controller, screenPoint);
   }
-  if (!g_session.isAltMode) {
+  if (!g_session.isDocking) {
     g_session = Session{};
-    g_session.isAltMode = true;
+    g_session.isDocking = true;
     g_session.tsm = tsm;
     g_session.draggedContents = edge::DraggedContents(controller, 0);
-    Log("[tabdrag] Alt held: dock mode");
+    Log("[tabdrag] dock mode (%s)", isPaneOffTabList ? "a pane" : "Alt");
   }
-  ShowSplitUnder(context, *screenPoint);
+  if (isPaneOffTabList) {
+    ShowSplitAt(edge::IndexOfWebContents(tsm, pane->splitContents));
+  } else {
+    ShowSplitUnder(context, *screenPoint);
+  }
   PreviewDock(*screenPoint);
   return 0;
 }
@@ -176,19 +279,40 @@ inline int __fastcall h_continue_dragging(void* controller,
 using EndDrag_t = void(__fastcall*)(void*, int);
 inline constinit EndDrag_t o_end_drag = nullptr;
 inline void __fastcall h_end_drag(void* controller, int reason) {
-  const bool isDropping = g_session.isAltMode &&
-                          reason == edge155::off::TABDRAG_end_complete &&
-                          IsAltHeld() && g_session.splitContents &&
-                          g_session.plan.zone != dock::Zone::kNone;
+  PaneOrigin* pane = PaneDraggedBy(edge::DragContext(controller));
+  const bool isPaneDrag = pane != nullptr;
+  const bool isReleased = reason == edge155::off::TABDRAG_end_complete;
+  const bool hasDockTarget = g_session.isDocking && g_session.splitContents &&
+                             g_session.plan.zone != dock::Zone::kNone;
+  const bool isDropping =
+      isReleased && hasDockTarget && (IsAltHeld() || isPaneDrag);
+  // As before the tab list took the drag over: let go anywhere but on a dock
+  // target and the pane stays a tab of its own (where Edge has its tab); Esc,
+  // or a lost capture, puts it back.
+  const bool isPuttingPaneBack = isPaneDrag && !isReleased;
   if (isDropping) {
     g_drop = Drop{g_session.tsm, g_session.mcv, g_session.draggedContents,
                   g_session.splitContents, std::move(g_session.plan.result)};
+  } else if (isPuttingPaneBack) {
+    g_drop = Drop{pane->tsm, pane->mcv, pane->draggedContents,
+                  pane->splitContents, std::move(pane->tree)};
+  }
+  if (isPaneDrag) {
+    const char* outcome = "a tab of its own";
+    if (isDropping) {
+      outcome = "docked";
+    } else if (isPuttingPaneBack) {
+      outcome = "the pane goes back";
+    }
+    Log("[tabdrag] the pane's tab drag ended (reason %d): %s", reason, outcome);
+    g_paneOrigin.reset();
   }
   overlay::Hide();
   g_session = Session{};
   g_lastMove = LastMove{};
   o_end_drag(controller, reason);
-  if (isDropping) {
+  const bool isDropQueued = isDropping || isPuttingPaneBack;
+  if (isDropQueued) {
     channel::Post(channel::CodeOf(channel::Command::kTabDrop));
   }
 }
