@@ -163,6 +163,27 @@ void RunChecks() {
     }
     Check(sum == 30, "panes still tile the tiny window exactly");
   }
+  // A pane that left the split and came back as its newest pane keeps its
+  // place: H[0 V[1 2] 3] with pane 1 back as pane 3 is H[0 V[3 1] 2].
+  {
+    Node tree = FlatTree(3, Axis::kHorizontal);
+    SplitPane(tree, 1, Direction::kDown, 3);
+    std::swap(tree.children[1].children[1].leaf,
+              tree.children[2].leaf);  // H[0 V[1 2] 3]
+    Check(Order(tree) == std::vector<int>{0, 1, 2, 3}, "the starting tree");
+    const std::string before = Layout(tree, 900, 600);
+    RenumberAsNewest(tree, 1, 3);
+    Check(Order(tree) == std::vector<int>{0, 3, 1, 2},
+          "the returning pane is the newest, the later ones one earlier");
+    Check(Layout(tree, 900, 600) ==
+              "0:[0,0,300,600] 3:[300,0,300,300] 1:[300,300,300,300] "
+              "2:[600,0,300,600] ",
+          "every pane keeps its rect");
+    Check(before ==
+              "0:[0,0,300,600] 1:[300,0,300,300] 2:[300,300,300,300] "
+              "3:[600,0,300,600] ",
+          "the rects it started from");
+  }
 }
 
 }  // namespace

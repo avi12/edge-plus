@@ -491,6 +491,23 @@ inline void RenumberAfterRemoval(Node& node, int removed) {
   }
 }
 
+// The same layout once `leaf` has left the split and come back as its newest
+// pane: the panes after it are re-fed one slot earlier and it takes the last
+// slot, `newest`.
+inline void RenumberAsNewest(Node& node, int leaf, int newest) {
+  if (node.isLeaf) {
+    if (node.leaf == leaf) {
+      node.leaf = newest;
+    } else if (node.leaf > leaf) {
+      node.leaf--;
+    }
+    return;
+  }
+  for (Node& child : node.children) {
+    RenumberAsNewest(child, leaf, newest);
+  }
+}
+
 inline bool RemovePane(Node& root, int leaf) {
   if (!Detach(root, leaf)) {
     return false;
