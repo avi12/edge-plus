@@ -206,7 +206,27 @@ inline void SetPreviewTab(void* tab) {
   RepaintPreviewTab(tab);
 }
 
-// bool Tab::IsActive(this): `this` is the tab object, not its view.
+// Whether any tab of the split `tab` is in, walking the strip from it both
+// ways while the tabs share its split, is the strip's active tab. Edge's own
+// answer looks at one neighbour only (offsets.h SLOTCONTROLLER_vtbl_IsActiveTab).
+inline bool IsSplitActive(void* tab) {
+  if (edge::IsTheActiveTabObject(tab)) {
+    return true;
+  }
+  for (const int step : {-1, 1}) {
+    void* member = edge::AdjacentTabObject(tab, step);
+    while (member && edge::IsSameSplitTabObject(tab, member)) {
+      if (edge::IsTheActiveTabObject(member)) {
+        return true;
+      }
+      member = edge::AdjacentTabObject(member, step);
+    }
+  }
+  return false;
+}
+
+// bool Tab::IsActive(this): `this` is the tab object, not its view. Every tab
+// of the active split, however many, paints as active.
 using IsActive_t = bool(__fastcall*)(void*);
 inline constinit IsActive_t o_is_active = nullptr;
 inline bool __fastcall h_is_active(void* tab) {
@@ -214,6 +234,9 @@ inline bool __fastcall h_is_active(void* tab) {
       g_previewTab && tab == edge::TabObjectOfView(g_previewTab);
   if (isPreviewTab) {
     return false;
+  }
+  if (edge::IsTabObjectInSplit(tab)) {
+    return IsSplitActive(tab);
   }
   return o_is_active(tab);
 }
