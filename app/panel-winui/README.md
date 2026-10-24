@@ -31,6 +31,20 @@ theme watchers; the window, while open, only listens to it.
 - Closing the window keeps the listener while Edge+ starts with Windows
   (`PanelEntry.IsResident`), and ends the process otherwise.
 
+## When Edge+ updates
+
+`UpdateWatch` (a `BackgroundService` watcher like the Edge and theme ones)
+reads the repository's `docs/updates.json` at start and every six hours,
+downloads a newer release's exe into `%LOCALAPPDATA%\EdgePlus\update\`, checks
+it against the manifest's digest and tells the window, which shows
+`UpdateCard`. Restart to update swaps the running exe in place
+(`UpdateInstall`), starts the new one with `--restarted-from <pid>` and exits;
+the new one waits for that pid before its single-instance check. Only a
+published exe does this (the host's own `edgeplus.dll` is not beside it), and
+`Settings.AutoUpdate` turns the check off. `EDGEPLUS_UPDATE_FEED` points it at
+a manifest on this machine for a test. The release side is in
+`docs/RELEASING.md`.
+
 ## When Edge updates
 
 The split DLL runs only on the exact `msedge.dll` build in `offsets.h`.

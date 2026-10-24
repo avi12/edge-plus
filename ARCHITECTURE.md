@@ -109,6 +109,23 @@ The panel is a separate assembly. The host loads it into a collectible
 panel in while the window stays open. The rules that make the panel unloadable
 are listed in the panel's README.
 
+### Updating itself
+
+Installed copies update the way a browser extension does through its update
+URL. The repository hosts a small manifest, `docs/updates.json` (version, the
+URL of that release's exe, its SHA-256), written by
+`tools/Write-UpdateManifest.ps1` once a release's exe is attached.
+`UpdateWatch` reads it at start and every six hours (`UpdateFeed` decides
+whether it names a newer version), downloads the exe into `update\`, and checks
+it against the digest. The window then shows `UpdateCard`. **Restart to
+update** runs `UpdateInstall`: the running exe is renamed aside (a running exe
+can be renamed, not overwritten), the new one takes its name, and the new
+process is started with `--restarted-from <pid>`, which makes it wait for the
+old process to exit before it looks for a running panel to hand over to. The
+new exe then swaps its own DLL into Edge, so Edge does not restart. Only a
+published exe does any of this, and the **Check for updates** switch turns it
+all off.
+
 ### Upgrading from before the rename
 
 The project was called fix-edge before it was Edge+. An install from then has

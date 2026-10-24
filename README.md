@@ -77,6 +77,14 @@ hiding the developer-mode prompt, which only edits Edge's `Preferences`.
 - **Hide the developer-mode prompt** — stops Edge asking to turn off
   developer-mode extensions at startup.
 
+### Edge+ itself
+
+- **Updates itself** — checks this repository for a newer release at start and
+  every six hours, downloads it in the background and checks it, then offers
+  **Restart to update** in the window. Edge keeps running through it. The
+  "Check for updates" switch turns it off, and with it every connection Edge+
+  makes (`docs/RELEASING.md`).
+
 Removed for now: the Gemini integration (Gemini in a side panel from the
 toolbar chat button, with tab sharing). Copilot is the only assistant. The code
 is in git history at `4ee5113`; the notes are in
