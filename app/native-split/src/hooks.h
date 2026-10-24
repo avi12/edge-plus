@@ -70,6 +70,7 @@ inline constinit Calc_t o_calc = nullptr;
 inline void* __fastcall h_calc(void* self, void* out, void* sizeBounds) {
   void* mcv = edge::McvFromLayoutBase(self);
   g_activeMcv = mcv;
+  tabdrag::OnLaidOut(mcv);
   const bool isBounded =
       edge::Field<uint8_t>(sizeBounds, edge155::off::SIZEBOUNDS_has_width) ==
           1 &&

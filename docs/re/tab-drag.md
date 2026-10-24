@@ -6,14 +6,21 @@ in code is `app/native-split/src/offsets.h`.
 **What the user does:**
 
 1. Drag one tab in the list. Over the list it is Edge's own drag: the tab
-   follows the pointer and the others make room.
-2. Cross a split's tab on the way: that split is *picked*.
+   follows the pointer and the others make room. The split that was on screen
+   when the tab was grabbed is *picked*.
+2. Cross another split's tab on the way: that split is picked instead.
 3. Move off the list, into the window: the picked split shows, and the docking
    preview shows where the tab would land.
 4. Release: the tab becomes a new pane there.
 
 A pane dragged out of its split by its grip is the same drag, its own split
-picked from the start. With no split picked, or out of the window, the drag is
+picked from the start.
+
+**The split on screen at the grab.** The press activates the tab before the
+drag starts, so it is the active page before the dragged one. Switching tabs
+does not go through `MultiContentsView::SetWebContentsAtIndex`, but a layout
+of the split view always follows, so the `CalculateProposedLayout` detour
+keeps the last two active pages (`tabdrag::OnLaidOut`). With no split picked, or out of the window, the drag is
 Edge's own (it tears the tab off). Alt changes nothing: until 2026-10-24 it was
 the switch to docking, and a pane's drag needed none, so the two drags behaved
 differently; its key events are still dropped so a held Alt never ends a drag.

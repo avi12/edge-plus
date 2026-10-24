@@ -2,8 +2,9 @@
 // whether it began on the tab list or as a pane's grip drag: over the tab list
 // it is Edge's own drag, and crossing a split's tab there picks that split; off
 // the list, inside the window, the picked split shows and the docking preview
-// shows where the tab would land as a new pane. A pane's drag starts with its
-// own split picked. With no split picked the drag is Edge's own. UI thread.
+// shows where the tab would land as a new pane. A drag starts with the split
+// that was showing picked: a pane's own, or the one on screen when its tab was
+// grabbed. With no split picked the drag is Edge's own. UI thread.
 // docs/re/tab-drag.md.
 #pragma once
 #include <windows.h>
@@ -62,6 +63,37 @@ struct PickedSplit {
   void* splitContents = nullptr;
 };
 inline constinit PickedSplit g_picked;
+
+// The page of the active tab last laid out, and the one before it. A press on
+// a tab activates it before its drag starts, so the split the user was looking
+// at when they grabbed the tab is the page before. (Switching tabs does not go
+// through MultiContentsView::SetWebContentsAtIndex; the layout always follows.)
+struct ShownPages {
+  void* current = nullptr;
+  void* previous = nullptr;
+};
+inline constinit ShownPages g_shown;
+
+// Every layout of a window's split view (hooks.h h_calc).
+inline void OnLaidOut(void* mcv) {
+  void* tsm = edge::McvTabStripModel(mcv);
+  void* tab = tsm ? edge::ActiveTab(tsm) : nullptr;
+  void* webContents = tab ? edge::TabContents(tab) : nullptr;
+  const bool isNewPage = webContents && webContents != g_shown.current;
+  if (isNewPage) {
+    g_shown = ShownPages{webContents, g_shown.current};
+  }
+}
+
+// The split shown until the press on the dragged tab, or null. Only compared,
+// never dereferenced: the pages may be gone.
+inline void* SplitShownBefore(void* controller, void* tsm) {
+  const bool isDraggedTabJustShown =
+      g_shown.current == edge::DraggedContents(controller, 0);
+  void* tab =
+      isDraggedTabJustShown ? edge::TabShowing(tsm, g_shown.previous) : nullptr;
+  return tab && edge::TabIsSplit(tab) ? g_shown.previous : nullptr;
+}
 
 inline bool IsAltKey(int keyCode) {
   return keyCode == VK_MENU || keyCode == VK_LMENU || keyCode == VK_RMENU;
@@ -132,11 +164,14 @@ inline void PickSplitUnder(void* controller, void* context, void* tsm,
   g_picked = PickedSplit{controller, splitContents};
 }
 
-// The split picked in this drag, or null; a new drag starts with none, or with
-// its pane's own split.
-inline void* PickedSplitFor(void* controller, const PaneOrigin* pane) {
+// The split picked in this drag, or null. A new drag starts with its pane's own
+// split, or else the split shown when its tab was grabbed.
+inline void* PickedSplitFor(void* controller, void* tsm,
+                            const PaneOrigin* pane) {
   if (g_picked.controller != controller) {
-    g_picked = PickedSplit{controller, pane ? pane->splitContents : nullptr};
+    void* splitContents =
+        pane ? pane->splitContents : SplitShownBefore(controller, tsm);
+    g_picked = PickedSplit{controller, splitContents};
   }
   return g_picked.splitContents;
 }
@@ -192,10 +227,42 @@ inline void Cancel() {
 
 // --- a pane's grip drag that reaches the tab list -----------------------------
 
-// Takes the pane out of its split and starts Edge's own drag of its tab, as a
-// press on that tab would, then hands the strip the mouse capture as the
-// attach of a tab dragged in from another window does: from here views sends
-// the strip the moves and the release. Returns false if no drag started.
+// Starts Edge's own drag of the tab showing `draggedContents`, as a press on
+// that tab would, then hands the strip the mouse capture as the attach of a
+// tab dragged in from another window does: from here views sends the strip
+// the moves and the release. Returns false if no drag started.
+inline bool StartEdgeTabDrag(void* mcv, void* draggedContents,
+                             Point rootLocation) {
+  void* tsm = edge::McvTabStripModel(mcv);
+  void* context = edge::BrowserViewDragContext(edge::McvBrowserView(mcv));
+  if (!context) {
+    return false;
+  }
+  // Like a press, which selects the tab: Edge drags the selected tabs.
+  edge::ActivateTabAt(tsm, edge::IndexOfWebContents(tsm, draggedContents));
+  void* tabView = edge::DragContextTabFor(context, draggedContents);
+  if (!tabView) {
+    return false;
+  }
+  // The tab list animates a tab that just left a split's row, and no drag
+  // starts while it does. Ending that also puts the tab where it is going.
+  edge::TabStripStopAnimating(
+      edge::BrowserViewTabStrip(edge::McvBrowserView(mcv)));
+  Point grabPoint = rootLocation;
+  edge::ConvertPoint(edge::ViewRoot(tabView), tabView, &grabPoint);
+  const Rect tabBounds = edge::ViewBounds(tabView);
+  grabPoint.x = std::clamp(grabPoint.x, 0, std::max(tabBounds.width - 1, 0));
+  grabPoint.y = tabBounds.height / 2;
+  edge::StartTabDrag(tabView, grabPoint);
+  void* controller = edge::DragContextController(context);
+  if (!controller) {
+    return false;
+  }
+  edge::TabDragSetCapture(controller, context);
+  return true;
+}
+
+// Takes the pane out of its split and drags its tab (StartEdgeTabDrag).
 inline bool TakeOverPaneDrag(void* mcv, int pane, Point rootLocation) {
   void* tsm = edge::McvTabStripModel(mcv);
   void* context = edge::BrowserViewDragContext(edge::McvBrowserView(mcv));
@@ -213,35 +280,13 @@ inline bool TakeOverPaneDrag(void* mcv, int pane, Point rootLocation) {
   if (!split_ops::DetachPane(mcv, pane)) {
     return false;
   }
-  // Like a press, which selects the tab: Edge drags the selected tabs.
-  edge::ActivateTabAt(tsm, edge::IndexOfWebContents(tsm, draggedContents));
-  void* tabView = edge::DragContextTabFor(context, draggedContents);
-  if (!tabView) {
-    Log("[tabdrag] pane %d left its split, but its tab has no view", pane);
-    return false;
-  }
-  // The tab list animates the tab out of the split's row, and no drag starts
-  // while it does. Ending that also puts the tab where it is going.
-  edge::TabStripStopAnimating(
-      edge::BrowserViewTabStrip(edge::McvBrowserView(mcv)));
-  Point grabPoint = rootLocation;
-  edge::ConvertPoint(edge::ViewRoot(tabView), tabView, &grabPoint);
-  const Rect tabBounds = edge::ViewBounds(tabView);
-  grabPoint.x = std::clamp(grabPoint.x, 0, std::max(tabBounds.width - 1, 0));
-  grabPoint.y = tabBounds.height / 2;
-  edge::StartTabDrag(tabView, grabPoint);
-  void* controller = edge::DragContextController(context);
-  if (!controller) {
+  if (!StartEdgeTabDrag(mcv, draggedContents, rootLocation)) {
     Log("[tabdrag] pane %d left its split, but Edge started no drag", pane);
     return false;
   }
-  edge::TabDragSetCapture(controller, context);
   g_paneOrigin = PaneOrigin{
       tsm, mcv, context, draggedContents, splitContents, std::move(tree)};
-  const Rect listBounds = edge::ViewBoundsInScreen(context);
-  Log("[tabdrag] pane %d is a dragged tab now (grab %d,%d; list %d,%d %dx%d)",
-      pane, grabPoint.x, grabPoint.y, listBounds.x, listBounds.y,
-      listBounds.width, listBounds.height);
+  Log("[tabdrag] pane %d is a dragged tab now", pane);
   return true;
 }
 
@@ -278,7 +323,8 @@ inline int __fastcall h_continue_dragging(void* controller,
   void* tsm = context ? edge::DragContextTabStripModel(context) : nullptr;
   const bool canDock = tsm && CanDock(controller, tsm);
   void* splitContents =
-      canDock ? PickedSplitFor(controller, PaneDraggedBy(context)) : nullptr;
+      canDock ? PickedSplitFor(controller, tsm, PaneDraggedBy(context))
+              : nullptr;
   const bool isOverTabList =
       canDock && drag::IsOverTabList(context, *screenPoint);
   if (isOverTabList) {
@@ -384,14 +430,18 @@ inline void ApplyDrop() {
   Log("[tabdrag] drop: %s", hasGrown ? "the tab is a new pane" : "failed");
 }
 
-// --- a script's stand-in for the mouse on a grip ------------------------------
-// (channel kGripPressBase, kGripMoveTo, kGripRelease, kGripEscape). Points are
-// window DIPs. Each calls what the real event reaches: the grip's handlers
-// while the pane's drag runs, then what the strip's OnMouseDragged and
-// OnMouseReleased call once the tab list has taken it over.
+// --- a script's stand-in for the mouse on a grip or a tab ---------------------
+// (channel kGripPressBase, kTabPress, kGripMoveTo, kGripRelease, kGripEscape).
+// Points are window DIPs. Each calls what the real event reaches: the grip's
+// handlers while the pane's drag runs, then what the strip's OnMouseDragged
+// and OnMouseReleased call once the tab list runs the drag.
 
-inline const PaneOrigin* RunningPaneDrag() {
-  return g_paneOrigin.has_value() ? &g_paneOrigin.value() : nullptr;
+// The split view of the window whose tab list a script pressed a tab of.
+inline constinit void* g_scriptedTabDragMcv = nullptr;
+
+// The split view of the window whose tab list runs a scripted drag, or null.
+inline void* ScriptedTabDragMcv() {
+  return g_paneOrigin.has_value() ? g_paneOrigin->mcv : g_scriptedTabDragMcv;
 }
 
 inline void SimulateGripPress(void* mcv, int pane, Point rootLocation) {
@@ -401,17 +451,30 @@ inline void SimulateGripPress(void* mcv, int pane, Point rootLocation) {
   }
 }
 
+// Presses the tab at strip `index` in its middle and starts its drag.
+inline void SimulateTabPress(void* mcv, int index) {
+  void* tsm = mcv ? edge::McvTabStripModel(mcv) : nullptr;
+  void* contents = tsm ? edge::TabWebContentsAt(tsm, index) : nullptr;
+  if (!contents) {
+    return;
+  }
+  const bool isStarted = StartEdgeTabDrag(mcv, contents, Point{});
+  g_scriptedTabDragMcv = isStarted ? mcv : nullptr;
+  Log("[tabdrag] script pressed tab %d: %s", index,
+      isStarted ? "dragging" : "no drag");
+}
+
 inline void SimulateGripMove(Point rootLocation) {
   if (drag::IsActive()) {
     OnGripDragged(rootLocation);
     return;
   }
-  const PaneOrigin* pane = RunningPaneDrag();
-  void* controller =
-      pane ? edge::DragContextController(pane->context) : nullptr;
+  void* mcv = ScriptedTabDragMcv();
+  void* context =
+      mcv ? edge::BrowserViewDragContext(edge::McvBrowserView(mcv)) : nullptr;
+  void* controller = context ? edge::DragContextController(context) : nullptr;
   if (controller) {
-    edge::TabDragMoveTo(controller,
-                        drag::RootToScreen(pane->mcv, rootLocation));
+    edge::TabDragMoveTo(controller, drag::RootToScreen(mcv, rootLocation));
   }
 }
 
@@ -425,9 +488,11 @@ inline void SimulateGripEnd(int reason) {
     }
     return;
   }
-  const PaneOrigin* pane = RunningPaneDrag();
-  if (pane) {
-    edge::DragContextEndDrag(pane->context, reason);
+  void* mcv = ScriptedTabDragMcv();
+  g_scriptedTabDragMcv = nullptr;
+  if (mcv) {
+    edge::DragContextEndDrag(
+        edge::BrowserViewDragContext(edge::McvBrowserView(mcv)), reason);
   }
 }
 
