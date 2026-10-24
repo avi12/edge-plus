@@ -23,6 +23,15 @@ inline bool SplitActive() {
   return g_splitActive;
 }
 
+// A pane dragged out over the tab list is laid out as if it had left the split
+// (the rest close up), until the drop makes that real or Esc puts it back.
+// One drag at a time, so one pane.
+struct HeldOutPane {
+  void* mcv = nullptr;
+  int pane = -1;
+};
+inline constinit HeldOutPane g_heldOut;
+
 inline const Node* TreeFor(void* mcv) {
   const auto entry = Trees().find(mcv);
   return entry == Trees().end() ? nullptr : &entry->second;

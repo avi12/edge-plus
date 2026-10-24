@@ -88,10 +88,29 @@ inline void ShowDetachInTabList(void* mcv, int pane, dock::Zone zone) {
   tabrows::SetDetachPreview(tabIndex);
 }
 
+// While the pane is held outside its split, the split closes up without it.
+inline void HoldOut(void* mcv, int pane) {
+  const bool isChanged = g_heldOut.mcv != mcv || g_heldOut.pane != pane;
+  if (!isChanged) {
+    return;
+  }
+  void* laidOut = pane >= 0 ? mcv : g_heldOut.mcv;
+  g_heldOut = pane >= 0 ? HeldOutPane{mcv, pane} : HeldOutPane{};
+  if (laidOut) {
+    edge::InvalidateLayout(laidOut);
+    edge::LayoutImmediately(laidOut);
+  }
+}
+
+inline void PutBack() {
+  HoldOut(nullptr, -1);
+}
+
 inline void Cancel() {
   const bool wasDragging = g_session.isDragging;
   g_session = Session{};
   overlay::Hide();
+  PutBack();
   tabrows::SetDetachPreview(tabrows::kNoDetachPreview);
   if (wasDragging) {
     Log("[drag] cancelled");
@@ -133,7 +152,16 @@ inline void Move(Point rootLocation) {
                                  RootToSplit(g_session.mcv, rootLocation),
                                  g_session.pane, g_session.plan);
   ShowDetachInTabList(g_session.mcv, g_session.pane, g_session.plan.zone);
-  const bool hasDropTarget = g_session.plan.zone != dock::Zone::kNone;
+  // Leaving the split is shown by the split and the tab list themselves, not
+  // by an outline.
+  const bool isLeavingSplit = g_session.plan.zone == dock::Zone::kDetach;
+  if (isLeavingSplit) {
+    HoldOut(g_session.mcv, g_session.pane);
+  } else {
+    PutBack();
+  }
+  const bool hasDropTarget =
+      g_session.plan.zone != dock::Zone::kNone && !isLeavingSplit;
   if (hasDropTarget) {
     overlay::Show(channel::g_window,
                   SplitToScreen(g_session.mcv, g_session.plan.preview),
@@ -155,6 +183,8 @@ inline void Release() {
   const int pane = g_session.pane;
   g_session = Session{};
   overlay::Hide();
+  // Before any real edit, whose layout must see the whole split.
+  g_heldOut = HeldOutPane{};
   const bool isDetaching = isDropping && plan.zone == dock::Zone::kDetach;
   // A real detach lays the list out itself; any other end puts it back now.
   tabrows::SetDetachPreview(tabrows::kNoDetachPreview, !isDetaching);
@@ -166,6 +196,9 @@ inline void Release() {
     const bool hasDetached = split_ops::DetachPane(mcv, pane);
     if (hasDetached) {
       repaint::ScheduleAll();
+    } else {
+      edge::InvalidateLayout(mcv);
+      edge::LayoutImmediately(mcv);
     }
     Log("[drag] pane %d %s", pane,
         hasDetached ? "detached as a tab" : "could not be detached");

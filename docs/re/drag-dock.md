@@ -54,8 +54,13 @@ The two scenarios this was built for:
 
 **Zones** (`dock.h`), all lengths in DIPs of the split:
 
-1. A pointer up to 48 DIP outside the split is clamped in; farther out is no
-   target.
+1. A pointer up to 48 DIP outside the split is clamped in; farther out (over
+   the tab list, say) takes the pane out of the split as a tab of its own. That
+   is previewed by the outcome itself, with no outline: the split closes up
+   without the pane (`g_heldOut`, laid out by `geometry::TilePanes`, the pane
+   shrunk to nothing but left visible since its grip holds the mouse capture)
+   and the tab list shows it as its own tab. Coming back over the split or Esc
+   puts it back; releasing makes it real.
 2. The split's outer band first: within 8% of the split's extent of an outer
    edge (at least 24, at most 72 DIP; nearest edge wins), held 32 DIP deeper.
    The libraries use 10-16 px; this is deliberately deeper, so dragging "far

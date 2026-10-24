@@ -53,7 +53,12 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
   const int count = static_cast<int>(edge::McvCount(mcv));
   const int shownPanes = std::min(std::max(panes, 1), count);
   const Axis axis = SplitAxis(mcv);
-  const Node root = LiveTree(mcv, shownPanes);
+  Node root = LiveTree(mcv, shownPanes);
+  const bool isHoldingOut = g_heldOut.mcv == mcv && g_heldOut.pane >= 0 &&
+                            g_heldOut.pane < shownPanes;
+  if (isHoldingOut) {
+    Detach(root, g_heldOut.pane);
+  }
 
   std::vector<LeafRect> leaves;
   LayoutTree(root, Rect{0, 0, width, height}, kPaneGap, leaves);
@@ -77,6 +82,14 @@ inline void* TilePanes(void* mcv, void* out, int width, int height, int panes,
     bool isVisible = true;
     Rect rect = leafRect.rect;
     edge::EmplaceChildLayout(childLayouts, &container, &isVisible, &rect);
+  }
+  // Shrunk to nothing but kept visible: its grip holds the drag's mouse
+  // capture, which hiding the pane would take away.
+  if (isHoldingOut) {
+    bool isVisible = true;
+    Rect zeroRect{0, 0, 0, 0};
+    edge::EmplaceChildLayout(childLayouts, &containers[g_heldOut.pane],
+                             &isVisible, &zeroRect);
   }
   // Zeroed too, so they leave no stale pixels.
   for (int i = shownPanes; i < count; i++) {
