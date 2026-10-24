@@ -93,6 +93,21 @@ inline void* VirtualFunction(void* object, uintptr_t slotOffset) {
 
 // --- Edge functions, each resolved from g_base and typed exactly once ---------
 
+// What constructing a raw_ptr from `pointee` does: takes a BackupRefPtr
+// reference when the pointee lives in PartitionAlloc's BRP pool.
+inline void AcquireRawPtrRef(void* pointee) {
+  const uint64_t poolBase = *reinterpret_cast<const uint64_t*>(
+      At(edge155::rva::BRP_pool_base_global));
+  const bool isInPool = (reinterpret_cast<uint64_t>(pointee) &
+                         edge155::rva::BRP_pool_mask) == poolBase;
+  if (!isInPool) {
+    return;
+  }
+  using Fn = void(__fastcall*)(void*);
+  reinterpret_cast<Fn>(At(edge155::rva::RawPtrBackupRef_AcquireInternal))(
+      pointee);
+}
+
 inline void* NewView(size_t size) {
   using Fn = void*(__fastcall*)(size_t);
   return reinterpret_cast<Fn>(At(edge155::rva::CheckedOperatorNew3))(size);

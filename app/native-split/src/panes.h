@@ -25,7 +25,10 @@ inline bool AddContainer(void* mcv) {
     return false;
   }
   edge::AddChildViewAt(mcv, container, edge::ViewChildCount(mcv));
-  void* slot = container;  // raw_ptr temp for emplace_back
+  // The raw_ptr emplace_back moves in: it holds the reference a real one would
+  // have taken (offsets.h Containers_emplace_back).
+  edge::AcquireRawPtrRef(container);
+  void* slot = container;
   edge::ContainersEmplaceBack(edge::McvContainerVector(mcv), &slot);
   edge::SetViewVisible(container, true);
   return true;

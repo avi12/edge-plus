@@ -70,8 +70,21 @@ inline constexpr uintptr_t AddChildViewAtImpl = 0x10dabee;
 // (this, bool)  vtable+0x98
 inline constexpr uintptr_t View_SetVisible = 0x1055e20;
 inline constexpr uintptr_t View_GetVisible = 0x0fe0542;  // bool (this)
-// (&vec@+0x368, raw_ptr*)
+// vector<raw_ptr<ContentsContainerView,1>>::emplace_back<raw_ptr<...>>
+// (&vec@+0x368, raw_ptr*): it MOVES the raw_ptr in, taking no BackupRefPtr
+// reference, so the entry must hold one already (edge::AcquireRawPtrRef);
+// the vector's destructor gives one back. A plain pointer passed as the
+// raw_ptr left the count one short: closing the window freed our pane while
+// its cached ChildLayout still pointed at it, and ReleaseInternal CHECKed
+// (seen: a window with a grown split closed or torn off crashed Edge).
 inline constexpr uintptr_t Containers_emplace_back = 0x2b0c7f8;
+// base::internal::RawPtrBackupRefImpl<0>::AcquireInternal(uintptr_t), and the
+// test raw_ptr's constructor makes before calling it: the address masked by
+// BRP_pool_mask equals the BRP pool's base, a uint64 global at
+// BRP_pool_base_global (read at the call in ChildLayouts_emplace_back).
+inline constexpr uintptr_t RawPtrBackupRef_AcquireInternal = 0xfddd20;
+inline constexpr uintptr_t BRP_pool_base_global = 0x142da588;
+inline constexpr uint64_t BRP_pool_mask = 0xfffffffc00000000;
 // (this) mark layout dirty
 inline constexpr uintptr_t View_InvalidateLayout = 0x0ffa2d0;
 // (view): queue a repaint of the whole view.
