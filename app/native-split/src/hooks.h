@@ -723,6 +723,10 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
           reinterpret_cast<void*>(tabrows::h_calculate_ideal_bounds),
           &tabrows::o_calculate_ideal_bounds,
           "TabStripLayoutHelper::CalculateIdealBounds");
+  Install(edge155::rva::EdgeTabDragContextImpl_CalculateBoundsForDraggedViews,
+          reinterpret_cast<void*>(tabrows::h_dragged_bounds),
+          &tabrows::o_dragged_bounds,
+          "EdgeTabDragContextImpl::CalculateBoundsForDraggedViews");
   Install(edge155::rva::Tab_IsActive,
           reinterpret_cast<void*>(tabrows::h_is_active), &tabrows::o_is_active,
           "Tab::IsActive (detach preview)");

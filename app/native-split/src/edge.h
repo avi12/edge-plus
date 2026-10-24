@@ -851,6 +851,19 @@ inline Rect* IdealBoundsRects(void* result) {
 inline size_t IdealBoundsCount(void* result) {
   return Field<uint64_t>(result, edge155::off::IDEALBOUNDS_count);
 }
+// CalculateBoundsForDraggedViews: the dragged views, and the rects it returns.
+inline void* const* DraggedViews(void* views) {
+  return Field<void* const*>(views, edge155::off::VIEWSPAN_data);
+}
+inline size_t DraggedViewCount(void* views) {
+  return Field<uint64_t>(views, edge155::off::VIEWSPAN_count);
+}
+inline Rect* RectVectorBegin(void* vector) {
+  return Field<Rect*>(vector, edge155::off::RECTVECTOR_data);
+}
+inline size_t RectVectorCount(void* vector) {
+  return Field<uint64_t>(vector, edge155::off::RECTVECTOR_size);
+}
 
 // Where a mouse event happened, in the window's DIPs (its root location).
 inline Point EventRootLocation(const void* event) {

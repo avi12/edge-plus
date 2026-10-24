@@ -542,6 +542,13 @@ inline constexpr uintptr_t SetActiveIndex_index_jae = 0xa66e706;
 // EdgeTabStripLayoutHelper::CalculatePreferredHeight sizes the container from it.
 inline constexpr uintptr_t TabStripLayoutHelper_CalculateIdealBounds =
     0x109c1aa;
+// std::vector<gfx::Rect> EdgeTabDragContextImpl::CalculateBoundsForDraggedViews(
+//     this, out vector, base::span<TabSlotView* const> views): where the tabs
+// being dragged are drawn, one rect per view. It too draws a split as a pair,
+// and a grown split's later members each on a row of their own (seen while
+// dragging a 4-pane split's tab in the vertical list).
+inline constexpr uintptr_t
+    EdgeTabDragContextImpl_CalculateBoundsForDraggedViews = 0xa77c0e0;
 
 // --- theming (docs/re/theming.md) ---
 // The whole feature rides one Edge entry point. ThemeService applies a theme
@@ -1293,6 +1300,13 @@ inline constexpr uintptr_t TABVIEW_split_has_value = 0x368;
 // slot.
 inline constexpr uintptr_t IDEALBOUNDS_data = 0x00;
 inline constexpr uintptr_t IDEALBOUNDS_count = 0x08;
+// rva::EdgeTabDragContextImpl_CalculateBoundsForDraggedViews's views come as
+// {data, count}; its result as {data, size, capacity} (read live: not libc++'s
+// {begin, end, capacity}).
+inline constexpr uintptr_t VIEWSPAN_data = 0x00;
+inline constexpr uintptr_t VIEWSPAN_count = 0x08;
+inline constexpr uintptr_t RECTVECTOR_data = 0x00;
+inline constexpr uintptr_t RECTVECTOR_size = 0x08;
 
 // --- views::View ---
 // View* parent_ (null at the widget's root view)

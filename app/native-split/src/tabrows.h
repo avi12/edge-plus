@@ -142,6 +142,68 @@ inline void SpreadPiledSplits(void* helper, void* result) {
   }
 }
 
+// --- a split's tabs being dragged ---------------------------------------------
+
+// EdgeTabDragContextImpl::CalculateBoundsForDraggedViews draws a dragged split
+// as a pair too, and a grown split's later members each on a row of their own:
+// they are spread over rows as the strip spreads them, at the pitch Edge put
+// between its rows.
+inline void SpreadDraggedSplit(void* views, void* bounds) {
+  const size_t count = edge::DraggedViewCount(views);
+  const bool isOneRectPerView = edge::RectVectorCount(bounds) == count;
+  if (!isOneRectPerView || count <= static_cast<size_t>(kPairedMembers)) {
+    return;
+  }
+  void* const* tabViews = edge::DraggedViews(views);
+  const bool isSplitTab =
+      edge::IsEdgeTabView(tabViews[0]) && edge::IsTabViewInSplit(tabViews[0]);
+  if (!isSplitTab) {
+    return;
+  }
+  for (size_t i = 1; i < count; i++) {
+    const bool isSameSplit =
+        edge::IsTabViewInSameSplit(tabViews[0], tabViews[i]);
+    if (!isSameSplit) {
+      return;
+    }
+  }
+  const BoundsList list{nullptr, edge::RectVectorBegin(bounds), count};
+  int rowLeft = list.RectAt(0).x;
+  int rowRight = rowLeft;
+  int top = list.RectAt(0).y;
+  int rowPitch = 0;
+  for (size_t i = 0; i < count; i++) {
+    const Rect& rect = list.RectAt(i);
+    rowLeft = std::min(rowLeft, rect.x);
+    rowRight = std::max(rowRight, rect.x + rect.width);
+    top = std::min(top, rect.y);
+  }
+  for (size_t i = 0; i < count; i++) {
+    const int below = list.RectAt(i).y - top;
+    const bool isNearerRow = below > 0 && (rowPitch == 0 || below < rowPitch);
+    if (isNearerRow) {
+      rowPitch = below;
+    }
+  }
+  const int rowHeight = list.RectAt(0).height;
+  if (rowPitch == 0) {
+    rowPitch = rowHeight + kDefaultRowGap;
+  }
+  list.RectAt(0).y = top;
+  const int fitting = std::max(1, (rowRight - rowLeft) / kMinSlotWidth);
+  const int perRow = std::min(static_cast<int>(count), fitting);
+  SpreadRun(list, 0, count, rowLeft, rowRight, perRow, rowPitch);
+}
+
+using DraggedBounds_t = void*(__fastcall*)(void*, void*, void*);
+inline constinit DraggedBounds_t o_dragged_bounds = nullptr;
+inline void* __fastcall h_dragged_bounds(void* context, void* bounds,
+                                         void* views) {
+  void* result = o_dragged_bounds(context, bounds, views);
+  SpreadDraggedSplit(views, bounds);
+  return result;
+}
+
 // --- a pane being dragged out of its split, previewed in the tab list --------
 
 // The strip index of the tab of the pane being dragged out of its split, or -1.

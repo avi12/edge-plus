@@ -164,6 +164,7 @@ inline constexpr uint8_t kStockIndexCap = 2;
       edge155::rva::EdgeTabStyleViews_IsLeftSplitTab,
       edge155::rva::RawPtrBackupRef_AcquireInternal,
       edge155::rva::MultiContentsView_dtor,
+      edge155::rva::EdgeTabDragContextImpl_CalculateBoundsForDraggedViews,
       edge155::rva::EdgeTabStyleViews_IsRightSplitTab,
   };
   for (const uintptr_t rva : sites) {
