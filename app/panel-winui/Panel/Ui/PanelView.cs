@@ -112,7 +112,7 @@ internal sealed class PanelView : IDisposable {
       _service.IsWindowOpen = true;
       _service.BuildChanged += OnBuildChanged;
       _service.ThemeRefreshed += OnThemeRefreshed;
-      _service.BrowserStarted += OnBrowserStarted;
+      _service.BrowsersChanged += OnBrowsersChanged;
     }
     Refresh();
   }
@@ -129,7 +129,7 @@ internal sealed class PanelView : IDisposable {
     if (_service is not null) {
       _service.BuildChanged -= OnBuildChanged;
       _service.ThemeRefreshed -= OnThemeRefreshed;
-      _service.BrowserStarted -= OnBrowserStarted;
+      _service.BrowsersChanged -= OnBrowsersChanged;
       _service.IsWindowOpen = false;
     }
     Motion.Forget();
@@ -139,7 +139,7 @@ internal sealed class PanelView : IDisposable {
   private void OnBuildChanged(BuildChange change) => OnUiThread(Refresh);
 
   // Edge restarted: with auto-inject off, it may want the Inject button again.
-  private void OnBrowserStarted() => OnUiThread(Refresh);
+  private void OnBrowsersChanged() => OnUiThread(Refresh);
 
   private void OnThemeRefreshed(ThemeRefresh refresh) =>
       OnUiThread(() => ShowActionNotice(refresh.Error ?? ""));
