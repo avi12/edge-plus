@@ -29,8 +29,9 @@ export function keyText(item: unknown): string {
 // One theme's row (theme-row.svelte). `onRemove` is null for a theme
 // installed in Edge.
 export function themeRow(theme: ThemeRow, onRemove: (() => void) | null): Grid {
-  return projectAs(mountControl(ThemeRowView, {
+  const mounted = mountControl(ThemeRowView, {
     theme,
     onRemove
-  }).root, Grid);
+  });
+  return projectAs(mounted.root, Grid);
 }
