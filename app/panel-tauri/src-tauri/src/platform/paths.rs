@@ -79,6 +79,14 @@ pub fn window_root() -> PathBuf {
     data_root().join(WINDOW_FOLDER_NAME)
 }
 
+/// Windows matches file and folder names without regard to case (as .NET's
+/// `OrdinalIgnoreCase` compares them), so names are compared in this folded
+/// form.
+#[must_use]
+pub fn fold_case(name: &str) -> String {
+    name.to_uppercase()
+}
+
 /// Written whole then swapped in, so a reader (the DLL, Edge, the window) never
 /// sees half a file.
 pub fn write_atomically(path: &Path, contents: &[u8]) -> io::Result<()> {
