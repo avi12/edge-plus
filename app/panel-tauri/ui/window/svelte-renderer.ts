@@ -37,6 +37,7 @@ import * as winui from "./winui.ts";
 //   columns="Auto,*,Auto"       a grid's columns (rows= its rows)
 //   ontoggled={handler}         an event: onToggled
 //   <host element={control} />  a control made elsewhere, placed here
+//   {@attach withControl(...)}  the element's control, handed to code
 
 interface WinuiNative {
   control: UIElement | null;
@@ -382,6 +383,21 @@ const winuiHost: NativeHost<WinuiNative> = {
 };
 
 const renderer = createTreeRenderer(winuiHost);
+
+// {@attach withControl(StackPanel, panel => ...)}: hands the control an
+// element made to code, for what markup cannot say (registering a panel for
+// motion, reading a text box).
+export function withControl<Control>(
+  type: abstract new (...values: never[]) => Control,
+  use: (control: Control) => void
+): (node: unknown) => void {
+  return node => {
+    const control = read(read(node, "native"), "control");
+    if (control instanceof type) {
+      use(control);
+    }
+  };
+}
 
 // The control a mounted component made first: its root.
 export function rootControl(fragment: FragmentNode<WinuiNative>): FrameworkElement {
