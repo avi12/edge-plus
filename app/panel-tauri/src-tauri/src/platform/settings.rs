@@ -12,6 +12,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 use crate::platform::paths;
 use crate::themes::theme_order;
 
+const BYTE_ORDER_MARK: char = '\u{feff}';
+
 /// Held by every load-change-save-apply sequence, so the window's actions and
 /// the background watchers never interleave on the file or on the DLL.
 static GATE: Mutex<()> = Mutex::new(());
@@ -269,9 +271,12 @@ impl Settings {
         fs::read_to_string(path).map_or_else(|_| Self::default(), |text| Self::parse(&text))
     }
 
-    /// Garbage is the defaults.
+    /// Garbage is the defaults. A leading byte-order mark is skipped, as the
+    /// C# panel's File.ReadAllText did: a file saved by a Windows editor or
+    /// PowerShell 5 starts with one.
     #[must_use]
     pub fn parse(text: &str) -> Self {
+        let text = text.strip_prefix(BYTE_ORDER_MARK).unwrap_or(text);
         serde_json::from_str(text).unwrap_or_default()
     }
 
@@ -292,6 +297,11 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_byte_order_mark_is_read_past() {
+        assert!(!Settings::parse("\u{feff}{\"autoInject\":false}").auto_inject);
+    }
 
     // A file from before the switch existed checks for updates.
     #[test]
