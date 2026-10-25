@@ -121,10 +121,6 @@ export class Shell {
     this.window.appWindow.showWithActivation(false);
   }
 
-  render(view: View): void {
-    this.panel.render(view);
-  }
-
   showActionNotice(text: string): void {
     this.panel.showActionNotice(text);
   }

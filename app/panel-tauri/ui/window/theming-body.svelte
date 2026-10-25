@@ -1,69 +1,93 @@
 <script lang="ts">
-  import type { ThemingLabels } from "../protocol.g.ts";
-  import { animated } from "./animated.ts";
+  import type { Action, CardView, ColorMode, ThemingView } from "../protocol.g.ts";
+  import EdgeThemeList from "./edge-theme-list.svelte";
   import * as motion from "./motion.ts";
-  import { withControl } from "svelte-winui";
-  import type { ComboBox, FrameworkElement } from "./winui.ts";
-  import {
-    KeyRoutedEventArgs,
-    projectAs,
-    TextBox,
-    VirtualKey,
-    Visibility
-  } from "./winui.ts";
+  import { OwnThemeList } from "./own-theme-list.ts";
+  import { usePanel } from "./panel.svelte.ts";
+  import ThemePicker from "./theme-picker.svelte";
+  import { LocalThemeKind } from "./theming-card.ts";
+  import { KeyRoutedEventArgs, projectAs, VirtualKey } from "./winui.ts";
+  import { Button, Grid, StackPanel, TextBlock, TextBox } from "svelte-winui";
 
   // The theme library under the theming switch: add from a store link or a
   // local file, pick a theme for each Windows mode, and order the list.
   interface Props {
-    labels: ThemingLabels;
-    isOn: boolean;
-    // While an add or a choice runs, the add buttons wait for it.
-    isBusy: boolean;
-    error: string;
-    lightPicker: ComboBox;
-    darkPicker: ComboBox;
-    ownThemes: FrameworkElement;
-    edgeThemes: FrameworkElement;
-    // Resolves to whether the theme was added.
-    addStoreTheme: (link: string) => Promise<boolean>;
-    pickFile: () => void;
-    pickFolder: () => void;
+    card: CardView;
+    theming: ThemingView;
   }
 
-  const {
-    labels,
-    isOn,
-    isBusy,
-    error,
-    lightPicker,
-    darkPicker,
-    ownThemes,
-    edgeThemes,
-    addStoreTheme,
-    pickFile,
-    pickFolder
-  }: Props = $props();
+  const { card, theming }: Props = $props();
+  const panel = usePanel();
 
   const fullOpacity = 1;
   const dimmedOpacity = 0.5;
 
-  let storeLink: TextBox | null = null;
+  let storeLink = $state("");
+  // While an add or a choice runs, the add buttons wait for it.
+  let isBusy = $state(false);
+  // Why the last add or choice failed, under the add rows.
+  let error = $state("");
+
+  // The list is still drawn from TypeScript (a ListView with its own drag and
+  // keyboard reordering), until the package has a list component.
+  // svelte-ignore state_referenced_locally
+  const ownThemes = new OwnThemeList(theming.labels, {
+    remove(id) {
+      void runBusy({
+        kind: "removeTheme",
+        id
+      });
+    },
+    reorder(ids) {
+      void runQuietly({
+        kind: "reorderThemes",
+        ids
+      });
+    },
+    move(id, offset) {
+      return runQuietly({
+        kind: "moveTheme",
+        id,
+        offset
+      });
+    }
+  });
+
+  $effect(() => {
+    ownThemes.update(theming.own);
+  });
 
   async function addStore(): Promise<void> {
-    const box = storeLink;
-    if (box === null) {
-      return;
-    }
-
-    const link = box.text.trim();
+    const link = storeLink.trim();
     if (link.length === 0) {
       return;
     }
 
-    const isAdded = await addStoreTheme(link);
+    const isAdded = await runBusy({
+      kind: "addStoreTheme",
+      url: link
+    });
     if (isAdded) {
-      box.text = "";
+      storeLink = "";
     }
+  }
+
+  async function addLocal(kind: LocalThemeKind): Promise<void> {
+    const path = await panel.pick(kind);
+    if (path !== null) {
+      await runBusy({
+        kind: "addLocalTheme",
+        path
+      });
+    }
+  }
+
+  function assign(mode: ColorMode, id: string): void {
+    void runBusy({
+      kind: "assignTheme",
+      mode,
+      id
+    });
   }
 
   function addStoreOnEnter(_sender: unknown, event: unknown): void {
@@ -72,37 +96,46 @@
       void addStore();
     }
   }
+
+  // None of runBusy's busy state: holding the add buttons for a reorder
+  // flickered File… and Folder… on every drop.
+  async function runQuietly(action: Action): Promise<void> {
+    const failure = await panel.run(action);
+    if (failure !== null) {
+      error = failure;
+    }
+  }
+
+  // Resolves to whether the core did what the action asked.
+  async function runBusy(action: Action): Promise<boolean> {
+    error = "";
+    isBusy = true;
+    const failure = await panel.run(action);
+    isBusy = false;
+    error = failure ?? "";
+    return failure === null;
+  }
 </script>
 
-<!-- The picker's minimum width fits the longest choice it offers. -->
-{#snippet pickerRow(label: string, picker: ComboBox)}
-  <grid columns="*,Auto" column-spacing="8">
-    <text-block class="card-title" vertical-alignment="Center">{label}</text-block>
-    <host element={picker} min-width="200" automation-properties.name={label} grid.column={1} />
-  </grid>
-{/snippet}
-
-<stack-panel spacing="8" opacity={isOn ? fullOpacity : dimmedOpacity} {@attach animated(motion.reposition)}>
-  <grid columns="*,Auto" column-spacing="8">
-    <text-box placeholder-text={labels.storeLinkPlaceholder} onkeydown={addStoreOnEnter} {@attach withControl(TextBox, box => {
-      storeLink = box;
-    })} />
-    <button class="accent-button" is-enabled={!isBusy} onclick={() => void addStore()} grid.column={1}>{labels.add}</button>
-  </grid>
-  <stack-panel orientation="Horizontal" spacing="8">
-    <text-block class="card-description" vertical-alignment="Center">{labels.addLocal}</text-block>
-    <button is-enabled={!isBusy} onclick={pickFile}>{labels.pickFile}</button>
-    <button is-enabled={!isBusy} onclick={pickFolder}>{labels.pickFolder}</button>
-  </stack-panel>
-  <text-block class="error" visibility={error.length > 0 ? Visibility.Visible : Visibility.Collapsed}>{error}</text-block>
-  {@render pickerRow(labels.whenLight, lightPicker)}
-  {@render pickerRow(labels.whenDark, darkPicker)}
-  <host element={ownThemes} />
-  <host element={edgeThemes} />
-</stack-panel>
+<StackPanel spacing={8} opacity={card.isOn ? fullOpacity : dimmedOpacity} childrenTransitions={motion.applied(motion.reposition)}>
+  <Grid columns="*,Auto" columnSpacing={8}>
+    <TextBox bind:text={storeLink} placeholderText={theming.labels.storeLinkPlaceholder} onKeyDown={addStoreOnEnter} />
+    <Button class="accent-button" isEnabled={!isBusy} onClick={() => void addStore()} gridColumn={1}>{theming.labels.add}</Button>
+  </Grid>
+  <StackPanel orientation="Horizontal" spacing={8}>
+    <TextBlock class="card-description" verticalAlignment="Center" text={theming.labels.addLocal} />
+    <Button isEnabled={!isBusy} onClick={() => void addLocal(LocalThemeKind.File)}>{theming.labels.pickFile}</Button>
+    <Button isEnabled={!isBusy} onClick={() => void addLocal(LocalThemeKind.Folder)}>{theming.labels.pickFolder}</Button>
+  </StackPanel>
+  <TextBlock class="error" visibility={error.length > 0 ? "Visible" : "Collapsed"} text={error} />
+  <ThemePicker label={theming.labels.whenLight} options={theming.options} assignedId={theming.light} onPick={id => assign("light", id)} />
+  <ThemePicker label={theming.labels.whenDark} options={theming.options} assignedId={theming.dark} onPick={id => assign("dark", id)} />
+  <host element={ownThemes.view} />
+  <EdgeThemeList rows={theming.edge} empty={theming.empty} />
+</StackPanel>
 
 <style>
-  .error {
+  :global(.error) {
     -winui-based-on: CaptionTextBlockStyle;
     color: var(--system-fill-color-critical);
     text-wrap: wrap;

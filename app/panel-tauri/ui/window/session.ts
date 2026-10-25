@@ -1,10 +1,6 @@
-import type {
-  Action,
-  Bounds,
-  CoreMessage,
-  UiMessage,
-  View
-} from "../protocol.g.ts";
+import type { Action, Bounds, UiMessage, View } from "../protocol.g.ts";
+import type { OtherMessage } from "./core-link.ts";
+import { isOtherMessage, viewAsSnapshot, viewStateName } from "./core-link.ts";
 import { milliseconds } from "./layout.ts";
 import { joinAppUserModel } from "./native.ts";
 import "./shared-styles.svelte";
@@ -13,94 +9,77 @@ import { installStyles } from "./styles.ts";
 import * as winui from "./winui.ts";
 import { DispatcherQueue } from "./winui.ts";
 import type { MessagePort } from "node:worker_threads";
-import { receiveMessageOnPort } from "node:worker_threads";
 import { registerControls } from "svelte-winui";
+import type { HostChannel, HostState, Transport } from "svelte-winui/state";
+import { createHostChannel, createMessagePortTransport, hostState } from "svelte-winui/state";
 import { exitApplication, runWindow } from "svelte-winui/window";
 
 // WinUI's loop owns this thread until the window closes, so Node's event loop
 // never turns here: the core's messages are taken off the port by a
-// dispatcher timer, and every timer is the dispatcher's.
+// dispatcher timer (the channel's `poll`), and every timer is the dispatcher's.
 const inboxMilliseconds = 30;
 // Set by the dev fixture for unattended captures: the window opens without
 // taking focus (the fixture also places it off screen).
 const backgroundVariable = "EDGEPLUS_WINDOW_BACKGROUND";
 
-type MessageOfType = { [Message in CoreMessage as Message["type"]]: Message };
-type MessageType = keyof MessageOfType;
+type MessageType = OtherMessage["type"];
+type MessageOfType = { [Message in OtherMessage as Message["type"]]: Message };
 type Handlers = { [Type in MessageType]: (message: MessageOfType[Type]) => void };
-
-// The core's own process, so its messages are trusted to be well formed.
-function isCoreMessage(value: unknown): value is CoreMessage {
-  return typeof value === "object" && value !== null && "type" in value;
-}
 
 function dispatch<Type extends MessageType>(handlers: Handlers, message: MessageOfType[Type] & { type: Type }): void {
   handlers[message.type](message);
 }
 
 class Session {
-  private readonly port: MessagePort;
   private readonly dispatcher = DispatcherQueue.getForCurrentThread();
   // Held here, as is every pending timer: a timer whose wrapper is collected
   // stops.
   private readonly inbox = this.dispatcher.createTimer();
   private readonly timers = new Set<ReturnType<DispatcherQueue["createTimer"]>>();
-  private readonly replies = new Map<number, (error: string | null) => void>();
-  private nextId = 1;
+  private readonly transport: Transport;
+  private readonly channel: HostChannel;
+  // The core's View, one reactive object the page reads; the core sends it
+  // whole each time and the channel changes only what differs.
+  private readonly view: HostState<View>;
   private shell: Shell | null = null;
   private placement: Bounds | null = null;
 
   constructor(port: MessagePort) {
-    this.port = port;
+    this.transport = viewAsSnapshot(createMessagePortTransport(port, { poll: drain => this.poll(drain) }));
+    this.channel = createHostChannel(this.transport, { onOther: message => this.handle(message) });
+    this.view = hostState<View>(this.channel, viewStateName);
   }
 
   start(): void {
-    this.inbox.interval = milliseconds(inboxMilliseconds);
-    this.inbox.isRepeating = true;
-    this.inbox.onTick(() => this.drain());
-    this.inbox.start();
+    void this.view.ready.then(view => {
+      this.open(view);
+    });
   }
 
-  private drain(): void {
-    let received = receiveMessageOnPort(this.port);
-    while (received !== undefined) {
-      const message: unknown = received.message;
-      if (isCoreMessage(message)) {
-        this.handle(message);
-      }
-
-      received = receiveMessageOnPort(this.port);
-    }
+  private poll(drain: () => void): () => void {
+    this.inbox.interval = milliseconds(inboxMilliseconds);
+    this.inbox.isRepeating = true;
+    this.inbox.onTick(drain);
+    this.inbox.start();
+    return () => {
+      this.inbox.stop();
+    };
   }
 
   private readonly handlers: Handlers = {
     place: message => {
       this.placement = message.bounds;
     },
-    view: message => this.show(message.view),
-    reply: message => this.answer(message.id, message.error),
     notice: message => this.shell?.showActionNotice(message.text),
     status: message => this.shell?.showStatus(message.line),
     bringBack: () => this.shell?.bringBack(),
     close: () => this.close()
   };
 
-  private handle(message: CoreMessage): void {
-    dispatch(this.handlers, message);
-  }
-
-  private show(view: View): void {
-    if (this.shell === null) {
-      this.open(view);
-      return;
+  private handle(message: unknown): void {
+    if (isOtherMessage(message)) {
+      dispatch(this.handlers, message);
     }
-
-    this.shell.render(view);
-  }
-
-  private answer(id: number, error: string | null): void {
-    this.replies.get(id)?.(error);
-    this.replies.delete(id);
   }
 
   private open(view: View): void {
@@ -135,21 +114,18 @@ class Session {
     this.shell.close();
   }
 
-  private run(action: Action): Promise<string | null> {
-    const id = this.nextId;
-    this.nextId++;
-    const { promise, resolve } = Promise.withResolvers<string | null>();
-    this.replies.set(id, resolve);
-    this.send({
-      type: "action",
-      id,
-      action
-    });
-    return promise;
+  // Resolves to why the core refused the action, or null.
+  private async run(action: Action): Promise<string | null> {
+    try {
+      await this.channel.send(action);
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    }
   }
 
   private send(message: UiMessage): void {
-    this.port.postMessage(message);
+    this.transport.send(message);
   }
 
   private after(count: number, callback: () => void): () => void {
