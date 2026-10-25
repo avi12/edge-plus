@@ -77,6 +77,84 @@ pub const THEME_FILES_UNREADABLE: &str = "Edge+ could not read or write that the
 pub const MANIFEST_NOT_JSON: &str = "manifest.json is not valid JSON";
 pub const IDENTITY_CHANGED: &str = "The theme's identity changed; add it again.";
 
+// What is wrong with a local theme's files (theme_manifest, crx, protobuf).
+pub const THEME_TOO_LARGE: &str = "the theme is too large";
+pub const NOT_A_ZIP: &str = "not a valid ZIP";
+pub const MANIFEST_NOT_AN_OBJECT: &str = "manifest.json: not an object";
+pub const MANIFEST_HAS_NO_NAME: &str = "manifest.json has no name";
+pub const MANIFEST_HAS_NO_VERSION: &str = "manifest.json has no version";
+pub const MANIFEST_HAS_NO_THEME: &str = "manifest.json has no \"theme\" section";
+pub const NOT_A_CRX3: &str = "not a CRX3 file";
+pub const TRUNCATED_CRX_HEADER: &str = "truncated CRX header";
+pub const TRUNCATED_VARINT: &str = "truncated varint";
+pub const UNEXPECTED_CRX_HEADER_FIELD: &str = "unexpected CRX header field";
+pub const NO_PUBLIC_KEY_IN_HEADER: &str = "no public key in CRX header";
+pub const NO_PUBLIC_KEY_IN_PROOF: &str = "no public key in key proof";
+pub const BAD_CRX_ZIP: &str = "bad .crx ZIP";
+pub const NO_MANIFEST_IN_CRX: &str = "no manifest.json in .crx";
+pub const BAD_CRX_MANIFEST: &str = "bad manifest.json";
+pub const NO_VERSION_IN_CRX_MANIFEST: &str = "no version in manifest.json";
+
+#[must_use]
+pub fn manifest_not_json_at(line: usize) -> String {
+    format!("{MANIFEST_NOT_JSON} (line {line})")
+}
+
+#[must_use]
+pub fn entry_missing(name: &str) -> String {
+    format!("{name} is missing")
+}
+
+#[must_use]
+pub fn entry_too_large(name: &str) -> String {
+    format!("{name} is too large")
+}
+
+#[must_use]
+pub fn image_not_a_path(key: &str) -> String {
+    format!("image {key} is not a path")
+}
+
+#[must_use]
+pub fn image_unreadable(key: &str, path: &str, reason: &str) -> String {
+    format!("image {key} ({path}): {reason}")
+}
+
+#[must_use]
+pub fn image_not_png_or_jpeg(key: &str, path: &str) -> String {
+    format!("image {key} ({path}) is not a PNG or JPEG")
+}
+
+#[must_use]
+pub fn color_not_a_list(key: &str) -> String {
+    format!("color {key} is not a list")
+}
+
+#[must_use]
+pub fn color_wrong_count(key: &str) -> String {
+    format!("color {key} needs 3 or 4 numbers")
+}
+
+#[must_use]
+pub fn color_out_of_range(key: &str) -> String {
+    format!("color {key} has a value out of range")
+}
+
+#[must_use]
+pub fn tint_wrong_count(key: &str) -> String {
+    format!("tint {key} needs 3 numbers")
+}
+
+#[must_use]
+pub fn tint_out_of_range(key: &str) -> String {
+    format!("tint {key} has a value out of range")
+}
+
+#[must_use]
+pub fn not_a_valid_version(text: &str) -> String {
+    format!("\"{text}\" is not a valid version")
+}
+
 pub const THEME_LIST_NAME: &str = "Your themes";
 pub const REORDER_HELP: &str =
     "Drag a theme, or press Alt+Up or Alt+Down, to move it in this list and in the pickers.";
