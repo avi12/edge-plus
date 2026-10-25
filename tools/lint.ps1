@@ -4,7 +4,8 @@ The repo's lint gate over the DLL's C++ and the panel's Rust and TypeScript; non
 .DESCRIPTION
 Passes: clang-format, clang-tidy, C++ restricted syntax, shared.g.rs
 freshness, the panel's own gate (oxlint, eslint, clippy, rustfmt, tsc,
-fallow) and ui/protocol.g.ts freshness.
+fallow), ui/protocol.g.ts freshness and the freshness of the components
+svelte-winui generates from WinUI's metadata.
 .PARAMETER Fix
 Apply clang-format -i, clang-tidy --fix and the panel's fixers, then re-check.
 .PARAMETER Staged
@@ -143,6 +144,16 @@ if (-not $Staged) {
     $isProtocolCurrent = $LASTEXITCODE -eq 0 -and (Get-FileHash $protocol).Hash -eq $before
     if (-not $isProtocolCurrent) {
         Write-Host '[lint] ui/protocol.g.ts was out of date with protocol.rs; it is rewritten now, commit it.'
+        $panelOk = $false
+    }
+
+    # The svelte-winui components are generated from WinUI's metadata; a
+    # changed generator or an updated Windows App SDK leaves them stale.
+    $components = Join-Path $root 'packages\svelte-winui'
+    $componentsScript = if ($Fix) { 'gen:components' } else { 'gen:components:check' }
+    Write-Host "[lint] generated components (pnpm $componentsScript)"
+    & pnpm --dir $components $componentsScript
+    if ($LASTEXITCODE -ne 0) {
         $panelOk = $false
     }
 }
