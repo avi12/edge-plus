@@ -1,6 +1,6 @@
 import type { Mounted } from "../renderer/mount.svelte.ts";
 import { mountControl } from "../renderer/mount.svelte.ts";
-import { DesktopAcrylicBackdrop, Window } from "../winui.ts";
+import { DesktopAcrylicBackdrop, Grid, Window } from "../winui.ts";
 import type { FrameworkElement } from "../winui.ts";
 import type { Component } from "svelte";
 
@@ -88,7 +88,16 @@ function placeContent<Props extends object>(window: Window, options: WindowOptio
   }
 
   const mounted = mountControl(options.component, options.props);
-  window.content = mounted.root;
+  // The component's root sits in a grid of the window's, which puts a new root
+  // (a hot update's) in the old one's place: a window's own content is not a
+  // place a swap can find the old root's parent in.
+  const holder = new Grid();
+  holder.children.append(mounted.root);
+  window.content = holder;
+  mounted.onRootChange(root => {
+    holder.children.clear();
+    holder.children.append(root);
+  });
   return mounted;
 }
 

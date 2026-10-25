@@ -18,6 +18,12 @@ import { mount, unmount } from "svelte";
 export interface Mounted<Props> {
   readonly root: FrameworkElement;
   set(changes: Partial<Props>): void;
+  // Told the new root when the component's root control changes (a hot
+  // update, a root inside {#if}). The page has the new one in the old one's
+  // place by then when it holds it in a panel's children, a border's child or
+  // a content control's content; one that holds it where that cannot be found
+  // (a window's content) puts it there itself.
+  onRootChange(listener: (root: FrameworkElement) => void): void;
   // Ends the component's effects (attachment cleanups included) and lets go
   // of the controls it made, except the ones the app placed in it. The root
   // control is left where the page has it, for the page to drop.
@@ -37,6 +43,7 @@ export function mountControl<Props extends object>(
   });
   flush();
   let root = rootControl(fragment);
+  const rootListeners = new Set<(root: FrameworkElement) => void>();
   // A new root (a hot update, or a root inside {#if}) takes the old one's
   // place in the page, which holds the old control by then.
   watchRoot(fragment, control => {
@@ -44,11 +51,15 @@ export function mountControl<Props extends object>(
     if (isReplaced) {
       swapControl(root, control);
       root = control;
+      rootListeners.forEach(listener => listener(control));
     }
   });
   return {
     get root() {
       return root;
+    },
+    onRootChange(listener) {
+      rootListeners.add(listener);
     },
     set(changes) {
       Object.assign(props, changes);

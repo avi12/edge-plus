@@ -10,7 +10,9 @@ monorepo needs no build step (the repository is a pnpm workspace, see
 
 | Specifier | File | What |
 |---|---|---|
-| `svelte-winui` | `src/index.ts` | `control`, `withControl`, `mountControl`, `registerControls`, `setClassHandler`, `dispatch` / `flush` / `onFlush`, the value helpers; the components add their exports here |
+| `svelte-winui` | `src/index.ts` | `control`, `withControl`, `mountControl`, `registerControls`, `setClassHandler`, `dispatch` / `flush` / `onFlush`, the value helpers |
+| `svelte-winui/components` | `src/components/generated/index.ts` | every WinUI 3 control as a component (`StackPanel`, `ToggleSwitch`, ...) and its props type (`ToggleSwitchComponentProps`); importing it registers the generated bindings with the renderer |
+| `svelte-winui/state` | `src/state/index.ts` | `createHostChannel()`, `hostState()`, the transports (stdio, MessagePort, in-memory), `diff` / `applyOps` (see `src/state/README.md`) |
 | `svelte-winui/host` | `src/renderer/host.ts` | the custom renderer a compiled component imports (default export); not for app code |
 | `svelte-winui/keyed-list` | `src/renderer/keyed-list.ts` | `syncKeyed()`: sync a native collection to wanted keys, touching only what changed |
 | `svelte-winui/vite` | `src/vite/index.ts` | `svelteWinui()` Vite plugin, `startModuleServer()`, compile-error formatting |
@@ -19,7 +21,14 @@ monorepo needs no build step (the repository is a pnpm workspace, see
 | `svelte-winui/testing` | `src/vite/loader.ts` | `svelteHooks()`: Node module hooks that run `.svelte` files with a chosen renderer (pure tests) |
 | `svelte-winui/bootstrap` | `src/window/bootstrap.ts` | `initWindowsAppSdk()`; imports nothing of WinRT, safe on the host's main thread |
 | `svelte-winui/thread` | `src/window/thread.ts` | `runOnUiThread()`; imports only dynwinrt, so the apartment comes first |
-| `svelte-winui/window` | `src/window/index.ts` | `runWindow()`, `exitApplication()`, `createWindow()` |
+| `svelte-winui/window` | `src/window/index.ts` | `runWindow()`, `exitApplication()`, `createWindow()`, `startTimer()` |
+
+The `svelte-winui` command (`src/cli/main.ts`, `bin`) has one subcommand, `setup`, which prepares an app's bindings (README, "Install").
+
+The table is the source layout: `exports` point at `.ts` files so the monorepo
+needs no build. `pnpm build` compiles them to `dist/` and `publishConfig`
+(which pnpm applies when it packs) points `exports` and `bin` there, with a
+`types` and a `svelte` condition on each.
 
 ### The bindings are the app's
 
@@ -60,6 +69,11 @@ type NodeAttachment = (node: unknown) => void | (() => void);
 interface Mounted<Props> {
   readonly root: FrameworkElement;       // the component's first control
   set(changes: Partial<Props>): void;    // changes props, flush() at once
+  // Told the new root when the root control changes (a hot update, a root in
+  // {#if}). A page that holds the root in a panel's children, a border's child
+  // or a content control's content has it swapped in; one that holds it
+  // anywhere else (a window's content) places it itself, here.
+  onRootChange(listener: (root: FrameworkElement) => void): void;
   unmount(): void;                       // Svelte's unmount (cleanups run), then releases the controls it made
 }
 function mountControl<Props extends object>(component: Component<Props>, initial: Props): Mounted<Props>;
@@ -174,6 +188,11 @@ function runOnUiThread(main: () => Promise<void>): Promise<never>;
 // installed), then `onStart` on the UI thread. Settles when the app exits.
 function runWindow(options: { onStart: () => void }): Promise<void>;
 function exitApplication(): void;
+
+// A DispatcherQueue timer on the UI thread (WinUI holds the thread, so Node's
+// timers and a port's events never fire there): what takes a host's messages
+// or the module server's hot updates in. Returns what stops it.
+function startTimer(options: { milliseconds: number; onTick: () => void; isRepeating?: boolean }): () => void;
 
 // A window around a component (mounted: props can change, it can be
 // unmounted) or a control. Call it on the UI thread, from onStart or later.
