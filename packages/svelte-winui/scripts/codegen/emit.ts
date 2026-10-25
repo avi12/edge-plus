@@ -1,6 +1,6 @@
 import type { AttachedModel, BindableModel, ClassModel, EventModel, Model, PropertyModel } from "./model.ts";
-import { bindingClasses } from "./model.ts";
-import { extraBindings, PropertyKind } from "./tables.ts";
+import { bindingClasses, kebabCase } from "./model.ts";
+import { extendedClasses, extraBindings, PropertyKind } from "./tables.ts";
 import type { TypeName } from "./winmd.ts";
 import { fullName } from "./winmd.ts";
 
@@ -275,7 +275,9 @@ export function emitLevel(level: ClassModel): string {
   }
 
   const parentName = level.parent?.type.name;
-  const propsExtends = parentName === undefined ? "" : ` extends ${parentName}Props`;
+  const extras = extendedClasses.has(name) ? `${name}Extras` : null;
+  const extended = [parentName === undefined ? null : `${parentName}Props`, extras].filter(part => part !== null);
+  const propsExtends = extended.length === 0 ? "" : ` extends ${extended.join(", ")}`;
   const boundMembers = level.bindables.map(bindable => `"${bindable.key}"`).join(" | ");
   const ownBound = level.bindables.length === 0 ? null : `Pick<${name}Props, ${boundMembers}>`;
   const parentBound = parentName === undefined ? null : `${parentName}Bound`;
@@ -296,6 +298,12 @@ export function emitLevel(level: ClassModel): string {
   lines.push(...importLine([...imports.convert], "../../convert.ts"));
   lines.push(...importLine([...imports.convertTypes], "../../convert.ts", true));
   lines.push(...importLine(["Linker"], "../../runtime.svelte.ts"));
+  if (extras !== null) {
+    const extension = `../../extensions/${kebabCase(name)}.ts`;
+    lines.push(...importLine([`link${extras}`], extension));
+    lines.push(...importLine([extras], extension, true));
+  }
+
   for (const parent of imports.parents) {
     lines.push(`import { link${parent} } from "./${parent}.svelte.ts";`);
     lines.push(`import type { ${parent}Bound, ${parent}Props } from "./${parent}.svelte.ts";`);
@@ -314,6 +322,10 @@ export function emitLevel(level: ClassModel): string {
   );
   if (level.parent !== null) {
     lines.push(`  link${level.parent.type.name}(control, props, bound, link);`);
+  }
+
+  if (extras !== null) {
+    lines.push(`  link${extras}(control, props, link);`);
   }
 
   lines.push(...body, "}");
