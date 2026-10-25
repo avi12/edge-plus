@@ -1,6 +1,6 @@
+import { gridLengthOf } from "../convert.ts";
 import { ColumnDefinition, RowDefinition } from "../generated/bindings.ts";
 import type { Grid } from "../generated/bindings.ts";
-import { gridLengthOf } from "../convert.ts";
 import type { Linker } from "../runtime.svelte.ts";
 
 // Hand-written props of the generated Grid: WinUI's ColumnDefinitions and
@@ -22,7 +22,10 @@ type Definition = ColumnDefinition | RowDefinition;
 
 // The lengths replace the definitions the grid holds.
 function define<Item extends Definition>(
-  definitions: { clear(): void; append(item: Item): void },
+  definitions: {
+    clear(): void;
+    append(item: Item): void;
+  },
   make: (length: string) => Item,
   lengths: string
 ): void {
