@@ -1,10 +1,8 @@
-import { diff } from "../../src/state/diff.ts";
-import type { Json } from "../../src/state/protocol.ts";
-import { isJsonObject, MessageType } from "../../src/state/protocol.ts";
-import { createMessagePortTransport } from "../../src/state/transports/message-port.ts";
 import { startWindowsAppSdk } from "../bootstrap.ts";
 import { viewName } from "./app-types.ts";
 import { MessageChannel, Worker } from "node:worker_threads";
+import type { Json } from "svelte-winui/state/host";
+import { createMessagePortTransport, diff, isJsonObject, MessageType } from "svelte-winui/state/host";
 
 // The counter example's host: it owns the app's state (a count and a
 // history), sends it as a snapshot and then patches, and answers the actions
@@ -12,7 +10,10 @@ import { MessageChannel, Worker } from "node:worker_threads";
 // a worker MessagePort; a Rust or Electron host would speak the same
 // messages over stdio (createStdioTransport) instead.
 //
-//   node --disable-warning=ExperimentalWarning --import ../register-deps.ts launch.ts
+//   node --disable-warning=ExperimentalWarning examples/counter/launch.ts
+//
+// (from the package's folder: the Windows App SDK's bootstrapper is looked for
+// in its .winapp)
 
 const maximumHistory = 5;
 

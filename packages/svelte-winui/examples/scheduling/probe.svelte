@@ -1,7 +1,7 @@
 <script lang="ts">
   import { probe } from "./probe-state.svelte.ts";
-  import { TextBlock } from "../../../../app/panel-tauri/ui/window/winui.ts";
-  import { withControl } from "../../../../app/panel-tauri/ui/window/svelte-renderer.ts";
+  import { TextBlock } from "#winui/microsoft/ui/xaml/controls/TextBlock";
+  import { withControl } from "svelte-winui";
   import { observe, watch } from "./watch.ts";
 
   // No flushSync anywhere: the question is who applies the change.

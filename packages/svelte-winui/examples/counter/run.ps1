@@ -30,7 +30,8 @@ public static class Win {
 '@
 }
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$node = Start-Process node -WorkingDirectory $here -WindowStyle Hidden -PassThru -ArgumentList @('--disable-warning=ExperimentalWarning', '--import', '../register-deps.ts', 'launch.ts')
+$package = Split-Path -Parent (Split-Path -Parent $here)
+$node = Start-Process node -WorkingDirectory $package -WindowStyle Hidden -PassThru -ArgumentList @('--disable-warning=ExperimentalWarning', 'examples/counter/launch.ts')
 $automation = [System.Windows.Automation.AutomationElement]
 $scope = [System.Windows.Automation.TreeScope]::Descendants
 function Texts($root) {
