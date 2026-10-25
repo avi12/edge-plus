@@ -85,7 +85,7 @@ export function compileSheetModule(input: SheetModuleInput): SheetModule | null 
 
 // The statements that register a sheet. They name nothing a component might
 // (the import is aliased), so they can be appended to a compiled component.
-export function registrationCode(sheet: StyleSheetData, runtimeModule: string): string {
+function registrationCode(sheet: StyleSheetData, runtimeModule: string): string {
   return [
     `import { registerStyleSheet as ${registerAlias} } from ${JSON.stringify(runtimeModule)};`,
     `${registerAlias}(${JSON.stringify(sheet)});`

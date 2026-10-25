@@ -1,6 +1,6 @@
 import type { RankedRule } from "./cascade.ts";
 import { computeDeclarations, matchingRanked, resolveBuiltVariable, styleDictionaryXaml } from "./cascade.ts";
-import { inlineDeclaration, parseInlineStyle } from "./inline.ts";
+import { parseInlineStyle } from "./inline.ts";
 import type { LoweredStyle } from "./properties.ts";
 import { lowerDeclarations } from "./properties.ts";
 import type { LowerOptions } from "./reader.ts";
@@ -30,10 +30,9 @@ export interface CssNative {
 export interface StyledElement {
   // The whole class attribute, on every change.
   setClasses(classNames: string): void;
-  // style="..."; null removes it.
+  // The whole style attribute, which Svelte keeps as one string whether it
+  // was written as style="..." or as style:name={value}; null removes it.
   setInlineStyle(cssText: string | null): void;
-  // style:name={value}; null removes it.
-  setStyleProperty(name: string, value: string | null): void;
   dispose(): void;
 }
 
@@ -297,7 +296,6 @@ class ElementStyle implements StyledElement {
   private readonly elementType: string;
   private classes = new Set<string>();
   private inlineText: string | null = null;
-  private readonly directives = new Map<string, string>();
   private readonly states = new Set<PseudoState>();
   private readonly subscriptions = new Map<PseudoState, Array<() => void>>();
   private appliedKey: string | null = null;
@@ -320,16 +318,6 @@ class ElementStyle implements StyledElement {
     this.refresh();
   }
 
-  setStyleProperty(name: string, value: string | null): void {
-    if (value === null) {
-      this.directives.delete(name);
-    } else {
-      this.directives.set(name, value);
-    }
-
-    this.refresh();
-  }
-
   dispose(): void {
     this.isDisposed = true;
     elements.delete(this);
@@ -343,13 +331,12 @@ class ElementStyle implements StyledElement {
   private inlineDeclarations(): Declaration[] {
     const problems: string[] = [];
     const options = lowerOptions(this.elementType, problems);
-    const fromAttribute = this.inlineText === null ? [] : parseInlineStyle(this.inlineText, options);
-    const fromDirectives = [...this.directives].flatMap(([name, value]) => inlineDeclaration(name, value, options));
+    const declarations = this.inlineText === null ? [] : parseInlineStyle(this.inlineText, options);
     if (problems.length > 0) {
       throw new Error(`<${this.elementType}> style: ${problems.join("; ")}`);
     }
 
-    return [...fromAttribute, ...fromDirectives];
+    return declarations;
   }
 
   refresh(): void {

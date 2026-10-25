@@ -1,4 +1,6 @@
+import { installCss } from "../../../../packages/svelte-winui/src/css/native.ts";
 import type { Style } from "./winui.ts";
+import * as winui from "./winui.ts";
 import {
   Application,
   projectAs,
@@ -88,6 +90,8 @@ type StyleKey = (typeof StyleKey)[keyof typeof StyleKey];
 export function installStyles(): void {
   const dictionary = projectAs(XamlReader.load(resourcesXaml), ResourceDictionary);
   Application.current.resources.mergedDictionaries?.append(dictionary);
+  // The components' <style> blocks, over WinUI's own resources too.
+  installCss(winui);
 }
 
 export function style(key: StyleKey): Style {

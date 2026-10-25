@@ -184,10 +184,10 @@ test("style= and style: beat every class", () => {
   assert.match(target.style ?? "", /Value="0.25"/u);
   assert.match(target.style ?? "", /Value="4,4,4,4"/u);
 
-  element.setStyleProperty("opacity", "0.75");
+  // style:opacity={0.75} reaches the renderer as a longer style string.
+  element.setInlineStyle("opacity: 0.25; padding: 4px; opacity: 0.75");
   assert.match(target.style ?? "", /Value="0.75"/u);
 
-  element.setStyleProperty("opacity", null);
   element.setInlineStyle(null);
   assert.match(target.style ?? "", /Value="0.5"/u);
   assert.doesNotMatch(target.style ?? "", /Padding/u);

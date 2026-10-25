@@ -19,15 +19,14 @@ styledElement(control: object, elementType: string): StyledElement;
 
 interface StyledElement {
   setClasses(classNames: string): void;                        // the whole class attribute, on every change
-  setInlineStyle(cssText: string | null): void;                // style="..."
-  setStyleProperty(name: string, value: string | null): void;  // style:name={value}; null removes
+  setInlineStyle(cssText: string | null): void;                // the whole style attribute (Svelte merges style:name={value} into it)
   dispose(): void;                                             // when the element is removed
 }
 ```
 
 The renderer's `class` handler becomes `styled.setClasses(String(value))`, its
-`style` handler `styled.setInlineStyle(...)`, and `style:` directives
-`styled.setStyleProperty(...)`. A class no sheet knows applies nothing and
+`style` handler `styled.setInlineStyle(...)` (a removed attribute is
+`setClasses("")` / `setInlineStyle(null)`). A class no sheet knows applies nothing and
 leaves the element alone (so a hand-applied Style survives); a throw means a
 declaration the element's type cannot take, with the rule it came from.
 

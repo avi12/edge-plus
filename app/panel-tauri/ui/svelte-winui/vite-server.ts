@@ -2,10 +2,12 @@ import { logEvent } from "./vite-runner.ts";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { pathToFileURL } from "node:url";
 import type { MessagePort } from "node:worker_threads";
+import type { CompileOptions } from "svelte/compiler";
 import type {
   CustomPayload,
   HotChannel,
   HotChannelClient,
+  PluginOption,
   ResolvedConfig,
   ViteDevServer
 } from "vite";
@@ -29,6 +31,11 @@ export interface ModuleServerOptions {
   // Modules Node loads itself rather than Vite, such as the one that imports
   // generated native bindings.
   isNative: (file: string) => boolean;
+  // Vite plugins that run after the component is compiled, such as the one
+  // that registers a component's <style> as WinUI Styles.
+  afterSvelte?: PluginOption[];
+  // Compile options for every component, such as the scoping class's hash.
+  compilerOptions?: CompileOptions;
 }
 
 const environmentName = "winui";
@@ -137,6 +144,7 @@ export async function startModuleServer(options: ModuleServerOptions): Promise<V
         // CSS.
         emitCss: false,
         compilerOptions: {
+          ...options.compilerOptions,
           css: "external"
         },
         // The runner is Node, so the environment is a server one, but the
@@ -147,7 +155,8 @@ export async function startModuleServer(options: ModuleServerOptions): Promise<V
             customRenderer: options.customRenderer(filename)
           }
         })
-      })
+      }),
+      ...options.afterSvelte ?? []
     ],
     environments: {
       [environmentName]: {

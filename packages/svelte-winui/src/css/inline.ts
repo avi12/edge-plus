@@ -3,8 +3,9 @@ import type { LowerOptions } from "./reader.ts";
 import { expandDeclaration } from "./shorthands.ts";
 import type { Declaration, SourcePosition } from "./types.ts";
 
-// `style="padding: 8px; opacity: .5"` and `style:padding={value}`: declarations
-// that belong to one element and beat every rule of the stylesheet.
+// `style="padding: 8px; opacity: .5"`: declarations that belong to one element
+// and beat every rule of the stylesheet. Svelte merges `style:padding={value}`
+// directives into this one string before the renderer sees it.
 
 const inlinePosition: SourcePosition = {
   line: 1,
@@ -22,14 +23,4 @@ export function parseInlineStyle(cssText: string, options: LowerOptions): Declar
     ...declaration,
     at: inlinePosition
   }, options));
-}
-
-// One `style:name={value}` directive.
-export function inlineDeclaration(name: string, value: string, options: LowerOptions): Declaration[] {
-  return expandDeclaration({
-    property: name.toLowerCase(),
-    value,
-    isImportant: false,
-    at: inlinePosition
-  }, options);
 }

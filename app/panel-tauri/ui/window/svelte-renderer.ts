@@ -17,6 +17,8 @@ import {
   splitList,
   thicknessSides
 } from "./markup.ts";
+import type { StyledElement } from "../../../../packages/svelte-winui/src/css/runtime.ts";
+import { styledElement } from "../../../../packages/svelte-winui/src/css/runtime.ts";
 import { style, StyleKey } from "./styles.ts";
 import type { ElementNode, FragmentNode, NativeHost, TreeNode } from "./svelte-tree.ts";
 import { createTreeRenderer, NodeType, parentElement } from "./svelte-tree.ts";
@@ -41,6 +43,8 @@ import * as winui from "./winui.ts";
 
 interface WinuiNative {
   control: UIElement | null;
+  // Made when the element first gets a class or a style.
+  styled: StyledElement | null;
   // What the native collection holds, in order, to change it in place.
   placed: UIElement[];
 }
@@ -51,7 +55,8 @@ type TextConverter = (text: string, property: string) => unknown;
 
 const hostTag = "host";
 const hostAttribute = "element";
-const styleAttribute = "class";
+const classAttribute = "class";
+const inlineStyleAttribute = "style";
 const attachedSeparator = ".";
 const thicknessProperties = new Set(["margin", "padding", "borderThickness"]);
 const exports = new Map<string, unknown>(Object.entries(winui));
@@ -145,13 +150,27 @@ function convert(control: UIElement, property: string, value: unknown): unknown 
   return converter(value, property);
 }
 
-function applyStyle(control: UIElement, _name: string, value: unknown): void {
+// A class is either a StyleKey (a hand-written XAML Style) or, as in CSS, the
+// classes the component's <style> rules match.
+function applyStyle(element: WinuiElement, control: UIElement, value: unknown): void {
   const key = styleKeys.get(String(value));
-  if (key === undefined) {
-    throw new Error(`class="${String(value)}" names no StyleKey`);
+  if (key !== undefined) {
+    write(control, "style", style(key));
+    return;
   }
 
-  write(control, "style", style(key));
+  stylingOf(element, control).setClasses(String(value ?? ""));
+}
+
+// Svelte hands the renderer the whole style attribute, style:name={value}
+// directives merged into it.
+function applyInlineStyle(element: WinuiElement, control: UIElement, value: unknown): void {
+  stylingOf(element, control).setInlineStyle(value === null || value === undefined ? null : String(value));
+}
+
+function stylingOf(element: WinuiElement, control: UIElement): StyledElement {
+  element.native.styled ??= styledElement(control, element.name);
+  return element.native.styled;
 }
 
 // A grid's columns or rows, each length a new definition; set again, they
@@ -180,7 +199,6 @@ function applyProperty(control: UIElement, name: string, value: unknown): void {
 }
 
 const namedAttributes = new Map<string, AttributeHandler>([
-  [styleAttribute, applyStyle],
   ["columns", definitionsHandler(winui.ColumnDefinition, "columnDefinitions", "width")],
   ["rows", definitionsHandler(winui.RowDefinition, "rowDefinitions", "height")]
 ]);
@@ -189,10 +207,22 @@ function attributeHandler(name: string): AttributeHandler {
   return namedAttributes.get(name) ?? (name.includes(attachedSeparator) ? applyAttached : applyProperty);
 }
 
+const elementAttributes = new Map<string, (element: WinuiElement, control: UIElement, value: unknown) => void>([
+  [classAttribute, applyStyle],
+  [inlineStyleAttribute, applyInlineStyle]
+]);
+
 function applyAttribute(element: WinuiElement, name: string, value: unknown): void {
   const control = element.native.control;
-  if (control !== null) {
+  if (control === null) {
+    return;
+  }
+
+  const elementAttribute = elementAttributes.get(name);
+  if (elementAttribute === undefined) {
     attributeHandler(name)(control, name, value);
+  } else {
+    elementAttribute(element, control, value);
   }
 }
 
@@ -363,6 +393,7 @@ function releaseHosts(node: TreeNode<WinuiNative>): void {
     return;
   }
 
+  node.native.styled?.dispose();
   node.children.forEach(releaseHosts);
 }
 
@@ -370,6 +401,7 @@ function createNative(name: string): WinuiNative {
   if (name === hostTag) {
     return {
       control: null,
+      styled: null,
       placed: []
     };
   }
@@ -381,6 +413,7 @@ function createNative(name: string): WinuiNative {
 
   return {
     control: new type(),
+    styled: null,
     placed: []
   };
 }
@@ -397,6 +430,8 @@ const winuiHost: NativeHost<WinuiNative> = {
   removeAttribute(element, name) {
     if (name === hostAttribute) {
       placeHost(element, null);
+    } else if (elementAttributes.has(name)) {
+      applyAttribute(element, name, null);
     }
   },
   childrenChanged: sync,
