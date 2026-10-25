@@ -5,13 +5,18 @@ import { createInterface } from "node:readline";
 
 // A stand-in for the core, to work on the window alone: it opens the window on
 // a saved View (fixture-view.json, or the file named), answers every action
-// with success and prints what the window sends.
+// with success and prints what the window sends. Given a window kit (pnpm
+// build:window), it runs the kit's Node and bundle instead of the sources.
 //
-//   node ui/dev/fixture.ts [view.json]
+//   node ui/dev/fixture.ts [view.json] [dist/window]
 
 const viewFile = process.argv[2] ?? path.join(import.meta.dirname, "fixture-view.json");
+const kit = process.argv[3];
 const view: unknown = JSON.parse(readFileSync(viewFile, "utf8"));
-const window = spawn(process.execPath, [path.join(import.meta.dirname, "..", "main.ts")], { stdio: ["pipe", "pipe", "inherit"] });
+const [node, entry] = kit === undefined
+  ? [process.execPath, path.join(import.meta.dirname, "..", "main.ts")]
+  : [path.join(kit, "node.exe"), path.join(kit, "main.mjs")];
+const window = spawn(node, [entry], { stdio: ["pipe", "pipe", "inherit"] });
 
 function send(message: object): void {
   window.stdin.write(`${JSON.stringify(message)}\n`);

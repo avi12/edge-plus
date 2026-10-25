@@ -36,6 +36,7 @@
     "@microsoft/winappcli": "0.7.1",
     "@stylistic/eslint-plugin": "^5.10.0",
     "@types/node": "^24.10.0",
+    "esbuild": "~0.25.12",
     "eslint": "^10.12.0",
     "eslint-plugin-import-newlines": "^2.0.0",
     "eslint-plugin-perfectionist": "^5.12.1",
@@ -51,43 +52,74 @@
       "additionalWinmds": [
         {
           "namespace": "Windows.Foundation",
-          "classes": ["PropertyValue", "Uri"]
+          "classes": [
+            "PropertyValue",
+            "Uri"
+          ]
         },
         {
           "namespace": "Windows.UI.ViewManagement",
-          "classes": ["UISettings"]
+          "classes": [
+            "UISettings"
+          ]
         },
         {
           "namespace": "Windows.ApplicationModel.DataTransfer",
-          "classes": ["StandardDataFormats"]
+          "classes": [
+            "StandardDataFormats"
+          ]
         },
         {
           "namespace": "Microsoft.UI.Windowing",
-          "classes": ["AppWindow", "DisplayArea", "OverlappedPresenter"]
+          "classes": [
+            "AppWindow",
+            "DisplayArea",
+            "OverlappedPresenter"
+          ]
         },
         {
           "namespace": "Microsoft.UI.Input",
-          "classes": ["InputNonClientPointerSource"]
+          "classes": [
+            "InputNonClientPointerSource"
+          ]
         },
         {
           "namespace": "Microsoft.UI.Dispatching",
-          "classes": ["DispatcherQueue", "DispatcherQueueTimer"]
+          "classes": [
+            "DispatcherQueue",
+            "DispatcherQueueTimer"
+          ]
         },
         {
           "namespace": "Microsoft.Windows.Storage.Pickers",
-          "classes": ["FileOpenPicker", "FolderPicker"]
+          "classes": [
+            "FileOpenPicker",
+            "FolderPicker"
+          ]
         },
         {
           "namespace": "Microsoft.UI.Xaml",
-          "classes": ["Application", "Window", "ResourceDictionary", "Style", "ScalarTransition", "VisualStateManager", "DataTemplate"]
+          "classes": [
+            "Application",
+            "Window",
+            "ResourceDictionary",
+            "Style",
+            "ScalarTransition",
+            "VisualStateManager",
+            "DataTemplate"
+          ]
         },
         {
           "namespace": "Microsoft.UI.Xaml.Markup",
-          "classes": ["XamlReader"]
+          "classes": [
+            "XamlReader"
+          ]
         },
         {
           "namespace": "Microsoft.UI.Xaml.Automation",
-          "classes": ["AutomationProperties"]
+          "classes": [
+            "AutomationProperties"
+          ]
         },
         {
           "namespace": "Microsoft.UI.Xaml.Controls",
@@ -116,19 +148,32 @@
         },
         {
           "namespace": "Microsoft.UI.Xaml.Media",
-          "classes": ["DesktopAcrylicBackdrop", "VisualTreeHelper", "DoubleCollection"]
+          "classes": [
+            "DesktopAcrylicBackdrop",
+            "VisualTreeHelper",
+            "DoubleCollection"
+          ]
         },
         {
           "namespace": "Microsoft.UI.Xaml.Media.Imaging",
-          "classes": ["BitmapImage"]
+          "classes": [
+            "BitmapImage"
+          ]
         },
         {
           "namespace": "Microsoft.UI.Xaml.Media.Animation",
-          "classes": ["AddDeleteThemeTransition", "ReorderThemeTransition", "RepositionThemeTransition", "TransitionCollection"]
+          "classes": [
+            "AddDeleteThemeTransition",
+            "ReorderThemeTransition",
+            "RepositionThemeTransition",
+            "TransitionCollection"
+          ]
         },
         {
           "namespace": "Microsoft.UI.Xaml.Shapes",
-          "classes": ["Rectangle"]
+          "classes": [
+            "Rectangle"
+          ]
         }
       ]
     }

@@ -1,3 +1,4 @@
+import type { UiMessage } from "./protocol.g.ts";
 import { initWinappsdk } from "@microsoft/dynwinrt";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -25,11 +26,23 @@ function bootstrapPath(): string {
   return path.join(import.meta.dirname, "..", ".winapp", "bin", process.arch, bootstrapName);
 }
 
+function say(message: UiMessage): void {
+  process.stdout.write(`${JSON.stringify(message)}\n`);
+}
+
 process.env[bootstrapVariable] ??= bootstrapPath();
-initWinappsdk(windowsAppSdkMajor, windowsAppSdkMinor);
+try {
+  initWinappsdk(windowsAppSdkMajor, windowsAppSdkMinor);
+} catch (error) {
+  // The core installs the runtime it carries and opens the window again.
+  process.stderr.write(`${String(error)}\n`);
+  say({ type: "runtimeMissing" });
+  process.exit(1);
+}
 
 const channel = new MessageChannel();
-const worker = new Worker(new URL("./window/worker.ts", import.meta.url), {
+// The same layout run from source (.ts) and from the bundled window kit (.mjs).
+const worker = new Worker(new URL(`./window/worker${path.extname(import.meta.filename)}`, import.meta.url), {
   workerData: channel.port2,
   transferList: [channel.port2]
 });
@@ -42,9 +55,7 @@ createInterface({ input: process.stdin }).on("line", line => {
   // The core is gone: so is its window.
   channel.port1.postMessage({ type: "close" });
 });
-channel.port1.on("message", message => {
-  process.stdout.write(`${JSON.stringify(message)}\n`);
-});
+channel.port1.on("message", (message: UiMessage) => say(message));
 worker.on("error", error => {
   process.stderr.write(`${error.stack ?? String(error)}\n`);
   process.exitCode = 1;

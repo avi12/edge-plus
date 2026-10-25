@@ -198,6 +198,9 @@ pub enum CoreMessage {
 #[serde(tag = "type", rename_all = "camelCase")]
 #[cfg_attr(test, derive(TS))]
 pub enum UiMessage {
+    /// Sent instead of opening when the Windows App runtime is not installed;
+    /// the window's process then ends.
+    RuntimeMissing,
     Refresh,
     Action { id: u32, action: Action },
     Bounds { bounds: Bounds },

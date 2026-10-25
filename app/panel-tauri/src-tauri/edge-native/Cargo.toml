@@ -32,6 +32,7 @@ version = "0.61"
 features = [
   "Data_Xml_Dom",
   "Foundation",
+  "Management_Deployment",
   "UI_Notifications",
 ]
 

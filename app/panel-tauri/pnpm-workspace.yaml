@@ -1,3 +1,5 @@
 allowBuilds:
   # Its postinstall only prints a greeting.
   "@microsoft/winappcli": false
+  # Installs its platform binary, which bundling the window needs (as in avi/pade).
+  esbuild: true

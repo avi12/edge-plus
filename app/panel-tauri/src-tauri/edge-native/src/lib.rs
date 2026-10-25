@@ -19,6 +19,7 @@
 mod clock;
 mod inject;
 mod memory;
+mod packages;
 mod process;
 mod registry;
 mod rsa;
@@ -33,6 +34,7 @@ mod wide;
 pub use clock::{local_time_of_day, local_timestamp};
 pub use inject::{free_module, inject_into};
 pub use memory::trim_working_set;
+pub use packages::install_packages;
 pub use process::{
     browser_pids, module_base, module_path, pids_missing_module, pids_with_module, wait_for_exit,
 };
