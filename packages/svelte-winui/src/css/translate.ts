@@ -221,11 +221,12 @@ function buildVariableResources(translator: Translator): VariableResources {
     entriesByScheme.set(variable.scheme, forScheme);
   }
 
-  const hasDefault = (key: string): boolean =>
-    [ColorScheme.Default, ColorScheme.Light].some(scheme => entriesByScheme.get(scheme)?.has(key) === true);
-  for (const key of entriesByScheme.get(ColorScheme.Dark)?.keys() ?? []) {
-    const variable = translator.variables.find(candidate => resourceNameOf(candidate.name) === key.replace(/Brush$/u, ""));
-    if (!hasDefault(key) && variable !== undefined) {
+  const lightNames = new Set(translator.variables.filter(variable => variable.scheme !== ColorScheme.Dark).map(variable => variable.name));
+  const reportedNames = new Set<string>();
+  for (const variable of translator.variables) {
+    const isDarkOnly = variable.scheme === ColorScheme.Dark && !lightNames.has(variable.name) && !reportedNames.has(variable.name);
+    if (isDarkOnly) {
+      reportedNames.add(variable.name);
       translator.diagnostics.push({
         severity: "error",
         message: `${variable.name} is declared for dark only; declare it outside @media too (the light value)`,
