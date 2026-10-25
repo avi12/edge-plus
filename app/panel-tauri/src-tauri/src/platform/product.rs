@@ -3,6 +3,5 @@
 
 pub const NAME: &str = "Edge+";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-pub const SUMMARY: &str = env!("CARGO_PKG_DESCRIPTION");
 pub const AUTHOR: &str = env!("CARGO_PKG_AUTHORS");
 pub const AUTHOR_URI: &str = "https://avi12.com";

@@ -104,7 +104,10 @@ mod tests {
             state_of(&choice, Feature::NativeSplit, None, PINNED)
         );
         assert!(is_supported(Some(PINNED), PINNED));
-        assert!(!is_supported(Some(FileVersion::new(154, 0, 4283, 62)), PINNED));
+        assert!(!is_supported(
+            Some(FileVersion::new(154, 0, 4283, 62)),
+            PINNED
+        ));
     }
 
     #[test]
@@ -134,7 +137,7 @@ mod tests {
             .filter(|&feature| edge_build::depends_on_pinned_build(feature))
             .count();
         assert_eq!(dll_features, held.len());
-        assert!(paused(&all_on, Some(PINNED), PINNED).is_empty());
+        assert_eq!(Vec::<Feature>::new(), paused(&all_on, Some(PINNED), PINNED));
     }
 
     #[test]

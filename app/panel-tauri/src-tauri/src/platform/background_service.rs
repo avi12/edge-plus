@@ -14,13 +14,13 @@ use crate::themes::theme_watch::{ThemeRefresh, ThemeWatch};
 /// What the watchers saw, raised on a watcher's thread.
 #[derive(Clone, Debug)]
 pub enum ServiceEvent {
-    BuildChanged(BuildChange),
+    BuildChanged,
     /// An Edge browser process started (once it got the DLL, with auto-inject
     /// on) or closed: the window re-reads its state.
     BrowsersChanged,
     ThemeRefreshed(ThemeRefresh),
     /// A newer release is downloaded and checked.
-    UpdateReady(ReadyUpdate),
+    UpdateReady,
     /// The paused-features toast was clicked: open the window.
     ToastClicked,
 }
@@ -48,17 +48,20 @@ fn raise(event: ServiceEvent) {
 pub fn start(listener: impl Fn(ServiceEvent) + Send + Sync + 'static) {
     let _ = LISTENER.set(Arc::new(listener));
     SERVICE.get_or_init(|| Service {
-        edge: EdgeWatch::start(on_build_changed, || raise(ServiceEvent::BrowsersChanged)),
+        edge: EdgeWatch::start(
+            |change| on_build_changed(&change),
+            || raise(ServiceEvent::BrowsersChanged),
+        ),
         themes: ThemeWatch::start(|refresh| raise(ServiceEvent::ThemeRefreshed(refresh))),
-        updates: UpdateWatch::start(|ready| raise(ServiceEvent::UpdateReady(ready))),
+        updates: UpdateWatch::start(|_ready| raise(ServiceEvent::UpdateReady)),
     });
 }
 
-fn on_build_changed(change: BuildChange) {
+fn on_build_changed(change: &BuildChange) {
     if !IS_WINDOW_OPEN.load(Ordering::SeqCst) {
-        paused_toast::show_once_per_build(&change, || raise(ServiceEvent::ToastClicked));
+        paused_toast::show_once_per_build(change, || raise(ServiceEvent::ToastClicked));
     }
-    raise(ServiceEvent::BuildChanged(change));
+    raise(ServiceEvent::BuildChanged);
 }
 
 pub fn set_window_open(is_open: bool) {

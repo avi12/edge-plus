@@ -64,7 +64,7 @@ fn apply_to(settings: &Settings, reach: Reach, holders: &[u32]) {
         .filter(|pid| reach == Reach::EveryBrowser || holders.contains(pid))
         .collect();
     if !missing.is_empty() {
-        edge_native::inject_into(&missing, &paths::split_dll());
+        let _ = edge_native::inject_into(&missing, &paths::split_dll());
     }
     dll_channel::signal_config_changed();
 }

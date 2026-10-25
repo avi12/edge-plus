@@ -83,7 +83,7 @@ pub struct InjectSlot {
     pub offer: Option<InjectView>,
 }
 
-/// Which switch a card is: echoed back in Action::SetSwitch.
+/// Which switch a card is: echoed back in `Action::SetSwitch`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(TS))]
@@ -156,19 +156,40 @@ pub struct View {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 #[cfg_attr(test, derive(TS))]
 pub enum Action {
-    SetSwitch { key: SwitchKey, is_on: bool },
+    SetSwitch {
+        key: SwitchKey,
+        is_on: bool,
+    },
     Inject,
     RestartToUpdate,
-    AddStoreTheme { url: String },
-    AddLocalTheme { path: String },
-    RemoveTheme { id: String },
-    ReorderThemes { ids: Vec<String> },
+    AddStoreTheme {
+        url: String,
+    },
+    AddLocalTheme {
+        path: String,
+    },
+    RemoveTheme {
+        id: String,
+    },
+    ReorderThemes {
+        ids: Vec<String>,
+    },
     /// Alt+Up (-1) or Alt+Down (1) on a theme in the list.
-    MoveTheme { id: String, offset: i32 },
-    AssignTheme { mode: ColorMode, id: String },
+    MoveTheme {
+        id: String,
+        offset: i32,
+    },
+    AssignTheme {
+        mode: ColorMode,
+        id: String,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -185,11 +206,22 @@ pub struct Bounds {
 #[cfg_attr(test, derive(TS))]
 pub enum CoreMessage {
     /// Before the first view, on a dev swap: where the window it replaces was.
-    Place { bounds: Bounds },
-    View { view: Box<View> },
-    Reply { id: u32, error: Option<String> },
-    Notice { text: String },
-    Status { line: String },
+    Place {
+        bounds: Bounds,
+    },
+    View {
+        view: Box<View>,
+    },
+    Reply {
+        id: u32,
+        error: Option<String>,
+    },
+    Notice {
+        text: String,
+    },
+    Status {
+        line: String,
+    },
     BringBack,
     Close,
 }
@@ -202,8 +234,13 @@ pub enum UiMessage {
     /// the window's process then ends.
     RuntimeMissing,
     Refresh,
-    Action { id: u32, action: Action },
-    Bounds { bounds: Bounds },
+    Action {
+        id: u32,
+        action: Action,
+    },
+    Bounds {
+        bounds: Bounds,
+    },
 }
 
 #[cfg(test)]

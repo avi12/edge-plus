@@ -1,6 +1,6 @@
 //! Why an action the window asked for failed. Only a `User` error carries a
 //! sentence written for the user; anything else is logged, and the window says
-//! wording::ACTION_FAILED instead of a raw message.
+//! `wording::ACTION_FAILED` instead of a raw message.
 
 use std::fmt;
 use std::io;

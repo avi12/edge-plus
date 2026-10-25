@@ -63,12 +63,12 @@ pub fn set_auto_update(is_on: bool) -> ActionResult<PanelState> {
 }
 
 /// The Inject button: the DLL into every Edge browser process missing it. The
-/// returned state's is_split_loaded is the outcome the button shows.
-pub fn inject() -> ActionResult<PanelState> {
+/// returned state's `is_split_loaded` is the outcome the button shows.
+pub fn inject() -> PanelState {
     let _gate = settings::gate();
     let settings = Settings::load();
     dll_sync::apply_and_wait_for_load(&settings);
-    Ok(read(&settings))
+    read(&settings)
 }
 
 pub fn add_store_theme(url: &str) -> ActionResult<PanelState> {

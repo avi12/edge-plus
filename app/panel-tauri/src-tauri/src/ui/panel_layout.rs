@@ -23,12 +23,18 @@ pub enum OwnCard {
 /// `needs`, and is held, with a short hint, while that one is off.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CardSlot {
-    Feature { feature: Feature, needs: Option<Feature> },
+    Feature {
+        feature: Feature,
+        needs: Option<Feature>,
+    },
     Own(OwnCard),
 }
 
 const fn feature(feature: Feature) -> CardSlot {
-    CardSlot::Feature { feature, needs: None }
+    CardSlot::Feature {
+        feature,
+        needs: None,
+    }
 }
 
 pub const SECTIONS: [(Section, &[CardSlot]); 4] = [
@@ -82,7 +88,9 @@ mod tests {
     fn every_feature_has_exactly_one_card() {
         for wanted in Feature::ALL {
             let count = all_cards()
-                .filter(|slot| matches!(slot, CardSlot::Feature { feature, .. } if *feature == wanted))
+                .filter(
+                    |slot| matches!(slot, CardSlot::Feature { feature, .. } if *feature == wanted),
+                )
                 .count();
             assert_eq!(1, count, "{wanted:?}");
         }
@@ -90,8 +98,14 @@ mod tests {
 
     #[test]
     fn every_own_card_appears_once() {
-        for wanted in [OwnCard::StartWithWindows, OwnCard::AutoInject, OwnCard::AutoUpdate] {
-            let count = all_cards().filter(|slot| *slot == CardSlot::Own(wanted)).count();
+        for wanted in [
+            OwnCard::StartWithWindows,
+            OwnCard::AutoInject,
+            OwnCard::AutoUpdate,
+        ] {
+            let count = all_cards()
+                .filter(|slot| *slot == CardSlot::Own(wanted))
+                .count();
             assert_eq!(1, count, "{wanted:?}");
         }
     }
@@ -99,7 +113,11 @@ mod tests {
     #[test]
     fn a_needed_feature_is_never_itself() {
         for slot in all_cards() {
-            if let CardSlot::Feature { feature, needs: Some(needed) } = slot {
+            if let CardSlot::Feature {
+                feature,
+                needs: Some(needed),
+            } = slot
+            {
                 assert_ne!(feature, needed);
             }
         }

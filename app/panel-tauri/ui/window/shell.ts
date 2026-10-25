@@ -42,6 +42,8 @@ const statusShown = 1;
 const statusHidden = 0;
 const statusMilliseconds = 4000;
 const themeFileTypes = [".crx", ".zip"];
+// ui/assets from source (ui/window/shell.ts), and the kit's assets from its
+// bundle (window/worker.mjs).
 const iconPath = path.join(import.meta.dirname, "..", "assets", "edgeplus.ico");
 
 // What the window needs from the process it runs in: the core's link.

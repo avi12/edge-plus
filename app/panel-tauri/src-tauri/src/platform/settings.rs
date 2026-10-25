@@ -1,5 +1,5 @@
 //! The user's choices, in `settings.json`. The file keeps exactly the shape the
-//! earlier panels (Tauri, then WinUI) wrote, so an existing file carries over;
+//! earlier panels (Tauri, then `WinUI`) wrote, so an existing file carries over;
 //! keep it so.
 
 use std::fs;
@@ -19,7 +19,8 @@ static GATE: Mutex<()> = Mutex::new(());
 /// Takes the gate; a panic that poisoned it left nothing half-written that the
 /// next load would not read past.
 pub fn gate() -> MutexGuard<'static, ()> {
-    GATE.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    GATE.lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -28,17 +29,17 @@ pub enum Feature {
     NativeSplit,
     Theming,
     QuietDevMode,
-    /// protocol_handlers.h
+    /// `protocol_handlers.h`
     ProtocolHandlers,
     /// find.h
     EnhancedFind,
-    /// theme_follow.h
+    /// `theme_follow.h`
     WebUiFollowsTheme,
-    /// live_preview.h
+    /// `live_preview.h`
     LivePreview,
-    /// tab_shape.h
+    /// `tab_shape.h`
     TabShape,
-    /// reading_mode.h; the two themes are picked in reading mode itself and
+    /// `reading_mode.h`; the two themes are picked in reading mode itself and
     /// kept by the DLL.
     ReadingTheme,
 }
@@ -77,7 +78,10 @@ pub enum ColorMode {
 /// unknown field is ignored.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
-#[allow(clippy::struct_excessive_bools, reason = "each is an independent switch")]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "each is an independent switch"
+)]
 pub struct Features {
     pub native_split: bool,
     pub theming: bool,
@@ -150,7 +154,7 @@ impl Features {
         *switch = is_on;
     }
 
-    /// QuietDevMode is the panel's own, not the DLL's.
+    /// `QuietDevMode` is the panel's own, not the DLL's.
     #[must_use]
     pub fn needs_dll(&self) -> bool {
         Feature::ALL
@@ -185,14 +189,6 @@ pub struct Theming {
 }
 
 impl Theming {
-    #[must_use]
-    pub fn theme_for(&self, mode: ColorMode) -> &str {
-        match mode {
-            ColorMode::Light => &self.light,
-            ColorMode::Dark => &self.dark,
-        }
-    }
-
     pub fn assign(&mut self, mode: ColorMode, id: &str) {
         let slot = match mode {
             ColorMode::Light => &mut self.light,
@@ -235,7 +231,7 @@ pub struct Settings {
     /// Puts the DLL into an Edge that (re)starts while the panel runs; off, the
     /// panel offers an Inject button instead. On by default, as it always was.
     pub auto_inject: bool,
-    /// Looks for a newer Edge+ release (update_watch) and offers to restart
+    /// Looks for a newer Edge+ release (`update_watch`) and offers to restart
     /// into it. On by default; off, Edge+ never contacts GitHub.
     pub auto_update: bool,
 }
@@ -346,7 +342,11 @@ mod tests {
         let settings = Settings::default();
         for feature in Feature::ALL {
             let is_expected_on = matches!(feature, Feature::NativeSplit | Feature::TabShape);
-            assert_eq!(is_expected_on, settings.features.is_on(feature), "{feature:?}");
+            assert_eq!(
+                is_expected_on,
+                settings.features.is_on(feature),
+                "{feature:?}"
+            );
         }
         assert!(settings.features.needs_dll());
     }
@@ -382,7 +382,7 @@ mod tests {
         assert_eq!(ThemeSource::Store, settings.theming.themes[0].source);
         assert_eq!(ThemeSource::Local, settings.theming.themes[1].source);
         assert_eq!(r"C:\t", settings.theming.themes[1].origin);
-        assert_eq!("def", settings.theming.theme_for(ColorMode::Dark));
+        assert_eq!("def", settings.theming.dark);
         assert_eq!(Some("155.0.4283.62"), settings.last_edge_build.as_deref());
     }
 
@@ -414,7 +414,8 @@ mod tests {
 
     #[test]
     fn round_trips_through_a_file() {
-        let path = std::env::temp_dir().join(format!("edgeplus-settings-{}.json", std::process::id()));
+        let path =
+            std::env::temp_dir().join(format!("edgeplus-settings-{}.json", std::process::id()));
         let mut settings = Settings::default();
         settings.features.set(Feature::LivePreview, true);
         settings.theming.assign(ColorMode::Light, "abc");
@@ -432,7 +433,7 @@ mod tests {
         assert!(Settings::parse("not json").features.native_split);
         let nulls = Settings::parse(r#"{"features":null,"theming":null}"#);
         assert!(nulls.features.native_split);
-        assert!(nulls.theming.themes.is_empty());
+        assert_eq!(Vec::<ThemeEntry>::new(), nulls.theming.themes);
     }
 
     #[test]
@@ -452,7 +453,7 @@ mod tests {
         theming.assign(ColorMode::Dark, "a");
         theming.remove("a");
         assert!(theming.light.is_empty() && theming.dark.is_empty());
-        assert!(theming.themes.is_empty());
+        assert_eq!(Vec::<ThemeEntry>::new(), theming.themes);
     }
 
     #[test]
@@ -461,10 +462,18 @@ mod tests {
             let mut features = Features::none();
             features.set(feature, true);
             for other in Feature::ALL {
-                assert_eq!(other == feature, features.is_on(other), "{feature:?} reads {other:?}");
+                assert_eq!(
+                    other == feature,
+                    features.is_on(other),
+                    "{feature:?} reads {other:?}"
+                );
             }
             let is_panel_own = feature == Feature::QuietDevMode;
-            assert_eq!(!is_panel_own, features.needs_dll(), "{feature:?} needs the DLL");
+            assert_eq!(
+                !is_panel_own,
+                features.needs_dll(),
+                "{feature:?} needs the DLL"
+            );
         }
     }
 }

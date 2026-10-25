@@ -37,8 +37,11 @@ mod tests {
     use crate::platform::settings::{Features, Theming};
 
     const SUPPORTED: FileVersion = FileVersion::new(155, 0, 4283, 62);
-    const EVERY_OFFER: [InjectOffer; 3] =
-        [InjectOffer::Hidden, InjectOffer::Ready, InjectOffer::Injected];
+    const EVERY_OFFER: [InjectOffer; 3] = [
+        InjectOffer::Hidden,
+        InjectOffer::Ready,
+        InjectOffer::Injected,
+    ];
 
     // Auto-inject off, Edge open on a supported build, a switch wanting the DLL.
     fn missing() -> PanelState {
@@ -73,7 +76,10 @@ mod tests {
     #[test]
     fn an_injection_shows_the_button_done_until_edge_restarts_without_it() {
         assert_eq!(InjectOffer::Injected, next(InjectOffer::Ready, &loaded()));
-        assert_eq!(InjectOffer::Injected, next(InjectOffer::Injected, &loaded()));
+        assert_eq!(
+            InjectOffer::Injected,
+            next(InjectOffer::Injected, &loaded())
+        );
         assert_eq!(InjectOffer::Ready, next(InjectOffer::Injected, &missing()));
     }
 

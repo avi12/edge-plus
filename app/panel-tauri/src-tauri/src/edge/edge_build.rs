@@ -100,14 +100,20 @@ mod tests {
     #[test]
     fn only_the_dll_features_depend_on_the_build() {
         for feature in Feature::ALL {
-            assert_eq!(DLL_FEATURES.contains(&feature), depends_on_pinned_build(feature));
+            assert_eq!(
+                DLL_FEATURES.contains(&feature),
+                depends_on_pinned_build(feature)
+            );
         }
     }
 
     #[test]
     fn the_pinned_build_blocks_nothing_and_any_other_blocks_the_dll_features() {
         let pinned = version("155.0.4283.45");
-        assert!(edge_support::paused(&all_on(), Some(pinned), pinned).is_empty());
+        assert_eq!(
+            Vec::<Feature>::new(),
+            edge_support::paused(&all_on(), Some(pinned), pinned)
+        );
         assert_eq!(
             DLL_FEATURES.to_vec(),
             edge_support::paused(&all_on(), Some(version("155.0.4300.2")), pinned)

@@ -93,7 +93,10 @@ mod tests {
             "155.0.4283.70000",
             "155.0.+4283.45",
         ] {
-            assert!(FileVersion::parse(text).is_none(), "\"{text}\" does not parse");
+            assert!(
+                FileVersion::parse(text).is_none(),
+                "\"{text}\" does not parse"
+            );
         }
     }
 

@@ -285,7 +285,6 @@ mod tests {
 
     // Needs edge_user_data::read_json, which another part of the rewrite fills.
     #[test]
-    #[ignore = "edge_user_data::read_json is still a stub"]
     fn a_scan_lists_installed_themes_and_marks_the_active_one() {
         let root = std::env::temp_dir().join(format!("edgeplus-themes-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);

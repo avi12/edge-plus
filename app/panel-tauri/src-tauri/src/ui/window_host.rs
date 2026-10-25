@@ -1,4 +1,4 @@
-//! The window's process: Node running ui/main.ts, which draws the WinUI window.
+//! The window's process: Node running ui/main.ts, which draws the `WinUI` window.
 //! The core starts it on demand and talks to it over its stdin and stdout, one
 //! JSON message per line (protocol.rs). The window renders the View it is sent
 //! and asks for Actions; it never touches settings, Edge or the DLL.
@@ -11,6 +11,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 use std::thread;
 use std::time::{Duration, SystemTime};
@@ -23,13 +24,10 @@ use crate::ui::inject_offer::{self, InjectOffer};
 use crate::ui::panel_layout::{CardSlot, OwnCard};
 use crate::ui::panel_state::PanelState;
 use crate::ui::protocol::{Action, Bounds, CoreMessage, UiMessage};
-use crate::ui::{view, wording};
+use crate::ui::{view, window_kit, wording};
 
 /// Keeps Node's console from flashing up.
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-const NODE: &str = "node";
-const NODE_FLAGS: [&str; 1] = ["--disable-warning=ExperimentalWarning"];
-const ENTRY: &str = "main.ts";
 const WINDOW_SOURCE_EXTENSION: &str = "ts";
 const DEV_POLL: Duration = Duration::from_secs(1);
 /// An editor saves in several writes; a swap waits for them to settle.
@@ -44,12 +42,19 @@ struct Session {
     /// What the window showed last; the Inject card's next state depends on it.
     offer: InjectOffer,
     bounds: Option<Bounds>,
+    /// The kit's folder, which carries the runtime; None in a dev run.
+    kit: Option<PathBuf>,
+    /// The window found no Windows App runtime and is ending.
+    is_runtime_missing: bool,
 }
 
 struct Host {
     session: Mutex<Option<Session>>,
     next_id: Mutex<u64>,
     on_last_close: OnLastClose,
+    /// The runtime is installed once per process at most, so a broken install
+    /// cannot loop.
+    has_installed_runtime: AtomicBool,
 }
 
 static HOST: OnceLock<Host> = OnceLock::new();
@@ -68,8 +73,9 @@ pub fn init(on_last_close: OnLastClose) {
         session: Mutex::new(None),
         next_id: Mutex::new(0),
         on_last_close,
+        has_installed_runtime: AtomicBool::new(false),
     });
-    if let Some(sources) = dev_sources() {
+    if let Some(sources) = window_kit::dev_sources() {
         thread::Builder::new()
             .name("window sources".to_owned())
             .spawn(move || watch_sources(&sources))
@@ -91,11 +97,6 @@ pub fn show() {
     open(None, None);
 }
 
-/// Ends the window, if one is open.
-pub fn close() {
-    send(&CoreMessage::Close);
-}
-
 /// The watchers' news, for the window while one is open.
 pub fn on_service_event(event: &ServiceEvent) {
     match event {
@@ -103,19 +104,19 @@ pub fn on_service_event(event: &ServiceEvent) {
         ServiceEvent::ThemeRefreshed(refresh) => send(&CoreMessage::Notice {
             text: refresh.error.clone().unwrap_or_default(),
         }),
-        ServiceEvent::BuildChanged(_)
-        | ServiceEvent::BrowsersChanged
-        | ServiceEvent::UpdateReady(_) => refresh(),
+        ServiceEvent::BuildChanged | ServiceEvent::BrowsersChanged | ServiceEvent::UpdateReady => {
+            refresh();
+        }
     }
 }
 
 fn open(placement: Option<Bounds>, status: Option<String>) {
-    let Some((program, arguments)) = window_command() else {
+    let Some(command) = window_kit::locate() else {
         panel_log::write("the window's scripts are missing; no window opened");
         return;
     };
-    let spawned = Command::new(&program)
-        .args(&arguments)
+    let spawned = Command::new(&command.program)
+        .args(&command.arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -143,6 +144,8 @@ fn open(placement: Option<Bounds>, status: Option<String>) {
         stdin,
         offer: InjectOffer::Hidden,
         bounds: placement,
+        kit: command.kit,
+        is_runtime_missing: false,
     });
     background_service::set_window_open(true);
     if let Some(bounds) = placement {
@@ -181,29 +184,45 @@ fn listen(id: u64, stdout: impl std::io::Read, mut child: Child) {
         }
     }
     let _ = child.wait();
-    let is_current = {
+    let ended = {
         let mut session = lock(&host().session);
         let is_current = session.as_ref().is_some_and(|open| open.id == id);
-        if is_current {
-            *session = None;
-        }
-        is_current
+        if is_current { session.take() } else { None }
     };
-    if is_current {
-        background_service::set_window_open(false);
-        (host().on_last_close)();
+    let Some(ended) = ended else {
+        return;
+    };
+    background_service::set_window_open(false);
+    let should_install_runtime =
+        ended.is_runtime_missing && !host().has_installed_runtime.swap(true, Ordering::SeqCst);
+    if let Some(kit) = ended.kit.filter(|_| should_install_runtime) {
+        match window_kit::install_runtime(&kit) {
+            Ok(()) => return open(ended.bounds, None),
+            Err(error) => {
+                panel_log::write_error("installing the Windows App runtime failed", &error);
+            }
+        }
     }
+    (host().on_last_close)();
 }
 
 fn handle(id: u64, message: UiMessage) {
     match message {
+        UiMessage::RuntimeMissing => {
+            if let Some(session) = lock(&host().session).as_mut().filter(|open| open.id == id) {
+                session.is_runtime_missing = true;
+            }
+        }
         UiMessage::Refresh => refresh(),
         UiMessage::Bounds { bounds } => {
             if let Some(session) = lock(&host().session).as_mut().filter(|open| open.id == id) {
                 session.bounds = Some(bounds);
             }
         }
-        UiMessage::Action { id: request, action } => {
+        UiMessage::Action {
+            id: request,
+            action,
+        } => {
             thread::Builder::new()
                 .name("window action".to_owned())
                 .spawn(move || run(request, action))
@@ -247,7 +266,7 @@ fn perform(action: Action) -> ActionResult<PanelState> {
             Some(CardSlot::Own(own)) => set_own(own, is_on),
             None => Err(ActionError::Internal(format!("no card for {key:?}"))),
         },
-        Action::Inject => panel_actions::inject(),
+        Action::Inject => Ok(panel_actions::inject()),
         Action::AddStoreTheme { url } => panel_actions::add_store_theme(&url),
         Action::AddLocalTheme { path } => panel_actions::add_local_theme(Path::new(&path)),
         Action::RemoveTheme { id } => panel_actions::remove_theme(&id),
@@ -321,24 +340,9 @@ fn write_line(stdin: &mut ChildStdin, message: &CoreMessage) {
         return;
     };
     line.push('\n');
-    let _ = stdin.write_all(line.as_bytes()).and_then(|()| stdin.flush());
-}
-
-/// The window's scripts in this checkout, when this exe was built from one.
-fn dev_sources() -> Option<PathBuf> {
-    let sources = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("ui");
-    let executable = std::env::current_exe().ok()?;
-    let checkout = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
-    let is_dev_run = sources.join(ENTRY).exists()
-        && executable.starts_with(checkout.canonicalize().ok()?.as_path());
-    is_dev_run.then(|| sources.canonicalize().unwrap_or(sources))
-}
-
-fn window_command() -> Option<(PathBuf, Vec<String>)> {
-    let entry = dev_sources()?.join(ENTRY);
-    let mut arguments: Vec<String> = NODE_FLAGS.iter().map(|&flag| flag.to_owned()).collect();
-    arguments.push(entry.to_string_lossy().into_owned());
-    Some((PathBuf::from(NODE), arguments))
+    let _ = stdin
+        .write_all(line.as_bytes())
+        .and_then(|()| stdin.flush());
 }
 
 fn watch_sources(sources: &Path) {
@@ -377,7 +381,12 @@ fn newest_change(folder: &Path) -> Option<SystemTime> {
                 .extension()
                 .is_some_and(|extension| extension == WINDOW_SOURCE_EXTENSION);
             is_source
-                .then(|| entry.metadata().and_then(|metadata| metadata.modified()).ok())
+                .then(|| {
+                    entry
+                        .metadata()
+                        .and_then(|metadata| metadata.modified())
+                        .ok()
+                })
                 .flatten()
         };
         newest = newest.max(changed);

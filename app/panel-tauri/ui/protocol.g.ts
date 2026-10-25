@@ -43,5 +43,5 @@ export type Bounds = { x: number, y: number, width: number, height: number, };
 
 export type CoreMessage = { "type": "place", bounds: Bounds, } | { "type": "view", view: View, } | { "type": "reply", id: number, error: string | null, } | { "type": "notice", text: string, } | { "type": "status", line: string, } | { "type": "bringBack" } | { "type": "close" };
 
-export type UiMessage = { "type": "refresh" } | { "type": "action", id: number, action: Action, } | { "type": "bounds", bounds: Bounds, };
+export type UiMessage = { "type": "runtimeMissing" } | { "type": "refresh" } | { "type": "action", id: number, action: Action, } | { "type": "bounds", bounds: Bounds, };
 

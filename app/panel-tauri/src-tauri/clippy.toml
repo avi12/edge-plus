@@ -1,5 +1,5 @@
 # Names of one or two characters fail, as in the C++ (CLAUDE.md), but for its
 # idioms: a bare loop counter, a coordinate pair, `hr`, the `from` / `to` pair,
-# and `id`, which is a word. (The threshold is the longest name flagged.)
-allowed-idents-below-min-chars = ["i", "j", "x", "y", "hr", "to", "id"]
+# and `id`, `of`, `On`, `by` and `ui`, which are words. (The threshold is the longest name flagged.)
+allowed-idents-below-min-chars = ["i", "j", "x", "y", "hr", "to", "id", "of", "On", "by", "BY", "ui"]
 min-ident-chars-threshold = 2

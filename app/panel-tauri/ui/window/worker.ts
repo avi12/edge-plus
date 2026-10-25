@@ -10,7 +10,7 @@ roInitialize(singleThreadedApartment);
 const { runWindow } = await import("./session.ts");
 const port: unknown = workerData;
 if (isPort(port)) {
-  runWindow(port);
+  await runWindow(port);
 }
 
 function isPort(value: unknown): value is MessagePort {

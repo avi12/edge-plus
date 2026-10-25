@@ -8,8 +8,8 @@ use crate::ui::inject_offer::InjectOffer;
 use crate::ui::panel_layout::{self, CardSlot, OwnCard};
 use crate::ui::panel_state::PanelState;
 use crate::ui::protocol::{
-    CardView, CardWording, FooterView, InjectSlot, InjectView, SectionView, SwitchKey,
-    ThemeOption, ThemeRow, ThemingLabels, ThemingView, UpdateView, View,
+    CardView, CardWording, FooterView, InjectSlot, InjectView, SectionView, SwitchKey, ThemeOption,
+    ThemeRow, ThemingLabels, ThemingView, UpdateView, View,
 };
 use crate::ui::wording;
 

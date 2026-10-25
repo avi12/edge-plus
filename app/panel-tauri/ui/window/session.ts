@@ -9,12 +9,11 @@ import { milliseconds } from "./layout.ts";
 import { Shell } from "./shell.ts";
 import { installStyles } from "./styles.ts";
 import { Application, DispatcherQueue } from "./winui.ts";
-import { registerWinuiDispatcherQueue } from "@microsoft/dynwinrt";
 import type { MessagePort } from "node:worker_threads";
 import { receiveMessageOnPort } from "node:worker_threads";
 
-// Application.start owns this thread until the window closes, so Node's event
-// loop never turns here: the core's messages are taken off the port by a
+// WinUI's loop owns this thread until the window closes, so Node's event loop
+// never turns here: the core's messages are taken off the port by a
 // dispatcher timer, and every timer is the dispatcher's.
 const inboxMilliseconds = 30;
 
@@ -155,10 +154,13 @@ class Session {
   }
 }
 
-export function runWindow(port: MessagePort): void {
-  Application.start(() => {
+// Scheduled rather than started in place: WinUI's loop then runs from a libuv
+// callback with no JavaScript under it, so each event handler drains the
+// promise continuations it queues. Started from JavaScript, the loop keeps
+// that script on the stack for good, and no `await` ever resumes.
+export async function runWindow(port: MessagePort): Promise<void> {
+  await Application.startScheduled(() => {
     Application.create(() => {
-      registerWinuiDispatcherQueue();
       installStyles();
       new Session(port).start();
     });

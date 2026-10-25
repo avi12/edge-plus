@@ -1,6 +1,6 @@
 //! The data folder is a contract with the DLL (config.h, log.h), so its
 //! location comes from the DLL's own constant (shared). Earlier panels kept it
-//! in a folder of the project's old name; legacy_install carries that over.
+//! in a folder of the project's old name; `legacy_install` carries that over.
 
 use std::fs;
 use std::io;
@@ -32,7 +32,10 @@ pub fn config_file() -> PathBuf {
 
 #[must_use]
 pub fn data_root() -> PathBuf {
-    config_file().parent().map(Path::to_path_buf).unwrap_or_default()
+    config_file()
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_default()
 }
 
 #[must_use]

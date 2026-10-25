@@ -3,7 +3,7 @@
 /// A boot launch from the Run entry: no window.
 pub const BACKGROUND: &str = "--background";
 
-/// Re-run headless as the dev-mode waiter (dev_mode_prompt).
+/// Re-run headless as the dev-mode waiter (`dev_mode_prompt`).
 pub const DEV_MODE_WAITER: &str = "--quiet-dev-mode-after-exit";
 
 /// The relaunch after an update, followed by the pid of the process it
@@ -28,7 +28,10 @@ mod tests {
     use super::*;
 
     fn line(arguments: &[&str]) -> Vec<String> {
-        arguments.iter().map(|&argument| argument.to_owned()).collect()
+        arguments
+            .iter()
+            .map(|&argument| argument.to_owned())
+            .collect()
     }
 
     #[test]

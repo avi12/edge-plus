@@ -1,13 +1,13 @@
 //! Every sentence Edge+ shows: the window's (sent to it in each View), the
 //! toast's and the errors'. The window itself holds none.
 
+use crate::edge::edge_support::FeatureState;
 use crate::edge::file_version::FileVersion;
 use crate::platform::settings::Feature;
 use crate::ui::panel_layout::{OwnCard, Section};
 use crate::ui::panel_state::PanelState;
-use crate::edge::edge_support::FeatureState;
 
-/// Must match the DLL's copy (chat_target.h).
+/// Must match the DLL's copy (`chat_target.h`).
 const ASSISTANT_NAME: &str = "Copilot";
 /// Must match the DLL's kRegExpName.
 const REGEXP_NAME: &str = "RegExp";
@@ -426,11 +426,11 @@ mod tests {
     #[test]
     fn every_section_and_own_card_has_words() {
         for (section, _) in panel_layout::SECTIONS {
-            assert!(!section_name(section).is_empty());
+            assert_ne!("", section_name(section));
         }
         for slot in panel_layout::all_cards() {
             if let CardSlot::Own(own) = slot {
-                assert!(!for_own(own).title.is_empty());
+                assert_ne!("", for_own(own).title);
             }
         }
         assert_eq!(

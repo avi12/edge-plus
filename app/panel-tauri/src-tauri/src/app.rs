@@ -2,7 +2,7 @@
 //! (Edge and theme watchers, the update check) runs from start, and the window
 //! is a separate process opened on demand.
 //!
-//! * A boot launch (`--background`, from the Run entry start_with_windows
+//! * A boot launch (`--background`, from the Run entry `start_with_windows`
 //!   writes) opens no window: it is the always-on listener.
 //! * Launching Edge+ again, or clicking its toast, opens the window from this
 //!   same process.
@@ -25,13 +25,15 @@ const TRIM_DELAY: Duration = Duration::from_secs(5);
 
 pub fn run(is_boot_launch: bool) {
     let app = tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|_app, command_line, _folder| {
-            // A boot launch finding Edge+ already running has nothing to add,
-            // and handing it over would open the window.
-            if !switches::is_present(&command_line, switches::BACKGROUND) {
-                window_host::show();
-            }
-        }))
+        .plugin(tauri_plugin_single_instance::init(
+            |_app, command_line, _folder| {
+                // A boot launch finding Edge+ already running has nothing to add,
+                // and handing it over would open the window.
+                if !switches::is_present(&command_line, switches::BACKGROUND) {
+                    window_host::show();
+                }
+            },
+        ))
         .setup(move |_app| {
             start_background();
             window_host::init(on_window_closed);

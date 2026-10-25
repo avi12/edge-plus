@@ -13,8 +13,7 @@ use windows::core::HSTRING;
 pub fn install_packages(packages: &[&Path]) -> io::Result<()> {
     let manager = PackageManager::new().map_err(io::Error::other)?;
     for package in packages {
-        let uri = Uri::CreateUri(&HSTRING::from(package.as_os_str()))
-            .map_err(io::Error::other)?;
+        let uri = Uri::CreateUri(&HSTRING::from(package.as_os_str())).map_err(io::Error::other)?;
         manager
             .AddPackageAsync(&uri, None, DeploymentOptions::None)
             .and_then(|operation| operation.get())

@@ -15,7 +15,7 @@ pub struct PanelState {
     pub is_edge_running: bool,
     pub is_start_with_windows: bool,
     pub is_split_loaded: bool,
-    /// The switches on want the DLL in Edge (dll_sync::is_wanted).
+    /// The switches on want the DLL in Edge (`dll_sync::is_wanted`).
     pub is_split_wanted: bool,
     pub is_auto_inject: bool,
     pub is_auto_update: bool,
