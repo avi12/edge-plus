@@ -29,6 +29,11 @@ export function camelCase(name: string): string {
   return `${pascal.charAt(0).toLowerCase()}${pascal.slice(1)}`;
 }
 
+// A class name as its tag: TextBlock is <text-block>.
+export function kebabCase(name: string): string {
+  return name.replace(/(?<=[a-z0-9])(?=[A-Z])/gu, wordSeparator).toLowerCase();
+}
+
 export function isNumeric(text: string): boolean {
   return text.trim() !== "" && Number.isFinite(Number(text));
 }

@@ -1,8 +1,11 @@
+import { installCss } from "../css/index.ts";
+import * as winui from "../winui.ts";
 import { Application } from "../winui.ts";
 
 export interface RunWindowOptions {
-  // Runs on the UI thread once WinUI is up (its own resources installed): the
-  // place to register controls and open windows.
+  // Runs on the UI thread once WinUI is up (its own resources installed, and
+  // the components' <style> sheets merged over them): the place to register
+  // controls and open windows.
   onStart: () => void;
 }
 
@@ -15,7 +18,10 @@ export interface RunWindowOptions {
 // that script on the stack for good, and no `await` ever resumes.
 export async function runWindow(options: RunWindowOptions): Promise<void> {
   await Application.startScheduled(() => {
-    Application.create(options.onStart);
+    Application.create(() => {
+      installCss(winui);
+      options.onStart();
+    });
   });
 }
 

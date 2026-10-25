@@ -1,3 +1,5 @@
+import type { StyledElement } from "../css/index.ts";
+import { styledElement } from "../css/index.ts";
 import type { FrameworkElement, UIElement } from "../winui.ts";
 import { ColumnDefinition, Grid, RowDefinition } from "../winui.ts";
 import type { KeyedItems } from "./keyed-list.ts";
@@ -8,6 +10,7 @@ import {
   gridLength,
   GridUnit,
   isNumeric,
+  kebabCase,
   pascalCase,
   splitList,
   thicknessSides
@@ -30,7 +33,10 @@ import {
 // follow it (a panel's children, a border's child, a button's content, a text
 // block's text).
 //
-//   class="CardTitle"           what the app's class handler makes of it
+//   class="card-title"          the classes the component's <style> rules match
+//                               (css/), after the app's class handler has
+//                               seen the string (an app with Styles of its own)
+//   style="margin: 4px"         inline declarations, style:name={value} merged
 //   vertical-alignment="Center" a property; a quoted value becomes the
 //                               property's enum, number, flag or Thickness
 //   On-content="On"            a property whose name starts with "on"
@@ -47,21 +53,25 @@ import {
 
 interface WinuiNative {
   control: UIElement | null;
+  // Made when the element first gets a class or a style.
+  styled: StyledElement | null;
   // What the native collection holds, in order, to change it in place.
   placed: UIElement[];
 }
 
 type WinuiElement = ElementNode<WinuiNative>;
 type AttributeHandler = (control: UIElement, name: string, value: unknown) => void;
+type ElementAttributeHandler = (element: WinuiElement, control: UIElement, value: unknown) => void;
 type TextConverter = (text: string, property: string) => unknown;
 
-// What `class="..."` does on an element: the app decides, since a class is
-// whatever the app's styling makes of it.
+// What an app with Styles of its own makes of `class="..."`, before the
+// component's <style> rules see the same string.
 export type ClassHandler = (control: UIElement, value: string) => void;
 
 const hostTag = "host";
 const hostAttribute = "element";
 const classAttribute = "class";
+const inlineStyleAttribute = "style";
 const attachedSeparator = ".";
 const wordSeparator = "-";
 const thicknessProperties = new Set(["margin", "padding", "borderThickness"]);
@@ -149,8 +159,39 @@ function convert(control: UIElement, property: string, value: unknown): unknown 
   return converter(value, property);
 }
 
-function applyClass(control: UIElement, _name: string, value: unknown): void {
-  classHandler?.(control, String(value));
+// `<host>` has no type of its own: the control placed there names it.
+function elementType(element: WinuiElement, control: UIElement): string {
+  return element.name === hostTag ? kebabCase(control.constructor.name) : element.name;
+}
+
+function stylingOf(element: WinuiElement, control: UIElement): StyledElement {
+  element.native.styled ??= styledElement(control, elementType(element, control));
+  return element.native.styled;
+}
+
+function applyClass(element: WinuiElement, control: UIElement, value: unknown): void {
+  const classNames = String(value ?? "");
+  classHandler?.(control, classNames);
+  const isStyled = element.native.styled !== null || classNames.trim() !== "";
+  if (isStyled) {
+    stylingOf(element, control).setClasses(classNames);
+  }
+}
+
+// Svelte hands over the whole style attribute, style:name={value}
+// directives merged into it.
+function applyInlineStyle(element: WinuiElement, control: UIElement, value: unknown): void {
+  const isRemoved = value === null || value === undefined;
+  if (isRemoved && element.native.styled === null) {
+    return;
+  }
+
+  stylingOf(element, control).setInlineStyle(isRemoved ? null : String(value));
+}
+
+function disposeStyling(element: WinuiElement): void {
+  element.native.styled?.dispose();
+  element.native.styled = null;
 }
 
 // A grid's columns or rows, each length a new definition; set again, they
@@ -178,8 +219,12 @@ function applyProperty(control: UIElement, name: string, value: unknown): void {
   write(control, property, convert(control, property, value));
 }
 
-const namedAttributes = new Map<string, AttributeHandler>([
+const elementAttributes = new Map<string, ElementAttributeHandler>([
   [classAttribute, applyClass],
+  [inlineStyleAttribute, applyInlineStyle]
+]);
+
+const namedAttributes = new Map<string, AttributeHandler>([
   ["columns", definitionsHandler(ColumnDefinition, "columnDefinitions", "width")],
   ["rows", definitionsHandler(RowDefinition, "rowDefinitions", "height")]
 ]);
@@ -190,8 +235,15 @@ function attributeHandler(name: string): AttributeHandler {
 
 function applyAttribute(element: WinuiElement, name: string, value: unknown): void {
   const control = element.native.control;
-  if (control !== null) {
+  if (control === null) {
+    return;
+  }
+
+  const elementAttribute = elementAttributes.get(name);
+  if (elementAttribute === undefined) {
     attributeHandler(name)(control, name, value);
+  } else {
+    elementAttribute(element, control, value);
   }
 }
 
@@ -363,6 +415,8 @@ function valueOf(thunk: () => unknown, guidance: string): unknown {
 const hostOf = new WeakMap<UIElement, WinuiElement>();
 
 function hostControl(element: WinuiElement, control: unknown): void {
+  // The styling belongs to the control it was made for.
+  disposeStyling(element);
   element.native.control = isControl(control) ? control : null;
 
   if (element.native.control !== null) {
@@ -391,6 +445,7 @@ function releaseHosts(node: TreeNode<WinuiNative>): void {
   }
 
   if (node.name === hostTag) {
+    disposeStyling(node);
     node.native.control = null;
     syncParent(node);
     return;
@@ -412,6 +467,7 @@ function forgetControls(node: TreeNode<WinuiNative>): void {
   }
 
   node.listeners.clear();
+  disposeStyling(node);
   node.native.control = null;
   node.native.placed.length = 0;
 }
@@ -427,6 +483,7 @@ function createNative(name: string): WinuiNative {
   if (name === hostTag) {
     return {
       control: null,
+      styled: null,
       placed: []
     };
   }
@@ -438,6 +495,7 @@ function createNative(name: string): WinuiNative {
 
   return {
     control: new type(),
+    styled: null,
     placed: []
   };
 }
@@ -454,6 +512,8 @@ const winuiHost: NativeHost<WinuiNative> = {
   removeAttribute(element, name) {
     if (name === hostAttribute) {
       placeHost(element, null);
+    } else if (elementAttributes.has(name)) {
+      applyAttribute(element, name, null);
     }
   },
   childrenChanged: sync,
