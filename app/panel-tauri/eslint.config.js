@@ -251,7 +251,7 @@ const sharedPlugins = {
 
 // The window runs under Node, not in a webview.
 export default [
-  globalIgnores(["node_modules/", "src-tauri/", "eslint-rules/", ".winapp/", "ui/protocol.g.ts", ".claude/worktrees/"]),
+  globalIgnores(["node_modules/", "dist/", "src-tauri/", "eslint-rules/", ".winapp/", "ui/protocol.g.ts", ".claude/worktrees/"]),
   {
     files: ["**/*.{ts,js,mjs}"],
     languageOptions: {
