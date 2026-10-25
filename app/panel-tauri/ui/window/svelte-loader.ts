@@ -5,8 +5,8 @@ import { fileURLToPath } from "node:url";
 
 // Node module hooks that run .svelte files from source: Svelte resolves to its
 // browser build, the one that mounts components, and a .svelte file is
-// compiled as it loads. The window registers them (svelte-hooks.ts); a test
-// registers them with its own renderer.
+// compiled as it loads. A test registers them with its own renderer; the
+// window itself runs from source through the Vite dev server instead.
 
 const browserCondition = "browser";
 const svelteSpecifier = "svelte";
