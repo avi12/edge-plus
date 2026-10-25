@@ -81,7 +81,8 @@ hiding the developer-mode prompt, which only edits Edge's `Preferences`.
 
 - **Updates itself** — checks this repository for a newer release at start and
   every six hours, downloads it in the background and checks it, then offers
-  **Restart to update** in the window. Edge keeps running through it. The
+  **Restart to update** in the window. Edge keeps running through it. A copy
+  installed with the MSI updates through the new release's MSI. The
   "Check for updates" switch turns it off, and with it every connection Edge+
   makes (`docs/RELEASING.md`).
 
@@ -117,6 +118,11 @@ Turning the split off breaks any split of three or more panes back into
 standalone tabs first, so nothing Edge can't render on its own is left behind.
 
 ## Setup
+
+Every [release](https://github.com/avi12/edge-plus/releases) has two downloads:
+`EdgePlus-<version>-setup.msi` installs Edge+ under Program Files with desktop
+and Start menu shortcuts, and `EdgePlus-<version>.exe` runs from wherever it is
+saved. To build it yourself:
 
 ```powershell
 dotnet publish app\panel-winui -c Release    # one self-contained edgeplus.exe

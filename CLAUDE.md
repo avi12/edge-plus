@@ -7,6 +7,8 @@ Live feature switches for Microsoft Edge (see `README.md`):
   (`src/offsets.h`), reverse-engineered in `docs/re/`
 - `app/panel-winui/` — the panel that toggles each feature and injects the DLL:
   WinUI 3 / C#, with every Win32 call isolated in a `Native/` folder
+- `app/installer/` — the MSI (WiX 5 through its NuGet SDK) that installs the
+  published exe under Program Files
 
 These rules are `avi/youtube-time-manager`'s, carried to C++ the way
 `avi/any-stt` carries them, and overridden only where C++ has a stronger
@@ -214,3 +216,17 @@ layout, data-folder paths) has one home per side and must match the DLL's
 
 Every commit is one self-contained logical change with a message saying what and
 why; land large work as a sequence of them.
+
+# Releases
+
+**Every GitHub release carries both the portable `EdgePlus-<version>.exe` and
+the installable `EdgePlus-<version>-setup.msi`**, the MSI built from that same
+exe, as `avi/pade` does. Cut one only when asked, with
+`pwsh tools\Release.ps1 -Version <x.y.z> -NotesFile <file>` (`docs/RELEASING.md`):
+it bumps `Directory.Build.props`, publishes the exe, builds the MSI
+(`tools\Build-Installer.ps1`), commits, tags, pushes, creates the release with
+both files and then pushes `docs/updates.json` naming both. The notes file holds
+the changelog highlights for users — plain sentences, no file names. Never ship
+a release without its MSI: a copy the MSI installed is offered only releases
+whose manifest names one. A release made some other way gets its MSI added with
+`tools\Build-Installer.ps1 -Exe <its exe>` and `gh release upload`.

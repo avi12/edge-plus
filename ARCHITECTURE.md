@@ -113,18 +113,28 @@ are listed in the panel's README.
 
 Installed copies update the way a browser extension does through its update
 URL. The repository hosts a small manifest, `docs/updates.json` (version, the
-URL of that release's exe, its SHA-256), written by
-`tools/Write-UpdateManifest.ps1` once a release's exe is attached.
-`UpdateWatch` reads it at start and every six hours (`UpdateFeed` decides
-whether it names a newer version), downloads the exe into `update\`, and checks
-it against the digest. The window then shows `UpdateCard`. **Restart to
-update** runs `UpdateInstall`: the running exe is renamed aside (a running exe
-can be renamed, not overwritten), the new one takes its name, and the new
-process is started with `--restarted-from <pid>`, which makes it wait for the
-old process to exit before it looks for a running panel to hand over to. The
-new exe then swaps its own DLL into Edge, so Edge does not restart. Only a
-published exe does any of this, and the **Check for updates** switch turns it
-all off.
+URLs of that release's exe and MSI, each one's SHA-256), written by
+`tools/Release.ps1` once a release's files are attached. `UpdateWatch` reads it
+at start and every six hours (`UpdateFeed` decides whether it names a newer
+version), downloads the file this copy needs into `update\`, and checks it
+against the digest. The window then shows `UpdateCard`.
+
+A portable copy downloads the exe, and **Restart to update** runs
+`UpdateInstall`: the running exe is renamed aside (a running exe can be renamed,
+not overwritten), the new one takes its name, and the new process is started
+with `--restarted-from <pid>`, which makes it wait for the old process to exit
+before it looks for a running panel to hand over to. The new exe then swaps its
+own DLL into Edge, so Edge does not restart.
+
+A copy the MSI installed (`app/installer`, which records its folder under
+`HKLM\Software\EdgePlus`, read by `MsiInstall`) lives under Program Files, where
+it cannot rename its own exe. It downloads the MSI instead, and **Restart to
+update** starts a hidden PowerShell that waits for the panel to exit, runs the
+MSI unattended (keeping only the shortcuts that still exist) and starts the
+installed exe again.
+
+Only a published exe does any of this, and the **Check for updates** switch
+turns it all off.
 
 ### Upgrading from before the rename
 
