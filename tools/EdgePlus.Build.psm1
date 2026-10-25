@@ -79,5 +79,18 @@ function Get-ProductVersion {
     return $version
 }
 
+# A release's files on GitHub, as the release attaches them and the update
+# manifest names them.
+function Get-ReleaseAsset([string] $version) {
+    $repository = 'avi12/edge-plus'
+    return [pscustomobject]@{
+        Repository = $repository
+        Tag        = "v$version"
+        Exe        = "EdgePlus-$version.exe"
+        Installer  = "EdgePlus-$version-setup.msi"
+        Url        = "https://github.com/$repository/releases/download/v$version"
+    }
+}
+
 Export-ModuleMember -Function Get-RepoRoot, Get-BuildScriptPath, Get-BuildSetting, Get-VcVarsPath,
-    Invoke-Checked, Write-Step, Get-ProductVersion
+    Invoke-Checked, Write-Step, Get-ProductVersion, Get-ReleaseAsset

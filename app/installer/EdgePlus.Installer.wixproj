@@ -1,0 +1,35 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <!-- The MSI that installs a published edgeplus.exe under Program Files. It
+       wraps an exe that is already built, so the release's MSI and its portable
+       exe are the same bytes:
+
+         pwsh tools\Build-Installer.ps1 -Exe <edgeplus.exe>
+
+       which names it as the release attaches it; tools\Release.ps1 runs it for
+       every release. The version and names come from Directory.Build.props. -->
+  <Import Project="..\panel-winui\Directory.Build.props" />
+
+  <PropertyGroup>
+    <Platform>x64</Platform>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <!-- The ICE checks run on VBScript, which Windows no longer installs by
+         default; an install and an uninstall on a test machine are the check. -->
+    <SuppressValidation>true</SuppressValidation>
+    <DefineConstants>
+      ProductName=$(Product);
+      Manufacturer=$(Company);
+      ProductVersion=$(Version);
+      ExePath=$(ExePath);
+      IconPath=$(MSBuildThisFileDirectory)..\panel-winui\Assets\edgeplus.ico
+    </DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+  <Target Name="RequireExe" BeforeTargets="CoreCompile">
+    <Error Condition="'$(ExePath)' == '' Or !Exists('$(ExePath)')"
+           Text="Pass the published exe: -p:ExePath=&lt;edgeplus.exe&gt; (got '$(ExePath)')." />
+  </Target>
+</Project>
