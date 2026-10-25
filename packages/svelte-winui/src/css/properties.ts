@@ -735,6 +735,8 @@ const propertyGroups: readonly PropertyGroup[] = [
   cornerRadius(),
   brushProperty("background-color", "Background"),
   brushProperty("color", "Foreground"),
+  brushProperty("stroke", "Stroke"),
+  lengthProperty("stroke-width", "StrokeThickness"),
   simple("opacity", "Opacity", opacity),
   lengthProperty("width", "Width", new Map([["auto", NotANumber]])),
   lengthProperty("height", "Height", new Map([["auto", NotANumber]])),

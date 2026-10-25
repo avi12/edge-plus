@@ -101,6 +101,10 @@ const rows: Array<[string, string | null, string, Array<[string, string]>]> = [
   ["opacity as a percentage", null, "opacity: 40%", [["Opacity", "0.4"]]],
   ["color to Foreground", null, "color: #0af", [["Foreground", "#00AAFF"]]],
   ["color from a WinUI brush", null, "color: var(--text-fill-color-secondary)", [["Foreground", "{ThemeResource TextFillColorSecondaryBrush}"]]],
+  ["stroke and stroke-width on a shape", "rectangle", "stroke: var(--accent-fill-color-default); stroke-width: 2px", [
+    ["Stroke", "{ThemeResource AccentFillColorDefaultBrush}"],
+    ["StrokeThickness", "2"]
+  ]],
   ["background-color", null, "background-color: rgb(0 0 0 / 50%)", [["Background", "#80000000"]]],
   ["background to a brush", null, "background: transparent", [["Background", "#00FFFFFF"]]],
   ["background none", null, "background: none", [["Background", "#00FFFFFF"]]],
