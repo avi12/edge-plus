@@ -4,7 +4,11 @@
   // worker by URL, and ui/dev holds the stand-in core for working on the
   // window alone.
   "entry": ["ui/main.ts", "ui/window/worker.ts", "ui/dev/fixture.ts", "eslint.config.js"],
-  "ignorePatterns": [".winapp/**", "src-tauri/**"],
+  // worker.ts imports the module hooks by a variable path, so a bundler
+  // leaves them out of the window kit (whose .svelte files are compiled
+  // already) and the module graph can't see the import either.
+  "dynamicallyLoaded": ["ui/window/svelte-hooks.ts"],
+  "ignorePatterns":[".winapp/**", "src-tauri/**"],
   // Run by package.json scripts, which dependency scanning can't see through.
   "ignoreDependencies": ["@microsoft/winappcli", "@microsoft/dynwinrt-codegen", "oxlint-tsgolint"]
 }
