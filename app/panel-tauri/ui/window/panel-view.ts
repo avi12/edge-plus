@@ -2,61 +2,19 @@ import type {
   Action,
   CardView,
   InjectView,
-  SectionView,
   SwitchKey,
   View
 } from "../protocol.g.ts";
 import { FeatureCard } from "./feature-card.ts";
 import { InjectCard } from "./inject-card.ts";
-import {
-  autoLength,
-  boxed,
-  milliseconds,
-  starLength,
-  thickness,
-  uniform
-} from "./layout.ts";
-import * as motion from "./motion.ts";
-import { style, StyleKey } from "./styles.ts";
+import type { Mounted } from "./mount.svelte.ts";
+import { mountControl } from "./mount.svelte.ts";
+import PanelPage from "./panel-page.svelte";
 import type { PickLocalTheme, RunAction } from "./theming-card.ts";
 import { ThemingCard } from "./theming-card.ts";
 import { UpdateCard } from "./update-card.ts";
 import type { FrameworkElement, Window } from "./winui.ts";
-import {
-  ColumnDefinition,
-  DataPackageOperation,
-  DoubleCollection,
-  DragEventArgs,
-  Grid,
-  HorizontalAlignment,
-  HyperlinkButton,
-  InfoBar,
-  InfoBarSeverity,
-  Orientation,
-  projectAs,
-  Rectangle,
-  ScalarTransition,
-  ScrollBarVisibility,
-  ScrollViewer,
-  StackPanel,
-  StandardDataFormats,
-  TextBlock,
-  Uri,
-  VerticalAlignment,
-  Visibility
-} from "./winui.ts";
-
-const veilShown = 1;
-const veilHidden = 0;
-const contentPadding = 16;
-const cardSpacing = 4;
-const sectionSpacing = 20;
-const veilInset = 12;
-const veilCornerRadius = 8;
-const veilDashes = [4, 3];
-const veilFadeMilliseconds = 120;
-// Lines the header up with the cards' text, as Windows Settings does.
-const sectionHeaderMargin = thickness(4, 0, 0, 4);
+import { DataPackageOperation, DragEventArgs, projectAs, StandardDataFormats } from "./winui.ts";
 
 async function droppedPaths(event: DragEventArgs): Promise<string[]> {
   const items = await event.dataView.getStorageItemsAsync();
@@ -77,73 +35,61 @@ export interface PanelHost {
   restartToUpdate(): Promise<string | null>;
 }
 
-// The window's content. It renders the View the core sent last and never
-// touches settings, Edge or the DLL itself: every change is an Action the core
-// runs, answered with a fresh View.
+// The window's content (panel-page.svelte). It renders the View the core sent
+// last and never touches settings, Edge or the DLL itself: every change is an
+// Action the core runs, answered with a fresh View. The cards are made here,
+// once per key, since each holds its own control's state.
 export class PanelView {
-  readonly root = new Grid();
-  private readonly sectionList = new StackPanel();
-  private readonly openEdgeHint = new TextBlock();
-  private readonly buildNotice = new InfoBar();
-  private readonly actionNotice = new InfoBar();
-  private readonly dropVeil: Grid;
+  readonly root: FrameworkElement;
+  private readonly page: Mounted<Record<string, unknown>>;
   private readonly switchCards = new Map<SwitchKey, FeatureCard>();
+  private readonly cardControls = new Map<SwitchKey, FrameworkElement>();
   private themingCard: ThemingCard | null = null;
   private readonly updateCard: UpdateCard;
-  // The Inject automatically card, with the Inject card under it while offered;
-  // its add/delete transition slides the Inject card in and out.
-  private readonly injectGroup = new StackPanel();
   private injectCard: InjectCard | null = null;
   private readonly host: PanelHost;
 
   constructor(host: PanelHost, view: View) {
     this.host = host;
-    this.root.allowDrop = true;
-    this.openEdgeHint.style = style(StyleKey.CardDescription);
-    this.openEdgeHint.margin = thickness(4, 0, 4, 4);
-    this.openEdgeHint.visibility = Visibility.Collapsed;
-    this.buildNotice.isClosable = false;
-    this.buildNotice.severity = InfoBarSeverity.Warning;
-    this.actionNotice.isClosable = true;
-    this.actionNotice.severity = InfoBarSeverity.Error;
     this.updateCard = new UpdateCard(() => {
       void this.restartToUpdate();
     });
-    this.injectGroup.spacing = cardSpacing;
-    motion.animate(this.injectGroup, motion.addDelete);
-    this.sectionList.spacing = sectionSpacing;
-    for (const section of view.sections) {
-      this.sectionList.children.append(this.sectionView(section));
-    }
-    motion.animate(this.sectionList, motion.reposition);
-
-    const page = new StackPanel();
-    page.padding = thickness(contentPadding, cardSpacing, contentPadding, contentPadding);
-    page.spacing = cardSpacing;
-    page.children.append(this.updateCard.view);
-    page.children.append(this.openEdgeHint);
-    page.children.append(this.buildNotice);
-    page.children.append(this.actionNotice);
-    page.children.append(this.sectionList);
-    page.children.append(this.footer(view));
-    const scroller = new ScrollViewer();
-    scroller.content = page;
-    scroller.verticalScrollBarVisibility = ScrollBarVisibility.Auto;
-    this.root.children.append(scroller);
-    this.dropVeil = this.veil(view.dropHint);
-    this.root.children.append(this.dropVeil);
-    this.root.onDragOver((_sender, event) => this.onDragOver(projectAs(event, DragEventArgs)));
-    this.root.onDragLeave(() => {
-      this.dropVeil.opacity = veilHidden;
+    this.makeCards(view);
+    this.page = mountControl(PanelPage, {
+      sections: view.sections,
+      cardControl: (key: SwitchKey) => this.cardControl(key),
+      updateCard: this.updateCard.view,
+      injectCard: null,
+      openEdgeHint: view.openEdgeHint,
+      buildNotice: view.buildNotice,
+      actionNotice: "",
+      footer: view.footer,
+      dropHint: view.dropHint,
+      isVeilShown: false,
+      onDragOver: (_sender: unknown, event: unknown) => {
+        this.onDragOver(projectAs(event, DragEventArgs));
+      },
+      onDragLeave: () => {
+        this.page.set({ isVeilShown: false });
+      },
+      onDrop: (_sender: unknown, event: unknown) => {
+        void this.onDrop(projectAs(event, DragEventArgs));
+      },
+      onActionNoticeClosed: () => {
+        this.showActionNotice("");
+      }
     });
-    this.root.onDrop((_sender, event) => {
-      void this.onDrop(projectAs(event, DragEventArgs));
-    });
+    this.root = this.page.root;
     this.render(view);
   }
 
   render(view: View): void {
-    this.renderNotices(view);
+    this.makeCards(view);
+    this.page.set({
+      sections: view.sections,
+      openEdgeHint: view.openEdgeHint,
+      buildNotice: view.buildNotice
+    });
     for (const card of view.sections.flatMap(section => section.cards)) {
       this.renderCard(card);
     }
@@ -152,16 +98,7 @@ export class PanelView {
   }
 
   showActionNotice(message: string): void {
-    this.actionNotice.message = message;
-    this.actionNotice.isOpen = message.length > 0;
-  }
-
-  private renderNotices(view: View): void {
-    const hint = view.openEdgeHint;
-    this.openEdgeHint.text = hint ?? "";
-    this.openEdgeHint.visibility = hint === null ? Visibility.Collapsed : Visibility.Visible;
-    this.buildNotice.message = view.buildNotice;
-    this.buildNotice.isOpen = view.buildNotice.length > 0;
+    this.page.set({ actionNotice: message });
   }
 
   private renderCard(card: CardView): void {
@@ -178,19 +115,23 @@ export class PanelView {
     }
   }
 
-  private sectionView(section: SectionView): StackPanel {
-    const stack = new StackPanel();
-    stack.spacing = cardSpacing;
-    const header = new TextBlock();
-    header.text = section.name;
-    header.style = style(StyleKey.SectionHeader);
-    header.margin = sectionHeaderMargin;
-    stack.children.append(header);
-    for (const card of section.cards) {
-      stack.children.append(this.cardView(card));
+  // Made before the page places them: a card mounts a component of its own,
+  // which cannot happen while the page is rendering.
+  private makeCards(view: View): void {
+    for (const card of view.sections.flatMap(section => section.cards)) {
+      if (!this.cardControls.has(card.key)) {
+        this.cardControls.set(card.key, this.cardView(card));
+      }
     }
-    motion.animate(stack, motion.reposition);
-    return stack;
+  }
+
+  private cardControl(key: SwitchKey): FrameworkElement {
+    const control = this.cardControls.get(key);
+    if (control === undefined) {
+      throw new Error(`no ${key} card was made`);
+    }
+
+    return control;
   }
 
   private cardView(card: CardView): FrameworkElement {
@@ -208,22 +149,13 @@ export class PanelView {
       });
     });
     this.switchCards.set(card.key, feature);
-
-    if (card.inject === null) {
-      return feature.view;
-    }
-
-    this.injectGroup.children.append(feature.view);
-    return this.injectGroup;
+    return feature.view;
   }
 
   private showInjectOffer(offer: InjectView | null): void {
     if (offer === null) {
-      if (this.injectCard !== null) {
-        this.injectGroup.children.removeAtEnd();
-        this.injectCard = null;
-      }
-
+      this.injectCard = null;
+      this.page.set({ injectCard: null });
       return;
     }
 
@@ -232,7 +164,7 @@ export class PanelView {
         void this.inject(card);
       });
       this.injectCard = card;
-      this.injectGroup.children.append(card.view);
+      this.page.set({ injectCard: card.view });
       return;
     }
 
@@ -261,65 +193,6 @@ export class PanelView {
     }
   }
 
-  private footer(view: View): Grid {
-    const footer = new Grid();
-    footer.margin = thickness(4, 14, 4, 0);
-    for (const width of [starLength(), autoLength()]) {
-      const column = new ColumnDefinition();
-      column.width = width;
-      footer.columnDefinitions.append(column);
-    }
-    const byline = new StackPanel();
-    byline.orientation = Orientation.Horizontal;
-    byline.spacing = cardSpacing;
-    const byWord = new TextBlock();
-    byWord.text = view.footer.by;
-    byWord.style = style(StyleKey.CardDescription);
-    byWord.verticalAlignment = VerticalAlignment.Center;
-    byline.children.append(byWord);
-    const author = new HyperlinkButton();
-    author.content = boxed(view.footer.author);
-    author.navigateUri = new Uri(view.footer.authorUri);
-    author.padding = thickness(2, 0, 2, 0);
-    byline.children.append(author);
-    const version = new TextBlock();
-    version.text = view.footer.version;
-    version.style = style(StyleKey.CardDescription);
-    version.verticalAlignment = VerticalAlignment.Center;
-    Grid.setColumn(version, 1);
-    footer.children.append(byline);
-    footer.children.append(version);
-    return footer;
-  }
-
-  private veil(hint: string): Grid {
-    const veil = new Grid();
-    veil.style = style(StyleKey.DropVeil);
-    veil.margin = uniform(veilInset);
-    veil.opacity = veilHidden;
-    veil.isHitTestVisible = false;
-    const fade = new ScalarTransition();
-    fade.duration = milliseconds(veilFadeMilliseconds);
-    veil.opacityTransition = fade;
-    const frame = new Rectangle();
-    frame.style = style(StyleKey.DropVeilFrame);
-    const dashes = new DoubleCollection();
-    for (const dash of veilDashes) {
-      dashes.append(dash);
-    }
-    frame.strokeDashArray = dashes;
-    frame.radiusX = veilCornerRadius;
-    frame.radiusY = veilCornerRadius;
-    veil.children.append(frame);
-    const text = new TextBlock();
-    text.text = hint;
-    text.style = style(StyleKey.CardTitle);
-    text.horizontalAlignment = HorizontalAlignment.Center;
-    text.verticalAlignment = VerticalAlignment.Center;
-    veil.children.append(text);
-    return veil;
-  }
-
   private onDragOver(event: DragEventArgs): void {
     const hasFiles = event.dataView.contains(StandardDataFormats.storageItems);
     if (!hasFiles) {
@@ -327,13 +200,13 @@ export class PanelView {
     }
 
     event.acceptedOperation = DataPackageOperation.Copy;
-    this.dropVeil.opacity = veilShown;
+    this.page.set({ isVeilShown: true });
   }
 
   // The core tells a folder, .zip and .crx apart; the last failure is the one
   // shown.
   private async onDrop(event: DragEventArgs): Promise<void> {
-    this.dropVeil.opacity = veilHidden;
+    this.page.set({ isVeilShown: false });
     const hasFiles = event.dataView.contains(StandardDataFormats.storageItems);
     if (!hasFiles) {
       return;
