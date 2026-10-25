@@ -252,6 +252,7 @@ fn perform(action: Action) -> ActionResult<PanelState> {
         Action::AddLocalTheme { path } => panel_actions::add_local_theme(Path::new(&path)),
         Action::RemoveTheme { id } => panel_actions::remove_theme(&id),
         Action::ReorderThemes { ids } => panel_actions::reorder_themes(&ids),
+        Action::MoveTheme { id, offset } => panel_actions::move_theme(&id, offset),
         Action::AssignTheme { mode, id } => panel_actions::assign_theme(mode, &id),
         Action::RestartToUpdate => Err(ActionError::Internal(
             "restart to update is not a state change".to_owned(),

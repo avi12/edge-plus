@@ -1,5 +1,12 @@
 import type { Style } from "./winui.ts";
-import { Application, projectAs, PropertyValue, ResourceDictionary, Style as StyleType, XamlReader } from "./winui.ts";
+import {
+  Application,
+  projectAs,
+  PropertyValue,
+  ResourceDictionary,
+  Style as StyleType,
+  XamlReader
+} from "./winui.ts";
 
 // The window's styles, parsed at start and merged into the application's
 // resources over WinUI's own (XamlControlsResources). Every colour is a

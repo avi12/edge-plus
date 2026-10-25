@@ -1,20 +1,34 @@
-import type { Action, Bounds, CoreMessage, UiMessage } from "../protocol.ts";
-import type { MessagePort } from "node:worker_threads";
-import { registerWinuiDispatcherQueue } from "@microsoft/dynwinrt";
-import { receiveMessageOnPort } from "node:worker_threads";
+import type {
+  Action,
+  Bounds,
+  CoreMessage,
+  UiMessage,
+  View
+} from "../protocol.g.ts";
 import { milliseconds } from "./layout.ts";
 import { Shell } from "./shell.ts";
 import { installStyles } from "./styles.ts";
 import { Application, DispatcherQueue } from "./winui.ts";
+import { registerWinuiDispatcherQueue } from "@microsoft/dynwinrt";
+import type { MessagePort } from "node:worker_threads";
+import { receiveMessageOnPort } from "node:worker_threads";
 
 // Application.start owns this thread until the window closes, so Node's event
 // loop never turns here: the core's messages are taken off the port by a
 // dispatcher timer, and every timer is the dispatcher's.
 const inboxMilliseconds = 30;
 
+type MessageOfType = { [Message in CoreMessage as Message["type"]]: Message };
+type MessageType = keyof MessageOfType;
+type Handlers = { [Type in MessageType]: (message: MessageOfType[Type]) => void };
+
 // The core's own process, so its messages are trusted to be well formed.
 function isCoreMessage(value: unknown): value is CoreMessage {
   return typeof value === "object" && value !== null && "type" in value;
+}
+
+function dispatch<Type extends MessageType>(handlers: Handlers, message: MessageOfType[Type] & { type: Type }): void {
+  handlers[message.type](message);
 }
 
 class Session {
@@ -47,42 +61,42 @@ class Session {
       if (isCoreMessage(message)) {
         this.handle(message);
       }
+
       received = receiveMessageOnPort(this.port);
     }
   }
 
+  private readonly handlers: Handlers = {
+    place: message => {
+      this.placement = message.bounds;
+    },
+    view: message => this.show(message.view),
+    reply: message => this.answer(message.id, message.error),
+    notice: message => this.shell?.showActionNotice(message.text),
+    status: message => this.shell?.showStatus(message.line),
+    bringBack: () => this.shell?.bringBack(),
+    close: () => this.close()
+  };
+
   private handle(message: CoreMessage): void {
-    switch (message.type) {
-      case "place":
-        this.placement = message.bounds;
-        break;
-      case "view":
-        if (this.shell === null) {
-          this.open(message.view);
-        } else {
-          this.shell.render(message.view);
-        }
-        break;
-      case "reply":
-        this.replies.get(message.id)?.(message.error);
-        this.replies.delete(message.id);
-        break;
-      case "notice":
-        this.shell?.showActionNotice(message.text);
-        break;
-      case "status":
-        this.shell?.showStatus(message.line);
-        break;
-      case "bringBack":
-        this.shell?.bringBack();
-        break;
-      case "close":
-        this.close();
-        break;
-    }
+    dispatch(this.handlers, message);
   }
 
-  private open(view: Parameters<Shell["render"]>[0]): void {
+  private show(view: View): void {
+    if (this.shell === null) {
+      this.open(view);
+      return;
+    }
+
+    this.shell.render(view);
+  }
+
+  private answer(id: number, error: string | null): void {
+    this.replies.get(id)?.(error);
+    this.replies.delete(id);
+  }
+
+  private open(view: View): void {
     const shell = new Shell(view, {
       run: action => this.run(action),
       refresh: () => this.send({ type: "refresh" }),
@@ -103,6 +117,7 @@ class Session {
       Application.current.exit();
       return;
     }
+
     this.shell.close();
   }
 

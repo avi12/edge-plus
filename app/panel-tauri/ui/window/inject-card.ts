@@ -1,8 +1,8 @@
-import type { InjectView } from "../protocol.ts";
-import type { Border } from "./winui.ts";
+import type { InjectView } from "../protocol.g.ts";
 import { CardFrame } from "./card-frame.ts";
 import { boxed } from "./layout.ts";
 import { style, StyleKey } from "./styles.ts";
+import type { Border } from "./winui.ts";
 import { Button } from "./winui.ts";
 
 // The Inject button, as a card under the Inject automatically switch. When it

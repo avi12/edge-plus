@@ -21,6 +21,7 @@ function bootstrapPath(): string {
   if (existsSync(beside)) {
     return beside;
   }
+
   return path.join(import.meta.dirname, "..", ".winapp", "bin", process.arch, bootstrapName);
 }
 

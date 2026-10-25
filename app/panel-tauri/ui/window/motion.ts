@@ -24,6 +24,11 @@ function isSwitchOn(): boolean {
   return settings.animationsEnabled;
 }
 
+// What a panel gets while the switch is as it is now.
+function applied(transitions: Transitions): TransitionCollection {
+  return isOn ? transitions() : new TransitionCollection();
+}
+
 export function addDelete(): TransitionCollection {
   const collection = new TransitionCollection();
   collection.append(new AddDeleteThemeTransition());
@@ -46,12 +51,12 @@ export function listItems(): TransitionCollection {
 
 export function animate(panel: StackPanel, transitions: Transitions): void {
   panels.push([panel, transitions]);
-  panel.childrenTransitions = isOn ? transitions() : new TransitionCollection();
+  panel.childrenTransitions = applied(transitions);
 }
 
 export function animateItems(list: ListView, transitions: Transitions): void {
   lists.push([list, transitions]);
-  list.itemContainerTransitions = isOn ? transitions() : new TransitionCollection();
+  list.itemContainerTransitions = applied(transitions);
 }
 
 // Read again whenever the window is activated: the switch is flipped in
@@ -61,11 +66,13 @@ export function refresh(): void {
   if (isNowOn === isOn) {
     return;
   }
+
   isOn = isNowOn;
   for (const [panel, transitions] of panels) {
-    panel.childrenTransitions = isOn ? transitions() : new TransitionCollection();
+    panel.childrenTransitions = applied(transitions);
   }
+
   for (const [list, transitions] of lists) {
-    list.itemContainerTransitions = isOn ? transitions() : new TransitionCollection();
+    list.itemContainerTransitions = applied(transitions);
   }
 }

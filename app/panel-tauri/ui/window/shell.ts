@@ -1,13 +1,11 @@
-import type { Bounds, View } from "../protocol.ts";
-import type { PanelHost } from "./panel-view.ts";
-import type { LocalThemeKind, RunAction } from "./theming-card.ts";
-import path from "node:path";
-import { pathToFileURL } from "node:url";
+import type { Bounds, View } from "../protocol.g.ts";
 import { autoLength, starLength, thickness } from "./layout.ts";
 import * as motion from "./motion.ts";
 import { scaleOf } from "./native.ts";
+import type { PanelHost } from "./panel-view.ts";
 import { PanelView } from "./panel-view.ts";
 import { style, StyleKey } from "./styles.ts";
+import type { LocalThemeKind, RunAction } from "./theming-card.ts";
 import { LocalThemeKind as ThemeKind } from "./theming-card.ts";
 import {
   BitmapImage,
@@ -28,6 +26,8 @@ import {
   Window,
   WindowActivationState
 } from "./winui.ts";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 // In device-independent pixels; only the height is the user's.
 const windowWidth = 560;
@@ -185,6 +185,7 @@ export class Shell {
     presenter.preferredMinimumWidth = width;
     presenter.preferredMaximumWidth = width;
     presenter.preferredMinimumHeight = Math.round(minimumHeight * scale);
+
     if (placement !== null) {
       appWindow.moveAndResize({
         x: placement.x,
@@ -194,6 +195,7 @@ export class Shell {
       });
       return;
     }
+
     appWindow.resize({
       width,
       height: Math.round(windowHeight * scale)
@@ -206,16 +208,21 @@ export class Shell {
     });
   }
 
-  private async pick(kind: LocalThemeKind): Promise<string | null> {
-    const windowId = this.window.appWindow.id;
-    if (kind === ThemeKind.Folder) {
-      const folder = await new FolderPicker(windowId).pickSingleFolderAsync();
-      return folder?.path ?? null;
-    }
-    const picker = new FileOpenPicker(windowId);
+  private pick(kind: LocalThemeKind): Promise<string | null> {
+    return kind === ThemeKind.Folder ? this.pickFolder() : this.pickFile();
+  }
+
+  private async pickFolder(): Promise<string | null> {
+    const folder = await new FolderPicker(this.window.appWindow.id).pickSingleFolderAsync();
+    return folder?.path ?? null;
+  }
+
+  private async pickFile(): Promise<string | null> {
+    const picker = new FileOpenPicker(this.window.appWindow.id);
     for (const fileType of themeFileTypes) {
       picker.fileTypeFilter?.append(fileType);
     }
+
     const file = await picker.pickSingleFileAsync();
     return file?.path ?? null;
   }

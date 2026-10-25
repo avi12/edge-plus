@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/fallow/schema.json",
+  // The window's entry points: the core starts main.ts, main.ts starts the
+  // worker by URL, and ui/dev holds the stand-in core for working on the
+  // window alone.
+  "entry": ["ui/main.ts", "ui/window/worker.ts", "ui/dev/fixture.ts", "eslint.config.js"],
+  "ignorePatterns": [".winapp/**", "src-tauri/**"],
+  // Run by package.json scripts, which dependency scanning can't see through.
+  "ignoreDependencies": ["@microsoft/winappcli", "@microsoft/dynwinrt-codegen", "oxlint-tsgolint"]
+}

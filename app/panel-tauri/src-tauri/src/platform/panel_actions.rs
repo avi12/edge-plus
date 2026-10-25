@@ -10,7 +10,7 @@ use crate::platform::action_error::{ActionError, ActionResult};
 use crate::platform::background_service;
 use crate::platform::settings::{self, ColorMode, Feature, Settings};
 use crate::setup::{start_with_windows, update_watch};
-use crate::themes::theme_library;
+use crate::themes::{theme_library, theme_order};
 use crate::ui::panel_state::PanelState;
 
 #[must_use]
@@ -88,6 +88,18 @@ pub fn remove_theme(id: &str) -> ActionResult<PanelState> {
 
 pub fn reorder_themes(ids: &[String]) -> ActionResult<PanelState> {
     theme_library::reorder(ids)?;
+    Ok(load())
+}
+
+/// Moves a theme up (negative) or down the list, stopping at either end.
+pub fn move_theme(id: &str, offset: i32) -> ActionResult<PanelState> {
+    let ids: Vec<String> = Settings::load()
+        .theming
+        .themes
+        .into_iter()
+        .map(|theme| theme.id)
+        .collect();
+    theme_library::reorder(&theme_order::moved(&ids, id, offset))?;
     Ok(load())
 }
 

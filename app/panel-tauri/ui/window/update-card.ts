@@ -1,8 +1,8 @@
-import type { UpdateView } from "../protocol.ts";
-import type { Border } from "./winui.ts";
+import type { UpdateView } from "../protocol.g.ts";
 import { CardFrame } from "./card-frame.ts";
 import { boxed } from "./layout.ts";
 import { style, StyleKey } from "./styles.ts";
+import type { Border } from "./winui.ts";
 import { Button, Visibility } from "./winui.ts";
 
 const hiddenWording = {
@@ -35,10 +35,15 @@ export class UpdateCard {
   }
 
   show(update: UpdateView | null): void {
-    const isSame = JSON.stringify(update) === JSON.stringify(this.shown);
-    if (isSame || update === null) {
+    if (update === null) {
       return;
     }
+
+    const isShownAlready = JSON.stringify(update) === JSON.stringify(this.shown);
+    if (isShownAlready) {
+      return;
+    }
+
     this.shown = update;
     this.frame.setWording(update.wording);
     this.reset();

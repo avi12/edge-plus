@@ -1,13 +1,27 @@
-import type { Action, CardView, InjectView, SectionView, View } from "../protocol.ts";
-import type { PickLocalTheme, RunAction } from "./theming-card.ts";
-import type { FrameworkElement, Window } from "./winui.ts";
+import type {
+  Action,
+  CardView,
+  InjectView,
+  SectionView,
+  SwitchKey,
+  View
+} from "../protocol.g.ts";
 import { FeatureCard } from "./feature-card.ts";
 import { InjectCard } from "./inject-card.ts";
-import { autoLength, boxed, milliseconds, starLength, thickness, uniform } from "./layout.ts";
+import {
+  autoLength,
+  boxed,
+  milliseconds,
+  starLength,
+  thickness,
+  uniform
+} from "./layout.ts";
 import * as motion from "./motion.ts";
 import { style, StyleKey } from "./styles.ts";
+import type { PickLocalTheme, RunAction } from "./theming-card.ts";
 import { ThemingCard } from "./theming-card.ts";
 import { UpdateCard } from "./update-card.ts";
+import type { FrameworkElement, Window } from "./winui.ts";
 import {
   ColumnDefinition,
   DataPackageOperation,
@@ -44,6 +58,16 @@ const veilFadeMilliseconds = 120;
 // Lines the header up with the cards' text, as Windows Settings does.
 const sectionHeaderMargin = thickness(4, 0, 0, 4);
 
+async function droppedPaths(event: DragEventArgs): Promise<string[]> {
+  const items = await event.dataView.getStorageItemsAsync();
+  const paths: string[] = [];
+  for (const item of items ?? []) {
+    paths.push(item.path);
+  }
+
+  return paths;
+}
+
 // What the page asks of the window it is in.
 export interface PanelHost {
   readonly window: Window;
@@ -63,8 +87,8 @@ export class PanelView {
   private readonly buildNotice = new InfoBar();
   private readonly actionNotice = new InfoBar();
   private readonly dropVeil: Grid;
-  private readonly switchCards = new Map<string, FeatureCard>();
-  private readonly themingCards: ThemingCard[] = [];
+  private readonly switchCards = new Map<SwitchKey, FeatureCard>();
+  private themingCard: ThemingCard | null = null;
   private readonly updateCard: UpdateCard;
   // The Inject automatically card, with the Inject card under it while offered;
   // its add/delete transition slides the Inject card in and out.
@@ -82,7 +106,9 @@ export class PanelView {
     this.buildNotice.severity = InfoBarSeverity.Warning;
     this.actionNotice.isClosable = true;
     this.actionNotice.severity = InfoBarSeverity.Error;
-    this.updateCard = new UpdateCard(() => void this.restartToUpdate());
+    this.updateCard = new UpdateCard(() => {
+      void this.restartToUpdate();
+    });
     this.injectGroup.spacing = cardSpacing;
     motion.animate(this.injectGroup, motion.addDelete);
     this.sectionList.spacing = sectionSpacing;
@@ -110,21 +136,18 @@ export class PanelView {
     this.root.onDragLeave(() => {
       this.dropVeil.opacity = veilHidden;
     });
-    this.root.onDrop((_sender, event) => void this.onDrop(projectAs(event, DragEventArgs)));
+    this.root.onDrop((_sender, event) => {
+      void this.onDrop(projectAs(event, DragEventArgs));
+    });
     this.render(view);
   }
 
   render(view: View): void {
-    const hint = view.openEdgeHint;
-    this.openEdgeHint.text = hint ?? "";
-    this.openEdgeHint.visibility = hint === null ? Visibility.Collapsed : Visibility.Visible;
-    this.buildNotice.message = view.buildNotice;
-    this.buildNotice.isOpen = view.buildNotice.length > 0;
-    for (const section of view.sections) {
-      for (const card of section.cards) {
-        this.renderCard(card);
-      }
+    this.renderNotices(view);
+    for (const card of view.sections.flatMap(section => section.cards)) {
+      this.renderCard(card);
     }
+
     this.updateCard.show(view.update);
   }
 
@@ -133,14 +156,23 @@ export class PanelView {
     this.actionNotice.isOpen = message.length > 0;
   }
 
+  private renderNotices(view: View): void {
+    const hint = view.openEdgeHint;
+    this.openEdgeHint.text = hint ?? "";
+    this.openEdgeHint.visibility = hint === null ? Visibility.Collapsed : Visibility.Visible;
+    this.buildNotice.message = view.buildNotice;
+    this.buildNotice.isOpen = view.buildNotice.length > 0;
+  }
+
   private renderCard(card: CardView): void {
-    if (card.theming !== null) {
-      for (const theming of this.themingCards) {
-        theming.update(card);
-      }
+    const theming = card.theming;
+    if (theming !== null) {
+      this.themingCard?.update(card, theming);
       return;
     }
+
     this.switchCards.get(card.key)?.update(card.isOn, card.isLocked, card.note);
+
     if (card.inject !== null) {
       this.showInjectOffer(card.inject.offer);
     }
@@ -164,18 +196,23 @@ export class PanelView {
   private cardView(card: CardView): FrameworkElement {
     if (card.theming !== null) {
       const theming = new ThemingCard(card, card.theming, this.host.run, this.host.pick);
-      this.themingCards.push(theming);
+      this.themingCard = theming;
       return theming.view;
     }
-    const feature = new FeatureCard(card.wording, isOn => void this.runAndReport({
-      kind: "setSwitch",
-      key: card.key,
-      isOn
-    }));
+
+    const feature = new FeatureCard(card.wording, isOn => {
+      void this.runAndReport({
+        kind: "setSwitch",
+        key: card.key,
+        isOn
+      });
+    });
     this.switchCards.set(card.key, feature);
+
     if (card.inject === null) {
       return feature.view;
     }
+
     this.injectGroup.children.append(feature.view);
     return this.injectGroup;
   }
@@ -186,14 +223,19 @@ export class PanelView {
         this.injectGroup.children.removeAtEnd();
         this.injectCard = null;
       }
+
       return;
     }
+
     if (this.injectCard === null) {
-      const card = new InjectCard(offer, () => void this.inject(card));
+      const card = new InjectCard(offer, () => {
+        void this.inject(card);
+      });
       this.injectCard = card;
       this.injectGroup.children.append(card.view);
       return;
     }
+
     this.injectCard.update(offer);
   }
 
@@ -230,11 +272,11 @@ export class PanelView {
     const byline = new StackPanel();
     byline.orientation = Orientation.Horizontal;
     byline.spacing = cardSpacing;
-    const by = new TextBlock();
-    by.text = view.footer.by;
-    by.style = style(StyleKey.CardDescription);
-    by.verticalAlignment = VerticalAlignment.Center;
-    byline.children.append(by);
+    const byWord = new TextBlock();
+    byWord.text = view.footer.by;
+    byWord.style = style(StyleKey.CardDescription);
+    byWord.verticalAlignment = VerticalAlignment.Center;
+    byline.children.append(byWord);
     const author = new HyperlinkButton();
     author.content = boxed(view.footer.author);
     author.navigateUri = new Uri(view.footer.authorUri);
@@ -283,6 +325,7 @@ export class PanelView {
     if (!hasFiles) {
       return;
     }
+
     event.acceptedOperation = DataPackageOperation.Copy;
     this.dropVeil.opacity = veilShown;
   }
@@ -295,19 +338,20 @@ export class PanelView {
     if (!hasFiles) {
       return;
     }
+
     this.showActionNotice("");
-    const items = await event.dataView.getStorageItemsAsync();
-    if (items === null) {
-      return;
+    for (const path of await droppedPaths(event)) {
+      await this.addDropped(path);
     }
-    for (let i = 0; i < items.size; i++) {
-      const error = await this.host.run({
-        kind: "addLocalTheme",
-        path: items.getAt(i).path
-      });
-      if (error !== null) {
-        this.showActionNotice(error);
-      }
+  }
+
+  private async addDropped(path: string): Promise<void> {
+    const error = await this.host.run({
+      kind: "addLocalTheme",
+      path
+    });
+    if (error !== null) {
+      this.showActionNotice(error);
     }
   }
 }

@@ -1,7 +1,7 @@
-import type { CardWording } from "../protocol.ts";
-import type { Border, FrameworkElement } from "./winui.ts";
+import type { CardWording } from "../protocol.g.ts";
 import { CardFrame } from "./card-frame.ts";
 import { boxed } from "./layout.ts";
+import type { Border, FrameworkElement } from "./winui.ts";
 import { AutomationProperties, ToggleSwitch } from "./winui.ts";
 
 // A card with a switch at its end.

@@ -1,5 +1,5 @@
-import type { MessagePort } from "node:worker_threads";
 import { roInitialize } from "@microsoft/dynwinrt";
+import type { MessagePort } from "node:worker_threads";
 import { workerData } from "node:worker_threads";
 
 // The UI thread. Its apartment comes first, so everything loaded after it may

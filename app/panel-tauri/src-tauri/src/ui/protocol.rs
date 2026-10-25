@@ -166,6 +166,8 @@ pub enum Action {
     AddLocalTheme { path: String },
     RemoveTheme { id: String },
     ReorderThemes { ids: Vec<String> },
+    /// Alt+Up (-1) or Alt+Down (1) on a theme in the list.
+    MoveTheme { id: String, offset: i32 },
     AssignTheme { mode: ColorMode, id: String },
 }
 

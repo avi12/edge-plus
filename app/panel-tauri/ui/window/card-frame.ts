@@ -1,7 +1,7 @@
-import type { CardWording } from "../protocol.ts";
-import type { FrameworkElement } from "./winui.ts";
+import type { CardWording } from "../protocol.g.ts";
 import { autoLength, glyph, starLength, thickness } from "./layout.ts";
 import { style, StyleKey } from "./styles.ts";
+import type { FrameworkElement } from "./winui.ts";
 import {
   Border,
   ColumnDefinition,
