@@ -513,6 +513,33 @@ export function emitComponent(level: ClassModel): string {
   ].join("\n")}\n`;
 }
 
+const ownPropertyLimit = 8;
+const namespacePrefix = "Microsoft.UI.Xaml.";
+
+function codeList(names: string[]): string {
+  return names.map(name => `\`${name}\``).join(", ");
+}
+
+// The README's table of the components: one row for each, with the props its
+// class adds (the rest come from the classes it inherits from) and the
+// bindables it has, inherited ones included.
+export function emitControlsTable(model: Model): string {
+  const rows = model.classes.filter(level => level.isComponent).map(level => {
+    const own = level.properties.map(property => property.key);
+    const shown = codeList(own.slice(0, ownPropertyLimit));
+    const hiddenCount = own.length - ownPropertyLimit;
+    const props = hiddenCount > 0 ? `${shown}, +${hiddenCount} more` : shown;
+    const category = level.type.namespace.replace(namespacePrefix, "");
+    const content = level.contentProperty === null ? "" : "yes";
+    return `| \`${level.type.name}\` | ${category} | ${props} | ${codeList(allBindableNames(level))} | ${content} |`;
+  });
+  return [
+    "| Component | Namespace | Props it adds | Bindable | Children |",
+    "| --- | --- | --- | --- | --- |",
+    ...rows
+  ].join("\n");
+}
+
 // The classes an app generates bindings for to use the package (`svelte-winui
 // setup` reads it): the components' hierarchy, what the conversions build and
 // what the package itself reaches (the core classes).

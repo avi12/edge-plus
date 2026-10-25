@@ -3,6 +3,7 @@ import {
   bindingModule,
   emitBindings,
   emitComponent,
+  emitControlsTable,
   emitDeclaration,
   emitIndex,
   emitLevel,
@@ -49,6 +50,51 @@ function updatedPackageJson(packagePath: string, wanted: TypeName[]): OutputFile
   };
 }
 
+// What the README holds that comes from elsewhere, between a pair of markers
+// each: `<!-- controls:start -->` ... `<!-- controls:end -->`.
+interface ReadmeBlock {
+  name: string;
+  body: string;
+}
+
+const packageFolder = path.join(import.meta.dirname, "..", "..");
+// The hello example's files, which the quick start shows as they are.
+const quickStartFiles = ["vite.config.ts", "app.svelte", "window.ts", "main.ts"];
+
+function exampleBlock(name: string): ReadmeBlock {
+  const source = readFileSync(path.join(packageFolder, "examples", "hello", name), "utf8");
+  const language = path.extname(name).slice(1);
+  return {
+    name: `hello/${name}`,
+    body: `\`\`\`${language}\n${normalized(source).trimEnd()}\n\`\`\``
+  };
+}
+
+// README.md with each block's body between its markers.
+function updatedReadme(blocks: ReadmeBlock[]): OutputFile {
+  const file = path.join(packageFolder, "README.md");
+  const original = readFileSync(file, "utf8");
+  let text = normalized(original);
+  for (const block of blocks) {
+    const start = `<!-- ${block.name}:start -->`;
+    const end = `<!-- ${block.name}:end -->`;
+    const startAt = text.indexOf(start);
+    const endAt = text.indexOf(end);
+    const hasMarkers = startAt >= 0 && endAt > startAt;
+    if (!hasMarkers) {
+      throw new Error(`${file} needs ${start} and ${end}`);
+    }
+
+    text = `${text.slice(0, startAt + start.length)}\n\n${block.body}\n\n${text.slice(endAt)}`;
+  }
+
+  const newline = original.includes("\r\n") ? "\r\n" : "\n";
+  return {
+    file,
+    text: text.replaceAll("\n", newline)
+  };
+}
+
 function generatedFiles(project: string): OutputFile[] {
   const model = buildModel(path.join(project, ...lockPath));
   const output: OutputFile[] = [
@@ -90,6 +136,15 @@ function generatedFiles(project: string): OutputFile[] {
     }
   }
 
+  output.push(
+    updatedReadme([
+      {
+        name: "controls",
+        body: emitControlsTable(model)
+      },
+      ...quickStartFiles.map(exampleBlock)
+    ])
+  );
   output.push(updatedPackageJson(path.join(project, "package.json"), requestedClasses(model)));
   reportMissingBindings(project, bindingClasses(model));
   return output;
