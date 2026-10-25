@@ -68,15 +68,38 @@ function Write-Step([string] $text) {
     Write-Host "==> $text" -ForegroundColor Cyan
 }
 
-# Directory.Build.props is the one place the version is written.
+# The core's Cargo.toml: the one place the version is written (the exe's file
+# version, the window's footer and the update check all read it).
+function Get-CargoManifestPath {
+    return Join-Path (Get-RepoRoot) 'app\panel-tauri\src-tauri\Cargo.toml'
+}
+
+# The [package] table's version, the first `version = "..."` in the file.
 function Get-ProductVersion {
-    $props = Join-Path (Get-RepoRoot) 'app\panel-winui\Directory.Build.props'
-    $version = ([xml](Get-Content $props -Raw)).Project.PropertyGroup.Version |
-        Where-Object { $_ } | Select-Object -First 1
-    if (-not $version) {
-        throw "No <Version> in $props."
+    $manifest = Get-CargoManifestPath
+    $line = Get-Content $manifest | Where-Object { $_ -match '^version\s*=\s*"([^"]+)"' } |
+        Select-Object -First 1
+    if (-not $line) {
+        throw "No version in $manifest."
     }
-    return $version
+    return ([regex]::Match($line, '"([^"]+)"')).Groups[1].Value
+}
+
+function Set-ProductVersion([string] $version) {
+    $manifest = Get-CargoManifestPath
+    $text = Get-Content $manifest -Raw
+    $text = ([regex]'(?m)^version\s*=\s*"[^"]*"').Replace($text, "version = `"$version`"", 1)
+    Set-Content $manifest $text -Encoding utf8NoBOM -NoNewline
+}
+
+# The release build: the window kit (pnpm build:window), then the core in
+# release, which embeds it. Returns the exe.
+function Build-ReleaseExe {
+    $panel = Join-Path (Get-RepoRoot) 'app\panel-tauri'
+    Invoke-Checked 'pnpm install' { pnpm --dir $panel install --frozen-lockfile }
+    Invoke-Checked 'pnpm restore' { pnpm --dir $panel restore }
+    Invoke-Checked 'pnpm build' { pnpm --dir $panel build }
+    return Join-Path $panel 'src-tauri\target\release\edgeplus.exe'
 }
 
 # A release's files on GitHub, as the release attaches them and the update
@@ -93,4 +116,5 @@ function Get-ReleaseAsset([string] $version) {
 }
 
 Export-ModuleMember -Function Get-RepoRoot, Get-BuildScriptPath, Get-BuildSetting, Get-VcVarsPath,
-    Invoke-Checked, Write-Step, Get-ProductVersion, Get-ReleaseAsset
+    Invoke-Checked, Write-Step, Get-CargoManifestPath, Get-ProductVersion, Set-ProductVersion,
+    Build-ReleaseExe, Get-ReleaseAsset

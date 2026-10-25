@@ -1,11 +1,12 @@
 <#
 .SYNOPSIS
-The repo's lint gate over the DLL's C++ and the panel's C#; non-zero exit on any finding.
+The repo's lint gate over the DLL's C++ and the panel's Rust and TypeScript; non-zero exit on any finding.
 .DESCRIPTION
-Passes: clang-format, clang-tidy, C++ restricted syntax, C# house rules,
-Shared.g.cs freshness, dotnet format (app\.editorconfig).
+Passes: clang-format, clang-tidy, C++ restricted syntax, shared.g.rs
+freshness, the panel's own gate (oxlint, eslint, clippy, rustfmt, tsc,
+fallow) and ui/protocol.g.ts freshness.
 .PARAMETER Fix
-Apply clang-format -i, clang-tidy --fix and dotnet format, then re-check.
+Apply clang-format -i, clang-tidy --fix and the panel's fixers, then re-check.
 .PARAMETER Staged
 Only files staged for commit (what the pre-commit hook runs).
 .PARAMETER InstallHook
@@ -115,43 +116,7 @@ if ($hasCppInScope) {
     }
 }
 
-# Every Win32 call is a [DllImport] in a Native\ folder, so one anywhere else
-# escaped its one home.
-$panelRoot = 'app/panel-winui'
-$csharpRules = @(
-    @{
-        Pattern = '\[(DllImport|LibraryImport)\b'
-        Allowed = "^$panelRoot/(Panel/)?Native/"
-        Message = 'Win32 calls live in a Native/ folder only (the host''s or the panel''s); move this [DllImport] there.'
-    }
-    @{
-        Pattern = 'for\s*\(\s*;\s*;\s*\)'
-        Message = 'Use `while (true)` for an infinite loop. `for (;;)` reads as a for loop someone forgot to finish writing.'
-    }
-)
-$csharpFiles = @(git -C $root ls-files "$panelRoot/*.cs")
-if ($Staged) {
-    $csharpFiles = @(git -C $root diff --cached --name-only --diff-filter=ACMR |
-        Where-Object { $_ -match "^$panelRoot/.*\.cs$" })
-}
-$csharpSyntaxOk = $true
-Write-Host "[lint] C# house rules ($($csharpRules.Count) rules, $($csharpFiles.Count) files)"
-foreach ($file in $csharpFiles) {
-    $lineNumber = 0
-    foreach ($line in [System.IO.File]::ReadAllLines((Join-Path $root $file))) {
-        $lineNumber++
-        $code = $line -replace '//.*$', ''
-        foreach ($rule in $csharpRules) {
-            $isAllowedHere = $rule.ContainsKey('Allowed') -and ($file -match $rule.Allowed)
-            if (($code -match $rule.Pattern) -and -not $isAllowedHere) {
-                $csharpSyntaxOk = $false
-                Write-Host "${file}:${lineNumber}: $($rule.Message)"
-            }
-        }
-    }
-}
-
-# A checked-in Shared.g.cs that disagrees with the @share markers means a C++
+# A checked-in shared.g.rs that disagrees with the @share markers means a C++
 # value moved and the commit carries a stale generated file.
 $sharedOk = $true
 if (-not $Staged) {
@@ -159,37 +124,32 @@ if (-not $Staged) {
     $sharedOk = $LASTEXITCODE -eq 0
 }
 
-# Skipped under -Staged: dotnet format works on a project, not a file list.
-#
-# The flag is written out twice rather than splatted in: a conditional array
-# unrolls to a bare string, and `@v` on a string drops it, which silently turns
-# the check into a fix.
-$csharpOk = $true
+# The panel: oxlint, eslint, clippy at -D warnings, rustfmt, tsc and the
+# fallow audit (its package.json), and the window's protocol, which `cargo
+# test` writes from protocol.rs, still matching what is committed. Skipped
+# under -Staged: these run on the project, not a file list.
+$panelOk = $true
 if (-not $Staged) {
-    $csharpProjects = @(
-        "$panelRoot/EdgePlus.csproj",
-        "$panelRoot/Panel/EdgePlus.Panel.csproj",
-        "$panelRoot/test/EdgePlus.Tests.csproj"
-    )
-    foreach ($project in $csharpProjects) {
-        $projectPath = Join-Path $root $project
-        Write-Host "[lint] dotnet format ($project)"
-        foreach ($subcommand in @('whitespace', 'style')) {
-            if ($Fix) {
-                & dotnet format $subcommand $projectPath
-            } else {
-                & dotnet format $subcommand $projectPath --verify-no-changes
-            }
-            if ($LASTEXITCODE -ne 0) {
-                $csharpOk = $false
-            }
-        }
+    $panel = Join-Path $root 'app\panel-tauri'
+    $script = if ($Fix) { 'lint' } else { 'lint:verify' }
+    Write-Host "[lint] panel (pnpm $script)"
+    & pnpm --dir $panel $script
+    $panelOk = $LASTEXITCODE -eq 0
+
+    $protocol = Join-Path $panel 'ui\protocol.g.ts'
+    $before = (Get-FileHash $protocol).Hash
+    Write-Host '[lint] window protocol (cargo test export_the_window_types)'
+    & cargo test --manifest-path (Join-Path $panel 'src-tauri\Cargo.toml') --quiet export_the_window_types | Out-Null
+    $isProtocolCurrent = $LASTEXITCODE -eq 0 -and (Get-FileHash $protocol).Hash -eq $before
+    if (-not $isProtocolCurrent) {
+        Write-Host '[lint] ui/protocol.g.ts was out of date with protocol.rs; it is rewritten now, commit it.'
+        $panelOk = $false
     }
 }
 
-if ($formatOk -and $tidyOk -and $syntaxOk -and $csharpSyntaxOk -and $sharedOk -and $csharpOk) {
+if ($formatOk -and $tidyOk -and $syntaxOk -and $sharedOk -and $panelOk) {
     Write-Host "[lint] clean"
     exit 0
 }
-Write-Host "[lint] FAILED (format=$formatOk tidy=$tidyOk syntax=$syntaxOk csharpRules=$csharpSyntaxOk shared=$sharedOk csharp=$csharpOk)"
+Write-Host "[lint] FAILED (format=$formatOk tidy=$tidyOk syntax=$syntaxOk shared=$sharedOk panel=$panelOk)"
 exit 1

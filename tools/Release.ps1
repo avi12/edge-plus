@@ -6,9 +6,10 @@
 .DESCRIPTION
   In order:
 
-    1. set <Version> in app\panel-winui\Directory.Build.props, its one home;
-    2. publish the exe (rebuilding the embedded split DLL if its sources are
-       newer) and copy it to out\release\EdgePlus-<version>.exe;
+    1. set the version in app\panel-tauri\src-tauri\Cargo.toml, its one home;
+    2. build the window kit and the release exe that embeds it (rebuilding the
+       embedded split DLL if its sources are newer) and copy the exe to
+       out\release\EdgePlus-<version>.exe;
     3. build the MSI from that exe (tools\Build-Installer.ps1);
     4. commit `chore(release): <version>`, tag v<version> and push both;
     5. create the GitHub release with the exe and the MSI attached, its notes
@@ -41,7 +42,8 @@ $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'EdgePlus.Build.psm1') -Force
 
 $repo = Get-RepoRoot
-$props = Join-Path $repo 'app\panel-winui\Directory.Build.props'
+$manifest = Get-CargoManifestPath
+$lockfile = Join-Path (Split-Path $manifest -Parent) 'Cargo.lock'
 $current = Get-ProductVersion
 $highlights = (Get-Content (Resolve-Path $NotesFile) -Raw).Trim()
 
@@ -57,24 +59,19 @@ $previousTag = git -C $repo describe --tags --abbrev=0
 $asset = Get-ReleaseAsset $Version
 
 Write-Step "Setting the version to $Version"
-$text = Get-Content $props -Raw
-$text = $text -replace '<Version>[^<]*</Version>', "<Version>$Version</Version>"
-Set-Content $props $text -Encoding utf8NoBOM -NoNewline
+Set-ProductVersion $Version
 
-Write-Step 'Publishing the exe'
-$panel = Join-Path $repo 'app\panel-winui'
-Invoke-Checked 'dotnet publish' { dotnet publish $panel -c Release -nologo -v:q }
-$published = Get-ChildItem (Join-Path $panel 'bin\Release') -Recurse -Filter edgeplus.exe |
-    Where-Object { $_.Directory.Name -eq 'publish' } | Select-Object -First 1
+Write-Step 'Building the exe'
+$built = Build-ReleaseExe
 $releaseFolder = Join-Path $repo 'out\release'
 New-Item -ItemType Directory -Force $releaseFolder | Out-Null
 $exe = Join-Path $releaseFolder $asset.Exe
-Copy-Item $published.FullName $exe -Force
+Copy-Item $built $exe -Force
 
 $installer = & (Join-Path $PSScriptRoot 'Build-Installer.ps1') -Exe $exe
 
 Write-Step "Committing and tagging $($asset.Tag)"
-Invoke-Checked 'git add' { git -C $repo add $props }
+Invoke-Checked 'git add' { git -C $repo add $manifest $lockfile }
 Invoke-Checked 'git commit' { git -C $repo commit -m "chore(release): $Version" }
 Invoke-Checked 'git tag' { git -C $repo tag $asset.Tag }
 Invoke-Checked 'git push' { git -C $repo push origin main $asset.Tag }

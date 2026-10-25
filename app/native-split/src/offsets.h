@@ -9,7 +9,7 @@ namespace edgeplus::edge155 {
 
 // The build these offsets belong to (the module's file version,
 // major.minor.build.revision). verify.h refuses to hook anything else.
-// The @share markers hand the build to the WinUI panel, which holds the DLL
+// The @share markers hand the build to the panel's core, which holds the DLL
 // back from any other (tools/Export-SharedConstants.ps1).
 // @share EdgeModule
 inline constexpr wchar_t kModule[] = L"msedge.dll";

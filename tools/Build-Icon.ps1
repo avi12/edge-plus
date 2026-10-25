@@ -1,8 +1,9 @@
-# Draws Assets/edgeplus.svg's geometry into Assets/edgeplus.ico (PNG frames).
+# Draws icons/edgeplus.svg's geometry into icons/icon.ico (PNG frames), the
+# icon the core embeds and hands to the window.
 # Keep the numbers in step with the SVG, which is the design source.
 Add-Type -AssemblyName System.Drawing
 
-$assets = Join-Path $PSScriptRoot '..\app\panel-winui\Assets'
+$icons = Join-Path $PSScriptRoot '..\app\panel-tauri\src-tauri\icons'
 $sizes = 16, 24, 32, 48, 64, 256
 $viewBoxSize = 120.0
 
@@ -66,5 +67,5 @@ for ($i = 0; $i -lt $sizes.Count; $i++) {
 }
 foreach ($png in $pngs) { $writer.Write($png) }
 $writer.Flush()
-[System.IO.File]::WriteAllBytes((Join-Path $assets 'edgeplus.ico'), $out.ToArray())
-Write-Host "wrote edgeplus.ico ($($sizes -join ', '))"
+[System.IO.File]::WriteAllBytes((Join-Path $icons 'icon.ico'), $out.ToArray())
+Write-Host "wrote icon.ico ($($sizes -join ', '))"

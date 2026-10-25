@@ -9,6 +9,8 @@
   },
   "bundle": {
     "active": false,
+    "publisher": "Avi",
+    "copyright": "© 2026 Avi",
     "icon": ["icons/icon.ico"]
   }
 }

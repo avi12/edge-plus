@@ -6,8 +6,8 @@
          pwsh tools\Build-Installer.ps1 -Exe <edgeplus.exe>
 
        which names it as the release attaches it; tools\Release.ps1 runs it for
-       every release. The version and names come from Directory.Build.props. -->
-  <Import Project="..\panel-winui\Directory.Build.props" />
+       every release. The script passes the version (Cargo.toml's) and the
+       product name and publisher (the exe's own version resource). -->
 
   <PropertyGroup>
     <Platform>x64</Platform>
@@ -20,7 +20,7 @@
       Manufacturer=$(Company);
       ProductVersion=$(Version);
       ExePath=$(ExePath);
-      IconPath=$(MSBuildThisFileDirectory)..\panel-winui\Assets\edgeplus.ico
+      IconPath=$(MSBuildThisFileDirectory)..\panel-tauri\src-tauri\icons\icon.ico
     </DefineConstants>
   </PropertyGroup>
 

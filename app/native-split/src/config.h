@@ -1,6 +1,6 @@
 // config.h — the panel's live configuration of this DLL: the wire struct the
 // panel writes to the config file, mirrored field-for-field in
-// app/panel-winui/Panel/Dll/ConfigWire.cs.
+// app/panel-tauri/src-tauri/src/dll/config_wire.rs.
 #pragma once
 #include <windows.h>
 #include <cstddef>

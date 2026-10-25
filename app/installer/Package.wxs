@@ -2,7 +2,7 @@
      on by default) decide the desktop and Start menu shortcuts. A silent install
      turns one off with DESKTOPSHORTCUT="" or STARTMENUSHORTCUT="", which is how
      an installed copy's update keeps the shortcuts the user already has
-     (Panel/Setup/MsiInstall.cs). -->
+     (src-tauri/src/setup/msi_install.rs). -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <!-- The UpgradeCode is what makes a newer MSI replace an older one: never
@@ -31,7 +31,7 @@
         <Component Id="Executable">
           <File Id="EdgePlusExe" Source="$(ExePath)" Name="edgeplus.exe" KeyPath="yes" />
           <!-- How a running copy knows the MSI installed it, and so updates
-               through a newer MSI: MsiInstall.cs reads this key. -->
+               through a newer MSI: msi_install.rs reads this key. -->
           <RegistryValue Root="HKLM" Key="Software\EdgePlus" Name="InstallDir"
                          Type="string" Value="[INSTALLFOLDER]" />
         </Component>
