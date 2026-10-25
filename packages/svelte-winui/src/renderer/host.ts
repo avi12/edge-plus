@@ -33,8 +33,11 @@ import {
 //   class="CardTitle"           what the app's class handler makes of it
 //   vertical-alignment="Center" a property; a quoted value becomes the
 //                               property's enum, number, flag or Thickness
-//   on-content="On"             a property too (ToggleSwitch.OnContent): only
-//                               a name with no dash is an event
+//   On-content="On"            a property whose name starts with "on"
+//                               (ToggleSwitch.OnContent): Svelte takes a
+//                               lower-case "on" for an event, so it is
+//                               spelled with a capital, or on-content={() =>
+//                               "On"} (see applyPropertyNamedOn)
 //   grid.column={1}             an attached property: Grid.setColumn
 //   columns="Auto,*,Auto"       a grid's columns (rows= its rows)
 //   ontoggled={handler}         an event: onToggled
@@ -321,6 +324,40 @@ function eventMethod(control: UIElement, type: string): string {
   throw new Error(`a ${control.constructor.name} has no ${type} event`);
 }
 
+// A property whose name starts with "on" (ToggleSwitch.OnContent) on a raw
+// element. Svelte takes every attribute starting with "on" for an event: the
+// quoted form is a compile error, and `on-content={value}` hands the host a
+// wrapper that calls `value` as a handler and keeps nothing it returns. An
+// inline function is handed over as it is, so `on-content={() => "On"}` is
+// the form that works, read once when the element is made. A property that
+// changes is set through {@attach control(...)}, as components do.
+function applyPropertyNamedOn(control: UIElement, type: string, thunk: unknown): void {
+  const name = `on${type}`;
+  const guidance = `${name} on a raw element must be an inline function returning the value: ${name}={() => value}`;
+  if (!isThunk(thunk)) {
+    throw new TypeError(guidance);
+  }
+
+  const value = valueOf(thunk, guidance);
+  if (value === undefined) {
+    throw new TypeError(guidance);
+  }
+
+  applyProperty(control, name, value);
+}
+
+function isThunk(value: unknown): value is () => unknown {
+  return typeof value === "function";
+}
+
+function valueOf(thunk: () => unknown, guidance: string): unknown {
+  try {
+    return thunk();
+  } catch (error) {
+    throw new TypeError(guidance, { cause: error });
+  }
+}
+
 // Which <host> placed each control, so a hot-swapped component's new root
 // can take the old one's place with the same attributes.
 const hostOf = new WeakMap<UIElement, WinuiElement>();
@@ -426,27 +463,25 @@ const winuiHost: NativeHost<WinuiNative> = {
   removed: release,
   listen(element, type, handler) {
     const control = element.native.control;
-    if (control === null) {
-      return null;
-    }
-
-    // `on-content={value}` reaches the host as an event named "-content":
-    // Svelte reads every expression attribute that starts with "on" as one.
-    // It is the property OnContent.
-    const isPropertyNamedOn = type.startsWith(wordSeparator);
-    if (isPropertyNamedOn) {
-      applyProperty(control, `on${type}`, handler);
-      return null;
-    }
-
-    if (typeof handler !== "function") {
-      return null;
-    }
-
-    const unsubscribe = call(control, eventMethod(control, type), handler);
-    return typeof unsubscribe === "function" ? () => unsubscribe() : null;
+    return control === null ? null : subscribe(control, type, handler);
   }
 };
+
+// What ends the subscription, or null for a handler that is not one.
+function subscribe(control: UIElement, type: string, handler: unknown): (() => void) | null {
+  const isPropertyNamedOn = type.startsWith(wordSeparator);
+  if (isPropertyNamedOn) {
+    applyPropertyNamedOn(control, type, handler);
+    return null;
+  }
+
+  if (typeof handler !== "function") {
+    return null;
+  }
+
+  const unsubscribe = call(control, eventMethod(control, type), handler);
+  return typeof unsubscribe === "function" ? () => unsubscribe() : null;
+}
 
 const renderer = createTreeRenderer(winuiHost);
 

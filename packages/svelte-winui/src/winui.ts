@@ -8,7 +8,6 @@ export { Application } from "#winui/microsoft/ui/xaml/Application";
 export { ColumnDefinition } from "#winui/microsoft/ui/xaml/controls/ColumnDefinition";
 export { Grid } from "#winui/microsoft/ui/xaml/controls/Grid";
 export { RowDefinition } from "#winui/microsoft/ui/xaml/controls/RowDefinition";
-export { XamlControlsResources } from "#winui/microsoft/ui/xaml/controls/XamlControlsResources";
 export { DispatcherQueue } from "#winui/microsoft/ui/dispatching/DispatcherQueue";
 export { DesktopAcrylicBackdrop } from "#winui/microsoft/ui/xaml/media/DesktopAcrylicBackdrop";
 export { FrameworkElement } from "#winui/microsoft/ui/xaml/FrameworkElement";

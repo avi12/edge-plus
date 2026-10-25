@@ -60,29 +60,44 @@ function applyBackdrop(window: Window, backdrop: Backdrop): void {
   }
 }
 
+const chromeDefaults = {
+  backdrop: Backdrop.None,
+  extendsIntoTitleBar: false,
+  title: ""
+};
+
+function applyChrome(window: Window, chrome: WindowChrome): void {
+  const { backdrop, extendsIntoTitleBar, title } = {
+    ...chromeDefaults,
+    ...chrome
+  };
+  applyBackdrop(window, backdrop);
+  window.extendsContentIntoTitleBar = extendsIntoTitleBar;
+  window.title = title;
+
+  if (chrome.size !== undefined) {
+    window.appWindow.resize(chrome.size);
+  }
+}
+
+// Puts the content in the window; the mounted component, if it is one.
+function placeContent<Props extends object>(window: Window, options: WindowOptions<Props>): Mounted<Props> | null {
+  if (!isComponentContent(options)) {
+    window.content = options.control;
+    return null;
+  }
+
+  const mounted = mountControl(options.component, options.props);
+  window.content = mounted.root;
+  return mounted;
+}
+
 // Opens a window around a component or a control. Call it on the UI thread,
 // from `onStart` (application.ts) or later.
 export function createWindow<Props extends object>(options: WindowOptions<Props>): AppWindow<Props> {
   const window = new Window();
-  if (options.title !== undefined) {
-    window.title = options.title;
-  }
-
-  applyBackdrop(window, options.backdrop ?? Backdrop.None);
-  window.extendsContentIntoTitleBar = options.extendsIntoTitleBar ?? false;
-
-  if (options.size !== undefined) {
-    window.appWindow.resize(options.size);
-  }
-
-  let mounted: Mounted<Props> | null = null;
-  if (isComponentContent(options)) {
-    mounted = mountControl(options.component, options.props);
-    window.content = mounted.root;
-  } else {
-    window.content = options.control;
-  }
-
+  applyChrome(window, options);
+  const mounted = placeContent(window, options);
   if (options.isBackground === true) {
     window.appWindow.showWithActivation(false);
   } else {
