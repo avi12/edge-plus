@@ -247,12 +247,13 @@ function placedItems(element: WinuiElement, collection: unknown): KeyedItems<UIE
   };
 }
 
-// A panel's collection is changed in place, moving as little as it can.
-function syncPanel(element: WinuiElement, control: UIElement): void {
+// A panel's children, or a ComboBox's items, are changed in place, moving as
+// little as they can.
+function syncCollection(element: WinuiElement, control: UIElement, collectionName: string): void {
   const wanted = element.children.flatMap(controlsOf);
   const byKey = new Map(wanted.map(child => [keyOf(child), child]));
   syncKeyed({
-    items: placedItems(element, read(control, "children")),
+    items: placedItems(element, read(control, collectionName)),
     keyOf,
     create(key) {
       const child = byKey.get(key);
@@ -283,8 +284,10 @@ function syncContent(element: WinuiElement, control: UIElement): void {
 }
 
 // The first of these properties a control has says where its children go.
+// Items come before text: a ComboBox has both, and its children are its items.
 const childSlots: Array<[string, (element: WinuiElement, control: UIElement) => void]> = [
-  ["children", syncPanel],
+  ["children", (element, control) => syncCollection(element, control, "children")],
+  ["items", (element, control) => syncCollection(element, control, "items")],
   ["text", syncText],
   ["child", syncChild],
   ["content", syncContent]
