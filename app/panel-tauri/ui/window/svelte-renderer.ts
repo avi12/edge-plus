@@ -329,13 +329,16 @@ function eventMethod(control: UIElement, type: string): string {
 // can take the old one's place with the same attributes.
 const hostOf = new WeakMap<UIElement, WinuiElement>();
 
-function placeHost(element: WinuiElement, control: unknown): void {
+function hostControl(element: WinuiElement, control: unknown): void {
   element.native.control = isControl(control) ? control : null;
 
   if (element.native.control !== null) {
     hostOf.set(element.native.control, element);
   }
+}
 
+function placeHost(element: WinuiElement, control: unknown): void {
+  hostControl(element, control);
   for (const [name, value] of element.attributes) {
     if (name !== hostAttribute) {
       applyAttribute(element, name, value);
@@ -431,14 +434,7 @@ export function withControl<Control>(
 }
 
 function firstControl(parent: FragmentNode<WinuiNative> | WinuiElement): FrameworkElement | null {
-  for (const child of parent.children) {
-    const control = child.type === NodeType.Element ? child.native.control : null;
-    if (isFrameworkElement(control)) {
-      return control;
-    }
-  }
-
-  return null;
+  return parent.children.flatMap(controlsOf).find(isFrameworkElement) ?? null;
 }
 
 // The control a mounted component made first: its root.
@@ -463,18 +459,28 @@ export function watchRoot(
 
 const gridPlacements = ["Row", "Column", "RowSpan", "ColumnSpan"];
 
-// Puts `next` where `previous` is: through the <host> that placed it, with
-// that host's attributes, or else in its parent control, keeping its place in
-// a grid.
-export function swapControl(previous: FrameworkElement, next: FrameworkElement): void {
-  const host = hostOf.get(previous);
-  if (host !== undefined) {
-    placeHost(host, next);
+function replaceInCollection(collection: unknown, previous: FrameworkElement, next: FrameworkElement): void {
+  const index = Number(call(collection, "indexOf", previous));
+  call(collection, "removeAt", index);
+  call(collection, "insertAt", index, next);
+}
+
+// Where a control placed by code sits in its parent: a panel's children, a
+// border's child or a content control's content.
+const parentSlots: Array<[string, (parent: object, previous: FrameworkElement, next: FrameworkElement) => void]> = [
+  ["children", (parent, previous, next) => replaceInCollection(read(parent, "children"), previous, next)],
+  ["child", (parent, _previous, next) => write(parent, "child", next)],
+  ["content", (parent, _previous, next) => write(parent, "content", next)]
+];
+
+function replaceInParent(previous: FrameworkElement, next: FrameworkElement): void {
+  const parent = read(previous, "parent");
+  if (!isRecord(parent)) {
     return;
   }
 
-  const parent = read(previous, "parent");
-  if (!isRecord(parent)) {
+  const slot = parentSlots.find(([property]) => property in parent);
+  if (slot === undefined) {
     return;
   }
 
@@ -482,14 +488,18 @@ export function swapControl(previous: FrameworkElement, next: FrameworkElement):
     call(winui.Grid, `set${placement}`, next, call(winui.Grid, `get${placement}`, previous));
   }
 
-  const slot = ["children", "child", "content"].find(property => property in parent);
-  if (slot === "children") {
-    const collection = read(parent, slot);
-    const index = Number(call(collection, "indexOf", previous));
-    call(collection, "removeAt", index);
-    call(collection, "insertAt", index, next);
-  } else if (slot !== undefined) {
-    write(parent, slot, next);
+  slot[1](parent, previous, next);
+}
+
+// Puts `next` where `previous` is: through the <host> that placed it, with
+// that host's attributes, or else in its parent control, keeping its place in
+// a grid.
+export function swapControl(previous: FrameworkElement, next: FrameworkElement): void {
+  const host = hostOf.get(previous);
+  if (host === undefined) {
+    replaceInParent(previous, next);
+  } else {
+    placeHost(host, next);
   }
 }
 

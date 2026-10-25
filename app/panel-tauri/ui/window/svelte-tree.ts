@@ -66,9 +66,13 @@ export function parentElement<Native>(node: TreeNode<Native>): ElementNode<Nativ
 }
 
 function notify<Native>(host: NativeHost<Native>, parent: ParentNode<Native> | null): void {
-  if (parent?.type === NodeType.Element) {
+  if (parent === null) {
+    return;
+  }
+
+  if (parent.type === NodeType.Element) {
     host.childrenChanged(parent);
-  } else if (parent?.type === NodeType.Fragment) {
+  } else {
     host.fragmentChanged(parent);
   }
 }
