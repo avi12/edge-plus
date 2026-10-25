@@ -34,6 +34,12 @@ const defaultRuntimeModule = "svelte-winui/css";
 const queryStart = "?";
 const svelteExtension = ".svelte";
 
+const styleOpening = "<style";
+const styleBlocks = /<style[\s\S]*?<\/style>/gu;
+function withoutStyle(source: string): string {
+  return source.replace(styleBlocks, styleOpening);
+}
+
 function isComponentId(id: string): boolean {
   return id.endsWith(svelteExtension) && !id.includes(queryStart);
 }
@@ -46,6 +52,8 @@ export function winuiCss(options: WinuiCssOptions): Plugin {
   const resources = loadWinuiCatalogue();
   const runtimeModule = options.runtimeModule ?? defaultRuntimeModule;
   let root = options.root ?? "";
+  // Each component as last compiled, less its <style> blocks.
+  const withoutStyles = new Map<string, string>();
   return {
     name: pluginName,
     enforce: "post",
@@ -57,7 +65,9 @@ export function winuiCss(options: WinuiCssOptions): Plugin {
         return null;
       }
 
-      const hasStyle = readFileSync(id, "utf8").includes("<style");
+      const source = readFileSync(id, "utf8");
+      withoutStyles.set(id, withoutStyle(source));
+      const hasStyle = source.includes(styleOpening);
       if (!hasStyle) {
         return null;
       }
@@ -68,10 +78,20 @@ export function winuiCss(options: WinuiCssOptions): Plugin {
       };
     },
     // The sheet module is not the component's file, so a change to the
-    // component does not reach it by itself.
+    // component does not reach it by itself. A change to the <style> alone is
+    // the sheet's: the component is left running, with its state, and its live
+    // elements restyle.
     hotUpdate({ file, modules }) {
       const sheet = this.environment.moduleGraph.getModuleById(`${file}${sheetSuffix}`);
-      return sheet === undefined ? undefined : [...modules, sheet];
+      if (sheet === undefined) {
+        return undefined;
+      }
+
+      const previous = withoutStyles.get(file);
+      const current = withoutStyle(readFileSync(file, "utf8"));
+      withoutStyles.set(file, current);
+      const isStyleOnlyChange = previous === current;
+      return isStyleOnlyChange ? [sheet] : [...modules, sheet];
     },
     // The import a component gets may be root-relative (`/window/a.svelte-winui-css.js`):
     // the sheet's id has to be the file's own path, which `load` reads.
