@@ -67,13 +67,14 @@ function nugetCache(): string {
   return cache;
 }
 
-// The window's .svelte components, compiled as the bundle takes them in.
+// The window's .svelte components, compiled as the bundle takes them in, each
+// with the statements that register its <style> as WinUI Styles.
 const svelteComponents: Plugin = {
   name: "svelte-components",
   setup(bundler) {
     // esbuild runs the filter in Go, which takes no regular expression flags.
     bundler.onLoad({ filter: /\.svelte(?:\.ts)?$/ }, ({ path: filename }) => ({
-      contents: compileSvelte(filename, readFileSync(filename, "utf8")),
+      contents: compileSvelte(filename, readFileSync(filename, "utf8"), { root: path.join(root, "ui") }),
       loader: "js"
     }));
   }

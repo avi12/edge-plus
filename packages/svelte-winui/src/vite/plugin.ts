@@ -1,3 +1,5 @@
+import { cssHash } from "../css/sheet-module.ts";
+import { winuiCss } from "../css/vite.ts";
 import { winuiRenderer } from "./compile.ts";
 import type { Options } from "@sveltejs/vite-plugin-svelte";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
@@ -35,6 +37,9 @@ export function winuiPluginOptions(options: SvelteWinuiOptions = {}): PluginOpti
     // The runner is Node, so the environment is a server one, but the window
     // mounts components: they compile for the client.
     generate: "client",
+    // The scoping class a component's elements carry and its <style>'s
+    // selectors name must agree (see css/sheet-module.ts).
+    cssHash,
     experimental: {
       customRenderer: options.renderer ?? winuiRenderer
     }
@@ -86,5 +91,12 @@ export function svelteWinui(options: SvelteWinuiOptions = {}): Plugin[] {
     name: "svelte-winui:environment",
     config: windowConfig
   };
-  return [environment, ...svelte(winuiPluginOptions(options).svelte)];
+  const { svelte: svelteOptions, compile } = winuiPluginOptions(options);
+  // A component's <style> becomes WinUI Styles its module registers; a rule
+  // WinUI cannot say is reported, and the open window keeps running.
+  const css = winuiCss({
+    compilerOptions: compile,
+    onError: "report"
+  });
+  return [environment, ...svelte(svelteOptions), css];
 }

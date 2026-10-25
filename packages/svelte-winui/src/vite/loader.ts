@@ -38,7 +38,7 @@ export function svelteHooks(renderer = winuiRenderer): RegisterHooksOptions {
       const filename = fileURLToPath(url);
       return {
         format: "module",
-        source: compileSvelte(filename, readFileSync(filename, "utf8"), renderer),
+        source: compileSvelte(filename, readFileSync(filename, "utf8"), { renderer }),
         shortCircuit: true
       };
     }

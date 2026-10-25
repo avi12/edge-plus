@@ -19,11 +19,14 @@ import { readFileSync } from "node:fs";
 // sheet's selectors carry is the one the elements get.
 
 export interface WinuiCssOptions {
-  // Sheet ids and diagnostics are paths relative to this.
-  root: string;
+  // Sheet ids and diagnostics are paths relative to this; default Vite's root.
+  root?: string;
   compilerOptions?: CompileOptions;
   // The module that exports registerStyleSheet, as the window imports it.
   runtimeModule?: string;
+  // What a <style> WinUI cannot say does: "fail" the load, or "report" the
+  // line on stderr and register nothing, so an open window stays up (dev).
+  onError?: "fail" | "report";
 }
 
 const pluginName = "svelte-winui:css";
@@ -42,9 +45,13 @@ function isSheetId(id: string): boolean {
 export function winuiCss(options: WinuiCssOptions): Plugin {
   const resources = loadWinuiCatalogue();
   const runtimeModule = options.runtimeModule ?? defaultRuntimeModule;
+  let root = options.root ?? "";
   return {
     name: pluginName,
     enforce: "post",
+    configResolved(config) {
+      root = options.root ?? config.root;
+    },
     transform(code, id) {
       if (!isComponentId(id)) {
         return null;
@@ -91,7 +98,7 @@ export function winuiCss(options: WinuiCssOptions): Plugin {
         const module = compileSheetModule({
           filename,
           source: readFileSync(filename, "utf8"),
-          sheetId: path.relative(options.root, filename).replaceAll("\\", "/"),
+          sheetId: path.relative(root, filename).replaceAll("\\", "/"),
           resources,
           runtimeModule,
           compilerOptions: options.compilerOptions,
@@ -103,6 +110,12 @@ export function winuiCss(options: WinuiCssOptions): Plugin {
 
         return module === null ? "export default null;" : module.code;
       } catch (error) {
+        const isReported = error instanceof SheetError && options.onError === "report";
+        if (isReported) {
+          process.stderr.write(`${error.message}\n`);
+          return "export default null;";
+        }
+
         if (error instanceof SheetError) {
           this.error(error.message);
         }

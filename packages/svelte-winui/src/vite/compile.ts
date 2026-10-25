@@ -1,3 +1,5 @@
+import { loadWinuiCatalogue } from "../css/catalogue.ts";
+import { compileSheetModule, cssHash, SheetError } from "../css/sheet-module.ts";
 import { describeError } from "./diagnostics.ts";
 import { stripTypeScriptTypes } from "node:module";
 import path from "node:path";
@@ -29,7 +31,20 @@ export function isSvelteFile(filename: string): boolean {
   return filename.endsWith(componentExtension) || filename.endsWith(runesExtension);
 }
 
-function compileSource(filename: string, source: string, renderer: string): string {
+export interface CompileOptions {
+  // The module a component imports its renderer from.
+  renderer?: string;
+  // Sheet ids and their diagnostics are paths relative to this.
+  root?: string;
+  // The module that exports registerStyleSheet, as the compiled component
+  // imports it.
+  cssRuntime?: string;
+}
+
+const winuiCssRuntime = "svelte-winui/css";
+const resources = loadWinuiCatalogue();
+
+function compileSource(filename: string, source: string, options: CompileOptions): string {
   if (filename.endsWith(runesExtension)) {
     return compileModule(stripTypeScriptTypes(source), {
       filename,
@@ -37,22 +52,35 @@ function compileSource(filename: string, source: string, renderer: string): stri
     }).js.code;
   }
 
-  return compile(source, {
+  const renderer = options.renderer ?? winuiRenderer;
+  const component = compile(source, {
     filename,
     generate: "client",
     runes: true,
+    cssHash,
     experimental: {
-      customRenderer: ({ filename: component }) => rendererImport(component, renderer)
+      customRenderer: ({ filename: name }) => rendererImport(name, renderer)
     }
   }).js.code;
+  // The dev server registers the sheet through the Vite plugin (css/vite.ts);
+  // here its statements are appended to the component.
+  const sheet = compileSheetModule({
+    filename,
+    source,
+    sheetId: path.relative(options.root ?? path.dirname(filename), filename).replaceAll("\\", "/"),
+    resources,
+    runtimeModule: options.cssRuntime ?? winuiCssRuntime
+  });
+  return sheet === null ? component : `${component}\n${sheet.code}`;
 }
 
 // A compile error is thrown as one that names the file and line, which a
-// bundler prints as it is.
-export function compileSvelte(filename: string, source: string, renderer = winuiRenderer): string {
+// bundler prints as it is. A <style> WinUI cannot say fails the build with
+// each rule's `file:line:column: property has no WinUI meaning (why)`.
+export function compileSvelte(filename: string, source: string, options: CompileOptions = {}): string {
   try {
-    return compileSource(filename, source, renderer);
+    return compileSource(filename, source, options);
   } catch (error) {
-    throw new Error(describeError(error), { cause: error });
+    throw new Error(error instanceof SheetError ? error.message : describeError(error), { cause: error });
   }
 }

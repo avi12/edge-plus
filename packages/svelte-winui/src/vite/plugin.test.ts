@@ -1,3 +1,4 @@
+import { cssHash } from "../css/sheet-module.ts";
 import { compileSvelte, rendererImport } from "./compile.ts";
 import { svelteWinui, windowConfig, windowEnvironment, winuiPluginOptions } from "./plugin.ts";
 import assert from "node:assert/strict";
@@ -13,6 +14,7 @@ test("components compile for the client against svelte-winui's renderer", () => 
   assert.equal(svelte.compilerOptions?.css, "external");
   assert.deepEqual(compile, {
     generate: "client",
+    cssHash,
     experimental: {
       customRenderer: "svelte-winui/host"
     }
@@ -27,6 +29,7 @@ test("another renderer can be named", () => {
 test("the plugin brings Svelte's own with its environment", () => {
   const names = svelteWinui().map(plugin => plugin.name);
   assert.ok(names.includes("svelte-winui:environment"));
+  assert.ok(names.includes("svelte-winui:css"));
   assert.ok(names.length > 1);
 });
 
