@@ -1,3 +1,4 @@
+import { packageJsonWithBindings } from "../../src/cli/binding-list.ts";
 import {
   bindingModule,
   emitBindings,
@@ -5,7 +6,8 @@ import {
   emitDeclaration,
   emitIndex,
   emitLevel,
-  emitMetadata
+  emitMetadata,
+  emitRequiredBindings
 } from "./emit.ts";
 import { bindingClasses, buildModel, requestedClasses } from "./model.ts";
 import type { TypeName } from "./winmd.ts";
@@ -35,64 +37,15 @@ const generatedFolder = path.join(import.meta.dirname, "..", "..", "src", "compo
 const lockPath = [".winapp", "winmds.lock.json"];
 const bindingsPath = [".winapp", "bindings"];
 
-interface BindingEntry {
-  namespace: string;
-  classes?: string[];
-}
-
 interface OutputFile {
   file: string;
   text: string;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isBindingEntry(value: unknown): value is BindingEntry {
-  return isRecord(value) && typeof value["namespace"] === "string";
-}
-
-// The class list package.json asks `winapp restore` for, with the classes the
-// components need added. The ones already there stay.
-function mergedEntries(existing: BindingEntry[], wanted: TypeName[]): BindingEntry[] {
-  const byNamespace = new Map<string, Set<string>>();
-  const wholeNamespaces: BindingEntry[] = [];
-  for (const entry of existing) {
-    if (entry.classes === undefined) {
-      wholeNamespaces.push(entry);
-    } else {
-      byNamespace.set(entry.namespace, new Set([...byNamespace.get(entry.namespace) ?? [], ...entry.classes]));
-    }
-  }
-
-  for (const type of wanted) {
-    byNamespace.set(type.namespace, new Set([...byNamespace.get(type.namespace) ?? [], type.name]));
-  }
-
-  const entries = [...byNamespace.entries()].map(([namespace, classes]) => ({
-    namespace,
-    classes: [...classes].sort((left, right) => left.localeCompare(right))
-  }));
-  return [...entries, ...wholeNamespaces].sort((left, right) => left.namespace.localeCompare(right.namespace));
-}
-
 function updatedPackageJson(packagePath: string, wanted: TypeName[]): OutputFile {
-  const original = readFileSync(packagePath, "utf8");
-  const newline = original.includes("\r\n") ? "\r\n" : "\n";
-  const parsed: unknown = JSON.parse(original);
-  const winapp = isRecord(parsed) ? parsed["winapp"] : undefined;
-  const bindings = isRecord(winapp) ? winapp["jsBindings"] : undefined;
-  const list = isRecord(bindings) ? bindings["additionalWinmds"] : undefined;
-  const hasAdditionalWinmds = isRecord(bindings) && Array.isArray(list);
-  if (!hasAdditionalWinmds) {
-    throw new Error(`${packagePath} has no winapp.jsBindings.additionalWinmds`);
-  }
-
-  bindings["additionalWinmds"] = mergedEntries(list.filter(isBindingEntry), wanted);
   return {
     file: packagePath,
-    text: `${JSON.stringify(parsed, null, 2).replaceAll("\n", newline)}${newline}`
+    text: packageJsonWithBindings(readFileSync(packagePath, "utf8"), wanted)
   };
 }
 
@@ -110,6 +63,10 @@ function generatedFiles(project: string): OutputFile[] {
     {
       file: path.join(generatedFolder, "metadata.ts"),
       text: emitMetadata(model)
+    },
+    {
+      file: path.join(generatedFolder, "required-bindings.json"),
+      text: emitRequiredBindings(model)
     }
   ];
   for (const level of model.classes) {

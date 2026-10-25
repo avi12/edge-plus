@@ -2,6 +2,7 @@ import {
   attachedOwners,
   bindableEvents,
   componentWinmd,
+  coreClasses,
   kindOfType,
   neverBindable,
   nonConstructible,
@@ -106,7 +107,7 @@ function isLockFile(value: unknown): value is LockFile {
 
 // The index of the metadata `winapp restore` locked, and the file the
 // components are in.
-export function loadMetadata(lockPath: string): {
+function loadMetadata(lockPath: string): {
   index: TypeIndex;
   components: WinMdFile;
 } {
@@ -523,5 +524,10 @@ export function bindingClasses(model: Model): TypeName[] {
 // use them (asked for by name as well, it generates them twice and stops).
 export function requestedClasses(model: Model): TypeName[] {
   const enums = new Set([...model.enums, ...supportEnums].map(fullName));
-  return bindingClasses(model).filter(type => !enums.has(fullName(type)));
+  const classes = new Map<string, TypeName>();
+  for (const type of [...bindingClasses(model), ...coreClasses]) {
+    classes.set(fullName(type), type);
+  }
+
+  return [...classes.values()].filter(type => !enums.has(fullName(type)));
 }

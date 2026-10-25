@@ -15,7 +15,6 @@ const windowsAppSdkMajor = 2;
 const windowsAppSdkMinor = 2;
 const packageRoot = path.join(import.meta.dirname, "..");
 const bindingsFolder = ".winapp/bindings/";
-const bindingsSite = "generated/bindings.ts";
 
 process.env["WINAPPSDK_BOOTSTRAP_DLL_PATH"] ??= path.join(
   packageRoot,
@@ -33,7 +32,7 @@ const server = await startModuleServer({
   // The generated bindings are CommonJS that Node loads itself.
   isNative(file) {
     const normalized = file.replaceAll("\\", "/");
-    return normalized.includes(bindingsFolder) || normalized.endsWith(bindingsSite);
+    return normalized.includes(bindingsFolder);
   }
 });
 const worker = new Worker(new URL("mount-all.worker.ts", import.meta.url), {
