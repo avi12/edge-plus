@@ -1,4 +1,5 @@
 import type { LoweredStyle } from "./properties.ts";
+import type { VariableResolution } from "./resources.ts";
 import type { Declaration, PseudoState, Rule } from "./types.ts";
 
 // CSS's cascade for one element: which rules apply to it (its type, classes and
@@ -7,6 +8,8 @@ import type { Declaration, PseudoState, Rule } from "./types.ts";
 
 export interface RankedRule {
   rule: Rule;
+  // Names the rule across sheets, for caching what it styles.
+  id: string;
   // The order across sheets: a rule registered later ranks higher.
   rank: number;
 }
@@ -27,11 +30,14 @@ function ruleApplies(rule: Rule, facts: ElementFacts, isStateIgnored: boolean): 
 // The rules that style the element, lowest priority first. With
 // `isStateIgnored`, a state rule counts whether or not its state is active:
 // that is how the runtime learns which events an element needs.
-export function matchingRules(rules: readonly RankedRule[], facts: ElementFacts, isStateIgnored = false): Rule[] {
+export function matchingRanked(rules: readonly RankedRule[], facts: ElementFacts, isStateIgnored = false): RankedRule[] {
   return rules
     .filter(ranked => ruleApplies(ranked.rule, facts, isStateIgnored))
-    .sort((first, second) => first.rule.specificity - second.rule.specificity || first.rank - second.rank)
-    .map(ranked => ranked.rule);
+    .sort((first, second) => first.rule.specificity - second.rule.specificity || first.rank - second.rank);
+}
+
+export function matchingRules(rules: readonly RankedRule[], facts: ElementFacts, isStateIgnored = false): Rule[] {
+  return matchingRanked(rules, facts, isStateIgnored).map(ranked => ranked.rule);
 }
 
 // Later declarations win; `!important` ones win over every other. The
@@ -45,6 +51,22 @@ export function computeDeclarations(matched: readonly Rule[], inline: readonly D
   }
 
   return new Map([...normal, ...important]);
+}
+
+// The runtime does not know WinUI's resource names: the build wrote the key
+// each var() resolved to on its declaration.
+export function resolveBuiltVariable(declaration: Declaration, name: string): VariableResolution {
+  if (declaration.resource === undefined) {
+    return {
+      isFound: false,
+      reason: `${name} was not resolved at build time (var() works in a <style> block, not in a style attribute)`
+    };
+  }
+
+  return {
+    isFound: true,
+    key: declaration.resource
+  };
 }
 
 const xmlEscapes = new Map([

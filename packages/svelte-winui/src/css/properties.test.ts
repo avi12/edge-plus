@@ -1,4 +1,4 @@
-import { computeDeclarations } from "./cascade.ts";
+import { computeDeclarations, resolveBuiltVariable } from "./cascade.ts";
 import { loadWinuiCatalogue } from "./catalogue.ts";
 import { lowerDeclarations } from "./properties.ts";
 import { formatDiagnostic, translateStyleSheet } from "./translate.ts";
@@ -37,24 +37,12 @@ function lower(elementType: string | null, declarations: string): Lowered {
     return messages;
   }
 
-  const quiet = {
+  // As the runtime does: the keys the build resolved, no catalogue.
+  const lowered = lowerDeclarations(computeDeclarations([rule], []), {
     elementType,
-    resolveVariable: () => ({
-      isFound: false as const,
-      reason: "unused"
-    }),
+    resolveVariable: resolveBuiltVariable,
     hasStyle: () => true,
     report: () => {}
-  };
-  const lowered = lowerDeclarations(computeDeclarations([rule], []), {
-    ...quiet,
-    resolveVariable: (name, kind) => {
-      const base = name.replace(/^--/u, "");
-      return base === "" ? quiet.resolveVariable() : {
-        isFound: true as const,
-        key: `${base}:${kind}`
-      };
-    }
   });
   messages.setters = lowered.setters.map(entry => [entry.property, entry.kind === "setter" ? entry.value : entry.xaml]);
   messages.writes = lowered.writes.map(entry => [entry.target, entry.value]);
@@ -112,7 +100,7 @@ const rows: Array<[string, string | null, string, Array<[string, string]>]> = [
   ["opacity", null, "opacity: 0.5", [["Opacity", "0.5"]]],
   ["opacity as a percentage", null, "opacity: 40%", [["Opacity", "0.4"]]],
   ["color to Foreground", null, "color: #0af", [["Foreground", "#00AAFF"]]],
-  ["color from a WinUI brush", null, "color: var(--text-fill-color-secondary)", [["Foreground", "{ThemeResource text-fill-color-secondary:Brush}"]]],
+  ["color from a WinUI brush", null, "color: var(--text-fill-color-secondary)", [["Foreground", "{ThemeResource TextFillColorSecondaryBrush}"]]],
   ["background-color", null, "background-color: rgb(0 0 0 / 50%)", [["Background", "#80000000"]]],
   ["background to a brush", null, "background: transparent", [["Background", "#00FFFFFF"]]],
   ["background none", null, "background: none", [["Background", "#00FFFFFF"]]],
@@ -131,7 +119,7 @@ const rows: Array<[string, string | null, string, Array<[string, string]>]> = [
   ]],
   ["border-radius, one value", null, "border-radius: 4px", [["CornerRadius", "4,4,4,4"]]],
   ["border-radius, corners clockwise from top left", null, "border-radius: 1px 2px 3px 4px", [["CornerRadius", "1,2,3,4"]]],
-  ["border-radius from a WinUI resource", null, "border-radius: var(--control-corner-radius)", [["CornerRadius", "{ThemeResource control-corner-radius:CornerRadius}"]]],
+  ["border-radius from a WinUI resource", null, "border-radius: var(--control-corner-radius)", [["CornerRadius", "{ThemeResource ControlCornerRadius}"]]],
   ["one corner", null, "border-top-left-radius: 8px", [["CornerRadius", "8,0,0,0"]]],
   ["font-size", null, "font-size: 14px", [["FontSize", "14"]]],
   ["font-weight number", null, "font-weight: 600", [["FontWeight", "SemiBold"]]],

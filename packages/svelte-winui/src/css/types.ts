@@ -25,6 +25,9 @@ export interface Declaration {
   value: string;
   isImportant: boolean;
   at: SourcePosition;
+  // For a value that is a `var(--name)`: the WinUI resource key it resolved
+  // to at build time, spelled exactly as WinUI spells it.
+  resource?: string;
 }
 
 // The states WinUI's controls report through events. Each is a flag the

@@ -10,7 +10,7 @@ export interface LowerOptions {
   // The element the style is for ("stack-panel"), or null when only the
   // syntax is being checked (a selector that names no element type).
   elementType: string | null;
-  resolveVariable(name: string, kind: ResourceKind): VariableResolution;
+  resolveVariable(declaration: Declaration, name: string, kind: ResourceKind): VariableResolution;
   hasStyle(key: string): boolean;
   report(severity: Severity, message: string, at: SourcePosition): void;
 }
@@ -64,7 +64,7 @@ export class Reader {
       return undefined;
     }
 
-    const resolution = this.options.resolveVariable(reference.name, kind);
+    const resolution = this.options.resolveVariable(this.declaration, reference.name, kind);
     if (resolution.isFound) {
       return themeResource(resolution.key);
     }

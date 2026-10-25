@@ -262,7 +262,14 @@ function validateRules(translator: Translator, catalogue: ResourceCatalogue): vo
   for (const rule of translator.rules) {
     const options: LowerOptions = {
       elementType: rule.elementType,
-      resolveVariable: (name, kind) => resolveVariable(catalogue, name, kind),
+      resolveVariable(declaration, name, kind) {
+        const resolution = resolveVariable(catalogue, name, kind);
+        if (resolution.isFound) {
+          declaration.resource = resolution.key;
+        }
+
+        return resolution;
+      },
       hasStyle: key => hasStyle(catalogue, key),
       report: (severity, message, at) => report(translator, severity, message, at)
     };

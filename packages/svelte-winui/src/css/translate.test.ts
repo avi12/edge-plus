@@ -1,4 +1,4 @@
-import { computeDeclarations, matchingRules, styleXaml } from "./cascade.ts";
+import { computeDeclarations, matchingRules, resolveBuiltVariable, styleXaml } from "./cascade.ts";
 import { loadWinuiCatalogue } from "./catalogue.ts";
 import { lowerDeclarations } from "./properties.ts";
 import { parseSelectorList } from "./selectors.ts";
@@ -187,6 +187,7 @@ function stylesFor(css: string, facts: { elementType: string; classes: string[];
   const { sheet } = translate(css);
   const ranked = sheet.rules.map(rule => ({
     rule,
+    id: String(rule.order),
     rank: rule.order
   }));
   const matched = matchingRules(ranked, {
@@ -197,10 +198,7 @@ function stylesFor(css: string, facts: { elementType: string; classes: string[];
   const inlineRule = translate(`.i { ${inline} }`).sheet.rules[0]?.declarations ?? [];
   const lowered = lowerDeclarations(computeDeclarations(matched, inlineRule), {
     elementType: facts.elementType,
-    resolveVariable: () => ({
-      isFound: false,
-      reason: "unused"
-    }),
+    resolveVariable: resolveBuiltVariable,
     hasStyle: () => true,
     report: () => {}
   });
