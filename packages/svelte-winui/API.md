@@ -3,28 +3,36 @@
 What `src/renderer`, `src/vite` and `src/window` export. Names are fixed once
 this file lands; the other parts code against them. Everything is TypeScript
 source: `package.json` `exports` point at `.ts` files, so an app in the
-monorepo needs no build step.
+monorepo needs no build step (the repository is a pnpm workspace, see
+`pnpm-workspace.yaml`).
 
 ## Entry points
 
 | Specifier | File | What |
 |---|---|---|
-| `svelte-winui` | `src/index.ts` | the attachment, `mountControl`, `registerControls`, `dispatch` / `flush`; the components add their exports here |
+| `svelte-winui` | `src/index.ts` | `control`, `withControl`, `mountControl`, `registerControls`, `setClassHandler`, `dispatch` / `flush` / `onFlush`, the value helpers; the components add their exports here |
 | `svelte-winui/host` | `src/renderer/host.ts` | the custom renderer a compiled component imports (default export); not for app code |
-| `svelte-winui/vite` | `src/vite/index.ts` | `svelteWinui()` Vite plugin, `startModuleServer()` |
+| `svelte-winui/keyed-list` | `src/renderer/keyed-list.ts` | `syncKeyed()`: sync a native collection to wanted keys, touching only what changed |
+| `svelte-winui/vite` | `src/vite/index.ts` | `svelteWinui()` Vite plugin, `startModuleServer()`, compile-error formatting |
 | `svelte-winui/runner` | `src/vite/runner.ts` | `createWindowModuleRunner()`, the window thread's side of the module server |
 | `svelte-winui/compile` | `src/vite/compile.ts` | `compileSvelte()` for bundlers (esbuild) and tests |
-| `svelte-winui/testing` | `src/vite/loader.ts` | `svelteHooks()`: Node module hooks that run `.svelte` files with a chosen renderer |
-| `svelte-winui/window` | `src/window/index.ts` | `initWindowsAppSdk()`, `runOnUiThread()`, `runWindow()`, `createWindow()` |
+| `svelte-winui/testing` | `src/vite/loader.ts` | `svelteHooks()`: Node module hooks that run `.svelte` files with a chosen renderer (pure tests) |
+| `svelte-winui/bootstrap` | `src/window/bootstrap.ts` | `initWindowsAppSdk()`; imports nothing of WinRT, safe on the host's main thread |
+| `svelte-winui/thread` | `src/window/thread.ts` | `runOnUiThread()`; imports only dynwinrt, so the apartment comes first |
+| `svelte-winui/window` | `src/window/index.ts` | `runWindow()`, `exitApplication()`, `createWindow()` |
 
-The WinUI bindings come from the app: the package imports `#winui/*`, which its
-`package.json` maps to the `@winapp/bindings` package that `winapp node
-generate-bindings` writes. The app depends on it
-(`"@winapp/bindings": "link:.winapp/bindings"`) and lists every class the
-window uses in `winapp.jsBindings`. A class the package itself needs
-(`Application`, `Window`, `DispatcherQueue`, `Grid`, `ColumnDefinition`,
-`RowDefinition`, `PropertyValue`, `GridUnitType`, `XamlControlsResources`) must
-be in that list.
+### The bindings are the app's
+
+The package imports `#winui/*`, which its `package.json` maps to the
+`@winapp/bindings` package that `winapp node generate-bindings` writes. The app
+depends on it (`"@winapp/bindings": "link:.winapp/bindings"`) and lists every
+class the window uses in `winapp.jsBindings`; the package itself needs
+`Application`, `Window`, `DispatcherQueue`, `Grid`, `ColumnDefinition`,
+`RowDefinition`, `PropertyValue`, `GridUnitType`, `DesktopAcrylicBackdrop`,
+`FrameworkElement`, `UIElement`. Both sides reach the same files, so a class is
+one class. `src/winui.ts` is the package's one import site; the vite server
+loads it through Node (the bindings are CommonJS), as it does the app's own
+import site (`isNative`).
 
 ## Renderer (`svelte-winui`)
 
@@ -32,129 +40,165 @@ be in that list.
 // {@attach control<ToggleSwitch>(toggle => { ...; return () => cleanup })}
 // Hands the element's native control to the handler once it is made. The
 // handler may return a cleanup; Svelte runs it when the element goes or the
-// attachment re-runs. Effects created inside the handler belong to the
-// attachment, so they end with it (a hot swap included). Nothing is called
-// for a `<host>` that holds no control.
+// attachment re-runs. Effects created inside the handler ($effect) belong to
+// the attachment, so each re-runs on its own when what it reads changes, and
+// they end with it (unmount and hot swaps included). Nothing is called for a
+// <host> that holds no control.
 function control<Control extends object>(
   handler: (control: Control) => void | (() => void)
-): Attachment;
+): NodeAttachment;
 
 // {@attach withControl(StackPanel, panel => ...)}: the same, checked with
 // instanceof (the control is skipped when it is another class).
 function withControl<Control>(
   type: abstract new (...values: never[]) => Control,
   use: (control: Control) => void
-): Attachment;
+): NodeAttachment;
+
+type NodeAttachment = (node: unknown) => void | (() => void);
 
 interface Mounted<Props> {
   readonly root: FrameworkElement;       // the component's first control
-  set(changes: Partial<Props>): void;    // changes props, flushes at once
-  unmount(): void;                       // Svelte's unmount, then releases hosted controls
+  set(changes: Partial<Props>): void;    // changes props, flush() at once
+  unmount(): void;                       // Svelte's unmount (cleanups run), then releases the controls it made
 }
 function mountControl<Props extends object>(component: Component<Props>, initial: Props): Mounted<Props>;
 
-// The classes (and enums) a tag, an enum-valued attribute or `attached` may
-// name, as the bindings' exports: `registerControls(winui)` where `winui` is
-// the app's one import site of the bindings. Later calls add to earlier ones.
+// The classes (and enums) a tag, an enum-valued attribute or an attached
+// property may name, by WinUI name: `registerControls(winui)` where `winui` is
+// the app's one import site of the bindings (every export becomes a class a
+// tag can name). Later calls add to earlier ones.
 function registerControls(controls: Record<string, unknown>): void;
 
-// What `class="..."` does on an element, until the CSS runtime takes it over:
-// the app decides (Edge+ looks the name up in its XAML styles).
+// What class="..." does on an element, until the CSS runtime takes it over:
+// the app decides (Edge+ looks the name up in its XAML styles). With no
+// handler, class is ignored.
 type ClassHandler = (control: UIElement, value: string) => void;
-function setClassHandler(handler: ClassHandler): void;
+function setClassHandler(handler: ClassHandler | null): void;
 
-// Raw kebab elements (<stack-panel>, <toggle-switch on-content="...">) keep
-// working: `on-content` is the property OnContent, because only a lower-case
-// `on` + name with no dash in it is an event (`ontoggled={...}`).
+// Value helpers the app needs as well (WinRT values the way bindings take them).
+function boxed(text: string): unknown;
+function thickness(left: number, top: number, right: number, bottom: number): Thickness;
+function starLength(value?: number): GridLength;
+function autoLength(): GridLength;
+function pixelLength(value: number): GridLength;
 ```
 
-Raw-element rules (unchanged): kebab-case tag = WinUI class, kebab attribute =
-camelCase property, `grid.column={1}` = attached property, `columns` / `rows`
-on a grid, `<host element={control} />` places a control made elsewhere.
+A removed subtree ends its event subscriptions and lets go of its controls
+(`<host element={control}>` controls live on and can be placed again at once).
+
+Raw kebab elements: tag = WinUI class, kebab attribute = camelCase property,
+`grid.column={1}` = attached property, `columns` / `rows` on a grid,
+`<host element={control} />` places a control made elsewhere,
+`ontoggled={handler}` = the event `Toggled`.
+
+A property whose name starts with "on" (ToggleSwitch.OnContent) on a raw
+element: Svelte takes any attribute starting with lower-case "on" for an event
+(`on-content="x"` is a compile error; `on-content={value}` hands the host a
+wrapper that cannot be read). Two forms work: `On-content="On"` (a capital O is
+not Svelte's event rule), and `on-content={() => "On"}` (an inline function is
+handed over as it is and read once, when the element is made). A property that
+changes is set through `{@attach control(...)}`, as components do.
 
 ## Scheduling (`svelte-winui`)
 
 ```ts
-// Runs `work` on the UI thread's DispatcherQueue, then flush(). The way state
-// that arrives off the dispatcher (a message from the host) reaches the UI.
+// Runs `work` on the UI thread's DispatcherQueue (call it on the UI thread),
+// then flush(). How state that arrives off the dispatcher reaches the UI.
 function dispatch(work: () => void): void;
 
 // Svelte's flushSync(), then every onFlush listener. Call it after changing
-// state from code that is not an event handler.
+// state from code that is not an event handler (Node's microtasks, where
+// Svelte schedules its own flush, do not run while WinUI holds the thread).
 function flush(): void;
 
 // For other parts (the CSS runtime) that must act after Svelte has applied a
-// batch. Returns the function that removes the listener.
+// batch. Returns what removes the listener.
 function onFlush(listener: () => void): () => void;
 ```
 
 ## Vite (`svelte-winui/vite`)
 
 ```ts
-// The one line in an app's vite.config: wraps @sveltejs/vite-plugin-svelte
+// The one line in an app's vite.config.ts: wraps @sveltejs/vite-plugin-svelte
 // with the custom renderer, client generation, css "external" (the CSS part
-// takes the <style> blocks over) and the "browser" resolve condition.
+// takes the <style> blocks over), the "browser" resolve condition and the
+// window module environment (named "winui").
 function svelteWinui(options?: SvelteWinuiOptions): Plugin[];
 
 interface SvelteWinuiOptions {
-  // The module a component imports its renderer from. Default: svelte-winui/host.
-  renderer?: string;
+  renderer?: string;   // the module a component imports its renderer from; default "svelte-winui/host"
 }
 
-// The pure part of the above, for tests.
-function winuiPluginOptions(options?: SvelteWinuiOptions): { svelte: SvelteOptions; conditions: string[] };
+// The pure parts, for tests.
+function winuiPluginOptions(options?: SvelteWinuiOptions): { svelte: Options; compile: CompileOptions };
+function windowConfig(): UserConfig;
 
 // Hot reload inside the window process: a Vite dev server with no HTTP
 // server, talking to the module runner over a MessagePort pair.
 function startModuleServer(options: {
   root: string;
   port: MessagePort;                       // the runner's counterpart
-  isNative: (file: string) => boolean;     // modules Node loads itself (the bindings' import site)
+  configFile?: string;                     // the app's vite.config; without one, svelteWinui() defaults serve
+  isNative?: (file: string) => boolean;    // the app's import site of the bindings (the package's own is built in)
   renderer?: string;
 }): Promise<ViteDevServer>;
+
+// svelte-winui/runner: the window thread's side. `receive()` is called from a
+// DispatcherQueue timer; a hot update that cannot be applied is reported and
+// the window goes on.
+function createWindowModuleRunner(port: MessagePort): { runner: ModuleRunner; receive(): void };
 ```
 
-A compile error in a `.svelte` file is printed on the host process's stderr as
-`file:line:column: message` plus the code frame, and the window keeps running.
+Compile errors: a `.svelte` file that does not compile is printed on the host
+process's stderr as `file:line:column: message [code]` and its code frame (at
+start, the process then ends with that as its reason; on a hot update, the
+window keeps running with the code it has, and the next good save applies).
+`describeError()` / `compileDiagnostic()` / `formatDiagnostic()` are exported
+for tools; `compileSvelte()` throws an `Error` with that message.
 
-## Window (`svelte-winui/window`)
+## Window (`svelte-winui/bootstrap`, `/thread`, `/window`)
 
 ```ts
-// Windows App SDK bootstrap: finds Microsoft.WindowsAppRuntime.Bootstrap.dll
-// in `folders`, sets WINAPPSDK_BOOTSTRAP_DLL_PATH and initialises it. Throws
-// WindowsAppRuntimeMissing when the runtime is not installed.
+// bootstrap: finds Microsoft.WindowsAppRuntime.Bootstrap.dll in `folders` (first
+// match wins), sets WINAPPSDK_BOOTSTRAP_DLL_PATH and initialises the Windows
+// App SDK. Throws WindowsAppRuntimeMissing when the runtime is not installed.
 function initWindowsAppSdk(options: { major: number; minor: number; folders: string[] }): void;
 
-// In the worker that owns the UI thread: enters the single-threaded
-// apartment first, so everything `main` loads may create WinRT objects, then
-// awaits main and ends the process.
+// thread (in the worker that owns the UI thread; WinUI's loop never gives its
+// thread back): enters the single-threaded apartment first, so everything
+// `main` loads may create WinRT objects, awaits main, ends the process.
 function runOnUiThread(main: () => Promise<void>): Promise<never>;
 
-// Starts WinUI on this thread (the caller is the UI-thread worker):
-// Application, WinUI's own resources, then `onStart` on the UI thread. The
-// returned promise settles when the application exits.
+// window: starts WinUI on this thread: Application (WinUI's own resources
+// installed), then `onStart` on the UI thread. Settles when the app exits.
 function runWindow(options: { onStart: () => void }): Promise<void>;
+function exitApplication(): void;
 
-// A window around a component or a control.
-function createWindow(options: {
+// A window around a component (mounted: props can change, it can be
+// unmounted) or a control. Call it on the UI thread, from onStart or later.
+function createWindow<Props extends object>(options: WindowOptions<Props>): AppWindow<Props>;
+
+type WindowOptions<Props> = {
   title?: string;
-  content: Component | UIElement;
-  props?: object;                  // for a component
-  size?: { width: number; height: number };
-  backdrop?: "acrylic" | "mica" | "none";
+  size?: { width: number; height: number };   // device pixels
+  backdrop?: "acrylic" | "none";              // "mica" needs MicaBackdrop in the app's bindings
   extendsIntoTitleBar?: boolean;
-  background?: boolean;            // open without activating (tests, captures)
-}): AppWindow;
+  isBackground?: boolean;                     // shown without activating (tests, captures)
+} & ({ component: Component<Props>; props: Props } | { control: FrameworkElement });
 
-interface AppWindow {
+interface AppWindow<Props> {
   readonly window: Window;
-  readonly mounted: Mounted<object> | null;
+  readonly mounted: Mounted<Props> | null;    // null for a control
   close(): void;
   onClosed(listener: () => void): void;
 }
 ```
 
 Who starts the process is the app's business (Tauri sidecar, Electron utility
-process, plain Node). A transport (JSON lines on stdio, a MessagePort) is not
-in these files: it is `src/state`'s, which uses `dispatch` to put host
-messages on the UI thread.
+process, plain Node): its main thread calls `initWindowsAppSdk`, starts a
+worker whose file calls `runOnUiThread(() => ...)`, which loads the app and
+calls `runWindow`. A transport (JSON lines on stdio, a MessagePort) is not in
+these files: it is `src/state`'s, which uses `dispatch` to put host messages
+on the UI thread. Edge+'s `ui/main.ts`, `ui/window/worker.ts` and
+`ui/window/session.ts` are the working example.

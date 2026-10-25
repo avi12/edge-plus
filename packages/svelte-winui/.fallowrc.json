@@ -1,0 +1,21 @@
+{
+  "$schema": "../../app/panel-tauri/node_modules/fallow/schema.json",
+  // The package.json exports are its entry points; the app's own entry
+  // files are in the app's config.
+  "entry": [
+    "src/index.ts",
+    "src/renderer/host.ts",
+    "src/renderer/keyed-list.ts",
+    "src/vite/index.ts",
+    "src/vite/runner.ts",
+    "src/vite/compile.ts",
+    "src/vite/loader.ts",
+    "src/window/bootstrap.ts",
+    "src/window/thread.ts",
+    "src/window/index.ts",
+    "eslint.config.js"
+  ],
+  // The bindings are reached through the #winui/* import map, and the linters
+  // run from package.json scripts.
+  "ignoreDependencies": ["@winapp/bindings", "oxlint-tsgolint"]
+}

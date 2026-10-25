@@ -1,21 +1,9 @@
-import { thickness } from "svelte-winui";
-
 // WinRT's plain values, built the way the bindings take them. The ones every
 // WinUI app needs are svelte-winui's.
 
-export {
-  autoLength,
-  boxed,
-  pixelLength,
-  starLength,
-  thickness
-} from "svelte-winui";
+export { autoLength, starLength, thickness } from "svelte-winui";
 
 const ticksPerMillisecond = 10_000n;
-
-export function uniform(size: number) {
-  return thickness(size, size, size, size);
-}
 
 export function milliseconds(count: number) {
   return { duration: BigInt(count) * ticksPerMillisecond };
