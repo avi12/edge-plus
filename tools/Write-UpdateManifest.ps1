@@ -5,42 +5,52 @@
 
 .DESCRIPTION
   Names the version in app\panel-winui\Directory.Build.props, where that
-  release's exe is (the asset EdgePlus-<version>.exe on the GitHub release) and
-  the exe's SHA-256, which an installed copy checks its download against. Run it
-  after the exe is attached to the release and push the result to main: until
-  then installed copies see no update, so the manifest never points at an exe
+  release's exe and MSI are (the assets EdgePlus-<version>.exe and
+  EdgePlus-<version>-setup.msi on the GitHub release) and each one's SHA-256,
+  which an installed copy checks its download against: a portable copy fetches
+  the exe, a copy the MSI installed fetches the MSI. tools\Release.ps1 runs it
+  after both are attached to the release and pushes the result to main: until
+  then installed copies see no update, so the manifest never points at a file
   that is not there yet.
 
 .PARAMETER Exe
   The exe attached to the release. Its file version must match the version in
   Directory.Build.props, so a stale build cannot be published as a new release.
 
+.PARAMETER Installer
+  The MSI attached to the release, built from that exe.
+
 .EXAMPLE
-  pwsh tools\Write-UpdateManifest.ps1 -Exe EdgePlus-0.0.2.exe
+  pwsh tools\Write-UpdateManifest.ps1 -Exe EdgePlus-0.0.2.exe -Installer EdgePlus-0.0.2-setup.msi
 #>
 param(
     [Parameter(Mandatory)]
-    [string] $Exe
+    [string] $Exe,
+    [Parameter(Mandatory)]
+    [string] $Installer
 )
 
 $ErrorActionPreference = 'Stop'
+Import-Module (Join-Path $PSScriptRoot 'EdgePlus.Build.psm1') -Force
 
-$repo = Split-Path $PSScriptRoot -Parent
-$props = [xml](Get-Content (Join-Path $repo 'app\panel-winui\Directory.Build.props') -Raw)
-$version = ($props.Project.PropertyGroup | Where-Object { $_.Version } | Select-Object -First 1).Version
-
+$version = Get-ProductVersion
 $exePath = (Resolve-Path $Exe).Path
 $builtVersion = (Get-Item $exePath).VersionInfo.ProductVersion
 if ($builtVersion -ne $version) {
     throw "$exePath is version $builtVersion, but Directory.Build.props says $version. Build the release first."
 }
 
+$asset = Get-ReleaseAsset $version
 $manifest = [ordered]@{
-    version = $version
-    url     = "https://github.com/avi12/edge-plus/releases/download/v$version/EdgePlus-$version.exe"
-    sha256  = (Get-FileHash $exePath -Algorithm SHA256).Hash
+    version   = $version
+    url       = "$($asset.Url)/$($asset.Exe)"
+    sha256    = (Get-FileHash $exePath -Algorithm SHA256).Hash
+    installer = [ordered]@{
+        url    = "$($asset.Url)/$($asset.Installer)"
+        sha256 = (Get-FileHash (Resolve-Path $Installer).Path -Algorithm SHA256).Hash
+    }
 }
-$target = Join-Path $repo 'docs\updates.json'
+$target = Join-Path (Get-RepoRoot) 'docs\updates.json'
 ($manifest | ConvertTo-Json) + "`n" | Set-Content $target -Encoding utf8NoBOM -NoNewline
 Write-Host "wrote $target"
 Get-Content $target
