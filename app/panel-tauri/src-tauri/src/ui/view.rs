@@ -1,8 +1,8 @@
 //! Turns the state the actions return into the View the window renders: which
 //! cards, in which sections, saying what.
 
-use crate::platform::product;
 use crate::platform::settings::{Feature, ThemeSource};
+use crate::platform::{app_identity, product};
 use crate::setup::update_watch::ReadyUpdate;
 use crate::ui::inject_offer::InjectOffer;
 use crate::ui::panel_layout::{self, CardSlot, OwnCard};
@@ -56,6 +56,8 @@ pub fn build(state: &PanelState, offer: InjectOffer, update: Option<&ReadyUpdate
     });
     View {
         product_name: product::NAME.to_owned(),
+        app_user_model_id: app_identity::APP_ID.to_owned(),
+        icon: app_identity::icon_path().to_string_lossy().into_owned(),
         open_edge_hint: (!state.is_edge_running).then(|| wording::OPEN_EDGE_HINT.to_owned()),
         build_notice,
         sections: panel_layout::SECTIONS

@@ -12,7 +12,12 @@ import { createInterface } from "node:readline";
 
 const viewFile = process.argv[2] ?? path.join(import.meta.dirname, "fixture-view.json");
 const kit = process.argv[3];
-const view: unknown = JSON.parse(readFileSync(viewFile, "utf8"));
+const saved: unknown = JSON.parse(readFileSync(viewFile, "utf8"));
+// The core would name the icon it wrote; here it is the checkout's.
+const view = {
+  ...typeof saved === "object" && saved !== null ? saved : {},
+  icon: path.join(import.meta.dirname, "..", "..", "src-tauri", "icons", "icon.ico")
+};
 const [node, entry] = kit === undefined
   ? [process.execPath, path.join(import.meta.dirname, "..", "main.ts")]
   : [path.join(kit, "node.exe"), path.join(kit, "main.mjs")];

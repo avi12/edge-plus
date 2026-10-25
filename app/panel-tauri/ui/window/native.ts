@@ -17,6 +17,24 @@ const getDpiForWindow = DynWin32Unsafe.bind({
   returnType: "u32"
 });
 
+const setAppUserModelId = DynWin32Unsafe.bind({
+  dll: "shell32.dll",
+  entryPoint: "SetCurrentProcessExplicitAppUserModelID",
+  parameters: [
+    {
+      type: "pointer",
+      direction: "in"
+    }
+  ],
+  returnType: "i32"
+});
+
+// The core's toast sender id, which it registered with Edge+'s name and icon:
+// the window then groups on the taskbar as Edge+, not as Node.js.
+export function joinAppUserModel(appId: string): void {
+  setAppUserModelId.invoke([DynWin32.wideString(appId)]);
+}
+
 // AppWindow sizes in physical pixels; this gives the scale before any content
 // has loaded, when XamlRoot's scale is not yet known.
 export function scaleOf(hwnd: bigint): number {

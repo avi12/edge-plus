@@ -2,6 +2,7 @@
 //! window asks for.
 
 pub mod action_error;
+pub mod app_identity;
 pub mod background_service;
 pub mod panel_actions;
 pub mod panel_log;

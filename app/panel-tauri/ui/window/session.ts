@@ -6,6 +6,7 @@ import type {
   View
 } from "../protocol.g.ts";
 import { milliseconds } from "./layout.ts";
+import { joinAppUserModel } from "./native.ts";
 import { Shell } from "./shell.ts";
 import { installStyles } from "./styles.ts";
 import { Application, DispatcherQueue } from "./winui.ts";
@@ -96,6 +97,8 @@ class Session {
   }
 
   private open(view: View): void {
+    // Before the window exists, so the taskbar groups it as Edge+.
+    joinAppUserModel(view.appUserModelId);
     const shell = new Shell(view, {
       run: action => this.run(action),
       refresh: () => this.send({ type: "refresh" }),

@@ -73,7 +73,6 @@ for (const file of ["winrt.js", "index.js", "win32.js", "win32-unsafe.js", "win3
 }
 
 copy(path.join(root, ".winapp", "bin", architecture, bootstrapName), path.join(kit, bootstrapName));
-copy(path.join(root, "ui", "assets"), path.join(kit, "assets"));
 const runtime = path.join(nugetCache(), "microsoft.windowsappsdk.runtime", runtimeVersion, "tools", "MSIX", `win10-${architecture}`);
 for (const name of runtimePackages) {
   copy(path.join(runtime, name), path.join(kit, "runtime", name));

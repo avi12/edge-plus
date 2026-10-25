@@ -26,7 +26,6 @@ import {
   Window,
   WindowActivationState
 } from "./winui.ts";
-import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 // In device-independent pixels; only the height is the user's.
@@ -42,9 +41,6 @@ const statusShown = 1;
 const statusHidden = 0;
 const statusMilliseconds = 4000;
 const themeFileTypes = [".crx", ".zip"];
-// ui/assets from source (ui/window/shell.ts), and the kit's assets from its
-// bundle (window/worker.mjs).
-const iconPath = path.join(import.meta.dirname, "..", "assets", "edgeplus.ico");
 
 // What the window needs from the process it runs in: the core's link.
 export interface ShellLink {
@@ -68,9 +64,9 @@ export class Shell {
     this.window.systemBackdrop = new DesktopAcrylicBackdrop();
     this.window.extendsContentIntoTitleBar = true;
     this.window.title = view.productName;
-    this.window.appWindow.setIcon(iconPath);
+    this.window.appWindow.setIcon(view.icon);
 
-    const titleBar = this.titleBar(view.productName);
+    const titleBar = this.titleBar(view.productName, view.icon);
     const layout = new Grid();
     for (const height of [autoLength(), starLength()]) {
       const row = new RowDefinition();
@@ -145,7 +141,7 @@ export class Shell {
     });
   }
 
-  private titleBar(productName: string): Grid {
+  private titleBar(productName: string, iconPath: string): Grid {
     const bar = new Grid();
     bar.height = titleBarHeight;
     bar.padding = thickness(titleBarInset, 0, 0, 0);

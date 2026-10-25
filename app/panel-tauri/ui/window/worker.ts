@@ -13,6 +13,10 @@ if (isPort(port)) {
   await runWindow(port);
 }
 
+// WinUI has ended, but handles it left would keep this thread alive; in a
+// worker this ends only the worker, which ends the process (main.ts).
+process.exit(0);
+
 function isPort(value: unknown): value is MessagePort {
   return typeof value === "object" && value !== null && "postMessage" in value;
 }

@@ -147,6 +147,11 @@ pub struct FooterView {
 #[cfg_attr(test, derive(TS))]
 pub struct View {
     pub product_name: String,
+    /// The id the core registered (name and icon) for its toasts; the window
+    /// takes it too, so the taskbar shows it as Edge+.
+    pub app_user_model_id: String,
+    /// The icon file the core wrote, for the title bar and the taskbar.
+    pub icon: String,
     pub open_edge_hint: Option<String>,
     pub build_notice: String,
     pub sections: Vec<SectionView>,

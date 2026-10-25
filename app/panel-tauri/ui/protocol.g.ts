@@ -33,7 +33,16 @@ export type UpdateView = { wording: CardWording, button: string, restarting: str
 
 export type FooterView = { by: string, author: string, authorUri: string, version: string, };
 
-export type View = { productName: string, openEdgeHint: string | null, buildNotice: string, sections: Array<SectionView>, update: UpdateView | null, footer: FooterView, dropHint: string, };
+export type View = { productName: string, 
+/**
+ * The id the core registered (name and icon) for its toasts; the window
+ * takes it too, so the taskbar shows it as Edge+.
+ */
+appUserModelId: string, 
+/**
+ * The icon file the core wrote, for the title bar and the taskbar.
+ */
+icon: string, openEdgeHint: string | null, buildNotice: string, sections: Array<SectionView>, update: UpdateView | null, footer: FooterView, dropHint: string, };
 
 export type ColorMode = "light" | "dark";
 

@@ -8,29 +8,13 @@ use crate::edge::edge_build::BuildChange;
 use crate::edge::edge_install;
 use crate::edge::edge_support;
 use crate::edge::file_version::FileVersion;
-use crate::platform::{panel_log, paths, product};
+use crate::platform::app_identity::APP_ID;
+use crate::platform::{panel_log, paths};
 use crate::ui::wording;
-
-/// The toasts' sender, registered under HKCU at start.
-pub const APP_ID: &str = "Avi.EdgePlus";
-const ICON_FILE_NAME: &str = "edgeplus.ico";
-const ICON: &[u8] = include_bytes!("../../icons/icon.ico");
 
 /// A simulation (`edge_install`) remembers in memory only, so the real record
 /// stays as it was.
 static SIMULATED_NOTIFIED: Mutex<Option<FileVersion>> = Mutex::new(None);
-
-/// Windows shows an unpackaged app's toasts only under a registered app id,
-/// whose icon must be a file.
-pub fn register() {
-    let icon = paths::data_root().join(ICON_FILE_NAME);
-    let registered = fs::create_dir_all(paths::data_root())
-        .and_then(|()| fs::write(&icon, ICON))
-        .and_then(|()| edge_native::register_toast_app(APP_ID, product::NAME, &icon));
-    if let Err(error) = registered {
-        panel_log::write_error("registering for toasts failed", &error);
-    }
-}
 
 pub fn show_once_per_build(change: &BuildChange, on_click: impl Fn() + Send + Sync + 'static) {
     let notified_for = notified_for();

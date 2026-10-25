@@ -16,7 +16,7 @@ use tauri::RunEvent;
 
 use crate::dll::payload;
 use crate::edge::{legacy_cleanup, legacy_install};
-use crate::platform::{background_service, panel_log, paused_toast, switches};
+use crate::platform::{app_identity, background_service, panel_log, switches};
 use crate::setup::{start_with_windows, startup_entry, update_install};
 use crate::ui::window_host;
 
@@ -82,7 +82,7 @@ fn start_background() {
         }
     }
     payload::unpack();
-    paused_toast::register();
+    app_identity::register();
     background_service::start(|event| window_host::on_service_event(&event));
 }
 

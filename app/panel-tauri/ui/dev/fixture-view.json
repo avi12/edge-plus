@@ -1,5 +1,7 @@
 {
   "productName": "Edge+",
+  "appUserModelId": "Avi.EdgePlus",
+  "icon": "",
   "openEdgeHint": null,
   "buildNotice": "",
   "sections": [
