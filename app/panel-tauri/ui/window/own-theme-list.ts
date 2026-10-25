@@ -1,6 +1,6 @@
 import type { ThemeRow, ThemingLabels } from "../protocol.g.ts";
 import * as motion from "./motion.ts";
-import { style, StyleKey } from "./styles.ts";
+import { themeListItemStyle } from "./styles.ts";
 import {
   idOf,
   keyText,
@@ -80,7 +80,7 @@ export class OwnThemeList {
     this.view.canReorderItems = true;
     this.view.canDragItems = true;
     this.view.allowDrop = true;
-    this.view.itemContainerStyle = style(StyleKey.ThemeListItem);
+    this.view.itemContainerStyle = themeListItemStyle();
     this.view.itemTemplate = projectAs(XamlReader.load(rowSlotTemplate), DataTemplate);
     this.view.itemsSource = this.keys;
     AutomationProperties.setName(this.view, labels.themeListName);

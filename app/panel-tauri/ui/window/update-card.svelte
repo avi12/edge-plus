@@ -17,6 +17,6 @@
 
 <CardFrame wording={update?.wording ?? hiddenWording} isShown={update !== null}>
   {#snippet end()}
-    <button class="AccentButton" is-enabled={!isPressed} onclick={onClicked}>{label ?? ""}</button>
+    <button class="accent-button" is-enabled={!isPressed} onclick={onClicked}>{label ?? ""}</button>
   {/snippet}
 </CardFrame>

@@ -11,6 +11,6 @@
 
 <CardFrame wording={offer.wording}>
   {#snippet end()}
-    <button class="AccentButton" is-enabled={canPress} onclick={onClicked}>{offer.button}</button>
+    <button class="accent-button" is-enabled={canPress} onclick={onClicked}>{offer.button}</button>
   {/snippet}
 </CardFrame>

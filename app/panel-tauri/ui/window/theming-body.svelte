@@ -77,7 +77,7 @@
 <!-- The picker's minimum width fits the longest choice it offers. -->
 {#snippet pickerRow(label: string, picker: ComboBox)}
   <grid columns="*,Auto" column-spacing="8">
-    <text-block class="CardTitle" vertical-alignment="Center">{label}</text-block>
+    <text-block class="card-title" vertical-alignment="Center">{label}</text-block>
     <host element={picker} min-width="200" automation-properties.name={label} grid.column={1} />
   </grid>
 {/snippet}
@@ -87,16 +87,24 @@
     <text-box placeholder-text={labels.storeLinkPlaceholder} onkeydown={addStoreOnEnter} {@attach withControl(TextBox, box => {
       storeLink = box;
     })} />
-    <button class="AccentButton" is-enabled={!isBusy} onclick={() => void addStore()} grid.column={1}>{labels.add}</button>
+    <button class="accent-button" is-enabled={!isBusy} onclick={() => void addStore()} grid.column={1}>{labels.add}</button>
   </grid>
   <stack-panel orientation="Horizontal" spacing="8">
-    <text-block class="CardDescription" vertical-alignment="Center">{labels.addLocal}</text-block>
+    <text-block class="card-description" vertical-alignment="Center">{labels.addLocal}</text-block>
     <button is-enabled={!isBusy} onclick={pickFile}>{labels.pickFile}</button>
     <button is-enabled={!isBusy} onclick={pickFolder}>{labels.pickFolder}</button>
   </stack-panel>
-  <text-block class="CardError" visibility={error.length > 0 ? Visibility.Visible : Visibility.Collapsed}>{error}</text-block>
+  <text-block class="error" visibility={error.length > 0 ? Visibility.Visible : Visibility.Collapsed}>{error}</text-block>
   {@render pickerRow(labels.whenLight, lightPicker)}
   {@render pickerRow(labels.whenDark, darkPicker)}
   <host element={ownThemes} />
   <host element={edgeThemes} />
 </stack-panel>
+
+<style>
+  .error {
+    -winui-based-on: CaptionTextBlockStyle;
+    color: var(--system-fill-color-critical);
+    text-wrap: wrap;
+  }
+</style>

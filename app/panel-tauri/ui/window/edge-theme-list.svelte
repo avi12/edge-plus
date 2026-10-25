@@ -21,6 +21,6 @@
     <ThemeRow theme={row} onRemove={null} />
   {/each}
   {#if empty !== null}
-    <text-block class="CardDescription">{empty}</text-block>
+    <text-block class="card-description">{empty}</text-block>
   {/if}
 </stack-panel>

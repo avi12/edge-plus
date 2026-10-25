@@ -26,11 +26,11 @@
 <!-- The row's inset lines the list's rows and Edge's rows up. -->
 <grid columns="16,*,Auto,Auto" column-spacing={8} padding="4,0,4,0" automation-properties.name={theme.name}>
   <font-icon glyph={glyph(gripGlyph)} font-size={12} opacity={isOwn ? shown : hidden} />
-  <text-block class="CardTitle" grid.column={1} vertical-alignment="Center" text-trimming="CharacterEllipsis">{theme.name}</text-block>
+  <text-block class="card-title" grid.column={1} vertical-alignment="Center" text-trimming="CharacterEllipsis">{theme.name}</text-block>
   <stack-panel grid.column={2} orientation="Horizontal" spacing={4}>
     {#each theme.badges as badge}
-      <border class="Badge">
-        <text-block class="BadgeText">{badge}</text-block>
+      <border class="badge">
+        <text-block class="badge-text">{badge}</text-block>
       </border>
     {/each}
   </stack-panel>
@@ -38,3 +38,17 @@
     <font-icon glyph={glyph(removeGlyph)} font-size={12} />
   </button>
 </grid>
+
+<style>
+  .badge {
+    background: var(--subtle-fill-color-secondary);
+    border-radius: var(--control-corner-radius);
+    padding: 1px 6px;
+    align-self: center;
+  }
+
+  .badge-text {
+    -winui-based-on: CaptionTextBlockStyle;
+    color: var(--text-fill-color-secondary);
+  }
+</style>

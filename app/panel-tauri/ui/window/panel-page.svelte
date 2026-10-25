@@ -51,7 +51,7 @@
   <scroll-viewer vertical-scroll-bar-visibility={ScrollBarVisibility.Auto}>
     <stack-panel padding="16,4,16,16" spacing="4">
       <host element={updateCard} />
-      <text-block class="CardDescription" margin="4,0,4,4" visibility={openEdgeHint === null ? Visibility.Collapsed : Visibility.Visible}>{openEdgeHint ?? ""}</text-block>
+      <text-block class="card-description" margin="4,0,4,4" visibility={openEdgeHint === null ? Visibility.Collapsed : Visibility.Visible}>{openEdgeHint ?? ""}</text-block>
       <info-bar is-closable="false" severity={InfoBarSeverity.Warning} message={buildNotice} is-open={buildNotice.length > 0} />
       <info-bar is-closable="true" severity={InfoBarSeverity.Error} message={actionNotice} is-open={actionNotice.length > 0} onclosed={onActionNoticeClosed} />
       <stack-panel spacing="20" {@attach animated(motion.reposition)}>

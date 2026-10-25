@@ -17,7 +17,7 @@
 <stack-panel spacing="4" {@attach animated(motion.reposition)}>
   <!-- The left margin lines the header up with the cards' text, as Windows
        Settings does. -->
-  <text-block class="SectionHeader" margin="4,0,0,4">{section.name}</text-block>
+  <text-block class="section-header" margin="4,0,0,4">{section.name}</text-block>
   {#each section.cards as card (card.key)}
     {#if card.inject === null}
       <host element={cardControl(card.key)} />
@@ -32,3 +32,9 @@
     {/if}
   {/each}
 </stack-panel>
+
+<style>
+  .section-header {
+    -winui-based-on: BodyStrongTextBlockStyle;
+  }
+</style>

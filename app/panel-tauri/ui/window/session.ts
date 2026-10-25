@@ -8,12 +8,13 @@ import type {
 import { milliseconds } from "./layout.ts";
 import { joinAppUserModel } from "./native.ts";
 import { Shell } from "./shell.ts";
-import { applyStyleClass, installStyles } from "./styles.ts";
+import "./shared-styles.svelte";
+import { installStyles } from "./styles.ts";
 import * as winui from "./winui.ts";
 import { DispatcherQueue } from "./winui.ts";
 import type { MessagePort } from "node:worker_threads";
 import { receiveMessageOnPort } from "node:worker_threads";
-import { registerControls, setClassHandler } from "svelte-winui";
+import { registerControls } from "svelte-winui";
 import { exitApplication, runWindow } from "svelte-winui/window";
 
 // WinUI's loop owns this thread until the window closes, so Node's event loop
@@ -174,7 +175,6 @@ export async function runSession(port: MessagePort, onStart?: () => void): Promi
   await runWindow({
     onStart() {
       registerControls(winui);
-      setClassHandler(applyStyleClass);
       installStyles();
       onStart?.();
       new Session(port).start();

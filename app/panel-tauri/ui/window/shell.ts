@@ -4,7 +4,6 @@ import * as motion from "./motion.ts";
 import { scaleOf } from "./native.ts";
 import type { PanelHost } from "./panel-view.ts";
 import { PanelView } from "./panel-view.ts";
-import { style, StyleKey } from "./styles.ts";
 import type { LocalThemeKind, RunAction } from "./theming-card.ts";
 import { LocalThemeKind as ThemeKind } from "./theming-card.ts";
 import {
@@ -27,7 +26,10 @@ import {
   WindowActivationState
 } from "./winui.ts";
 import { pathToFileURL } from "node:url";
+import { styledElement } from "svelte-winui/css";
 
+// The tag a text block is styled as, as in markup (<text-block class="...">).
+const textBlockTag = "text-block";
 // In device-independent pixels; only the height is the user's.
 const windowWidth = 560;
 const windowHeight = 640;
@@ -165,13 +167,13 @@ export class Shell {
     name.text = productName;
     name.verticalAlignment = VerticalAlignment.Center;
     name.margin = thickness(titleGap, 0, 0, 0);
-    name.style = style(StyleKey.Caption);
+    styledElement(name, textBlockTag).setClasses("caption");
     Grid.setColumn(name, 1);
     bar.children.append(name);
     this.status.verticalAlignment = VerticalAlignment.Center;
     this.status.margin = thickness(statusGap, 0, 0, 0);
     this.status.opacity = statusHidden;
-    this.status.style = style(StyleKey.CardDescription);
+    styledElement(this.status, textBlockTag).setClasses("card-description");
     Grid.setColumn(this.status, 2);
     bar.children.append(this.status);
     return bar;
