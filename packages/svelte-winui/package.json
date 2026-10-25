@@ -121,7 +121,7 @@
     }
   },
   "scripts": {
-    "build": "node --disable-warning=ExperimentalWarning scripts/build/build.ts",
+    "build": "node --disable-warning=ExperimentalWarning scripts/pack/build.ts",
     "check": "tsc --noEmit",
     "lint": "oxlint --type-aware && eslint . && pnpm check && pnpm fallow && pnpm gen:components:check",
     "fallow": "fallow",

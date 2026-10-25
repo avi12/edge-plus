@@ -27,7 +27,7 @@
     "test/mount-all.worker.ts",
     "scripts/codegen/generate.ts",
     "scripts/css/export-winui-resources.ts",
-    "scripts/build/build.ts",
+    "scripts/pack/build.ts",
     "examples/counter/launch.ts",
     "examples/counter/window.ts",
     "examples/scheduling/launch.ts",
