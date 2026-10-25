@@ -47,9 +47,12 @@ function text(value: unknown, fallback: string): string {
   return typeof value === "string" ? value : fallback;
 }
 
+// Vite's message starts with the position again.
+const leadingPosition = /^\S+:\d+:\d+\s+/u;
+
 // The message without the documentation link Svelte appends on its own line.
 function firstLine(message: string): string {
-  return message.split("\n")[0] ?? message;
+  return (message.split("\n")[0] ?? message).replace(leadingPosition, "");
 }
 
 export function compileDiagnostic(error: unknown): CompileDiagnostic | null {

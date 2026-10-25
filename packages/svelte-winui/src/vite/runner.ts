@@ -1,3 +1,4 @@
+import { describeError } from "./diagnostics.ts";
 import { format } from "node:util";
 import type { MessagePort } from "node:worker_threads";
 import { receiveMessageOnPort } from "node:worker_threads";
@@ -38,14 +39,32 @@ function restartNotice(file: string | undefined): string {
 }
 
 export function createWindowModuleRunner(port: MessagePort): WindowModuleRunner {
-  let handle: ((payload: HotPayload) => void) | null = null;
+  let handle: ((payload: HotPayload) => unknown) | null = null;
 
+  // An error is described by where it is (a compile error's file and line),
+  // not dumped with everything it carries.
   function log(...messages: unknown[]): void {
+    const lines = messages.map(message => message instanceof Error ? describeError(message) : message);
     port.postMessage({
       type: "custom",
       event: logEvent,
-      data: format(...messages)
+      data: format(...lines)
     });
+  }
+
+  // An update that cannot be applied (a component that no longer compiles)
+  // is reported and the window goes on with the code it has: an exception
+  // here would end it, since it surfaces in a callback WinUI made.
+  function reportFailure(error: unknown): void {
+    log("the hot update failed:", error);
+  }
+
+  function handleSafely(payload: HotPayload): void {
+    try {
+      Promise.resolve(handle?.(payload)).catch(reportFailure);
+    } catch (error) {
+      reportFailure(error);
+    }
   }
 
   function deliver(message: unknown): void {
@@ -60,9 +79,10 @@ export function createWindowModuleRunner(port: MessagePort): WindowModuleRunner 
       return;
     }
 
-    handle?.(message);
+    handleSafely(message);
   }
 
+  process.on("unhandledRejection", error => reportFailure(error));
   const logger: HMRLogger = {
     debug: log,
     error: log
