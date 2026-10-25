@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "typeRoots": ["../../app/panel-tauri/node_modules/@types"],
+    "paths": {
+      "svelte": ["../../app/panel-tauri/node_modules/svelte/types/index.d.ts"],
+      "svelte/compiler": ["../../app/panel-tauri/node_modules/svelte/types/index.d.ts"]
+    }
+  },
+  "include": ["src/state/**/*.ts"]
+}
