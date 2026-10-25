@@ -1,4 +1,5 @@
 import type { UiMessage } from "./protocol.g.ts";
+import type { WindowPorts } from "./window/worker.ts";
 import { initWinappsdk } from "@microsoft/dynwinrt";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -41,10 +42,29 @@ try {
 }
 
 const channel = new MessageChannel();
+const sourceExtension = ".ts";
 // The same layout run from source (.ts) and from the bundled window kit (.mjs).
-const worker = new Worker(new URL(`./window/worker${path.extname(import.meta.filename)}`, import.meta.url), {
-  workerData: channel.port2,
-  transferList: [channel.port2]
+const extension = path.extname(import.meta.filename);
+const isFromSource = extension === sourceExtension;
+// Run from source, the window's modules come from a dev server on this
+// thread, which updates the open window as its .svelte files are saved.
+const modules = isFromSource ? new MessageChannel() : null;
+if (modules !== null) {
+  // Imported by name, so the window kit's bundle leaves Vite out.
+  const windowModules = "./dev/window-modules.ts";
+  const { serveWindowModules } = await import(windowModules);
+  await serveWindowModules(modules.port1);
+}
+
+const workerPorts: WindowPorts = modules === null
+  ? { link: channel.port2 }
+  : {
+    link: channel.port2,
+    modules: modules.port2
+  };
+const worker = new Worker(new URL(`./window/worker${extension}`, import.meta.url), {
+  workerData: workerPorts,
+  transferList: modules === null ? [channel.port2] : [channel.port2, modules.port2]
 });
 
 createInterface({ input: process.stdin }).on("line", line => {

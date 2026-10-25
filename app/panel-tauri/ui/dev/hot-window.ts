@@ -1,0 +1,29 @@
+import { createWindowModuleRunner } from "../svelte-winui/vite-runner.ts";
+import type * as Layout from "../window/layout.ts";
+import type * as Session from "../window/session.ts";
+import type * as WinUI from "../window/winui.ts";
+import type { MessagePort } from "node:worker_threads";
+
+// The window run from source: its modules load through the dev server
+// (window-modules.ts), and the server's replies and hot updates are taken in
+// by a dispatcher timer, since WinUI holds this thread.
+
+const receiveMilliseconds = 30;
+// Held for as long as the window runs: a timer whose wrapper is collected
+// stops.
+const heldTimers = new Set<ReturnType<WinUI.DispatcherQueue["createTimer"]>>();
+
+export async function runHotWindow(link: MessagePort, modules: MessagePort): Promise<void> {
+  const { runner, receive } = createWindowModuleRunner(modules);
+  const { runWindow } = await runner.import<typeof Session>("/window/session.ts");
+  const { DispatcherQueue } = await runner.import<typeof WinUI>("/window/winui.ts");
+  const { milliseconds } = await runner.import<typeof Layout>("/window/layout.ts");
+  await runWindow(link, () => {
+    const timer = DispatcherQueue.getForCurrentThread().createTimer();
+    timer.interval = milliseconds(receiveMilliseconds);
+    timer.isRepeating = true;
+    timer.onTick(receive);
+    timer.start();
+    heldTimers.add(timer);
+  });
+}

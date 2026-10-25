@@ -8,6 +8,8 @@ import { flushSync, mount } from "svelte";
 // reads them. Updates are flushed at once, since WinUI's loop holds the
 // thread and Node's microtasks are not a place to wait for them.
 
+const hotRootTag = "border";
+
 export interface Mounted<Props> {
   readonly root: FrameworkElement;
   set(changes: Partial<Props>): void;
@@ -18,15 +20,23 @@ export function mountControl<Props extends object>(
   initial: Props
 ): Mounted<Props> {
   const props = $state(initial);
-  const target = renderer.createFragment();
+  const fragment = renderer.createFragment();
+  // A hot update replaces the component's root control, which the page holds
+  // by then; under HMR the component is mounted into a Border that stays.
+  const isHot = "hot" in import.meta;
+  const hotRoot = isHot ? renderer.createElement(hotRootTag) : null;
+  if (hotRoot !== null) {
+    renderer.insert(fragment, hotRoot, null);
+  }
+
   mount(component, {
     renderer,
-    target,
+    target: hotRoot ?? fragment,
     props
   });
   flushSync();
   return {
-    root: rootControl(target),
+    root: rootControl(fragment),
     set(changes) {
       Object.assign(props, changes);
       flushSync();

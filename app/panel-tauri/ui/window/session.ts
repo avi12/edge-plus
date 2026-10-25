@@ -169,10 +169,13 @@ class Session {
 // callback with no JavaScript under it, so each event handler drains the
 // promise continuations it queues. Started from JavaScript, the loop keeps
 // that script on the stack for good, and no `await` ever resumes.
-export async function runWindow(port: MessagePort): Promise<void> {
+// onStart runs on the UI thread once WinUI is up, for work of the caller's
+// own that needs the dispatcher.
+export async function runWindow(port: MessagePort, onStart?: () => void): Promise<void> {
   await Application.startScheduled(() => {
     Application.create(() => {
       installStyles();
+      onStart?.();
       new Session(port).start();
     });
   });
