@@ -11,8 +11,8 @@
     get selectedItem() {
       return selectedItem;
     },
-    set selectedItem(value) {
-      selectedItem = value;
+    set selectedItem(next) {
+      selectedItem = next;
     }
   };
 </script>

@@ -11,8 +11,8 @@
     get isExpanded() {
       return isExpanded;
     },
-    set isExpanded(value) {
-      isExpanded = value;
+    set isExpanded(next) {
+      isExpanded = next;
     }
   };
 </script>

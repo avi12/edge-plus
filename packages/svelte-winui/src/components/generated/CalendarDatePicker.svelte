@@ -11,8 +11,8 @@
     get date() {
       return date;
     },
-    set date(value) {
-      date = value;
+    set date(next) {
+      date = next;
     }
   };
 </script>

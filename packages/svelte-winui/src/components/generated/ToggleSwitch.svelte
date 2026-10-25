@@ -11,8 +11,8 @@
     get isOn() {
       return isOn;
     },
-    set isOn(value) {
-      isOn = value;
+    set isOn(next) {
+      isOn = next;
     }
   };
 </script>

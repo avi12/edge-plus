@@ -11,8 +11,8 @@
     get text() {
       return text;
     },
-    set text(value) {
-      text = value;
+    set text(next) {
+      text = next;
     }
   };
 </script>

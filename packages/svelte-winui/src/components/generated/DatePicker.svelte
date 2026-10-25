@@ -11,14 +11,14 @@
     get date() {
       return date;
     },
-    set date(value) {
-      date = value;
+    set date(next) {
+      date = next;
     },
     get selectedDate() {
       return selectedDate;
     },
-    set selectedDate(value) {
-      selectedDate = value;
+    set selectedDate(next) {
+      selectedDate = next;
     }
   };
 </script>

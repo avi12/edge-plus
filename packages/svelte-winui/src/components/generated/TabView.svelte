@@ -11,14 +11,14 @@
     get selectedIndex() {
       return selectedIndex;
     },
-    set selectedIndex(value) {
-      selectedIndex = value;
+    set selectedIndex(next) {
+      selectedIndex = next;
     },
     get selectedItem() {
       return selectedItem;
     },
-    set selectedItem(value) {
-      selectedItem = value;
+    set selectedItem(next) {
+      selectedItem = next;
     }
   };
 </script>
