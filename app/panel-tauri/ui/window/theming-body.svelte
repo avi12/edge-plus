@@ -1,12 +1,12 @@
 <script lang="ts">
   import type { ThemingLabels } from "../protocol.g.ts";
+  import { animated } from "./animated.ts";
   import * as motion from "./motion.ts";
   import { withControl } from "./svelte-renderer.ts";
   import type { ComboBox, FrameworkElement } from "./winui.ts";
   import {
     KeyRoutedEventArgs,
     projectAs,
-    StackPanel,
     TextBox,
     VirtualKey,
     Visibility
@@ -82,7 +82,7 @@
   </grid>
 {/snippet}
 
-<stack-panel spacing="8" opacity={isOn ? fullOpacity : dimmedOpacity} {@attach withControl(StackPanel, body => motion.animate(body, motion.reposition))}>
+<stack-panel spacing="8" opacity={isOn ? fullOpacity : dimmedOpacity} {@attach animated(motion.reposition)}>
   <grid columns="*,Auto" column-spacing="8">
     <text-box placeholder-text={labels.storeLinkPlaceholder} onkeydown={addStoreOnEnter} {@attach withControl(TextBox, box => {
       storeLink = box;
