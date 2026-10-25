@@ -2,4 +2,4 @@
 # idioms: a bare loop counter, a coordinate pair, `hr`, the `from` / `to` pair,
 # and `id`, which is a word.
 allowed-idents-below-min-chars = ["i", "j", "x", "y", "hr", "to", "id"]
-min-ident-chars-threshold = 3
+min-ident-chars-threshold = 2
