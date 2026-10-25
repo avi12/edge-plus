@@ -16,5 +16,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["ui/**/*.ts"]
+  "include": ["ui/**/*.ts", "../../packages/svelte-winui/**/*.ts"]
 }

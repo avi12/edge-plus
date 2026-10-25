@@ -57,22 +57,16 @@
     "jsBindings": {
       "additionalWinmds": [
         {
-          "namespace": "Windows.Foundation",
+          "namespace": "Microsoft.UI.Dispatching",
           "classes": [
-            "PropertyValue",
-            "Uri"
+            "DispatcherQueue",
+            "DispatcherQueueTimer"
           ]
         },
         {
-          "namespace": "Windows.UI.ViewManagement",
+          "namespace": "Microsoft.UI.Input",
           "classes": [
-            "UISettings"
-          ]
-        },
-        {
-          "namespace": "Windows.ApplicationModel.DataTransfer",
-          "classes": [
-            "StandardDataFormats"
+            "InputNonClientPointerSource"
           ]
         },
         {
@@ -84,41 +78,17 @@
           ]
         },
         {
-          "namespace": "Microsoft.UI.Input",
-          "classes": [
-            "InputNonClientPointerSource"
-          ]
-        },
-        {
-          "namespace": "Microsoft.UI.Dispatching",
-          "classes": [
-            "DispatcherQueue",
-            "DispatcherQueueTimer"
-          ]
-        },
-        {
-          "namespace": "Microsoft.Windows.Storage.Pickers",
-          "classes": [
-            "FileOpenPicker",
-            "FolderPicker"
-          ]
-        },
-        {
           "namespace": "Microsoft.UI.Xaml",
           "classes": [
             "Application",
-            "Window",
+            "DataTemplate",
+            "FrameworkElement",
             "ResourceDictionary",
-            "Style",
             "ScalarTransition",
+            "Style",
+            "UIElement",
             "VisualStateManager",
-            "DataTemplate"
-          ]
-        },
-        {
-          "namespace": "Microsoft.UI.Xaml.Markup",
-          "classes": [
-            "XamlReader"
+            "Window"
           ]
         },
         {
@@ -130,40 +100,216 @@
         {
           "namespace": "Microsoft.UI.Xaml.Controls",
           "classes": [
+            "AnimatedIcon",
+            "AnimatedVisualPlayer",
+            "AnnotatedScrollBar",
+            "AppBar",
+            "AppBarButton",
+            "AppBarElementContainer",
+            "AppBarSeparator",
+            "AppBarToggleButton",
+            "AutoSuggestBox",
+            "BitmapIcon",
             "Border",
+            "BreadcrumbBar",
+            "BreadcrumbBarItem",
             "Button",
+            "CalendarDatePicker",
+            "CalendarView",
+            "CalendarViewDayItem",
+            "Canvas",
+            "CheckBox",
+            "ColorPicker",
             "ColumnDefinition",
             "ComboBox",
             "ComboBoxItem",
+            "CommandBar",
+            "CommandBarOverflowPresenter",
             "ContentControl",
+            "ContentDialog",
+            "ContentPresenter",
+            "Control",
+            "DatePicker",
+            "DropDownButton",
+            "Expander",
+            "FlipView",
+            "FlipViewItem",
+            "FlyoutPresenter",
             "FontIcon",
+            "Frame",
             "Grid",
+            "GridView",
+            "GridViewHeaderItem",
+            "GridViewItem",
+            "GroupItem",
+            "Hub",
+            "HubSection",
             "HyperlinkButton",
+            "IconElement",
+            "IconSourceElement",
             "Image",
+            "ImageIcon",
+            "InfoBadge",
             "InfoBar",
+            "ItemContainer",
+            "ItemsControl",
+            "ItemsPresenter",
+            "ItemsRepeater",
+            "ItemsRepeaterScrollHost",
+            "ItemsStackPanel",
+            "ItemsView",
+            "ItemsWrapGrid",
+            "ListBox",
+            "ListBoxItem",
             "ListView",
+            "ListViewBase",
+            "ListViewBaseHeaderItem",
+            "ListViewHeaderItem",
             "ListViewItem",
+            "MapControl",
+            "MediaPlayerElement",
+            "MediaPlayerPresenter",
+            "MediaTransportControls",
+            "MenuBar",
+            "MenuBarItem",
+            "MenuFlyoutItem",
+            "MenuFlyoutItemBase",
+            "MenuFlyoutPresenter",
+            "MenuFlyoutSeparator",
+            "MenuFlyoutSubItem",
+            "NavigationView",
+            "NavigationViewItem",
+            "NavigationViewItemBase",
+            "NavigationViewItemHeader",
+            "NavigationViewItemSeparator",
+            "NumberBox",
+            "Page",
+            "Panel",
+            "ParallaxView",
+            "PasswordBox",
+            "PathIcon",
+            "PersonPicture",
+            "PipsPager",
+            "Pivot",
+            "PivotItem",
+            "ProgressBar",
+            "ProgressRing",
+            "RadioButton",
+            "RadioButtons",
+            "RadioMenuFlyoutItem",
+            "RatingControl",
+            "RefreshContainer",
+            "RefreshVisualizer",
+            "RelativePanel",
+            "RevealListViewItemPresenter",
+            "RichEditBox",
+            "RichTextBlock",
+            "RichTextBlockOverflow",
             "RowDefinition",
+            "ScrollContentPresenter",
+            "ScrollView",
             "ScrollViewer",
+            "SelectorBar",
+            "SelectorBarItem",
+            "SemanticZoom",
+            "Slider",
+            "SplitButton",
+            "SplitMenuFlyoutItem",
+            "SplitView",
             "StackPanel",
+            "SwipeControl",
+            "SymbolIcon",
+            "SystemBackdropElement",
+            "TabView",
+            "TabViewItem",
+            "TeachingTip",
             "TextBlock",
             "TextBox",
+            "TimePicker",
+            "TitleBar",
+            "ToggleMenuFlyoutItem",
+            "ToggleSplitButton",
             "ToggleSwitch",
+            "ToolTip",
+            "ToolTipService",
+            "TreeView",
+            "TreeViewItem",
+            "TreeViewList",
+            "TwoPaneView",
+            "UserControl",
+            "VariableSizedWrapGrid",
+            "Viewbox",
+            "VirtualizingPanel",
+            "VirtualizingStackPanel",
+            "WrapGrid",
             "XamlControlsResources"
+          ]
+        },
+        {
+          "namespace": "Microsoft.UI.Xaml.Controls.Primitives",
+          "classes": [
+            "ButtonBase",
+            "CalendarPanel",
+            "CarouselPanel",
+            "ColorPickerSlider",
+            "ColorSpectrum",
+            "CommandBarFlyoutCommandBar",
+            "GridViewItemPresenter",
+            "InfoBarPanel",
+            "ListViewItemPresenter",
+            "MonochromaticOverlayPresenter",
+            "NavigationViewItemPresenter",
+            "OrientedVirtualizingPanel",
+            "PivotHeaderItem",
+            "PivotHeaderPanel",
+            "PivotPanel",
+            "Popup",
+            "RangeBase",
+            "RepeatButton",
+            "ScrollBar",
+            "ScrollPresenter",
+            "Selector",
+            "SelectorItem",
+            "TabViewListView",
+            "Thumb",
+            "TickBar",
+            "ToggleButton"
+          ]
+        },
+        {
+          "namespace": "Microsoft.UI.Xaml.Documents",
+          "classes": [
+            "Block",
+            "Bold",
+            "Glyphs",
+            "Hyperlink",
+            "Inline",
+            "InlineUIContainer",
+            "Italic",
+            "LineBreak",
+            "Paragraph",
+            "Run",
+            "Span",
+            "TextElement",
+            "Underline"
+          ]
+        },
+        {
+          "namespace": "Microsoft.UI.Xaml.Markup",
+          "classes": [
+            "XamlReader"
           ]
         },
         {
           "namespace": "Microsoft.UI.Xaml.Media",
           "classes": [
+            "Brush",
             "DesktopAcrylicBackdrop",
-            "VisualTreeHelper",
-            "DoubleCollection"
-          ]
-        },
-        {
-          "namespace": "Microsoft.UI.Xaml.Media.Imaging",
-          "classes": [
-            "BitmapImage"
+            "DoubleCollection",
+            "FontFamily",
+            "ImageSource",
+            "SolidColorBrush",
+            "VisualTreeHelper"
           ]
         },
         {
@@ -176,9 +322,47 @@
           ]
         },
         {
+          "namespace": "Microsoft.UI.Xaml.Media.Imaging",
+          "classes": [
+            "BitmapImage"
+          ]
+        },
+        {
           "namespace": "Microsoft.UI.Xaml.Shapes",
           "classes": [
-            "Rectangle"
+            "Ellipse",
+            "Line",
+            "Path",
+            "Polygon",
+            "Polyline",
+            "Rectangle",
+            "Shape"
+          ]
+        },
+        {
+          "namespace": "Microsoft.Windows.Storage.Pickers",
+          "classes": [
+            "FileOpenPicker",
+            "FolderPicker"
+          ]
+        },
+        {
+          "namespace": "Windows.ApplicationModel.DataTransfer",
+          "classes": [
+            "StandardDataFormats"
+          ]
+        },
+        {
+          "namespace": "Windows.Foundation",
+          "classes": [
+            "PropertyValue",
+            "Uri"
+          ]
+        },
+        {
+          "namespace": "Windows.UI.ViewManagement",
+          "classes": [
+            "UISettings"
           ]
         }
       ]
