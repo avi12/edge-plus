@@ -1,4 +1,4 @@
-import type { Style } from "./winui.ts";
+import type { Style, UIElement } from "./winui.ts";
 import {
   Application,
   projectAs,
@@ -92,4 +92,16 @@ export function installStyles(): void {
 
 export function style(key: StyleKey): Style {
   return projectAs(Application.current.resources.lookup(PropertyValue.createString(key)), StyleType);
+}
+
+const styleKeys = new Map(Object.entries(StyleKey));
+
+// class="CardTitle" in markup: the style StyleKey.CardTitle names.
+export function applyStyleClass(control: UIElement, name: string): void {
+  const key = styleKeys.get(name);
+  if (key === undefined) {
+    throw new Error(`class="${name}" names no StyleKey`);
+  }
+
+  Object.assign(control, { style: style(key) });
 }

@@ -7,14 +7,14 @@ import type {
 } from "../protocol.g.ts";
 import { FeatureCard } from "./feature-card.ts";
 import { InjectCard } from "./inject-card.ts";
-import type { Mounted } from "./mount.svelte.ts";
-import { mountControl } from "./mount.svelte.ts";
 import PanelPage from "./panel-page.svelte";
 import type { PickLocalTheme, RunAction } from "./theming-card.ts";
 import { ThemingCard } from "./theming-card.ts";
 import { UpdateCard } from "./update-card.ts";
 import type { FrameworkElement, Window } from "./winui.ts";
 import { DataPackageOperation, DragEventArgs, projectAs, StandardDataFormats } from "./winui.ts";
+import type { Mounted } from "svelte-winui";
+import { mountControl } from "svelte-winui";
 
 async function droppedPaths(event: DragEventArgs): Promise<string[]> {
   const items = await event.dataView.getStorageItemsAsync();

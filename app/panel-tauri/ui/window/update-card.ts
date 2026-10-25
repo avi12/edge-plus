@@ -1,9 +1,9 @@
 import type { UpdateView } from "../protocol.g.ts";
-import type { Mounted } from "./mount.svelte.ts";
-import { mountControl } from "./mount.svelte.ts";
 import type { UpdateCardProps } from "./update-card.d.svelte.ts";
 import UpdateCardView from "./update-card.svelte";
 import type { FrameworkElement } from "./winui.ts";
+import type { Mounted } from "svelte-winui";
+import { mountControl } from "svelte-winui";
 
 // The update card (update-card.svelte), for the page to show once a release
 // is ready.

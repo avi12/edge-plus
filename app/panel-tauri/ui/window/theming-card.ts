@@ -1,12 +1,12 @@
 import type { Action, CardView, ThemingView } from "../protocol.g.ts";
 import { EdgeThemeList } from "./edge-theme-list.ts";
 import { FeatureCard } from "./feature-card.ts";
-import type { Mounted } from "./mount.svelte.ts";
-import { mountControl } from "./mount.svelte.ts";
 import { OwnThemeList } from "./own-theme-list.ts";
 import { ThemePicker } from "./theme-picker.ts";
 import ThemingBody from "./theming-body.svelte";
 import type { FrameworkElement } from "./winui.ts";
+import type { Mounted } from "svelte-winui";
+import { mountControl } from "svelte-winui";
 
 // A .crx or .zip file, or an unpacked folder.
 export const LocalThemeKind = {

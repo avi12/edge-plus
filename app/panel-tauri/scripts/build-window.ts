@@ -1,4 +1,3 @@
-import { compileSvelte } from "../ui/window/svelte-compile.ts";
 import type { Plugin } from "esbuild";
 import { build } from "esbuild";
 import { execFileSync } from "node:child_process";
@@ -11,6 +10,7 @@ import {
   rmSync
 } from "node:fs";
 import path from "node:path";
+import { compileSvelte } from "svelte-winui/compile";
 
 // Builds dist/window, the window kit a published edgeplus.exe carries and
 // unpacks: Node itself, the window's scripts bundled, dynwinrt's native

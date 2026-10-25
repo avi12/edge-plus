@@ -2,7 +2,7 @@
   import type { ThemingLabels } from "../protocol.g.ts";
   import { animated } from "./animated.ts";
   import * as motion from "./motion.ts";
-  import { withControl } from "./svelte-renderer.ts";
+  import { withControl } from "svelte-winui";
   import type { ComboBox, FrameworkElement } from "./winui.ts";
   import {
     KeyRoutedEventArgs,

@@ -8,10 +8,13 @@ import type {
 import { milliseconds } from "./layout.ts";
 import { joinAppUserModel } from "./native.ts";
 import { Shell } from "./shell.ts";
-import { installStyles } from "./styles.ts";
-import { Application, DispatcherQueue } from "./winui.ts";
+import { applyStyleClass, installStyles } from "./styles.ts";
+import * as winui from "./winui.ts";
+import { DispatcherQueue } from "./winui.ts";
 import type { MessagePort } from "node:worker_threads";
 import { receiveMessageOnPort } from "node:worker_threads";
+import { registerControls, setClassHandler } from "svelte-winui";
+import { exitApplication, runWindow } from "svelte-winui/window";
 
 // WinUI's loop owns this thread until the window closes, so Node's event loop
 // never turns here: the core's messages are taken off the port by a
@@ -112,7 +115,7 @@ class Session {
       }),
       setTimeout: (count, callback) => this.after(count, callback)
     }, this.placement);
-    shell.onClosed(() => Application.current.exit());
+    shell.onClosed(exitApplication);
     this.shell = shell;
     const isBackgroundRun = process.env[backgroundVariable] === "1";
     if (isBackgroundRun) {
@@ -124,7 +127,7 @@ class Session {
 
   private close(): void {
     if (this.shell === null) {
-      Application.current.exit();
+      exitApplication();
       return;
     }
 
@@ -165,18 +168,16 @@ class Session {
   }
 }
 
-// Scheduled rather than started in place: WinUI's loop then runs from a libuv
-// callback with no JavaScript under it, so each event handler drains the
-// promise continuations it queues. Started from JavaScript, the loop keeps
-// that script on the stack for good, and no `await` ever resumes.
 // onStart runs on the UI thread once WinUI is up, for work of the caller's
 // own that needs the dispatcher.
-export async function runWindow(port: MessagePort, onStart?: () => void): Promise<void> {
-  await Application.startScheduled(() => {
-    Application.create(() => {
+export async function runSession(port: MessagePort, onStart?: () => void): Promise<void> {
+  await runWindow({
+    onStart() {
+      registerControls(winui);
+      setClassHandler(applyStyleClass);
       installStyles();
       onStart?.();
       new Session(port).start();
-    });
+    }
   });
 }

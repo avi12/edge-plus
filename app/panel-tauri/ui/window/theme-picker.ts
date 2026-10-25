@@ -1,9 +1,9 @@
 import type { ThemeOption } from "../protocol.g.ts";
-import type { Mounted } from "./mount.svelte.ts";
-import { mountControl } from "./mount.svelte.ts";
 import ThemePickerView from "./theme-picker.svelte";
 import type { FrameworkElement } from "./winui.ts";
 import { ComboBox, projectAs } from "./winui.ts";
+import type { Mounted } from "svelte-winui";
+import { mountControl } from "svelte-winui";
 
 interface Props extends Record<string, unknown> {
   options: ThemeOption[];

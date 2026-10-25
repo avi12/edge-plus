@@ -1,10 +1,9 @@
 import type { UiMessage } from "./protocol.g.ts";
 import type { WindowPorts } from "./window/worker.ts";
-import { initWinappsdk } from "@microsoft/dynwinrt";
-import { existsSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import { MessageChannel, Worker } from "node:worker_threads";
+import { initWindowsAppSdk, WindowsAppRuntimeMissing } from "svelte-winui/bootstrap";
 
 // The window's process, started by the core with its stdin and stdout as the
 // link: one JSON message per line each way (protocol.g.ts). The window itself
@@ -13,31 +12,27 @@ import { MessageChannel, Worker } from "node:worker_threads";
 
 const windowsAppSdkMajor = 2;
 const windowsAppSdkMinor = 2;
-const bootstrapVariable = "WINAPPSDK_BOOTSTRAP_DLL_PATH";
-const bootstrapName = "Microsoft.WindowsAppRuntime.Bootstrap.dll";
-
-// `pnpm restore` puts the bootstrapper in .winapp; a packaged window carries
-// it beside this file.
-function bootstrapPath(): string {
-  const beside = path.join(import.meta.dirname, bootstrapName);
-  if (existsSync(beside)) {
-    return beside;
-  }
-
-  return path.join(import.meta.dirname, "..", ".winapp", "bin", process.arch, bootstrapName);
-}
 
 function say(message: UiMessage): void {
   process.stdout.write(`${JSON.stringify(message)}\n`);
 }
 
-process.env[bootstrapVariable] ??= bootstrapPath();
 try {
-  initWinappsdk(windowsAppSdkMajor, windowsAppSdkMinor);
+  // `pnpm restore` puts the bootstrapper in .winapp; a packaged window
+  // carries it beside this file.
+  initWindowsAppSdk({
+    major: windowsAppSdkMajor,
+    minor: windowsAppSdkMinor,
+    folders: [import.meta.dirname, path.join(import.meta.dirname, "..", ".winapp", "bin", process.arch)]
+  });
 } catch (error) {
   // The core installs the runtime it carries and opens the window again.
   process.stderr.write(`${String(error)}\n`);
-  say({ type: "runtimeMissing" });
+
+  if (error instanceof WindowsAppRuntimeMissing) {
+    say({ type: "runtimeMissing" });
+  }
+
   process.exit(1);
 }
 

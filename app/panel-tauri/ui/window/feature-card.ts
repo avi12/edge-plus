@@ -1,9 +1,9 @@
 import type { CardWording } from "../protocol.g.ts";
 import type { FeatureCardProps } from "./feature-card.d.svelte.ts";
 import FeatureCardView from "./feature-card.svelte";
-import type { Mounted } from "./mount.svelte.ts";
-import { mountControl } from "./mount.svelte.ts";
 import type { FrameworkElement } from "./winui.ts";
+import type { Mounted } from "svelte-winui";
+import { mountControl } from "svelte-winui";
 
 // A card with a switch at its end (feature-card.svelte), for the page to
 // update from each view.

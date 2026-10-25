@@ -1,8 +1,8 @@
 import type { ThemeRow } from "../protocol.g.ts";
-import { mountControl } from "./mount.svelte.ts";
 import ThemeRowView from "./theme-row.svelte";
 import type { FrameworkElement } from "./winui.ts";
 import { unboxObject } from "@microsoft/dynwinrt";
+import { mountControl } from "svelte-winui";
 
 const rowKeySeparator = "\n";
 

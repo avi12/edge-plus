@@ -1,9 +1,9 @@
 import type { InjectView } from "../protocol.g.ts";
 import type { InjectCardProps } from "./inject-card.d.svelte.ts";
 import InjectCardView from "./inject-card.svelte";
-import type { Mounted } from "./mount.svelte.ts";
-import { mountControl } from "./mount.svelte.ts";
 import type { FrameworkElement } from "./winui.ts";
+import type { Mounted } from "svelte-winui";
+import { mountControl } from "svelte-winui";
 
 // The Inject card (inject-card.svelte), for the page to update from each view.
 export class InjectCard {

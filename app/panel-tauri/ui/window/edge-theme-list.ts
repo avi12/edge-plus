@@ -1,10 +1,10 @@
 import type { ThemeRow } from "../protocol.g.ts";
 import EdgeThemeListView from "./edge-theme-list.svelte";
 import * as motion from "./motion.ts";
-import type { Mounted } from "./mount.svelte.ts";
-import { mountControl } from "./mount.svelte.ts";
 import type { FrameworkElement } from "./winui.ts";
 import { projectAs, StackPanel } from "./winui.ts";
+import type { Mounted } from "svelte-winui";
+import { mountControl } from "svelte-winui";
 
 interface Props extends Record<string, unknown> {
   rows: ThemeRow[];

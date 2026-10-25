@@ -1,5 +1,4 @@
 import type { ThemeRow, ThemingLabels } from "../protocol.g.ts";
-import { syncKeyed } from "./keyed-list.ts";
 import * as motion from "./motion.ts";
 import { style, StyleKey } from "./styles.ts";
 import {
@@ -30,6 +29,7 @@ import {
   XamlReader
 } from "./winui.ts";
 import { DynWinRtType, DynWinRtValue } from "@microsoft/dynwinrt";
+import { syncKeyed } from "svelte-winui/keyed-list";
 
 const normalState = "Normal";
 const moveUp = -1;

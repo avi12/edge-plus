@@ -1,47 +1,20 @@
-import { GridUnitType, PropertyValue } from "./winui.ts";
+import { thickness } from "svelte-winui";
 
-// WinRT's plain values, built the way the bindings take them.
+// WinRT's plain values, built the way the bindings take them. The ones every
+// WinUI app needs are svelte-winui's.
 
-// A string for an `object` property such as a button's content, which takes
-// only a boxed value.
-export function boxed(text: string): unknown {
-  return PropertyValue.createString(text);
-}
+export {
+  autoLength,
+  boxed,
+  pixelLength,
+  starLength,
+  thickness
+} from "svelte-winui";
 
 const ticksPerMillisecond = 10_000n;
 
-export function thickness(left: number, top: number, right: number, bottom: number) {
-  return {
-    left,
-    top,
-    right,
-    bottom
-  };
-}
-
 export function uniform(size: number) {
   return thickness(size, size, size, size);
-}
-
-export function starLength(value = 1) {
-  return {
-    value,
-    gridUnitType: GridUnitType.Star
-  };
-}
-
-export function autoLength() {
-  return {
-    value: 1,
-    gridUnitType: GridUnitType.Auto
-  };
-}
-
-export function pixelLength(value: number) {
-  return {
-    value,
-    gridUnitType: GridUnitType.Pixel
-  };
 }
 
 export function milliseconds(count: number) {

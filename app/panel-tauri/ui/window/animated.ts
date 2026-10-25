@@ -1,7 +1,7 @@
 import type * as motion from "./motion.ts";
 import { animate } from "./motion.ts";
-import { withControl } from "./svelte-renderer.ts";
 import { StackPanel } from "./winui.ts";
+import { withControl } from "svelte-winui";
 
 // {@attach animated(motion.reposition)} on a <stack-panel>: motion follows
 // Windows' Animation effects switch, so motion.ts holds each panel rather than
