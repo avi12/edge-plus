@@ -9,7 +9,6 @@
   "engines": {
     "node": ">=24"
   },
-<<<<<<< HEAD
   "exports": {
     ".": "./src/index.ts",
     "./host": "./src/renderer/host.ts",
@@ -29,6 +28,8 @@
     "check": "tsc --noEmit",
     "lint": "oxlint --type-aware && eslint . && pnpm check && pnpm fallow",
     "fallow": "fallow audit --base HEAD",
+    "gen:components": "node --disable-warning=ExperimentalWarning scripts/codegen/generate.ts --project ../../app/panel-tauri",
+    "gen:components:check": "node --disable-warning=ExperimentalWarning scripts/codegen/generate.ts --project ../../app/panel-tauri --check",
     "test": "node --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\""
   },
   "dependencies": {
@@ -50,16 +51,5 @@
     "oxlint-tsgolint": "^7.0.2004",
     "svelte": "https://pkg.pr.new/svelte@18042",
     "typescript": "^6.0.3"
-=======
-  "imports": {
-    "#winui/*": {
-      "types": "./.winapp/bindings/*.d.ts",
-      "default": "./.winapp/bindings/*.js"
-    }
-  },
-  "scripts": {
-    "gen:components": "node --disable-warning=ExperimentalWarning scripts/codegen/generate.ts --project ../../app/panel-tauri",
-    "gen:components:check": "node --disable-warning=ExperimentalWarning scripts/codegen/generate.ts --project ../../app/panel-tauri --check"
->>>>>>> worktree-agent-a6800670fb1109201
   }
 }
