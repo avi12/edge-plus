@@ -52,6 +52,8 @@ export interface NativeHost<Native> {
   setAttribute(element: ElementNode<Native>, name: string, value: unknown): void;
   removeAttribute(element: ElementNode<Native>, name: string): void;
   childrenChanged(element: ElementNode<Native>): void;
+  // A subtree Svelte has removed and will not insert again.
+  removed(node: TreeNode<Native>): void;
   // What ends the subscription, or null when nothing was subscribed.
   listen(element: ElementNode<Native>, type: string, handler: unknown): (() => void) | null;
 }
@@ -249,6 +251,7 @@ export function createTreeRenderer<Native>(host: NativeHost<Native>) {
     },
     remove(node) {
       removeNode(host, node);
+      host.removed(node);
     },
     getParent(node) {
       return node.parent;

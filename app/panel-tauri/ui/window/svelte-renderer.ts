@@ -336,6 +336,24 @@ function placeHost(element: WinuiElement, control: unknown): void {
   syncParent(element);
 }
 
+// A removed subtree is discarded, but a control placed in it from elsewhere
+// (<host>) lives on and may be placed again, as a hot-swapped component does
+// at once: it is taken out of the discarded control that holds it, which
+// WinUI would otherwise refuse (already the child of another element).
+function releaseHosts(node: TreeNode<WinuiNative>): void {
+  if (node.type !== NodeType.Element) {
+    return;
+  }
+
+  if (node.name === hostTag) {
+    node.native.control = null;
+    syncParent(node);
+    return;
+  }
+
+  node.children.forEach(releaseHosts);
+}
+
 function createNative(name: string): WinuiNative {
   if (name === hostTag) {
     return {
@@ -370,6 +388,7 @@ const winuiHost: NativeHost<WinuiNative> = {
     }
   },
   childrenChanged: sync,
+  removed: releaseHosts,
   listen(element, type, handler) {
     const control = element.native.control;
     const canListen = control !== null && typeof handler === "function";

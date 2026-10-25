@@ -21,6 +21,7 @@ const probeHost: NativeHost<ProbeNative> = {
   },
   setAttribute() {},
   removeAttribute() {},
+  removed() {},
   childrenChanged(element) {
     element.native.childChanges++;
   },
