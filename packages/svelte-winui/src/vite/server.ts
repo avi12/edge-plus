@@ -1,5 +1,8 @@
-import { logEvent } from "./vite-runner.ts";
-import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { describeError } from "./diagnostics.ts";
+import { svelteWinui, windowEnvironment } from "./plugin.ts";
+import type { SvelteWinuiOptions } from "./plugin.ts";
+import { logEvent } from "./runner.ts";
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { MessagePort } from "node:worker_threads";
 import type {
@@ -14,29 +17,33 @@ import type { FetchFunctionOptions, FetchResult } from "vite/module-runner";
 
 // The development side of Svelte on WinUI: a Vite dev server, in-process and
 // with no HTTP server, that compiles a window's modules for a module runner
-// (vite-runner.ts) on the window's thread and sends it hot updates, both over
-// a MessagePort. Components compile for the client with HMR and render
-// through the app's custom renderer; Svelte resolves to its browser build.
+// (runner.ts) on the window's thread and sends it hot updates, both over a
+// MessagePort. Components compile for the client with HMR and render through
+// the custom renderer; Svelte resolves to its browser build. The compile
+// settings are the plugin's (plugin.ts), from the app's Vite config or, with
+// none, the plugin's defaults.
 
-export interface ModuleServerOptions {
+export interface ModuleServerOptions extends SvelteWinuiOptions {
   // The folder of the window's sources, which Vite serves and watches.
   root: string;
   // The runner's end of this port is the window thread's.
   port: MessagePort;
-  // The custom renderer a component imports, as an import specifier relative
-  // to the component.
-  customRenderer: (component: string) => string;
-  // Modules Node loads itself rather than Vite, such as the one that imports
-  // generated native bindings.
-  isNative: (file: string) => boolean;
+  // Modules Node loads itself rather than Vite, besides the package's own
+  // import site of the bindings: the app's import site of generated native
+  // bindings.
+  isNative?: (file: string) => boolean;
+  // The app's Vite config, whose plugins should include svelteWinui(); without
+  // one, the plugin's defaults serve.
+  configFile?: string;
 }
 
-const environmentName = "winui";
-const browserCondition = "browser";
-// Svelte and esm-env pick their builds by condition, so Vite compiles them for
-// the runner rather than leaving them to Node.
-const compiledPackages = [/^svelte(?:\/|$)/u, "esm-env"];
+// The package's import site of the bindings, which Node must load itself.
+const packageBindingsSite = path.join(import.meta.dirname, "..", "winui.ts");
 const queryOrHash = /[?#].*$/u;
+
+function isSameFile(file: string, other: string): boolean {
+  return path.relative(file, other) === "";
+}
 
 // What the runner sends: its module fetches and its own events.
 function isCustomPayload(value: unknown): value is CustomPayload {
@@ -110,13 +117,25 @@ class WindowEnvironment extends DevEnvironment {
       };
     }
 
-    return super.fetchModule(id, importer, options);
+    // The runner only learns that a fetch failed; the developer needs the file
+    // and line, here on the host's stderr.
+    try {
+      return await super.fetchModule(id, importer, options);
+    } catch (error) {
+      process.stderr.write(`[vite] ${describeError(error)}\n`);
+      throw error;
+    }
   }
 }
 
 export async function startModuleServer(options: ModuleServerOptions): Promise<ViteDevServer> {
+  function isNative(file: string): boolean {
+    return isSameFile(file, packageBindingsSite) || options.isNative?.(file) === true;
+  }
+
+  const hasConfigFile = options.configFile !== undefined;
   const server = await createServer({
-    configFile: false,
+    configFile: options.configFile ?? false,
     root: options.root,
     appType: "custom",
     clearScreen: false,
@@ -125,40 +144,11 @@ export async function startModuleServer(options: ModuleServerOptions): Promise<V
       middlewareMode: true,
       ws: false
     },
-    // Nothing runs in a browser, so there is nothing to pre-bundle for one.
-    optimizeDeps: {
-      noDiscovery: true,
-      include: []
-    },
-    plugins: [
-      svelte({
-        configFile: false,
-        // WinUI has no stylesheets, and a custom renderer takes no injected
-        // CSS.
-        emitCss: false,
-        compilerOptions: {
-          css: "external"
-        },
-        // The runner is Node, so the environment is a server one, but the
-        // window mounts components: they compile for the client.
-        dynamicCompileOptions: ({ filename }) => ({
-          generate: "client",
-          experimental: {
-            customRenderer: options.customRenderer(filename)
-          }
-        })
-      })
-    ],
+    plugins: hasConfigFile ? [] : svelteWinui(options),
     environments: {
-      [environmentName]: {
-        consumer: "server",
-        resolve: {
-          conditions: [browserCondition, "development"],
-          noExternal: compiledPackages
-        },
+      [windowEnvironment]: {
         dev: {
-          moduleRunnerTransform: true,
-          createEnvironment: (name, config) => new WindowEnvironment(name, config, options.port, options.isNative)
+          createEnvironment: (name, config) => new WindowEnvironment(name, config, options.port, isNative)
         }
       }
     }

@@ -1,4 +1,4 @@
-import { compileSvelte, isSvelteFile, winuiRenderer } from "./svelte-compile.ts";
+import { compileSvelte, isSvelteFile, winuiRenderer } from "./compile.ts";
 import { readFileSync } from "node:fs";
 import type { RegisterHooksOptions } from "node:module";
 import { fileURLToPath } from "node:url";
@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 // Node module hooks that run .svelte files from source: Svelte resolves to its
 // browser build, the one that mounts components, and a .svelte file is
 // compiled as it loads. A test registers them with its own renderer; the
-// window itself runs from source through the Vite dev server instead.
+// window itself runs from source through the Vite dev server instead
+// (server.ts).
 
 const browserCondition = "browser";
 const svelteSpecifier = "svelte";
