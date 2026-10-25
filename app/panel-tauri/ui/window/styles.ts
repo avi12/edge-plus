@@ -17,23 +17,11 @@ const resourcesXaml = `
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Style x:Key="FeatureCardStyle" TargetType="Border">
-        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
-        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="{ThemeResource ControlCornerRadius}"/>
-        <Setter Property="Padding" Value="16,12,16,12"/>
-        <Setter Property="MinHeight" Value="68"/>
-    </Style>
     <Style x:Key="CardTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyTextBlockStyle}">
         <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     <Style x:Key="CardDescriptionStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
         <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
-        <Setter Property="TextWrapping" Value="Wrap"/>
-    </Style>
-    <Style x:Key="CardNoteStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
-        <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCautionBrush}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     <Style x:Key="CardErrorStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
@@ -68,10 +56,8 @@ const resourcesXaml = `
 
 // Each is an x:Key above, or one of WinUI's own.
 export const StyleKey = {
-  Card: "FeatureCardStyle",
   CardTitle: "CardTitleStyle",
   CardDescription: "CardDescriptionStyle",
-  CardNote: "CardNoteStyle",
   CardError: "CardErrorStyle",
   Badge: "BadgeStyle",
   BadgeText: "BadgeTextStyle",

@@ -14,13 +14,13 @@
 <!-- The right margin on the words keeps a wrapped description off the
      control, as in Windows Settings. The end control and the body sit in a
      bare border each, which places them in the grid. -->
-<border class="Card" visibility={isShown ? Visibility.Visible : Visibility.Collapsed}>
+<border class="card" visibility={isShown ? Visibility.Visible : Visibility.Collapsed}>
   <grid columns="Auto,*,Auto" rows="Auto,Auto">
     <font-icon glyph={glyph(wording.glyph)} font-size={20} margin="0,0,16,0" vertical-alignment="Center" />
     <stack-panel grid.column={1} margin="0,0,16,0" vertical-alignment="Center">
-      <text-block class="CardTitle">{wording.title}</text-block>
-      <text-block class="CardDescription">{wording.description}</text-block>
-      <text-block class="CardNote" visibility={note.length > 0 ? Visibility.Visible : Visibility.Collapsed}>{note}</text-block>
+      <text-block class="title">{wording.title}</text-block>
+      <text-block class="description">{wording.description}</text-block>
+      <text-block class="note" visibility={note.length > 0 ? Visibility.Visible : Visibility.Collapsed}>{note}</text-block>
     </stack-panel>
     <border grid.column={2} vertical-alignment="Center">
       {@render end()}
@@ -32,3 +32,32 @@
     {/if}
   </grid>
 </border>
+
+<!-- Every colour is a WinUI theme resource, so light and dark follow Windows.
+     -winui-based-on starts a text block from WinUI's own text style. -->
+<style>
+  .card {
+    background: var(--card-background-fill-color-default);
+    border: 1px solid var(--card-stroke-color-default);
+    border-radius: var(--control-corner-radius);
+    padding: 12px 16px;
+    min-height: 68px;
+  }
+
+  .title {
+    -winui-based-on: BodyTextBlockStyle;
+    text-wrap: wrap;
+  }
+
+  .description {
+    -winui-based-on: CaptionTextBlockStyle;
+    color: var(--text-fill-color-secondary);
+    text-wrap: wrap;
+  }
+
+  .note {
+    -winui-based-on: CaptionTextBlockStyle;
+    color: var(--system-fill-color-caution);
+    text-wrap: wrap;
+  }
+</style>
