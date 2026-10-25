@@ -32,11 +32,11 @@ export interface AtRuleBlock {
 export type Block = RuleBlock | AtRuleBlock;
 
 export class CssSyntaxError extends Error {
-  readonly at: SourcePosition;
+  readonly position: SourcePosition;
 
-  constructor(message: string, at: SourcePosition) {
+  constructor(message: string, position: SourcePosition) {
     super(message);
-    this.at = at;
+    this.position = position;
   }
 }
 
@@ -133,7 +133,7 @@ interface Prelude {
 function readPrelude(cursor: Cursor): Prelude {
   cursor.skipSpace();
   const start = cursor.index;
-  const at = cursor.positionAt(start);
+  const position = cursor.positionAt(start);
   let depth = 0;
   let text = "";
   while (!cursor.isAtEnd) {
@@ -162,7 +162,7 @@ function readPrelude(cursor: Cursor): Prelude {
     if (isTerminator) {
       return {
         text: text.trim(),
-        at,
+        at: position,
         terminator: character
       };
     }
@@ -173,7 +173,7 @@ function readPrelude(cursor: Cursor): Prelude {
 
   return {
     text: text.trim(),
-    at,
+    at: position,
     terminator: Terminator.End
   };
 }

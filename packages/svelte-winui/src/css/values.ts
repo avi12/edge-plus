@@ -222,8 +222,8 @@ function parseHslColor(token: string): string | null {
   const high = isDark ? lightness * (1 + saturation) : lightness + saturation - lightness * saturation;
   const low = 2 * lightness - high;
   const hueFraction = (((hue % hueDegrees) + hueDegrees) % hueDegrees) / hueDegrees;
-  const channel = (offset: number): number => hueChannel(low, high, hueFraction + offset) * maxChannel;
-  return xamlColor(channel(1 / 3), channel(0), channel(-1 / 3), alpha);
+  const [red, green, blue] = [1 / 3, 0, -1 / 3].map(offset => hueChannel(low, high, hueFraction + offset) * maxChannel);
+  return xamlColor(red ?? 0, green ?? 0, blue ?? 0, alpha);
 }
 
 // A color as XAML spells it, or null: hex (3, 4, 6 or 8 digits), rgb()/rgba(),

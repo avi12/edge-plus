@@ -51,12 +51,12 @@ interface Translator {
   nextOrder: number;
 }
 
-function report(translator: Translator, severity: Severity, message: string, at: SourcePosition): void {
+function report(translator: Translator, severity: Severity, message: string, position: SourcePosition): void {
   translator.diagnostics.push({
     severity,
     message,
     file: translator.input.file,
-    at
+    at: position
   });
 }
 
@@ -83,8 +83,8 @@ function originalDeclaration(translator: Translator, declaration: Declaration): 
 }
 
 function addRuleBlock(translator: Translator, block: RuleBlock, scheme: ColorScheme): void {
-  for (const at of block.nested) {
-    reportError(translator, "nested rules have no WinUI meaning (write each selector at the top level)", at);
+  for (const nestedAt of block.nested) {
+    reportError(translator, "nested rules have no WinUI meaning (write each selector at the top level)", nestedAt);
   }
 
   const results = parseSelectorList(block.selector);
@@ -271,7 +271,7 @@ function validateRules(translator: Translator, catalogue: ResourceCatalogue): vo
         return resolution;
       },
       hasStyle: key => hasStyle(catalogue, key),
-      report: (severity, message, at) => report(translator, severity, message, at)
+      report: (severity, message, position) => report(translator, severity, message, position)
     };
     const expanded = rule.declarations.flatMap(declaration => expandDeclaration(declaration, options));
     rule.declarations = expanded;
@@ -295,7 +295,7 @@ export function translateStyleSheet(input: TranslateInput): Translation {
       throw error;
     }
 
-    reportError(translator, error.message, error.at);
+    reportError(translator, error.message, error.position);
   }
 
   const variables = buildVariableResources(translator);

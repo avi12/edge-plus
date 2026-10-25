@@ -563,8 +563,8 @@ function overflow(input: GroupInput): Output[] {
 
 function translation(reader: Reader): Output[] {
   const words = reader.words;
-  const [x, y = "0", z = "0"] = words;
-  const lengths = [x, y, z].map(word => (word === undefined ? null : parseLength(word)));
+  const [first, second = "0", third = "0"] = words;
+  const lengths = [first, second, third].map(word => (word === undefined ? null : parseLength(word)));
   const isValid = words.length >= 1 && words.length <= 3 && !lengths.includes(null);
   if (!isValid) {
     reader.expected("one to three lengths");
@@ -575,8 +575,8 @@ function translation(reader: Reader): Output[] {
 }
 
 function scaling(reader: Reader): Output[] {
-  const [x, y = x, z = "1"] = reader.words;
-  const factors = [x, y, z].map(word => (word === undefined ? null : parseNumber(word)));
+  const [first, second = first, third = "1"] = reader.words;
+  const factors = [first, second, third].map(word => (word === undefined ? null : parseNumber(word)));
   if (factors.includes(null)) {
     reader.expected("one to three numbers");
     return [];

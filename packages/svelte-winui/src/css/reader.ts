@@ -12,7 +12,7 @@ export interface LowerOptions {
   elementType: string | null;
   resolveVariable(declaration: Declaration, name: string, kind: ResourceKind): VariableResolution;
   hasStyle(key: string): boolean;
-  report(severity: Severity, message: string, at: SourcePosition): void;
+  report(severity: Severity, message: string, position: SourcePosition): void;
 }
 
 export const ThemeResourceMarkup = {

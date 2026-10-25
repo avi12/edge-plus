@@ -1,3 +1,5 @@
+import type { StyledElement } from "../../../../packages/svelte-winui/src/css/runtime.ts";
+import { styledElement } from "../../../../packages/svelte-winui/src/css/runtime.ts";
 import type { KeyedItems } from "./keyed-list.ts";
 import { syncKeyed } from "./keyed-list.ts";
 import {
@@ -17,8 +19,6 @@ import {
   splitList,
   thicknessSides
 } from "./markup.ts";
-import type { StyledElement } from "../../../../packages/svelte-winui/src/css/runtime.ts";
-import { styledElement } from "../../../../packages/svelte-winui/src/css/runtime.ts";
 import { style, StyleKey } from "./styles.ts";
 import type { ElementNode, FragmentNode, NativeHost, TreeNode } from "./svelte-tree.ts";
 import { createTreeRenderer, NodeType, parentElement } from "./svelte-tree.ts";

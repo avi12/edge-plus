@@ -35,6 +35,11 @@ export function isResourceKind(value: string): value is ResourceKind {
   return Object.values<string>(ResourceKind).includes(value);
 }
 
+// An alias stands for another resource, whose kind is not known here.
+function isUsableAs(candidate: ResourceKind | undefined, kind: ResourceKind): boolean {
+  return candidate === kind || candidate === ResourceKind.Alias;
+}
+
 // "--card-background-fill-color-default" as "CardBackgroundFillColorDefault".
 export function resourceNameOf(customProperty: string): string {
   return customProperty
@@ -100,8 +105,6 @@ export function createCatalogue(
   }
 
   const byLowerCase = new Map([...kinds.keys()].map(key => [key.toLowerCase(), key]));
-  const isUsableAs = (candidate: ResourceKind | undefined, kind: ResourceKind): boolean =>
-    candidate === kind || candidate === ResourceKind.Alias;
   return {
     extend: more => createCatalogue(groups, new Map([...extra, ...more])),
     kindOf: key => kinds.get(key),

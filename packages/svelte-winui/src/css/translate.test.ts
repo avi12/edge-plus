@@ -200,7 +200,7 @@ function stylesFor(css: string, facts: { elementType: string; classes: string[];
     elementType: facts.elementType,
     resolveVariable: resolveBuiltVariable,
     hasStyle: () => true,
-    report: () => {}
+    report() {}
   });
   return lowered.setters.map(entry => [entry.property, entry.kind === "setter" ? entry.value : entry.xaml]);
 }

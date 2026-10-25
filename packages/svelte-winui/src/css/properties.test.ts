@@ -42,7 +42,7 @@ function lower(elementType: string | null, declarations: string): Lowered {
     elementType,
     resolveVariable: resolveBuiltVariable,
     hasStyle: () => true,
-    report: () => {}
+    report() {}
   });
   messages.setters = lowered.setters.map(entry => [entry.property, entry.kind === "setter" ? entry.value : entry.xaml]);
   messages.writes = lowered.writes.map(entry => [entry.target, entry.value]);

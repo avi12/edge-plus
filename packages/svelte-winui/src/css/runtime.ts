@@ -53,8 +53,13 @@ interface StateSupport {
   initially?(read: ReadProperty): boolean;
 }
 
-const yes = (): boolean => true;
-const no = (): boolean => false;
+function isAlways(): boolean {
+  return true;
+}
+
+function isNever(): boolean {
+  return false;
+}
 
 // The WinUI events that say a control is in a state. A control handles some
 // pointer events itself (a Button marks PointerPressed handled), so `:active`
@@ -64,11 +69,11 @@ const stateSupport: ReadonlyMap<PseudoState, StateSupport> = new Map<PseudoState
     bindings: [
       {
         event: "PointerEntered",
-        isActive: yes
+        isActive: isAlways
       },
       {
         event: "PointerExited",
-        isActive: no
+        isActive: isNever
       }
     ]
   }],
@@ -76,19 +81,19 @@ const stateSupport: ReadonlyMap<PseudoState, StateSupport> = new Map<PseudoState
     bindings: [
       {
         event: "PointerPressed",
-        isActive: yes
+        isActive: isAlways
       },
       {
         event: "PointerReleased",
-        isActive: no
+        isActive: isNever
       },
       {
         event: "PointerCanceled",
-        isActive: no
+        isActive: isNever
       },
       {
         event: "PointerCaptureLost",
-        isActive: no
+        isActive: isNever
       }
     ]
   }],
@@ -96,11 +101,11 @@ const stateSupport: ReadonlyMap<PseudoState, StateSupport> = new Map<PseudoState
     bindings: [
       {
         event: "GotFocus",
-        isActive: yes
+        isActive: isAlways
       },
       {
         event: "LostFocus",
-        isActive: no
+        isActive: isNever
       }
     ]
   }],
@@ -112,7 +117,7 @@ const stateSupport: ReadonlyMap<PseudoState, StateSupport> = new Map<PseudoState
       },
       {
         event: "LostFocus",
-        isActive: no
+        isActive: isNever
       }
     ]
   }],
@@ -127,11 +132,11 @@ const stateSupport: ReadonlyMap<PseudoState, StateSupport> = new Map<PseudoState
     bindings: [
       {
         event: "Checked",
-        isActive: yes
+        isActive: isAlways
       },
       {
         event: "Unchecked",
-        isActive: no
+        isActive: isNever
       },
       {
         event: "Toggled",
@@ -233,10 +238,10 @@ function lowerOptions(elementType: string, problems: string[]): LowerOptions {
     elementType,
     resolveVariable: resolveBuiltVariable,
     // The build checked every -winui-based-on against WinUI's styles.
-    hasStyle: yes,
-    report(severity, message, at) {
+    hasStyle: isAlways,
+    report(severity, message, position) {
       if (severity === "error") {
-        problems.push(`${message} (${at.line}:${at.column})`);
+        problems.push(`${message} (${position.line}:${position.column})`);
       } else {
         warnOnce(message);
       }

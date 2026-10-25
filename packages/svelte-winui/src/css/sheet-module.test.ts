@@ -69,14 +69,12 @@ test("a component without a <style> has no sheet", () => {
 
 test("an error names the line of the .svelte file, not of the generated CSS", () => {
   const broken = `<border class="a" />\n\n<style>\n  .a {\n    color: red;\n    box-shadow: 0 0 2px red;\n  }\n</style>\n`;
-  assert.throws(() => moduleFor(broken), (error: unknown) => {
-    return error instanceof SheetError && error.message.startsWith("ui/card.svelte:6:5: box-shadow has no WinUI meaning");
-  });
+  assert.throws(() => moduleFor(broken), (error: unknown) =>
+    error instanceof SheetError && error.message.startsWith("ui/card.svelte:6:5: box-shadow has no WinUI meaning"));
 });
 
 test("a descendant selector Svelte keeps is reported at its rule", () => {
   const nested = `<border class="a"><text-block class="b" /></border>\n<style>\n  .a .b { color: red }\n</style>\n`;
-  assert.throws(() => moduleFor(nested), (error: unknown) => {
-    return error instanceof SheetError && error.message.startsWith("ui/card.svelte:3:3:") && error.message.includes("descendant");
-  });
+  assert.throws(() => moduleFor(nested), (error: unknown) =>
+    error instanceof SheetError && error.message.startsWith("ui/card.svelte:3:3:") && error.message.includes("descendant"));
 });

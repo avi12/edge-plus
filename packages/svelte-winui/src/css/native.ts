@@ -55,29 +55,30 @@ function isEventMethod(value: unknown): value is (handler: () => void) => unknow
   return typeof value === "function";
 }
 
-export function createCssNative(winui: CssWinui): CssNative {
-  // "Auto", "*", "2*" or pixels, as WinUI's GridLength.
-  const gridLength = (text: string): object => {
-    if (text === autoLength) {
-      return {
-        value: 1,
-        gridUnitType: winui.GridUnitType.Auto
-      };
-    }
-
-    if (text.endsWith(starSuffix)) {
-      const weight = text.slice(0, -starSuffix.length);
-      return {
-        value: weight === "" ? 1 : Number(weight),
-        gridUnitType: winui.GridUnitType.Star
-      };
-    }
-
+// "Auto", "*", "2*" or pixels, as WinUI's GridLength.
+function gridLength(winui: CssWinui, text: string): object {
+  if (text === autoLength) {
     return {
-      value: Number(text),
-      gridUnitType: winui.GridUnitType.Pixel
+      value: 1,
+      gridUnitType: winui.GridUnitType.Auto
     };
+  }
+
+  if (text.endsWith(starSuffix)) {
+    const weight = text.slice(0, -starSuffix.length);
+    return {
+      value: weight === "" ? 1 : Number(weight),
+      gridUnitType: winui.GridUnitType.Star
+    };
+  }
+
+  return {
+    value: Number(text),
+    gridUnitType: winui.GridUnitType.Pixel
   };
+}
+
+export function createCssNative(winui: CssWinui): CssNative {
   return {
     loadDictionary: xaml => winui.projectAs(winui.XamlReader.load(xaml), winui.ResourceDictionary),
     mergeIntoApplication(dictionary) {
@@ -104,7 +105,7 @@ export function createCssNative(winui: CssWinui): CssNative {
       definitions.clear();
       for (const length of lengths === "" ? [] : lengths.split(listSeparator)) {
         const definition = isColumns ? new winui.ColumnDefinition() : new winui.RowDefinition();
-        Object.assign(definition, { [isColumns ? "width" : "height"]: gridLength(length.trim()) });
+        Object.assign(definition, { [isColumns ? "width" : "height"]: gridLength(winui, length.trim()) });
         definitions.append(definition);
       }
     },
