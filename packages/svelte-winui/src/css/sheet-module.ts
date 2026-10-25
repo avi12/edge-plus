@@ -37,8 +37,10 @@ export function cssHash({ filename, hash }: { filename: string; hash: (text: str
   return `svelte-${hash(filename.replaceAll("\\", "/"))}`;
 }
 
-export const sheetQuery = "?winui-css";
-const registerAlias = "$registerWinuiSheet";
+// Neither a query nor `.svelte.` in the name: vite-plugin-svelte compiles
+// `a.svelte?x` as a component and `a.svelte.x` as a rune module.
+export const sheetSuffix = "-winui-css.js";
+const registerAlias = "registerWinuiSheet";
 
 export class SheetError extends Error {
   readonly diagnostics: Diagnostic[];

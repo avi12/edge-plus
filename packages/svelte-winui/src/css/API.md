@@ -43,7 +43,7 @@ svelte({ compilerOptions: { cssHash, ...theRest } })   // the SAME options below
 winuiCss({ root, compilerOptions: { cssHash, ...theRest }, runtimeModule: "svelte-winui/css" })
 ```
 
-The plugin adds `import ".../Card.svelte?winui-css"` to each compiled
+The plugin adds `import ".../Card.svelte-winui-css.js"` to each compiled
 component that has a `<style>`. That module is
 
 ```ts

@@ -2,15 +2,15 @@ import type { CompileOptions } from "svelte/compiler";
 import path from "node:path";
 import type { Plugin } from "vite";
 import { loadWinuiCatalogue } from "./catalogue.ts";
-import { compileSheetModule, SheetError, sheetQuery } from "./sheet-module.ts";
+import { compileSheetModule, SheetError, sheetSuffix } from "./sheet-module.ts";
 import { formatDiagnostic } from "./translate.ts";
 import { readFileSync } from "node:fs";
 
 // The Vite plugin that turns every component's <style> into the module that
 // registers its WinUI Styles. For `Card.svelte` it adds
-// `import "Card.svelte?winui-css"` to the compiled component; that module is
+// `import "Card.svelte-winui-css.js"` to the compiled component; that module is
 // the translated sheet (see sheet-module.ts). Editing a <style> reloads that
-// module alone, so the open window restyles in place.
+// module as well (hotUpdate), so the open window restyles in place.
 //
 //   plugins: [svelte({ compilerOptions: { cssHash } }), winuiCss({ root, compilerOptions })]
 //
@@ -36,7 +36,7 @@ function isComponentId(id: string): boolean {
 }
 
 function isSheetId(id: string): boolean {
-  return id.endsWith(`${svelteExtension}${sheetQuery}`);
+  return id.endsWith(`${svelteExtension}${sheetSuffix}`);
 }
 
 export function winuiCss(options: WinuiCssOptions): Plugin {
@@ -56,19 +56,36 @@ export function winuiCss(options: WinuiCssOptions): Plugin {
       }
 
       return {
-        code: `${code}\nimport ${JSON.stringify(`${id}${sheetQuery}`)};\n`,
+        code: `${code}\nimport ${JSON.stringify(`${id}${sheetSuffix}`)};\n`,
         map: null
       };
     },
-    resolveId(source) {
-      return isSheetId(source) ? source : null;
+    // The sheet module is not the component's file, so a change to the
+    // component does not reach it by itself.
+    hotUpdate({ file, modules }) {
+      const sheet = this.environment.moduleGraph.getModuleById(`${file}${sheetSuffix}`);
+      return sheet === undefined ? undefined : [...modules, sheet];
+    },
+    // The import a component gets may be root-relative (`/window/a.svelte-winui-css.js`):
+    // the sheet's id has to be the file's own path, which `load` reads.
+    async resolveId(source, importer, resolveOptions) {
+      if (!isSheetId(source)) {
+        return null;
+      }
+
+      const component = source.slice(0, -sheetSuffix.length);
+      const resolved = await this.resolve(component, importer, {
+        ...resolveOptions,
+        skipSelf: true
+      });
+      return resolved === null ? null : `${resolved.id}${sheetSuffix}`;
     },
     load(id) {
       if (!isSheetId(id)) {
         return null;
       }
 
-      const filename = id.slice(0, -sheetQuery.length);
+      const filename = id.slice(0, -sheetSuffix.length);
       this.addWatchFile(filename);
       try {
         const module = compileSheetModule({
