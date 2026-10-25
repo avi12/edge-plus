@@ -1,42 +1,30 @@
 import type { UpdateView } from "../protocol.g.ts";
-import CardFrame from "./card-frame.svelte";
-import { boxed } from "./layout.ts";
 import type { Mounted } from "./mount.svelte.ts";
 import { mountControl } from "./mount.svelte.ts";
-import { style, StyleKey } from "./styles.ts";
+import type { UpdateCardProps } from "./update-card.d.svelte.ts";
+import UpdateCardView from "./update-card.svelte";
 import type { FrameworkElement } from "./winui.ts";
-import { Button, Visibility } from "./winui.ts";
 
-const hiddenWording = {
-  title: "",
-  description: "",
-  glyph: 0
-};
-
-// A release that is downloaded and checked, with the button that restarts Edge+
-// into it. Hidden until one is ready.
+// The update card (update-card.svelte), for the page to show once a release
+// is ready.
 export class UpdateCard {
-  private readonly button = new Button();
-  private readonly frame: Mounted<Record<string, unknown>>;
+  private readonly card: Mounted<UpdateCardProps>;
   private shown: UpdateView | null = null;
 
   constructor(onClicked: () => void) {
-    this.button.style = style(StyleKey.AccentButton);
-    // Disabled at once, so a second click cannot start a second restart.
-    this.button.onClick(() => {
-      this.button.isEnabled = false;
-      this.button.content = boxed(this.shown?.restarting ?? "");
-      onClicked();
+    this.card = mountControl(UpdateCardView, {
+      update: null,
+      isPressed: false,
+      // Disabled at once, so a second click cannot start a second restart.
+      onClicked: () => {
+        this.card.set({ isPressed: true });
+        onClicked();
+      }
     });
-    this.frame = mountControl(CardFrame, {
-      wording: hiddenWording,
-      control: this.button
-    });
-    this.frame.root.visibility = Visibility.Collapsed;
   }
 
   get view(): FrameworkElement {
-    return this.frame.root;
+    return this.card.root;
   }
 
   show(update: UpdateView | null): void {
@@ -50,14 +38,14 @@ export class UpdateCard {
     }
 
     this.shown = update;
-    this.frame.set({ wording: update.wording });
-    this.reset();
-    this.frame.root.visibility = Visibility.Visible;
+    this.card.set({
+      update,
+      isPressed: false
+    });
   }
 
   // The restart failed: the button comes back, so it can be tried again.
   reset(): void {
-    this.button.content = boxed(this.shown?.button ?? "");
-    this.button.isEnabled = true;
+    this.card.set({ isPressed: false });
   }
 }

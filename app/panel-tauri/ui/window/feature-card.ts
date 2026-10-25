@@ -1,47 +1,41 @@
 import type { CardWording } from "../protocol.g.ts";
-import CardFrame from "./card-frame.svelte";
-import { boxed } from "./layout.ts";
+import type { FeatureCardProps } from "./feature-card.d.svelte.ts";
+import FeatureCardView from "./feature-card.svelte";
 import type { Mounted } from "./mount.svelte.ts";
 import { mountControl } from "./mount.svelte.ts";
 import type { FrameworkElement } from "./winui.ts";
-import { AutomationProperties, ToggleSwitch } from "./winui.ts";
 
-// A card with a switch at its end.
+// A card with a switch at its end (feature-card.svelte), for the page to
+// update from each view.
 export class FeatureCard {
-  private readonly toggle = new ToggleSwitch();
-  private readonly frame: Mounted<Record<string, unknown>>;
-  // So update's write to the switch is not taken for a click.
-  private isUpdating = false;
+  private readonly card: Mounted<FeatureCardProps>;
 
   constructor(wording: CardWording, onToggled: (isOn: boolean) => void) {
-    this.toggle.onContent = boxed("");
-    this.toggle.offContent = boxed("");
-    this.toggle.minWidth = 0;
-    AutomationProperties.setName(this.toggle, wording.title);
-    this.toggle.onToggled(() => {
-      if (!this.isUpdating) {
-        onToggled(this.toggle.isOn);
-      }
-    });
-    this.frame = mountControl(CardFrame, {
+    this.card = mountControl(FeatureCardView, {
       wording,
-      control: this.toggle
+      isOn: false,
+      isLocked: false,
+      note: "",
+      onToggled: isOn => {
+        this.card.set({ isOn });
+        onToggled(isOn);
+      }
     });
   }
 
   get view(): FrameworkElement {
-    return this.frame.root;
+    return this.card.root;
   }
 
   update(isOn: boolean, isLocked: boolean, note: string): void {
-    this.isUpdating = true;
-    this.toggle.isOn = isOn;
-    this.isUpdating = false;
-    this.toggle.isEnabled = !isLocked;
-    this.frame.set({ note });
+    this.card.set({
+      isOn,
+      isLocked,
+      note
+    });
   }
 
   setBody(body: FrameworkElement): void {
-    this.frame.set({ body });
+    this.card.set({ body });
   }
 }
