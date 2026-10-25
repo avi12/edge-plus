@@ -188,11 +188,13 @@ function rebuildRules(): void {
 
 function mergeResources(registered: RegisteredSheet): void {
   const xaml = registered.sheet.resourcesXaml;
-  if (native === null || xaml === null) {
+  const currentNative = native;
+  const canMerge = currentNative !== null && xaml !== null;
+  if (!canMerge) {
     return;
   }
 
-  native.mergeIntoApplication(native.loadDictionary(xaml));
+  currentNative.mergeIntoApplication(currentNative.loadDictionary(xaml));
 }
 
 function refreshAll(): void {
@@ -346,7 +348,8 @@ class ElementStyle implements StyledElement {
 
   refresh(): void {
     const currentNative = native;
-    if (currentNative === null || this.isDisposed) {
+    const canRefresh = currentNative !== null && !this.isDisposed;
+    if (!canRefresh) {
       return;
     }
 
@@ -367,7 +370,8 @@ class ElementStyle implements StyledElement {
 
     const isUnstyled = matched.length === 0 && inline.length === 0;
     const hadStyle = this.appliedKey !== null;
-    if (isUnstyled && !hadStyle) {
+    const isStillUnstyled = isUnstyled && !hadStyle;
+    if (isStillUnstyled) {
       return;
     }
 
@@ -411,13 +415,15 @@ class ElementStyle implements StyledElement {
 
   private subscribeTo(state: PseudoState): void {
     const support = stateSupport.get(state);
-    if (native === null || support === undefined) {
+    const currentNative = native;
+    const canSubscribe = currentNative !== null && support !== undefined;
+    if (!canSubscribe) {
       return;
     }
 
     const unsubscribers: Array<() => void> = [];
     for (const binding of support.bindings) {
-      const unsubscribe = native.subscribe(this.control, binding.event, () => {
+      const unsubscribe = currentNative.subscribe(this.control, binding.event, () => {
         const isActive = binding.isActive(this.readProperty);
         const isChanged = isActive !== this.states.has(state);
         if (isActive) {
@@ -440,6 +446,7 @@ class ElementStyle implements StyledElement {
     }
 
     this.subscriptions.set(state, unsubscribers);
+
     if (support.initially?.(this.readProperty) === true) {
       this.states.add(state);
     }

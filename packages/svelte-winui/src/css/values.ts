@@ -34,6 +34,7 @@ function splitOutside(text: string, isSeparator: (character: string) => boolean)
     const isInString = quote !== "";
     if (isInString) {
       current += character;
+
       if (character === quote) {
         quote = "";
       }
@@ -135,7 +136,7 @@ function parseHexColor(token: string): string | null {
   }
 
   const isShort = digits.length === 3 || digits.length === 4;
-  const full = isShort ? [...digits].map(digit => digit + digit).join("") : digits;
+  const full = isShort ? digits.split("").map(digit => digit + digit).join("") : digits;
   const isValidLength = full.length === 6 || full.length === 8;
   if (!isValidLength) {
     return null;

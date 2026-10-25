@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import {
   attachedOwners,
   bindableEvents,
@@ -20,6 +18,8 @@ import {
 } from "./tables.ts";
 import type { AttributeInfo, TypeInfo, TypeName, TypeSignature } from "./winmd.ts";
 import { fullName, TypeAttribute, TypeIndex, WinMdFile } from "./winmd.ts";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 // The components, read from WinUI's metadata: every activatable class below
 // UIElement or TextElement, with the properties, events and attached
@@ -90,7 +90,10 @@ export interface Model {
   // Statics-only classes the attached properties are set through.
   owners: TypeName[];
   // Components the metadata activates but the generator leaves out.
-  excluded: Array<{ name: string; reason: string }>;
+  excluded: Array<{
+    name: string;
+    reason: string;
+  }>;
 }
 
 interface LockFile {
@@ -103,21 +106,24 @@ function isLockFile(value: unknown): value is LockFile {
 
 // The index of the metadata `winapp restore` locked, and the file the
 // components are in.
-export function loadMetadata(lockPath: string): { index: TypeIndex; components: WinMdFile } {
+export function loadMetadata(lockPath: string): {
+  index: TypeIndex;
+  components: WinMdFile;
+} {
   const lock: unknown = JSON.parse(readFileSync(lockPath, "utf8"));
   if (!isLockFile(lock)) {
     throw new Error(`${lockPath} is not a winapp lock file`);
   }
 
   const files = lock.packages.flatMap(entry => entry.winmds);
-  const find = (name: string): string => {
+  function find(name: string): string {
     const found = files.find(file => path.basename(file).toLowerCase() === name.toLowerCase());
     if (found === undefined) {
       throw new Error(`${name} is not among the winmds in ${lockPath}`);
     }
 
     return found;
-  };
+  }
   const index = new TypeIndex();
   const components = new WinMdFile(find(componentWinmd));
   index.add(components);
@@ -178,21 +184,33 @@ class Builder {
     this.index = index;
   }
 
-  classify(signature: TypeSignature): { kind: PropertyKind; enumType: TypeName | null } {
+  classify(signature: TypeSignature): {
+    kind: PropertyKind;
+    enumType: TypeName | null;
+  } {
     if (signature.kind === "primitive") {
-      return { kind: this.classifyPrimitive(signature.name), enumType: null };
+      return {
+        kind: this.classifyPrimitive(signature.name),
+        enumType: null
+      };
     }
 
     if (signature.kind === "named") {
       const special = kindOfType.get(fullName(signature.type));
       if (special !== undefined) {
-        return { kind: special, enumType: null };
+        return {
+          kind: special,
+          enumType: null
+        };
       }
 
       const isEnum = signature.isValueType && isEnumType(this.index.find(signature.type));
       if (isEnum) {
         this.enums.set(fullName(signature.type), signature.type);
-        return { kind: PropertyKind.Enum, enumType: signature.type };
+        return {
+          kind: PropertyKind.Enum,
+          enumType: signature.type
+        };
       }
     }
 
@@ -203,10 +221,16 @@ class Builder {
       && signature.args[0]?.kind === "primitive"
       && signature.args[0].name === "Boolean";
     if (isNullableBoolean) {
-      return { kind: PropertyKind.NullableBoolean, enumType: null };
+      return {
+        kind: PropertyKind.NullableBoolean,
+        enumType: null
+      };
     }
 
-    return { kind: PropertyKind.Passthrough, enumType: null };
+    return {
+      kind: PropertyKind.Passthrough,
+      enumType: null
+    };
   }
 
   private classifyPrimitive(name: string): PropertyKind {
@@ -230,7 +254,8 @@ class Builder {
     for (const reference of type.interfaces) {
       const interfaceType = reference.type === null ? undefined : this.index.find(reference.type);
       const isForSubclasses = subclassInterfaceSuffixes.some(suffix => interfaceType?.name.endsWith(suffix));
-      if (interfaceType !== undefined && !isForSubclasses) {
+      const isRequired = interfaceType !== undefined && !isForSubclasses;
+      if (isRequired) {
         found.push(interfaceType);
       }
     }
@@ -250,7 +275,8 @@ class Builder {
       const factoryName = nameOfString(attribute.fixed[0]);
       const factory = factoryName === null ? undefined : this.index.find(factoryName);
       const isPublic = attribute.fixed[1] === publicComposition;
-      const hasDefaultFactory = factory?.methods.some(method => method.parameters.length === factoryParameters) === true;
+      const hasDefaultFactory = factory?.methods
+        .some(method => method.parameters.length === factoryParameters) === true;
       return isPublic && hasDefaultFactory;
     });
   }
@@ -263,7 +289,7 @@ class Builder {
 
   private ancestry(type: TypeInfo): TypeInfo[] {
     const chain: TypeInfo[] = [];
-    for (let current: TypeInfo | undefined = type; current !== undefined; ) {
+    for (let current: TypeInfo | undefined = type; current !== undefined;) {
       chain.push(current);
       current = current.base === null ? undefined : this.index.find(current.base);
     }
@@ -312,7 +338,8 @@ class Builder {
       const key = camelCase(member.name);
       const isSkipped = skippedProperties.has(member.name) || reservedKeys.has(key);
       const isNew = !seenProperties.has(member.name);
-      if (member.hasSetter && !isSkipped && isNew) {
+      const isWritableProperty = member.hasSetter && !isSkipped && isNew;
+      if (isWritableProperty) {
         seenProperties.add(member.name);
         const { kind, enumType } = this.classify(member.type);
         model.properties.push({
@@ -391,7 +418,8 @@ class Builder {
     const isSetter = method.name.startsWith(attachedSetterPrefix)
       && method.parameters.length === attachedSetterParameters;
     const targetName = target?.kind === "named" ? target.type.name : "";
-    if (!isSetter || value === undefined || !targetTypes.has(targetName)) {
+    const isAttachedSetter = isSetter && value !== undefined && targetTypes.has(targetName);
+    if (!isAttachedSetter) {
       return;
     }
 

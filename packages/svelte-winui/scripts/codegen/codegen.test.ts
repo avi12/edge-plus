@@ -23,7 +23,10 @@ test("a property name is camel case", () => {
 // The metadata is the one `pnpm restore` locked, so these need it.
 test("the model finds the components, their bindables and attached properties", { skip: !hasMetadata }, () => {
   const model = buildModel(lockPath);
-  const find = (name: string) => model.classes.find(level => level.type.name === name);
+  function find(name: string) {
+    return model.classes.find(level => level.type.name === name);
+  }
+
   const toggle = find("ToggleSwitch");
   assert.equal(toggle?.isComponent, true);
   assert.equal(toggle?.tag, "toggle-switch");

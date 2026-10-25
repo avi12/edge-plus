@@ -1,3 +1,4 @@
+import { read } from "../renderer/reflect.ts";
 import {
   Application,
   BitmapImage,
@@ -20,7 +21,14 @@ import type {
   ThicknessInput,
   ThicknessValue
 } from "./values.ts";
-import { attachedList, cornerSides, GridUnit, gridLengthParts, parseColor, thicknessSides } from "./values.ts";
+import {
+  attachedList,
+  cornerSides,
+  gridLengthParts,
+  GridUnit,
+  parseColor,
+  thicknessSides
+} from "./values.ts";
 
 // A prop's value as the bindings take it: the generated components call these
 // where a prop is not already the bindings' own type.
@@ -75,7 +83,7 @@ export function enumValue<Table extends Record<string, number>>(
   table: Table,
   input: EnumInput<Table>
 ): Table[keyof Table] {
-  const value: unknown = typeof input === "string" ? Reflect.get(table, input) : input;
+  const value: unknown = typeof input === "string" ? read(table, input) : input;
   if (isMember(table, value)) {
     return value;
   }
@@ -156,7 +164,8 @@ export function brushOf(input: BrushInput): Brush {
   }
 
   const found = resources.lookup(key);
-  if (typeof found !== "object" || found === null || !isBrush(found)) {
+  const isBrushResource = typeof found === "object" && found !== null && isBrush(found);
+  if (!isBrushResource) {
     throw new TypeError(`the resource "${input}" is not a brush`);
   }
 
@@ -210,11 +219,11 @@ export function objectOf(input: unknown): unknown {
 // Calls each Owner.set<Property>(control, value) an `attached` prop lists.
 export function setAttached(control: object, input: AttachedInput): void {
   for (const [owner, property, value] of attachedList(input)) {
-    const setter: unknown = Reflect.get(owner, `set${property}`);
+    const setter = read(owner, `set${property}`);
     if (typeof setter !== "function") {
       throw new TypeError(`attached={[Owner, "${property}", …]}: the owner has no set${property}`);
     }
 
-    Reflect.apply(setter, owner, [control, value]);
+    setter.apply(owner, [control, value]);
   }
 }

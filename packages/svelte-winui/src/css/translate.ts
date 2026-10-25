@@ -4,12 +4,20 @@ import { BlockKind, CssSyntaxError, parseCss } from "./parser.ts";
 import { lowerDeclarations } from "./properties.ts";
 import type { LowerOptions } from "./reader.ts";
 import type { ResourceCatalogue } from "./resources.ts";
-import { hasStyle, ResourceKind, resolveVariable, resourceNameOf } from "./resources.ts";
+import { hasStyle, resolveVariable, ResourceKind, resourceNameOf } from "./resources.ts";
 import { parseSelectorList } from "./selectors.ts";
 import { expandDeclaration } from "./shorthands.ts";
 import type { PositionMapper, SourceMapV3 } from "./source-map.ts";
 import { createPositionMapper } from "./source-map.ts";
-import type { Declaration, Diagnostic, Rule, Severity, SourcePosition, StyleSheetData, Translation } from "./types.ts";
+import type {
+  Declaration,
+  Diagnostic,
+  Rule,
+  Severity,
+  SourcePosition,
+  StyleSheetData,
+  Translation
+} from "./types.ts";
 import { parseColor, parseLength, parseNumber } from "./values.ts";
 
 // Svelte's compiled CSS for one component, translated: its rules become data
@@ -155,10 +163,12 @@ function addBlocks(translator: Translator, blocks: Block[], scheme: ColorScheme)
 
     const isNestedMedia = scheme !== ColorScheme.Default;
     const inner = isNestedMedia ? null : schemeOf(translator, block);
+    const { children } = block;
+    const canNest = inner !== null && children !== null;
     if (isNestedMedia) {
       reportError(translator, `@${block.name} inside @media has no WinUI meaning`, block.at);
-    } else if (inner !== null && block.children !== null) {
-      addBlocks(translator, block.children, inner);
+    } else if (canNest) {
+      addBlocks(translator, children, inner);
     } else if (inner !== null) {
       reportError(translator, `@${block.name} has no WinUI meaning`, block.at);
     }
@@ -171,7 +181,11 @@ interface VariableResources {
   kinds: Map<string, ResourceKind>;
 }
 
-function variableEntries(variable: Variable, reportProblem: (message: string) => void): { key: string; xaml: string; kind: ResourceKind }[] {
+function variableEntries(variable: Variable, reportProblem: (message: string) => void): {
+  key: string;
+  xaml: string;
+  kind: ResourceKind;
+}[] {
   const key = resourceNameOf(variable.name);
   const color = parseColor(variable.value);
   if (color !== null) {
@@ -221,10 +235,13 @@ function buildVariableResources(translator: Translator): VariableResources {
     entriesByScheme.set(variable.scheme, forScheme);
   }
 
-  const lightNames = new Set(translator.variables.filter(variable => variable.scheme !== ColorScheme.Dark).map(variable => variable.name));
+  const lightNames = new Set(
+    translator.variables.filter(variable => variable.scheme !== ColorScheme.Dark).map(variable => variable.name)
+  );
   const reportedNames = new Set<string>();
   for (const variable of translator.variables) {
-    const isDarkOnly = variable.scheme === ColorScheme.Dark && !lightNames.has(variable.name) && !reportedNames.has(variable.name);
+    const isUnseen = !lightNames.has(variable.name) && !reportedNames.has(variable.name);
+    const isDarkOnly = variable.scheme === ColorScheme.Dark && isUnseen;
     if (isDarkOnly) {
       reportedNames.add(variable.name);
       translator.diagnostics.push({

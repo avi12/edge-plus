@@ -20,7 +20,11 @@ interface ListLike {
 }
 
 export interface CssWinui {
-  Application: { current: { resources: { mergedDictionaries: ListLike | null } } };
+  Application: {
+    current: {
+      resources: { mergedDictionaries: ListLike | null };
+    };
+  };
   ResourceDictionary: ProjectedType<DictionaryLike>;
   Style: ProjectedType<object>;
   XamlReader: { load(xaml: string): unknown };
@@ -28,7 +32,11 @@ export interface CssWinui {
   projectAs<Instance extends object>(value: unknown, type: ProjectedType<Instance>): Instance;
   ColumnDefinition: new () => object;
   RowDefinition: new () => object;
-  GridUnitType: { Auto: number; Pixel: number; Star: number };
+  GridUnitType: {
+    Auto: number;
+    Pixel: number;
+    Star: number;
+  };
 }
 
 const listSeparator = ",";

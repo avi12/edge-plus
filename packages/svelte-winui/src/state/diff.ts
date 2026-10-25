@@ -42,10 +42,12 @@ function diffValues(path: PathSegment[], previous: Json, next: Json, ops: PatchO
     return;
   }
 
-  if (Array.isArray(previous) && Array.isArray(next)) {
+  const areArrays = Array.isArray(previous) && Array.isArray(next);
+  const areRecords = isRecord(previous) && isRecord(next) && !Array.isArray(previous) && !Array.isArray(next);
+  if (areArrays) {
     diffArrays(path, previous, next, ops);
-  } else if (isRecord(previous) && isRecord(next) && !Array.isArray(previous) && !Array.isArray(next)) {
-    for (const key of Object.keys(previous)) {
+  } else if (areRecords) {
+    for (const key in previous) {
       if (!Object.hasOwn(next, key)) {
         ops.push({
           op: PatchOperation.remove,

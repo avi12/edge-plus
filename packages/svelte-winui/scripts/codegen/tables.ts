@@ -100,7 +100,10 @@ export const neverBindable = new Set(["DataContext", "IsEnabled"]);
 // properties, each as a prop named by the prefix and the property: gridRow,
 // automationName, toolTip. A property that starts with the prefix already
 // keeps its own name (AutomationId is automationId, not automationAutomationId).
-export const attachedOwners: Array<{ owner: TypeName; prefix: string }> = [
+export const attachedOwners: Array<{
+  owner: TypeName;
+  prefix: string;
+}> = [
   {
     owner: {
       namespace: "Microsoft.UI.Xaml.Controls",

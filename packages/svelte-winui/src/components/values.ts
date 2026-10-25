@@ -77,7 +77,8 @@ function toPixels(text: string): number {
   const trimmed = text.trim();
   const digits = trimmed.endsWith(pixelSuffix) ? trimmed.slice(0, -pixelSuffix.length) : trimmed;
   const value = Number(digits);
-  if (digits === "" || Number.isNaN(value)) {
+  const isLength = digits !== "" && !Number.isNaN(value);
+  if (!isLength) {
     throw new TypeError(`"${text}" is not a length`);
   }
 
@@ -97,7 +98,10 @@ function sidesOf(values: readonly number[], order: "xaml" | "css"): [number, num
   return [first, second, third ?? first, fourth ?? second];
 }
 
-function valuesOf(text: string): { values: number[]; order: "xaml" | "css" } {
+function valuesOf(text: string): {
+  values: number[];
+  order: "xaml" | "css";
+} {
   const isXaml = text.includes(listSeparator);
   const parts = isXaml ? text.split(listSeparator) : text.trim().split(cssSeparator);
   return {
@@ -193,7 +197,7 @@ export function parseColor(text: string): ColorValue | null {
 
   const digits = name.slice(1);
   const isShort = digits.length === shortHexLength;
-  const expanded = isShort ? [...digits].map(digit => `${digit}${digit}`).join("") : digits;
+  const expanded = isShort ? digits.split("").map(digit => `${digit}${digit}`).join("") : digits;
   const hasAlpha = expanded.length > 6;
   const channels = [...expanded.matchAll(/../gu)].map(match => Number.parseInt(match[0], hexRadix));
   const [alpha = opaque, red = 0, green = 0, blue = 0] = hasAlpha ? channels : [opaque, ...channels];

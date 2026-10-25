@@ -30,8 +30,10 @@ transport.listen({
 
     const kind = action["kind"];
     let error: string | null = null;
-    if (kind === "increment" && isRecord(state) && typeof state["count"] === "number") {
-      publish({ count: state["count"] + 1 });
+    const count = isRecord(state) ? state["count"] : undefined;
+    const canIncrement = kind === "increment" && typeof count === "number";
+    if (canIncrement) {
+      publish({ count: count + 1 });
     } else if (kind === "fail") {
       error = "asked to fail";
     } else if (kind === "log") {

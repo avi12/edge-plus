@@ -1,5 +1,5 @@
-import { splitCommas } from "./values.ts";
 import { PseudoState } from "./types.ts";
+import { splitCommas } from "./values.ts";
 
 // The selectors a component's stylesheet may use: a compound of an element
 // type (kebab case, `text-block`), classes (`.a.b`), and at most one state.
@@ -19,8 +19,14 @@ export interface ParsedSelector {
 }
 
 export type SelectorResult =
-  | { isValid: true; selector: ParsedSelector }
-  | { isValid: false; reason: string };
+  | {
+    isValid: true;
+    selector: ParsedSelector;
+  }
+  | {
+    isValid: false;
+    reason: string;
+  };
 
 const combinatorReason = "descendant, child and sibling selectors have no WinUI meaning (a style applies to an element by its own type and classes; give the element a class)";
 const states = new Set<string>(Object.values(PseudoState));
@@ -63,6 +69,9 @@ function readCompound(text: string, compound: Compound, weight: number): string 
       continue;
     }
 
+    const isPseudo = character === ":" && !rest.startsWith("::");
+    const isUniversal = character === "*" && isStart;
+    const isTypeSelector = isStart && identifier.test(rest);
     if (character === ".") {
       const name = identifier.exec(rest.slice(1))?.[0];
       if (name === undefined) {
@@ -72,7 +81,7 @@ function readCompound(text: string, compound: Compound, weight: number): string 
       compound.classes.push(name);
       compound.specificity += weight * classWeight;
       index += 1 + name.length;
-    } else if (character === ":" && !rest.startsWith("::")) {
+    } else if (isPseudo) {
       const name = identifier.exec(rest.slice(1))?.[0]?.toLowerCase();
       const problem = readPseudo(compound, name, weight);
       if (problem !== null) {
@@ -80,9 +89,9 @@ function readCompound(text: string, compound: Compound, weight: number): string 
       }
 
       index += 1 + (name?.length ?? 0);
-    } else if (character === "*" && isStart) {
+    } else if (isUniversal) {
       index++;
-    } else if (isStart && identifier.test(rest)) {
+    } else if (isTypeSelector) {
       const name = identifier.exec(rest)?.[0] ?? "";
       compound.elementType = name.toLowerCase();
       compound.specificity += weight * typeWeight;
@@ -100,6 +109,7 @@ function matchingParenthesis(text: string, open: number): number {
   for (let index = open; index < text.length; index++) {
     depth += text[index] === "(" ? 1 : 0;
     depth -= text[index] === ")" ? 1 : 0;
+
     if (depth === 0) {
       return index;
     }
@@ -114,7 +124,8 @@ function readPseudo(compound: Compound, name: string | undefined, weight: number
     return null;
   }
 
-  if (name === undefined || !states.has(name)) {
+  const isKnownState = name !== undefined && states.has(name);
+  if (!isKnownState) {
     const known = [...states].map(state => `:${state}`).join(", ");
     return `:${name ?? ""} has no WinUI meaning (a control reports ${known})`;
   }
@@ -133,7 +144,8 @@ function stateOf(name: string): PseudoState | null {
 }
 
 function unsupportedCharacter(character: string, rest: string): string | null {
-  if (character === " " || character === ">" || character === "+" || character === "~") {
+  const isCombinator = character === " " || character === ">" || character === "+" || character === "~";
+  if (isCombinator) {
     return combinatorReason;
   }
 
@@ -157,7 +169,8 @@ export function parseSelectorList(text: string): SelectorResult[] {
       return fail(problem);
     }
 
-    const isRootWithMore = compound.isRoot && (compound.classes.length > 0 || compound.elementType !== null || compound.state !== null);
+    const hasMore = compound.classes.length > 0 || compound.elementType !== null || compound.state !== null;
+    const isRootWithMore = compound.isRoot && hasMore;
     if (isRootWithMore) {
       return fail(":root cannot be combined with a class, type or state");
     }

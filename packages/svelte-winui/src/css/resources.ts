@@ -61,11 +61,13 @@ function editDistance(from: string, to: string): number {
     const current = [row];
     for (let column = 1; column <= to.length; column++) {
       const cost = from[row - 1] === to[column - 1] ? 0 : 1;
-      current.push(Math.min(
-        (previous[column] ?? 0) + 1,
-        (current[column - 1] ?? 0) + 1,
-        (previous[column - 1] ?? 0) + cost
-      ));
+      current.push(
+        Math.min(
+          (previous[column] ?? 0) + 1,
+          (current[column - 1] ?? 0) + 1,
+          (previous[column - 1] ?? 0) + cost
+        )
+      );
     }
 
     previous = current;
@@ -129,8 +131,14 @@ export function createCatalogue(
 }
 
 export type VariableResolution =
-  | { isFound: true; key: string }
-  | { isFound: false; reason: string };
+  | {
+    isFound: true;
+    key: string;
+  }
+  | {
+    isFound: false;
+    reason: string;
+  };
 
 function describeSuggestions(suggestions: string[]): string {
   return suggestions.length === 0 ? "" : `; did you mean ${suggestions.join(" or ")}?`;
@@ -144,7 +152,8 @@ export function resolveVariable(catalogue: ResourceCatalogue, name: string, kind
     const key = catalogue.keyOf(candidate);
     const found = key === undefined ? undefined : catalogue.kindOf(key);
     const isUsable = found === kind || found === ResourceKind.Alias;
-    if (key !== undefined && isUsable) {
+    const isResolved = key !== undefined && isUsable;
+    if (isResolved) {
       return {
         isFound: true,
         key
@@ -154,7 +163,8 @@ export function resolveVariable(catalogue: ResourceCatalogue, name: string, kind
 
   const existing = candidates.map(candidate => catalogue.keyOf(candidate)).find(key => key !== undefined);
   const existingKind = existing === undefined ? undefined : catalogue.kindOf(existing);
-  if (existing !== undefined && existingKind !== undefined) {
+  const isOtherKind = existing !== undefined && existingKind !== undefined;
+  if (isOtherKind) {
     return {
       isFound: false,
       reason: `${name} is a WinUI ${existingKind} resource (${existing}), and a ${kind} is needed here`

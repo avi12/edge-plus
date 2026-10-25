@@ -1,10 +1,10 @@
+import { levels } from "./generated/metadata.ts";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import path from "node:path";
 import { test } from "node:test";
 import { compile, compileModule } from "svelte/compiler";
-import { levels } from "./generated/metadata.ts";
 
 // Every generated file goes through Svelte's compiler, with a custom renderer
 // as the window has: a component that does not compile, or compiles with a
@@ -27,7 +27,9 @@ test("every component compiles without a warning", () => {
       filename: file,
       generate: "client",
       runes: true,
-      experimental: { customRenderer: rendererPath }
+      experimental: {
+        customRenderer: rendererPath
+      }
     });
     const warnings = result.warnings.map(warning => `${path.basename(file)}: ${warning.message}`);
     assert.deepEqual(warnings, []);

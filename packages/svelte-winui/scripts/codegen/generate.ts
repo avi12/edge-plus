@@ -1,9 +1,25 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import path from "node:path";
-import { parseArgs } from "node:util";
-import { bindingModule, emitBindings, emitComponent, emitDeclaration, emitIndex, emitLevel, emitMetadata } from "./emit.ts";
+import {
+  bindingModule,
+  emitBindings,
+  emitComponent,
+  emitDeclaration,
+  emitIndex,
+  emitLevel,
+  emitMetadata
+} from "./emit.ts";
 import { bindingClasses, buildModel, requestedClasses } from "./model.ts";
 import type { TypeName } from "./winmd.ts";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync
+} from "node:fs";
+import path from "node:path";
+import { parseArgs } from "node:util";
 
 // Generates the components from WinUI's metadata:
 //
@@ -68,7 +84,8 @@ function updatedPackageJson(packagePath: string, wanted: TypeName[]): OutputFile
   const winapp = isRecord(parsed) ? parsed["winapp"] : undefined;
   const bindings = isRecord(winapp) ? winapp["jsBindings"] : undefined;
   const list = isRecord(bindings) ? bindings["additionalWinmds"] : undefined;
-  if (!isRecord(bindings) || !Array.isArray(list)) {
+  const hasAdditionalWinmds = isRecord(bindings) && Array.isArray(list);
+  if (!hasAdditionalWinmds) {
     throw new Error(`${packagePath} has no winapp.jsBindings.additionalWinmds`);
   }
 
@@ -101,6 +118,7 @@ function generatedFiles(project: string): OutputFile[] {
       file: path.join(generatedFolder, "controls", `${name}.svelte.ts`),
       text: emitLevel(level)
     });
+
     if (level.isComponent) {
       output.push(
         {
@@ -159,7 +177,8 @@ function linkProjectFolders(project: string): void {
   for (const name of [".winapp", "node_modules"]) {
     const link = path.join(import.meta.dirname, "..", "..", name);
     const target = path.join(project, name);
-    if (!existsSync(link) && existsSync(target)) {
+    const canLink = !existsSync(link) && existsSync(target);
+    if (canLink) {
       symlinkSync(target, link, "junction");
     }
   }
@@ -171,8 +190,12 @@ function normalized(text: string): string {
 
 const { values } = parseArgs({
   options: {
-    project: { type: "string" },
-    check: { type: "boolean" }
+    project: {
+      type: "string"
+    },
+    check: {
+      type: "boolean"
+    }
   }
 });
 if (values.project === undefined) {

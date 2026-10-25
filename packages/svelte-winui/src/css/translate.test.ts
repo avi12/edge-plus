@@ -96,10 +96,12 @@ test("a rule's shorthands are stored as longhands", () => {
 });
 
 test("custom properties on :root become a dictionary with light and dark", () => {
-  const { sheet, diagnostics } = translate(`
+  const { sheet, diagnostics } = translate(
+    `
 :root { --accent: #0af; --gap: 8px }
 @media (prefers-color-scheme: dark) { :root { --accent: #fa0 } }
-.a { color: var(--accent) }`);
+.a { color: var(--accent) }`
+  );
   assert.deepEqual(diagnostics, []);
   assert.deepEqual(sheet.rules.length, 1);
   const xaml = sheet.resourcesXaml ?? "";
@@ -183,7 +185,11 @@ test("a syntax error is reported, not thrown", () => {
 
 // The cascade.
 
-function stylesFor(css: string, facts: { elementType: string; classes: string[]; states?: string[] }, inline = "") {
+function stylesFor(css: string, facts: {
+  elementType: string;
+  classes: string[];
+  states?: string[];
+}, inline = "") {
   const { sheet } = translate(css);
   const ranked = sheet.rules.map(rule => ({
     rule,
@@ -207,50 +213,66 @@ function stylesFor(css: string, facts: { elementType: string; classes: string[];
 
 test("cascade: every class must be on the element; a type-only rule matches the type", () => {
   const css = ".a.b { opacity: 0.1 }\ntext-block { opacity: 0.2 }";
-  assert.deepEqual(stylesFor(css, {
-    elementType: "border",
-    classes: ["a"]
-  }), []);
-  assert.deepEqual(stylesFor(css, {
-    elementType: "border",
-    classes: ["a", "b"]
-  }), [["Opacity", "0.1"]]);
-  assert.deepEqual(stylesFor(css, {
-    elementType: "text-block",
-    classes: []
-  }), [["Opacity", "0.2"]]);
+  assert.deepEqual(
+    stylesFor(css, {
+      elementType: "border",
+      classes: ["a"]
+    }), []
+  );
+  assert.deepEqual(
+    stylesFor(css, {
+      elementType: "border",
+      classes: ["a", "b"]
+    }), [["Opacity", "0.1"]]
+  );
+  assert.deepEqual(
+    stylesFor(css, {
+      elementType: "text-block",
+      classes: []
+    }), [["Opacity", "0.2"]]
+  );
 });
 
 test("cascade: higher specificity wins whatever the order, then the later rule", () => {
   const css = ".a.b { opacity: 0.1 }\n.a { opacity: 0.2 }\n.b { opacity: 0.3 }";
-  assert.deepEqual(stylesFor(css, {
-    elementType: "border",
-    classes: ["a", "b"]
-  }), [["Opacity", "0.1"]]);
-  assert.deepEqual(stylesFor(css, {
-    elementType: "border",
-    classes: ["a"]
-  }), [["Opacity", "0.2"]]);
+  assert.deepEqual(
+    stylesFor(css, {
+      elementType: "border",
+      classes: ["a", "b"]
+    }), [["Opacity", "0.1"]]
+  );
+  assert.deepEqual(
+    stylesFor(css, {
+      elementType: "border",
+      classes: ["a"]
+    }), [["Opacity", "0.2"]]
+  );
 });
 
 test("cascade: a state rule applies only while its state is active", () => {
   const css = ".a { opacity: 1 }\n.a:hover { opacity: 0.5 }";
-  assert.deepEqual(stylesFor(css, {
-    elementType: "border",
-    classes: ["a"]
-  }), [["Opacity", "1"]]);
-  assert.deepEqual(stylesFor(css, {
-    elementType: "border",
-    classes: ["a"],
-    states: ["hover"]
-  }), [["Opacity", "0.5"]]);
+  assert.deepEqual(
+    stylesFor(css, {
+      elementType: "border",
+      classes: ["a"]
+    }), [["Opacity", "1"]]
+  );
+  assert.deepEqual(
+    stylesFor(css, {
+      elementType: "border",
+      classes: ["a"],
+      states: ["hover"]
+    }), [["Opacity", "0.5"]]
+  );
 });
 
 test("cascade: the element's own style beats every rule", () => {
-  assert.deepEqual(stylesFor(".a { opacity: 1 !important; width: 10px }", {
-    elementType: "border",
-    classes: ["a"]
-  }, "width: 20px; opacity: 0"), [["Opacity", "1"], ["Width", "20"]]);
+  assert.deepEqual(
+    stylesFor(".a { opacity: 1 !important; width: 10px }", {
+      elementType: "border",
+      classes: ["a"]
+    }, "width: 20px; opacity: 0"), [["Opacity", "1"], ["Width", "20"]]
+  );
 });
 
 test("a Style as XAML: based on, setters, element-form setters", () => {
@@ -275,11 +297,13 @@ test("a Style as XAML: based on, setters, element-form setters", () => {
     ],
     writes: []
   });
-  assert.equal(xaml, [
-    "<Style x:Key=\"K\" TargetType=\"TextBlock\" BasedOn=\"{StaticResource CaptionTextBlockStyle}\">",
-    "  <Setter Property=\"Foreground\" Value=\"{ThemeResource TextFillColorSecondaryBrush}\"/>",
-    "  <Setter Property=\"OpacityTransition\"><Setter.Value><ScalarTransition Duration=\"0:0:0.200\"/></Setter.Value></Setter>",
-    "  <Setter Property=\"FontFamily\" Value=\"A &amp; &quot;B&quot;\"/>",
-    "</Style>"
-  ].join("\n"));
+  assert.equal(
+    xaml, [
+      "<Style x:Key=\"K\" TargetType=\"TextBlock\" BasedOn=\"{StaticResource CaptionTextBlockStyle}\">",
+      "  <Setter Property=\"Foreground\" Value=\"{ThemeResource TextFillColorSecondaryBrush}\"/>",
+      "  <Setter Property=\"OpacityTransition\"><Setter.Value><ScalarTransition Duration=\"0:0:0.200\"/></Setter.Value></Setter>",
+      "  <Setter Property=\"FontFamily\" Value=\"A &amp; &quot;B&quot;\"/>",
+      "</Style>"
+    ].join("\n")
+  );
 });

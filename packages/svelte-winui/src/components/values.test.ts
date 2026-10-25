@@ -1,6 +1,13 @@
+import {
+  attachedList,
+  cornerSides,
+  gridLengthParts,
+  GridUnit,
+  parseColor,
+  thicknessSides
+} from "./values.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { attachedList, cornerSides, gridLengthParts, GridUnit, parseColor, thicknessSides } from "./values.ts";
 
 test("a number is every side of a thickness", () => {
   assert.deepEqual(thicknessSides(8), [8, 8, 8, 8]);

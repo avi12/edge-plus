@@ -31,9 +31,22 @@ export const PatchOperation = {
 } as const;
 
 export type PatchOp =
-  | { op: typeof PatchOperation.set; path: PathSegment[]; value: Json }
-  | { op: typeof PatchOperation.remove; path: PathSegment[] }
-  | { op: typeof PatchOperation.splice; path: PathSegment[]; start: number; deleteCount: number; items: Json[] };
+  | {
+    op: typeof PatchOperation.set;
+    path: PathSegment[];
+    value: Json;
+  }
+  | {
+    op: typeof PatchOperation.remove;
+    path: PathSegment[];
+  }
+  | {
+    op: typeof PatchOperation.splice;
+    path: PathSegment[];
+    start: number;
+    deleteCount: number;
+    items: Json[];
+  };
 
 export interface SnapshotMessage {
   type: typeof MessageType.snapshot;
@@ -92,7 +105,8 @@ function isCount(value: unknown): value is number {
 }
 
 export function isPatchOp(value: unknown): value is PatchOp {
-  if (!isRecord(value) || !isPath(value["path"])) {
+  const hasPath = isRecord(value) && isPath(value["path"]);
+  if (!hasPath) {
     return false;
   }
 

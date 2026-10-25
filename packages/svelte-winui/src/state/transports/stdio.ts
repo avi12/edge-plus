@@ -42,9 +42,9 @@ export function createStdioTransport(streams: StdioStreams = {
 // Sends what the app prints with console.log/info/debug to stderr, so a stray
 // log line cannot corrupt the protocol. Call once, first thing in the process.
 export function reserveStdout(): void {
-  const toStderr = (...values: unknown[]): void => {
+  function toStderr(...values: unknown[]): void {
     console.error(...values);
-  };
+  }
   console.log = toStderr;
   console.info = toStderr;
   console.debug = toStderr;

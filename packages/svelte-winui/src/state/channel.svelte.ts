@@ -1,6 +1,12 @@
 import { applyOps } from "./patch.ts";
 import type { ActionMessage, HostMessage, Json } from "./protocol.ts";
-import { isHostMessage, isOwnMessageType, isTypedMessage, MessageType, PatchOperation } from "./protocol.ts";
+import {
+  isHostMessage,
+  isOwnMessageType,
+  isTypedMessage,
+  MessageType,
+  PatchOperation
+} from "./protocol.ts";
 import type { Transport } from "./transports/transport.ts";
 
 // The window's end of the state the host owns. `hostState<View>(channel,
@@ -69,6 +75,7 @@ class StateSlot<State> implements HostState<State> {
       value
     }]);
     this.hasSnapshot = true;
+
     if (this.cell.current !== undefined) {
       this.settled.resolve(this.cell.current);
     }
@@ -92,9 +99,8 @@ class Channel implements HostChannel {
   private readonly transport: Transport;
   private readonly options: ChannelOptions;
   // Typed by whoever asks first: the one place the app's own State type
-  // meets the wire.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private readonly slots = new Map<string, StateSlot<any>>();
+  // meets the wire (an `instanceof` hands the slot back as that State).
+  private readonly slots = new Map<string, unknown>();
   private readonly pending = new Map<number, PendingAction>();
   private readonly stopListening: () => void;
   private nextId = 1;
@@ -116,7 +122,7 @@ class Channel implements HostChannel {
 
   private slotFor<State>(name: string): StateSlot<State> {
     const existing = this.slots.get(name);
-    if (existing !== undefined) {
+    if (existing instanceof StateSlot) {
       return existing;
     }
 
@@ -195,7 +201,7 @@ class Channel implements HostChannel {
     }
 
     const slot = this.slots.get(message.name);
-    const hasSnapshot = slot !== undefined && slot.isReady;
+    const hasSnapshot = slot instanceof StateSlot && slot.isReady;
     if (!hasSnapshot) {
       throw new Error(`a patch for "${message.name}" arrived before its snapshot`);
     }
@@ -210,6 +216,7 @@ class Channel implements HostChannel {
     }
 
     this.pending.delete(id);
+
     if (error === null) {
       action.resolve();
     } else {

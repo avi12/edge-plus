@@ -50,7 +50,8 @@ export class Linker {
       $effect(() => {
         const value = props[key];
         const hasChildren = props.children !== undefined;
-        if (value !== undefined && !hasChildren) {
+        const isWritable = value !== undefined && !hasChildren;
+        if (isWritable) {
           this.write(() => apply(value));
         }
       });

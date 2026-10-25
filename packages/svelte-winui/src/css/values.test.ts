@@ -1,4 +1,14 @@
-import { parseColor, parseLength, parseMilliseconds, parseNumber, parsePercent, parseVariable, splitCommas, splitSlash, splitWords } from "./values.ts";
+import {
+  parseColor,
+  parseLength,
+  parseMilliseconds,
+  parseNumber,
+  parsePercent,
+  parseVariable,
+  splitCommas,
+  splitSlash,
+  splitWords
+} from "./values.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 

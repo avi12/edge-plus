@@ -26,13 +26,19 @@ const context = {
   }
 };
 
+// A hook called with its own `this`, as Vite calls it, whatever stand-in the
+// test gives it for Vite's context.
+function callHook(hook: (...args: never[]) => unknown, thisArg: unknown, args: unknown[]): unknown {
+  return Function.prototype.apply.call(hook, thisArg, args);
+}
+
 function run(name: "transform" | "resolveId" | "load", ...values: string[]): unknown {
   const found = plugin[name];
   if (typeof found !== "function") {
     throw new TypeError(`${name} is not a function`);
   }
 
-  return Reflect.apply(found, context, values);
+  return callHook(found, context, values);
 }
 
 test("a component with a <style> imports its sheet module", () => {
@@ -74,14 +80,18 @@ test("a change to a component reloads its sheet module too", () => {
   }
 
   const component = { id: styled };
-  assert.deepEqual(Reflect.apply(hotUpdate, { environment }, [{
-    file: styled,
-    modules: [component]
-  }]), [component, sheet]);
-  assert.equal(Reflect.apply(hotUpdate, { environment }, [{
-    file: plain,
-    modules: [component]
-  }]), undefined);
+  assert.deepEqual(
+    callHook(hotUpdate, { environment }, [{
+      file: styled,
+      modules: [component]
+    }]), [component, sheet]
+  );
+  assert.equal(
+    callHook(hotUpdate, { environment }, [{
+      file: plain,
+      modules: [component]
+    }]), undefined
+  );
 });
 
 test("a sheet with an error fails the load with its line", () => {

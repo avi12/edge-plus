@@ -1,10 +1,10 @@
-import { startWindowsAppSdk } from "../bootstrap.ts";
 import { diff } from "../../src/state/diff.ts";
 import type { Json } from "../../src/state/protocol.ts";
 import { isRecord, MessageType } from "../../src/state/protocol.ts";
 import { createMessagePortTransport } from "../../src/state/transports/message-port.ts";
-import { MessageChannel, Worker } from "node:worker_threads";
+import { startWindowsAppSdk } from "../bootstrap.ts";
 import { viewName } from "./app-types.ts";
+import { MessageChannel, Worker } from "node:worker_threads";
 
 // The counter example's host: it owns the app's state (a count and a
 // history), sends it as a snapshot and then patches, and answers the actions
@@ -21,7 +21,9 @@ process.stdout.write(`pid ${process.pid}\n`);
 
 const channel = new MessageChannel();
 const worker = new Worker(new URL("./window.ts", import.meta.url), {
-  workerData: { port: channel.port2 },
+  workerData: {
+    port: channel.port2
+  },
   transferList: [channel.port2]
 });
 const transport = createMessagePortTransport(channel.port1);
@@ -50,7 +52,8 @@ transport.listen({
     let error: string | null = null;
     const count = isRecord(state) ? state["count"] : undefined;
     const history = isRecord(state) ? state["history"] : undefined;
-    if (action["kind"] === "increment" && typeof count === "number" && Array.isArray(history)) {
+    const isIncrement = action["kind"] === "increment" && typeof count === "number" && Array.isArray(history);
+    if (isIncrement) {
       publish({
         count: count + 1,
         history: [...history, count + 1].slice(-maximumHistory)

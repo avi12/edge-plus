@@ -14,7 +14,8 @@ function isStringList(value: unknown): value is string[] {
 
 export function loadWinuiCatalogue(): ResourceCatalogue {
   const parsed: unknown = JSON.parse(readFileSync(catalogueFile, "utf8"));
-  if (typeof parsed !== "object" || parsed === null) {
+  const isCatalogue = typeof parsed === "object" && parsed !== null;
+  if (!isCatalogue) {
     throw new TypeError(`${catalogueFile.pathname} is not a resource catalogue`);
   }
 

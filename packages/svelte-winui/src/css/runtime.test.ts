@@ -1,3 +1,4 @@
+import { read } from "../renderer/reflect.ts";
 import { loadWinuiCatalogue } from "./catalogue.ts";
 import type { CssNative } from "./runtime.ts";
 import { installCssRuntime, registerStyleSheet, styledElement, unregisterStyleSheet } from "./runtime.ts";
@@ -44,12 +45,12 @@ const mergedResources: string[] = [];
 const fakeNative: CssNative = {
   loadDictionary: xaml => ({ xaml }),
   mergeIntoApplication(dictionary) {
-    mergedResources.push(String(Reflect.get(dictionary, "xaml")));
+    mergedResources.push(String(read(dictionary, "xaml")));
   },
   lookupStyle: dictionary => dictionary,
   setStyle(target, style) {
     const fakeControl = fake(target);
-    fakeControl.style = style === null ? null : String(Reflect.get(style, "xaml"));
+    fakeControl.style = style === null ? null : String(read(style, "xaml"));
     fakeControl.styleChanges++;
   },
   setGridDefinitions(target, kind, lengths) {

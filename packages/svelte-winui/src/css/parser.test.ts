@@ -6,12 +6,16 @@ import { test } from "node:test";
 test("a rule keeps its selector, declarations and their positions", () => {
   const [block] = parseCss(".card { padding: 12px 16px;\n  color: red !important }");
   assert.equal(block?.kind, BlockKind.Rule);
+
   if (block?.kind !== BlockKind.Rule) {
     return;
   }
 
   assert.equal(block.selector, ".card");
-  assert.deepEqual(block.declarations.map(declaration => [declaration.property, declaration.value, declaration.isImportant]), [
+  const declarations = block.declarations.map(
+    declaration => [declaration.property, declaration.value, declaration.isImportant]
+  );
+  assert.deepEqual(declarations, [
     ["padding", "12px 16px", false],
     ["color", "red", true]
   ]);
@@ -24,6 +28,7 @@ test("a rule keeps its selector, declarations and their positions", () => {
 test("comments, strings and parentheses do not end a declaration", () => {
   const [block] = parseCss("a { /* x; y */ font-family: \"A;B\", serif; background: url(a;b) }");
   assert.equal(block?.kind, BlockKind.Rule);
+
   if (block?.kind !== BlockKind.Rule) {
     return;
   }
@@ -34,6 +39,7 @@ test("comments, strings and parentheses do not end a declaration", () => {
 test("a custom property keeps its case and a property is lower-cased", () => {
   const [block] = parseCss(":root { --Accent: #0af; COLOR: red }");
   assert.equal(block?.kind, BlockKind.Rule);
+
   if (block?.kind !== BlockKind.Rule) {
     return;
   }
@@ -46,7 +52,9 @@ test("@media holds rules and an at-rule ending in a semicolon has no children", 
   const [importRule, media] = blocks;
   assert.equal(importRule?.kind, BlockKind.AtRule);
   assert.equal(media?.kind, BlockKind.AtRule);
-  if (importRule?.kind !== BlockKind.AtRule || media?.kind !== BlockKind.AtRule) {
+
+  const areAtRules = importRule?.kind === BlockKind.AtRule && media?.kind === BlockKind.AtRule;
+  if (!areAtRules) {
     return;
   }
 
@@ -59,6 +67,7 @@ test("@media holds rules and an at-rule ending in a semicolon has no children", 
 test("a rule nested in a rule is recorded where it starts", () => {
   const [block] = parseCss(".a {\n  color: red;\n  &:hover { color: blue }\n  margin: 0 }");
   assert.equal(block?.kind, BlockKind.Rule);
+
   if (block?.kind !== BlockKind.Rule) {
     return;
   }
@@ -79,20 +88,24 @@ test("a source map turns a generated position into the .svelte file's", () => {
   // and the segment after it, 10 columns on, to source column 12 (UAAU: +10,+0,+0,+10).
   const map = { mappings: "AAIE,UAAU" };
   const mapper = createPositionMapper(map);
-  assert.deepEqual(mapper({
-    line: 1,
-    column: 1
-  }), {
-    line: 5,
-    column: 3
-  });
-  assert.deepEqual(mapper({
-    line: 1,
-    column: 11
-  }), {
-    line: 5,
-    column: 13
-  });
+  assert.deepEqual(
+    mapper({
+      line: 1,
+      column: 1
+    }), {
+      line: 5,
+      column: 3
+    }
+  );
+  assert.deepEqual(
+    mapper({
+      line: 1,
+      column: 11
+    }), {
+      line: 5,
+      column: 13
+    }
+  );
 });
 
 test("without a map positions stay as they are", () => {

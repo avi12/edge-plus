@@ -1,8 +1,8 @@
+import { panelWindowModule } from "../bootstrap.ts";
 import { roInitialize } from "@microsoft/dynwinrt";
 import { registerHooks } from "node:module";
 import type { MessagePort } from "node:worker_threads";
 import { workerData } from "node:worker_threads";
-import { panelWindowModule } from "../bootstrap.ts";
 
 // The counter example's UI thread: Edge+'s window start (startScheduled,
 // Application.create) around the package's state layer. The host's messages
@@ -42,22 +42,26 @@ const heldTimers = new Set<unknown>();
 
 await Application.startScheduled(() => {
   Application.create(() => {
-    const channel = createHostChannel(createMessagePortTransport(port, {
-      poll(drain) {
-        const timer = DispatcherQueue.getForCurrentThread().createTimer();
-        timer.interval = milliseconds(pollMilliseconds);
-        timer.isRepeating = true;
-        timer.onTick(drain);
-        timer.start();
-        heldTimers.add(timer);
-        return () => timer.stop();
-      }
-    }));
+    const channel = createHostChannel(
+      createMessagePortTransport(port, {
+        poll(drain) {
+          const timer = DispatcherQueue.getForCurrentThread().createTimer();
+          timer.interval = milliseconds(pollMilliseconds);
+          timer.isRepeating = true;
+          timer.onTick(drain);
+          timer.start();
+          heldTimers.add(timer);
+          return () => timer.stop();
+        }
+      })
+    );
     const fragment = renderer.createFragment();
     mount(App, {
       renderer,
       target: fragment,
-      props: { channel }
+      props: {
+        channel
+      }
     });
     const window = new Window();
     window.content = rootControl(fragment);

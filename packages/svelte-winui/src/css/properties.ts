@@ -1,7 +1,14 @@
 import type { LowerOptions } from "./reader.ts";
 import { NotANumber, Reader, Unbounded } from "./reader.ts";
 import type { Declaration } from "./types.ts";
-import { parseLength, parseMilliseconds, parseNumber, parsePercent, splitCommas, splitWords } from "./values.ts";
+import {
+  parseLength,
+  parseMilliseconds,
+  parseNumber,
+  parsePercent,
+  splitCommas,
+  splitWords
+} from "./values.ts";
 
 // THE property map: which CSS property becomes which WinUI property, and how
 // its value is spelled. One table of groups (a group is the CSS properties
@@ -18,10 +25,25 @@ export const ElementType = {
 // A Style setter, a collection a Style cannot set, or the style this one
 // builds on.
 export type Output =
-  | { kind: "setter"; property: string; value: string }
-  | { kind: "content"; property: string; xaml: string }
-  | { kind: "write"; target: "columns" | "rows"; value: string }
-  | { kind: "basedOn"; key: string };
+  | {
+    kind: "setter";
+    property: string;
+    value: string;
+  }
+  | {
+    kind: "content";
+    property: string;
+    xaml: string;
+  }
+  | {
+    kind: "write";
+    target: "columns" | "rows";
+    value: string;
+  }
+  | {
+    kind: "basedOn";
+    key: string;
+  };
 
 export interface LoweredStyle {
   basedOn: string | null;
@@ -84,7 +106,11 @@ function brushProperty(member: string, property: string): PropertyGroup {
   });
 }
 
-function lengthProperty(member: string, property: string, extra: ReadonlyMap<string, string> = new Map()): PropertyGroup {
+function lengthProperty(
+  member: string,
+  property: string,
+  extra: ReadonlyMap<string, string> = new Map()
+): PropertyGroup {
   return simple(member, property, reader => {
     const word = reader.single();
     if (word === null) {
@@ -296,7 +322,8 @@ function gridTemplate(target: "columns" | "rows", member: string): PropertyGroup
       const tracks = splitWords(reader.declaration.value).flatMap(repeated);
       const lengths = tracks.map(track => gridLength(track, reader));
       const isNone = reader.declaration.value.toLowerCase() === "none";
-      if (isNone || lengths.includes(null)) {
+      const isUnusable = isNone || lengths.includes(null);
+      if (isUnusable) {
         return isNone ? [{
           kind: "write",
           target,
@@ -370,8 +397,13 @@ function gridPlacement(axis: "grid-column" | "grid-row"): PropertyGroup {
 
       if (end?.span !== undefined) {
         outputs.push(setter(span, String(end.span)));
-      } else if (end?.line !== undefined && start?.line !== undefined) {
-        outputs.push(setter(span, String(end.line - start.line)));
+      } else {
+        const endLine = end?.line;
+        const startLine = start?.line;
+        const hasBothLines = endLine !== undefined && startLine !== undefined;
+        if (hasBothLines) {
+          outputs.push(setter(span, String(endLine - startLine)));
+        }
       }
 
       return outputs;
@@ -379,7 +411,10 @@ function gridPlacement(axis: "grid-column" | "grid-row"): PropertyGroup {
   };
 }
 
-function parseLine(reader: Reader | undefined): { line?: number; span?: number } | undefined {
+function parseLine(reader: Reader | undefined): {
+  line?: number;
+  span?: number;
+} | undefined {
   if (reader === undefined) {
     return undefined;
   }
@@ -486,12 +521,14 @@ function display(input: GroupInput): Output[] {
   const isKnownType = elementType !== null;
   const isFlexOnStack = elementType === ElementType.StackPanel;
   const isGridOnGrid = elementType === ElementType.Grid;
-  if (isFlex && isKnownType && !isFlexOnStack) {
+  const isFlexOnWrongType = isFlex && isKnownType && !isFlexOnStack;
+  if (isFlexOnWrongType) {
     reader.error(`display: ${word} has no WinUI meaning on ${describeType(elementType)} (a flex row or column is a <stack-panel>; use grid for two dimensions)`);
     return [];
   }
 
-  if (isGrid && isKnownType && !isGridOnGrid) {
+  const isGridOnWrongType = isGrid && isKnownType && !isGridOnGrid;
+  if (isGridOnWrongType) {
     reader.error(`display: ${word} has no WinUI meaning on ${describeType(elementType)} (only a <grid> lays out in rows and columns)`);
     return [];
   }
@@ -522,7 +559,8 @@ function gap(input: GroupInput): Output[] {
   }
 
   const reader = rowReader ?? columnReader;
-  if (elementType !== null && reader !== undefined) {
+  const canReportGap = elementType !== null && reader !== undefined;
+  if (canReportGap) {
     reader.error(`gap has no WinUI meaning on ${describeType(elementType)} (only <stack-panel> has Spacing and <grid> has RowSpacing and ColumnSpacing)`);
   }
 
@@ -545,13 +583,15 @@ function overflow(input: GroupInput): Output[] {
   for (const [member, property] of axes) {
     const reader = input.readers.get(member);
     const word = reader?.single()?.toLowerCase();
-    if (reader === undefined || word === undefined || word === "visible") {
+    const isClipped = reader !== undefined && word !== undefined && word !== "visible";
+    if (!isClipped) {
       continue;
     }
 
     const visibility = reader.keyword(word, scrollBarVisibilities);
     const { elementType } = input.options;
-    if (visibility !== null && elementType !== null && elementType !== ElementType.ScrollViewer) {
+    const isOnWrongType = visibility !== null && elementType !== null && elementType !== ElementType.ScrollViewer;
+    if (isOnWrongType) {
       reader.error(`${member}: ${word} has no WinUI meaning on ${describeType(elementType)} (scrolling belongs to a <scroll-viewer>; WinUI has no Style value for clipping)`);
     } else if (visibility !== null) {
       outputs.push(setter(property, visibility));
@@ -727,7 +767,10 @@ function ignored(member: string, why: string): PropertyGroup {
 // The groups, in precedence order: where two set the same WinUI property, the
 // later one wins (display none over visibility).
 const propertyGroups: readonly PropertyGroup[] = [
-  { members: [basedOnProperty], lower: basedOn },
+  {
+    members: [basedOnProperty],
+    lower: basedOn
+  },
   thicknessGroup("margin", "Margin"),
   thicknessGroup("padding", "Padding"),
   borderThickness(),
@@ -746,7 +789,10 @@ const propertyGroups: readonly PropertyGroup[] = [
   simple("font-weight", "FontWeight", fontWeight),
   simple("font-family", "FontFamily", fontFamily),
   keywordProperty("font-style", "FontStyle", fontStyles),
-  { members: ["line-height"], lower: lineHeight },
+  {
+    members: ["line-height"],
+    lower: lineHeight
+  },
   simple("letter-spacing", "CharacterSpacing", letterSpacing),
   keywordProperty("text-align", "TextAlignment", textAlignments),
   keywordProperty("text-wrap", "TextWrapping", wrapKeywords),
@@ -757,14 +803,23 @@ const propertyGroups: readonly PropertyGroup[] = [
   alignmentProperty("align-self", "VerticalAlignment", "Top", "Bottom"),
   alignmentProperty("justify-self", "HorizontalAlignment", "Left", "Right"),
   keywordProperty("flex-direction", "Orientation", flexDirections),
-  { members: ["row-gap", "column-gap"], lower: gap },
+  {
+    members: ["row-gap", "column-gap"],
+    lower: gap
+  },
   gridTemplate("columns", "grid-template-columns"),
   gridTemplate("rows", "grid-template-rows"),
   gridPlacement("grid-column"),
   gridPlacement("grid-row"),
-  { members: ["overflow-x", "overflow-y"], lower: overflow },
+  {
+    members: ["overflow-x", "overflow-y"],
+    lower: overflow
+  },
   keywordProperty("visibility", "Visibility", visibilities),
-  { members: ["display"], lower: display },
+  {
+    members: ["display"],
+    lower: display
+  },
   keywordProperty("pointer-events", "IsHitTestVisible", hitTesting),
   simple("z-index", "Canvas.ZIndex", reader => {
     const value = parseNumber(reader.single() ?? "");
@@ -773,7 +828,10 @@ const propertyGroups: readonly PropertyGroup[] = [
   multiple("translate", translation),
   multiple("scale", scaling),
   multiple("rotate", rotation),
-  { members: ["transition"], lower: transition },
+  {
+    members: ["transition"],
+    lower: transition
+  },
   ignored("cursor", "WinUI's controls choose their own cursor")
 ];
 
@@ -837,11 +895,13 @@ export function lowerDeclarations(computed: ReadonlyMap<string, Declaration>, op
     }
 
     if (readers.size > 0) {
-      outputs.push(...group.lower({
-        options,
-        computed,
-        readers
-      }));
+      outputs.push(
+        ...group.lower({
+          options,
+          computed,
+          readers
+        })
+      );
     }
   }
 

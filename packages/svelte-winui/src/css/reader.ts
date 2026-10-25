@@ -1,6 +1,13 @@
 import type { ResourceKind, VariableResolution } from "./resources.ts";
 import type { Declaration, Severity, SourcePosition } from "./types.ts";
-import { parseColor, parseLength, parseNumber, parsePercent, parseVariable, splitWords } from "./values.ts";
+import {
+  parseColor,
+  parseLength,
+  parseNumber,
+  parsePercent,
+  parseVariable,
+  splitWords
+} from "./values.ts";
 
 // What the lowering of a declaration needs from its surroundings, and a reader
 // that parses one declaration's value into WinUI's spelling, reporting what it
