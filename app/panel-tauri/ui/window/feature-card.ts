@@ -1,13 +1,15 @@
 import type { CardWording } from "../protocol.g.ts";
-import { CardFrame } from "./card-frame.ts";
+import CardFrame from "./card-frame.svelte";
 import { boxed } from "./layout.ts";
-import type { Border, FrameworkElement } from "./winui.ts";
+import type { Mounted } from "./mount.svelte.ts";
+import { mountControl } from "./mount.svelte.ts";
+import type { FrameworkElement } from "./winui.ts";
 import { AutomationProperties, ToggleSwitch } from "./winui.ts";
 
 // A card with a switch at its end.
 export class FeatureCard {
   private readonly toggle = new ToggleSwitch();
-  private readonly frame: CardFrame;
+  private readonly frame: Mounted<Record<string, unknown>>;
   // So update's write to the switch is not taken for a click.
   private isUpdating = false;
 
@@ -21,11 +23,14 @@ export class FeatureCard {
         onToggled(this.toggle.isOn);
       }
     });
-    this.frame = new CardFrame(wording, this.toggle);
+    this.frame = mountControl(CardFrame, {
+      wording,
+      control: this.toggle
+    });
   }
 
-  get view(): Border {
-    return this.frame.view;
+  get view(): FrameworkElement {
+    return this.frame.root;
   }
 
   update(isOn: boolean, isLocked: boolean, note: string): void {
@@ -33,10 +38,10 @@ export class FeatureCard {
     this.toggle.isOn = isOn;
     this.isUpdating = false;
     this.toggle.isEnabled = !isLocked;
-    this.frame.setNote(note);
+    this.frame.set({ note });
   }
 
   setBody(body: FrameworkElement): void {
-    this.frame.setBody(body);
+    this.frame.set({ body });
   }
 }

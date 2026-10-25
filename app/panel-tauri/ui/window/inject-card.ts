@@ -1,15 +1,17 @@
 import type { InjectView } from "../protocol.g.ts";
-import { CardFrame } from "./card-frame.ts";
+import CardFrame from "./card-frame.svelte";
 import { boxed } from "./layout.ts";
+import type { Mounted } from "./mount.svelte.ts";
+import { mountControl } from "./mount.svelte.ts";
 import { style, StyleKey } from "./styles.ts";
-import type { Border } from "./winui.ts";
+import type { FrameworkElement } from "./winui.ts";
 import { Button } from "./winui.ts";
 
 // The Inject button, as a card under the Inject automatically switch. When it
 // is shown, and whether it can be pressed, is the core's decision.
 export class InjectCard {
   private readonly button = new Button();
-  private readonly frame: CardFrame;
+  private readonly frame: Mounted<Record<string, unknown>>;
   private shown: InjectView;
 
   constructor(offer: InjectView, onClicked: () => void) {
@@ -20,17 +22,20 @@ export class InjectCard {
       this.button.isEnabled = false;
       onClicked();
     });
-    this.frame = new CardFrame(offer.wording, this.button);
+    this.frame = mountControl(CardFrame, {
+      wording: offer.wording,
+      control: this.button
+    });
     this.update(offer);
   }
 
-  get view(): Border {
-    return this.frame.view;
+  get view(): FrameworkElement {
+    return this.frame.root;
   }
 
   update(offer: InjectView): void {
     this.shown = offer;
-    this.frame.setWording(offer.wording);
+    this.frame.set({ wording: offer.wording });
     this.button.content = boxed(offer.button);
     this.button.isEnabled = offer.isEnabled;
   }

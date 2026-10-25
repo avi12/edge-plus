@@ -7,7 +7,7 @@ import * as motion from "./motion.ts";
 import { OwnThemeList } from "./own-theme-list.ts";
 import { style, StyleKey } from "./styles.ts";
 import { ThemePicker } from "./theme-picker.ts";
-import type { Border, Grid } from "./winui.ts";
+import type { FrameworkElement, Grid } from "./winui.ts";
 import {
   Button,
   KeyRoutedEventArgs,
@@ -104,7 +104,7 @@ export class ThemingCard {
     motion.animate(this.body, motion.reposition);
   }
 
-  get view(): Border {
+  get view(): FrameworkElement {
     return this.card.view;
   }
 

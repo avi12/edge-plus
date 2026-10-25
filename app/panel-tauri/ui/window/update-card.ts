@@ -1,8 +1,10 @@
 import type { UpdateView } from "../protocol.g.ts";
-import { CardFrame } from "./card-frame.ts";
+import CardFrame from "./card-frame.svelte";
 import { boxed } from "./layout.ts";
+import type { Mounted } from "./mount.svelte.ts";
+import { mountControl } from "./mount.svelte.ts";
 import { style, StyleKey } from "./styles.ts";
-import type { Border } from "./winui.ts";
+import type { FrameworkElement } from "./winui.ts";
 import { Button, Visibility } from "./winui.ts";
 
 const hiddenWording = {
@@ -15,7 +17,7 @@ const hiddenWording = {
 // into it. Hidden until one is ready.
 export class UpdateCard {
   private readonly button = new Button();
-  private readonly frame: CardFrame;
+  private readonly frame: Mounted<Record<string, unknown>>;
   private shown: UpdateView | null = null;
 
   constructor(onClicked: () => void) {
@@ -26,12 +28,15 @@ export class UpdateCard {
       this.button.content = boxed(this.shown?.restarting ?? "");
       onClicked();
     });
-    this.frame = new CardFrame(hiddenWording, this.button);
-    this.frame.view.visibility = Visibility.Collapsed;
+    this.frame = mountControl(CardFrame, {
+      wording: hiddenWording,
+      control: this.button
+    });
+    this.frame.root.visibility = Visibility.Collapsed;
   }
 
-  get view(): Border {
-    return this.frame.view;
+  get view(): FrameworkElement {
+    return this.frame.root;
   }
 
   show(update: UpdateView | null): void {
@@ -45,9 +50,9 @@ export class UpdateCard {
     }
 
     this.shown = update;
-    this.frame.setWording(update.wording);
+    this.frame.set({ wording: update.wording });
     this.reset();
-    this.frame.view.visibility = Visibility.Visible;
+    this.frame.root.visibility = Visibility.Visible;
   }
 
   // The restart failed: the button comes back, so it can be tried again.

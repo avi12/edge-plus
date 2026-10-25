@@ -51,6 +51,7 @@ export { ScalarTransition } from "#winui/microsoft/ui/xaml/ScalarTransition";
 export { Rectangle } from "#winui/microsoft/ui/xaml/shapes/Rectangle";
 export { Style } from "#winui/microsoft/ui/xaml/Style";
 export { TextTrimming } from "#winui/microsoft/ui/xaml/TextTrimming";
+export { UIElement } from "#winui/microsoft/ui/xaml/UIElement";
 export { VerticalAlignment } from "#winui/microsoft/ui/xaml/VerticalAlignment";
 export { Visibility } from "#winui/microsoft/ui/xaml/Visibility";
 export { VisualStateManager } from "#winui/microsoft/ui/xaml/VisualStateManager";

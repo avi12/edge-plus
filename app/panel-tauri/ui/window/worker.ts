@@ -7,6 +7,13 @@ import { workerData } from "node:worker_threads";
 const singleThreadedApartment = 0;
 
 roInitialize(singleThreadedApartment);
+// From source, .svelte files are compiled as they load; the kit's are built.
+const isFromSource = import.meta.filename.endsWith(".ts");
+if (isFromSource) {
+  const hooks = "./svelte-hooks.ts";
+  await import(hooks);
+}
+
 const { runWindow } = await import("./session.ts");
 const port: unknown = workerData;
 if (isPort(port)) {

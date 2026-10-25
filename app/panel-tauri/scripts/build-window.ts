@@ -1,3 +1,5 @@
+import { compileSvelte } from "../ui/window/svelte-compile.ts";
+import type { Plugin } from "esbuild";
 import { build } from "esbuild";
 import { execFileSync } from "node:child_process";
 import {
@@ -65,6 +67,18 @@ function nugetCache(): string {
   return cache;
 }
 
+// The window's .svelte components, compiled as the bundle takes them in.
+const svelteComponents: Plugin = {
+  name: "svelte-components",
+  setup(bundler) {
+    // esbuild runs the filter in Go, which takes no regular expression flags.
+    bundler.onLoad({ filter: /\.svelte(?:\.ts)?$/ }, ({ path: filename }) => ({
+      contents: compileSvelte(filename, readFileSync(filename, "utf8")),
+      loader: "js"
+    }));
+  }
+};
+
 function copy(from: string, to: string): void {
   if (!existsSync(from)) {
     throw new Error(`The window kit needs ${from}`);
@@ -93,6 +107,9 @@ await build({
   target: "node24",
   minify: true,
   external: ["@microsoft/dynwinrt", "@microsoft/dynwinrt/*"],
+  // Svelte's browser build is the one that mounts components.
+  conditions: ["browser"],
+  plugins: [svelteComponents],
   // The generated bindings are CommonJS; ESM output needs a require for them.
   banner: {
     js: "import { createRequire } from \"node:module\"; const require = createRequire(import.meta.url);"

@@ -32,7 +32,8 @@
     }
   },
   "dependencies": {
-    "@microsoft/dynwinrt": "0.1.0-preview.23"
+    "@microsoft/dynwinrt": "0.1.0-preview.23",
+    "svelte": "https://pkg.pr.new/svelte@18042"
   },
   "devDependencies": {
     "@microsoft/dynwinrt-codegen": "0.1.0-preview.23",
