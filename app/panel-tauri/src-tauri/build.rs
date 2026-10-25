@@ -43,8 +43,11 @@ fn main() {
             .any(|source| modified(source).is_some_and(|changed| changed > built))
     });
     if is_stale {
+        // By its full path: cmd skips the current folder when
+        // NoDefaultCurrentDirectoryInExePath is set.
         let status = Command::new("cmd")
-            .args(["/c", "build.cmd"])
+            .arg("/c")
+            .arg(native_split.join("build.cmd"))
             .current_dir(&native_split)
             .status()
             .expect("run app/native-split/build.cmd");
