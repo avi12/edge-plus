@@ -10,6 +10,13 @@ import { createInterface } from "node:readline";
 //
 //   node ui/dev/fixture.ts [view.json] [dist/window]
 
+// Far left of any monitor; PrintWindow still captures it there.
+const offScreen = {
+  x: -8000,
+  y: 0,
+  width: 560,
+  height: 1700
+};
 const viewFile = process.argv[2] ?? path.join(import.meta.dirname, "fixture-view.json");
 const kit = process.argv[3];
 const saved: unknown = JSON.parse(readFileSync(viewFile, "utf8"));
@@ -25,6 +32,16 @@ const window = spawn(node, [entry], { stdio: ["pipe", "pipe", "inherit"] });
 
 function send(message: object): void {
   window.stdin.write(`${JSON.stringify(message)}\n`);
+}
+
+// EDGEPLUS_WINDOW_BACKGROUND=1: an unattended capture, opened off screen and
+// without focus, so it never interrupts the user.
+const isBackgroundRun = process.env["EDGEPLUS_WINDOW_BACKGROUND"] === "1";
+if (isBackgroundRun) {
+  send({
+    type: "place",
+    bounds: offScreen
+  });
 }
 
 send({

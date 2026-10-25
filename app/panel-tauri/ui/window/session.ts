@@ -17,6 +17,9 @@ import { receiveMessageOnPort } from "node:worker_threads";
 // never turns here: the core's messages are taken off the port by a
 // dispatcher timer, and every timer is the dispatcher's.
 const inboxMilliseconds = 30;
+// Set by the dev fixture for unattended captures: the window opens without
+// taking focus (the fixture also places it off screen).
+const backgroundVariable = "EDGEPLUS_WINDOW_BACKGROUND";
 
 type MessageOfType = { [Message in CoreMessage as Message["type"]]: Message };
 type MessageType = keyof MessageOfType;
@@ -111,7 +114,12 @@ class Session {
     }, this.placement);
     shell.onClosed(() => Application.current.exit());
     this.shell = shell;
-    shell.activate();
+    const isBackgroundRun = process.env[backgroundVariable] === "1";
+    if (isBackgroundRun) {
+      shell.showInBackground();
+    } else {
+      shell.activate();
+    }
   }
 
   private close(): void {

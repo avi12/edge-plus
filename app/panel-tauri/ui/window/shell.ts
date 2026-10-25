@@ -114,6 +114,11 @@ export class Shell {
     this.window.activate();
   }
 
+  // Shown without taking focus from whatever the user is doing.
+  showInBackground(): void {
+    this.window.appWindow.showWithActivation(false);
+  }
+
   render(view: View): void {
     this.panel.render(view);
   }
