@@ -2,6 +2,7 @@ import type { ThemeOption } from "../protocol.g.ts";
 import type { Mounted } from "./mount.svelte.ts";
 import { mountControl } from "./mount.svelte.ts";
 import ThemePickerView from "./theme-picker.svelte";
+import type { FrameworkElement } from "./winui.ts";
 import { ComboBox, projectAs } from "./winui.ts";
 
 interface Props extends Record<string, unknown> {
@@ -10,7 +11,9 @@ interface Props extends Record<string, unknown> {
 
 // The theme for one Windows mode (theme-picker.svelte).
 export class ThemePicker {
-  readonly box: ComboBox;
+  // What the page places; the ComboBox itself is combo.
+  readonly box: FrameworkElement;
+  private readonly combo: ComboBox;
   private readonly picker: Mounted<Props>;
   private options: ThemeOption[] = [];
   // So a refill is not taken for a choice.
@@ -18,9 +21,10 @@ export class ThemePicker {
 
   constructor(onPicked: (id: string) => void) {
     this.picker = mountControl<Props>(ThemePickerView, { options: [] });
-    this.box = projectAs(this.picker.root, ComboBox);
-    this.box.onSelectionChanged(() => {
-      const option = this.options.at(this.box.selectedIndex);
+    this.box = this.picker.root;
+    this.combo = projectAs(this.picker.root, ComboBox);
+    this.combo.onSelectionChanged(() => {
+      const option = this.options.at(this.combo.selectedIndex);
       const isUserChoice = !this.isFilling && option !== undefined;
       if (isUserChoice) {
         onPicked(option.id);
@@ -45,8 +49,8 @@ export class ThemePicker {
   // option.
   private select(id: string): void {
     const wanted = Math.max(this.options.findIndex(option => option.id === id), 0);
-    if (this.box.selectedIndex !== wanted) {
-      this.box.selectedIndex = wanted;
+    if (this.combo.selectedIndex !== wanted) {
+      this.combo.selectedIndex = wanted;
     }
   }
 }

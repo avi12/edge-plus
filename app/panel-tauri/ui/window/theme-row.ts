@@ -1,7 +1,7 @@
 import type { ThemeRow } from "../protocol.g.ts";
 import { mountControl } from "./mount.svelte.ts";
 import ThemeRowView from "./theme-row.svelte";
-import { Grid, projectAs } from "./winui.ts";
+import type { FrameworkElement } from "./winui.ts";
 import { unboxObject } from "@microsoft/dynwinrt";
 
 const rowKeySeparator = "\n";
@@ -28,10 +28,10 @@ export function keyText(item: unknown): string {
 
 // One theme's row (theme-row.svelte). `onRemove` is null for a theme
 // installed in Edge.
-export function themeRow(theme: ThemeRow, onRemove: (() => void) | null): Grid {
+export function themeRow(theme: ThemeRow, onRemove: (() => void) | null): FrameworkElement {
   const mounted = mountControl(ThemeRowView, {
     theme,
     onRemove
   });
-  return projectAs(mounted.root, Grid);
+  return mounted.root;
 }

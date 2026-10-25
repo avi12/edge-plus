@@ -325,8 +325,17 @@ function eventMethod(control: UIElement, type: string): string {
   throw new Error(`a ${control.constructor.name} has no ${type} event`);
 }
 
+// Which <host> placed each control, so a hot-swapped component's new root
+// can take the old one's place with the same attributes.
+const hostOf = new WeakMap<UIElement, WinuiElement>();
+
 function placeHost(element: WinuiElement, control: unknown): void {
   element.native.control = isControl(control) ? control : null;
+
+  if (element.native.control !== null) {
+    hostOf.set(element.native.control, element);
+  }
+
   for (const [name, value] of element.attributes) {
     if (name !== hostAttribute) {
       applyAttribute(element, name, value);
@@ -388,6 +397,9 @@ const winuiHost: NativeHost<WinuiNative> = {
     }
   },
   childrenChanged: sync,
+  fragmentChanged(fragment) {
+    rootWatchers.get(fragment)?.(firstControl(fragment));
+  },
   removed: releaseHosts,
   listen(element, type, handler) {
     const control = element.native.control;
@@ -418,16 +430,67 @@ export function withControl<Control>(
   };
 }
 
-// The control a mounted component made first: its root.
-export function rootControl(fragment: FragmentNode<WinuiNative>): FrameworkElement {
-  for (const child of fragment.children) {
+function firstControl(parent: FragmentNode<WinuiNative> | WinuiElement): FrameworkElement | null {
+  for (const child of parent.children) {
     const control = child.type === NodeType.Element ? child.native.control : null;
     if (isFrameworkElement(control)) {
       return control;
     }
   }
 
-  throw new Error("the component made no control");
+  return null;
+}
+
+// The control a mounted component made first: its root.
+export function rootControl(parent: FragmentNode<WinuiNative> | WinuiElement): FrameworkElement {
+  const control = firstControl(parent);
+  if (control === null) {
+    throw new Error("the component made no control");
+  }
+
+  return control;
+}
+
+// Told the mount target's first control each time its children change.
+const rootWatchers = new WeakMap<FragmentNode<WinuiNative>, (control: FrameworkElement | null) => void>();
+
+export function watchRoot(
+  fragment: FragmentNode<WinuiNative>,
+  onChange: (control: FrameworkElement | null) => void
+): void {
+  rootWatchers.set(fragment, onChange);
+}
+
+const gridPlacements = ["Row", "Column", "RowSpan", "ColumnSpan"];
+
+// Puts `next` where `previous` is: through the <host> that placed it, with
+// that host's attributes, or else in its parent control, keeping its place in
+// a grid.
+export function swapControl(previous: FrameworkElement, next: FrameworkElement): void {
+  const host = hostOf.get(previous);
+  if (host !== undefined) {
+    placeHost(host, next);
+    return;
+  }
+
+  const parent = read(previous, "parent");
+  if (!isRecord(parent)) {
+    return;
+  }
+
+  for (const placement of gridPlacements) {
+    call(winui.Grid, `set${placement}`, next, call(winui.Grid, `get${placement}`, previous));
+  }
+
+  const slot = ["children", "child", "content"].find(property => property in parent);
+  if (slot === "children") {
+    const collection = read(parent, slot);
+    const index = Number(call(collection, "indexOf", previous));
+    call(collection, "removeAt", index);
+    call(collection, "insertAt", index, next);
+  } else if (slot !== undefined) {
+    write(parent, slot, next);
+  }
 }
 
 export default renderer;

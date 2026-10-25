@@ -52,6 +52,9 @@ export interface NativeHost<Native> {
   setAttribute(element: ElementNode<Native>, name: string, value: unknown): void;
   removeAttribute(element: ElementNode<Native>, name: string): void;
   childrenChanged(element: ElementNode<Native>): void;
+  // A fragment's children changed: a mount target's, when a hot update
+  // replaces a component's nodes.
+  fragmentChanged(fragment: FragmentNode<Native>): void;
   // A subtree Svelte has removed and will not insert again.
   removed(node: TreeNode<Native>): void;
   // What ends the subscription, or null when nothing was subscribed.
@@ -65,6 +68,8 @@ export function parentElement<Native>(node: TreeNode<Native>): ElementNode<Nativ
 function notify<Native>(host: NativeHost<Native>, parent: ParentNode<Native> | null): void {
   if (parent?.type === NodeType.Element) {
     host.childrenChanged(parent);
+  } else if (parent?.type === NodeType.Fragment) {
+    host.fragmentChanged(parent);
   }
 }
 
