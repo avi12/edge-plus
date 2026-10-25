@@ -1,6 +1,6 @@
-import type { ProbeElement } from "./svelte-tree-probe.ts";
-import probeRenderer, { outline } from "./svelte-tree-probe.ts";
-import { nextSibling } from "./svelte-tree.ts";
+import type { ProbeElement } from "./tree-probe.ts";
+import probeRenderer, { outline } from "./tree-probe.ts";
+import { nextSibling } from "./tree.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 

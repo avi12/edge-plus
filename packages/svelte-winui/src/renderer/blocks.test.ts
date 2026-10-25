@@ -1,7 +1,7 @@
-import { svelteHooks } from "./svelte-loader.ts";
-import type { ProbeElement } from "./svelte-tree-probe.ts";
-import probeRenderer, { outline } from "./svelte-tree-probe.ts";
-import { NodeType } from "./svelte-tree.ts";
+import { svelteHooks } from "../vite/loader.ts";
+import type { ProbeElement } from "./tree-probe.ts";
+import probeRenderer, { outline } from "./tree-probe.ts";
+import { NodeType } from "./tree.ts";
 import assert from "node:assert/strict";
 import { registerHooks } from "node:module";
 import path from "node:path";
@@ -10,9 +10,9 @@ import { test } from "node:test";
 // A real component through the tree: {#if} and keyed {#each} anchor on
 // comments, insert before them, and a reorder moves the same nodes.
 
-registerHooks(svelteHooks(path.join(import.meta.dirname, "svelte-tree-probe.ts")));
+registerHooks(svelteHooks(path.join(import.meta.dirname, "tree-probe.ts")));
 const { flushSync, mount } = await import("svelte");
-const { default: Blocks } = await import("./svelte-blocks.fixture.svelte");
+const { default: Blocks } = await import("./blocks.fixture.svelte");
 
 function elementsOf(panel: ProbeElement): ProbeElement[] {
   return panel.children.flatMap(child => child.type === NodeType.Element ? [child] : []);

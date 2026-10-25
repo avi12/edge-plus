@@ -1,5 +1,5 @@
-import type { ElementNode, FragmentNode, NativeHost, TreeNode } from "./svelte-tree.ts";
-import { createTreeRenderer, NodeType } from "./svelte-tree.ts";
+import type { ElementNode, FragmentNode, NativeHost, TreeNode } from "./tree.ts";
+import { createTreeRenderer, NodeType } from "./tree.ts";
 
 // A host with no platform behind it, for the tests: each element counts how
 // often its children changed and how many events it listens to; its

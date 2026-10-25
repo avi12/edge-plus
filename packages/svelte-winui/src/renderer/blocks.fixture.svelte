@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Svelte's blocks through a custom renderer, for svelte-blocks.test.ts.
+  // Svelte's blocks through a custom renderer, for blocks.test.ts.
   let items = $state(["a", "b", "c"]);
   let isHeaderShown = $state(true);
 

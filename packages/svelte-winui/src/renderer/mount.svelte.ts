@@ -1,7 +1,14 @@
-import renderer, { rootControl, swapControl, watchRoot } from "./svelte-renderer.ts";
-import type { FrameworkElement } from "./winui.ts";
+import { flush } from "../scheduling.ts";
+import type { FrameworkElement } from "../winui.ts";
+import renderer, {
+  releaseFragment,
+  rootControl,
+  swapControl,
+  unwatchRoot,
+  watchRoot
+} from "./host.ts";
 import type { Component } from "svelte";
-import { flushSync, mount } from "svelte";
+import { mount, unmount } from "svelte";
 
 // A .svelte component mounted on WinUI: its root control, to put in the page,
 // and set(), which changes some of its props; Svelte then updates only what
@@ -11,6 +18,10 @@ import { flushSync, mount } from "svelte";
 export interface Mounted<Props> {
   readonly root: FrameworkElement;
   set(changes: Partial<Props>): void;
+  // Ends the component's effects (attachment cleanups included) and lets go
+  // of the controls it made, except the ones the app placed in it. The root
+  // control is left where the page has it, for the page to drop.
+  unmount(): void;
 }
 
 export function mountControl<Props extends object>(
@@ -19,12 +30,12 @@ export function mountControl<Props extends object>(
 ): Mounted<Props> {
   const props = $state(initial);
   const fragment = renderer.createFragment();
-  mount(component, {
+  const instance = mount(component, {
     renderer,
     target: fragment,
     props
   });
-  flushSync();
+  flush();
   let root = rootControl(fragment);
   // A new root (a hot update, or a root inside {#if}) takes the old one's
   // place in the page, which holds the old control by then.
@@ -41,7 +52,14 @@ export function mountControl<Props extends object>(
     },
     set(changes) {
       Object.assign(props, changes);
-      flushSync();
+      flush();
+    },
+    unmount() {
+      // Before Svelte removes the nodes, so the page is not told of a root
+      // that is going.
+      unwatchRoot(fragment);
+      void unmount(instance);
+      releaseFragment(fragment);
     }
   };
 }

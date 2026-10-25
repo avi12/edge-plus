@@ -1,12 +1,7 @@
+import type { FrameworkElement, UIElement } from "../winui.ts";
+import { ColumnDefinition, Grid, RowDefinition } from "../winui.ts";
 import type { KeyedItems } from "./keyed-list.ts";
 import { syncKeyed } from "./keyed-list.ts";
-import {
-  autoLength,
-  boxed,
-  pixelLength,
-  starLength,
-  thickness
-} from "./layout.ts";
 import type { GridLength } from "./markup.ts";
 import {
   camelCase,
@@ -17,27 +12,35 @@ import {
   splitList,
   thicknessSides
 } from "./markup.ts";
-import { style, StyleKey } from "./styles.ts";
-import type { ElementNode, FragmentNode, NativeHost, TreeNode } from "./svelte-tree.ts";
-import { createTreeRenderer, NodeType, parentElement } from "./svelte-tree.ts";
-import type { FrameworkElement, UIElement } from "./winui.ts";
-import * as winui from "./winui.ts";
+import { call, isRecord, read, write } from "./reflect.ts";
+import type { ElementNode, FragmentNode, NativeHost, TreeNode } from "./tree.ts";
+import { createTreeRenderer, NodeType, parentElement } from "./tree.ts";
+import {
+  autoLength,
+  boxed,
+  pixelLength,
+  starLength,
+  thickness
+} from "./values.ts";
 
 // Svelte's custom renderer for WinUI: a .svelte component's elements are
 // WinUI's own controls, named in kebab case (<stack-panel>, <text-block>), so
 // the window keeps native controls, Windows' light and dark and the acrylic
-// backdrop. The tree itself is svelte-tree.ts; here each element's native
-// children follow it (a panel's children, a border's child, a button's
-// content, a text block's text).
+// backdrop. The tree itself is tree.ts; here each element's native children
+// follow it (a panel's children, a border's child, a button's content, a text
+// block's text).
 //
-//   class="CardTitle"           the style StyleKey.CardTitle names
+//   class="CardTitle"           what the app's class handler makes of it
 //   vertical-alignment="Center" a property; a quoted value becomes the
 //                               property's enum, number, flag or Thickness
+//   on-content="On"             a property too (ToggleSwitch.OnContent): only
+//                               a name with no dash is an event
 //   grid.column={1}             an attached property: Grid.setColumn
 //   columns="Auto,*,Auto"       a grid's columns (rows= its rows)
 //   ontoggled={handler}         an event: onToggled
 //   <host element={control} />  a control made elsewhere, placed here
-//   {@attach withControl(...)}  the element's control, handed to code
+//   {@attach control(...)}      the element's control, handed to code
+//                               (control.ts)
 
 interface WinuiNative {
   control: UIElement | null;
@@ -49,21 +52,36 @@ type WinuiElement = ElementNode<WinuiNative>;
 type AttributeHandler = (control: UIElement, name: string, value: unknown) => void;
 type TextConverter = (text: string, property: string) => unknown;
 
+// What `class="..."` does on an element: the app decides, since a class is
+// whatever the app's styling makes of it.
+export type ClassHandler = (control: UIElement, value: string) => void;
+
 const hostTag = "host";
 const hostAttribute = "element";
-const styleAttribute = "class";
+const classAttribute = "class";
 const attachedSeparator = ".";
+const wordSeparator = "-";
 const thicknessProperties = new Set(["margin", "padding", "borderThickness"]);
-const exports = new Map<string, unknown>(Object.entries(winui));
-const styleKeys = new Map(Object.entries(StyleKey));
+// The classes and enums a tag, an enum-valued attribute or an attached
+// property may name, by their WinUI names; the app registers its bindings.
+const controls = new Map<string, unknown>();
+let classHandler: ClassHandler | null = null;
 const gridLengths = new Map<GridUnit, (length: GridLength) => object>([
   [GridUnit.Auto, () => autoLength()],
   [GridUnit.Pixel, (length: GridLength) => pixelLength(length.value)],
   [GridUnit.Star, (length: GridLength) => starLength(length.value)]
 ]);
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return (typeof value === "object" || typeof value === "function") && value !== null;
+// `winui` is the app's one import site of the bindings: every export it has
+// becomes a class a tag can name. Later calls add to earlier ones.
+export function registerControls(winui: Record<string, unknown>): void {
+  for (const [name, value] of Object.entries(winui)) {
+    controls.set(name, value);
+  }
+}
+
+export function setClassHandler(handler: ClassHandler | null): void {
+  classHandler = handler;
 }
 
 function isControlClass(value: unknown): value is new () => UIElement {
@@ -78,23 +96,6 @@ function isFrameworkElement(value: unknown): value is FrameworkElement {
   return isRecord(value) && "margin" in value;
 }
 
-function read(target: unknown, key: string): unknown {
-  return isRecord(target) ? target[key] : undefined;
-}
-
-function call(target: unknown, key: string, ...values: unknown[]): unknown {
-  const method = read(target, key);
-  if (typeof method !== "function") {
-    throw new TypeError(`WinUI has no ${key} here`);
-  }
-
-  return method.apply(target, values);
-}
-
-function write(target: object, key: string, value: unknown): void {
-  Object.assign(target, { [key]: value });
-}
-
 function nativeLength(text: string): unknown {
   const length = gridLength(text);
   return gridLengths.get(length.unit)?.(length);
@@ -106,9 +107,9 @@ function nativeThickness(text: string): object {
 
 function enumMember(property: string, name: string): unknown {
   const typeName = pascalCase(property);
-  const member = read(exports.get(typeName), name);
+  const member = read(controls.get(typeName), name);
   if (member === undefined) {
-    throw new Error(`${property}="${name}" names no ${typeName} (or winui.ts does not export it)`);
+    throw new Error(`${property}="${name}" names no ${typeName} (or registerControls was not given it)`);
   }
 
   return member;
@@ -145,13 +146,8 @@ function convert(control: UIElement, property: string, value: unknown): unknown 
   return converter(value, property);
 }
 
-function applyStyle(control: UIElement, _name: string, value: unknown): void {
-  const key = styleKeys.get(String(value));
-  if (key === undefined) {
-    throw new Error(`class="${String(value)}" names no StyleKey`);
-  }
-
-  write(control, "style", style(key));
+function applyClass(control: UIElement, _name: string, value: unknown): void {
+  classHandler?.(control, String(value));
 }
 
 // A grid's columns or rows, each length a new definition; set again, they
@@ -171,7 +167,7 @@ function definitionsHandler(type: new () => object, collectionName: string, size
 function applyAttached(control: UIElement, name: string, value: unknown): void {
   const [owner = "", attached = ""] = name.split(attachedSeparator);
   const isNumber = typeof value === "string" && isNumeric(value);
-  call(exports.get(pascalCase(owner)), `set${pascalCase(attached)}`, control, isNumber ? Number(value) : value);
+  call(controls.get(pascalCase(owner)), `set${pascalCase(attached)}`, control, isNumber ? Number(value) : value);
 }
 
 function applyProperty(control: UIElement, name: string, value: unknown): void {
@@ -180,9 +176,9 @@ function applyProperty(control: UIElement, name: string, value: unknown): void {
 }
 
 const namedAttributes = new Map<string, AttributeHandler>([
-  [styleAttribute, applyStyle],
-  ["columns", definitionsHandler(winui.ColumnDefinition, "columnDefinitions", "width")],
-  ["rows", definitionsHandler(winui.RowDefinition, "rowDefinitions", "height")]
+  [classAttribute, applyClass],
+  ["columns", definitionsHandler(ColumnDefinition, "columnDefinitions", "width")],
+  ["rows", definitionsHandler(RowDefinition, "rowDefinitions", "height")]
 ]);
 
 function attributeHandler(name: string): AttributeHandler {
@@ -366,6 +362,30 @@ function releaseHosts(node: TreeNode<WinuiNative>): void {
   node.children.forEach(releaseHosts);
 }
 
+// Nothing in a removed subtree may keep its controls alive: the tree nodes
+// hold them, and an event subscription is held by the control itself.
+function forgetControls(node: TreeNode<WinuiNative>): void {
+  if (node.type !== NodeType.Element) {
+    return;
+  }
+
+  node.children.forEach(forgetControls);
+  for (const subscriptions of node.listeners.values()) {
+    subscriptions.forEach(unsubscribe => unsubscribe());
+  }
+
+  node.listeners.clear();
+  node.native.control = null;
+  node.native.placed.length = 0;
+}
+
+// Hosted controls first: they must leave the discarded controls that hold
+// them before those are forgotten.
+function release(node: TreeNode<WinuiNative>): void {
+  releaseHosts(node);
+  forgetControls(node);
+}
+
 function createNative(name: string): WinuiNative {
   if (name === hostTag) {
     return {
@@ -374,9 +394,9 @@ function createNative(name: string): WinuiNative {
     };
   }
 
-  const type = exports.get(pascalCase(name));
+  const type = controls.get(pascalCase(name));
   if (!isControlClass(type)) {
-    throw new Error(`<${name}> is not a WinUI control winui.ts exports`);
+    throw new Error(`<${name}> is not a WinUI control registerControls was given`);
   }
 
   return {
@@ -403,11 +423,23 @@ const winuiHost: NativeHost<WinuiNative> = {
   fragmentChanged(fragment) {
     rootWatchers.get(fragment)?.(firstControl(fragment));
   },
-  removed: releaseHosts,
+  removed: release,
   listen(element, type, handler) {
     const control = element.native.control;
-    const canListen = control !== null && typeof handler === "function";
-    if (!canListen) {
+    if (control === null) {
+      return null;
+    }
+
+    // `on-content={value}` reaches the host as an event named "-content":
+    // Svelte reads every expression attribute that starts with "on" as one.
+    // It is the property OnContent.
+    const isPropertyNamedOn = type.startsWith(wordSeparator);
+    if (isPropertyNamedOn) {
+      applyProperty(control, `on${type}`, handler);
+      return null;
+    }
+
+    if (typeof handler !== "function") {
       return null;
     }
 
@@ -418,19 +450,15 @@ const winuiHost: NativeHost<WinuiNative> = {
 
 const renderer = createTreeRenderer(winuiHost);
 
-// {@attach withControl(StackPanel, panel => ...)}: hands the control an
-// element made to code, for what markup cannot say (registering a panel for
-// motion, reading a text box).
-export function withControl<Control>(
-  type: abstract new (...values: never[]) => Control,
-  use: (control: Control) => void
-): (node: unknown) => void {
-  return node => {
-    const control = read(read(node, "native"), "control");
-    if (control instanceof type) {
-      use(control);
-    }
-  };
+// A mounted component's nodes after Svelte's unmount: whatever is left of
+// them lets go of its controls, and the mount target stops being watched.
+export function releaseFragment(fragment: FragmentNode<WinuiNative>): void {
+  for (const node of fragment.children.splice(0)) {
+    node.parent = null;
+    release(node);
+  }
+
+  unwatchRoot(fragment);
 }
 
 function firstControl(parent: FragmentNode<WinuiNative> | WinuiElement): FrameworkElement | null {
@@ -455,6 +483,10 @@ export function watchRoot(
   onChange: (control: FrameworkElement | null) => void
 ): void {
   rootWatchers.set(fragment, onChange);
+}
+
+export function unwatchRoot(fragment: FragmentNode<WinuiNative>): void {
+  rootWatchers.delete(fragment);
 }
 
 const gridPlacements = ["Row", "Column", "RowSpan", "ColumnSpan"];
@@ -485,7 +517,7 @@ function replaceInParent(previous: FrameworkElement, next: FrameworkElement): vo
   }
 
   for (const placement of gridPlacements) {
-    call(winui.Grid, `set${placement}`, next, call(winui.Grid, `get${placement}`, previous));
+    call(Grid, `set${placement}`, next, call(Grid, `get${placement}`, previous));
   }
 
   slot[1](parent, previous, next);
