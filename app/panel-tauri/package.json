@@ -1,0 +1,136 @@
+{
+  "name": "edgeplus-panel",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Edge+ - the panel: a Tauri core in Rust and a WinUI 3 window drawn from TypeScript",
+  "license": "Apache-2.0",
+  "type": "module",
+  "packageManager": "pnpm@11.13.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "restore": "winapp restore",
+    "bindings": "winapp node generate-bindings",
+    "app": "cargo run --manifest-path src-tauri/Cargo.toml",
+    "check": "tsc --noEmit",
+    "lint:js": "oxlint --type-aware --fix && eslint --fix .",
+    "lint:rust": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings && cargo fmt --manifest-path src-tauri/Cargo.toml",
+    "lint": "pnpm lint:js && pnpm lint:rust && pnpm fallow",
+    "test:js": "node --test \"ui/**/*.test.ts\"",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --workspace",
+    "test": "pnpm test:js && pnpm test:rust",
+    "fallow": "fallow audit --base HEAD"
+  },
+  "imports": {
+    "#winui/*": {
+      "types": "./.winapp/bindings/*.d.ts",
+      "default": "./.winapp/bindings/*.js"
+    }
+  },
+  "dependencies": {
+    "@microsoft/dynwinrt": "0.1.0-preview.23"
+  },
+  "devDependencies": {
+    "@microsoft/dynwinrt-codegen": "0.1.0-preview.23",
+    "@microsoft/winappcli": "0.7.1",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@types/node": "^24.10.0",
+    "eslint": "^10.12.0",
+    "eslint-plugin-import-newlines": "^2.0.0",
+    "eslint-plugin-perfectionist": "^5.12.1",
+    "fallow": "2.103.0",
+    "globals": "^17.13.0",
+    "oxlint": "1.88.0",
+    "oxlint-tsgolint": "^7.0.2004",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.2"
+  },
+  "winapp": {
+    "jsBindings": {
+      "additionalWinmds": [
+        {
+          "namespace": "Windows.Foundation",
+          "classes": ["PropertyValue", "Uri"]
+        },
+        {
+          "namespace": "Windows.UI.ViewManagement",
+          "classes": ["UISettings"]
+        },
+        {
+          "namespace": "Windows.ApplicationModel.DataTransfer",
+          "classes": ["StandardDataFormats"]
+        },
+        {
+          "namespace": "Microsoft.UI.Windowing",
+          "classes": ["AppWindow", "DisplayArea", "OverlappedPresenter"]
+        },
+        {
+          "namespace": "Microsoft.UI.Input",
+          "classes": ["InputNonClientPointerSource"]
+        },
+        {
+          "namespace": "Microsoft.UI.Dispatching",
+          "classes": ["DispatcherQueue", "DispatcherQueueTimer"]
+        },
+        {
+          "namespace": "Microsoft.Windows.Storage.Pickers",
+          "classes": ["FileOpenPicker", "FolderPicker"]
+        },
+        {
+          "namespace": "Microsoft.UI.Xaml",
+          "classes": ["Application", "Window", "ResourceDictionary", "Style", "ScalarTransition", "VisualStateManager", "DataTemplate"]
+        },
+        {
+          "namespace": "Microsoft.UI.Xaml.Markup",
+          "classes": ["XamlReader"]
+        },
+        {
+          "namespace": "Microsoft.UI.Xaml.Automation",
+          "classes": ["AutomationProperties"]
+        },
+        {
+          "namespace": "Microsoft.UI.Xaml.Controls",
+          "classes": [
+            "Border",
+            "Button",
+            "ColumnDefinition",
+            "ComboBox",
+            "ComboBoxItem",
+            "ContentControl",
+            "FontIcon",
+            "Grid",
+            "HyperlinkButton",
+            "Image",
+            "InfoBar",
+            "ListView",
+            "ListViewItem",
+            "RowDefinition",
+            "ScrollViewer",
+            "StackPanel",
+            "TextBlock",
+            "TextBox",
+            "ToggleSwitch",
+            "XamlControlsResources"
+          ]
+        },
+        {
+          "namespace": "Microsoft.UI.Xaml.Media",
+          "classes": ["DesktopAcrylicBackdrop", "VisualTreeHelper", "DoubleCollection"]
+        },
+        {
+          "namespace": "Microsoft.UI.Xaml.Media.Imaging",
+          "classes": ["BitmapImage"]
+        },
+        {
+          "namespace": "Microsoft.UI.Xaml.Media.Animation",
+          "classes": ["AddDeleteThemeTransition", "ReorderThemeTransition", "RepositionThemeTransition", "TransitionCollection"]
+        },
+        {
+          "namespace": "Microsoft.UI.Xaml.Shapes",
+          "classes": ["Rectangle"]
+        }
+      ]
+    }
+  }
+}

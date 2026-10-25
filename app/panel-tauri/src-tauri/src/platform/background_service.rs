@@ -1,0 +1,88 @@
+//! Runs whether or not the window is open. The window listens to it rather than
+//! running watchers of its own, so there is one watcher of each and a boot
+//! launch with no window is still the listener.
+
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, OnceLock};
+
+use crate::edge::edge_build::BuildChange;
+use crate::edge::edge_watch::EdgeWatch;
+use crate::platform::paused_toast;
+use crate::setup::update_watch::{ReadyUpdate, UpdateWatch};
+use crate::themes::theme_watch::{ThemeRefresh, ThemeWatch};
+
+/// What the watchers saw, raised on a watcher's thread.
+#[derive(Clone, Debug)]
+pub enum ServiceEvent {
+    BuildChanged(BuildChange),
+    /// An Edge browser process started (once it got the DLL, with auto-inject
+    /// on) or closed: the window re-reads its state.
+    BrowsersChanged,
+    ThemeRefreshed(ThemeRefresh),
+    /// A newer release is downloaded and checked.
+    UpdateReady(ReadyUpdate),
+    /// The paused-features toast was clicked: open the window.
+    ToastClicked,
+}
+
+type Listener = Arc<dyn Fn(ServiceEvent) + Send + Sync>;
+
+struct Service {
+    edge: EdgeWatch,
+    themes: ThemeWatch,
+    updates: UpdateWatch,
+}
+
+static SERVICE: OnceLock<Service> = OnceLock::new();
+static LISTENER: OnceLock<Listener> = OnceLock::new();
+/// A toast is only for when no window is open.
+static IS_WINDOW_OPEN: AtomicBool = AtomicBool::new(false);
+
+fn raise(event: ServiceEvent) {
+    if let Some(listener) = LISTENER.get() {
+        listener(event);
+    }
+}
+
+/// Once per process; `listener` hears every event.
+pub fn start(listener: impl Fn(ServiceEvent) + Send + Sync + 'static) {
+    let _ = LISTENER.set(Arc::new(listener));
+    SERVICE.get_or_init(|| Service {
+        edge: EdgeWatch::start(on_build_changed, || raise(ServiceEvent::BrowsersChanged)),
+        themes: ThemeWatch::start(|refresh| raise(ServiceEvent::ThemeRefreshed(refresh))),
+        updates: UpdateWatch::start(|ready| raise(ServiceEvent::UpdateReady(ready))),
+    });
+}
+
+fn on_build_changed(change: BuildChange) {
+    if !IS_WINDOW_OPEN.load(Ordering::SeqCst) {
+        paused_toast::show_once_per_build(&change, || raise(ServiceEvent::ToastClicked));
+    }
+    raise(ServiceEvent::BuildChanged(change));
+}
+
+pub fn set_window_open(is_open: bool) {
+    IS_WINDOW_OPEN.store(is_open, Ordering::SeqCst);
+}
+
+/// The switch was turned on: look now rather than at the next scheduled check.
+pub fn check_for_update_soon() {
+    if let Some(service) = SERVICE.get() {
+        service.updates.check_soon();
+    }
+}
+
+/// The downloaded release waiting for a restart, if any.
+#[must_use]
+pub fn pending_update() -> Option<ReadyUpdate> {
+    SERVICE.get().and_then(|service| service.updates.pending())
+}
+
+/// Stops every watcher before the process ends, so none is cut off mid-write.
+pub fn stop() {
+    if let Some(service) = SERVICE.get() {
+        service.edge.stop();
+        service.themes.stop();
+        service.updates.stop();
+    }
+}

@@ -1,0 +1,216 @@
+{
+  "productName": "Edge+",
+  "openEdgeHint": null,
+  "buildNotice": "",
+  "sections": [
+    {
+      "name": "Tabs and windows",
+      "cards": [
+        {
+          "key": "nativeSplit",
+          "wording": {
+            "title": "Split into any grid",
+            "description": "Grows Edge's own split past two panes: add panes on any side, drag the dividers, move with Shift+Alt+arrow. Live, no restart. Open Edge first.",
+            "glyph": 61666
+          },
+          "isOn": true,
+          "isLocked": false,
+          "note": "",
+          "theming": null,
+          "inject": null
+        },
+        {
+          "key": "livePreview",
+          "wording": {
+            "title": "Live tab preview on hover",
+            "description": "Hover a tab and its thumbnail plays live instead of a frozen snapshot, by keeping Edge's own tab capture running while the preview is open. Live, no restart. Open Edge first.",
+            "glyph": 59536
+          },
+          "isOn": true,
+          "isLocked": false,
+          "note": "",
+          "theming": null,
+          "inject": null
+        }
+      ]
+    },
+    {
+      "name": "Look and themes",
+      "cards": [
+        {
+          "key": "theming",
+          "wording": {
+            "title": "Theme by Windows light and dark",
+            "description": "Use one theme when Windows is light and another when it is dark, switched live. Add themes from the Chrome Web Store, Edge Add-ons or a local file.",
+            "glyph": 59280
+          },
+          "isOn": true,
+          "isLocked": false,
+          "note": "",
+          "theming": {
+            "labels": {
+              "storeLinkPlaceholder": "Paste a Chrome Web Store or Edge Add-ons link",
+              "add": "Add",
+              "addLocal": "Or add a local theme",
+              "pickFile": "File…",
+              "pickFolder": "Folder…",
+              "whenLight": "When Windows is light",
+              "whenDark": "When Windows is dark",
+              "themeListName": "Your themes",
+              "reorderHelp": "Drag a theme, or press Alt+Up or Alt+Down, to move it in this list and in the pickers."
+            },
+            "options": [
+              { "id": "", "label": "Default theme" },
+              { "id": "chkhiabninacddbgpadcfjkbmandlklp", "label": "theme-2077-light" },
+              { "id": "aompgonebanjfgjojkhaflnbbkbifioc", "label": "theme-2077-dark" }
+            ],
+            "light": "chkhiabninacddbgpadcfjkbmandlklp",
+            "dark": "aompgonebanjfgjojkhaflnbbkbifioc",
+            "own": [
+              { "id": "chkhiabninacddbgpadcfjkbmandlklp", "name": "theme-2077-light", "badges": ["Local"], "removeLabel": "Remove theme-2077-light" },
+              { "id": "aompgonebanjfgjojkhaflnbbkbifioc", "name": "theme-2077-dark", "badges": ["Local"], "removeLabel": "Remove theme-2077-dark" }
+            ],
+            "edge": [],
+            "empty": null
+          },
+          "inject": null
+        },
+        {
+          "key": "tabShape",
+          "wording": {
+            "title": "Cut-corner tabs",
+            "description": "Gives every tab, vertical and horizontal, a straight leading edge and a cut trailing corner, with the selected tab filled in the theme's neon. Works with Theming on. Live, no restart.",
+            "glyph": 59331
+          },
+          "isOn": true,
+          "isLocked": false,
+          "note": "",
+          "theming": null,
+          "inject": null
+        },
+        {
+          "key": "webUiFollowsTheme",
+          "wording": {
+            "title": "Settings and extensions pages follow the theme",
+            "description": "Makes edge://settings and edge://extensions light or dark to match your Edge theme, not Windows. Only those two pages change; websites are untouched. Live, no restart. Open Edge first.",
+            "glyph": 59142
+          },
+          "isOn": true,
+          "isLocked": false,
+          "note": "",
+          "theming": null,
+          "inject": null
+        },
+        {
+          "key": "readingTheme",
+          "wording": {
+            "title": "Reading mode follows Windows light and dark",
+            "description": "Reading mode uses one page theme while Windows is light and another while it is dark, switched as Windows switches. Pick both in reading mode: Appearance settings, Themes, then Light mode or Dark mode. Live, no restart.",
+            "glyph": 59190
+          },
+          "isOn": true,
+          "isLocked": false,
+          "note": "",
+          "theming": null,
+          "inject": null
+        }
+      ]
+    },
+    {
+      "name": "Browsing",
+      "cards": [
+        {
+          "key": "enhancedFind",
+          "wording": {
+            "title": "Enhanced find: RegExp and Ask Copilot",
+            "description": "Adds RegExp (with its flags) and Ask Copilot to the options of Edge's Ctrl+F bar. RegExp highlights every match; Ask sends your question to Copilot, which opens in its side panel. Live, no restart. Open Edge first.",
+            "glyph": 59169
+          },
+          "isOn": true,
+          "isLocked": false,
+          "note": "",
+          "theming": null,
+          "inject": null
+        },
+        {
+          "key": "protocolHandlers",
+          "wording": {
+            "title": "Ask to handle links, like Chrome",
+            "description": "Like Chrome: when a site such as Gmail offers to open email or calendar links, closing the bubble no longer blocks it for good; only Ignore or Block does. Turning this on lifts earlier blocks. Live, no restart.",
+            "glyph": 59163
+          },
+          "isOn": true,
+          "isLocked": false,
+          "note": "",
+          "theming": null,
+          "inject": null
+        },
+        {
+          "key": "quietDevMode",
+          "wording": {
+            "title": "Hide the developer-mode prompt",
+            "description": "Stops Edge asking to turn off developer-mode extensions when it starts. Takes effect from Edge's next start.",
+            "glyph": 59322
+          },
+          "isOn": true,
+          "isLocked": false,
+          "note": "",
+          "theming": null,
+          "inject": null
+        }
+      ]
+    },
+    {
+      "name": "Edge+ itself",
+      "cards": [
+        {
+          "key": "startWithWindows",
+          "wording": {
+            "title": "Start Edge+ when Windows starts",
+            "description": "Runs Edge+ in the background, with no window, from when you sign in to Windows: your settings apply and an Edge update that needs a newer Edge+ is caught. Launch Edge+ to open its window.",
+            "glyph": 59368
+          },
+          "isOn": true,
+          "isLocked": false,
+          "note": "",
+          "theming": null,
+          "inject": null
+        },
+        {
+          "key": "autoInject",
+          "wording": {
+            "title": "Inject automatically",
+            "description": "Puts Edge+ into Edge each time Edge starts. Off, Edge starts without it and Edge+ offers an Inject button.",
+            "glyph": 59717
+          },
+          "isOn": true,
+          "isLocked": false,
+          "note": "",
+          "theming": null,
+          "inject": { "offer": null }
+        },
+        {
+          "key": "autoUpdate",
+          "wording": {
+            "title": "Check for updates",
+            "description": "Looks for a new Edge+ release on GitHub and offers to restart into it. Off, Edge+ never contacts GitHub.",
+            "glyph": 59541
+          },
+          "isOn": true,
+          "isLocked": false,
+          "note": "",
+          "theming": null,
+          "inject": null
+        }
+      ]
+    }
+  ],
+  "update": null,
+  "footer": {
+    "by": "by",
+    "author": "Avi",
+    "authorUri": "https://avi12.com",
+    "version": "0.0.1"
+  },
+  "dropHint": "Drop a theme folder, .zip or .crx to add it"
+}

@@ -1,0 +1,15 @@
+# winapp restore reads this: the Windows App SDK the WinUI window is drawn
+# with, and what restore itself needs (CppWinRT and the Windows SDK's
+# metadata) to generate the bindings in .winapp/bindings from package.json's
+# winapp.jsBindings.
+packages:
+  - name: Microsoft.Windows.CppWinRT
+    version: 3.0.260520.1
+  - name: Microsoft.WindowsAppSDK
+    version: 2.2.0
+  - name: Microsoft.Windows.ImplementationLibrary
+    version: 1.0.260126.7
+  - name: Microsoft.Windows.SDK.CPP
+    version: 10.0.28000.2270
+  - name: Microsoft.Windows.SDK.CPP.x64
+    version: 10.0.28000.2270

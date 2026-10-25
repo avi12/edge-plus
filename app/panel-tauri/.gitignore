@@ -1,0 +1,4 @@
+# pnpm restore: the Windows App SDK, its bootstrapper and the generated bindings.
+.winapp/
+src-tauri/target/
+src-tauri/gen/
