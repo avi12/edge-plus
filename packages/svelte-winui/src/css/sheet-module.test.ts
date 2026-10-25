@@ -57,8 +57,8 @@ test("the module registers the sheet, and accepts hot updates when asked", () =>
     runtimeModule: "svelte-winui/css",
     isHot: true
   });
-  assert.match(result?.code ?? "", /^import \{ registerStyleSheet \} from "svelte-winui\/css";/u);
-  assert.match(result?.code ?? "", /registerStyleSheet\(sheet\);/u);
+  assert.match(result?.code ?? "", /^import \{ registerStyleSheet as \$registerWinuiSheet \} from "svelte-winui\/css";/u);
+  assert.match(result?.code ?? "", /\$registerWinuiSheet\(\{"id":"ui\/card\.svelte","rules":/u);
   assert.match(result?.code ?? "", /import\.meta\.hot\.accept\(\)/u);
   assert.doesNotMatch(moduleFor(source)?.code ?? "", /import\.meta\.hot/u);
 });

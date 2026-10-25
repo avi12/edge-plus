@@ -38,6 +38,7 @@ export function cssHash({ filename, hash }: { filename: string; hash: (text: str
 }
 
 export const sheetQuery = "?winui-css";
+const registerAlias = "$registerWinuiSheet";
 
 export class SheetError extends Error {
   readonly diagnostics: Diagnostic[];
@@ -75,16 +76,18 @@ export function compileSheetModule(input: SheetModuleInput): SheetModule | null 
   }
 
   const hot = input.isHot === true ? "\nif (import.meta.hot) {\n  import.meta.hot.accept();\n}" : "";
-  const code = [
-    `import { registerStyleSheet } from ${JSON.stringify(input.runtimeModule)};`,
-    `const sheet = ${JSON.stringify(translation.sheet)};`,
-    "registerStyleSheet(sheet);",
-    "export default sheet;",
-    hot
-  ].join("\n");
   return {
-    code,
+    code: `${registrationCode(translation.sheet, input.runtimeModule)}${hot}\n`,
     sheet: translation.sheet,
     diagnostics: translation.diagnostics
   };
+}
+
+// The statements that register a sheet. They name nothing a component might
+// (the import is aliased), so they can be appended to a compiled component.
+export function registrationCode(sheet: StyleSheetData, runtimeModule: string): string {
+  return [
+    `import { registerStyleSheet as ${registerAlias} } from ${JSON.stringify(runtimeModule)};`,
+    `${registerAlias}(${JSON.stringify(sheet)});`
+  ].join("\n");
 }

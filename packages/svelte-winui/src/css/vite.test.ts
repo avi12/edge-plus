@@ -53,7 +53,7 @@ test("the sheet module is resolved and loaded as the translated sheet", () => {
   assert.equal(run("resolveId", id), id);
   assert.equal(run("resolveId", "./other.js"), null);
   const code = String(run("load", id));
-  assert.match(code, /registerStyleSheet\(sheet\)/u);
+  assert.match(code, /\$registerWinuiSheet\(/u);
   assert.match(code, /"id":"styled.svelte"/u);
   assert.match(code, /import\.meta\.hot\.accept\(\)/u);
 });
