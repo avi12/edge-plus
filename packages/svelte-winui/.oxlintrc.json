@@ -1,0 +1,4 @@
+{
+  "$schema": "../../app/panel-tauri/node_modules/oxlint/configuration_schema.json",
+  "extends": ["../../app/panel-tauri/.oxlintrc.json"]
+}

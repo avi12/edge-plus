@@ -1,3 +1,6 @@
+packages:
+  - app/panel-tauri
+  - packages/*
 allowBuilds:
   # Its postinstall only prints a greeting.
   "@microsoft/winappcli": false
