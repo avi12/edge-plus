@@ -13,7 +13,7 @@ export interface Mounted<Props> {
   set(changes: Partial<Props>): void;
 }
 
-export function mountControl<Props extends Record<string, unknown>>(
+export function mountControl<Props extends object>(
   component: Component<Props>,
   initial: Props
 ): Mounted<Props> {
