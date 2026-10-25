@@ -5,8 +5,9 @@ Live feature switches for Microsoft Edge (see `README.md`):
 - `app/native-split/` — C++20 DLL injected into Edge's browser process that grows
   Edge's native split view to N panes; pinned to one `msedge.dll` build
   (`src/offsets.h`), reverse-engineered in `docs/re/`
-- `app/panel-winui/` — the panel that toggles each feature and injects the DLL:
-  WinUI 3 / C#, with every Win32 call isolated in a `Native/` folder
+- `app/panel-tauri/` — the panel that toggles each feature and injects the DLL:
+  a Rust core (every Win32 call in its `edge-native` crate) and a WinUI 3
+  window drawn from TypeScript
 - `app/installer/` — the MSI (WiX 5 through its NuGet SDK) that installs the
   published exe under Program Files
 
@@ -59,18 +60,20 @@ reader fluent in code but not in Edge's internals.
    for a condition whose terms must not all be evaluated (a null check guarding a
    dereference stays in one `&&`, extracted whole).
 
-Rule 1 is enforced by the formatters (clang-format `InsertBraces` for C++, and
-dotnet format with `app/.editorconfig` for the panel's C#). Rule 2 is a review
-concern.
+Rule 1 is enforced by the formatters and linters (clang-format `InsertBraces`
+for C++, rustfmt and clippy for the core, oxlint's `curly` for the window). Rule
+2 is a review concern, and ESLint's restricted-syntax rule for the window.
 
 # Every language: hardcoded values
 
 - **A closed set of values is an enum** — command codes, modes, kinds, ids,
   message types, zone or direction names, whether they are strings or numbers:
-  an `enum class` in C++ and an `enum` in C#. Never the same literal repeated
+  an `enum class` in C++ and an `enum` in Rust (a TypeScript union when it
+  crosses to the window, generated with the protocol). Never the same literal repeated
   at its producer and its consumers.
 - **A lone magic number or string is a named constant** (`kName` in C++,
-  `PascalCase` `const` in C#), unless it is self-evident (`0`, `1`, a `/ 2`).
+  `SCREAMING_SNAKE_CASE` `const` in Rust, a `camelCase` `const` in TypeScript),
+  unless it is self-evident (`0`, `1`, a `/ 2`).
 - An Edge ABI value (an RVA, a struct offset, a vtable slot) is not a magic
   number to extract elsewhere: its one home is `src/offsets.h`.
 
@@ -139,61 +142,77 @@ what it is, an Edge quirk being worked around, a required ordering or lifetime,
 a dead end recorded so nobody retries it. Delete comments that restate the code,
 and above all any comment that no longer matches it.
 
-# The panel (`app/panel-winui/`)
+# The panel (`app/panel-tauri/`)
 
-WinUI 3 / C#, modelled on `avi/any-stt`'s app: unpackaged and self-contained,
-its own `Program.Main`, Google C# style from `app/.editorconfig`. It keeps
-`%LOCALAPPDATA%\EdgePlus\settings.json` in the shape the earlier Tauri panel
-used, so existing settings carry over; keep that path and format as they are.
-The folder was named for the project's old name (`FixEdge`) until the rename;
-`Panel/Edge/LegacyInstall.cs` carries it over and holds the old names it has to
-match (that folder, `fixedge-split.dll`, `Local\fixedge-split-unload`). The only
-other old names left are what `LegacyCleanup` and `StartupEntry` match from the
-extension and Tauri days. A value the panel and the DLL both need (event names, the config wire
-layout, data-folder paths) has one home per side and must match the DLL's
-(`app/native-split/src/{config.h,dllmain.cpp,log.h}`).
+A Rust core and a WinUI 3 window drawn from TypeScript, ported from the WinUI /
+C# panel (in git history before it was removed) and **pixel-identical to it**:
+keep it that way. It keeps `%LOCALAPPDATA%\EdgePlus\settings.json` in the shape
+every earlier panel used, so existing settings carry over; keep that path and
+format as they are. `edge/legacy_install.rs` carries the project's old name
+(`FixEdge`) over and holds the old names it has to match (that folder,
+`fixedge-split.dll`, `Local\fixedge-split-unload`); the only other old names
+left are what `legacy_cleanup.rs` and `startup_entry.rs` match from the
+extension and earlier panels. A value the panel and the DLL both need (event
+names, the config wire layout, data-folder paths) has one home per side and
+must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h}`).
 
-- **Host + swappable panel** (see `app/panel-winui/README.md`): `EdgePlus.csproj`
-  is a thin host (process, single instance, window, `App.xaml`, `Host/`);
-  `Panel/EdgePlus.Panel.csproj` is everything else, loaded into a collectible
-  load context and swapped live on rebuild in a dev run. In the panel: no
-  compiled XAML, no WinRT subclasses, CsWinRT's AOT optimizer off, JSON through
-  a source-generated context, and every thread / host subscription torn down in
-  `PanelView.Dispose` — each of those otherwise pins the old panel.
-- **Panel layout**: `Platform/` (paths, settings, the actions the window calls),
-  `Dll/` (the config wire, its events, the embedded DLL, `DllSync`), `Edge/`
-  (the pinned build, the Edge watcher, installed themes, the dev-mode waiter,
-  legacy cleanup), `Themes/`, `Setup/` (start at sign-in), `Ui/`, and `Native/`.
-  A `Native/` folder (the panel's or the host's) is the **only** place with a
-  `[DllImport]` (and no `unsafe` anywhere; `tools/lint.ps1` enforces it).
-- **UI**: WinUI's own controls only — no CommunityToolkit, no UI library. Cards
-  are built in code (`PanelView`, `FeatureCard`, `ThemingCard`) from App.xaml's
-  styles, whose colours are all `ThemeResource`. Every sentence is in
-  `Ui/Wording.cs`; glyphs are code points (dotnet format rewrites a `\u` escape
-  into an invisible character). Motion goes through `Ui/Motion.cs`, which
-  follows Windows' Animation effects switch live.
-- **The embedded split DLL is rebuilt whenever its sources are newer**: a stale
-  one, carried silently, once replaced Edge's current DLL at panel start.
+- **The core** (`src-tauri/src/`, Rust): process, single instance, settings,
+  Edge watching, themes, injection and updates, one module per concern —
+  `platform/` (paths, settings, the actions the window calls), `dll/` (the
+  config wire, its events, the embedded DLL, `dll_sync`), `edge/` (the pinned
+  build, the Edge watcher, the dev-mode waiter, legacy carry-over), `themes/`,
+  `setup/` (start at sign-in, updates, the MSI hand-off) and `ui/` (the View the
+  window renders, every sentence in `wording.rs`, the window's process).
+- **`edge-native`** (`src-tauri/edge-native/`) is the **only** crate with
+  `unsafe` and every Win32 / WinRT call the core makes; the core forbids
+  `unsafe`.
+- **The window** (`ui/`, TypeScript) is a separate Node process the core
+  starts. It draws WinUI's own controls through dynwinrt's bindings (`pnpm
+  restore` generates them into `.winapp/bindings`; `ui/window/winui.ts` is their
+  one import site), renders the View the core sends and answers with Actions,
+  one JSON line each way. `ui/protocol.g.ts` is generated from
+  `src-tauri/src/ui/protocol.rs` (`cargo test export_the_window_types`; the lint
+  gate fails when it is stale). WinUI's loop runs on a worker thread. No UI
+  library; styles are `ui/window/styles.ts`, motion goes through
+  `ui/window/motion.ts`, which follows Windows' Animation effects switch.
+- **The window kit**: a release exe embeds Node, the bundled scripts, dynwinrt
+  (with `vcruntime140.dll` beside its native module, which a clean Windows
+  lacks), the Windows App SDK bootstrapper and runtime packages (`pnpm
+  build:window`), unpacked under the data folder once per kit; the core
+  installs the runtime for the user when it is missing. An exe built inside the
+  checkout runs `ui/` with the Node on PATH instead.
+- **The embedded split DLL is rebuilt whenever its sources are newer**
+  (`build.rs`): a stale one, carried silently, once replaced Edge's current DLL
+  at panel start.
 - **Shared values** come from the DLL's sources: `// @share Name` markers in
-  `app/native-split/src` become `Panel/Platform/Shared.g.cs`
-  (`tools/Export-SharedConstants.ps1`, run before every build). Put a marker on
+  `app/native-split/src` become `src-tauri/src/platform/shared.g.rs`
+  (`tools/Export-SharedConstants.ps1`; the lint gate checks it). Put a marker on
   its own line above the declaration it exports.
-- **C# naming** (any-stt's): `PascalCase` types, members and constants,
-  `camelCase` locals and parameters, `_camelCase` private fields, `s_camelCase`
-  private statics, `is`/`has`/`can` booleans. The `if` and enum rules apply.
-- **Tests**: `test/` compiles the pure sources (no WinUI, no Win32) into a
-  dependency-free console harness: `app\panel-winui\test\run.cmd`.
-- **Never run the full panel against Avi's Edge** unless asked: at start (and
-  on every live swap) it injects the DLL into every Edge browser process on the
-  pinned build, replacing a loaded DLL that differs from the one it carries.
+- **Naming**: Rust's own (`snake_case` functions and locals, `PascalCase`
+  types, `SCREAMING_SNAKE_CASE` constants), `camelCase` in TypeScript;
+  `is`/`has`/`can`/`should` booleans and full words everywhere (clippy's
+  `min-ident-chars` and oxlint's `id-length` enforce it). The `if` and enum
+  rules apply.
+- **Build, test, run** (in `app/panel-tauri`): `pnpm restore` once, `pnpm
+  build` (the kit, then the release exe), `pnpm test` (`node --test` and `cargo
+  test`), `pnpm app` (the full panel from source), `pnpm window` (the window
+  alone on `ui/dev/fixture-view.json`, with no core: it never touches Edge, so
+  it is the way to work on the UI).
+- **Never run the full panel against Avi's Edge** unless asked: at start it
+  injects the DLL into every Edge browser process on the pinned build,
+  replacing a loaded DLL that differs from the one it carries. To compare it
+  with the C# panel, run both in Windows Sandbox (Smart App Control blocks
+  unsigned exes there until it is turned off inside the Sandbox) and capture
+  each window with `PrintWindow`.
 
 # Linting
 
 - The C++ DLL and the panel: `pwsh tools/lint.ps1` (`-Fix` applies
-  clang-format, clang-tidy's fixes and dotnet format). The gate is clang-format
-  (`.clang-format`), clang-tidy (`.clang-tidy`, correctness as errors), a
-  restricted-syntax pass, the C# house rules, the `Shared.g.cs` freshness check
-  and dotnet format.
+  clang-format, clang-tidy's fixes and the panel's fixers). The gate is
+  clang-format (`.clang-format`), clang-tidy (`.clang-tidy`, correctness as
+  errors), a restricted-syntax pass, the `shared.g.rs` freshness check, the
+  panel's `pnpm lint:verify` (oxlint, ESLint, clippy at `-D warnings`, rustfmt,
+  `tsc` and the fallow audit) and the window protocol's freshness.
   `pwsh tools/lint.ps1 -InstallHook` gates every commit on its staged C++.
 
 # Native split: build and test
@@ -223,7 +242,7 @@ why; land large work as a sequence of them.
 the installable `EdgePlus-<version>-setup.msi`**, the MSI built from that same
 exe, as `avi/pade` does. Cut one only when asked, with
 `pwsh tools\Release.ps1 -Version <x.y.z> -NotesFile <file>` (`docs/RELEASING.md`):
-it bumps `Directory.Build.props`, publishes the exe, builds the MSI
+it bumps the core's `Cargo.toml`, builds the window kit and the exe, builds the MSI
 (`tools\Build-Installer.ps1`), commits, tags, pushes, creates the release with
 both files and then pushes `docs/updates.json` naming both. The notes file holds
 the changelog highlights for users — plain sentences, no file names. Never ship

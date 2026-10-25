@@ -55,10 +55,11 @@ the panel can tell whether it is running without tracking any process.*
 
 | Part | Where | Language | Role |
 |---|---|---|---|
-| Host | `app/panel-winui/EdgePlus.csproj`, `Host/` | C# / WinUI 3 | Process, single instance, window, title bar. Loads the panel. |
-| Panel | `app/panel-winui/Panel/` | C# | Every feature, the settings, Edge watching, themes, injection, UI. |
+| Core | `app/panel-tauri/src-tauri/src/` | Rust | Process, single instance, every feature, the settings, Edge watching, themes, injection, updates; the View the window renders. |
+| Native calls | `app/panel-tauri/src-tauri/edge-native/` | Rust | Every Win32 / WinRT call the core makes; the only `unsafe`. |
+| Window | `app/panel-tauri/ui/` | TypeScript / WinUI 3 | A Node process the core starts: draws the View, sends back Actions, one JSON line each way. |
 | Split DLL | `app/native-split/` | C++20 | Runs inside Edge. Hooks, control window, hotkeys, tab drags. |
-| Injector | `app/panel-winui/Panel/Native/Injector.cs`, `app/native-split/src/inject.cpp` | C# / C++ | Panel's injector; `inject.exe` is a development harness. |
+| Injector | `edge-native/src/inject.rs`, `app/native-split/src/inject.cpp` | Rust / C++ | The panel's injector; `inject.exe` is a development harness. |
 | Reverse-engineering notes | `docs/re/` | Markdown | How each Edge hook was found and why it is safe. |
 
 ## Life of a change
@@ -99,35 +100,38 @@ running.*
 
 The host is a single process per user. A boot launch (`--background`) opens
 no window and keeps the watchers running. Launching the app again, or clicking
-its notification, opens the window in that same process. See
-[`app/panel-winui/README.md`](app/panel-winui/README.md).
+its notification, opens the window in that same process.
 
-### A panel that reloads live
+### A window in its own process
 
-The panel is a separate assembly. The host loads it into a collectible
-`AssemblyLoadContext` from a timestamped copy, so a rebuild swaps the new
-panel in while the window stays open. The rules that make the panel unloadable
-are listed in the panel's README.
+The core is Rust; the window is WinUI 3 drawn from TypeScript through
+dynwinrt's bindings, in a Node process the core starts with its stdin and
+stdout as the link (`src-tauri/src/ui/window_host.rs`). The core sends the View
+(`ui/protocol.rs`, exported to `ui/protocol.g.ts`) and the window answers with
+Actions, so the window never touches settings, Edge or the DLL. A release exe
+carries the window kit (Node, the bundled scripts, dynwinrt, the Windows App SDK
+runtime) and unpacks it once per kit; the core installs the runtime for the user
+when it is missing.
 
 ### Updating itself
 
 Installed copies update the way a browser extension does through its update
 URL. The repository hosts a small manifest, `docs/updates.json` (version, the
 URLs of that release's exe and MSI, each one's SHA-256), written by
-`tools/Release.ps1` once a release's files are attached. `UpdateWatch` reads it
-at start and every six hours (`UpdateFeed` decides whether it names a newer
+`tools/Release.ps1` once a release's files are attached. `update_watch` reads it
+at start and every six hours (`update_feed` decides whether it names a newer
 version), downloads the file this copy needs into `update\`, and checks it
-against the digest. The window then shows `UpdateCard`.
+against the digest. The window then shows its update card.
 
 A portable copy downloads the exe, and **Restart to update** runs
-`UpdateInstall`: the running exe is renamed aside (a running exe can be renamed,
+`update_install`: the running exe is renamed aside (a running exe can be renamed,
 not overwritten), the new one takes its name, and the new process is started
 with `--restarted-from <pid>`, which makes it wait for the old process to exit
 before it looks for a running panel to hand over to. The new exe then swaps its
 own DLL into Edge, so Edge does not restart.
 
 A copy the MSI installed (`app/installer`, which records its folder under
-`HKLM\Software\EdgePlus`, read by `MsiInstall`) lives under Program Files, where
+`HKLM\Software\EdgePlus`, read by `msi_install`) lives under Program Files, where
 it cannot rename its own exe. It downloads the MSI instead, and **Restart to
 update** starts a hidden PowerShell that waits for the panel to exit, runs the
 MSI unattended (keeping only the shortcuts that still exist) and starts the
@@ -148,7 +152,7 @@ left alone until Edge restarts, since two DLLs would hook the same code.
 
 ### Watching Edge
 
-`Panel/Edge/EdgeWatch.cs` runs three checks:
+`src-tauri/src/edge/edge_watch.rs` runs three checks:
 
 - At start, and whenever a new browser process gets a window: it reads the
   `msedge.dll` build that process runs, and injects the DLL where the switches
@@ -158,7 +162,7 @@ left alone until Edge restarts, since two DLLs would hook the same code.
 
 ### Features and their switches
 
-Each feature is a value of `Feature` (`Panel/Platform/Settings.cs`). Each one
+Each feature is a value of `Feature` (`src-tauri/src/platform/settings.rs`). Each one
 is either a switch in the DLL's config wire or something the panel does alone.
 
 | Feature | Runs in | Notes |
@@ -294,17 +298,17 @@ with the tools in `docs/re/`.
   `test/` for both the panel and the DLL.
 - **One place per value.** Values shared by the panel and the DLL (event names,
   the config layout, the data folder) are declared once on the DLL side, and
-  the panel's `Shared.g.cs` is generated from those markers
+  the core's `shared.g.rs` is generated from those markers
   (`tools/Export-SharedConstants.ps1`).
 
 ## Where to start reading
 
 | To understand | Read |
 |---|---|
-| What a switch does at startup | `app/panel-winui/Panel/Dll/DllSync.cs` |
-| How the panel finds Edge's build | `app/panel-winui/Panel/Edge/EdgeWatch.cs` |
+| What a switch does at startup | `app/panel-tauri/src-tauri/src/dll/dll_sync.rs` |
+| How the panel finds Edge's build | `app/panel-tauri/src-tauri/src/edge/edge_watch.rs` |
 | How the DLL starts and stops | `app/native-split/src/dllmain.cpp` |
-| The config the panel writes | `app/native-split/src/config.h`, `Panel/Dll/ConfigWire.cs` |
+| The config the panel writes | `app/native-split/src/config.h`, `src-tauri/src/dll/config_wire.rs` |
 | Which Edge functions are hooked | `app/native-split/src/hooks.h` |
 | How a split changes | `app/native-split/src/split_ops.h` |
 | How a tab is dragged into a split | `app/native-split/src/tabdrag.h` |
@@ -315,9 +319,9 @@ with the tools in `docs/re/`.
 ```powershell
 app\native-split\build.cmd              # the DLL (MSVC) -> build\edgeplus-split.dll
 app\native-split\test\run.cmd           # the DLL's pure-logic tests
-dotnet build app\panel-winui            # the panel, with the DLL embedded
-app\panel-winui\test\run.cmd            # the panel's pure-logic tests
-pwsh tools\lint.ps1                     # clang-format, clang-tidy, C# rules
+pnpm --dir app\panel-tauri build        # the panel, with the DLL and window kit embedded
+pnpm --dir app\panel-tauri test         # the panel's tests (window and core)
+pwsh tools\lint.ps1                     # clang-format, clang-tidy, the panel's linters
 ```
 
 The panel's build embeds the DLL it was built with, so the DLL the panel injects

@@ -95,9 +95,11 @@ is in git history at `4ee5113`; the notes are in
 
 ```
 app/
-  panel-winui/   the panel, WinUI 3 / C# (modelled on avi/any-stt): one switch
-                 per feature, in titled sections; Native/ holds all its Win32
+  panel-tauri/   the panel: a Rust core (its edge-native crate holds all its
+                 Win32) and a WinUI 3 window drawn from TypeScript, with one
+                 switch per feature, in titled sections
   native-split/  the C++ DLL the panel injects into Edge's browser process
+  installer/     the MSI that installs the panel's exe
 ```
 
 [ARCHITECTURE.md](ARCHITECTURE.md) has the full picture: the components, how a
@@ -107,10 +109,10 @@ The panel keeps the user's choices in `%LOCALAPPDATA%\EdgePlus\settings.json` an
 drives each feature directly. Every Win32 action — enumerating Edge's browser
 processes, injecting (or ejecting) `edgeplus-split.dll`, adding a theme through
 Edge's external-extension loader, snoozing the developer-mode prompt — lives in
-a `Native\` folder, the only place with a `[DllImport]`. The split DLL travels
-inside the panel binary and is unpacked beside the settings, so the DLL always
-matches the build. Started with Windows, the panel runs with no window and
-watches for an Edge update (see `app/panel-winui/README.md`).
+the core's `edge-native` crate, the only place with `unsafe`. The split DLL
+travels inside the panel binary and is unpacked beside the settings, so the DLL
+always matches the build. Started with Windows, the panel runs with no window
+and watches for an Edge update.
 
 The split and the theming share one injected DLL, driven by a small config file
 (`edgeplus-config.bin`) the DLL re-reads whenever a named event is signalled.
@@ -125,11 +127,14 @@ and Start menu shortcuts, and `EdgePlus-<version>.exe` runs from wherever it is
 saved. To build it yourself:
 
 ```powershell
-dotnet publish app\panel-winui -c Release    # one self-contained edgeplus.exe
+cd app\panel-tauri
+pnpm install; pnpm restore    # once: the Windows App SDK and the window's bindings
+pnpm build                    # -> src-tauri\target\release\edgeplus.exe
 ```
 
 Open the panel, open Edge, and flip the switches. There is no extension to load
-and nothing to pre-install.
+and nothing to pre-install: on first start the panel installs the Windows App
+SDK runtime its window needs, for the current user.
 
 ![The Edge+ panel](https://github.com/user-attachments/assets/428c98e9-b675-4023-a4cb-77e4c2faa34b)
 
@@ -146,14 +151,14 @@ user's choices so they apply again on a supported build, says so on each card
 
 ## Develop
 
-The panel (C#; .NET 10 SDK, Windows App SDK 1.8; the dev loop, with the panel
-swapped live on every rebuild, is in `app/panel-winui/README.md`):
+The panel (Rust, Node 24 with pnpm, Windows App SDK 2.2; in `app/panel-tauri`):
 
 ```powershell
-dotnet build app\panel-winui                 # -> bin\...\edgeplus.exe (builds the DLL if missing)
-dotnet publish app\panel-winui -c Release    # one self-contained edgeplus.exe
-app\panel-winui\test\run.cmd                 # the pure-logic unit tests
-pwsh tools\lint.ps1                          # includes dotnet format + the C# house rules
+pnpm app       # the full panel from source (it injects into Edge)
+pnpm window    # the window alone on a saved view, no core and no Edge
+pnpm test      # node --test for the window, cargo test for the core
+pnpm build     # the window kit, then the release exe that embeds it
+pwsh ..\..\tools\lint.ps1    # the C++ gate and the panel's own linters
 ```
 
 The native split DLL:

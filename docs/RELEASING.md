@@ -27,11 +27,11 @@ With the work committed:
 
 `tools/Release.ps1` then:
 
-1. sets `<Version>` in `app/panel-winui/Directory.Build.props`, the only place
-   the version is written: the exe, the MSI and the panel's footer read it from
-   there;
-2. publishes the exe (`dotnet publish app\panel-winui -c Release`) and copies it
-   to `out\release\EdgePlus-<version>.exe`;
+1. sets the version in `app/panel-tauri/src-tauri/Cargo.toml`, the only place
+   it is written: the exe, the MSI and the panel's footer read it from there;
+2. builds the window kit and the release exe that embeds it (`pnpm build` in
+   `app/panel-tauri`, after `pnpm install` and `pnpm restore`) and copies it to
+   `out\release\EdgePlus-<version>.exe`;
 3. builds the MSI from that exe (`tools\Build-Installer.ps1`, WiX 5 through its
    NuGet SDK, so nothing to install), so the MSI carries the same bytes. WiX's
    ICE checks are skipped: they run on VBScript, which Windows no longer
