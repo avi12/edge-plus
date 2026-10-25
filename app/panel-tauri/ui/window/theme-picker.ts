@@ -1,16 +1,24 @@
 import type { ThemeOption } from "../protocol.g.ts";
-import { boxed } from "./layout.ts";
-import { ComboBox, ComboBoxItem } from "./winui.ts";
+import type { Mounted } from "./mount.svelte.ts";
+import { mountControl } from "./mount.svelte.ts";
+import ThemePickerView from "./theme-picker.svelte";
+import { ComboBox, projectAs } from "./winui.ts";
 
-// The theme for one Windows mode: Edge's default theme, then the user's
-// themes, then Edge's own.
+interface Props extends Record<string, unknown> {
+  options: ThemeOption[];
+}
+
+// The theme for one Windows mode (theme-picker.svelte).
 export class ThemePicker {
-  readonly box = new ComboBox();
+  readonly box: ComboBox;
+  private readonly picker: Mounted<Props>;
   private options: ThemeOption[] = [];
   // So a refill is not taken for a choice.
   private isFilling = false;
 
   constructor(onPicked: (id: string) => void) {
+    this.picker = mountControl<Props>(ThemePickerView, { options: [] });
+    this.box = projectAs(this.picker.root, ComboBox);
     this.box.onSelectionChanged(() => {
       const option = this.options.at(this.box.selectedIndex);
       const isUserChoice = !this.isFilling && option !== undefined;
@@ -20,29 +28,17 @@ export class ThemePicker {
     });
   }
 
-  // Rebuilt only when the options changed, and then with new items: moving a
-  // ComboBoxItem by removing and re-inserting the same element throws
-  // (E_INVALIDARG).
+  // The items are rebuilt only when the options changed.
   fill(options: ThemeOption[], selectedId: string): void {
     this.isFilling = true;
     const isCurrent = JSON.stringify(this.options) === JSON.stringify(options);
     if (!isCurrent) {
-      this.rebuild(options);
+      this.options = options;
+      this.picker.set({ options });
     }
 
     this.select(selectedId);
     this.isFilling = false;
-  }
-
-  private rebuild(options: ThemeOption[]): void {
-    this.box.items.clear();
-    for (const option of options) {
-      const item = new ComboBoxItem();
-      item.content = boxed(option.label);
-      this.box.items.append(item);
-    }
-
-    this.options = options;
   }
 
   // A theme removed meanwhile falls back to the default theme, the first
