@@ -13,6 +13,7 @@
     ".": "./src/index.ts",
     "./host": "./src/renderer/host.ts",
     "./keyed-list": "./src/renderer/keyed-list.ts",
+    "./state": "./src/state/index.ts",
     "./css": "./src/css/index.ts",
     "./css/vite": "./src/css/vite.ts",
     "./css/sheet-module": "./src/css/sheet-module.ts",
