@@ -1,0 +1,12 @@
+{
+  "name": "svelte-winui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "WinUI 3 controls as Svelte components: native Windows apps in Svelte, for Tauri, Electron or Node",
+  "license": "Apache-2.0",
+  "type": "module",
+  "os": ["win32"],
+  "engines": {
+    "node": ">=24"
+  }
+}
