@@ -1,11 +1,20 @@
 import { build } from "esbuild";
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync
+} from "node:fs";
 import path from "node:path";
 
 // Builds dist/window, the window kit a published edgeplus.exe carries and
 // unpacks: Node itself, the window's scripts bundled, dynwinrt's native
-// module, the Windows App SDK bootstrapper and the runtime's packages, which
-// the core installs for the user when they are missing.
+// module and the C++ runtime it links (absent from a clean Windows), the
+// Windows App SDK bootstrapper and the runtime's packages, which the core
+// installs for the user when they are missing.
 //
 //   pnpm build:window
 
@@ -23,14 +32,37 @@ const runtimePackages = [
   "Microsoft.WindowsAppRuntime.Singleton.2.msix"
 ];
 
+// dynwinrt's native module needs vcruntime140.dll, which only an installed
+// Visual C++ Redistributable puts in System32. Node loads a native module with
+// its own folder searched in place of node.exe's, so the copy (Visual Studio's
+// redistributable one) goes beside the module.
+const cppRuntime = "vcruntime140.dll";
+const vswhere = path.join(process.env["ProgramFiles(x86)"] ?? "", "Microsoft Visual Studio", "Installer", "vswhere.exe");
+
+function cppRuntimePath(): string {
+  const installation = execFileSync(vswhere, ["-products", "*", "-latest", "-property", "installationPath"], { encoding: "utf8" }).trim();
+  const redist = path.join(installation, "VC", "Redist", "MSVC");
+  for (const version of readdirSync(redist).toSorted().toReversed()) {
+    const folder = path.join(redist, version, architecture);
+    const crt = existsSync(folder) ? readdirSync(folder).find(name => /^Microsoft\.VC\d+\.CRT$/v.test(name)) : undefined;
+    if (crt !== undefined) {
+      return path.join(folder, crt, cppRuntime);
+    }
+  }
+
+  throw new Error(`No ${cppRuntime} under ${redist}: install Visual Studio's C++ workload`);
+}
+
 function nugetCache(): string {
   const lock: unknown = JSON.parse(readFileSync(path.join(root, ".winapp", "winmds.lock.json"), "utf8"));
   const hasCache = typeof lock === "object" && lock !== null && "nuget_cache_dir" in lock;
-  if (!hasCache || typeof lock.nuget_cache_dir !== "string") {
+  const cache: unknown = hasCache ? lock.nuget_cache_dir : undefined;
+  const isNamed = typeof cache === "string";
+  if (!isNamed) {
     throw new Error("Run pnpm restore first: .winapp/winmds.lock.json names no NuGet cache");
   }
 
-  return lock.nuget_cache_dir;
+  return cache;
 }
 
 function copy(from: string, to: string): void {
@@ -52,7 +84,9 @@ await build({
     "window/worker": path.join(root, "ui", "window", "worker.ts")
   },
   outdir: kit,
-  outExtension: { ".js": ".mjs" },
+  outExtension: {
+    ".js": ".mjs"
+  },
   bundle: true,
   platform: "node",
   format: "esm",
@@ -60,17 +94,23 @@ await build({
   minify: true,
   external: ["@microsoft/dynwinrt", "@microsoft/dynwinrt/*"],
   // The generated bindings are CommonJS; ESM output needs a require for them.
-  banner: { js: "import { createRequire } from \"node:module\"; const require = createRequire(import.meta.url);" },
+  banner: {
+    js: "import { createRequire } from \"node:module\"; const require = createRequire(import.meta.url);"
+  },
   logLevel: "warning",
   // The generated bindings declare some event removers twice (the later one
   // wins, as at run time); nothing of ours does.
-  logOverride: { "duplicate-class-member": "silent" }
+  logOverride: {
+    "duplicate-class-member": "silent"
+  }
 });
 copy(process.execPath, path.join(kit, "node.exe"));
 copy(path.join(dynwinrt, "package.json"), path.join(kit, "node_modules", "@microsoft", "dynwinrt", "package.json"));
 for (const file of ["winrt.js", "index.js", "win32.js", "win32-unsafe.js", "win32-internal.js", "winrt-implementation.cjs", nativeModule]) {
   copy(path.join(dynwinrt, "dist", file), path.join(kit, "node_modules", "@microsoft", "dynwinrt", "dist", file));
 }
+
+copy(cppRuntimePath(), path.join(kit, "node_modules", "@microsoft", "dynwinrt", "dist", cppRuntime));
 
 copy(path.join(root, ".winapp", "bin", architecture, bootstrapName), path.join(kit, bootstrapName));
 const runtime = path.join(nugetCache(), "microsoft.windowsappsdk.runtime", runtimeVersion, "tools", "MSIX", `win10-${architecture}`);
