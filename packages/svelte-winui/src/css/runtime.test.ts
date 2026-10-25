@@ -162,6 +162,19 @@ test("replacing a sheet (hot reload) restyles live elements and keeps the others
   element.dispose();
 });
 
+test("replacing a sheet leaves an element that matches none of its rules untouched", () => {
+  registerStyleSheet(sheet("bystander.svelte", ".bystander { opacity: 0.3 }"));
+  registerStyleSheet(sheet("other.svelte", ".other { opacity: 0.2 }"));
+  const target = control();
+  const element = styledElement(target, "border");
+  element.setClasses("bystander");
+  const changes = target.styleChanges;
+
+  registerStyleSheet(sheet("other.svelte", ".other { opacity: 0.7 }"));
+  assert.equal(target.styleChanges, changes);
+  element.dispose();
+});
+
 test("a later sheet beats an earlier one at equal specificity", () => {
   registerStyleSheet(sheet("first.svelte", ".same { opacity: 0.1 }"));
   registerStyleSheet(sheet("second.svelte", ".same { opacity: 0.2 }"));

@@ -156,6 +156,9 @@ interface RegisteredSheet {
   sheet: StyleSheetData;
   // Keeps its place in the cascade when a hot reload replaces it.
   sequence: number;
+  // Counts the times the sheet was registered, to tell its rules from the ones
+  // it replaced.
+  version: number;
 }
 
 const sheets = new Map<string, RegisteredSheet>();
@@ -165,9 +168,9 @@ const warned = new Set<string>();
 let native: CssNative | null = null;
 let rules: RankedRule[] = [];
 let nextSequence = 0;
-// Counts the changes to the registered rules.
-let generation = 0;
-let nextStyleKey = 0;
+// Each Style is loaded in a dictionary of its own, so one key does for all.
+const styleResourceKey = "css-style";
+const stylesByXaml = new Map<string, object>();
 
 function warnOnce(message: string): void {
   if (!warned.has(message)) {
@@ -176,14 +179,22 @@ function warnOnce(message: string): void {
   }
 }
 
+const idSeparator = "#";
+
+// A rule's id and its sheet's version, to tell it from the rule of the same
+// name in the sheet a hot reload replaced.
+function versionedId(id: string): string {
+  const sheetId = id.slice(0, id.lastIndexOf(idSeparator));
+  return `${id}@${sheets.get(sheetId)?.version ?? 0}`;
+}
+
 function rebuildRules(): void {
   rules = [...sheets.values()].flatMap(({ sheet, sequence }) => sheet.rules.map(rule => ({
     rule,
-    id: `${sheet.id}#${rule.order}`,
+    id: `${sheet.id}${idSeparator}${rule.order}`,
     rank: sequence * rankStride + rule.order
   })));
   builtStyles.clear();
-  generation++;
 }
 
 function mergeResources(registered: RegisteredSheet): void {
@@ -204,10 +215,11 @@ function refreshAll(): void {
 // Same id replaces the sheet (hot reload): its custom properties are merged
 // again after the old ones, so they win, and every live element re-applies.
 export function registerStyleSheet(sheet: StyleSheetData): void {
-  const sequence = sheets.get(sheet.id)?.sequence ?? nextSequence++;
+  const previous = sheets.get(sheet.id);
   const registered: RegisteredSheet = {
     sheet,
-    sequence
+    sequence: previous?.sequence ?? nextSequence++,
+    version: (previous?.version ?? 0) + 1
   };
   sheets.set(sheet.id, registered);
   rebuildRules();
@@ -230,6 +242,7 @@ export function installCssRuntime(implementation: CssNative): void {
   }
 
   builtStyles.clear();
+  stylesByXaml.clear();
   refreshAll();
 }
 
@@ -272,11 +285,21 @@ function buildStyle(elementType: string, matched: RankedRule[], inline: Declarat
     };
   }
 
-  const styleKey = `css-${nextStyleKey}`;
-  nextStyleKey++;
-  const dictionary = native.loadDictionary(styleDictionaryXaml(styleKey, elementType, lowered));
+  // The same XAML is the same Style object, so a hot reload that left an
+  // element's declarations as they were does not set a new one on it.
+  const xaml = styleDictionaryXaml(styleResourceKey, elementType, lowered);
+  const known = stylesByXaml.get(xaml);
+  if (known !== undefined) {
+    return {
+      style: known,
+      writes: lowered.writes
+    };
+  }
+
+  const style = native.lookupStyle(native.loadDictionary(xaml), styleResourceKey);
+  stylesByXaml.set(xaml, style);
   return {
-    style: native.lookupStyle(dictionary, styleKey),
+    style,
     writes: lowered.writes
   };
 }
@@ -289,6 +312,7 @@ function builtFor(key: string, elementType: string, matched: RankedRule[], inlin
 
   if (builtStyles.size >= cacheLimit) {
     builtStyles.clear();
+    stylesByXaml.clear();
   }
 
   const built = buildStyle(elementType, matched, inline);
@@ -304,6 +328,7 @@ class ElementStyle implements StyledElement {
   private readonly states = new Set<PseudoState>();
   private readonly subscriptions = new Map<PseudoState, Array<() => void>>();
   private appliedKey: string | null = null;
+  private appliedStyle: object | null = null;
   private appliedWrites = "";
   private isDisposed = false;
 
@@ -359,8 +384,9 @@ class ElementStyle implements StyledElement {
     const matched = candidates.filter(({ rule }) => rule.state === null || this.states.has(rule.state));
     const inline = this.inlineDeclarations();
     const inlineKey = inline.map(({ property, value }) => `${property}:${value}`).join(";");
-    // The generation tells a replaced sheet's rules from the old ones of the same name.
-    const key = [generation, this.elementType, ...matched.map(({ id }) => id), inlineKey].join("|");
+    // The key carries each rule's sheet version, so an element is restyled
+    // only when a sheet it matches was replaced.
+    const key = [this.elementType, ...matched.map(({ id }) => versionedId(id)), inlineKey].join("|");
     if (key === this.appliedKey) {
       return;
     }
@@ -372,7 +398,11 @@ class ElementStyle implements StyledElement {
     }
 
     const built = builtFor(key, this.elementType, matched, inline);
-    currentNative.setStyle(this.control, built.style);
+    if (built.style !== this.appliedStyle) {
+      currentNative.setStyle(this.control, built.style);
+      this.appliedStyle = built.style;
+    }
+
     this.applyWrites(currentNative, built);
     this.appliedKey = isUnstyled ? null : key;
   }
