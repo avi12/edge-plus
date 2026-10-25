@@ -1,4 +1,4 @@
-import { createWindowModuleRunner } from "../../../app/panel-tauri/ui/svelte-winui/vite-runner.ts";
+import { createWindowModuleRunner } from "../src/vite/runner.ts";
 import { roInitialize } from "@microsoft/dynwinrt";
 import type { MessagePort } from "node:worker_threads";
 import { parentPort, workerData } from "node:worker_threads";

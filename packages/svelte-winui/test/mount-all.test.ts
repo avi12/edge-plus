@@ -24,9 +24,15 @@ function isFailureList(value: unknown): value is Failure[] {
   return Array.isArray(value);
 }
 
-test("every component mounts in a WinUI window", { skip: !existsSync(bootstrap), timeout: timeoutMilliseconds }, async () => {
+test("every component mounts in a WinUI window", {
+  skip: !existsSync(bootstrap),
+  timeout: timeoutMilliseconds
+}, async () => {
   const { stdout } = await run(process.execPath, ["--disable-warning=ExperimentalWarning", script], {
-    env: { ...process.env, EDGEPLUS_WINDOW_BACKGROUND: "1" },
+    env: {
+      ...process.env,
+      EDGEPLUS_WINDOW_BACKGROUND: "1"
+    },
     timeout: timeoutMilliseconds,
     maxBuffer: 64 * 1024 * 1024
   });

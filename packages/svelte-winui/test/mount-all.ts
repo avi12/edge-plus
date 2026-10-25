@@ -1,5 +1,4 @@
-import { startModuleServer } from "../../../app/panel-tauri/ui/svelte-winui/vite-server.ts";
-import { rendererFor } from "../../../app/panel-tauri/ui/window/svelte-compile.ts";
+import { startModuleServer } from "../src/vite/server.ts";
 import { initWinappsdk } from "@microsoft/dynwinrt";
 import path from "node:path";
 import { MessageChannel, Worker } from "node:worker_threads";
@@ -10,15 +9,13 @@ import { MessageChannel, Worker } from "node:worker_threads";
 //
 // The window's thread cannot take imports once WinUI runs, so the worker
 // (mount-all.worker.ts) loads every module from this thread's Vite server
-// first. (The server and the runner come from Edge+'s window until the package
-// holds its own.)
+// first.
 
 const windowsAppSdkMajor = 2;
 const windowsAppSdkMinor = 2;
 const packageRoot = path.join(import.meta.dirname, "..");
 const bindingsFolder = ".winapp/bindings/";
 const bindingsSite = "generated/bindings.ts";
-const edgePlusSite = "ui/window/winui.ts";
 
 process.env["WINAPPSDK_BOOTSTRAP_DLL_PATH"] ??= path.join(
   packageRoot,
@@ -33,16 +30,16 @@ const modules = new MessageChannel();
 const server = await startModuleServer({
   root: packageRoot,
   port: modules.port1,
-  // The components render through Edge+'s renderer until the package has its own.
-  customRenderer: rendererFor,
   // The generated bindings are CommonJS that Node loads itself.
-  isNative: file => {
+  isNative(file) {
     const normalized = file.replaceAll("\\", "/");
-    return normalized.includes(bindingsFolder) || normalized.endsWith(bindingsSite) || normalized.endsWith(edgePlusSite);
+    return normalized.includes(bindingsFolder) || normalized.endsWith(bindingsSite);
   }
 });
 const worker = new Worker(new URL("mount-all.worker.ts", import.meta.url), {
-  workerData: { modules: modules.port2 },
+  workerData: {
+    modules: modules.port2
+  },
   transferList: [modules.port2]
 });
 let report: unknown = null;
