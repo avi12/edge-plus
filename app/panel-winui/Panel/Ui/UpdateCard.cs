@@ -21,7 +21,7 @@ internal sealed class UpdateCard {
       _button.Content = Wording.UpdateRestarting;
       Clicked?.Invoke();
     };
-    _frame = new CardFrame(Wording.UpdateReady(new Version(0, 0)), _button);
+    _frame = new CardFrame(Wording.UpdateReady(new Version(0, 0), isInstaller: false), _button);
     _frame.View.Visibility = Visibility.Collapsed;
   }
 
@@ -29,8 +29,8 @@ internal sealed class UpdateCard {
 
   public FrameworkElement View => _frame.View;
 
-  public void Show(Version version) {
-    _frame.SetWording(Wording.UpdateReady(version));
+  public void Show(Version version, bool isInstaller) {
+    _frame.SetWording(Wording.UpdateReady(version, isInstaller));
     Reset();
     _frame.View.Visibility = Visibility.Visible;
   }

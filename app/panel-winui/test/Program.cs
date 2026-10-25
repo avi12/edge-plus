@@ -25,6 +25,7 @@ internal static class Program {
     ("legacy data", LegacyDataTests.Run),
     ("update feed", UpdateFeedTests.Run),
     ("update install", UpdateInstallTests.Run),
+    ("msi install", MsiInstallTests.Run),
   ];
 
   private static int Main() {

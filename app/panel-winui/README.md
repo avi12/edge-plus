@@ -39,7 +39,10 @@ downloads a newer release's exe into `%LOCALAPPDATA%\EdgePlus\update\`, checks
 it against the manifest's digest and tells the window, which shows
 `UpdateCard`. Restart to update swaps the running exe in place
 (`UpdateInstall`), starts the new one with `--restarted-from <pid>` and exits;
-the new one waits for that pid before its single-instance check. Only a
+the new one waits for that pid before its single-instance check. A copy the
+MSI installed (`MsiInstall.IsInstalledAt`) downloads the release's MSI instead,
+and Restart to update hands it to a hidden PowerShell that waits for this
+process, runs `msiexec /passive` and starts the exe again. Only a
 published exe does this (the host's own `edgeplus.dll` is not beside it), and
 `Settings.AutoUpdate` turns the check off. `EDGEPLUS_UPDATE_FEED` points it at
 a manifest on this machine for a test. The release side is in

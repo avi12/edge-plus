@@ -151,7 +151,7 @@ internal sealed class PanelView : IDisposable {
 
   private void ShowUpdate(ReadyUpdate? update) {
     if (update is not null) {
-      _updateCard.Show(update.Offer.Version);
+      _updateCard.Show(update.Offer.Version, update.IsInstaller);
     }
   }
 

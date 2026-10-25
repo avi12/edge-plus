@@ -85,10 +85,14 @@ internal static class Wording {
       "Edge+ could not replace itself where it is installed. Get the new version from its " +
       "GitHub releases page instead.";
 
-  public static CardWording UpdateReady(Version version) => new(
+  // A copy the installer put under Program Files updates through the new
+  // installer, which Windows asks to allow.
+  public static CardWording UpdateReady(Version version, bool isInstaller) => new(
       $"Edge+ {version} is ready",
-      "Restart Edge+ to finish updating. Edge keeps running, and your splits and themes stay " +
-          "as they are.",
+      (isInstaller
+           ? "Restart Edge+ to finish updating, and allow the installer when Windows asks. "
+           : "Restart Edge+ to finish updating. ") +
+          "Edge keeps running, and your splits and themes stay as they are.",
       0xE777);
 
   public static CardWording For(OwnCard card) => card switch {

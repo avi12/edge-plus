@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 
 namespace EdgePlus;
 
-// A newer release whose exe is downloaded and checked, waiting for the user to
-// restart into it.
-internal sealed record ReadyUpdate(UpdateOffer Offer, string File);
+// A newer release whose file is downloaded and checked, waiting for the user to
+// restart into it: the exe to swap in, or for a copy the MSI installed, the MSI
+// to run.
+internal sealed record ReadyUpdate(UpdateOffer Offer, string File, bool IsInstaller);
 
 // Asks the repository's update manifest (UpdateFeed) for a newer release at
-// start and then every few hours, and downloads its exe in the background so
+// start and then every few hours, and downloads it in the background so
 // the window can offer a restart at once. Only a published exe replaces itself:
 // a build run from a checkout is never touched. Off (Settings.AutoUpdate),
 // Edge+ never contacts GitHub.
@@ -27,6 +28,8 @@ internal sealed class UpdateWatch {
   // published single-file exe.
   private const string HostAssemblyFileName = "edgeplus.dll";
   private const string DownloadSuffix = ".part";
+  private const string ExeExtension = ".exe";
+  private const string InstallerExtension = ".msi";
 
   private readonly PollThread _thread = new("Update watch", s_tick);
   private readonly CancellationTokenSource _cancel = new();
@@ -85,25 +88,35 @@ internal sealed class UpdateWatch {
     client.DefaultRequestHeaders.UserAgent.ParseAdd($"EdgePlus/{Product.Version}");
     string manifest = client.GetStringAsync(UpdateFeed.Url, _cancel.Token).GetAwaiter().GetResult();
     UpdateOffer? offer = UpdateFeed.Parse(manifest, current);
-    bool isNew = offer is not null && (_pending is null || _pending.Offer.Version < offer.Version);
+    if (offer is null) {
+      return;
+    }
+    bool isNew = _pending is null || _pending.Offer.Version < offer.Version;
     if (!isNew) {
       return;
     }
-    string file = Download(client, offer!);
-    _pending = new ReadyUpdate(offer!, file);
+    // A release without an MSI is not offered to a copy the MSI installed.
+    bool isInstaller = MsiInstall.IsInstalledAt(Environment.ProcessPath!);
+    UpdateAsset? asset = isInstaller ? offer.Installer : offer.Exe;
+    if (asset is null) {
+      return;
+    }
+    string extension = isInstaller ? InstallerExtension : ExeExtension;
+    string file = Download(client, asset, $"EdgePlus-{offer.Version}{extension}");
+    _pending = new ReadyUpdate(offer, file, isInstaller);
     Ready?.Invoke(_pending);
   }
 
   // Checked against the manifest's digest before it is kept; a download from an
   // earlier run that still matches is used as it is.
-  private string Download(HttpClient client, UpdateOffer offer) {
+  private string Download(HttpClient client, UpdateAsset asset, string fileName) {
     Directory.CreateDirectory(Paths.UpdateFolder);
-    string target = Path.Combine(Paths.UpdateFolder, $"EdgePlus-{offer.Version}.exe");
-    if (File.Exists(target) && UpdateInstall.IsDigestOf(target, offer.Sha256)) {
+    string target = Path.Combine(Paths.UpdateFolder, fileName);
+    if (File.Exists(target) && UpdateInstall.IsDigestOf(target, asset.Sha256)) {
       return target;
     }
     string partial = target + DownloadSuffix;
-    Task<HttpResponseMessage> request = client.GetAsync(offer.Download,
+    Task<HttpResponseMessage> request = client.GetAsync(asset.Download,
                                                         HttpCompletionOption.ResponseHeadersRead,
                                                         _cancel.Token);
     using (HttpResponseMessage response = request.GetAwaiter().GetResult()) {
@@ -112,7 +125,7 @@ internal sealed class UpdateWatch {
       using FileStream destination = File.Create(partial);
       source.CopyToAsync(destination, _cancel.Token).GetAwaiter().GetResult();
     }
-    if (!UpdateInstall.IsDigestOf(partial, offer.Sha256)) {
+    if (!UpdateInstall.IsDigestOf(partial, asset.Sha256)) {
       File.Delete(partial);
       throw new InvalidDataException("The downloaded update does not match its digest.");
     }

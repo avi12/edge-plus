@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 
 namespace EdgePlus;
 
@@ -61,18 +62,43 @@ internal static class PanelActions {
 
   // Puts the downloaded release's exe in place of the running one and starts
   // it, which waits for this process to exit; the window then ends this
-  // process. The new exe swaps its own DLL into Edge, so no Edge restart.
+  // process. The new exe swaps its own DLL into Edge, so no Edge restart. A
+  // copy the MSI installed runs the release's MSI once this process has exited
+  // instead, and the MSI's update starts it again.
   public static void RestartToUpdate() {
     ReadyUpdate update = BackgroundService.Current?.PendingUpdate
         ?? throw new InvalidOperationException("No update is ready to install.");
     string running = Environment.ProcessPath
         ?? throw new InvalidOperationException("The panel cannot name its own executable.");
-    UpdateInstall.Install(update.File, running, update.Offer.Sha256, DateTime.UtcNow);
+    if (update.IsInstaller) {
+      RunInstallerAfterExit(update, running);
+      return;
+    }
+    UpdateInstall.Install(update.File, running, update.Offer.Exe.Sha256, DateTime.UtcNow);
     Process.Start(new ProcessStartInfo(running) {
       UseShellExecute = false,
       ArgumentList = { Switches.RestartedFrom, Environment.ProcessId.ToString() },
     });
   }
+
+  // Checked again here, since the download may have been altered since.
+  private static void RunInstallerAfterExit(ReadyUpdate update, string running) {
+    if (!UpdateInstall.IsDigestOf(update.File, update.Offer.Installer!.Sha256)) {
+      throw new InvalidDataException("The downloaded installer does not match its digest.");
+    }
+    string arguments = MsiInstall.InstallerArguments(
+        update.File,
+        HasShortcut(Environment.SpecialFolder.CommonDesktopDirectory),
+        HasShortcut(Environment.SpecialFolder.CommonPrograms));
+    string script = MsiInstall.UpdateScript(Environment.ProcessId, arguments, running);
+    bool isStarted = DetachedProcess.Start(MsiInstall.HiddenPowerShell(script));
+    if (!isStarted) {
+      throw new InvalidOperationException("The installer could not be started.");
+    }
+  }
+
+  private static bool HasShortcut(Environment.SpecialFolder folder) =>
+      File.Exists(MsiInstall.ShortcutFile(Environment.GetFolderPath(folder), Product.Name));
 
   // The Inject button: the DLL into every Edge browser process missing it. The
   // returned state's IsSplitLoaded is the outcome the button shows.
