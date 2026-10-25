@@ -175,6 +175,11 @@ must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h}`).
   gate fails when it is stale). WinUI's loop runs on a worker thread. No UI
   library; styles are `ui/window/styles.ts`, motion goes through
   `ui/window/motion.ts`, which follows Windows' Animation effects switch.
+  The Svelte-on-WinUI machinery (the custom renderer, the Vite plugin and hot
+  reload, the WinUI start-up) is the generic package `packages/svelte-winui`
+  (`DESIGN.md`, `API.md`), a pnpm workspace member with the panel: the panel
+  registers its bindings and XAML styles with it. `pnpm lint:package` and
+  `pnpm test:js` cover it too.
 - **The window kit**: a release exe embeds Node, the bundled scripts, dynwinrt
   (with `vcruntime140.dll` beside its native module, which a clean Windows
   lacks), the Windows App SDK bootstrapper and runtime packages (`pnpm
