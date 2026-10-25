@@ -5,18 +5,23 @@ import { compile, compileModule } from "svelte/compiler";
 // How the window's .svelte components (and the .svelte.ts modules that use
 // runes) become JavaScript, for both ways the window runs: from source
 // (svelte-hooks.ts) and bundled into the window kit (scripts/build-window.ts).
-// Components render through the WinUI renderer.
+// Components render through the WinUI renderer unless told another one (the
+// tests render through one without WinUI).
 
-const rendererModule = path.join(import.meta.dirname, "svelte-renderer.ts");
-export const componentExtension = ".svelte";
-export const runesExtension = ".svelte.ts";
+export const winuiRenderer = path.join(import.meta.dirname, "svelte-renderer.ts");
+const componentExtension = ".svelte";
+const runesExtension = ".svelte.ts";
 
-function rendererFor(filename: string): string {
-  const relative = path.relative(path.dirname(filename), rendererModule).replaceAll("\\", "/");
+function importPath(filename: string, module: string): string {
+  const relative = path.relative(path.dirname(filename), module).replaceAll("\\", "/");
   return relative.startsWith(".") ? relative : `./${relative}`;
 }
 
-export function compileSvelte(filename: string, source: string): string {
+export function isSvelteFile(filename: string): boolean {
+  return filename.endsWith(componentExtension) || filename.endsWith(runesExtension);
+}
+
+export function compileSvelte(filename: string, source: string, renderer = winuiRenderer): string {
   if (filename.endsWith(runesExtension)) {
     return compileModule(stripTypeScriptTypes(source), {
       filename,
@@ -29,7 +34,7 @@ export function compileSvelte(filename: string, source: string): string {
     generate: "client",
     runes: true,
     experimental: {
-      customRenderer: ({ filename: component }) => rendererFor(component)
+      customRenderer: ({ filename: component }) => importPath(component, renderer)
     }
   }).js.code;
 }
