@@ -7,8 +7,8 @@ import type {
 } from "../protocol.g.ts";
 import { milliseconds } from "./layout.ts";
 import { joinAppUserModel } from "./native.ts";
-import { Shell } from "./shell.ts";
 import "./shared-styles.svelte";
+import { Shell } from "./shell.ts";
 import { installStyles } from "./styles.ts";
 import * as winui from "./winui.ts";
 import { DispatcherQueue } from "./winui.ts";

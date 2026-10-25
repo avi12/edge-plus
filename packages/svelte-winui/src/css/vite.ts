@@ -1,10 +1,10 @@
-import type { CompileOptions } from "svelte/compiler";
-import path from "node:path";
-import type { Plugin } from "vite";
 import { loadWinuiCatalogue } from "./catalogue.ts";
 import { compileSheetModule, SheetError, sheetSuffix } from "./sheet-module.ts";
 import { formatDiagnostic } from "./translate.ts";
 import { readFileSync } from "node:fs";
+import path from "node:path";
+import type { CompileOptions } from "svelte/compiler";
+import type { Plugin } from "vite";
 
 // The Vite plugin that turns every component's <style> into the module that
 // registers its WinUI Styles. For `Card.svelte` it adds

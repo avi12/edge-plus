@@ -182,7 +182,8 @@ function applyClass(element: WinuiElement, control: UIElement, value: unknown): 
 // directives merged into it.
 function applyInlineStyle(element: WinuiElement, control: UIElement, value: unknown): void {
   const isRemoved = value === null || value === undefined;
-  if (isRemoved && element.native.styled === null) {
+  const isUnstyled = isRemoved && element.native.styled === null;
+  if (isUnstyled) {
     return;
   }
 

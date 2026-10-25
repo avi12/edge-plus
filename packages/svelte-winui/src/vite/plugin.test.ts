@@ -50,6 +50,21 @@ test("the window's module environment resolves Svelte's browser build", () => {
   });
 });
 
+test("a bundled component carries the statements that register its <style>", () => {
+  const component = path.join(import.meta.dirname, "styled.svelte");
+  const code = compileSvelte(component, "<border class=\"a\"></border>\n<style>\n  .a { padding: 4px }\n</style>\n");
+  assert.match(code, /registerStyleSheet as registerWinuiSheet \} from "svelte-winui\/css"/u);
+  assert.match(code, /"id":"styled\.svelte"/u);
+});
+
+test("a <style> WinUI cannot say fails the bundle with the rule's line", () => {
+  const component = path.join(import.meta.dirname, "broken.svelte");
+  assert.throws(
+    () => compileSvelte(component, "<border class=\"a\"></border>\n<style>\n  .a { float: left }\n</style>\n"),
+    /^Error: broken\.svelte:3:8: float has no WinUI meaning/u
+  );
+});
+
 test("a renderer given as a file is imported by relative path, a specifier as it is", () => {
   const component = path.join(import.meta.dirname, "a", "b.svelte");
   const renderer = path.join(import.meta.dirname, "c", "host.ts");
