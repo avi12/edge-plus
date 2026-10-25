@@ -6,7 +6,7 @@ import { namedColors } from "./named-colors.ts";
 
 // WinUI measures in device-independent pixels, which is what CSS's px is. A
 // rem is the browser's default root size; WinUI has no root font size.
-export const pixelsPerRem = 16;
+const pixelsPerRem = 16;
 const msPerSecond = 1000;
 const maxChannel = 255;
 const percentScale = 100;

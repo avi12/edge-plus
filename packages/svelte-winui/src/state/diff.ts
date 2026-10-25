@@ -1,5 +1,5 @@
 import type { Json, PatchOp, PathSegment } from "./protocol.ts";
-import { isRecord, PatchOperation } from "./protocol.ts";
+import { isJsonObject, PatchOperation } from "./protocol.ts";
 
 // For a host written in JavaScript (Node, Electron): the patch that turns one
 // value into the next. A Rust host does the same with its own diff and sends
@@ -37,37 +37,46 @@ function diffArrays(path: PathSegment[], previous: Json[], next: Json[], ops: Pa
   }
 }
 
+function diffRecords(
+  path: PathSegment[],
+  previous: Record<string, Json>,
+  next: Record<string, Json>,
+  ops: PatchOp[]
+): void {
+  for (const key in previous) {
+    if (!Object.hasOwn(next, key)) {
+      ops.push({
+        op: PatchOperation.remove,
+        path: [...path, key]
+      });
+    }
+  }
+
+  for (const [key, value] of Object.entries(next)) {
+    const before = Object.hasOwn(previous, key) ? previous[key] : undefined;
+    if (before === undefined) {
+      ops.push({
+        op: PatchOperation.set,
+        path: [...path, key],
+        value
+      });
+    } else {
+      diffValues([...path, key], before, value, ops);
+    }
+  }
+}
+
 function diffValues(path: PathSegment[], previous: Json, next: Json, ops: PatchOp[]): void {
   if (isSame(previous, next)) {
     return;
   }
 
   const areArrays = Array.isArray(previous) && Array.isArray(next);
-  const areRecords = isRecord(previous) && isRecord(next) && !Array.isArray(previous) && !Array.isArray(next);
+  const areRecords = isJsonObject(previous) && isJsonObject(next) && !Array.isArray(previous) && !Array.isArray(next);
   if (areArrays) {
     diffArrays(path, previous, next, ops);
   } else if (areRecords) {
-    for (const key in previous) {
-      if (!Object.hasOwn(next, key)) {
-        ops.push({
-          op: PatchOperation.remove,
-          path: [...path, key]
-        });
-      }
-    }
-
-    for (const [key, value] of Object.entries(next)) {
-      const before = Object.hasOwn(previous, key) ? previous[key] : undefined;
-      if (before === undefined) {
-        ops.push({
-          op: PatchOperation.set,
-          path: [...path, key],
-          value
-        });
-      } else {
-        diffValues([...path, key], before, value, ops);
-      }
-    }
+    diffRecords(path, previous, next, ops);
   } else {
     ops.push({
       op: PatchOperation.set,

@@ -1,6 +1,6 @@
 import { diff } from "../../src/state/diff.ts";
 import type { Json } from "../../src/state/protocol.ts";
-import { isRecord, MessageType } from "../../src/state/protocol.ts";
+import { isJsonObject, MessageType } from "../../src/state/protocol.ts";
 import { createMessagePortTransport } from "../../src/state/transports/message-port.ts";
 import { startWindowsAppSdk } from "../bootstrap.ts";
 import { viewName } from "./app-types.ts";
@@ -43,15 +43,15 @@ function publish(next: Json): void {
 
 transport.listen({
   message(value) {
-    const action = isRecord(value) ? value["action"] : undefined;
-    const isAction = isRecord(value) && value["type"] === MessageType.action && isRecord(action);
+    const action = isJsonObject(value) ? value["action"] : undefined;
+    const isAction = isJsonObject(value) && value["type"] === MessageType.action && isJsonObject(action);
     if (!isAction) {
       return;
     }
 
     let error: string | null = null;
-    const count = isRecord(state) ? state["count"] : undefined;
-    const history = isRecord(state) ? state["history"] : undefined;
+    const count = isJsonObject(state) ? state["count"] : undefined;
+    const history = isJsonObject(state) ? state["history"] : undefined;
     const isIncrement = action["kind"] === "increment" && typeof count === "number" && Array.isArray(history);
     if (isIncrement) {
       publish({

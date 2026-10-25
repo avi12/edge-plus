@@ -88,7 +88,7 @@ function escapeAttribute(value: string): string {
 }
 
 // "stack-panel" as StackPanel, the XAML name of the control.
-export function xamlTypeName(elementType: string): string {
+function xamlTypeName(elementType: string): string {
   return elementType.split("-").map(word => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join("");
 }
 

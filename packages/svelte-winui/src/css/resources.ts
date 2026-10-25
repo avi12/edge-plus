@@ -31,7 +31,7 @@ const maxSuggestions = 3;
 const suggestionDistanceShare = 0.25;
 const minSuggestionDistance = 3;
 
-export function isResourceKind(value: string): value is ResourceKind {
+function isResourceKind(value: string): value is ResourceKind {
   return Object.values<string>(ResourceKind).includes(value);
 }
 
@@ -50,7 +50,7 @@ export function resourceNameOf(customProperty: string): string {
 }
 
 // "CardBackgroundFillColorDefault" as "--card-background-fill-color-default".
-export function customPropertyOf(resourceName: string): string {
+function customPropertyOf(resourceName: string): string {
   const words = resourceName.replace(/([a-z0-9])([A-Z])/gu, "$1-$2").toLowerCase();
   return `--${words}`;
 }

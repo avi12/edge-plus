@@ -5,6 +5,7 @@ import { lowerDeclarations } from "./properties.ts";
 import type { LowerOptions } from "./reader.ts";
 import type { ResourceCatalogue } from "./resources.ts";
 import { hasStyle, resolveVariable, ResourceKind, resourceNameOf } from "./resources.ts";
+import type { ParsedSelector } from "./selectors.ts";
 import { parseSelectorList } from "./selectors.ts";
 import { expandDeclaration } from "./shorthands.ts";
 import type { PositionMapper, SourceMapV3 } from "./source-map.ts";
@@ -90,67 +91,78 @@ function originalDeclaration(translator: Translator, declaration: Declaration): 
   };
 }
 
+function reportDeclarations(translator: Translator, declarations: Declaration[], message: string): void {
+  for (const declaration of declarations) {
+    translator.diagnostics.push({
+      severity: "error",
+      message: `${declaration.property} ${message}`,
+      file: translator.input.file,
+      at: declaration.at
+    });
+  }
+}
+
+// One selector of a rule: its custom properties become variables, and its
+// other declarations a rule, unless the selector or the @media cannot style.
+function addSelectorRule(
+  translator: Translator,
+  block: RuleBlock,
+  selector: ParsedSelector,
+  scheme: ColorScheme
+): void {
+  const declarations = block.declarations.map(declaration => originalDeclaration(translator, declaration));
+  const customProperties = declarations.filter(declaration => declaration.property.startsWith("--"));
+  const properties = declarations.filter(declaration => !declaration.property.startsWith("--"));
+  for (const custom of customProperties) {
+    translator.variables.push({
+      name: custom.property,
+      value: custom.value,
+      scheme,
+      at: custom.at
+    });
+  }
+
+  if (selector.isRoot) {
+    reportDeclarations(
+      translator,
+      properties,
+      "has no WinUI meaning (:root styles no element; it can only declare custom properties)"
+    );
+    return;
+  }
+
+  const isSchemeConditional = scheme !== ColorScheme.Default;
+  if (isSchemeConditional) {
+    reportDeclarations(
+      translator,
+      [...properties, ...customProperties],
+      "has no WinUI meaning here (a Style cannot depend on the color scheme: set the color through var(--a-winui-brush) or declare a custom property on :root in the @media block)"
+    );
+    return;
+  }
+
+  translator.rules.push({
+    elementType: selector.elementType,
+    classes: selector.classes,
+    state: selector.state,
+    specificity: selector.specificity,
+    order: translator.nextOrder,
+    declarations: properties
+  });
+  translator.nextOrder++;
+}
+
 function addRuleBlock(translator: Translator, block: RuleBlock, scheme: ColorScheme): void {
   for (const nestedAt of block.nested) {
     reportError(translator, "nested rules have no WinUI meaning (write each selector at the top level)", nestedAt);
   }
 
-  const results = parseSelectorList(block.selector);
-  for (const result of results) {
-    if (!result.isValid) {
+  for (const result of parseSelectorList(block.selector)) {
+    if (result.isValid) {
+      addSelectorRule(translator, block, result.selector, scheme);
+    } else {
       reportError(translator, `selector "${block.selector}": ${result.reason}`, block.at);
-      continue;
     }
-
-    const { selector } = result;
-    const declarations = block.declarations.map(declaration => originalDeclaration(translator, declaration));
-    const customProperties = declarations.filter(declaration => declaration.property.startsWith("--"));
-    const properties = declarations.filter(declaration => !declaration.property.startsWith("--"));
-    for (const custom of customProperties) {
-      translator.variables.push({
-        name: custom.property,
-        value: custom.value,
-        scheme,
-        at: custom.at
-      });
-    }
-
-    if (selector.isRoot) {
-      for (const property of properties) {
-        translator.diagnostics.push({
-          severity: "error",
-          message: `${property.property} has no WinUI meaning (:root styles no element; it can only declare custom properties)`,
-          file: translator.input.file,
-          at: property.at
-        });
-      }
-
-      continue;
-    }
-
-    const isSchemeConditional = scheme !== ColorScheme.Default;
-    if (isSchemeConditional) {
-      for (const entry of [...properties, ...customProperties]) {
-        translator.diagnostics.push({
-          severity: "error",
-          message: `${entry.property} has no WinUI meaning here (a Style cannot depend on the color scheme: set the color through var(--a-winui-brush) or declare a custom property on :root in the @media block)`,
-          file: translator.input.file,
-          at: entry.at
-        });
-      }
-
-      continue;
-    }
-
-    translator.rules.push({
-      elementType: selector.elementType,
-      classes: selector.classes,
-      state: selector.state,
-      specificity: selector.specificity,
-      order: translator.nextOrder,
-      declarations: properties
-    });
-    translator.nextOrder++;
   }
 }
 

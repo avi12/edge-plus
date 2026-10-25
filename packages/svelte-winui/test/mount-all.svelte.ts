@@ -160,6 +160,45 @@ function attachedValue(owner: string, setter: string, control: object): unknown 
   return typeof method === "function" ? method.apply(holder, [control]) : undefined;
 }
 
+function samplePropertiesOf(
+  sample: Sample,
+  name: string,
+  level: LevelMetadata,
+  control: object,
+  isWanted: (key: string) => boolean
+): void {
+  for (const key of level.properties) {
+    const value = read(control, key);
+    const isBindable = level.bindables.includes(key);
+    const isWritable = !renderTransformFamily.has(key) && !refusedByWinui.get(name)?.includes(key);
+    const hasValue = value !== undefined && value !== null && isWanted(key) && isWritable;
+    const isBoundValue = hasValue && isBindable;
+    if (isBoundValue) {
+      sample.state[key] = value;
+      sample.counts.bindables++;
+    } else if (hasValue) {
+      sample.props[key] = value;
+      sample.counts.properties++;
+    }
+  }
+}
+
+function sampleAttachedOf(
+  sample: Sample,
+  level: LevelMetadata,
+  control: object,
+  isWanted: (key: string) => boolean
+): void {
+  for (const [key, [owner, setter]] of Object.entries(level.attached).filter(([key]) => isWanted(key))) {
+    const value = attachedValue(owner, setter, control);
+    const isPresent = value !== undefined && value !== null;
+    if (isPresent) {
+      sample.props[key] = value;
+      sample.counts.attached++;
+    }
+  }
+}
+
 function sampleOf(name: string, control: object, only: ReadonlySet<string> | null): Sample {
   const sample = emptySample();
   function isWanted(key: string): boolean {
@@ -167,34 +206,13 @@ function sampleOf(name: string, control: object, only: ReadonlySet<string> | nul
   }
 
   for (const level of chainOf(name)) {
-    for (const key of level.properties) {
-      const value = read(control, key);
-      const isBindable = level.bindables.includes(key);
-      const isWritable = !renderTransformFamily.has(key) && !refusedByWinui.get(name)?.includes(key);
-      const hasValue = value !== undefined && value !== null && isWanted(key) && isWritable;
-      const isBoundValue = hasValue && isBindable;
-      if (isBoundValue) {
-        sample.state[key] = value;
-        sample.counts.bindables++;
-      } else if (hasValue) {
-        sample.props[key] = value;
-        sample.counts.properties++;
-      }
-    }
-
+    samplePropertiesOf(sample, name, level, control, isWanted);
     for (const key of level.events.filter(isWanted)) {
       sample.props[key] = () => undefined;
       sample.counts.events++;
     }
 
-    for (const [key, [owner, setter]] of Object.entries(level.attached).filter(([key]) => isWanted(key))) {
-      const value = attachedValue(owner, setter, control);
-      const isPresent = value !== undefined && value !== null;
-      if (isPresent) {
-        sample.props[key] = value;
-        sample.counts.attached++;
-      }
-    }
+    sampleAttachedOf(sample, level, control, isWanted);
   }
 
   return sample;

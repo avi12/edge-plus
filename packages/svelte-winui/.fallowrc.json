@@ -1,11 +1,17 @@
 {
   "$schema": "../../app/panel-tauri/node_modules/fallow/schema.json",
-  // The package.json exports are its entry points; the app's own entry
-  // files are in the app's config.
+  // The package.json exports are its entry points, as are the tests, the
+  // scripts that package.json runs, the CSS part's surface (which the renderer
+  // takes over) and the examples.
   "entry": [
     "src/index.ts",
+    "src/components/generated/index.ts",
     "src/renderer/host.ts",
     "src/renderer/keyed-list.ts",
+    "src/state/index.ts",
+    "src/state/host.ts",
+    "src/state/transports/stdio.ts",
+    "src/css/index.ts",
     "src/vite/index.ts",
     "src/vite/runner.ts",
     "src/vite/compile.ts",
@@ -13,9 +19,52 @@
     "src/window/bootstrap.ts",
     "src/window/thread.ts",
     "src/window/index.ts",
+    "src/cli/main.ts",
+    "**/*.test.ts",
+    "src/state/test-support/echo-host.ts",
+    "test/mount-all.svelte.ts",
+    "test/mount-all.ts",
+    "test/mount-all.worker.ts",
+    "scripts/codegen/generate.ts",
+    "scripts/css/export-winui-resources.ts",
+    "scripts/build/build.ts",
+    "examples/counter/launch.ts",
+    "examples/counter/window.ts",
+    "examples/scheduling/launch.ts",
+    "examples/scheduling/window.ts",
+    "examples/hello/main.ts",
+    "examples/hello/app.svelte",
+    "examples/hello/window.ts",
     "eslint.config.js"
   ],
   // The bindings are reached through the #winui/* import map, and the linters
   // run from package.json scripts.
-  "ignoreDependencies": ["@winapp/bindings", "oxlint-tsgolint"]
+  "ignoreDependencies": ["@winapp/bindings", "oxlint-tsgolint", "@sveltejs/package"],
+  // Generated from WinUI's metadata: 167 components that differ by their
+  // property lists, and an app renders them, not the package.
+  // Called on the in-memory link by the state tests, through a type fallow
+  // does not follow.
+  "usedClassMembers": ["sendMalformed", "close"],
+  "ignoreExports": [
+    {
+      "file": "src/components/generated/**",
+      "exports": ["*"]
+    }
+  ],
+  // The examples each stand on their own (an app copies one), and the state
+  // tests' child-process host is the shape of the counter example's host.
+  "duplicates": {
+    "ignore": ["src/components/generated/**", "examples/**", "src/state/test-support/**"]
+  },
+  "rules": {
+    "unrendered-components": "off"
+  },
+  // No coverage is fed to fallow, so it scores CRAP as cyclomatic squared plus
+  // cyclomatic and flags every function above 5; the cyclomatic and cognitive
+  // limits do the work (the limit here lies above what 20 would score). The
+  // generated link functions have one branch per property of a WinUI class.
+  "health": {
+    "maxCrap": 1000,
+    "ignore": ["src/components/generated/**"]
+  }
 }

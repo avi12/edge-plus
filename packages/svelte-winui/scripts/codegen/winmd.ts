@@ -22,7 +22,7 @@ const wideBlobsFlag = 0x04;
 const smallIndexLimit = 0x10000;
 const nullStringMarker = 0xff;
 
-export const TableId = {
+const TableId = {
   Module: 0x00,
   TypeRef: 0x01,
   TypeDef: 0x02,
@@ -48,11 +48,11 @@ export const TypeAttribute = {
   Sealed: 0x100
 } as const;
 
-export const MethodAttribute = {
+const MethodAttribute = {
   Static: 0x10
 } as const;
 
-export const MethodSemantic = {
+const MethodSemantic = {
   Setter: 0x01,
   Getter: 0x02,
   AddOn: 0x08,
@@ -421,29 +421,34 @@ export class WinMdFile {
     }
   }
 
+  private tableIndexSize(table: number): number {
+    const rows = this.rowCounts.get(table) ?? 0;
+    return rows < smallIndexLimit ? 2 : 4;
+  }
+
+  private codedIndexSize(name: string): number {
+    const targets = codedIndexTables[name] ?? [];
+    const tagBits = Math.ceil(Math.log2(targets.length));
+    const largest = Math.max(...targets.map(target => target === null ? 0 : this.rowCounts.get(target) ?? 0));
+    return largest < smallIndexLimit >> tagBits ? 2 : 4;
+  }
+
   private columnSize(column: ColumnKind): number {
-    if (column === "str") {
-      return this.wideStrings ? 4 : 2;
-    }
-
-    if (column === "guid") {
-      return this.wideGuids ? 4 : 2;
-    }
-
-    if (column === "blob") {
-      return this.wideBlobs ? 4 : 2;
+    const heapIsWide = new Map([
+      ["str", this.wideStrings],
+      ["guid", this.wideGuids],
+      ["blob", this.wideBlobs]
+    ]).get(column);
+    if (heapIsWide !== undefined) {
+      return heapIsWide ? 4 : 2;
     }
 
     if (column.startsWith("t:")) {
-      const rows = this.rowCounts.get(Number(column.slice(2))) ?? 0;
-      return rows < smallIndexLimit ? 2 : 4;
+      return this.tableIndexSize(Number(column.slice(2)));
     }
 
     if (column.startsWith("c:")) {
-      const targets = codedIndexTables[column.slice(2)] ?? [];
-      const tagBits = Math.ceil(Math.log2(targets.length));
-      const largest = Math.max(...targets.map(target => target === null ? 0 : this.rowCounts.get(target) ?? 0));
-      return largest < smallIndexLimit >> tagBits ? 2 : 4;
+      return this.codedIndexSize(column.slice(2));
     }
 
     return Number(column);
@@ -697,7 +702,13 @@ export class WinMdFile {
     throw new Error("an attribute argument of this type is not supported");
   }
 
-  private readAttribute(row: number): AttributeInfo | null {
+  // The attribute's class and the blob of its constructor's signature; null
+  // for an attribute whose constructor is in this file or whose class is not
+  // among the types read.
+  private attributeConstructor(row: number): {
+    type: AttributeInfo["type"];
+    signatureIndex: number;
+  } | null {
     const { table, row: constructorRow } = this.decode("CustomAttributeType", this.cell(TableId.CustomAttribute, row, 1));
     let typeCoded = 0;
     let signatureIndex = 0;
@@ -714,6 +725,13 @@ export class WinMdFile {
       return null;
     }
 
+    return {
+      type,
+      signatureIndex
+    };
+  }
+
+  private constructorParameters(signatureIndex: number): TypeSignature[] {
     const signature = this.blob(signatureIndex);
     signature.byte();
     const parameterCount = signature.compressed();
@@ -723,52 +741,61 @@ export class WinMdFile {
       parameterTypes.push(this.readType(signature));
     }
 
+    return parameterTypes;
+  }
+
+  // The type of a named argument, from the serialization tag before its name.
+  private namedArgumentType(kind: number): TypeSignature {
+    const isString = kind === 0x0e || kind === 0x50;
+    const primitive = kind === 0x02 ? "Boolean" : "Int32";
+    return {
+      kind: "primitive",
+      name: isString ? "String" : primitive
+    };
+  }
+
+  private readNamedArguments(value: BlobReader, named: Map<string, unknown>): void {
+    const namedCount = value.integer(2);
+    for (let index = 0; index < namedCount; index++) {
+      value.byte();
+      const kind = value.byte();
+      const isEnum = kind === 0x55;
+      if (isEnum) {
+        value.text();
+      }
+
+      const name = value.text() ?? "";
+      named.set(name, this.attributeValue(value, this.namedArgumentType(kind)));
+    }
+  }
+
+  private readAttribute(row: number): AttributeInfo | null {
+    const constructed = this.attributeConstructor(row);
+    if (constructed === null) {
+      return null;
+    }
+
+    const parameterTypes = this.constructorParameters(constructed.signatureIndex);
     const value = this.blob(this.cell(TableId.CustomAttribute, row, 2));
     const prolog = value.integer(2);
     const hasProlog = prolog === 1;
     const fixed: unknown[] = [];
     const named = new Map<string, unknown>();
-    if (!hasProlog) {
-      return {
-        type,
-        fixed,
-        named
-      };
-    }
-
-    try {
-      for (const parameterType of parameterTypes) {
-        fixed.push(this.attributeValue(value, parameterType));
-      }
-
-      const namedCount = value.integer(2);
-      for (let index = 0; index < namedCount; index++) {
-        value.byte();
-        const kind = value.byte();
-        const isEnum = kind === 0x55;
-        if (isEnum) {
-          value.text();
+    if (hasProlog) {
+      try {
+        for (const parameterType of parameterTypes) {
+          fixed.push(this.attributeValue(value, parameterType));
         }
 
-        const name = value.text() ?? "";
-        const argumentType: TypeSignature = kind === 0x0e || kind === 0x50
-          ? {
-            kind: "primitive",
-            name: "String"
-          }
-          : {
-            kind: "primitive",
-            name: kind === 0x02 ? "Boolean" : "Int32"
-          };
-        named.set(name, this.attributeValue(value, argumentType));
+        this.readNamedArguments(value, named);
+      } catch {
+        // An argument this reader does not decode: the attributes the generator
+        // reads have only strings, types and integers.
       }
-    } catch {
-      // An argument this reader does not decode: the attributes the generator
-      // reads have only strings, types and integers.
     }
 
     return {
-      type,
+      type: constructed.type,
       fixed,
       named
     };
@@ -945,9 +972,5 @@ export class TypeIndex {
 
   find(type: TypeName): TypeInfo | undefined {
     return this.byName.get(fullName(type));
-  }
-
-  all(): TypeInfo[] {
-    return [...this.byName.values()];
   }
 }

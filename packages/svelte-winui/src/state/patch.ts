@@ -1,5 +1,5 @@
 import type { Json, PatchOp, PathSegment } from "./protocol.ts";
-import { isRecord, PatchOperation } from "./protocol.ts";
+import { isJsonObject, PatchOperation } from "./protocol.ts";
 
 // Applies a host's changes to a value in place, so a reactive proxy (a
 // `$state` object) only signals the properties that really changed: a
@@ -40,7 +40,7 @@ function childOf(container: unknown, segment: PathSegment): unknown {
     return container[indexIn(segment, container.length - 1)];
   }
 
-  if (isRecord(container)) {
+  if (isJsonObject(container)) {
     const key = keyOf(segment);
     return Object.hasOwn(container, key) ? container[key] : undefined;
   }
@@ -66,30 +66,38 @@ function follow(root: unknown, path: PathSegment[]): unknown {
 export function reconcile(previous: unknown, next: Json): unknown {
   const areArrays = Array.isArray(previous) && Array.isArray(next);
   if (areArrays) {
-    for (let index = 0; index < next.length; index++) {
-      previous[index] = reconcile(previous[index], next[index]);
-    }
-
-    previous.length = next.length;
-    return previous;
+    return reconcileArray(previous, next);
   }
 
-  const areRecords = isRecord(previous) && isRecord(next) && !Array.isArray(next);
+  const areRecords = isJsonObject(previous) && isJsonObject(next) && !Array.isArray(next);
   if (areRecords) {
-    for (const key in previous) {
-      if (!Object.hasOwn(next, key)) {
-        delete previous[key];
-      }
-    }
-
-    for (const [key, value] of Object.entries(next)) {
-      previous[keyOf(key)] = reconcile(Object.hasOwn(previous, key) ? previous[key] : undefined, value);
-    }
-
-    return previous;
+    return reconcileRecord(previous, next);
   }
 
   return next;
+}
+
+function reconcileArray(previous: unknown[], next: Json[]): unknown[] {
+  for (let index = 0; index < next.length; index++) {
+    previous[index] = reconcile(previous[index], next[index]);
+  }
+
+  previous.length = next.length;
+  return previous;
+}
+
+function reconcileRecord(previous: Record<string, unknown>, next: Record<string, Json>): Record<string, unknown> {
+  for (const key in previous) {
+    if (!Object.hasOwn(next, key)) {
+      delete previous[key];
+    }
+  }
+
+  for (const [key, value] of Object.entries(next)) {
+    previous[keyOf(key)] = reconcile(Object.hasOwn(previous, key) ? previous[key] : undefined, value);
+  }
+
+  return previous;
 }
 
 function setAt(holder: Holder, path: PathSegment[], value: Json): void {
@@ -103,7 +111,7 @@ function setAt(holder: Holder, path: PathSegment[], value: Json): void {
   if (Array.isArray(parent)) {
     const index = indexIn(last, parent.length);
     parent[index] = reconcile(parent[index], value);
-  } else if (isRecord(parent)) {
+  } else if (isJsonObject(parent)) {
     const key = keyOf(last);
     parent[key] = reconcile(Object.hasOwn(parent, key) ? parent[key] : undefined, value);
   } else {
@@ -120,7 +128,7 @@ function removeAt(holder: Holder, path: PathSegment[]): void {
   const parent = follow(holder.current, path.slice(0, -1));
   if (Array.isArray(parent)) {
     parent.splice(indexIn(last, parent.length - 1), 1);
-  } else if (isRecord(parent)) {
+  } else if (isJsonObject(parent)) {
     delete parent[keyOf(last)];
   } else {
     throw new PatchError(`cannot remove inside a ${typeof parent}`);

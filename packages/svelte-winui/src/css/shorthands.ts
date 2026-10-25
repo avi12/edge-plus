@@ -224,5 +224,3 @@ export function expandDeclaration(declaration: Declaration, options: LowerOption
   const reader = new Reader(declaration, options);
   return expansion(declaration, reader);
 }
-
-export const shorthandNames: ReadonlySet<string> = new Set(expansions.keys());

@@ -16,7 +16,7 @@ import {
 // by `lowerDeclarations`. A property absent here has no WinUI meaning and
 // fails the build; `unsupportedReasons` says why for the likely ones.
 
-export const ElementType = {
+const ElementType = {
   StackPanel: "stack-panel",
   Grid: "grid",
   ScrollViewer: "scroll-viewer"
@@ -538,24 +538,36 @@ function display(input: GroupInput): Output[] {
   return isFlex && isFlexOnStack && !hasDirection ? [setter("Orientation", "Horizontal")] : [];
 }
 
+function gapLength(reader: Reader | undefined): string | null {
+  return reader === undefined ? null : reader.length(reader.single() ?? "");
+}
+
+function gridSpacing(row: string | null, column: string | null): Output[] {
+  return [
+    ...row === null ? [] : [setter("RowSpacing", row)],
+    ...column === null ? [] : [setter("ColumnSpacing", column)]
+  ];
+}
+
+// A stack spaces its children along its orientation.
+function stackSpacing(input: GroupInput, row: string | null, column: string | null): Output[] {
+  const isVertical = (orientationOf(input.computed) ?? "Vertical") === "Vertical";
+  const along = isVertical ? row : column;
+  return along === null ? [] : [setter("Spacing", along)];
+}
+
 function gap(input: GroupInput): Output[] {
   const { elementType } = input.options;
   const rowReader = input.readers.get("row-gap");
   const columnReader = input.readers.get("column-gap");
-  const row = rowReader === undefined ? null : rowReader.length(rowReader.single() ?? "");
-  const column = columnReader === undefined ? null : columnReader.length(columnReader.single() ?? "");
+  const row = gapLength(rowReader);
+  const column = gapLength(columnReader);
   if (elementType === ElementType.Grid) {
-    return [
-      ...row === null ? [] : [setter("RowSpacing", row)],
-      ...column === null ? [] : [setter("ColumnSpacing", column)]
-    ];
+    return gridSpacing(row, column);
   }
 
   if (elementType === ElementType.StackPanel) {
-    // A stack spaces its children along its orientation.
-    const isVertical = (orientationOf(input.computed) ?? "Vertical") === "Vertical";
-    const along = isVertical ? row : column;
-    return along === null ? [] : [setter("Spacing", along)];
+    return stackSpacing(input, row, column);
   }
 
   const reader = rowReader ?? columnReader;
@@ -837,7 +849,7 @@ const propertyGroups: readonly PropertyGroup[] = [
 
 // Why a property no group handles has no WinUI meaning, for the ones an author
 // is likely to write.
-export const unsupportedReasons: ReadonlyMap<string, string> = new Map([
+const unsupportedReasons: ReadonlyMap<string, string> = new Map([
   ["position", "WinUI lays children out with panels; a <canvas> places by canvas-left and canvas-top"],
   ["top", "WinUI lays children out with panels; a <canvas> places by canvas-top"],
   ["left", "WinUI lays children out with panels; a <canvas> places by canvas-left"],
@@ -869,17 +881,13 @@ export const unsupportedReasons: ReadonlyMap<string, string> = new Map([
   ["user-select", "set IsTextSelectionEnabled on the text block"]
 ]);
 
-export function unsupportedReason(property: string): string {
+function unsupportedReason(property: string): string {
   return unsupportedReasons.get(property) ?? "WinUI has no property that corresponds to it";
 }
 
 const memberToGroup = new Map<string, PropertyGroup>(
   propertyGroups.flatMap(group => group.members.map((member): [string, PropertyGroup] => [member, group]))
 );
-
-export function isKnownProperty(property: string): boolean {
-  return memberToGroup.has(property);
-}
 
 // The final declarations of an element, longhands only (see expandDeclaration),
 // as WinUI Style setters.
