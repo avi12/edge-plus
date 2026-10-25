@@ -2,7 +2,9 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, 
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { bindingModule, emitBindings, emitComponent, emitDeclaration, emitIndex, emitLevel, emitMetadata } from "./emit.ts";
+import type { Model } from "./model.ts";
 import { bindingClasses, buildModel, requestedClasses } from "./model.ts";
+import { handWrittenComponents } from "./tables.ts";
 import type { TypeName } from "./winmd.ts";
 
 // Generates the components from WinUI's metadata:
@@ -79,8 +81,27 @@ function updatedPackageJson(packagePath: string, wanted: TypeName[]): OutputFile
   };
 }
 
+// A table entry that names no component, or whose module is missing, would
+// leave the index exporting nothing: fail here, with the entry.
+function checkHandWritten(model: Model): void {
+  const components = new Set(model.classes.filter(level => level.isComponent).map(level => level.type.name));
+  for (const [name, module] of handWrittenComponents) {
+    const isComponent = components.has(name);
+    if (!isComponent) {
+      throw new Error(`handWrittenComponents names ${name}, which is not a generated component`);
+    }
+
+    const file = path.join(generatedFolder, module);
+    const isPresent = existsSync(file) && existsSync(file.replace(/\.svelte$/u, ".d.svelte.ts"));
+    if (!isPresent) {
+      throw new Error(`handWrittenComponents: ${file} and its .d.svelte.ts must exist`);
+    }
+  }
+}
+
 function generatedFiles(project: string): OutputFile[] {
   const model = buildModel(path.join(project, ...lockPath));
+  checkHandWritten(model);
   const output: OutputFile[] = [
     {
       file: path.join(generatedFolder, "bindings.ts"),
@@ -101,7 +122,8 @@ function generatedFiles(project: string): OutputFile[] {
       file: path.join(generatedFolder, "controls", `${name}.svelte.ts`),
       text: emitLevel(level)
     });
-    if (level.isComponent) {
+    const isGenerated = level.isComponent && !handWrittenComponents.has(name);
+    if (isGenerated) {
       output.push(
         {
           file: path.join(generatedFolder, `${name}.svelte`),

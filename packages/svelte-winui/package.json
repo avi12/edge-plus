@@ -22,7 +22,8 @@
     "./testing": "./src/vite/loader.ts",
     "./bootstrap": "./src/window/bootstrap.ts",
     "./thread": "./src/window/thread.ts",
-    "./window": "./src/window/index.ts"
+    "./window": "./src/window/index.ts",
+    "./components": "./src/components/index.ts"
   },
   "imports": {
     "#winui/*": "@winapp/bindings/*"

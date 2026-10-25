@@ -1,6 +1,6 @@
 import type { AttachedModel, BindableModel, ClassModel, EventModel, Model, PropertyModel } from "./model.ts";
 import { bindingClasses } from "./model.ts";
-import { extraBindings, PropertyKind } from "./tables.ts";
+import { extraBindings, handWrittenComponents, PropertyKind } from "./tables.ts";
 import type { TypeName } from "./winmd.ts";
 import { fullName } from "./winmd.ts";
 
@@ -389,8 +389,9 @@ export function emitIndex(model: Model): string {
   const lines = [generatedHeader, ""];
   for (const component of components) {
     const name = component.type.name;
-    lines.push(`export { default as ${name} } from "./${name}.svelte";`);
-    lines.push(`export type { ${name}ComponentProps } from "./${name}.d.svelte.ts";`);
+    const module = handWrittenComponents.get(name) ?? `./${name}.svelte`;
+    lines.push(`export { default as ${name} } from "${module}";`);
+    lines.push(`export type { ${name}ComponentProps } from "${module.replace(/\.svelte$/u, ".d.svelte.ts")}";`);
   }
 
   return `${lines.join("\n")}\n`;
