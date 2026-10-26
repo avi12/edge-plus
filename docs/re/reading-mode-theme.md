@@ -9,7 +9,7 @@ Evidence: **[static]** from the public PDB and the binaries; **[run]** in a
 throwaway Edge (own `--user-data-dir` marker `edgeplus-readtheme-3b9d`, its
 `LOCALAPPDATA` redirected so its DLL read a private config, a Wikipedia article
 opened as `read://https_en.wikipedia.org/?url=...`, inspected over its own
-`--remote-debugging-port`); **[unit]** `test/reading_themes_test.cpp`.
+`--remote-debugging-port`); **[unit]** `test/theme/reading_themes_test.cpp`.
 
 ## Where the theme lives
 

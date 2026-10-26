@@ -1,8 +1,8 @@
 // Unit tests for find_flags.h.
 #include <cstdio>
 #include <string>
-#include "../src/find/find_flags.h"
-#include "../src/find/find_text.h"
+#include "../../src/find/find_flags.h"
+#include "../../src/find/find_text.h"
 
 using namespace edgeplus::find_flags;
 

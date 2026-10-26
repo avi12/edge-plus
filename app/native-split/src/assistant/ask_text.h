@@ -1,6 +1,6 @@
 // ask_text.h — the text side of "Ask" in the find bar: the page's sentences,
 // the prompts that carry them to Copilot, and reading its reply into sentences
-// to highlight. Pure; tested in test/ask_text_test.cpp. Copilot only names
+// to highlight. Pure; tested in test/assistant/ask_text_test.cpp. Copilot only names
 // sentences by label, checked against the labels sent, so a reply can never
 // highlight something that was not offered.
 #pragma once

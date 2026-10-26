@@ -1,6 +1,6 @@
 // Unit tests for theme_tone.h.
 #include <cstdio>
-#include "../src/theme/theme_tone.h"
+#include "../../src/theme/theme_tone.h"
 
 using namespace edgeplus::theme_tone;
 

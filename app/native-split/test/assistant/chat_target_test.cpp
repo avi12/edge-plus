@@ -1,7 +1,7 @@
 // Unit tests for chat_target.h.
 #include <cstdio>
 #include <cstring>
-#include "../src/assistant/chat_target.h"
+#include "../../src/assistant/chat_target.h"
 
 using namespace edgeplus;
 using namespace edgeplus::chat_target;

@@ -1,6 +1,6 @@
 // find_text.h — the text side of the enhanced find: parsing the find bar's box,
 // checking a RegExp, stepping through matches and reading the page script's
-// answer. Pure; tested in test/find_text_test.cpp.
+// answer. Pure; tested in test/find/find_text_test.cpp.
 #pragma once
 #include <cctype>
 #include <cstddef>
