@@ -8,7 +8,9 @@ use std::sync::{Arc, OnceLock};
 use crate::edge::edge_build::BuildChange;
 use crate::edge::edge_watch::EdgeWatch;
 use crate::platform::paused_toast;
+use crate::platform::settings::Settings;
 use crate::setup::update_watch::{ReadyUpdate, UpdateWatch};
+use crate::themes::theme_library;
 use crate::themes::theme_watch::{ThemeRefresh, ThemeWatch};
 
 /// What the watchers saw, raised on a watcher's thread.
@@ -47,6 +49,7 @@ fn raise(event: ServiceEvent) {
 /// Once per process; `listener` hears every event.
 pub fn start(listener: impl Fn(ServiceEvent) + Send + Sync + 'static) {
     let _ = LISTENER.set(Arc::new(listener));
+    theme_library::register_all(&Settings::load().theming);
     SERVICE.get_or_init(|| Service {
         edge: EdgeWatch::start(
             |change| on_build_changed(&change),

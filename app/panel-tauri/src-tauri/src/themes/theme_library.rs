@@ -107,6 +107,39 @@ pub fn refresh_local(id: &str, origin: &str) -> ActionResult<()> {
     Ok(())
 }
 
+/// Edge reads its external-extensions key when it starts, so a theme whose key
+/// went missing (something cleaned it, or Edge uninstalled it) is written back
+/// from the settings and the stored copy, ahead of the next Edge start.
+pub fn register_all(theming: &Theming) {
+    for theme in &theming.themes {
+        let registered = match theme.source {
+            ThemeSource::Store => register_store(theme),
+            ThemeSource::Local => register_local(&theme.id),
+        };
+        if let Err(error) = registered {
+            panel_log::write_error(&format!("registering the theme {}", theme.name), &error);
+        }
+    }
+}
+
+fn register_store(theme: &ThemeEntry) -> std::io::Result<()> {
+    match store_url::parse(&theme.origin) {
+        Some(parsed) => external_extensions::install_store(&parsed.id, parsed.store),
+        None => Ok(()),
+    }
+}
+
+/// From the copy stored when it was added or last refreshed, so a theme whose
+/// source folder has moved is still registered.
+fn register_local(id: &str) -> std::io::Result<()> {
+    let stored = stored_crx(id);
+    let bytes = fs::read(&stored)?;
+    let Ok(info) = crx::read(&bytes) else {
+        return Ok(());
+    };
+    external_extensions::install_local(id, &stored, &info.version)
+}
+
 /// The panel's own themes are installed in Edge too; each is listed once.
 #[must_use]
 pub fn edge_themes_not_in(theming: &Theming) -> Vec<InstalledTheme> {
