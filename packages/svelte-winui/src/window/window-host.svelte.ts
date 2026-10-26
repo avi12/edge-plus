@@ -59,7 +59,8 @@ export interface WindowProps {
   // The window became the active one (true) or lost that to another (false).
   onActiveChanged?: (isActive: boolean) => void;
   onClosed?: () => void;
-  // Moved or resized, by the user or by code; the bounds in device pixels.
+  // The bounds the window opens with, then whenever it is moved or resized, by
+  // the user or by code; in device pixels.
   onBoundsChanged?: (bounds: WindowBounds) => void;
 }
 
@@ -249,18 +250,24 @@ class WindowHost {
       window.appWindow.onChanged((_sender, event) => {
         const isMoved = event.didPositionChange || event.didSizeChange;
         if (isMoved) {
-          const { position, size } = window.appWindow;
-          this.props.onBoundsChanged?.({
-            x: position.x,
-            y: position.y,
-            width: size.width,
-            height: size.height
-          });
+          this.reportBounds();
         }
       })
     );
   }
 
+  private reportBounds(): void {
+    const { position, size } = this.handle.appWindow;
+    this.props.onBoundsChanged?.({
+      x: position.x,
+      y: position.y,
+      width: size.width,
+      height: size.height
+    });
+  }
+
+  // Shown, and then the bounds it opened with are reported: an app that keeps
+  // them (to reopen where the window was) needs them before the user moves it.
   private show(): void {
     const { window } = this.handle;
     if (this.props.activate === false) {
@@ -268,6 +275,8 @@ class WindowHost {
     } else {
       window.activate();
     }
+
+    this.reportBounds();
   }
 }
 

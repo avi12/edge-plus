@@ -299,7 +299,9 @@ the controls in it still click); it makes `extendsIntoTitleBar` true unless
 given. Sizes are in device-independent pixels (the window's DPI applied);
 `placement` is in device pixels (a position, and optionally a size) and wins over
 centering, which is the default. `activate={false}` shows the window without
-taking focus. `bind:handle` gives a `WindowHandle`: `window`, `appWindow`,
+taking focus. `onBoundsChanged` hears the bounds the window opened with and
+then every move or resize (device pixels), so an app that reopens the window
+where it was has them before the user touches it. `bind:handle` gives a `WindowHandle`: `window`, `appWindow`,
 `presenter`, `scale`, `close()`, `restore()`, `minimize()`, `maximize()`,
 `bringToFront()`. `appUserModelId` names the process for the taskbar (it is
 process-wide: read once, before the window opens).
