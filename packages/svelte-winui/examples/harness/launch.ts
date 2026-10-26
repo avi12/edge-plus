@@ -27,6 +27,9 @@ const { values, positionals } = parseArgs({
     },
     backdrop: {
       type: "string"
+    },
+    view: {
+      type: "string"
     }
   }
 });

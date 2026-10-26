@@ -78,3 +78,19 @@ test("a list of 1000 rows keeps a screenful of rows, recycles them and ends none
     example.kill();
   }
 });
+
+test("a grid view of 1000 items realizes only the ones it shows", {
+  skip: !isWindowsAppSdkRestored,
+  timeout: timeoutMilliseconds
+}, async () => {
+  const example = ExampleProcess.start("examples/lists/main.ts", ["--view", "grid"]);
+  try {
+    const opened = await example.settled({ cmd: "stats" }, "stats");
+    const shown = numberOf(opened, "live");
+    assert.ok(shown > 5 && shown < rowCount / 2, `${shown} items shown of ${rowCount}`);
+    example.send({ cmd: "close" });
+    assert.equal(await example.exited, 0);
+  } finally {
+    example.kill();
+  }
+});

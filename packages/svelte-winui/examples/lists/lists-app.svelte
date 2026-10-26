@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ListView, MoveDirection, Window } from "svelte-winui/components";
+  import { GridView, ListView, MoveDirection, Window } from "svelte-winui/components";
   import type { ListHandle } from "svelte-winui/components";
   import { exitApplication } from "svelte-winui/window";
   import type { ExampleHost } from "../harness/contract.ts";
@@ -69,6 +69,10 @@
   host.onCommand(command => commands.get(String(command["cmd"]))?.(command));
 </script>
 
+{#snippet rowOf(row)}
+  <ExampleRow {row} />
+{/snippet}
+
 <Window
   title="Lists example"
   width={420}
@@ -77,18 +81,19 @@
   activate={false}
   onClosed={exitApplication}
 >
-  <ListView
-    items={rows}
-    key={row => row.id}
-    itemName={row => row.name}
-    reorderable
-    keyboardReorder
-    selectionMode="None"
-    onReorder={reorder}
-    bind:handle
-  >
-    {#snippet item(row)}
-      <ExampleRow {row} />
-    {/snippet}
-  </ListView>
+  {#if host.options["view"] === "grid"}
+    <GridView items={rows} key={row => row.id} itemName={row => row.name} onReorder={reorder} bind:handle item={rowOf} />
+  {:else}
+    <ListView
+      items={rows}
+      key={row => row.id}
+      itemName={row => row.name}
+      reorderable
+      keyboardReorder
+      selectionMode="None"
+      onReorder={reorder}
+      bind:handle
+      item={rowOf}
+    />
+  {/if}
 </Window>
