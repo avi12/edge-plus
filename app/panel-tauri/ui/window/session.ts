@@ -2,14 +2,14 @@ import type { Action, Bounds, UiMessage, View } from "../protocol.g.ts";
 import type { OtherMessage } from "./core-link.ts";
 import { isOtherMessage, viewAsSnapshot, viewStateName } from "./core-link.ts";
 import { milliseconds } from "./layout.ts";
-import { joinAppUserModel } from "./native.ts";
+import { Panel } from "./panel.svelte.ts";
 import "./shared-styles.svelte";
-import { Shell } from "./shell.ts";
+import Shell from "./shell.svelte";
 import { installStyles } from "./styles.ts";
 import * as winui from "./winui.ts";
 import { DispatcherQueue } from "./winui.ts";
 import type { MessagePort } from "node:worker_threads";
-import { registerControls } from "svelte-winui";
+import { mountControl, registerControls } from "svelte-winui";
 import type { HostChannel, HostState, Transport } from "svelte-winui/state";
 import { createHostChannel, createMessagePortTransport, hostState } from "svelte-winui/state";
 import { exitApplication, runWindow } from "svelte-winui/window";
@@ -41,7 +41,11 @@ class Session {
   // The core's View, one reactive object the page reads; the core sends it
   // whole each time and the channel changes only what differs.
   private readonly view: HostState<View>;
-  private shell: Shell | null = null;
+  private readonly panel = new Panel({
+    run: action => this.run(action),
+    restartToUpdate: () => this.run({ kind: "restartToUpdate" }),
+    after: (count, callback) => this.after(count, callback)
+  });
   private placement: Bounds | null = null;
 
   constructor(port: MessagePort) {
@@ -70,9 +74,12 @@ class Session {
     place: message => {
       this.placement = message.bounds;
     },
-    notice: message => this.shell?.showActionNotice(message.text),
-    status: message => this.shell?.showStatus(message.line),
-    bringBack: () => this.shell?.bringBack(),
+    notice: message => {
+      this.panel.actionNotice = message.text;
+    },
+    status: message => this.panel.showStatus(message.line),
+    // Launching Edge+ again lands here.
+    bringBack: () => this.panel.window?.bringToFront(),
     close: () => this.close()
   };
 
@@ -83,35 +90,27 @@ class Session {
   }
 
   private open(view: View): void {
-    // Before the window exists, so the taskbar groups it as Edge+.
-    joinAppUserModel(view.appUserModelId);
-    const shell = new Shell(view, {
-      run: action => this.run(action),
+    mountControl(Shell, {
+      view,
+      panel: this.panel,
+      placement: this.placement,
+      isBackground: process.env[backgroundVariable] === "1",
       refresh: () => this.send({ type: "refresh" }),
-      restartToUpdate: () => this.run({ kind: "restartToUpdate" }),
-      reportBounds: bounds => this.send({
+      reportBounds: (bounds: Bounds) => this.send({
         type: "bounds",
         bounds
       }),
-      setTimeout: (count, callback) => this.after(count, callback)
-    }, this.placement);
-    shell.onClosed(exitApplication);
-    this.shell = shell;
-    const isBackgroundRun = process.env[backgroundVariable] === "1";
-    if (isBackgroundRun) {
-      shell.showInBackground();
-    } else {
-      shell.activate();
-    }
+      onClosed: exitApplication
+    });
   }
 
   private close(): void {
-    if (this.shell === null) {
+    if (this.panel.window === undefined) {
       exitApplication();
       return;
     }
 
-    this.shell.close();
+    this.panel.window.close();
   }
 
   // Resolves to why the core refused the action, or null.

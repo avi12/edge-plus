@@ -197,11 +197,11 @@ const tsStyleRules = {
       paths: [
         {
           name: "@microsoft/dynwinrt/win32/unsafe",
-          message: "Flat Win32 calls live in ui/window/native.ts only."
+          message: "The window makes no flat Win32 calls: svelte-winui's window helpers cover them."
         },
         {
           name: "@microsoft/dynwinrt/win32",
-          message: "Flat Win32 calls live in ui/window/native.ts only."
+          message: "The window makes no flat Win32 calls: svelte-winui's window helpers cover them."
         }
       ]
     }
@@ -260,11 +260,5 @@ export default [
     },
     plugins: sharedPlugins,
     rules: tsStyleRules
-  },
-  {
-    files: ["ui/window/native.ts"],
-    rules: {
-      "no-restricted-imports": "off"
-    }
   }
 ];

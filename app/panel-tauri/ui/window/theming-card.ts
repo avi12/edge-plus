@@ -12,6 +12,3 @@ export type LocalThemeKind = (typeof LocalThemeKind)[keyof typeof LocalThemeKind
 
 // Runs an action in the core; resolves to why it failed, or null.
 export type RunAction = (action: Action) => Promise<string | null>;
-
-// Resolves to null when the user cancels.
-export type PickLocalTheme = (kind: LocalThemeKind) => Promise<string | null>;

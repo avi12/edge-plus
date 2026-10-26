@@ -1,12 +1,17 @@
 import type { Action } from "../protocol.g.ts";
-import type { LocalThemeKind, PickLocalTheme, RunAction } from "./theming-card.ts";
+import { pickLocalTheme } from "./local-theme-picker.ts";
+import type { LocalThemeKind, RunAction } from "./theming-card.ts";
 import { getContext, setContext } from "svelte";
+import type { WindowHandle } from "svelte-winui/components";
 
-// What the page asks of the window it is in.
+const statusMilliseconds = 4000;
+
+// What the page asks of the process it runs in.
 export interface PanelActions {
   run: RunAction;
-  pick: PickLocalTheme;
   restartToUpdate(): Promise<string | null>;
+  // Calls back after the delay; the result cancels it.
+  after(milliseconds: number, callback: () => void): () => void;
 }
 
 // The page's own state and the actions its components run, shared down the
@@ -18,7 +23,13 @@ export class Panel {
   actionNotice = $state("");
   // While files are dragged over the window.
   isVeilShown = $state(false);
+  // What the core says in the title bar, shown for a moment.
+  statusLine = $state("");
+  isStatusShown = $state(false);
+  // The open window (shell.svelte binds it), which owns the pickers.
+  window = $state.raw<WindowHandle | undefined>();
   private readonly actions: PanelActions;
+  private cancelStatus: (() => void) | null = null;
 
   constructor(actions: PanelActions) {
     this.actions = actions;
@@ -32,7 +43,11 @@ export class Panel {
   // from a .svelte file.
   // fallow-ignore-next-line unused-class-member
   pick(kind: LocalThemeKind): Promise<string | null> {
-    return this.actions.pick(kind);
+    if (this.window === undefined) {
+      throw new Error("the window is not open");
+    }
+
+    return pickLocalTheme(kind, this.window);
   }
 
   // fallow-ignore-next-line unused-class-member
@@ -49,6 +64,15 @@ export class Panel {
     if (error !== null) {
       this.actionNotice = error;
     }
+  }
+
+  showStatus(line: string): void {
+    this.statusLine = line;
+    this.isStatusShown = true;
+    this.cancelStatus?.();
+    this.cancelStatus = this.actions.after(statusMilliseconds, () => {
+      this.isStatusShown = false;
+    });
   }
 }
 
