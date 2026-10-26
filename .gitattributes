@@ -1,2 +1,5 @@
 # Git hooks run under sh; CRLF would break the shebang and the exec line.
 .githooks/* text eol=lf
+
+# rustfmt.toml asks for Unix newlines; core.autocrlf would check Rust out as CRLF.
+*.rs text eol=lf
