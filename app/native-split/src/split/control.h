@@ -644,7 +644,7 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   // to a dead window and the DLL went silent until Edge restarted.
   const bool isClosing = message == WM_NCDESTROY;
   if (isClosing) {
-    const WNDPROC originalProc = g_originalProc;
+    WNDPROC originalProc = g_originalProc;
     SetWindowLongPtrW(hwnd, GWLP_WNDPROC,
                       reinterpret_cast<LONG_PTR>(originalProc));
     anim::Remove();

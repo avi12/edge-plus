@@ -54,7 +54,8 @@ void RunChecks() {
         "wrapped rows share the tabs out, earlier rows taking more");
   Check(GridOfFlatSplit(3, 40).rowSizes == Sizes({1, 1, 1}),
         "a very narrow list gets one tab per row");
-  Check(GridOfFlatSplit(3, 600).order.empty(), "a flat split keeps strip order");
+  Check(GridOfFlatSplit(3, 600).order.empty(),
+        "a flat split keeps strip order");
 }
 
 }  // namespace

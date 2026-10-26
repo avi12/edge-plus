@@ -174,9 +174,8 @@ inline void __fastcall h_reload_internal(void* browser, int32_t disposition,
   int paneCount = 0;
   if (isActiveTabInSplit) {
     splitId = edge::TabSplitId(activeTab);
-    paneCount = splitId.hasValue
-                    ? edge::SplitMembers(tsm, splitId.token).Count()
-                    : 0;
+    paneCount =
+        splitId.hasValue ? edge::SplitMembers(tsm, splitId.token).Count() : 0;
   }
   const bool isGrownSplit = paneCount > split_data::kMinSplitMembers;
   const bool isInCurrentTab =
