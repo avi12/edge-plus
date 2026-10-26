@@ -34,7 +34,8 @@
     "fallow": "fallow audit --base HEAD",
     "gen:components": "node --disable-warning=ExperimentalWarning scripts/codegen/generate.ts --project ../../app/panel-tauri",
     "gen:components:check": "node --disable-warning=ExperimentalWarning scripts/codegen/generate.ts --project ../../app/panel-tauri --check",
-    "test": "node --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\""
+    "test": "node --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\"",
+    "test:windows": "node --disable-warning=ExperimentalWarning --test test/lists.test.ts test/window.test.ts"
   },
   "dependencies": {
     "@sveltejs/vite-plugin-svelte": "7.3.1",

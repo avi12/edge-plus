@@ -16,5 +16,13 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "examples/harness/**/*.ts",
+    "examples/lists/*.ts",
+    "examples/window/*.ts",
+    "test/example-process.ts",
+    "test/lists.test.ts",
+    "test/window.test.ts"
+  ]
 }
