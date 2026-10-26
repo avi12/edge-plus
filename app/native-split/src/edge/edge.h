@@ -17,7 +17,7 @@
 #include "edge/offsets.h"
 #include "edge/geom.h"
 #include "core/log.h"
-#include "chrome/tab_edge.h"
+#include "chrome/tabs/tab_edge.h"
 #include "theme/theme_tone.h"
 
 namespace edgeplus::edge {

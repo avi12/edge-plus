@@ -52,7 +52,7 @@ hiding the developer-mode prompt, which only edits Edge's `Preferences`.
   trailing bottom corner (in a split, only the focused pane's tab), the
   selected tab is filled in the theme's neon, and a horizontal tab loses its
   flared feet. Edge's own outline is reshaped, so nothing is painted over the
-  tab (`app/native-split/src/chrome/tab_shape.h`).
+  tab (`app/native-split/src/chrome/tabs/tab_shape.h`).
 - **Settings and extensions pages follow the theme** — `edge://settings` and
   `edge://extensions` take their light or dark from Windows or Edge's
   Appearance setting, never from the theme, so a dark theme on a light Windows

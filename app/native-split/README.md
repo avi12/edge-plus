@@ -47,7 +47,8 @@ reverse-engineered ABI). Authorized personal customization of the user's own Edg
 | `edge/` | calls into msedge.dll, RVAs and offsets, hooks, Edge geometry |
 | `layout/` | pane tree, geometry, state, motion, docking, collapse, repaint |
 | `split/` | split data and operations, panes, tabs, control codes, links, offers |
-| `chrome/` | dividers, grips, drag, overlay, menus, icons, tab drawing and rows |
+| `chrome/pane/` | a pane's dividers, grip, drag, drop overlay, menus and icons |
+| `chrome/tabs/` | tab outline and edge, repaint, tab drags, the tab list's rows, live preview |
 | `find/` | find, its flags, scripts and text, tab list, web text |
 | `assistant/` | Ask / assistant chat, chat menu, scripts and target |
 | `theme/` | themes, following, tone, reading mode, focus, protocol handlers |

@@ -9,7 +9,7 @@ Edge's split icon, the label "Add pane", and a d-pad of ↑ ← → ↓ buttons.
 row itself does nothing; an arrow adds a pane beside the pane whose ⋯ it was,
 in that direction. The new pane opens on Edge's tab offer, the starting page
 its own split button opens (`split-offer.md`). Edge's own items are fitted to
-the N-pane split first (code: `src/chrome/pane_menu.h`).
+the N-pane split first (code: `src/chrome/pane/pane_menu.h`).
 
 ## Edge's own items
 

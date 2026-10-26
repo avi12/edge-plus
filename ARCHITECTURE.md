@@ -311,7 +311,7 @@ with the tools in `docs/re/`.
 | The config the panel writes | `app/native-split/src/core/config.h`, `src-tauri/src/dll/config_wire.rs` |
 | Which Edge functions are hooked | `app/native-split/src/edge/hooks.h` |
 | How a split changes | `app/native-split/src/split/split_ops.h` |
-| How a tab is dragged into a split | `app/native-split/src/chrome/tabdrag.h` |
+| How a tab is dragged into a split | `app/native-split/src/chrome/tabs/tabdrag.h` |
 | How an Edge function was found | `docs/re/` |
 
 ## Building and testing

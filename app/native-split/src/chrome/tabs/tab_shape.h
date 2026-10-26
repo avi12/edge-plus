@@ -14,7 +14,7 @@
 #include "edge/edge.h"
 #include "edge/geom.h"
 #include "layout/state.h"
-#include "chrome/tab_edge.h"
+#include "chrome/tabs/tab_edge.h"
 
 namespace edgeplus::tab_shape {
 

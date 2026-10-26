@@ -9,10 +9,10 @@
 #include "layout/dock.h"
 #include "edge/edge.h"
 #include "layout/geometry.h"
-#include "chrome/overlay.h"
+#include "chrome/pane/overlay.h"
 #include "layout/repaint.h"
 #include "split/split_ops.h"
-#include "chrome/tabrows.h"
+#include "chrome/tabs/tabrows.h"
 #include "layout/state.h"
 
 namespace edgeplus::drag {

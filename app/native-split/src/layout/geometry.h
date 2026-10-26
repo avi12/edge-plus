@@ -9,7 +9,7 @@
 #include "split/split_data.h"
 #include "layout/state.h"
 #include "layout/anim.h"
-#include "chrome/dividers.h"
+#include "chrome/pane/dividers.h"
 
 namespace edgeplus::geometry {
 

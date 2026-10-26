@@ -6,10 +6,10 @@
 #include <cstddef>
 #include <iterator>
 #include "edge/edge.h"
-#include "chrome/grip.h"
-#include "chrome/icons.h"
+#include "chrome/pane/grip.h"
+#include "chrome/pane/icons.h"
 #include "split/offer.h"
-#include "chrome/pane_menu.h"
+#include "chrome/pane/pane_menu.h"
 #include "split/split_ops.h"
 #include "layout/state.h"
 

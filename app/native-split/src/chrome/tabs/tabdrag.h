@@ -16,10 +16,10 @@
 #include <utility>
 #include "core/channel.h"
 #include "layout/dock.h"
-#include "chrome/drag.h"
+#include "chrome/pane/drag.h"
 #include "edge/edge.h"
 #include "layout/geometry.h"
-#include "chrome/overlay.h"
+#include "chrome/pane/overlay.h"
 #include "split/split_ops.h"
 #include "layout/state.h"
 

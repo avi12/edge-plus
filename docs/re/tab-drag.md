@@ -47,7 +47,7 @@ With nothing picked, or out of the window, the drag is Edge's own (it tears the
 tab off). Into a split, Alt changes nothing: until 2026-10-24 it was the switch
 to docking, and a pane's drag needed none, so the two drags behaved
 differently; its key events are still dropped so a held Alt never ends a drag.
-Code: `src/chrome/tabdrag.h`.
+Code: `src/chrome/tabs/tabdrag.h`.
 
 ## Edge's tab drag
 
@@ -108,7 +108,7 @@ mid-drag ends the drag. It:
 ## A pane's drag handed to the tab list
 
 Target: `msedge.dll` 156.0.4314.42. Code: `TakeOverPaneDrag` and the detours in
-`src/chrome/tabdrag.h`; the hand-off point in `drag.h` (`IsReadyForTabList`).
+`src/chrome/tabs/tabdrag.h`; the hand-off point in `drag.h` (`IsReadyForTabList`).
 
 **What the user does:** drags a pane of a grown split by its grip onto the
 vertical tab list. The pane's tab leaves the split's row at once and follows
