@@ -182,7 +182,7 @@ function createWindow<Props extends object>(options: WindowOptions<Props>): AppW
 type WindowOptions<Props> = {
   title?: string;
   size?: { width: number; height: number };   // device pixels
-  backdrop?: "acrylic" | "none";              // "mica" needs MicaBackdrop in the app's bindings
+  backdrop?: Backdrop;                        // "acrylic" | "mica" | "micaAlt" | "none"
   extendsIntoTitleBar?: boolean;
   isBackground?: boolean;                     // shown without activating (tests, captures)
 } & ({ component: Component<Props>; props: Props } | { control: FrameworkElement });
@@ -202,3 +202,84 @@ calls `runWindow`. A transport (JSON lines on stdio, a MessagePort) is not in
 these files: it is `src/state`'s, which uses `dispatch` to put host messages
 on the UI thread. Edge+'s `ui/main.ts`, `ui/window/worker.ts` and
 `ui/window/session.ts` are the working example.
+
+## Components written by hand (`svelte-winui/components`)
+
+Every control is a generated component, except the ones in
+`src/components/hand-written/`, which `scripts/codegen/tables.ts` names in
+`handWrittenComponents`. For those the generator still writes the level
+(`generated/controls/<Name>.svelte.ts`, which the hand-written component
+connects with) and the metadata, but not `<Name>.svelte` or `<Name>.d.svelte.ts`;
+the index exports the module named in the table instead. To hand-write another
+component, add `["Name", "../hand-written/Name.svelte"]` there and put
+`Name.svelte` and `Name.d.svelte.ts` in that folder; `pnpm gen:components`
+fails if either is missing and never touches them. `Window` is not a control
+(it is no UIElement), so it is only in `hand-written/` and `components/index.ts`.
+
+### ListView and GridView
+
+```svelte
+<ListView items={rows} key={row => row.id} reorderable keyboardReorder
+          onReorder={ids => save(ids)} itemName={row => row.name}
+          onControl={view => animate(view)} bind:handle>
+  {#snippet item(row)}
+    <ThemeRow {row} />
+  {/snippet}
+</ListView>
+```
+
+| Prop | |
+|---|---|
+| `items` | the items, in order (an array or a `$state` array) |
+| `key` | `(item) => string`: the item's identity, unique in the list. A row is kept while its key is; an item with the same key and new contents reaches the row as the new `item` |
+| `item` | the row snippet, given the item; mounted once per realized container |
+| `reorderable` | the control's own drag reorder (`canReorderItems`, `canDragItems`, `allowDrop`) |
+| `keyboardReorder` | Alt+Up / Alt+Down moves the focused item one place |
+| `onReorder` | `(keys: string[]) => void`, after a drag or a keyboard move, the keys in the order the user left. The list keeps that order until `items` changes |
+| `itemName` | the accessible name of an item's container |
+| `onControl` | `(view) => void \| cleanup`: the `ListViewBase` itself, for what the component does not cover (item transitions) |
+| `bind:handle` | `ListHandle`: `move(key, direction)` (what Alt+Up/Down does), `scrollToKey(key)`, `focus(key)` |
+
+Every other property and event of the control is a prop as on the generated
+components (`selectionMode`, `itemContainerStyle`, `onDragItemsCompleted`, ...);
+`itemsSource`, `itemTemplate` and `children` are the component's.
+
+How it works: the control's items are a vector of **boxed keys** (the
+control's drag reorder only commits a move to a list of plain values, not of
+rows), its item template is a `ContentControl` slot, and each time a container
+reports the key it shows (`ContainerContentChanging`) the `item` snippet is
+mounted into the slot (`mountControl`); a container going to the recycle queue
+ends its row. So a 1000 item list holds the rows of the containers WinUI has
+realized (a screenful and its cache, about 76 for a 640 pixel window), not
+1000, and nothing leaks (`test/lists.test.ts` counts rows made and ended). Rows
+are mounted outside the list's own component tree: they do not see its Svelte
+context. The key sync touches only keys that came, went or moved (an empty
+list is filled in one reset), so the control's item transitions play for
+exactly those.
+
+### Window
+
+```svelte
+<Window title="Edge+" backdrop="acrylic" icon={iconPath} appUserModelId={id}
+        width={560} minWidth={560} maxWidth={560} minHeight={420} height={640}
+        isMaximizable={false} placement={saved} activate={!isBackground}
+        onActiveChanged={refresh} onBoundsChanged={report} onClosed={exitApplication}
+        bind:handle>
+  {#snippet titleBar()}...{/snippet}
+  ...the page...
+</Window>
+```
+
+Mount it as the app's root (`mountControl(App, ...)` inside `runWindow`'s
+`onStart`): the component is the window. `backdrop` is `"acrylic"`, `"mica"`,
+`"micaAlt"` or `"none"` (`Backdrop`, also taken by `createWindow`); it can
+change while the window is open. A `titleBar` snippet is shown above the content
+and set as the window's title bar (`setTitleBar`, so it is the drag region and
+the controls in it still click); it makes `extendsIntoTitleBar` true unless
+given. Sizes are in device-independent pixels (the window's DPI applied);
+`placement` is in device pixels (a position, and optionally a size) and wins over
+centering, which is the default. `activate={false}` shows the window without
+taking focus. `bind:handle` gives a `WindowHandle`: `window`, `appWindow`,
+`presenter`, `scale`, `close()`, `restore()`, `minimize()`, `maximize()`,
+`bringToFront()`. `appUserModelId` names the process for the taskbar (it is
+process-wide: read once, before the window opens).
