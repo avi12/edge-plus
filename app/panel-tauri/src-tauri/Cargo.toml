@@ -2,7 +2,7 @@
 name = "edgeplus"
 # The product's one version: the window's footer, the update check and the
 # release all read it from here.
-version = "0.0.1"
+version = "0.1.0"
 description = "Live feature switches for Microsoft Edge"
 authors = ["Avi"]
 edition = "2024"
