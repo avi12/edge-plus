@@ -21,7 +21,7 @@
     "lint:package": "pnpm --dir ../../packages/svelte-winui lint",
     "lint": "pnpm lint:js && pnpm lint:rust && pnpm check && pnpm fallow && pnpm lint:package",
     "lint:verify": "oxlint --type-aware && eslint . && stylelint \"**/*.svelte\" && cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets -- -D warnings && cargo fmt --manifest-path src-tauri/Cargo.toml --all --check && pnpm check && pnpm fallow && pnpm lint:package",
-    "test:js": "node --disable-warning=ExperimentalWarning --test \"ui/**/*.test.ts\" && pnpm --dir ../../packages/svelte-winui test",
+    "test:js": "node --disable-warning=ExperimentalWarning --test --test-timeout=120000 \"ui/**/*.test.ts\" && pnpm --dir ../../packages/svelte-winui test",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --workspace",
     "test": "pnpm test:js && pnpm test:rust",
     "fallow": "fallow audit --base HEAD"
