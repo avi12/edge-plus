@@ -8,9 +8,10 @@ use std::time::Duration;
 
 use crate::dll::{dll_channel, dll_sync};
 use crate::edge::edge_user_data;
-use crate::platform::action_error::{ActionError, ActionResult};
+use crate::platform::actions::action_error::{ActionError, ActionResult};
+use crate::platform::actions::panel_log;
+use crate::platform::paths;
 use crate::platform::settings::{self, ColorMode, Settings, ThemeEntry, ThemeSource, Theming};
-use crate::platform::{panel_log, paths};
 use crate::themes::installed_themes::{self, InstalledTheme};
 use crate::themes::theme_manifest::ThemeFileError;
 use crate::themes::{crx, external_extensions, store_url, theme_packer};

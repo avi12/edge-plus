@@ -1,8 +1,8 @@
 //! Turns the state the actions return into the View the window renders: which
 //! cards, in which sections, saying what.
 
+use crate::platform::identity::{app_identity, product};
 use crate::platform::settings::{Feature, ThemeSource};
-use crate::platform::{app_identity, product};
 use crate::setup::update_watch::ReadyUpdate;
 use crate::ui::inject_offer::InjectOffer;
 use crate::ui::panel_layout::{self, CardSlot, OwnCard};

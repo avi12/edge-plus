@@ -7,7 +7,8 @@ use std::path::Path;
 
 use edge_native::Hive;
 
-use crate::platform::{paths, switches};
+use crate::platform::identity::switches;
+use crate::platform::paths;
 
 /// Approved holds Task Manager's on/off flag; tests point at a throwaway pair.
 #[derive(Clone, Debug, PartialEq, Eq)]

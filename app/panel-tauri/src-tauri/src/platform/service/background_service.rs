@@ -7,7 +7,7 @@ use std::sync::{Arc, OnceLock};
 
 use crate::edge::edge_build::BuildChange;
 use crate::edge::edge_watch::EdgeWatch;
-use crate::platform::paused_toast;
+use crate::platform::service::paused_toast;
 use crate::platform::settings::Settings;
 use crate::setup::update_watch::{ReadyUpdate, UpdateWatch};
 use crate::themes::theme_library;

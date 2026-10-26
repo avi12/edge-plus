@@ -13,7 +13,7 @@ mod ui;
 use std::time::Duration;
 
 use edge::{dev_mode_prompt, edge_user_data};
-use platform::switches;
+use platform::identity::switches;
 
 /// How long a relaunch after an update waits for the exe it replaced to end.
 const REPLACED_EXIT_WAIT: Duration = Duration::from_secs(30);

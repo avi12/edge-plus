@@ -12,8 +12,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use serde_json::{Map, Value};
 
 use crate::edge::edge_user_data;
+use crate::platform::identity::switches;
 use crate::platform::settings::Settings;
-use crate::platform::switches;
 
 /// One waiter at a time (every switch-on starts one).
 const WAITER_MUTEX: &str = r"Local\edgeplus.dev-mode-prompt";

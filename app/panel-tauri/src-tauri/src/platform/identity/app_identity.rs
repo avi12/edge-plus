@@ -5,12 +5,14 @@
 use std::fs;
 use std::path::PathBuf;
 
-use crate::platform::{panel_log, paths, product};
+use crate::platform::actions::panel_log;
+use crate::platform::identity::product;
+use crate::platform::paths;
 
 pub const APP_ID: &str = "Avi.EdgePlus";
 const ICON_FILE_NAME: &str = "edgeplus.ico";
 /// The one copy of the icon; the window loads the file written from it.
-const ICON: &[u8] = include_bytes!("../../icons/icon.ico");
+const ICON: &[u8] = include_bytes!("../../../icons/icon.ico");
 
 /// Written by `register`, for Windows (an unpackaged app's toast icon must be
 /// a file) and for the window's title bar.

@@ -8,8 +8,9 @@ use crate::edge::edge_build::BuildChange;
 use crate::edge::edge_install;
 use crate::edge::edge_support;
 use crate::edge::file_version::FileVersion;
-use crate::platform::app_identity::APP_ID;
-use crate::platform::{panel_log, paths};
+use crate::platform::actions::panel_log;
+use crate::platform::identity::app_identity::APP_ID;
+use crate::platform::paths;
 use crate::ui::wording;
 
 /// A simulation (`edge_install`) remembers in memory only, so the real record

@@ -9,7 +9,8 @@ use std::thread;
 use std::time::Duration;
 
 use crate::edge::{edge_install, legacy_data};
-use crate::platform::{panel_log, paths};
+use crate::platform::actions::panel_log;
+use crate::platform::paths;
 
 const DATA_FOLDER_NAME: &str = "FixEdge";
 const DLL_NAME: &str = "fixedge-split.dll";

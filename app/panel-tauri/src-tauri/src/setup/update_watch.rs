@@ -12,9 +12,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, SystemTime};
 
-use crate::platform::poll_thread::PollThread;
+use crate::platform::actions::panel_log;
+use crate::platform::identity::{product, switches};
+use crate::platform::paths;
+use crate::platform::service::poll_thread::PollThread;
 use crate::platform::settings::Settings;
-use crate::platform::{panel_log, paths, product, switches};
 use crate::setup::update_feed::{self, UpdateAsset, Version};
 use crate::setup::{msi_install, update_install};
 

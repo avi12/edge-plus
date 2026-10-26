@@ -16,7 +16,9 @@ use tauri::RunEvent;
 
 use crate::dll::payload;
 use crate::edge::{legacy_cleanup, legacy_install};
-use crate::platform::{app_identity, background_service, panel_log, switches};
+use crate::platform::actions::panel_log;
+use crate::platform::identity::{app_identity, switches};
+use crate::platform::service::background_service;
 use crate::setup::{start_with_windows, startup_entry, update_install};
 use crate::ui::window_host;
 

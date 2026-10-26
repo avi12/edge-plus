@@ -16,10 +16,10 @@ use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 use std::thread;
 use std::time::{Duration, SystemTime};
 
-use crate::platform::action_error::{ActionError, ActionResult};
-use crate::platform::background_service::{self, ServiceEvent};
-use crate::platform::panel_actions;
-use crate::platform::panel_log;
+use crate::platform::actions::action_error::{ActionError, ActionResult};
+use crate::platform::actions::panel_actions;
+use crate::platform::actions::panel_log;
+use crate::platform::service::background_service::{self, ServiceEvent};
 use crate::ui::inject_offer::{self, InjectOffer};
 use crate::ui::panel_layout::{CardSlot, OwnCard};
 use crate::ui::panel_state::PanelState;

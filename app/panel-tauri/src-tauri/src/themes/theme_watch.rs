@@ -10,9 +10,9 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
-use crate::platform::action_error::ActionError;
-use crate::platform::panel_log;
-use crate::platform::poll_thread::PollThread;
+use crate::platform::actions::action_error::ActionError;
+use crate::platform::actions::panel_log;
+use crate::platform::service::poll_thread::PollThread;
 use crate::platform::settings::{Settings, ThemeEntry, ThemeSource};
 use crate::themes::theme_library;
 use crate::ui::wording;

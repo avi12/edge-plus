@@ -9,7 +9,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::platform::{panel_log, paths};
+use crate::platform::actions::panel_log;
+use crate::platform::paths;
 
 const NODE: &str = "node";
 const NODE_FLAGS: [&str; 1] = ["--disable-warning=ExperimentalWarning"];

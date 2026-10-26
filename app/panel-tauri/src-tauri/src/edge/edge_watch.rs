@@ -14,7 +14,7 @@ use crate::dll::dll_sync;
 use crate::edge::edge_build::{self, BuildChange};
 use crate::edge::file_version::FileVersion;
 use crate::edge::{edge_install, edge_support};
-use crate::platform::poll_thread::PollThread;
+use crate::platform::service::poll_thread::PollThread;
 use crate::platform::settings::{self, Settings};
 use crate::platform::shared;
 
