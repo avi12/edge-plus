@@ -856,6 +856,20 @@ inline constexpr uintptr_t CopilotUtils_IsUndersideChatVisible = 0x273b00d;
 // closes the side panel, as the panel page's own close message does (it passes
 // true: OnPostMessageClosePane).
 inline constexpr uintptr_t CopilotUtils_CloseUndersideChat = 0x944f9f4;
+// void edge_copilot::utils::FrontLoadSidePaneImmediate(
+// base::WeakPtr<BrowserWindowInterface>): Edge's own preload of the side
+// panel's chat. For the iframeless panel (no host manager) it asks the window's
+// EdgeSidePane for FrontLoadSidePane(the underside chat's HubContentID, empty
+// HubUrlParams), which creates the chat's WebContents (SidePaneContentManager::
+// MaybeCreateSidePaneView) and loads it without showing the panel. The WeakPtr
+// (16 bytes) is passed by address and destroyed by the callee. Its caller
+// FrontLoadUndersideChatForImmediateUse first asks IsFrontLoadPossible (memory,
+// efficiency mode, prefs), which we skip. [infer from its disassembly; run]
+inline constexpr uintptr_t CopilotUtils_FrontLoadSidePaneImmediate = 0x9450067;
+// base::WeakPtr<BrowserWindowInterface> GetWeakPtr(this = the browser BrowserOf
+// returns, WeakPtr* out): what IframelessPromptDispatcher binds the browser
+// with (the PDB names it Browser::GetWeakPtr).
+inline constexpr uintptr_t Browser_GetWeakPtr = 0x2afc610;
 // The request the side panel's chat page is sent, and the function that delivers
 // it with no panel UI: IframelessPromptDispatcher::DispatchAskCopilotToDocument(
 // RenderFrameHost* chatFrame, const AskCopilotRequest&) checks the frame is

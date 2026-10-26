@@ -45,21 +45,96 @@ inline constexpr int kSettleMs = 2500;
 // when the answer's own markup is not known.
 inline constexpr int kEchoTailChars = 60;
 
+// How the question reaches the chat page the arm script runs in.
+enum class Delivery {
+  kAlreadyIn,  // Edge put it in (the panel path): only remember the baseline
+  kByEdge,     // the hidden page is the chat itself: Edge's dispatch follows
+  kTyped,      // the hidden chat is an iframe Edge cannot dispatch to: type it
+};
+
+// How long the typed question waits for the send button to wake.
+inline constexpr int kSendButtonWaitMs = 4000;
+
 // Remembers how many answers the page held before, so the reply script can
-// tell the new answer from the old page.
-inline std::string ArmScript(const Target& target, const std::string& prompt) {
-  std::string script = R"JS((function (prompt) {
-  window.__fxChat = {
+// tell the new answer from the old page. For a question that still has to go
+// into the hidden page it first waits for the composer (kWait) and answers
+// kUser while the first-use notice covers it (the question then goes through
+// the panel, where the person can accept it). kTyped then types the question
+// into the composer and presses send, as a person would.
+inline std::string ArmScript(const Target& target, const std::string& prompt,
+                             Delivery delivery) {
+  const bool isHidden = delivery != Delivery::kAlreadyIn;
+  const bool isTyped = delivery == Delivery::kTyped;
+  std::string script = R"JS((function (prompt, isHidden, isTyped) {
+  var box = null;
+  if (isHidden) {
+    var dialog = document.querySelector()JS";
+  script += web_text::JsStringLiteral(target.dialogSelectors);
+  script += R"JS();
+    var text = document.body ? document.body.innerText : "";
+    if ((dialog && dialog.offsetWidth) || text.indexOf()JS";
+  script += web_text::JsStringLiteral(target.noticeText);
+  script += R"JS() >= 0) {
+      return ")JS";
+  script += AnswerText(ScriptAnswer::kUser);
+  script += R"JS(";
+    }
+    box = document.querySelector()JS";
+  script += web_text::JsStringLiteral(target.composerSelectors);
+  script += R"JS();
+    if (document.readyState !== "complete" || !box) {
+      return ")JS";
+  script += AnswerText(ScriptAnswer::kWait);
+  script += R"JS(";
+    }
+  }
+  var state = window.__fxChat = {
     baseline: document.querySelectorAll()JS";
   script += web_text::JsStringLiteral(target.answerSelectors);
   script += R"JS().length,
     prompt: prompt, lastText: "", changedAt: Date.now(), failure: ""
   };
+  if (isTyped) {
+    box.focus();
+    if (box.isContentEditable) {
+      document.execCommand("selectAll", false);
+      prompt.split("\n").forEach(function (line, index) {
+        if (index > 0) {
+          document.execCommand("insertLineBreak", false);
+        }
+        if (line) {
+          document.execCommand("insertText", false, line);
+        }
+      });
+    } else {
+      var setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value").set;
+      setter.call(box, prompt);
+      box.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    var deadline = Date.now() + )JS";
+  script += std::to_string(kSendButtonWaitMs);
+  script += R"JS(;
+    var timer = setInterval(function () {
+      var button = document.querySelector()JS";
+  script += web_text::JsStringLiteral(target.sendSelectors);
+  script += R"JS();
+      var isReady = button && !button.disabled && button.getAttribute("aria-disabled") !== "true";
+      if (isReady) {
+        clearInterval(timer);
+        button.click();
+      } else if (Date.now() > deadline) {
+        clearInterval(timer);
+        state.failure = "the chat's send button did not wake up.";
+      }
+    }, 150);
+  }
   return ")JS";
   script += AnswerText(ScriptAnswer::kArmed);
   script += R"JS(";
 }))JS";
-  script += "(" + web_text::JsStringLiteral(prompt) + ")";
+  script += "(" + web_text::JsStringLiteral(prompt) + ", " +
+            (isHidden ? "true" : "false") + ", " +
+            (isTyped ? "true" : "false") + ")";
   return script;
 }
 

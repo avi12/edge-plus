@@ -1685,6 +1685,23 @@ inline bool IsCopilotPanelVisible(void* browser) {
       At(edge155::rva::CopilotUtils_IsUndersideChatVisible))(browser);
 }
 
+// Have Edge create and load the Copilot chat page of `browser`'s side panel
+// without showing the panel (Edge's own front-load). The page appears among
+// AllWebContents a moment later, hidden, and takes questions by AskChatFrame.
+inline void FrontLoadCopilotChat(void* browser) {
+  struct WeakPointer {
+    void* reference = nullptr;
+    void* target = nullptr;
+  };
+  WeakPointer weakBrowser;
+  using GetWeakFn = void*(__fastcall*)(void*, WeakPointer*);
+  using FrontLoadFn = void(__fastcall*)(WeakPointer*);
+  reinterpret_cast<GetWeakFn>(At(edge155::rva::Browser_GetWeakPtr))(
+      browser, &weakBrowser);
+  reinterpret_cast<FrontLoadFn>(
+      At(edge155::rva::CopilotUtils_FrontLoadSidePaneImmediate))(&weakBrowser);
+}
+
 inline void CloseCopilotPanel(void* browser) {
   using Fn = void(__fastcall*)(void*, bool);
   reinterpret_cast<Fn>(At(edge155::rva::CopilotUtils_CloseUndersideChat))(
@@ -2194,6 +2211,13 @@ inline void* CopilotChatFrame() {
     }
   }
   return nullptr;
+}
+
+// Whether the chat frame is the iframeless panel's page itself, the only kind
+// IframelessPromptDispatcher::DispatchAskCopilotToDocument takes (it refuses a
+// frame that is not its page's primary main frame, so the shell's iframe).
+inline bool IsChatPageFrame(void* frame) {
+  return FrameUrl(frame).starts_with(kIframelessPanelUrl);
 }
 
 // --- a tab's outline (EdgeTabStyleViews::GetPath) ------------------------------

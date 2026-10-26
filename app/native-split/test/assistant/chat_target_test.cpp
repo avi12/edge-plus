@@ -27,6 +27,7 @@ bool IsFilled(const char* text) {
 bool IsFullyDescribed(const Target& target) {
   return IsFilled(target.name) && IsFilled(target.answerSelectors) &&
          IsFilled(target.stopSelectors) && IsFilled(target.dialogSelectors) &&
+         IsFilled(target.composerSelectors) && IsFilled(target.sendSelectors) &&
          IsFilled(target.noticeText);
 }
 

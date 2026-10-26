@@ -32,8 +32,8 @@ reasoned from disassembly, not run.
 | what a typed box means, RegExp shape check, match stepping, script answers | `find_text.h` | [unit] |
 | sentence labels, prompts that fit a chat, reading its reply | `ask_text.h` | [unit] |
 | each assistant's name, page and selectors (one table) | `chat_target.h` | [unit] |
-| the scripts that arm and read the side panel's chat | `chat_scripts.h` | [run] |
-| a question's steps: side panel, arm, read the answer | `assistant_chat.h` | [run] |
+| the scripts that arm, type into and read the chat page | `chat_scripts.h` | [run] |
+| a question's steps: the hidden chat page (or the panel), arm, read the answer | `assistant_chat.h` | [run] |
 | scripts run in the searched tab (isolated world) | `find_scripts.h` | [run] |
 | the hooks on Edge's find bar and the flow | `find.h` | [run] |
 | the bar's RVAs / offsets / wrappers | `offsets.h`, `edge.h` | [run] |
@@ -150,33 +150,83 @@ read. So a question takes the same path as a person's:
    prompt), then reads it every 0.7 s until the answer stops growing, and
    `assistant_chat.h` hands it back. `ParseAnswer` reads labels **only if they
    were offered in that prompt**.
-6. **No panel when the chat is already alive.** Once the chat page has been
-   opened in a window, Edge keeps its WebContents alive when the panel closes
-   (`edge://copilot-sidepane-overlay/` and the chat page both stayed `live` 3 s
-   after a close). A later question then skips `SendPageContextualPromptToChat`
-   altogether: `edge::AskChatFrame` builds the same `AskCopilotRequest` it builds
-   (the constructor, the prompt string at +0, the type "text" at +0x18, the page
-   text as an `optional<string>` at +0x38, an empty one at +0xd8) and hands it to
-   `IframelessPromptDispatcher::DispatchAskCopilotToDocument(chatFrame, request)`
-   (`0x93e442a`), which raises the `OnAskCopilot` extension event in that
-   document. No panel opens; the hidden page (`visibilityState` hidden) still
-   answers and `ReplyScript` reads it. [run: the panel never appeared, the answer
-   was marked.] The question that finds no chat page opens the panel once, as
-   before; `assistant_chat::ReleasePanel` closes it afterwards with
-   `edge_copilot::utils::CloseUndersideChat(browser, true)` (`0x93d99bf`, what the
-   panel page's own close message runs), and the chat page stays alive for the
-   next one. If Edge refuses the hidden dispatch (the frame is not live or
-   active) the question falls back to the panel.
+6. **The panel never opens, the first question included (156.0.4314.42).** The
+   side panel is only a host for the chat page, and Edge itself can create that
+   page without showing it: its own preload ("front-load").
+   - **Creating the page.** `edge_copilot::utils::FrontLoadSidePaneImmediate(
+     base::WeakPtr<BrowserWindowInterface>)` (`0x9450067`). With no
+     `CopilotSidePanelController` host manager (the iframeless panel) it asks
+     the window's `EdgeSidePane` (`EdgeSidePane::ForBrowser`) for its virtual at
+     +0x178, `EdgeSidePaneBrowserView::FrontLoadSidePane(HubContentID, const
+     HubUrlParams&)` (`0xc9218d0`), with the underside chat's
+     `hub_utils::GetUndersideChatHubContentID` and empty params, which builds the
+     pane's WebContents (`SidePaneContentManager::MaybeCreateSidePaneView`) and
+     loads it, hidden. The WeakPtr comes from the function the PDB names
+     `Browser::GetWeakPtr` (`0x2afc610`; `this` = the pointer `BrowserOf`
+     returns, hidden return in rdx), the one `IframelessPromptDispatcher` binds the
+     browser with; it is 16 bytes passed by address and destroyed by the callee.
+     Its public caller `FrontLoadUndersideChatForImmediateUse` first asks
+     `IsFrontLoadPossibleAndReportDecision` (memory, efficiency mode, prefs),
+     which `edge::FrontLoadCopilotChat` skips. [run]
+   - **Waiting for it.** The page shows up among `GetAllWebContents` a second or
+     two later; the arm script answers "wait" until its composer exists and
+     `readyState` is complete (a question dispatched before the web app listens
+     is lost), and "user" if the first-use notice is on it.
+   - **Sending the question**, by the kind of chat frame `CopilotChatFrame`
+     finds (`chat_scripts::Delivery`):
+     - *The iframeless page* (`https://cr.m365copilotapp.svc.cloud.microsoft/chat/`,
+       its WebContents' own main frame): `edge::AskChatFrame` builds the
+       `AskCopilotRequest` `SendPageContextualPromptToChat` builds (the
+       constructor, the prompt string at +0, the type "text" at +0x18, the page
+       text as an `optional<string>` at +0x38, an empty one at +0xd8) and hands
+       it to `IframelessPromptDispatcher::DispatchAskCopilotToDocument(chatFrame,
+       request)` (`0x945b030`). That checks the frame's vtable +0xe0
+       (`RenderFrameHostImpl::IsInPrimaryMainFrame`) and +0x258 (`IsActive`),
+       that the prompt and type are not empty, then dispatches the
+       `copilot_bridge_private_chat::OnAskCopilot` event to the Copilot bridge
+       extension (`kEdgeCopilotBridgeExtensionId`) for that document's id
+       (`ExtensionApiFrameIdMap::GetDocumentId`). [run]
+     - *The older shell* (`edge://discover-chat-v2/` around a
+       `copilot.microsoft.com` **iframe**): the dispatch refuses an iframe (not
+       the primary main frame), so the arm script types the question into the
+       iframe's composer and presses send, as the first version of Ask did
+       against copilot.com (`chat_target`'s composer and send selectors).
+       [infer: the throwaway's front-loaded page was this shell on its first
+       launches ("your Copilot is migrating to the new experience") and the
+       iframeless page after that, so the typed path was not run]
+   - **Afterwards** the hidden page stays alive for the next question (Edge keeps
+     it when nothing shows it), and a person who opens the panel finds the
+     conversation there.
+   - **Falling back to the panel** (`assistant_chat::SendThroughPanel`, the old
+     path: `SendPageContextualPromptToChatImpl`, then `ReleasePanel` closes it
+     with `edge_copilot::utils::CloseUndersideChat(browser, true)`, `0x944f9f4`)
+     only when the hidden page shows the first-use notice, when Edge refuses the
+     dispatch, or when no ready page appears within 15 s.
 
-With the panel's first-use notice ("Navigate the Web with Copilot ... Continue")
-showing, the composer is covered and the question waits behind it: the label says
-"Accept notice" (tooltip: accept it in the side panel and the question goes
-through), for up to two minutes, and the question is delivered by Edge as soon as
-the person clicks Continue. We never accept it for them. If the panel does not
-open within 20 s the status is "Failed: Copilot isn't ready". [run: "Accept
+   [run 2026-10-27, 156.0.4314.42, throwaway signed in, no chat page alive:
+   `? how much do unlimited notes cost` front-loaded the iframeless page,
+   dispatched to it hidden, and "Unlimited notes cost four dollars a month." was
+   marked 1/1 about 4 s after Enter; then `? where is the team` with the page
+   alive marked "The team is spread across six countries." In 20 window captures
+   taken a second apart during the two questions the panel never appeared
+   (`IsUndersideChatVisible` stayed false); opening the panel afterwards by its
+   button showed both questions and answers.]
+
+**Capturing an off-screen throwaway.** A window at x = -8000 does not lay its
+views out again on its own: the side panel the old path opened was invisible
+in `PrintWindow` captures until the window's size changed. The harness now
+resizes the window by a few pixels and back before each capture, and launches
+Edge with `--disable-features=CalculateNativeWinOcclusion` so the page paints.
+
+With the first-use notice ("Navigate the Web with Copilot ... Continue") on the
+chat page, the composer is covered: the hidden page answers "user", the question
+goes through the panel instead, and it waits behind the notice there: the label
+says "Accept notice" (tooltip: accept it in the side panel and the question goes
+through), for up to two minutes, and Edge delivers the question as soon as the
+person clicks Continue. We never accept it for them. If the panel does not
+open within 20 s the status is "Failed: Copilot isn't ready". [run on 155: "Accept
 notice" in the bar; with Continue clicked the prompt and its paragraphs were in
-the chat, followed by Copilot's own "your Copilot is migrating" notice for the
-throwaway's account, which parses as no answer]
+the chat. Not run on 156: the throwaway's profile had no notice.]
 
 Limits of this path: the panel is found by URL among every WebContents of the
 process, so with two browser windows open it can be another window's; and a

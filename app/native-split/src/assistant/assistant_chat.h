@@ -1,7 +1,10 @@
-// assistant_chat.h — asking Copilot a question: it goes to Copilot's side panel
-// by the function the page's "Ask Copilot" menu runs, then the panel's page is
-// read until the answer stops growing. Edge has no API that returns the answer,
-// so reading the panel's page (chat_scripts.h) is ours.
+// assistant_chat.h — asking Copilot a question behind the scenes: it goes to the
+// side panel's chat page while the panel stays closed (Edge front-loads the
+// page when none is alive), then that page is read until the answer stops
+// growing. Only when the page cannot take it (the first-use notice, no page)
+// does it go through the panel, by the function the page's "Ask Copilot" menu
+// runs. Edge has no API that returns the answer, so reading the chat page
+// (chat_scripts.h) is ours.
 #pragma once
 #include <windows.h>
 #include <functional>
@@ -16,6 +19,9 @@
 namespace edgeplus::assistant_chat {
 
 inline constexpr ULONGLONG kPanelWaitMs = 20000;
+// How long a front-loaded chat page may take to appear before the question
+// goes through the panel instead.
+inline constexpr ULONGLONG kFrontLoadWaitMs = 15000;
 inline constexpr ULONGLONG kReplyTimeoutMs = 120000;
 inline constexpr ULONGLONG kStepMs = 700;
 // After the panel was reloaded.
@@ -55,13 +61,15 @@ struct Chat {
   bool isNeedingUser = false;
   ULONGLONG blockedSince = 0;  // when a dialog first waited for the person
   int resendCount = 0;
-  // The panel was closed when the first question went in, so ReleasePanel
+  // The panel was closed when a question went in through it, so ReleasePanel
   // closes it again once the whole ask is over.
   bool isOurPanel = false;
-  // The chat page was already alive (hidden), so the question goes straight to
-  // it and the panel never opens; `isSent` once it has.
+  // The question goes straight to the chat page, hidden (Edge front-loads it
+  // when it is not alive yet), and the panel never opens; `isSent` once it has.
   bool isHeadless = false;
   bool isSent = false;
+  // How the last arm script was told the question goes in.
+  chat_scripts::Delivery delivery = chat_scripts::Delivery::kAlreadyIn;
   std::string prompt;
   DoneFn onDone;
   NoticeFn onNotice;
@@ -123,11 +131,24 @@ inline void Fail(Chat& chat, const std::string& why) {
   Finish(chat, reply);
 }
 
+// The way a person asks: the panel opens with the question in it. Only when the
+// hidden page cannot take it (the first-use notice waits for the person, or
+// Edge made no page).
+inline void SendThroughPanel(Chat& chat) {
+  if (!chat.isOurPanel) {
+    chat.isOurPanel = !edge::IsCopilotPanelVisible(chat.browser);
+  }
+  chat.isHeadless = false;
+  edge::SendPromptToSidePanel(chat.browser, chat.prompt, kPanelTitle);
+}
+
 inline void Dispatch(Chat& chat) {
-  chat.isHeadless = edge::CopilotChatFrame() != nullptr;
+  chat.isHeadless = true;
   chat.isSent = false;
-  if (!chat.isHeadless) {
-    edge::SendPromptToSidePanel(chat.browser, chat.prompt, kPanelTitle);
+  const bool hasChatPage = edge::CopilotChatFrame() != nullptr;
+  if (!hasChatPage) {
+    Log("[chat] no chat page yet: front-loading it hidden");
+    edge::FrontLoadCopilotChat(chat.browser);
   }
   chat.phase = Phase::kWaitingForPanel;
   chat.phaseStartedAt = GetTickCount64();
@@ -152,9 +173,6 @@ inline bool Ask(HWND window, void* mcv, const std::string& prompt,
   chat.isNeedingUser = false;
   chat.blockedSince = 0;
   chat.resendCount = 0;
-  if (!chat.isOurPanel) {
-    chat.isOurPanel = !edge::IsCopilotPanelVisible(browser);
-  }
   chat.prompt = prompt;
   chat.onDone = std::move(onDone);
   chat.onNotice = std::move(onNotice);
@@ -214,23 +232,36 @@ inline void OnArmed(void* mcv, unsigned long long token,
     return;
   }
   chat->isScriptRunning = false;
+  chat->nextTryAt = GetTickCount64() + kStepMs;
+  const bool isHiddenUnsent = chat->isHeadless && !chat->isSent;
+  const bool isNeedingUser =
+      result.isString && result.text == chat_scripts::AnswerText(
+                                            chat_scripts::ScriptAnswer::kUser);
+  if (isNeedingUser && isHiddenUnsent) {
+    Log("[chat] the hidden chat shows its notice; asking through the panel");
+    SendThroughPanel(*chat);
+    return;
+  }
   const bool isArmed =
       result.isString && result.text == chat_scripts::AnswerText(
                                             chat_scripts::ScriptAnswer::kArmed);
   if (!isArmed) {
     return;
   }
-  if (chat->isHeadless && !chat->isSent) {
+  const bool isTyped = chat->delivery == chat_scripts::Delivery::kTyped;
+  if (isHiddenUnsent && isTyped) {
+    Log("[chat] typed the question into the hidden chat");
+    chat->isSent = true;
+  } else if (isHiddenUnsent) {
     void* chatFrame = edge::CopilotChatFrame();
     chat->isSent =
         chatFrame && edge::AskChatFrame(chatFrame, chat->prompt, kPanelTitle);
     if (!chat->isSent) {
       Log("[chat] the hidden chat refused the question; opening the panel");
-      chat->isHeadless = false;
-      edge::SendPromptToSidePanel(chat->browser, chat->prompt, kPanelTitle);
+      SendThroughPanel(*chat);
     }
   }
-  Log("[chat] panel armed");
+  Log("[chat] chat armed (hidden: %d)", chat->isHeadless ? 1 : 0);
   chat->phase = Phase::kWaitingForReply;
   chat->phaseStartedAt = GetTickCount64();
   chat->nextTryAt = GetTickCount64() + kStepMs;
@@ -295,16 +326,30 @@ inline void OnReplyAnswer(void* mcv, unsigned long long token,
   Finish(*chat, ask_text::ParseReply(result.text));
 }
 
-inline void StepWaitingForPanel(void* mcv, Chat& chat, const void* frame,
+// Edge dispatches a question only to the iframeless panel's own page; the
+// shell's chat iframe gets it typed into its composer.
+inline chat_scripts::Delivery DeliveryFor(const Chat& chat, void* frame) {
+  const bool isHiddenUnsent = chat.isHeadless && !chat.isSent;
+  if (!isHiddenUnsent) {
+    return chat_scripts::Delivery::kAlreadyIn;
+  }
+  return edge::IsChatPageFrame(frame) ? chat_scripts::Delivery::kByEdge
+                                      : chat_scripts::Delivery::kTyped;
+}
+
+inline void StepWaitingForPanel(void* mcv, Chat& chat, void* frame,
                                 ULONGLONG now) {
   const bool isDue = !chat.isScriptRunning && now >= chat.nextTryAt;
   if (!isDue) {
     return;
   }
   chat.isScriptRunning = true;
+  chat.delivery = DeliveryFor(chat, frame);
   const unsigned long long token = chat.token;
   const bool isRunning = edge::RunScriptInFrame(
-      frame, chat_scripts::ArmScript(chat_target::kCopilotTarget, chat.prompt),
+      frame,
+      chat_scripts::ArmScript(chat_target::kCopilotTarget, chat.prompt,
+                              chat.delivery),
       [mcv, token](const edge::ScriptResult& result) {
         OnArmed(mcv, token, result);
       });
@@ -384,7 +429,7 @@ inline void Tick() {
     if (chat.phase == Phase::kIdle) {
       continue;
     }
-    const void* frame = edge::CopilotChatFrame();
+    void* frame = edge::CopilotChatFrame();
     const bool isPanelReady = frame != nullptr;
     const bool isStopping = chat.phase == Phase::kStopping;
     if (isStopping) {
@@ -394,6 +439,15 @@ inline void Tick() {
       } else if (isPanelReady) {
         StepStopping(mcv, chat, frame, now);
       }
+      continue;
+    }
+    const bool isHiddenPageLate = chat.phase == Phase::kWaitingForPanel &&
+                                  chat.isHeadless && !chat.isSent &&
+                                  now - chat.phaseStartedAt > kFrontLoadWaitMs;
+    if (isHiddenPageLate) {
+      Log("[chat] the hidden chat page is not ready; asking through the panel");
+      SendThroughPanel(chat);
+      chat.phaseStartedAt = now;
       continue;
     }
     if (!isPanelReady) {
