@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ThemeOption } from "../../protocol.g.ts";
-  import { ComboBox, ComboBoxItem, Grid, TextBlock } from "svelte-winui";
+  import { ComboBox, ComboBoxItem, Grid, TextBlock } from "winui-svelte";
 
   // The theme for one Windows mode: Edge's default theme, then the user's
   // themes, then Edge's own, beside the mode's name.

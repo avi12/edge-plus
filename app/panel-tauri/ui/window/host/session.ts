@@ -9,10 +9,10 @@ import { DispatcherQueue } from "../winui.ts";
 import { viewAsSnapshot, viewStateName } from "./core-link.ts";
 import { Panel } from "./panel.svelte.ts";
 import type { MessagePort } from "node:worker_threads";
-import { mountControl, registerControls } from "svelte-winui";
-import type { HostChannel, HostState, Transport } from "svelte-winui/state";
-import { createHostChannel, createMessagePortTransport, hostState } from "svelte-winui/state";
-import { exitApplication, runWindow } from "svelte-winui/window";
+import { mountControl, registerControls } from "winui-svelte";
+import type { HostChannel, HostState, Transport } from "winui-svelte/state";
+import { createHostChannel, createMessagePortTransport, hostState } from "winui-svelte/state";
+import { exitApplication, runWindow } from "winui-svelte/window";
 
 // WinUI's loop owns this thread until the window closes, so Node's event loop
 // never turns here: the core's messages are taken off the port by a

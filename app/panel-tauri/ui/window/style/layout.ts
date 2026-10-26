@@ -1,5 +1,5 @@
 // WinRT's plain values, built the way the bindings take them. The ones every
-// WinUI app needs are svelte-winui's.
+// WinUI app needs are winui-svelte's.
 
 const ticksPerMillisecond = 10_000n;
 

@@ -4,8 +4,8 @@
   import PanelPage from "./page/PanelPage.svelte";
   import * as motion from "./style/motion.ts";
   import { pathToFileURL } from "node:url";
-  import { Grid, Image, TextBlock } from "svelte-winui";
-  import { Window } from "svelte-winui/components";
+  import { Grid, Image, TextBlock } from "winui-svelte";
+  import { Window } from "winui-svelte/components";
 
   // The window: dressed like any-stt's panel (acrylic, the content running into
   // the title bar), so the two tools read as one family. Sizes are in

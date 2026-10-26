@@ -3,7 +3,7 @@
   import * as motion from "../style/motion.ts";
   import { themeListItemStyle } from "../style/styles.ts";
   import ThemeRow from "./ThemeRow.svelte";
-  import { ListView } from "svelte-winui";
+  import { ListView } from "winui-svelte";
 
   // The user's own themes, in the order of the pickers, reordered by dragging
   // or with Alt+Up / Alt+Down. No selection: with it on, each dragged row kept

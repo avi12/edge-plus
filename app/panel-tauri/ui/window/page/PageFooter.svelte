@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { FooterView } from "../../protocol.g.ts";
-  import { Grid, HyperlinkButton, StackPanel, TextBlock } from "svelte-winui";
+  import { Grid, HyperlinkButton, StackPanel, TextBlock } from "winui-svelte";
 
   // Who made it, linked, with the version at the end.
   const { footer }: { footer: FooterView } = $props();

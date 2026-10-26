@@ -2,7 +2,7 @@
   import type { UpdateView } from "../../protocol.g.ts";
   import { usePanel } from "../host/panel.svelte.ts";
   import CardFrame from "./CardFrame.svelte";
-  import { Button } from "svelte-winui";
+  import { Button } from "winui-svelte";
 
   // A release that is downloaded and checked, with the button that restarts
   // Edge+ into it. The page shows it once one is ready.

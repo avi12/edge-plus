@@ -202,11 +202,11 @@ const tsStyleRules = {
       paths: [
         {
           name: "@microsoft/dynwinrt/win32/unsafe",
-          message: "The window makes no flat Win32 calls: svelte-winui's window helpers cover them."
+          message: "The window makes no flat Win32 calls: winui-svelte's window helpers cover them."
         },
         {
           name: "@microsoft/dynwinrt/win32",
-          message: "The window makes no flat Win32 calls: svelte-winui's window helpers cover them."
+          message: "The window makes no flat Win32 calls: winui-svelte's window helpers cover them."
         }
       ]
     }

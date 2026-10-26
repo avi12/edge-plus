@@ -3,7 +3,7 @@
   import { usePanel } from "../host/panel.svelte.ts";
   import ThemingBody from "../theming/ThemingBody.svelte";
   import CardFrame from "./CardFrame.svelte";
-  import { ToggleSwitch } from "svelte-winui";
+  import { ToggleSwitch } from "winui-svelte";
 
   // A card with a switch at its end. The theming card carries the theme
   // library under its words.

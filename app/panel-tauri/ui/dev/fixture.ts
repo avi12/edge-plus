@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline";
-import type { Json } from "svelte-winui/state";
+import type { Json } from "winui-svelte/state";
 import { z } from "zod";
 
 // A stand-in for the core, to work on the window alone: it opens the window on

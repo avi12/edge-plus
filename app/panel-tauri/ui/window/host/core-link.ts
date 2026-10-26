@@ -1,6 +1,6 @@
 import { CoreMessageType } from "../../protocol.g.ts";
-import type { Transport } from "svelte-winui/state";
-import { MessageType } from "svelte-winui/state";
+import type { Transport } from "winui-svelte/state";
+import { MessageType } from "winui-svelte/state";
 import { z } from "zod";
 
 // The core speaks its own protocol (protocol.rs, as EdgePlusProtocolMap): its

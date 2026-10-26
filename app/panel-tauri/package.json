@@ -18,10 +18,10 @@
     "check": "tsc --noEmit",
     "lint:js": "oxlint --type-aware --fix && eslint --fix . && stylelint \"**/*.svelte\" --fix",
     "lint:rust": "cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets -- -D warnings && cargo fmt --manifest-path src-tauri/Cargo.toml --all",
-    "lint:package": "pnpm --dir ../../packages/svelte-winui lint",
+    "lint:package": "pnpm --dir ../../packages/winui-svelte lint",
     "lint": "pnpm lint:js && pnpm lint:rust && pnpm check && pnpm fallow && pnpm lint:package",
     "lint:verify": "oxlint --type-aware && eslint . && stylelint \"**/*.svelte\" && cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets -- -D warnings && cargo fmt --manifest-path src-tauri/Cargo.toml --all --check && pnpm check && pnpm fallow && pnpm lint:package",
-    "test:js": "node --disable-warning=ExperimentalWarning --test --test-timeout=120000 \"ui/**/*.test.ts\" && pnpm --dir ../../packages/svelte-winui test",
+    "test:js": "node --disable-warning=ExperimentalWarning --test --test-timeout=120000 \"ui/**/*.test.ts\" && pnpm --dir ../../packages/winui-svelte test",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --workspace",
     "test": "pnpm test:js && pnpm test:rust",
     "fallow": "fallow audit --base HEAD"
@@ -36,7 +36,7 @@
     "@microsoft/dynwinrt": "0.1.0-preview.23",
     "@winapp/bindings": "link:.winapp/bindings",
     "svelte": "https://pkg.pr.new/svelte@18042",
-    "svelte-winui": "workspace:*",
+    "winui-svelte": "workspace:*",
     "zod": "^4.6.7"
   },
   "devDependencies": {

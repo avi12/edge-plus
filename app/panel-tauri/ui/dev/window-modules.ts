@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { MessagePort } from "node:worker_threads";
-import { startModuleServer } from "svelte-winui/vite";
 import type { ViteDevServer } from "vite";
+import { startModuleServer } from "winui-svelte/vite";
 
 // Run from source, the window's modules come from a Vite dev server on
 // main.ts's thread, so a saved .svelte file updates the open window in place.

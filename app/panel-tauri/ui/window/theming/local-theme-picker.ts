@@ -1,7 +1,7 @@
 import type { LocalThemeKind } from "../cards/theming-card.ts";
 import { LocalThemeKind as ThemeKind } from "../cards/theming-card.ts";
 import { FileOpenPicker, FolderPicker } from "../winui.ts";
-import type { WindowHandle } from "svelte-winui/components";
+import type { WindowHandle } from "winui-svelte/components";
 
 const themeFileTypes = [".crx", ".zip"];
 

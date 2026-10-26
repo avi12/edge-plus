@@ -2,7 +2,7 @@ import type { Action } from "../../protocol.g.ts";
 import type { LocalThemeKind, RunAction } from "../cards/theming-card.ts";
 import { pickLocalTheme } from "../theming/local-theme-picker.ts";
 import { getContext, setContext } from "svelte";
-import type { WindowHandle } from "svelte-winui/components";
+import type { WindowHandle } from "winui-svelte/components";
 
 const statusMilliseconds = 4000;
 

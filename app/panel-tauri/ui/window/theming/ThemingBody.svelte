@@ -14,7 +14,7 @@
     StackPanel,
     TextBlock,
     TextBox
-  } from "svelte-winui";
+  } from "winui-svelte";
 
   // The theme library under the theming switch: add from a store link or a
   // local file, pick a theme for each Windows mode, and order the list.

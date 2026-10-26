@@ -19,9 +19,9 @@ importers:
       svelte:
         specifier: https://pkg.pr.new/svelte@18042
         version: https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0)
-      svelte-winui:
+      winui-svelte:
         specifier: workspace:*
-        version: link:../../packages/svelte-winui
+        version: link:../../packages/winui-svelte
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -90,7 +90,7 @@ importers:
         specifier: 8.3.4
         version: 8.3.4(@types/node@24.19.2)(esbuild@0.25.12)
 
-  packages/svelte-winui:
+  packages/winui-svelte:
     dependencies:
       '@sveltejs/vite-plugin-svelte':
         specifier: 7.3.1
@@ -126,15 +126,15 @@ importers:
       svelte:
         specifier: https://pkg.pr.new/svelte@18042
         version: https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0)
-      svelte-winui:
-        specifier: link:.
-        version: 'link:'
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
       vite:
         specifier: 8.3.4
         version: 8.3.4(@types/node@24.19.2)(esbuild@0.25.12)
+      winui-svelte:
+        specifier: link:.
+        version: 'link:'
 
 packages:
 

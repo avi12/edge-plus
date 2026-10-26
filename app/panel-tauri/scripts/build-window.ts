@@ -10,7 +10,7 @@ import {
   rmSync
 } from "node:fs";
 import path from "node:path";
-import { compileSvelte } from "svelte-winui/compile";
+import { compileSvelte } from "winui-svelte/compile";
 import { z } from "zod";
 
 // Builds dist/window, the window kit a published edgeplus.exe carries and

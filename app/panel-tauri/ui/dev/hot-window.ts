@@ -2,7 +2,7 @@ import type * as Session from "../window/host/session.ts";
 import type * as Layout from "../window/style/layout.ts";
 import type * as WinUI from "../window/winui.ts";
 import type { MessagePort } from "node:worker_threads";
-import { createWindowModuleRunner } from "svelte-winui/runner";
+import { createWindowModuleRunner } from "winui-svelte/runner";
 
 // The window run from source: its modules load through the dev server
 // (window-modules.ts), and the server's replies and hot updates are taken in

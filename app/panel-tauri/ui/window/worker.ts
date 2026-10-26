@@ -1,8 +1,8 @@
 import { MessagePort, workerData } from "node:worker_threads";
-import { runOnUiThread } from "svelte-winui/thread";
+import { runOnUiThread } from "winui-svelte/thread";
 import { z } from "zod";
 
-// The UI thread (svelte-winui/thread): its apartment comes first, so
+// The UI thread (winui-svelte/thread): its apartment comes first, so
 // everything loaded after it may create WinRT objects as it loads.
 
 // What main.ts hands this thread: the link to the core and, run from source,

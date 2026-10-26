@@ -1,13 +1,13 @@
 {
   "name": "edge-plus-workspace",
   "private": true,
-  "description": "The Edge+ pnpm workspace: the panel and the svelte-winui package. Its scripts run a command in the members; the C++ DLL is built and linted by its own scripts (tools/lint.ps1 runs all the linters).",
+  "description": "The Edge+ pnpm workspace: the panel and the winui-svelte package. Its scripts run a command in the members; the C++ DLL is built and linted by its own scripts (tools/lint.ps1 runs all the linters).",
   "license": "Apache-2.0",
   "type": "module",
   "packageManager": "pnpm@11.13.1",
   "scripts": {
     "check": "pnpm -r check",
-    "test": "pnpm --filter svelte-winui test && pnpm --filter edgeplus-panel test:rust",
+    "test": "pnpm --filter winui-svelte test && pnpm --filter edgeplus-panel test:rust",
     "lint": "pwsh tools/lint.ps1"
   }
 }

@@ -2,7 +2,7 @@
   import type { SectionView } from "../../protocol.g.ts";
   import * as motion from "../style/motion.ts";
   import PanelCard from "./PanelCard.svelte";
-  import { StackPanel, TextBlock } from "svelte-winui";
+  import { StackPanel, TextBlock } from "winui-svelte";
 
   // A section's header over its cards.
   const { section }: { section: SectionView } = $props();

@@ -3,12 +3,12 @@ import type { WindowPorts } from "./window/worker.ts";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import { MessageChannel, Worker } from "node:worker_threads";
-import { initWindowsAppSdk, WindowsAppRuntimeMissing } from "svelte-winui/bootstrap";
-import type { RequestFrame, ResponseFrame } from "svelte-winui/messaging";
+import { initWindowsAppSdk, WindowsAppRuntimeMissing } from "winui-svelte/bootstrap";
+import type { RequestFrame, ResponseFrame } from "winui-svelte/messaging";
 
 // The window's process, started by the core with its stdin and stdout as the
 // link: one message frame per line each way (protocol.g.ts; the frames are
-// svelte-winui/messaging's). The window itself runs on a worker, because
+// winui-svelte/messaging's). The window itself runs on a worker, because
 // WinUI's loop never gives its thread back to Node; this thread only relays
 // lines, and speaks for the window where it cannot: no runtime to open it, and
 // the core gone.

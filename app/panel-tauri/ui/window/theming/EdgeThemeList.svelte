@@ -2,7 +2,7 @@
   import type { ThemeRow as Row } from "../../protocol.g.ts";
   import * as motion from "../style/motion.ts";
   import ThemeRow from "./ThemeRow.svelte";
-  import { StackPanel, TextBlock } from "svelte-winui";
+  import { StackPanel, TextBlock } from "winui-svelte";
 
   // The themes installed in Edge that the user did not add here: listed, never
   // reordered or removed. `empty` replaces the list (and the user's own) while

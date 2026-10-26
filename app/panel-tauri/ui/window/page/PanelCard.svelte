@@ -3,7 +3,7 @@
   import FeatureCard from "../cards/FeatureCard.svelte";
   import InjectCard from "../cards/InjectCard.svelte";
   import * as motion from "../style/motion.ts";
-  import { StackPanel } from "svelte-winui";
+  import { StackPanel } from "winui-svelte";
 
   // A feature's card; the one that has an Inject offer carries it under it.
   const { card }: { card: CardView } = $props();

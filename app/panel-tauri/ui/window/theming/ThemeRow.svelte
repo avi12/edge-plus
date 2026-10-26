@@ -8,7 +8,7 @@
     Grid,
     StackPanel,
     TextBlock
-  } from "svelte-winui";
+  } from "winui-svelte";
 
   // One theme: a grip, its name, its badges and a remove button. `onRemove` is
   // null for a theme installed in Edge, whose grip and remove button are only

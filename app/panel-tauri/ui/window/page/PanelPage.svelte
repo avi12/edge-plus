@@ -10,7 +10,7 @@
   import PageFooter from "./PageFooter.svelte";
   import PanelNotices from "./PanelNotices.svelte";
   import PanelSection from "./PanelSection.svelte";
-  import { Grid, ScrollViewer, StackPanel } from "svelte-winui";
+  import { Grid, ScrollViewer, StackPanel } from "winui-svelte";
 
   // The window's content: the update card, the notices, each section's cards
   // and the footer, with the veil a drag of files over the window shows. The

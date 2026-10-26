@@ -4,11 +4,11 @@ The repo's lint gate over the DLL's C++ and the panel's Rust and TypeScript; non
 .DESCRIPTION
 Passes: clang-format, clang-tidy, C++ restricted syntax, shared.g.rs
 freshness, the panel's own gate (oxlint, eslint, clippy, rustfmt, tsc,
-fallow), the svelte-winui package's (the same linters, and the freshness of
+fallow), the winui-svelte package's (the same linters, and the freshness of
 the components it generates from WinUI's metadata), which the panel's gate
 runs as lint:package, and ui/protocol.g.ts freshness.
 .PARAMETER Fix
-Apply clang-format -i, clang-tidy --fix and the panel's fixers, regenerate the svelte-winui components, then re-check.
+Apply clang-format -i, clang-tidy --fix and the panel's fixers, regenerate the winui-svelte components, then re-check.
 .PARAMETER Staged
 Only files staged for commit (what the pre-commit hook runs).
 .PARAMETER InstallHook
@@ -135,18 +135,18 @@ if (-not $Staged) {
     $panel = Join-Path $root 'app\panel-tauri'
     $script = if ($Fix) { 'lint' } else { 'lint:verify' }
 
-    # The svelte-winui components are generated from WinUI's metadata; a changed
+    # The winui-svelte components are generated from WinUI's metadata; a changed
     # generator or an updated Windows App SDK leaves them stale. The package's
     # lint (which the panel's runs as lint:package) fails on stale files, so
     # -Fix writes them first.
     $generatedOk = $true
     if ($Fix) {
         Write-Host '[lint] generated components (pnpm gen:components)'
-        & pnpm --dir (Join-Path $root 'packages\svelte-winui') gen:components
+        & pnpm --dir (Join-Path $root 'packages\winui-svelte') gen:components
         $generatedOk = $LASTEXITCODE -eq 0
     }
 
-    Write-Host "[lint] panel and svelte-winui (pnpm $script)"
+    Write-Host "[lint] panel and winui-svelte (pnpm $script)"
     & pnpm --dir $panel $script
     $panelOk = $generatedOk -and $LASTEXITCODE -eq 0
 

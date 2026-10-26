@@ -8,7 +8,7 @@
     Grid,
     StackPanel,
     TextBlock
-  } from "svelte-winui";
+  } from "winui-svelte";
 
   // The Windows Settings card, built by hand from WinUI's own controls rather
   // than a toolkit's SettingsCard (no UI library, to keep the supply chain

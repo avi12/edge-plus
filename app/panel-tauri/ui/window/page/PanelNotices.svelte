@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { View } from "../../protocol.g.ts";
   import { usePanel } from "../host/panel.svelte.ts";
-  import { InfoBar, TextBlock } from "svelte-winui";
+  import { InfoBar, TextBlock } from "winui-svelte";
 
   // What the page says above the cards: the hint to open Edge, the warning
   // that Edge's build is not the one Edge+ was made for, and the error of an

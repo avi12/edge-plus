@@ -176,7 +176,7 @@ must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h}`).
   library; styles are `ui/window/style/styles.ts`, motion goes through
   `ui/window/style/motion.ts`, which follows Windows' Animation effects switch.
   The Svelte-on-WinUI machinery (the custom renderer, the Vite plugin and hot
-  reload, the WinUI start-up) is the generic package `packages/svelte-winui`
+  reload, the WinUI start-up) is the generic package `packages/winui-svelte`
   (`DESIGN.md`, `API.md`), a pnpm workspace member with the panel: the panel
   registers its bindings and XAML styles with it. `pnpm lint:package` and
   `pnpm test:js` cover it too.

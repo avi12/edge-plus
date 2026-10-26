@@ -1,7 +1,7 @@
 <script lang="ts">
   import { milliseconds } from "../style/layout.ts";
   import { DoubleCollection, ScalarTransition } from "../winui.ts";
-  import { Grid, Rectangle, TextBlock } from "svelte-winui";
+  import { Grid, Rectangle, TextBlock } from "winui-svelte";
 
   // Fades in over the page while files are dragged over the window.
   const { hint, isShown }: {

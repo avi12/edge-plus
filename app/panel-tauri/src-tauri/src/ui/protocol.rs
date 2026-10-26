@@ -335,7 +335,7 @@ mod tests {
         let mut generated = String::from(
             "// Generated from src-tauri/src/ui/protocol.rs by its export test (cargo test).\n\
              // Do not edit: change protocol.rs and run the test again.\n\n\
-             import type { ProtocolWithReturn } from \"svelte-winui/messaging\";\n\n",
+             import type { ProtocolWithReturn } from \"winui-svelte/messaging\";\n\n",
         );
         for declaration in [
             CardWording::decl(),

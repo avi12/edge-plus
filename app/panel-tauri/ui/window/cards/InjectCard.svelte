@@ -2,7 +2,7 @@
   import type { InjectView } from "../../protocol.g.ts";
   import { usePanel } from "../host/panel.svelte.ts";
   import CardFrame from "./CardFrame.svelte";
-  import { Button } from "svelte-winui";
+  import { Button } from "winui-svelte";
 
   // The Inject button, as a card under the Inject automatically switch. When it
   // is shown, and whether it can be pressed, is the core's decision.

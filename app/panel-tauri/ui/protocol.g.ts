@@ -1,7 +1,7 @@
 // Generated from src-tauri/src/ui/protocol.rs by its export test (cargo test).
 // Do not edit: change protocol.rs and run the test again.
 
-import type { ProtocolWithReturn } from "svelte-winui/messaging";
+import type { ProtocolWithReturn } from "winui-svelte/messaging";
 
 export type CardWording = { title: string, description: string, 
 /**
