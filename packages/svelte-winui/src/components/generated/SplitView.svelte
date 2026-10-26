@@ -11,8 +11,8 @@
     get isPaneOpen() {
       return isPaneOpen;
     },
-    set isPaneOpen(value) {
-      isPaneOpen = value;
+    set isPaneOpen(next) {
+      isPaneOpen = next;
     }
   };
 </script>

@@ -1,8 +1,8 @@
 import { loadWinuiCatalogue } from "./catalogue.ts";
 import { compileSheetModule, cssHash, SheetError } from "./sheet-module.ts";
-import { compile } from "svelte/compiler";
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { compile } from "svelte/compiler";
 
 // Real Svelte compiles; the sheet must carry the class the elements get.
 

@@ -1,6 +1,6 @@
 import { diff } from "../diff.ts";
 import type { Json } from "../protocol.ts";
-import { isRecord, MessageType } from "../protocol.ts";
+import { isJsonObject, MessageType } from "../protocol.ts";
 import { createStdioTransport, reserveStdout } from "../transports/stdio.ts";
 
 // A host in a child process, for stdio.test.ts: it owns { count } and
@@ -22,16 +22,18 @@ function publish(next: Json): void {
 
 transport.listen({
   message(value) {
-    const action = isRecord(value) ? value["action"] : undefined;
-    const isAction = isRecord(value) && value["type"] === MessageType.action && isRecord(action);
+    const action = isJsonObject(value) ? value["action"] : undefined;
+    const isAction = isJsonObject(value) && value["type"] === MessageType.action && isJsonObject(action);
     if (!isAction) {
       return;
     }
 
     const kind = action["kind"];
     let error: string | null = null;
-    if (kind === "increment" && isRecord(state) && typeof state["count"] === "number") {
-      publish({ count: state["count"] + 1 });
+    const count = isJsonObject(state) ? state["count"] : undefined;
+    const canIncrement = kind === "increment" && typeof count === "number";
+    if (canIncrement) {
+      publish({ count: count + 1 });
     } else if (kind === "fail") {
       error = "asked to fail";
     } else if (kind === "log") {

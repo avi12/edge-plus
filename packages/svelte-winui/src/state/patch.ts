@@ -1,5 +1,5 @@
 import type { Json, PatchOp, PathSegment } from "./protocol.ts";
-import { isRecord, PatchOperation } from "./protocol.ts";
+import { isJsonObject, PatchOperation } from "./protocol.ts";
 
 // Applies a host's changes to a value in place, so a reactive proxy (a
 // `$state` object) only signals the properties that really changed: a
@@ -40,7 +40,7 @@ function childOf(container: unknown, segment: PathSegment): unknown {
     return container[indexIn(segment, container.length - 1)];
   }
 
-  if (isRecord(container)) {
+  if (isJsonObject(container)) {
     const key = keyOf(segment);
     return Object.hasOwn(container, key) ? container[key] : undefined;
   }
@@ -52,6 +52,7 @@ function follow(root: unknown, path: PathSegment[]): unknown {
   let current = root;
   for (const segment of path) {
     current = childOf(current, segment);
+
     if (current === undefined) {
       throw new PatchError(`nothing at ${JSON.stringify(path)}`);
     }
@@ -63,30 +64,40 @@ function follow(root: unknown, path: PathSegment[]): unknown {
 // `next` merged into `previous`: equal parts keep their identity (and so
 // their reactivity), differing parts are assigned. Returns what to store.
 export function reconcile(previous: unknown, next: Json): unknown {
-  if (Array.isArray(previous) && Array.isArray(next)) {
-    for (let index = 0; index < next.length; index++) {
-      previous[index] = reconcile(previous[index], next[index]);
-    }
-
-    previous.length = next.length;
-    return previous;
+  const areArrays = Array.isArray(previous) && Array.isArray(next);
+  if (areArrays) {
+    return reconcileArray(previous, next);
   }
 
-  if (isRecord(previous) && isRecord(next) && !Array.isArray(next)) {
-    for (const key of Object.keys(previous)) {
-      if (!Object.hasOwn(next, key)) {
-        Reflect.deleteProperty(previous, key);
-      }
-    }
-
-    for (const [key, value] of Object.entries(next)) {
-      previous[keyOf(key)] = reconcile(Object.hasOwn(previous, key) ? previous[key] : undefined, value);
-    }
-
-    return previous;
+  const areRecords = isJsonObject(previous) && isJsonObject(next) && !Array.isArray(next);
+  if (areRecords) {
+    return reconcileRecord(previous, next);
   }
 
   return next;
+}
+
+function reconcileArray(previous: unknown[], next: Json[]): unknown[] {
+  for (let index = 0; index < next.length; index++) {
+    previous[index] = reconcile(previous[index], next[index]);
+  }
+
+  previous.length = next.length;
+  return previous;
+}
+
+function reconcileRecord(previous: Record<string, unknown>, next: Record<string, Json>): Record<string, unknown> {
+  for (const key in previous) {
+    if (!Object.hasOwn(next, key)) {
+      delete previous[key];
+    }
+  }
+
+  for (const [key, value] of Object.entries(next)) {
+    previous[keyOf(key)] = reconcile(Object.hasOwn(previous, key) ? previous[key] : undefined, value);
+  }
+
+  return previous;
 }
 
 function setAt(holder: Holder, path: PathSegment[], value: Json): void {
@@ -100,7 +111,7 @@ function setAt(holder: Holder, path: PathSegment[], value: Json): void {
   if (Array.isArray(parent)) {
     const index = indexIn(last, parent.length);
     parent[index] = reconcile(parent[index], value);
-  } else if (isRecord(parent)) {
+  } else if (isJsonObject(parent)) {
     const key = keyOf(last);
     parent[key] = reconcile(Object.hasOwn(parent, key) ? parent[key] : undefined, value);
   } else {
@@ -117,37 +128,37 @@ function removeAt(holder: Holder, path: PathSegment[]): void {
   const parent = follow(holder.current, path.slice(0, -1));
   if (Array.isArray(parent)) {
     parent.splice(indexIn(last, parent.length - 1), 1);
-  } else if (isRecord(parent)) {
-    Reflect.deleteProperty(parent, keyOf(last));
+  } else if (isJsonObject(parent)) {
+    delete parent[keyOf(last)];
   } else {
     throw new PatchError(`cannot remove inside a ${typeof parent}`);
   }
 }
 
-function spliceAt(holder: Holder, op: Extract<PatchOp, { op: typeof PatchOperation.splice }>): void {
-  const target = follow(holder.current, op.path);
+function spliceAt(holder: Holder, operation: Extract<PatchOp, { op: typeof PatchOperation.splice }>): void {
+  const target = follow(holder.current, operation.path);
   if (!Array.isArray(target)) {
-    throw new PatchError(`splice needs an array at ${JSON.stringify(op.path)}`);
+    throw new PatchError(`splice needs an array at ${JSON.stringify(operation.path)}`);
   }
 
-  const isStartInRange = op.start <= target.length;
+  const isStartInRange = operation.start <= target.length;
   if (!isStartInRange) {
-    throw new PatchError(`splice start ${op.start} is past the end (${target.length})`);
+    throw new PatchError(`splice start ${operation.start} is past the end (${target.length})`);
   }
 
-  target.splice(op.start, op.deleteCount, ...op.items);
+  target.splice(operation.start, operation.deleteCount, ...operation.items);
 }
 
 // Operations apply in order. One that fails throws and leaves the earlier
 // ones applied: the host answers by sending a snapshot.
 export function applyOps(holder: Holder, ops: PatchOp[]): void {
-  for (const op of ops) {
-    if (op.op === PatchOperation.set) {
-      setAt(holder, op.path, op.value);
-    } else if (op.op === PatchOperation.remove) {
-      removeAt(holder, op.path);
+  for (const operation of ops) {
+    if (operation.op === PatchOperation.set) {
+      setAt(holder, operation.path, operation.value);
+    } else if (operation.op === PatchOperation.remove) {
+      removeAt(holder, operation.path);
     } else {
-      spliceAt(holder, op);
+      spliceAt(holder, operation);
     }
   }
 }

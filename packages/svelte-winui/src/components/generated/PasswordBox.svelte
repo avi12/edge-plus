@@ -11,8 +11,8 @@
     get password() {
       return password;
     },
-    set password(value) {
-      password = value;
+    set password(next) {
+      password = next;
     }
   };
 </script>

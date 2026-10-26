@@ -1,8 +1,8 @@
-import type { CompileOptions } from "svelte/compiler";
-import { compile } from "svelte/compiler";
 import type { ResourceCatalogue } from "./resources.ts";
 import { errorsOf, formatDiagnostic, translateStyleSheet } from "./translate.ts";
 import type { Diagnostic, StyleSheetData } from "./types.ts";
+import type { CompileOptions } from "svelte/compiler";
+import { compile } from "svelte/compiler";
 
 // A .svelte file's <style> as the JavaScript module that registers its
 // sheet: Svelte compiles the component (scoping the selectors), the
@@ -33,7 +33,10 @@ export interface SheetModule {
 
 // Svelte's default scoping class depends on its rootDir option; this one only
 // on the file's path, so the component's compile and the sheet's agree.
-export function cssHash({ filename, hash }: { filename: string; hash: (text: string) => string }): string {
+export function cssHash({ filename, hash }: {
+  filename: string;
+  hash: (text: string) => string;
+}): string {
   return `svelte-${hash(filename.replaceAll("\\", "/"))}`;
 }
 
@@ -63,7 +66,8 @@ export function compileSheetModule(input: SheetModuleInput): SheetModule | null 
     cssHash
   });
   const css = result.css;
-  if (css === null || css.code.trim() === "") {
+  const hasStyles = css !== null && css.code.trim() !== "";
+  if (!hasStyles) {
     return null;
   }
 

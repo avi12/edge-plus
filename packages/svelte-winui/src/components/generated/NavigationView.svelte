@@ -11,14 +11,14 @@
     get isPaneOpen() {
       return isPaneOpen;
     },
-    set isPaneOpen(value) {
-      isPaneOpen = value;
+    set isPaneOpen(next) {
+      isPaneOpen = next;
     },
     get selectedItem() {
       return selectedItem;
     },
-    set selectedItem(value) {
-      selectedItem = value;
+    set selectedItem(next) {
+      selectedItem = next;
     }
   };
 </script>

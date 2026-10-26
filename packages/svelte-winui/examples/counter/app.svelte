@@ -1,7 +1,7 @@
 <script lang="ts">
   import { setContext } from "svelte";
-  import type { HostChannel } from "../../src/state/index.ts";
-  import { hostState } from "../../src/state/index.ts";
+  import type { HostChannel } from "svelte-winui/state";
+  import { hostState } from "svelte-winui/state";
   import type { CounterView } from "./app-types.ts";
   import { viewName } from "./app-types.ts";
   import { hostContextKey } from "./context.ts";

@@ -11,8 +11,8 @@
     get value() {
       return value;
     },
-    set value(value) {
-      value = value;
+    set value(next) {
+      value = next;
     }
   };
 </script>

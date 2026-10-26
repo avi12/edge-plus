@@ -1,3 +1,4 @@
+import { read } from "../renderer/reflect.ts";
 import { diff } from "./diff.ts";
 import type { Holder } from "./patch.ts";
 import { applyOps, PatchError, reconcile } from "./patch.ts";
@@ -10,8 +11,8 @@ function clone(value: Json): Json {
   return JSON.parse(JSON.stringify(value));
 }
 
-function at(value: unknown, ...path: Array<string | number>): unknown {
-  return path.reduce((current, key) => Reflect.get(Object(current), String(key)), value);
+function valueAt(value: unknown, ...path: Array<string | number>): unknown {
+  return path.reduce((current, key) => read(current, String(key)), value);
 }
 
 function holderOf(value: Json): Holder {
@@ -21,7 +22,7 @@ function holderOf(value: Json): Holder {
 test("set changes one property and keeps its neighbours' identity", () => {
   const holder = holderOf({ cards: [{ title: "a" }, { title: "b" }] });
   const before = holder.current;
-  const cardB = at(holder.current, "cards", 1);
+  const cardB = valueAt(holder.current, "cards", 1);
   applyOps(holder, [{
     op: PatchOperation.set,
     path: ["cards", 0, "title"],
@@ -29,11 +30,15 @@ test("set changes one property and keeps its neighbours' identity", () => {
   }]);
   assert.equal(holder.current, before);
   assert.deepEqual(holder.current, { cards: [{ title: "A" }, { title: "b" }] });
-  assert.equal(at(holder.current, "cards", 1), cardB);
+  assert.equal(valueAt(holder.current, "cards", 1), cardB);
 });
 
 test("remove deletes a key or an array element; splice replaces a range", () => {
-  const holder = holderOf({ a: 1, b: 2, list: [1, 2, 3, 4] });
+  const holder = holderOf({
+    a: 1,
+    b: 2,
+    list: [1, 2, 3, 4]
+  });
   applyOps(holder, [
     {
       op: PatchOperation.remove,
@@ -51,19 +56,35 @@ test("remove deletes a key or an array element; splice replaces a range", () => 
       items: [9, 9]
     }
   ]);
-  assert.deepEqual(holder.current, { b: 2, list: [2, 9, 9, 4] });
+  assert.deepEqual(holder.current, {
+    b: 2,
+    list: [2, 9, 9, 4]
+  });
 });
 
 test("an empty path sets the root, merged in place", () => {
-  const holder = holderOf({ keep: { x: 1 }, drop: 1 });
-  const keep = at(holder.current, "keep");
+  const holder = holderOf({
+    keep: {
+      x: 1
+    },
+    drop: 1
+  });
+  const keep = valueAt(holder.current, "keep");
   applyOps(holder, [{
     op: PatchOperation.set,
     path: [],
-    value: { keep: { x: 2 } }
+    value: {
+      keep: {
+        x: 2
+      }
+    }
   }]);
-  assert.deepEqual(holder.current, { keep: { x: 2 } });
-  assert.equal(at(holder.current, "keep"), keep);
+  assert.deepEqual(holder.current, {
+    keep: {
+      x: 2
+    }
+  });
+  assert.equal(valueAt(holder.current, "keep"), keep);
 });
 
 test("reconcile turns an array into the next one without replacing it", () => {
@@ -75,7 +96,10 @@ test("reconcile turns an array into the next one without replacing it", () => {
 });
 
 test("bad operations throw PatchError and never touch the prototype", () => {
-  const holder = holderOf({ list: [1], name: "x" });
+  const holder = holderOf({
+    list: [1],
+    name: "x"
+  });
   const bad: PatchOp[] = [
     {
       op: PatchOperation.set,
@@ -111,11 +135,11 @@ test("bad operations throw PatchError and never touch the prototype", () => {
       path: []
     }
   ];
-  for (const op of bad) {
-    assert.throws(() => applyOps(holder, [op]), PatchError, JSON.stringify(op));
+  for (const operation of bad) {
+    assert.throws(() => applyOps(holder, [operation]), PatchError, JSON.stringify(operation));
   }
 
-  assert.equal(Reflect.get({}, "polluted"), undefined);
+  assert.equal(read({}, "polluted"), undefined);
 });
 
 test("diff then apply reproduces the next value, for many shapes", () => {
@@ -127,7 +151,11 @@ test("diff then apply reproduces the next value, for many shapes", () => {
     [{ list: [1, 2, 3] }, { list: [1, 9, 3] }],
     [{ list: [{ t: "a" }, { t: "b" }] }, { list: [{ t: "b" }] }],
     [{ list: [{ t: "a" }, { t: "b" }] }, { list: [{ t: "a" }, { t: "B" }] }],
-    [{ x: null }, { x: { y: [1] } }],
+    [{ x: null }, {
+      x: {
+        y: [1]
+      }
+    }],
     [[1, 2], { a: 1 }],
     [1, 2]
   ];
@@ -140,19 +168,103 @@ test("diff then apply reproduces the next value, for many shapes", () => {
 
 test("an unchanged value diffs to nothing; a one-field change to one operation", () => {
   assert.deepEqual(diff({ a: [1, { b: 2 }] }, { a: [1, { b: 2 }] }), []);
-  assert.equal(diff({ a: { b: 1, c: 1 } }, { a: { b: 2, c: 1 } }).length, 1);
+  assert.equal(
+    diff({
+      a: {
+        b: 1,
+        c: 1
+      }
+    }, {
+      a: {
+        b: 2,
+        c: 1
+      }
+    }).length, 1
+  );
 });
 
 test("message guards accept the protocol and reject the rest", () => {
-  assert.ok(isHostMessage({ type: MessageType.snapshot, name: "v", value: { a: [1] } }));
-  assert.ok(isHostMessage({ type: MessageType.reply, id: 1, error: null }));
-  assert.ok(isHostMessage({ type: MessageType.reply, id: 1 }));
-  assert.ok(isHostMessage({ type: MessageType.patch, name: "v", ops: [{ op: "remove", path: ["a", 0] }] }));
-  assert.ok(!isHostMessage({ type: MessageType.snapshot, value: 1 }));
-  assert.ok(!isHostMessage({ type: MessageType.reply, id: -1, error: null }));
-  assert.ok(!isHostMessage({ type: MessageType.reply, id: 1, error: 5 }));
-  assert.ok(!isHostMessage({ type: MessageType.patch, name: "v", ops: [{ op: "move", path: [] }] }));
-  assert.ok(!isHostMessage({ type: MessageType.patch, name: "v", ops: [{ op: "splice", path: [], start: -1, deleteCount: 0, items: [] }] }));
-  assert.ok(!isHostMessage({ type: MessageType.snapshot, name: "v", value: undefined }));
+  assert.ok(
+    isHostMessage({
+      type: MessageType.snapshot,
+      name: "v",
+      value: {
+        a: [1]
+      }
+    })
+  );
+  assert.ok(
+    isHostMessage({
+      type: MessageType.reply,
+      id: 1,
+      error: null
+    })
+  );
+  assert.ok(
+    isHostMessage({
+      type: MessageType.reply,
+      id: 1
+    })
+  );
+  assert.ok(
+    isHostMessage({
+      type: MessageType.patch,
+      name: "v",
+      ops: [{
+        op: "remove",
+        path: ["a", 0]
+      }]
+    })
+  );
+  assert.ok(
+    !isHostMessage({
+      type: MessageType.snapshot,
+      value: 1
+    })
+  );
+  assert.ok(
+    !isHostMessage({
+      type: MessageType.reply,
+      id: -1,
+      error: null
+    })
+  );
+  assert.ok(
+    !isHostMessage({
+      type: MessageType.reply,
+      id: 1,
+      error: 5
+    })
+  );
+  assert.ok(
+    !isHostMessage({
+      type: MessageType.patch,
+      name: "v",
+      ops: [{
+        op: "move",
+        path: []
+      }]
+    })
+  );
+  assert.ok(
+    !isHostMessage({
+      type: MessageType.patch,
+      name: "v",
+      ops: [{
+        op: "splice",
+        path: [],
+        start: -1,
+        deleteCount: 0,
+        items: []
+      }]
+    })
+  );
+  assert.ok(
+    !isHostMessage({
+      type: MessageType.snapshot,
+      name: "v",
+      value: undefined
+    })
+  );
   assert.ok(!isHostMessage("snapshot"));
 });

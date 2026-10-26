@@ -26,13 +26,19 @@ const context = {
   }
 };
 
+// A hook called with its own `this`, as Vite calls it, whatever stand-in the
+// test gives it for Vite's context.
+function callHook(hook: (...args: never[]) => unknown, thisArg: unknown, args: unknown[]): unknown {
+  return Function.prototype.apply.call(hook, thisArg, args);
+}
+
 function run(name: "transform" | "resolveId" | "load", ...values: string[]): unknown {
   const found = plugin[name];
   if (typeof found !== "function") {
     throw new TypeError(`${name} is not a function`);
   }
 
-  return Reflect.apply(found, context, values);
+  return callHook(found, context, values);
 }
 
 test("a component with a <style> imports its sheet module", () => {
@@ -75,28 +81,28 @@ test("a change to a component reloads its sheet module too", () => {
 
   const component = { id: styled };
   // A component with no sheet module is left to Vite's own reload.
-  assert.deepEqual(Reflect.apply(hotUpdate, { environment }, [{
+  assert.deepEqual(callHook(hotUpdate, { environment }, [{
     file: `${folder}/new.svelte`,
     modules: [component]
   }]), undefined);
   // After the component was compiled, an edit to its <style> alone is the
   // sheet's: the component keeps running.
   run("transform", "compiled();", styled);
-  assert.deepEqual(Reflect.apply(hotUpdate, { environment }, [{
+  assert.deepEqual(callHook(hotUpdate, { environment }, [{
     file: styled,
     modules: [component]
   }]), [sheet]);
   writeFileSync(styled, "<border class=\"a\" />\n<style>\n  .a { padding: 8px }\n</style>\n");
-  assert.deepEqual(Reflect.apply(hotUpdate, { environment }, [{
+  assert.deepEqual(callHook(hotUpdate, { environment }, [{
     file: styled,
     modules: [component]
   }]), [sheet]);
   writeFileSync(styled, "<border class=\"b\" />\n<style>\n  .a { padding: 8px }\n</style>\n");
-  assert.deepEqual(Reflect.apply(hotUpdate, { environment }, [{
+  assert.deepEqual(callHook(hotUpdate, { environment }, [{
     file: styled,
     modules: [component]
   }]), [component, sheet]);
-  assert.equal(Reflect.apply(hotUpdate, { environment }, [{
+  assert.equal(callHook(hotUpdate, { environment }, [{
     file: plain,
     modules: [component]
   }]), undefined);

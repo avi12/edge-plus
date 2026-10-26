@@ -11,8 +11,8 @@
     get color() {
       return color;
     },
-    set color(value) {
-      color = value;
+    set color(next) {
+      color = next;
     }
   };
 </script>

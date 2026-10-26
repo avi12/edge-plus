@@ -157,8 +157,10 @@ function readPrelude(cursor: Cursor): Prelude {
       depth--;
     }
 
-    const isTerminator = depth <= 0
-      && (character === Terminator.OpenBrace || character === Terminator.CloseBrace || character === Terminator.Semicolon);
+    const isTerminatorCharacter = character === Terminator.OpenBrace
+      || character === Terminator.CloseBrace
+      || character === Terminator.Semicolon;
+    const isTerminator = depth <= 0 && isTerminatorCharacter;
     if (isTerminator) {
       return {
         text: text.trim(),
@@ -202,6 +204,7 @@ function readRuleBody(cursor: Cursor, block: RuleBlock): void {
   while (!cursor.isAtEnd) {
     const prelude = readPrelude(cursor);
     cursor.index++;
+
     if (prelude.terminator === Terminator.OpenBrace) {
       // Nesting: skip its body and record where it was.
       block.nested.push(prelude.at);

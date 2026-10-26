@@ -57,11 +57,25 @@ const frameworkColors = [
   "SystemColorDisabledTextColor"
 ];
 
+// Code-unit order, so the file does not change with the machine's locale.
+function compareKeys(left: string, right: string): number {
+  if (left === right) {
+    return 0;
+  }
+
+  return left < right ? -1 : 1;
+}
+
+function compareEntries(left: [string, unknown], right: [string, unknown]): number {
+  return compareKeys(left[0], right[0]);
+}
+
 function defaultGenericXaml(): string {
   const lock: unknown = JSON.parse(readFileSync(lockFile, "utf8"));
   const packages = typeof lock === "object" && lock !== null && "packages" in lock ? lock.packages : [];
   const cacheFolder = typeof lock === "object" && lock !== null && "nuget_cache_dir" in lock ? lock.nuget_cache_dir : "";
-  if (!Array.isArray(packages) || typeof cacheFolder !== "string") {
+  const isLockFile = Array.isArray(packages) && typeof cacheFolder === "string";
+  if (!isLockFile) {
     throw new TypeError(`${lockFile} is not a winapp lock file`);
   }
 
@@ -80,7 +94,8 @@ const byKind = new Map<ResourceKind, Set<string>>();
 for (const match of xaml.matchAll(/<([\w:]+)\s+x:Key="([^"]+)"/gu)) {
   const kind = kindOfTag.get(match[1] ?? "");
   const key = match[2];
-  if (kind !== undefined && key !== undefined) {
+  const isResource = kind !== undefined && key !== undefined;
+  if (isResource) {
     const keys = byKind.get(kind) ?? new Set<string>();
     keys.add(key);
     byKind.set(kind, keys);
@@ -93,9 +108,13 @@ for (const color of frameworkColors) {
 }
 
 byKind.set(ResourceKind.Color, colors);
-const output = Object.fromEntries([...byKind].sort().map(([kind, keys]) => [kind, [...keys].sort()]));
-writeFileSync(outputFile, `${JSON.stringify({
-  source: `${winUiPackage} ${/([\d.]+)[\\/]lib[\\/]/u.exec(xamlFile)?.[1] ?? "?"}`,
-  ...output
-})}\n`);
+const output = Object.fromEntries(
+  [...byKind].sort(compareEntries).map(([kind, keys]) => [kind, [...keys].sort(compareKeys)])
+);
+writeFileSync(
+  outputFile, `${JSON.stringify({
+    source: `${winUiPackage} ${/([\d.]+)[\\/]lib[\\/]/u.exec(xamlFile)?.[1] ?? "?"}`,
+    ...output
+  })}\n`
+);
 process.stdout.write(`${[...byKind].map(([kind, keys]) => `${kind} ${keys.size}`).join(", ")}\n`);

@@ -11,8 +11,8 @@
     get isOpen() {
       return isOpen;
     },
-    set isOpen(value) {
-      isOpen = value;
+    set isOpen(next) {
+      isOpen = next;
     }
   };
 </script>

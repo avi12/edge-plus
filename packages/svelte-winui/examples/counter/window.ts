@@ -1,15 +1,13 @@
-import { roInitialize } from "@microsoft/dynwinrt";
 import { registerHooks } from "node:module";
 import type { MessagePort } from "node:worker_threads";
 import { workerData } from "node:worker_threads";
-import { panelWindowModule } from "../bootstrap.ts";
+import { svelteHooks } from "svelte-winui/testing";
+import { runOnUiThread } from "svelte-winui/thread";
 
-// The counter example's UI thread: Edge+'s window start (startScheduled,
-// Application.create) around the package's state layer. The host's messages
-// come in through a MessagePort drained by a DispatcherQueue timer, and no
-// code here calls flushSync.
+// The counter example's UI thread: the package's window start around its state
+// layer. The host's messages come in through a MessagePort drained by a
+// DispatcherQueue timer, and no code here calls flushSync.
 
-const singleThreadedApartment = 0;
 const pollMilliseconds = 30;
 
 function isPort(value: unknown): value is MessagePort {
@@ -25,44 +23,35 @@ function portFrom(data: unknown): MessagePort {
   return port;
 }
 
-roInitialize(singleThreadedApartment);
-const { svelteHooks } = await import(panelWindowModule("svelte-loader.ts"));
-registerHooks(svelteHooks());
-const { milliseconds } = await import(panelWindowModule("layout.ts"));
-const { Application, DispatcherQueue, Window } = await import(panelWindowModule("winui.ts"));
-const { default: renderer, rootControl } = await import(panelWindowModule("svelte-renderer.ts"));
-const { mount } = await import("svelte");
-const { default: App } = await import("./app.svelte");
-const { createHostChannel } = await import("../../src/state/index.ts");
-const { createMessagePortTransport } = await import("../../src/state/transports/message-port.ts");
-
-const port = portFrom(workerData);
-// Held for as long as the window runs: a timer whose wrapper is collected stops.
-const heldTimers = new Set<unknown>();
-
-await Application.startScheduled(() => {
-  Application.create(() => {
-    const channel = createHostChannel(createMessagePortTransport(port, {
-      poll(drain) {
-        const timer = DispatcherQueue.getForCurrentThread().createTimer();
-        timer.interval = milliseconds(pollMilliseconds);
-        timer.isRepeating = true;
-        timer.onTick(drain);
-        timer.start();
-        heldTimers.add(timer);
-        return () => timer.stop();
-      }
-    }));
-    const fragment = renderer.createFragment();
-    mount(App, {
-      renderer,
-      target: fragment,
-      props: { channel }
-    });
-    const window = new Window();
-    window.content = rootControl(fragment);
-    window.title = "counter-example";
-    window.appWindow.showWithActivation(false);
+await runOnUiThread(async () => {
+  // .svelte files run from source, through Node's own loader.
+  registerHooks(svelteHooks());
+  // Registers every WinUI control with the renderer, for the raw tags app.svelte uses.
+  await import("svelte-winui/components");
+  const { createWindow, runWindow, startTimer } = await import("svelte-winui/window");
+  const { createHostChannel, createMessagePortTransport } = await import("svelte-winui/state");
+  const { default: App } = await import("./app.svelte");
+  const port = portFrom(workerData);
+  await runWindow({
+    onStart() {
+      const channel = createHostChannel(
+        createMessagePortTransport(port, {
+          poll(drain) {
+            return startTimer({
+              milliseconds: pollMilliseconds,
+              onTick: drain
+            });
+          }
+        })
+      );
+      createWindow({
+        component: App,
+        props: {
+          channel
+        },
+        title: "counter-example",
+        isBackground: true
+      });
+    }
   });
 });
-process.exit(0);

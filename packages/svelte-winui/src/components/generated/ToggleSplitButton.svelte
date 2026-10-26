@@ -11,8 +11,8 @@
     get isChecked() {
       return isChecked;
     },
-    set isChecked(value) {
-      isChecked = value;
+    set isChecked(next) {
+      isChecked = next;
     }
   };
 </script>

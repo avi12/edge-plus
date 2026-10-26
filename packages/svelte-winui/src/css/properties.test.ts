@@ -181,10 +181,14 @@ const rows: Array<[string, string | null, string, Array<[string, string]>]> = [
   ]]
 ];
 
+function compareText(left: unknown, right: unknown): number {
+  return String(left).localeCompare(String(right));
+}
+
 for (const [name, elementType, declarations, expected] of rows) {
   test(`${name}: ${declarations}`, () => {
     // The order of setters in a Style does not matter.
-    assert.deepEqual(setters(elementType, declarations).sort(), expected.toSorted());
+    assert.deepEqual(setters(elementType, declarations).sort(compareText), expected.toSorted(compareText));
   });
 }
 

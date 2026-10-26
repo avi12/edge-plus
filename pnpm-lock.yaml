@@ -6,6 +6,8 @@ settings:
 
 importers:
 
+  .: {}
+
   app/panel-tauri:
     dependencies:
       '@microsoft/dynwinrt':
@@ -72,9 +74,6 @@ importers:
       '@sveltejs/vite-plugin-svelte':
         specifier: 7.3.1
         version: 7.3.1(svelte@https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0))(vite@8.3.4(@types/node@24.19.2))
-      vite:
-        specifier: 8.3.4
-        version: 8.3.4(@types/node@24.19.2)(esbuild@0.25.12)
     devDependencies:
       '@microsoft/dynwinrt':
         specifier: 0.1.0-preview.23
@@ -100,9 +99,15 @@ importers:
       svelte:
         specifier: https://pkg.pr.new/svelte@18042
         version: https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0)
+      svelte-winui:
+        specifier: link:.
+        version: 'link:'
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+      vite:
+        specifier: 8.3.4
+        version: 8.3.4(@types/node@24.19.2)(esbuild@0.25.12)
 
 packages:
 

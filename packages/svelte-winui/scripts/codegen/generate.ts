@@ -1,9 +1,28 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import path from "node:path";
-import { parseArgs } from "node:util";
-import { bindingModule, emitBindings, emitComponent, emitDeclaration, emitIndex, emitLevel, emitMetadata } from "./emit.ts";
+import { packageJsonWithBindings } from "../../src/cli/binding-list.ts";
+import {
+  bindingModule,
+  emitBindings,
+  emitComponent,
+  emitControlsTable,
+  emitDeclaration,
+  emitIndex,
+  emitLevel,
+  emitMetadata,
+  emitRequiredBindings
+} from "./emit.ts";
 import { bindingClasses, buildModel, requestedClasses } from "./model.ts";
 import type { TypeName } from "./winmd.ts";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync
+} from "node:fs";
+import path from "node:path";
+import { parseArgs } from "node:util";
 
 // Generates the components from WinUI's metadata:
 //
@@ -19,63 +38,60 @@ const generatedFolder = path.join(import.meta.dirname, "..", "..", "src", "compo
 const lockPath = [".winapp", "winmds.lock.json"];
 const bindingsPath = [".winapp", "bindings"];
 
-interface BindingEntry {
-  namespace: string;
-  classes?: string[];
-}
-
 interface OutputFile {
   file: string;
   text: string;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isBindingEntry(value: unknown): value is BindingEntry {
-  return isRecord(value) && typeof value["namespace"] === "string";
-}
-
-// The class list package.json asks `winapp restore` for, with the classes the
-// components need added. The ones already there stay.
-function mergedEntries(existing: BindingEntry[], wanted: TypeName[]): BindingEntry[] {
-  const byNamespace = new Map<string, Set<string>>();
-  const wholeNamespaces: BindingEntry[] = [];
-  for (const entry of existing) {
-    if (entry.classes === undefined) {
-      wholeNamespaces.push(entry);
-    } else {
-      byNamespace.set(entry.namespace, new Set([...byNamespace.get(entry.namespace) ?? [], ...entry.classes]));
-    }
-  }
-
-  for (const type of wanted) {
-    byNamespace.set(type.namespace, new Set([...byNamespace.get(type.namespace) ?? [], type.name]));
-  }
-
-  const entries = [...byNamespace.entries()].map(([namespace, classes]) => ({
-    namespace,
-    classes: [...classes].sort((left, right) => left.localeCompare(right))
-  }));
-  return [...entries, ...wholeNamespaces].sort((left, right) => left.namespace.localeCompare(right.namespace));
-}
-
 function updatedPackageJson(packagePath: string, wanted: TypeName[]): OutputFile {
-  const original = readFileSync(packagePath, "utf8");
-  const newline = original.includes("\r\n") ? "\r\n" : "\n";
-  const parsed: unknown = JSON.parse(original);
-  const winapp = isRecord(parsed) ? parsed["winapp"] : undefined;
-  const bindings = isRecord(winapp) ? winapp["jsBindings"] : undefined;
-  const list = isRecord(bindings) ? bindings["additionalWinmds"] : undefined;
-  if (!isRecord(bindings) || !Array.isArray(list)) {
-    throw new Error(`${packagePath} has no winapp.jsBindings.additionalWinmds`);
-  }
-
-  bindings["additionalWinmds"] = mergedEntries(list.filter(isBindingEntry), wanted);
   return {
     file: packagePath,
-    text: `${JSON.stringify(parsed, null, 2).replaceAll("\n", newline)}${newline}`
+    text: packageJsonWithBindings(readFileSync(packagePath, "utf8"), wanted)
+  };
+}
+
+// What the README holds that comes from elsewhere, between a pair of markers
+// each: `<!-- controls:start -->` ... `<!-- controls:end -->`.
+interface ReadmeBlock {
+  name: string;
+  body: string;
+}
+
+const packageFolder = path.join(import.meta.dirname, "..", "..");
+// The hello example's files, which the quick start shows as they are.
+const quickStartFiles = ["vite.config.ts", "app.svelte", "window.ts", "main.ts"];
+
+function exampleBlock(name: string): ReadmeBlock {
+  const source = readFileSync(path.join(packageFolder, "examples", "hello", name), "utf8");
+  const language = path.extname(name).slice(1);
+  return {
+    name: `hello/${name}`,
+    body: `\`\`\`${language}\n${normalized(source).trimEnd()}\n\`\`\``
+  };
+}
+
+// README.md with each block's body between its markers.
+function updatedReadme(blocks: ReadmeBlock[]): OutputFile {
+  const file = path.join(packageFolder, "README.md");
+  const original = readFileSync(file, "utf8");
+  let text = normalized(original);
+  for (const block of blocks) {
+    const start = `<!-- ${block.name}:start -->`;
+    const end = `<!-- ${block.name}:end -->`;
+    const startAt = text.indexOf(start);
+    const endAt = text.indexOf(end);
+    const hasMarkers = startAt >= 0 && endAt > startAt;
+    if (!hasMarkers) {
+      throw new Error(`${file} needs ${start} and ${end}`);
+    }
+
+    text = `${text.slice(0, startAt + start.length)}\n\n${block.body}\n\n${text.slice(endAt)}`;
+  }
+
+  const newline = original.includes("\r\n") ? "\r\n" : "\n";
+  return {
+    file,
+    text: text.replaceAll("\n", newline)
   };
 }
 
@@ -93,6 +109,10 @@ function generatedFiles(project: string): OutputFile[] {
     {
       file: path.join(generatedFolder, "metadata.ts"),
       text: emitMetadata(model)
+    },
+    {
+      file: path.join(generatedFolder, "required-bindings.json"),
+      text: emitRequiredBindings(model)
     }
   ];
   for (const level of model.classes) {
@@ -101,6 +121,7 @@ function generatedFiles(project: string): OutputFile[] {
       file: path.join(generatedFolder, "controls", `${name}.svelte.ts`),
       text: emitLevel(level)
     });
+
     if (level.isComponent) {
       output.push(
         {
@@ -115,6 +136,15 @@ function generatedFiles(project: string): OutputFile[] {
     }
   }
 
+  output.push(
+    updatedReadme([
+      {
+        name: "controls",
+        body: emitControlsTable(model)
+      },
+      ...quickStartFiles.map(exampleBlock)
+    ])
+  );
   output.push(updatedPackageJson(path.join(project, "package.json"), requestedClasses(model)));
   reportMissingBindings(project, bindingClasses(model));
   return output;
@@ -159,7 +189,8 @@ function linkProjectFolders(project: string): void {
   for (const name of [".winapp", "node_modules"]) {
     const link = path.join(import.meta.dirname, "..", "..", name);
     const target = path.join(project, name);
-    if (!existsSync(link) && existsSync(target)) {
+    const canLink = !existsSync(link) && existsSync(target);
+    if (canLink) {
       symlinkSync(target, link, "junction");
     }
   }
@@ -171,8 +202,12 @@ function normalized(text: string): string {
 
 const { values } = parseArgs({
   options: {
-    project: { type: "string" },
-    check: { type: "boolean" }
+    project: {
+      type: "string"
+    },
+    check: {
+      type: "boolean"
+    }
   }
 });
 if (values.project === undefined) {

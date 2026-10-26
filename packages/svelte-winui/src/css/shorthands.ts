@@ -42,7 +42,12 @@ function isWholeVariable(declaration: Declaration): boolean {
   return parseVariable(declaration.value) !== null;
 }
 
-function expandBox(declaration: Declaration, names: readonly string[], reader: Reader, template: (name: string) => string): Declaration[] {
+function expandBox(
+  declaration: Declaration,
+  names: readonly string[],
+  reader: Reader,
+  template: (name: string) => string
+): Declaration[] {
   const values = box(reader.words);
   if (values === null) {
     reader.expected("one to four values");
@@ -125,6 +130,7 @@ function expandFont(declaration: Declaration, reader: Reader): Declaration[] {
 
   const [size = "", lineHeight] = splitSlash(words[sizeIndex] ?? "");
   result.push(longhand(declaration, "font-size", size));
+
   if (lineHeight !== undefined) {
     result.push(longhand(declaration, "line-height", lineHeight));
   }
@@ -218,5 +224,3 @@ export function expandDeclaration(declaration: Declaration, options: LowerOption
   const reader = new Reader(declaration, options);
   return expansion(declaration, reader);
 }
-
-export const shorthandNames: ReadonlySet<string> = new Set(expansions.keys());

@@ -100,7 +100,10 @@ export const neverBindable = new Set(["DataContext", "IsEnabled"]);
 // properties, each as a prop named by the prefix and the property: gridRow,
 // automationName, toolTip. A property that starts with the prefix already
 // keeps its own name (AutomationId is automationId, not automationAutomationId).
-export const attachedOwners: Array<{ owner: TypeName; prefix: string }> = [
+export const attachedOwners: Array<{
+  owner: TypeName;
+  prefix: string;
+}> = [
   {
     owner: {
       namespace: "Microsoft.UI.Xaml.Controls",
@@ -190,6 +193,36 @@ export const supportClasses: TypeName[] = [
   {
     namespace: "Windows.Foundation",
     name: "Uri"
+  }
+];
+
+// What the package itself reaches besides its components, from src/winui.ts
+// (the package's one import site of the bindings; a test keeps the two in
+// step): an app generates bindings for these as well.
+export const coreClasses: TypeName[] = [
+  {
+    namespace: "Microsoft.UI.Dispatching",
+    name: "DispatcherQueue"
+  },
+  {
+    namespace: "Microsoft.UI.Dispatching",
+    name: "DispatcherQueueTimer"
+  },
+  {
+    namespace: "Microsoft.UI.Windowing",
+    name: "AppWindow"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml",
+    name: "Window"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml.Controls",
+    name: "RowDefinition"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml.Media",
+    name: "DesktopAcrylicBackdrop"
   }
 ];
 

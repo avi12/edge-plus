@@ -7,7 +7,11 @@ const logPath = process.env["SCHEDULING_LOG"] ?? "scheduling.log";
 const clockStart = performance.now();
 const timeWidth = 6;
 const labelWidth = 28;
-let readText: () => string = () => "";
+let readText = readNothing;
+
+function readNothing(): string {
+  return "";
+}
 
 export function record(label: string, text: string): void {
   const elapsed = (performance.now() - clockStart).toFixed(0).padStart(timeWidth);

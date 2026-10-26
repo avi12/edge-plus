@@ -22,7 +22,7 @@ const wideBlobsFlag = 0x04;
 const smallIndexLimit = 0x10000;
 const nullStringMarker = 0xff;
 
-export const TableId = {
+const TableId = {
   Module: 0x00,
   TypeRef: 0x01,
   TypeDef: 0x02,
@@ -48,11 +48,11 @@ export const TypeAttribute = {
   Sealed: 0x100
 } as const;
 
-export const MethodAttribute = {
+const MethodAttribute = {
   Static: 0x10
 } as const;
 
-export const MethodSemantic = {
+const MethodSemantic = {
   Setter: 0x01,
   Getter: 0x02,
   AddOn: 0x08,
@@ -137,11 +137,28 @@ export interface TypeName {
 
 // A type as a signature writes it.
 export type TypeSignature =
-  | { kind: "primitive"; name: string }
-  | { kind: "named"; type: TypeName; isValueType: boolean }
-  | { kind: "generic"; type: TypeName; args: TypeSignature[] }
-  | { kind: "array"; element: TypeSignature }
-  | { kind: "parameter"; index: number };
+  | {
+    kind: "primitive";
+    name: string;
+  }
+  | {
+    kind: "named";
+    type: TypeName;
+    isValueType: boolean;
+  }
+  | {
+    kind: "generic";
+    type: TypeName;
+    args: TypeSignature[];
+  }
+  | {
+    kind: "array";
+    element: TypeSignature;
+  }
+  | {
+    kind: "parameter";
+    index: number;
+  };
 
 export interface PropertyInfo {
   name: string;
@@ -157,7 +174,10 @@ export interface EventInfo {
 export interface MethodInfo {
   name: string;
   isStatic: boolean;
-  parameters: Array<{ name: string; type: TypeSignature }>;
+  parameters: Array<{
+    name: string;
+    type: TypeSignature;
+  }>;
   returns: TypeSignature;
 }
 
@@ -181,7 +201,10 @@ export interface TypeInfo {
   properties: PropertyInfo[];
   events: EventInfo[];
   methods: MethodInfo[];
-  enumMembers: Array<{ name: string; value: number }>;
+  enumMembers: Array<{
+    name: string;
+    value: number;
+  }>;
   attributes: AttributeInfo[];
 }
 
@@ -275,7 +298,8 @@ export class WinMdFile {
     const tables = streams.get("#~");
     const strings = streams.get("#Strings");
     const blobs = streams.get("#Blob");
-    if (tables === undefined || strings === undefined || blobs === undefined) {
+    const hasAllStreams = tables !== undefined && strings !== undefined && blobs !== undefined;
+    if (!hasAllStreams) {
       throw new Error(`${filePath} is missing a metadata stream`);
     }
 
@@ -299,30 +323,37 @@ export class WinMdFile {
     const directoriesOffset = optionalOffset + (isPe32Plus ? dataDirectoriesOffsetPe32Plus : dataDirectoriesOffsetPe32);
     const cliRva = this.buffer.readUInt32LE(directoriesOffset + cliHeaderDirectoryIndex * dataDirectorySize);
     const sectionsOffset = optionalOffset + optionalSize;
-    const sections: Array<{ rva: number; size: number; raw: number }> = [];
+    const sections: Array<{
+      rva: number;
+      size: number;
+      raw: number;
+    }> = [];
     for (let index = 0; index < sectionCount; index++) {
-      const at = sectionsOffset + index * sectionHeaderSize;
+      const headerOffset = sectionsOffset + index * sectionHeaderSize;
       sections.push({
-        rva: this.buffer.readUInt32LE(at + 12),
-        size: Math.max(this.buffer.readUInt32LE(at + 8), this.buffer.readUInt32LE(at + 16)),
-        raw: this.buffer.readUInt32LE(at + 20)
+        rva: this.buffer.readUInt32LE(headerOffset + 12),
+        size: Math.max(this.buffer.readUInt32LE(headerOffset + 8), this.buffer.readUInt32LE(headerOffset + 16)),
+        raw: this.buffer.readUInt32LE(headerOffset + 20)
       });
     }
 
-    const toOffset = (rva: number): number => {
+    function toOffset(rva: number): number {
       const section = sections.find(candidate => rva >= candidate.rva && rva < candidate.rva + candidate.size);
       if (section === undefined) {
         throw new Error(`RVA ${rva} is in no section`);
       }
 
       return section.raw + (rva - section.rva);
-    };
+    }
     const cliOffset = toOffset(cliRva);
     this.metadataOffset = toOffset(this.buffer.readUInt32LE(cliOffset + 8));
     return this.metadataOffset;
   }
 
-  private readStreams(root: number): Map<string, { offset: number; size: number }> {
+  private readStreams(root: number): Map<string, {
+    offset: number;
+    size: number;
+  }> {
     if (this.buffer.readUInt32LE(root) !== metadataRootSignature) {
       throw new Error("not a metadata root");
     }
@@ -330,7 +361,10 @@ export class WinMdFile {
     const versionLength = this.buffer.readUInt32LE(root + 12);
     const streamCount = this.buffer.readUInt16LE(root + 16 + versionLength + 2);
     let cursor = root + 16 + versionLength + 4;
-    const streams = new Map<string, { offset: number; size: number }>();
+    const streams = new Map<string, {
+      offset: number;
+      size: number;
+    }>();
     for (let index = 0; index < streamCount; index++) {
       const offset = this.buffer.readUInt32LE(cursor);
       const size = this.buffer.readUInt32LE(cursor + 4);
@@ -367,11 +401,13 @@ export class WinMdFile {
     for (let id = 0; id < tableCount; id++) {
       const rowCount = this.rowCounts.get(id);
       const columns = tableColumns[id];
-      if (rowCount !== undefined && columns === undefined) {
+      const isUnsupported = rowCount !== undefined && columns === undefined;
+      if (isUnsupported) {
         throw new Error(`metadata table ${id} is not supported`);
       }
 
-      if (rowCount !== undefined && columns !== undefined) {
+      const isSupported = rowCount !== undefined && columns !== undefined;
+      if (isSupported) {
         const columnSizes = columns.map(column => this.columnSize(column));
         const rowSize = columnSizes.reduce((total, size) => total + size, 0);
         this.tables.set(id, {
@@ -385,29 +421,34 @@ export class WinMdFile {
     }
   }
 
+  private tableIndexSize(table: number): number {
+    const rows = this.rowCounts.get(table) ?? 0;
+    return rows < smallIndexLimit ? 2 : 4;
+  }
+
+  private codedIndexSize(name: string): number {
+    const targets = codedIndexTables[name] ?? [];
+    const tagBits = Math.ceil(Math.log2(targets.length));
+    const largest = Math.max(...targets.map(target => target === null ? 0 : this.rowCounts.get(target) ?? 0));
+    return largest < smallIndexLimit >> tagBits ? 2 : 4;
+  }
+
   private columnSize(column: ColumnKind): number {
-    if (column === "str") {
-      return this.wideStrings ? 4 : 2;
-    }
-
-    if (column === "guid") {
-      return this.wideGuids ? 4 : 2;
-    }
-
-    if (column === "blob") {
-      return this.wideBlobs ? 4 : 2;
+    const heapIsWide = new Map([
+      ["str", this.wideStrings],
+      ["guid", this.wideGuids],
+      ["blob", this.wideBlobs]
+    ]).get(column);
+    if (heapIsWide !== undefined) {
+      return heapIsWide ? 4 : 2;
     }
 
     if (column.startsWith("t:")) {
-      const rows = this.rowCounts.get(Number(column.slice(2))) ?? 0;
-      return rows < smallIndexLimit ? 2 : 4;
+      return this.tableIndexSize(Number(column.slice(2)));
     }
 
     if (column.startsWith("c:")) {
-      const targets = codedIndexTables[column.slice(2)] ?? [];
-      const tagBits = Math.ceil(Math.log2(targets.length));
-      const largest = Math.max(...targets.map(target => target === null ? 0 : this.rowCounts.get(target) ?? 0));
-      return largest < smallIndexLimit >> tagBits ? 2 : 4;
+      return this.codedIndexSize(column.slice(2));
     }
 
     return Number(column);
@@ -424,13 +465,13 @@ export class WinMdFile {
       return 0;
     }
 
-    let at = data.offset + (row - 1) * data.rowSize;
+    let cellOffset = data.offset + (row - 1) * data.rowSize;
     for (let index = 0; index < column; index++) {
-      at += data.columnSizes[index] ?? 0;
+      cellOffset += data.columnSizes[index] ?? 0;
     }
 
     const width = data.columnSizes[column] ?? 0;
-    return width === 2 ? this.buffer.readUInt16LE(at) : this.buffer.readUInt32LE(at);
+    return width === 2 ? this.buffer.readUInt16LE(cellOffset) : this.buffer.readUInt32LE(cellOffset);
   }
 
   string(index: number): string {
@@ -449,7 +490,10 @@ export class WinMdFile {
   }
 
   // A coded index as its table and 1-based row.
-  decode(coded: string, value: number): { table: number | null; row: number } {
+  decode(coded: string, value: number): {
+    table: number | null;
+    row: number;
+  } {
     const targets = codedIndexTables[coded] ?? [];
     const tagBits = Math.ceil(Math.log2(targets.length));
     const tag = value & ((1 << tagBits) - 1);
@@ -513,7 +557,8 @@ export class WinMdFile {
 
     const isValueType = element === 0x11;
     const isClass = element === 0x12;
-    if (isValueType || isClass) {
+    const isNamedType = isValueType || isClass;
+    if (isNamedType) {
       const type = this.typeNameOf(reader.compressed());
       return {
         kind: "named",
@@ -657,7 +702,13 @@ export class WinMdFile {
     throw new Error("an attribute argument of this type is not supported");
   }
 
-  private readAttribute(row: number): AttributeInfo | null {
+  // The attribute's class and the blob of its constructor's signature; null
+  // for an attribute whose constructor is in this file or whose class is not
+  // among the types read.
+  private attributeConstructor(row: number): {
+    type: AttributeInfo["type"];
+    signatureIndex: number;
+  } | null {
     const { table, row: constructorRow } = this.decode("CustomAttributeType", this.cell(TableId.CustomAttribute, row, 1));
     let typeCoded = 0;
     let signatureIndex = 0;
@@ -674,6 +725,13 @@ export class WinMdFile {
       return null;
     }
 
+    return {
+      type,
+      signatureIndex
+    };
+  }
+
+  private constructorParameters(signatureIndex: number): TypeSignature[] {
     const signature = this.blob(signatureIndex);
     signature.byte();
     const parameterCount = signature.compressed();
@@ -683,58 +741,71 @@ export class WinMdFile {
       parameterTypes.push(this.readType(signature));
     }
 
+    return parameterTypes;
+  }
+
+  // The type of a named argument, from the serialization tag before its name.
+  private namedArgumentType(kind: number): TypeSignature {
+    const isString = kind === 0x0e || kind === 0x50;
+    const primitive = kind === 0x02 ? "Boolean" : "Int32";
+    return {
+      kind: "primitive",
+      name: isString ? "String" : primitive
+    };
+  }
+
+  private readNamedArguments(value: BlobReader, named: Map<string, unknown>): void {
+    const namedCount = value.integer(2);
+    for (let index = 0; index < namedCount; index++) {
+      value.byte();
+      const kind = value.byte();
+      const isEnum = kind === 0x55;
+      if (isEnum) {
+        value.text();
+      }
+
+      const name = value.text() ?? "";
+      named.set(name, this.attributeValue(value, this.namedArgumentType(kind)));
+    }
+  }
+
+  private readAttribute(row: number): AttributeInfo | null {
+    const constructed = this.attributeConstructor(row);
+    if (constructed === null) {
+      return null;
+    }
+
+    const parameterTypes = this.constructorParameters(constructed.signatureIndex);
     const value = this.blob(this.cell(TableId.CustomAttribute, row, 2));
     const prolog = value.integer(2);
     const hasProlog = prolog === 1;
     const fixed: unknown[] = [];
     const named = new Map<string, unknown>();
-    if (!hasProlog) {
-      return {
-        type,
-        fixed,
-        named
-      };
-    }
-
-    try {
-      for (const parameterType of parameterTypes) {
-        fixed.push(this.attributeValue(value, parameterType));
-      }
-
-      const namedCount = value.integer(2);
-      for (let index = 0; index < namedCount; index++) {
-        value.byte();
-        const kind = value.byte();
-        const isEnum = kind === 0x55;
-        if (isEnum) {
-          value.text();
+    if (hasProlog) {
+      try {
+        for (const parameterType of parameterTypes) {
+          fixed.push(this.attributeValue(value, parameterType));
         }
 
-        const name = value.text() ?? "";
-        const argumentType: TypeSignature = kind === 0x0e || kind === 0x50
-          ? {
-            kind: "primitive",
-            name: "String"
-          }
-          : {
-            kind: "primitive",
-            name: kind === 0x02 ? "Boolean" : "Int32"
-          };
-        named.set(name, this.attributeValue(value, argumentType));
+        this.readNamedArguments(value, named);
+      } catch {
+        // An argument this reader does not decode: the attributes the generator
+        // reads have only strings, types and integers.
       }
-    } catch {
-      // An argument this reader does not decode: the attributes the generator
-      // reads have only strings, types and integers.
     }
 
     return {
-      type,
+      type: constructed.type,
       fixed,
       named
     };
   }
 
-  private attributesOf(parentTable: number, parentRow: number, byParent: Map<string, AttributeInfo[]>): AttributeInfo[] {
+  private attributesOf(
+    parentTable: number,
+    parentRow: number,
+    byParent: Map<string, AttributeInfo[]>
+  ): AttributeInfo[] {
     return byParent.get(`${parentTable}:${parentRow}`) ?? [];
   }
 
@@ -744,7 +815,8 @@ export class WinMdFile {
     for (let row = 1; row <= this.rowCount(TableId.CustomAttribute); row++) {
       const parent = this.decode("HasCustomAttribute", this.cell(TableId.CustomAttribute, row, 0));
       const isOfInterest = parent.table === TableId.TypeDef || parent.table === TableId.InterfaceImpl;
-      if (isOfInterest && tagged.includes(parent.table)) {
+      const isTagged = isOfInterest && tagged.includes(parent.table);
+      if (isTagged) {
         const attribute = this.readAttribute(row);
         if (attribute !== null) {
           const key = `${parent.table}:${parent.row}`;
@@ -900,9 +972,5 @@ export class TypeIndex {
 
   find(type: TypeName): TypeInfo | undefined {
     return this.byName.get(fullName(type));
-  }
-
-  all(): TypeInfo[] {
-    return [...this.byName.values()];
   }
 }

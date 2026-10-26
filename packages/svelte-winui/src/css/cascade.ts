@@ -30,7 +30,11 @@ function ruleApplies(rule: Rule, facts: ElementFacts, isStateIgnored: boolean): 
 // The rules that style the element, lowest priority first. With
 // `isStateIgnored`, a state rule counts whether or not its state is active:
 // that is how the runtime learns which events an element needs.
-export function matchingRanked(rules: readonly RankedRule[], facts: ElementFacts, isStateIgnored = false): RankedRule[] {
+export function matchingRanked(
+  rules: readonly RankedRule[],
+  facts: ElementFacts,
+  isStateIgnored = false
+): RankedRule[] {
   return rules
     .filter(ranked => ruleApplies(ranked.rule, facts, isStateIgnored))
     .sort((first, second) => first.rule.specificity - second.rule.specificity || first.rank - second.rank);
@@ -42,7 +46,10 @@ export function matchingRules(rules: readonly RankedRule[], facts: ElementFacts,
 
 // Later declarations win; `!important` ones win over every other. The
 // element's own `style` declarations come last.
-export function computeDeclarations(matched: readonly Rule[], inline: readonly Declaration[]): Map<string, Declaration> {
+export function computeDeclarations(
+  matched: readonly Rule[],
+  inline: readonly Declaration[]
+): Map<string, Declaration> {
   const normal = new Map<string, Declaration>();
   const important = new Map<string, Declaration>();
   const declarations = [...matched.flatMap(rule => rule.declarations), ...inline];
@@ -81,7 +88,7 @@ function escapeAttribute(value: string): string {
 }
 
 // "stack-panel" as StackPanel, the XAML name of the control.
-export function xamlTypeName(elementType: string): string {
+function xamlTypeName(elementType: string): string {
   return elementType.split("-").map(word => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join("");
 }
 

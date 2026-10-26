@@ -6,11 +6,7 @@ export interface SourcePosition {
   column: number;
 }
 
-export const Severity = {
-  Error: "error",
-  Warning: "warning"
-} as const;
-export type Severity = (typeof Severity)[keyof typeof Severity];
+export type Severity = "error" | "warning";
 
 export interface Diagnostic {
   severity: Severity;

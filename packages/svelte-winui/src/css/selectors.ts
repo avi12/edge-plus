@@ -1,5 +1,5 @@
-import { splitCommas } from "./values.ts";
 import { PseudoState } from "./types.ts";
+import { splitCommas } from "./values.ts";
 
 // The selectors a component's stylesheet may use: a compound of an element
 // type (kebab case, `text-block`), classes (`.a.b`), and at most one state.
@@ -19,8 +19,14 @@ export interface ParsedSelector {
 }
 
 export type SelectorResult =
-  | { isValid: true; selector: ParsedSelector }
-  | { isValid: false; reason: string };
+  | {
+    isValid: true;
+    selector: ParsedSelector;
+  }
+  | {
+    isValid: false;
+    reason: string;
+  };
 
 const combinatorReason = "descendant, child and sibling selectors have no WinUI meaning (a style applies to an element by its own type and classes; give the element a class)";
 const states = new Set<string>(Object.values(PseudoState));
@@ -43,53 +49,102 @@ function fail(reason: string): SelectorResult {
   };
 }
 
+// What reading one piece of a compound consumed, or why it cannot be read.
+interface Step {
+  length: number;
+  problem: string | null;
+}
+
+function failedStep(problem: string): Step {
+  return {
+    length: 0,
+    problem
+  };
+}
+
+function readWhere(rest: string, openLength: number, compound: Compound): Step {
+  const end = matchingParenthesis(rest, openLength - 1);
+  const problem = readCompound(rest.slice(openLength, end), compound, 0);
+  return {
+    length: end + 1,
+    problem
+  };
+}
+
+function readClass(rest: string, compound: Compound, weight: number): Step {
+  const name = identifier.exec(rest.slice(1))?.[0];
+  if (name === undefined) {
+    return failedStep(`"${rest}" is not a class name`);
+  }
+
+  compound.classes.push(name);
+  compound.specificity += weight * classWeight;
+  return {
+    length: 1 + name.length,
+    problem: null
+  };
+}
+
+function readPseudoClass(rest: string, compound: Compound, weight: number): Step {
+  const name = identifier.exec(rest.slice(1))?.[0]?.toLowerCase();
+  return {
+    length: 1 + (name?.length ?? 0),
+    problem: readPseudo(compound, name, weight)
+  };
+}
+
+function readElementType(rest: string, compound: Compound, weight: number): Step {
+  const name = identifier.exec(rest)?.[0] ?? "";
+  compound.elementType = name.toLowerCase();
+  compound.specificity += weight * typeWeight;
+  return {
+    length: name.length,
+    problem: null
+  };
+}
+
+function readStep(rest: string, isStart: boolean, compound: Compound, weight: number): Step {
+  const where = /^:where\(/iu.exec(rest);
+  if (where !== null) {
+    return readWhere(rest, where[0].length, compound);
+  }
+
+  const character = rest.charAt(0);
+  const isPseudo = character === ":" && !rest.startsWith("::");
+  const isUniversal = character === "*" && isStart;
+  const isTypeSelector = isStart && identifier.test(rest);
+  if (character === ".") {
+    return readClass(rest, compound, weight);
+  }
+
+  if (isPseudo) {
+    return readPseudoClass(rest, compound, weight);
+  }
+
+  if (isUniversal) {
+    return {
+      length: 1,
+      problem: null
+    };
+  }
+
+  if (isTypeSelector) {
+    return readElementType(rest, compound, weight);
+  }
+
+  return failedStep(unsupportedCharacter(character, rest));
+}
+
 // Reads one compound from `text`; `weight` is 0 inside :where().
 function readCompound(text: string, compound: Compound, weight: number): string | null {
   let index = 0;
   while (index < text.length) {
-    const rest = text.slice(index);
-    const character = rest.charAt(0);
-    const isStart = index === 0;
-    const where = /^:where\(/iu.exec(rest);
-    if (where !== null) {
-      const end = matchingParenthesis(rest, where[0].length - 1);
-      const inner = rest.slice(where[0].length, end);
-      const problem = readCompound(inner, compound, 0);
-      if (problem !== null) {
-        return problem;
-      }
-
-      index += end + 1;
-      continue;
+    const step = readStep(text.slice(index), index === 0, compound, weight);
+    if (step.problem !== null) {
+      return step.problem;
     }
 
-    if (character === ".") {
-      const name = identifier.exec(rest.slice(1))?.[0];
-      if (name === undefined) {
-        return `"${rest}" is not a class name`;
-      }
-
-      compound.classes.push(name);
-      compound.specificity += weight * classWeight;
-      index += 1 + name.length;
-    } else if (character === ":" && !rest.startsWith("::")) {
-      const name = identifier.exec(rest.slice(1))?.[0]?.toLowerCase();
-      const problem = readPseudo(compound, name, weight);
-      if (problem !== null) {
-        return problem;
-      }
-
-      index += 1 + (name?.length ?? 0);
-    } else if (character === "*" && isStart) {
-      index++;
-    } else if (isStart && identifier.test(rest)) {
-      const name = identifier.exec(rest)?.[0] ?? "";
-      compound.elementType = name.toLowerCase();
-      compound.specificity += weight * typeWeight;
-      index += name.length;
-    } else {
-      return unsupportedCharacter(character, rest);
-    }
+    index += step.length;
   }
 
   return null;
@@ -100,6 +155,7 @@ function matchingParenthesis(text: string, open: number): number {
   for (let index = open; index < text.length; index++) {
     depth += text[index] === "(" ? 1 : 0;
     depth -= text[index] === ")" ? 1 : 0;
+
     if (depth === 0) {
       return index;
     }
@@ -114,7 +170,8 @@ function readPseudo(compound: Compound, name: string | undefined, weight: number
     return null;
   }
 
-  if (name === undefined || !states.has(name)) {
+  const isKnownState = name !== undefined && states.has(name);
+  if (!isKnownState) {
     const known = [...states].map(state => `:${state}`).join(", ");
     return `:${name ?? ""} has no WinUI meaning (a control reports ${known})`;
   }
@@ -132,8 +189,9 @@ function stateOf(name: string): PseudoState | null {
   return Object.values(PseudoState).find(state => state === name) ?? null;
 }
 
-function unsupportedCharacter(character: string, rest: string): string | null {
-  if (character === " " || character === ">" || character === "+" || character === "~") {
+function unsupportedCharacter(character: string, rest: string): string {
+  const isCombinator = character === " " || character === ">" || character === "+" || character === "~";
+  if (isCombinator) {
     return combinatorReason;
   }
 
@@ -157,7 +215,8 @@ export function parseSelectorList(text: string): SelectorResult[] {
       return fail(problem);
     }
 
-    const isRootWithMore = compound.isRoot && (compound.classes.length > 0 || compound.elementType !== null || compound.state !== null);
+    const hasMore = compound.classes.length > 0 || compound.elementType !== null || compound.state !== null;
+    const isRootWithMore = compound.isRoot && hasMore;
     if (isRootWithMore) {
       return fail(":root cannot be combined with a class, type or state");
     }

@@ -31,9 +31,22 @@ export const PatchOperation = {
 } as const;
 
 export type PatchOp =
-  | { op: typeof PatchOperation.set; path: PathSegment[]; value: Json }
-  | { op: typeof PatchOperation.remove; path: PathSegment[] }
-  | { op: typeof PatchOperation.splice; path: PathSegment[]; start: number; deleteCount: number; items: Json[] };
+  | {
+    op: typeof PatchOperation.set;
+    path: PathSegment[];
+    value: Json;
+  }
+  | {
+    op: typeof PatchOperation.remove;
+    path: PathSegment[];
+  }
+  | {
+    op: typeof PatchOperation.splice;
+    path: PathSegment[];
+    start: number;
+    deleteCount: number;
+    items: Json[];
+  };
 
 export interface SnapshotMessage {
   type: typeof MessageType.snapshot;
@@ -62,11 +75,11 @@ export interface ActionMessage<Action = Json> {
 
 export type HostMessage = SnapshotMessage | PatchMessage | ReplyMessage;
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
+export function isJsonObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function isJson(value: unknown): value is Json {
+function isJson(value: unknown): value is Json {
   if (value === null) {
     return true;
   }
@@ -80,7 +93,7 @@ export function isJson(value: unknown): value is Json {
     return value.every(isJson);
   }
 
-  return isRecord(value) && Object.values(value).every(isJson);
+  return isJsonObject(value) && Object.values(value).every(isJson);
 }
 
 function isPath(value: unknown): value is PathSegment[] {
@@ -91,8 +104,9 @@ function isCount(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;
 }
 
-export function isPatchOp(value: unknown): value is PatchOp {
-  if (!isRecord(value) || !isPath(value["path"])) {
+function isPatchOp(value: unknown): value is PatchOp {
+  const hasPath = isJsonObject(value) && isPath(value["path"]);
+  if (!hasPath) {
     return false;
   }
 
@@ -109,7 +123,7 @@ export function isPatchOp(value: unknown): value is PatchOp {
 }
 
 export function isHostMessage(value: unknown): value is HostMessage {
-  if (!isRecord(value)) {
+  if (!isJsonObject(value)) {
     return false;
   }
 
@@ -131,7 +145,7 @@ export function isHostMessage(value: unknown): value is HostMessage {
 // A host's own, unrelated messages (Edge+'s place, notice, close) are not
 // malformed: the channel hands them to its `onOther` listener.
 export function isTypedMessage(value: unknown): value is Record<string, unknown> & { type: string } {
-  return isRecord(value) && typeof value["type"] === "string";
+  return isJsonObject(value) && typeof value["type"] === "string";
 }
 
 export function isOwnMessageType(type: string): boolean {

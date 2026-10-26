@@ -1,6 +1,6 @@
 import type { ResourceKind, VariableResolution } from "./resources.ts";
 import type { Declaration, Severity, SourcePosition } from "./types.ts";
-import { parseColor, parseLength, parseNumber, parsePercent, parseVariable, splitWords } from "./values.ts";
+import { parseColor, parseLength, parseVariable, splitWords } from "./values.ts";
 
 // What the lowering of a declaration needs from its surroundings, and a reader
 // that parses one declaration's value into WinUI's spelling, reporting what it
@@ -15,12 +15,12 @@ export interface LowerOptions {
   report(severity: Severity, message: string, position: SourcePosition): void;
 }
 
-export const ThemeResourceMarkup = {
+const ThemeResourceMarkup = {
   open: "{ThemeResource ",
   close: "}"
 } as const;
 
-export function themeResource(key: string): string {
+function themeResource(key: string): string {
   return `${ThemeResourceMarkup.open}${key}${ThemeResourceMarkup.close}`;
 }
 
@@ -92,23 +92,9 @@ export class Reader {
     return pixels === null ? this.expected("a length in px (or rem, or 0)", token) : String(pixels);
   }
 
-  // A length, or `auto` as NaN, WinUI's "not set".
-  lengthOrAuto(token: string): string | null {
-    return token.toLowerCase() === "auto" ? NotANumber : this.length(token);
-  }
-
   pixels(token: string): number | null {
     const pixels = parseLength(token);
     return pixels ?? this.expected("a length in px (or rem, or 0)", token);
-  }
-
-  number(token: string): number | null {
-    return parseNumber(token) ?? this.expected("a number", token);
-  }
-
-  // A number, or a percentage as its fraction.
-  fraction(token: string): number | null {
-    return parseNumber(token) ?? parsePercent(token) ?? this.expected("a number or a percentage", token);
   }
 
   // One of the keywords in `choices`, as the value it maps to.

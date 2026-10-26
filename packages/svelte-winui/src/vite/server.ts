@@ -37,12 +37,23 @@ export interface ModuleServerOptions extends SvelteWinuiOptions {
   configFile?: string;
 }
 
-// The package's import site of the bindings, which Node must load itself.
-const packageBindingsSite = path.join(import.meta.dirname, "..", "winui.ts");
+// The package's import sites of the bindings, which Node must load itself.
+// Without an extension: from source they are .ts, from the published package
+// .js.
+const packageBindingsSites = [
+  path.join(import.meta.dirname, "..", "winui"),
+  path.join(import.meta.dirname, "..", "components", "generated", "bindings")
+];
 const queryOrHash = /[?#].*$/u;
+const scriptExtension = /\.[cm]?[jt]s$/u;
 
 function isSameFile(file: string, other: string): boolean {
   return path.relative(file, other) === "";
+}
+
+function isPackageBindingsSite(file: string): boolean {
+  const withoutExtension = file.replace(queryOrHash, "").replace(scriptExtension, "");
+  return packageBindingsSites.some(site => isSameFile(withoutExtension, site));
 }
 
 // What the runner sends: its module fetches and its own events.
@@ -130,7 +141,7 @@ class WindowEnvironment extends DevEnvironment {
 
 export async function startModuleServer(options: ModuleServerOptions): Promise<ViteDevServer> {
   function isNative(file: string): boolean {
-    return isSameFile(file, packageBindingsSite) || options.isNative?.(file) === true;
+    return isPackageBindingsSite(file) || options.isNative?.(file) === true;
   }
 
   const hasConfigFile = options.configFile !== undefined;

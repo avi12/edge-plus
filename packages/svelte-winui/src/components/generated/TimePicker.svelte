@@ -11,14 +11,14 @@
     get selectedTime() {
       return selectedTime;
     },
-    set selectedTime(value) {
-      selectedTime = value;
+    set selectedTime(next) {
+      selectedTime = next;
     },
     get time() {
       return time;
     },
-    set time(value) {
-      time = value;
+    set time(next) {
+      time = next;
     }
   };
 </script>

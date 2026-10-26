@@ -5,7 +5,7 @@ import { Worker } from "node:worker_threads";
 // whose Svelte state is changed from three kinds of callback, with no
 // flushSync. Prints this process's pid so a script can find the window by pid.
 //
-//   node --disable-warning=ExperimentalWarning --import ../register-deps.ts launch.ts
+//   node --disable-warning=ExperimentalWarning examples/scheduling/launch.ts
 
 const messageDelayMilliseconds = 2500;
 

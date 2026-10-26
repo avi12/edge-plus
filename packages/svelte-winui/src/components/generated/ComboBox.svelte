@@ -11,26 +11,26 @@
     get selectedIndex() {
       return selectedIndex;
     },
-    set selectedIndex(value) {
-      selectedIndex = value;
+    set selectedIndex(next) {
+      selectedIndex = next;
     },
     get selectedItem() {
       return selectedItem;
     },
-    set selectedItem(value) {
-      selectedItem = value;
+    set selectedItem(next) {
+      selectedItem = next;
     },
     get selectedValue() {
       return selectedValue;
     },
-    set selectedValue(value) {
-      selectedValue = value;
+    set selectedValue(next) {
+      selectedValue = next;
     },
     get isDropDownOpen() {
       return isDropDownOpen;
     },
-    set isDropDownOpen(value) {
-      isDropDownOpen = value;
+    set isDropDownOpen(next) {
+      isDropDownOpen = next;
     }
   };
 </script>

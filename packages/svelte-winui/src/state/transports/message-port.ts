@@ -29,13 +29,13 @@ export function createMessagePortTransport(port: MessagePort, options: MessagePo
         };
       }
 
-      const drain = (): void => {
+      function drain(): void {
         let received = receiveMessageOnPort(port);
         while (received !== undefined) {
           listener.message(received.message);
           received = receiveMessageOnPort(port);
         }
-      };
+      }
       return poll(drain);
     }
   };

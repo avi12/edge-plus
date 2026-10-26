@@ -18,10 +18,12 @@ test("state and actions round-trip with a host in a child process over stdio", a
   const stderr: string[] = [];
   child.stderr.on("data", chunk => stderr.push(String(chunk)));
   const errors: Error[] = [];
-  const channel = createHostChannel(createStdioTransport({
-    input: child.stdout,
-    output: child.stdin
-  }), { onError: error => errors.push(error) });
+  const channel = createHostChannel(
+    createStdioTransport({
+      input: child.stdout,
+      output: child.stdin
+    }), { onError: error => errors.push(error) }
+  );
   try {
     const counter = hostState<Counter>(channel, "counter");
     assert.deepEqual(await counter.ready, { count: 0 });
