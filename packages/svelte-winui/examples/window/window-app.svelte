@@ -97,7 +97,11 @@
   activate={false}
   appUserModelId="svelte-winui.examples.window"
   bind:handle
-  onActivated={() => activations++}
+  onActiveChanged={isActive => {
+    if (isActive) {
+      activations++;
+    }
+  }}
   onBoundsChanged={bounds => {
     boundsReports++;
     lastBounds = bounds;

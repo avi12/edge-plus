@@ -1,5 +1,5 @@
-import type { FrameworkElement, WindowActivationState } from "../winui.ts";
-import { DisplayArea, DisplayAreaFallback, Window } from "../winui.ts";
+import type { FrameworkElement } from "../winui.ts";
+import { DisplayArea, DisplayAreaFallback, Window, WindowActivationState } from "../winui.ts";
 import type { Backdrop } from "./backdrop.ts";
 import { applyBackdrop, Backdrop as BackdropKind } from "./backdrop.ts";
 import { joinAppUserModel } from "./native.ts";
@@ -56,7 +56,8 @@ export interface WindowProps {
   // false opens the window without taking focus from whatever the user is
   // doing (tests, captures, background starts). Read once.
   activate?: boolean;
-  onActivated?: (state: WindowActivationState) => void;
+  // The window became the active one (true) or lost that to another (false).
+  onActiveChanged?: (isActive: boolean) => void;
   onClosed?: () => void;
   // Moved or resized, by the user or by code; the bounds in device pixels.
   onBoundsChanged?: (bounds: WindowBounds) => void;
@@ -241,7 +242,9 @@ class WindowHost {
   private listen(): void {
     const { window } = this.handle;
     this.unsubscribe.push(
-      window.onActivated((_sender, event) => this.props.onActivated?.(event.windowActivationState)),
+      window.onActivated((_sender, event) => {
+        this.props.onActiveChanged?.(event.windowActivationState !== WindowActivationState.Deactivated);
+      }),
       window.onClosed(() => this.props.onClosed?.()),
       window.appWindow.onChanged((_sender, event) => {
         const isMoved = event.didPositionChange || event.didSizeChange;
