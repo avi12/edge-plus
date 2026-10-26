@@ -27,7 +27,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./components": "./src/components/generated/index.ts",
+    "./components": "./src/components/index.ts",
     "./state": "./src/state/index.ts",
     "./state/host": "./src/state/host.ts",
     "./host": "./src/renderer/host.ts",
@@ -69,9 +69,9 @@
         "default": "./dist/index.js"
       },
       "./components": {
-        "types": "./dist/components/generated/index.d.ts",
-        "svelte": "./dist/components/generated/index.js",
-        "default": "./dist/components/generated/index.js"
+        "types": "./dist/components/index.d.ts",
+        "svelte": "./dist/components/index.js",
+        "default": "./dist/components/index.js"
       },
       "./state": {
         "types": "./dist/state/index.d.ts",
@@ -143,7 +143,8 @@
     "fallow": "fallow",
     "gen:components": "node --disable-warning=ExperimentalWarning scripts/codegen/generate.ts --project ../../app/panel-tauri",
     "gen:components:check": "node --disable-warning=ExperimentalWarning scripts/codegen/generate.ts --project ../../app/panel-tauri --check",
-    "test": "node --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\" \"scripts/**/*.test.ts\" \"test/**/*.test.ts\""
+    "test": "node --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\" \"scripts/**/*.test.ts\" test/mount-all.test.ts",
+    "test:windows": "node --disable-warning=ExperimentalWarning --test test/lists.test.ts test/window.test.ts"
   },
   "dependencies": {
     "@sveltejs/vite-plugin-svelte": "7.3.1"

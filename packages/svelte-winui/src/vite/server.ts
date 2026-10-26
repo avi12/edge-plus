@@ -37,8 +37,8 @@ export interface ModuleServerOptions extends SvelteWinuiOptions {
   configFile?: string;
 }
 
-// The package's import sites of the bindings, which Node must load itself.
-// Without an extension: from source they are .ts, from the published package
+// The package's import sites of the bindings (its own, and the generated
+// components'), which Node must load itself. Without an extension: from source they are .ts, from the published package
 // .js.
 const packageBindingsSites = [
   path.join(import.meta.dirname, "..", "winui"),

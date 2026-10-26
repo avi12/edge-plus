@@ -9,17 +9,22 @@
   {
     "namespace": "Microsoft.UI.Windowing",
     "classes": [
-      "AppWindow"
+      "AppWindow",
+      "DisplayArea",
+      "OverlappedPresenter"
     ]
   },
   {
     "namespace": "Microsoft.UI.Xaml",
     "classes": [
       "Application",
+      "DataTemplate",
+      "DependencyObject",
       "FrameworkElement",
       "ResourceDictionary",
       "Style",
       "UIElement",
+      "VisualStateManager",
       "Window"
     ]
   },
@@ -57,6 +62,7 @@
       "ComboBoxItem",
       "CommandBar",
       "CommandBarOverflowPresenter",
+      "ContainerContentChangingEventArgs",
       "ContentControl",
       "ContentDialog",
       "ContentPresenter",
@@ -225,6 +231,12 @@
     ]
   },
   {
+    "namespace": "Microsoft.UI.Xaml.Input",
+    "classes": [
+      "KeyRoutedEventArgs"
+    ]
+  },
+  {
     "namespace": "Microsoft.UI.Xaml.Markup",
     "classes": [
       "XamlReader"
@@ -237,7 +249,10 @@
       "DesktopAcrylicBackdrop",
       "FontFamily",
       "ImageSource",
-      "SolidColorBrush"
+      "MicaBackdrop",
+      "SolidColorBrush",
+      "SystemBackdrop",
+      "VisualTreeHelper"
     ]
   },
   {

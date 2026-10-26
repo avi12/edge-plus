@@ -1,8 +1,8 @@
+import { filesIn } from "../files-in.ts";
 import { execFileSync } from "node:child_process";
 import {
   copyFileSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync
@@ -34,15 +34,6 @@ const declarationSuffix = ".d.svelte.ts";
 const legalFiles = ["LICENSE", "NOTICE"];
 // `from "./x.ts"` and `import("./x.ts")` in a .svelte script.
 const relativeTsImport = /(["'])(\.{1,2}\/[^"']*?)\.ts\1/gu;
-
-function filesIn(folder: string): string[] {
-  return readdirSync(folder, {
-    recursive: true,
-    withFileTypes: true
-  })
-    .filter(entry => entry.isFile())
-    .map(entry => path.join(entry.parentPath, entry.name));
-}
 
 function isShipped(file: string): boolean {
   const isDeclaration = file.endsWith(declarationSuffix);

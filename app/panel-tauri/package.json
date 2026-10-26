@@ -84,6 +84,7 @@
           "classes": [
             "Application",
             "DataTemplate",
+            "DependencyObject",
             "FrameworkElement",
             "ResourceDictionary",
             "ScalarTransition",
@@ -127,6 +128,7 @@
             "ComboBoxItem",
             "CommandBar",
             "CommandBarOverflowPresenter",
+            "ContainerContentChangingEventArgs",
             "ContentControl",
             "ContentDialog",
             "ContentPresenter",
@@ -297,6 +299,12 @@
           ]
         },
         {
+          "namespace": "Microsoft.UI.Xaml.Input",
+          "classes": [
+            "KeyRoutedEventArgs"
+          ]
+        },
+        {
           "namespace": "Microsoft.UI.Xaml.Markup",
           "classes": [
             "XamlReader"
@@ -310,7 +318,9 @@
             "DoubleCollection",
             "FontFamily",
             "ImageSource",
+            "MicaBackdrop",
             "SolidColorBrush",
+            "SystemBackdrop",
             "VisualTreeHelper"
           ]
         },

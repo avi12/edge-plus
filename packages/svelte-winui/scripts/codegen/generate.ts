@@ -1,4 +1,5 @@
 import { packageJsonWithBindings } from "../../src/cli/binding-list.ts";
+import { filesIn } from "../files-in.ts";
 import {
   bindingModule,
   emitBindings,
@@ -10,12 +11,13 @@ import {
   emitMetadata,
   emitRequiredBindings
 } from "./emit.ts";
+import type { Model } from "./model.ts";
 import { bindingClasses, buildModel, requestedClasses } from "./model.ts";
+import { handWrittenComponents } from "./tables.ts";
 import type { TypeName } from "./winmd.ts";
 import {
   existsSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -95,8 +97,27 @@ function updatedReadme(blocks: ReadmeBlock[]): OutputFile {
   };
 }
 
+// A table entry that names no component, or whose module is missing, would
+// leave the index exporting nothing: fail here, with the entry.
+function checkHandWritten(model: Model): void {
+  const components = new Set(model.classes.filter(level => level.isComponent).map(level => level.type.name));
+  for (const [name, module] of handWrittenComponents) {
+    const isComponent = components.has(name);
+    if (!isComponent) {
+      throw new Error(`handWrittenComponents names ${name}, which is not a generated component`);
+    }
+
+    const file = path.join(generatedFolder, module);
+    const isPresent = existsSync(file) && existsSync(file.replace(/\.svelte$/u, ".d.svelte.ts"));
+    if (!isPresent) {
+      throw new Error(`handWrittenComponents: ${file} and its .d.svelte.ts must exist`);
+    }
+  }
+}
+
 function generatedFiles(project: string): OutputFile[] {
   const model = buildModel(path.join(project, ...lockPath));
+  checkHandWritten(model);
   const output: OutputFile[] = [
     {
       file: path.join(generatedFolder, "bindings.ts"),
@@ -122,7 +143,8 @@ function generatedFiles(project: string): OutputFile[] {
       text: emitLevel(level)
     });
 
-    if (level.isComponent) {
+    const isGenerated = level.isComponent && !handWrittenComponents.has(name);
+    if (isGenerated) {
       output.push(
         {
           file: path.join(generatedFolder, `${name}.svelte`),
@@ -167,19 +189,6 @@ function reportMissingBindings(project: string, wanted: TypeName[]): void {
   }
 }
 
-function listFiles(folder: string): string[] {
-  if (!existsSync(folder)) {
-    return [];
-  }
-
-  return readdirSync(folder, {
-    recursive: true,
-    withFileTypes: true
-  })
-    .filter(entry => entry.isFile())
-    .map(entry => path.join(entry.parentPath, entry.name));
-}
-
 // The generated files import the bindings as #winui/..., which the package's
 // package.json maps into its own .winapp; Node's imports map cannot point out
 // of the package, so .winapp here is a junction to the project's. The same
@@ -217,7 +226,7 @@ if (values.project === undefined) {
 linkProjectFolders(path.resolve(values.project));
 const output = generatedFiles(path.resolve(values.project));
 const wanted = new Set(output.map(entry => entry.file));
-const stale = listFiles(generatedFolder).filter(file => !wanted.has(file));
+const stale = filesIn(generatedFolder).filter(file => !wanted.has(file));
 const differing = output.filter(entry => {
   const isPresent = existsSync(entry.file);
   return !isPresent || normalized(readFileSync(entry.file, "utf8")) !== normalized(entry.text);

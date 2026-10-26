@@ -35,6 +35,12 @@
     "examples/hello/main.ts",
     "examples/hello/app.svelte",
     "examples/hello/window.ts",
+    "src/components/index.ts",
+    "examples/harness/launch.ts",
+    "examples/harness/worker.ts",
+    "examples/harness/run-example.ts",
+    "examples/lists/main.ts",
+    "examples/window/main.ts",
     "eslint.config.js"
   ],
   // The bindings are reached through the #winui/* import map, and the linters
@@ -49,12 +55,24 @@
     {
       "file": "src/components/generated/**",
       "exports": ["*"]
+    },
+    // The hand-written components' declarations are what an app's types read.
+    {
+      "file": "src/components/hand-written/*.d.svelte.ts",
+      "exports": ["*"]
     }
   ],
   // The examples each stand on their own (an app copies one), and the state
   // tests' child-process host is the shape of the counter example's host.
+  // ListView and GridView are one component over two controls: a Svelte
+  // component cannot be generic over the control class it renders.
   "duplicates": {
-    "ignore": ["src/components/generated/**", "examples/**", "src/state/test-support/**"]
+    "ignore": [
+      "src/components/generated/**",
+      "src/components/hand-written/*View.svelte",
+      "examples/**",
+      "src/state/test-support/**"
+    ]
   },
   "rules": {
     "unrendered-components": "off"

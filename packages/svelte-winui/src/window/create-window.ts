@@ -1,15 +1,9 @@
 import type { Mounted } from "../renderer/mount.svelte.ts";
 import { mountControl } from "../renderer/mount.svelte.ts";
-import { DesktopAcrylicBackdrop, Grid, Window } from "../winui.ts";
+import { Grid, Window } from "../winui.ts";
 import type { FrameworkElement } from "../winui.ts";
+import { applyBackdrop, Backdrop } from "./backdrop.ts";
 import type { Component } from "svelte";
-
-export const Backdrop = {
-  Acrylic: "acrylic",
-  None: "none"
-} as const;
-
-export type Backdrop = typeof Backdrop[keyof typeof Backdrop];
 
 interface WindowChrome {
   title?: string;
@@ -52,12 +46,6 @@ function isComponentContent<Props extends object>(
   options: WindowOptions<Props>
 ): options is ComponentWindowOptions<Props> {
   return "component" in options;
-}
-
-function applyBackdrop(window: Window, backdrop: Backdrop): void {
-  if (backdrop === Backdrop.Acrylic) {
-    window.systemBackdrop = new DesktopAcrylicBackdrop();
-  }
 }
 
 const chromeDefaults = {

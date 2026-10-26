@@ -110,9 +110,15 @@ test("every class src/winui.ts imports is among the required bindings", () => {
     requiredBindings().flatMap(entry => (entry.classes ?? []).map(name => `${entry.namespace}.${name}`))
   );
   const listedModules = new Set([...listed].map(name => name.replaceAll(".", "/").toLowerCase()));
-  // Not metadata classes: an enum that arrives with ColumnDefinition, and the
-  // generated bindings' own lifetime helper.
-  const exempt = new Set(["microsoft/ui/xaml/gridunittype", "lifetime"]);
+  // Not metadata classes: the enums that arrive with the classes that name
+  // them, and the generated bindings' own lifetime helper.
+  const exempt = new Set([
+    "microsoft/ui/xaml/gridunittype",
+    "microsoft/ui/xaml/windowactivationstate",
+    "microsoft/ui/windowing/displayareafallback",
+    "microsoft/ui/composition/system-backdrops/micakind",
+    "lifetime"
+  ]);
   const missing = modules.filter(module => module !== undefined && !listedModules.has(module) && !exempt.has(module));
   assert.deepEqual(missing, []);
 });

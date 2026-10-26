@@ -203,6 +203,36 @@ export const supportClasses: TypeName[] = [
   {
     namespace: "Windows.Foundation",
     name: "Uri"
+  },
+  // The list components (src/components/hand-written/): the item template they
+  // parse, the containers they fill and reset, and the keys they read.
+  {
+    namespace: "Microsoft.UI.Xaml",
+    name: "DataTemplate"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml",
+    name: "DependencyObject"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml",
+    name: "VisualStateManager"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml.Markup",
+    name: "XamlReader"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml.Media",
+    name: "VisualTreeHelper"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml.Input",
+    name: "KeyRoutedEventArgs"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml.Controls",
+    name: "ContainerContentChangingEventArgs"
   }
 ];
 
@@ -221,6 +251,14 @@ export const coreClasses: TypeName[] = [
   {
     namespace: "Microsoft.UI.Windowing",
     name: "AppWindow"
+  },
+  {
+    namespace: "Microsoft.UI.Windowing",
+    name: "DisplayArea"
+  },
+  {
+    namespace: "Microsoft.UI.Windowing",
+    name: "OverlappedPresenter"
   },
   {
     namespace: "Microsoft.UI.Xaml",
@@ -245,8 +283,30 @@ export const coreClasses: TypeName[] = [
   {
     namespace: "Microsoft.UI.Xaml.Media",
     name: "DesktopAcrylicBackdrop"
+  },
+  // MicaBackdrop is one class for both Mica and Mica Alt (its Kind property
+  // says which).
+  {
+    namespace: "Microsoft.UI.Xaml.Media",
+    name: "MicaBackdrop"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml.Media",
+    name: "SystemBackdrop"
   }
 ];
+
+// Components written by hand, because what they do is more than a control's
+// properties and events (the list controls fill containers from a data
+// source). The generator still writes their level (controls/<Name>.svelte.ts,
+// which the hand-written component connects with) and their metadata, but not
+// <Name>.svelte or <Name>.d.svelte.ts; the index exports the module named
+// here instead, relative to the generated folder. Nothing in the generated
+// folder is edited by hand, so `pnpm gen:components` never clobbers these.
+export const handWrittenComponents = new Map<string, string>([
+  ["ListView", "../hand-written/ListView.svelte"],
+  ["GridView", "../hand-written/GridView.svelte"]
+]);
 
 // Exports of the bindings that are not metadata types: the generic
 // instantiations the conversions name.
@@ -254,15 +314,46 @@ export const extraBindings = [
   {
     name: "IReference_Boolean",
     module: "#winui/windows/foundation/IReference_Boolean"
+  },
+  // The list components hold their keys in a vector of boxed values, and
+  // narrow the controls WinUI hands back (projectAs).
+  {
+    name: "IVector_Object",
+    module: "#winui/windows/foundation/collections/IVector_Object"
+  },
+  {
+    name: "projectAs",
+    module: "#winui/lifetime"
   }
 ];
 
-// Enums the conversions use, which arrive in the bindings with ColumnDefinition
-// (its GridLength names GridUnitType).
+// Enums the conversions and the hand-written components use, which arrive in
+// the bindings with the classes that name them (ColumnDefinition and
+// GridUnitType, KeyRoutedEventArgs and VirtualKey, MicaBackdrop and MicaKind).
 export const supportEnums: TypeName[] = [
   {
     namespace: "Microsoft.UI.Xaml",
     name: "GridUnitType"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml",
+    name: "FocusState"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml",
+    name: "WindowActivationState"
+  },
+  {
+    namespace: "Microsoft.UI.Windowing",
+    name: "DisplayAreaFallback"
+  },
+  {
+    namespace: "Microsoft.UI.Composition.SystemBackdrops",
+    name: "MicaKind"
+  },
+  {
+    namespace: "Windows.System",
+    name: "VirtualKey"
   }
 ];
 
