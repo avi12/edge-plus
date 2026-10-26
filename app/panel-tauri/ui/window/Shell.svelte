@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Bounds, View } from "../protocol.g.ts";
   import * as motion from "./motion.ts";
-  import PanelPage from "./panel-page.svelte";
+  import PanelPage from "./PanelPage.svelte";
   import type { Panel } from "./panel.svelte.ts";
   import { Grid, Image, TextBlock } from "svelte-winui";
   import { Window } from "svelte-winui/components";

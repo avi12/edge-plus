@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { CardView } from "../protocol.g.ts";
-  import FeatureCard from "./feature-card.svelte";
-  import InjectCard from "./inject-card.svelte";
+  import FeatureCard from "./FeatureCard.svelte";
+  import InjectCard from "./InjectCard.svelte";
   import * as motion from "./motion.ts";
   import { StackPanel } from "svelte-winui";
 

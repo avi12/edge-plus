@@ -1,7 +1,7 @@
 # Edge+ on the package's `<ListView>` and `<Window>`
 
 How `app/panel-tauri/ui/window/own-theme-list.ts` became a `<ListView>`
-(`own-theme-list.svelte`) and `shell.ts` a `<Window>` (`shell.svelte`). **Both
+(`OwnThemeList.svelte`) and `shell.ts` a `<Window>` (`Shell.svelte`). **Both
 are done** on the converted Edge+ (commits "the own themes list is a ListView
 of the package" and "the shell is a Window of the package"), pixel-identical
 to the window before them (0 differing pixels, default and states views, with
@@ -9,7 +9,7 @@ and without the Edge hint and build notice, from source and from the window
 kit). The tables below say what moved where. Two differences from the first
 proof on `edgeplus-migration-proof`: there is no `Shell` facade class (the
 panel's state holds the status line, the open window and the pickers, and
-`session.ts` mounts `shell.svelte` itself), and `onBoundsChanged` also reports
+`session.ts` mounts `Shell.svelte` itself), and `onBoundsChanged` also reports
 the bounds the window opens with.
 
 ## Before anything: regenerate the bindings
@@ -25,11 +25,11 @@ cd ../../packages/svelte-winui
 pnpm gen:components:check              # must be silent: no "bindings missing"
 ```
 
-## The list: `own-theme-list.ts` to `own-theme-list.svelte`
+## The list: `own-theme-list.ts` to `OwnThemeList.svelte`
 
-New `own-theme-list.svelte` (a component, mounted by `OwnThemeList` exactly as
-`EdgeThemeList` mounts `edge-theme-list.svelte`; `view` is the mounted root,
-which `theming-body.svelte` still places with `<host element={ownThemes} />`; once
+New `OwnThemeList.svelte` (a component, mounted by `OwnThemeList` exactly as
+`EdgeThemeList` mounts `EdgeThemeList.svelte`; `view` is the mounted root,
+which `ThemingBody.svelte` still places with `<host element={ownThemes} />`; once
 the body is converted, drop the class and put `<OwnThemeList {rows} ...>` there):
 
 ```svelte
@@ -76,13 +76,13 @@ regenerate `protocol.g.ts`, and the Rust handler, when convenient).
 Behaviour that differs, on purpose:
 
 - **The key is the id, not `id + name + badges`.** A theme whose name or badges
-  change keeps its row, which shows the new values (`theme-row.svelte` reads
+  change keeps its row, which shows the new values (`ThemeRow.svelte` reads
   `theme` reactively); before, the row was replaced and its add/remove transition
   played again.
 - **Rows are ended when their container is recycled** (before, none were: a
   long list leaked one component per row shown).
 - Rows are mounted outside the list's component tree: `getContext` in
-  `theme-row.svelte` would not see the page's context (it uses none).
+  `ThemeRow.svelte` would not see the page's context (it uses none).
 - The list keeps the user's order after `onReorder` until `items` changes: the
   core answers `reorderThemes` with a View in that order, which finds the list
   already there.
@@ -90,9 +90,9 @@ Behaviour that differs, on purpose:
 `ListHandle` (`bind:handle`) also gives `move(key, direction)`, `scrollToKey`
 and `focus(key)`, for buttons or shortcuts of the app's own.
 
-## The window: `shell.ts` to `shell.svelte`
+## The window: `shell.ts` to `Shell.svelte`
 
-New `shell.svelte` is a `<Window>` root; `shell.ts` stays as a thin facade so
+New `Shell.svelte` is a `<Window>` root; `shell.ts` stays as a thin facade so
 `session.ts` changes in three lines. The facade mounts it with `mountControl`
 and passes the page (`PanelView.root`) as `content`, placed in the window with
 `<host element={content} />`.
@@ -114,7 +114,7 @@ and passes the page (`PanelView.root`) as `content`, placed in the window with
 | `joinAppUserModel(view.appUserModelId)` in `session.ts` | `appUserModelId` prop |
 | `FolderPicker(window.appWindow.id)` | `handle.appWindow.id`; the picker code stays in the facade |
 
-`handle` reaches the facade through a prop callback: `shell.svelte` binds
+`handle` reaches the facade through a prop callback: `Shell.svelte` binds
 `handle` and calls `onOpen(handle)`; the facade keeps it for `bringBack`,
 `close` and the pickers.
 

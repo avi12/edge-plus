@@ -2,7 +2,7 @@
   import type { ThemeRow as Row, ThemingLabels } from "../protocol.g.ts";
   import * as motion from "./motion.ts";
   import { themeListItemStyle } from "./styles.ts";
-  import ThemeRow from "./theme-row.svelte";
+  import ThemeRow from "./ThemeRow.svelte";
   import { ListView } from "svelte-winui";
 
   // The user's own themes, in the order of the pickers, reordered by dragging

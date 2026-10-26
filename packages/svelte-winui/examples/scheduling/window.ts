@@ -18,7 +18,7 @@ await runOnUiThread(async () => {
   registerHooks(svelteHooks());
   await import("svelte-winui/components");
   const { createWindow, runWindow, startTimer } = await import("svelte-winui/window");
-  const { default: Probe } = await import("./probe.svelte");
+  const { default: Probe } = await import("./Probe.svelte");
   const { probe } = await import("./probe-state.svelte.ts");
   const { look, record, watch } = await import("./watch.ts");
 

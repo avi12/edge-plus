@@ -4,7 +4,7 @@
   import { exitApplication } from "svelte-winui/window";
   import type { ExampleHost } from "../harness/contract.ts";
   import { makeItems } from "./example-item.ts";
-  import ExampleRow from "./example-row.svelte";
+  import ExampleRow from "./ExampleRow.svelte";
   import { liveRows, rowStats } from "./row-stats.ts";
 
   const defaultRows = 1000;

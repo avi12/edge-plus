@@ -5,7 +5,7 @@
   import type { CounterView } from "./app-types.ts";
   import { viewName } from "./app-types.ts";
   import { hostContextKey } from "./context.ts";
-  import HostButtons from "./host-buttons.svelte";
+  import HostButtons from "./HostButtons.svelte";
   import { Tallies } from "./tallies.svelte.ts";
 
   interface Props {

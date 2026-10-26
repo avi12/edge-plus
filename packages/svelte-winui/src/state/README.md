@@ -19,7 +19,7 @@ port by a timer (WinUI holds the thread, so port events never fire):
 |---|---|---|
 | a class with `$state`/`$derived` in a `.svelte.ts` | window-only state shared by components | `examples/counter/tallies.svelte.ts`, `svelte-state.test.ts` |
 | `SvelteMap` / `SvelteSet` | reactive collections, one signal per key | the same class (`buttonsUsed`), `svelte-state.test.ts` |
-| context (`setContext`/`getContext`) | the channel and host state for a subtree | `examples/counter/app.svelte` and `host-buttons.svelte` |
+| context (`setContext`/`getContext`) | the channel and host state for a subtree | `examples/counter/App.svelte` and `HostButtons.svelte` |
 | stores | a store from a library, read with `fromStore(store).current` | `svelte-state.test.ts` |
 
 No store of our own is added: a `$state` object in a `.svelte.ts` is the store.

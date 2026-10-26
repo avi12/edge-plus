@@ -1,5 +1,5 @@
 import type { ExampleHost } from "../harness/contract.ts";
-import WindowApp from "./window-app.svelte";
+import WindowApp from "./WindowApp.svelte";
 import { fileURLToPath } from "node:url";
 import { mountControl } from "svelte-winui";
 

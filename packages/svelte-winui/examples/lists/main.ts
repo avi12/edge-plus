@@ -1,5 +1,5 @@
 import type { ExampleHost } from "../harness/contract.ts";
-import ListsApp from "./lists-app.svelte";
+import ListsApp from "./ListsApp.svelte";
 import { mountControl } from "svelte-winui";
 
 // The lists example: a window with a ListView of rows (examples/lists/run.ps1

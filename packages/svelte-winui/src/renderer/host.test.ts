@@ -16,7 +16,7 @@ setClassHandler((control, value) => {
 });
 registerHooks(svelteHooks(path.join(import.meta.dirname, "host.ts")));
 const { mountControl } = await import("./mount.svelte.ts");
-const { default: Fixture } = await import("./host.fixture.svelte");
+const { default: Fixture } = await import("./Host.fixture.svelte");
 
 interface Props extends Record<string, unknown> {
   isOn: boolean;

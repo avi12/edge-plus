@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { CardView } from "../protocol.g.ts";
-  import CardFrame from "./card-frame.svelte";
+  import CardFrame from "./CardFrame.svelte";
   import { usePanel } from "./panel.svelte.ts";
-  import ThemingBody from "./theming-body.svelte";
+  import ThemingBody from "./ThemingBody.svelte";
   import { ToggleSwitch } from "svelte-winui";
 
   // A card with a switch at its end. The theming card carries the theme

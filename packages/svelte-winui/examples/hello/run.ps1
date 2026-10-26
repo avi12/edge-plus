@@ -36,7 +36,7 @@ public static class Win {
 }
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $package = Split-Path -Parent (Split-Path -Parent $here)
-$source = Join-Path $here 'app.svelte'
+$source = Join-Path $here 'App.svelte'
 $original = [IO.File]::ReadAllText($source)
 $env:SVELTE_WINUI_BACKGROUND = '1'
 $log = Join-Path $env:TEMP 'svelte-winui-hello.log'

@@ -61,7 +61,7 @@ interface ReadmeBlock {
 
 const packageFolder = path.join(import.meta.dirname, "..", "..");
 // The hello example's files, which the quick start shows as they are.
-const quickStartFiles = ["vite.config.ts", "app.svelte", "window.ts", "main.ts"];
+const quickStartFiles = ["vite.config.ts", "App.svelte", "window.ts", "main.ts"];
 
 function exampleBlock(name: string): ReadmeBlock {
   const source = readFileSync(path.join(packageFolder, "examples", "hello", name), "utf8");

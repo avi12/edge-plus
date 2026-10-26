@@ -33,7 +33,7 @@
     "examples/scheduling/launch.ts",
     "examples/scheduling/window.ts",
     "examples/hello/main.ts",
-    "examples/hello/app.svelte",
+    "examples/hello/App.svelte",
     "examples/hello/window.ts",
     "src/components/index.ts",
     "examples/harness/launch.ts",

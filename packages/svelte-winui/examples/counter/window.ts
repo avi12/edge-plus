@@ -30,7 +30,7 @@ await runOnUiThread(async () => {
   await import("svelte-winui/components");
   const { createWindow, runWindow, startTimer } = await import("svelte-winui/window");
   const { createHostChannel, createMessagePortTransport } = await import("svelte-winui/state");
-  const { default: App } = await import("./app.svelte");
+  const { default: App } = await import("./App.svelte");
   const port = portFrom(workerData);
   await runWindow({
     onStart() {

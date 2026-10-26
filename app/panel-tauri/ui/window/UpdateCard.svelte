@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { UpdateView } from "../protocol.g.ts";
-  import CardFrame from "./card-frame.svelte";
+  import CardFrame from "./CardFrame.svelte";
   import { usePanel } from "./panel.svelte.ts";
   import { Button } from "svelte-winui";
 

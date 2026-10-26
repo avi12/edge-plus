@@ -91,7 +91,7 @@ the window uses (`Microsoft.UI.Windowing.DisplayArea`, say) goes in the same
 
 The files below are the [hello example](examples/hello), run for real by
 `examples/hello/run.ps1` (it flips the switch through UI Automation and edits
-`app.svelte` to check hot reload).
+`App.svelte` to check hot reload).
 
 `vite.config.ts` is one line of plugin:
 
@@ -108,10 +108,10 @@ export default defineConfig({
 
 <!-- hello/vite.config.ts:end -->
 
-`app.svelte` is the window's content. `bind:isOn` works on the component like any
+`App.svelte` is the window's content. `bind:isOn` works on the component like any
 Svelte binding:
 
-<!-- hello/app.svelte:start -->
+<!-- hello/App.svelte:start -->
 
 ```svelte
 <script lang="ts">
@@ -127,7 +127,7 @@ Svelte binding:
 </StackPanel>
 ```
 
-<!-- hello/app.svelte:end -->
+<!-- hello/App.svelte:end -->
 
 `window.ts` runs on the UI thread. WinUI's message loop never gives its thread
 back, so `runOnUiThread` (the package's `/thread` entry) is a worker's first
@@ -168,7 +168,7 @@ await runOnUiThread(async () => {
   // share one renderer.
   const { runner, receive } = createWindowModuleRunner(data.modules);
   const { createWindow, runWindow, startTimer } = await runner.import<typeof WindowModule>("svelte-winui/window");
-  const { default: App } = await runner.import("/app.svelte");
+  const { default: App } = await runner.import("/App.svelte");
   await runWindow({
     onStart() {
       startTimer({
@@ -245,7 +245,7 @@ Run it from the folder `setup` was run in:
 node main.ts
 ```
 
-Edit the text in `app.svelte` and save: the window follows within a moment.
+Edit the text in `App.svelte` and save: the window follows within a moment.
 Set `SVELTE_WINUI_BACKGROUND=1` to open the window without taking focus (for
 scripts and captures).
 

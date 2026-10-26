@@ -12,7 +12,7 @@ import { test } from "node:test";
 
 registerHooks(svelteHooks(path.join(import.meta.dirname, "tree-probe.ts")));
 const { flushSync, mount } = await import("svelte");
-const { default: Blocks } = await import("./blocks.fixture.svelte");
+const { default: Blocks } = await import("./Blocks.fixture.svelte");
 
 function elementsOf(panel: ProbeElement): ProbeElement[] {
   return panel.children.flatMap(child => child.type === NodeType.Element ? [child] : []);

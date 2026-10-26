@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { SectionView } from "../protocol.g.ts";
   import * as motion from "./motion.ts";
-  import PanelCard from "./panel-card.svelte";
+  import PanelCard from "./PanelCard.svelte";
   import { StackPanel, TextBlock } from "svelte-winui";
 
   // A section's header over its cards.
