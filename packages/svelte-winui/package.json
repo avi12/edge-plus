@@ -138,7 +138,7 @@
   "scripts": {
     "build": "node --disable-warning=ExperimentalWarning scripts/pack/build.ts",
     "check": "tsc --noEmit",
-    "lint": "oxlint --type-aware && eslint . && pnpm check && pnpm fallow && pnpm gen:components:check",
+    "lint": "oxlint --type-aware && eslint . && stylelint \"**/*.svelte\" --config ../../app/panel-tauri/.stylelintrc.json --ignore-pattern src/components/generated && pnpm check && pnpm fallow && pnpm gen:components:check",
     "fallow": "fallow",
     "gen:components": "node --disable-warning=ExperimentalWarning scripts/codegen/generate.ts --project ../../app/panel-tauri",
     "gen:components:check": "node --disable-warning=ExperimentalWarning scripts/codegen/generate.ts --project ../../app/panel-tauri --check",
@@ -167,6 +167,7 @@
     "fallow": "2.103.0",
     "oxlint": "1.88.0",
     "oxlint-tsgolint": "^7.0.2004",
+    "stylelint": "^17.16.0",
     "svelte": "https://pkg.pr.new/svelte@18042",
     "svelte-winui": "link:.",
     "typescript": "^6.0.3",

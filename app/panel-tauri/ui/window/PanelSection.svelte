@@ -8,7 +8,7 @@
   const { section }: { section: SectionView } = $props();
 </script>
 
-<StackPanel spacing={4} childrenTransitions={motion.applied(motion.reposition)}>
+<StackPanel childrenTransitions={motion.applied(motion.reposition)} spacing={4}>
   <!-- The left margin lines the header up with the cards' text, as Windows
        Settings does. -->
   <TextBlock class="section-header" margin="4,0,0,4" text={section.name} />

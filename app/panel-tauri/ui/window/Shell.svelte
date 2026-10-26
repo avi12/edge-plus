@@ -1,11 +1,11 @@
 <script lang="ts">
   import type { Bounds, View } from "../protocol.g.ts";
   import * as motion from "./motion.ts";
-  import PanelPage from "./PanelPage.svelte";
   import type { Panel } from "./panel.svelte.ts";
+  import PanelPage from "./PanelPage.svelte";
+  import { pathToFileURL } from "node:url";
   import { Grid, Image, TextBlock } from "svelte-winui";
   import { Window } from "svelte-winui/components";
-  import { pathToFileURL } from "node:url";
 
   // The window: dressed like any-stt's panel (acrylic, the content running into
   // the title bar), so the two tools read as one family. Sizes are in
@@ -51,36 +51,40 @@
 </script>
 
 <Window
-  title={view.productName}
-  backdrop="acrylic"
-  icon={view.icon}
-  appUserModelId={view.appUserModelId}
-  width={windowWidth}
-  minWidth={windowWidth}
-  maxWidth={windowWidth}
-  height={windowHeight}
-  minHeight={minimumHeight}
-  isMaximizable={false}
-  placement={placement === null ? null : { x: placement.x, y: placement.y, height: placement.height }}
   activate={!isBackground}
+  appUserModelId={view.appUserModelId}
+  backdrop="acrylic"
+  height={windowHeight}
+  icon={view.icon}
+  isMaximizable={false}
+  maxWidth={windowWidth}
+  minHeight={minimumHeight}
+  minWidth={windowWidth}
   {onActiveChanged}
   onBoundsChanged={reportBounds}
   {onClosed}
+  placement={placement === null ? null : {
+    x: placement.x,
+    y: placement.y,
+    height: placement.height
+  }}
+  title={view.productName}
+  width={windowWidth}
   bind:handle={panel.window}
 >
   {#snippet titleBar()}
-    <Grid height={titleBarHeight} padding="14,0,0,0" columns="Auto,Auto,*">
-      <Image width={iconSize} height={iconSize} verticalAlignment="Center" source={pathToFileURL(view.icon).href} />
-      <TextBlock class="caption" gridColumn={1} verticalAlignment="Center" margin="10,0,0,0" text={view.productName} />
+    <Grid columns="Auto,Auto,*" height={titleBarHeight} padding="14,0,0,0">
+      <Image height={iconSize} source={pathToFileURL(view.icon).href} verticalAlignment="Center" width={iconSize} />
+      <TextBlock class="caption" gridColumn={1} margin="10,0,0,0" text={view.productName} verticalAlignment="Center" />
       <TextBlock
         class="card-description"
         gridColumn={2}
-        verticalAlignment="Center"
         margin="12,0,0,0"
         opacity={panel.isStatusShown ? statusShown : statusHidden}
         text={panel.statusLine}
+        verticalAlignment="Center"
       />
     </Grid>
   {/snippet}
-  <PanelPage {view} {panel} />
+  <PanelPage {panel} {view} />
 </Window>

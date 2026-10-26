@@ -7,7 +7,13 @@
   import ThemePicker from "./ThemePicker.svelte";
   import { LocalThemeKind } from "./theming-card.ts";
   import { KeyRoutedEventArgs, projectAs, VirtualKey } from "./winui.ts";
-  import { Button, Grid, StackPanel, TextBlock, TextBox } from "svelte-winui";
+  import {
+    Button,
+    Grid,
+    StackPanel,
+    TextBlock,
+    TextBox
+  } from "svelte-winui";
 
   // The theme library under the theming switch: add from a store link or a
   // local file, pick a theme for each Windows mode, and order the list.
@@ -98,27 +104,43 @@
   }
 </script>
 
-<StackPanel spacing={8} opacity={card.isOn ? fullOpacity : dimmedOpacity} childrenTransitions={motion.applied(motion.reposition)}>
-  <Grid columns="*,Auto" columnSpacing={8}>
-    <TextBox bind:text={storeLink} placeholderText={theming.labels.storeLinkPlaceholder} onKeyDown={addStoreOnEnter} />
-    <Button class="accent-button" isEnabled={!isBusy} onClick={() => void addStore()} gridColumn={1}>{theming.labels.add}</Button>
+<StackPanel
+  childrenTransitions={motion.applied(motion.reposition)}
+  opacity={card.isOn ? fullOpacity : dimmedOpacity}
+  spacing={8}
+>
+  <Grid columnSpacing={8} columns="*,Auto">
+    <TextBox
+      onKeyDown={addStoreOnEnter}
+      placeholderText={theming.labels.storeLinkPlaceholder}
+      bind:text={storeLink}
+    />
+    <Button
+      class="accent-button"
+      gridColumn={1}
+      isEnabled={!isBusy}
+      onClick={() => void addStore()}
+    >{theming.labels.add}</Button>
   </Grid>
   <StackPanel orientation="Horizontal" spacing={8}>
-    <TextBlock class="card-description" verticalAlignment="Center" text={theming.labels.addLocal} />
+    <TextBlock class="card-description" text={theming.labels.addLocal} verticalAlignment="Center" />
     <Button isEnabled={!isBusy} onClick={() => void addLocal(LocalThemeKind.File)}>{theming.labels.pickFile}</Button>
-    <Button isEnabled={!isBusy} onClick={() => void addLocal(LocalThemeKind.Folder)}>{theming.labels.pickFolder}</Button>
+    <Button
+      isEnabled={!isBusy}
+      onClick={() => void addLocal(LocalThemeKind.Folder)}
+    >{theming.labels.pickFolder}</Button>
   </StackPanel>
-  <TextBlock class="error" visibility={error.length > 0 ? "Visible" : "Collapsed"} text={error} />
-  <ThemePicker label={theming.labels.whenLight} options={theming.options} assignedId={theming.light} onPick={id => assign("light", id)} />
-  <ThemePicker label={theming.labels.whenDark} options={theming.options} assignedId={theming.dark} onPick={id => assign("dark", id)} />
-  <OwnThemeList rows={theming.own} labels={theming.labels} onRemove={remove} onReorder={ids => void reorder(ids)} />
-  <EdgeThemeList rows={theming.edge} empty={theming.empty} />
+  <TextBlock class="error" text={error} visibility={error.length > 0 ? "Visible" : "Collapsed"} />
+  <ThemePicker assignedId={theming.light} label={theming.labels.whenLight} onPick={id => assign("light", id)} options={theming.options} />
+  <ThemePicker assignedId={theming.dark} label={theming.labels.whenDark} onPick={id => assign("dark", id)} options={theming.options} />
+  <OwnThemeList labels={theming.labels} onRemove={remove} onReorder={ids => void reorder(ids)} rows={theming.own} />
+  <EdgeThemeList empty={theming.empty} rows={theming.edge} />
 </StackPanel>
 
 <style>
   :global(.error) {
-    -winui-based-on: CaptionTextBlockStyle;
     color: var(--system-fill-color-critical);
     text-wrap: wrap;
+    -winui-based-on: CaptionTextBlockStyle;
   }
 </style>

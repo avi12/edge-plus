@@ -1,18 +1,21 @@
 <script lang="ts">
+  import { DesktopAcrylicBackdrop, MicaBackdrop, MicaKind, projectAs } from "../../src/winui.ts";
+  import type { ExampleHost } from "../harness/contract.ts";
   import { flush } from "svelte-winui";
   import { Window } from "svelte-winui/components";
   import type { WindowBounds, WindowHandle } from "svelte-winui/components";
   import { exitApplication } from "svelte-winui/window";
   import { Backdrop } from "svelte-winui/window";
-  import { DesktopAcrylicBackdrop, MicaBackdrop, MicaKind, projectAs } from "../../src/winui.ts";
-  import type { ExampleHost } from "../harness/contract.ts";
 
   // The material named, or acrylic.
   function backdropOf(name: unknown): Backdrop {
     return Object.values(Backdrop).find(candidate => candidate === name) ?? Backdrop.Acrylic;
   }
 
-  const { host, icon }: { host: ExampleHost; icon: string } = $props();
+  const { host, icon }: {
+    host: ExampleHost;
+    icon: string;
+  } = $props();
 
   let backdrop = $state(backdropOf(host.options["backdrop"]));
   let title = $state("Window example");
@@ -26,7 +29,8 @@
   // The kind of material the window holds now, read back from WinUI.
   function backdropName(): string {
     const held = handle?.window.systemBackdrop;
-    if (held === undefined || held === null) {
+    const isUnset = held === undefined || held === null;
+    if (isUnset) {
       return "none";
     }
 
@@ -77,7 +81,10 @@
       report("width");
     }],
     ["move", command => {
-      handle?.appWindow.move({ x: Number(command["x"]), y: Number(command["y"]) });
+      handle?.appWindow.move({
+        x: Number(command["x"]),
+        y: Number(command["y"])
+      });
       report("moved");
     }],
     ["close", () => handle?.close()]
@@ -86,17 +93,13 @@
 </script>
 
 <Window
-  {title}
-  {backdrop}
-  {icon}
-  {width}
-  height={360}
-  minWidth={400}
-  isMaximizable={false}
-  placement={{ x: -8000, y: 0 }}
   activate={false}
   appUserModelId="svelte-winui.examples.window"
-  bind:handle
+  {backdrop}
+  height={360}
+  {icon}
+  isMaximizable={false}
+  minWidth={400}
   onActiveChanged={isActive => {
     if (isActive) {
       activations++;
@@ -110,14 +113,21 @@
     closes++;
     exitApplication();
   }}
+  placement={{
+    x: -8000,
+    y: 0
+  }}
+  {title}
+  {width}
+  bind:handle
 >
   {#snippet titleBar()}
-    <stack-panel orientation="Horizontal" height={40} padding="14,0,0,0" spacing={10}>
+    <stack-panel height={40} orientation="Horizontal" padding="14,0,0,0" spacing={10}>
       <text-block text={title} vertical-alignment="Center" />
     </stack-panel>
   {/snippet}
   <stack-panel padding="24" spacing={8}>
-    <text-block text={`Backdrop: ${backdrop}`} font-size={20} />
+    <text-block font-size={20} text={`Backdrop: ${backdrop}`} />
     <text-block text="The content runs into the title bar; the backdrop shows through." />
   </stack-panel>
 </Window>

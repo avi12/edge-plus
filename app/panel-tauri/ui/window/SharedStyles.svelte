@@ -4,14 +4,14 @@
      is a WinUI theme resource, so light and dark follow Windows. -->
 <style>
   :global(.card-title) {
-    -winui-based-on: BodyTextBlockStyle;
     text-wrap: wrap;
+    -winui-based-on: BodyTextBlockStyle;
   }
 
   :global(.card-description) {
-    -winui-based-on: CaptionTextBlockStyle;
     color: var(--text-fill-color-secondary);
     text-wrap: wrap;
+    -winui-based-on: CaptionTextBlockStyle;
   }
 
   :global(.caption) {

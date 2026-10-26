@@ -30,10 +30,15 @@
   }
 </script>
 
-<Grid columns="*,Auto" columnSpacing={8}>
-  <TextBlock class="card-title" verticalAlignment="Center" text={label} />
-  <ComboBox bind:selectedIndex={() => selectedIndex, pick} gridColumn={1} minWidth={pickerMinimumWidth} automationName={label}>
-    {#each options as option}
+<Grid columnSpacing={8} columns="*,Auto">
+  <TextBlock class="card-title" text={label} verticalAlignment="Center" />
+  <ComboBox
+    automationName={label}
+    gridColumn={1}
+    minWidth={pickerMinimumWidth}
+    bind:selectedIndex={() => selectedIndex, pick}
+  >
+    {#each options as option (option.label)}
       <ComboBoxItem>{option.label}</ComboBoxItem>
     {/each}
   </ComboBox>

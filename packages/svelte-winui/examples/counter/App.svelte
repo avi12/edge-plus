@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { setContext } from "svelte";
-  import type { HostChannel } from "svelte-winui/state";
-  import { hostState } from "svelte-winui/state";
   import type { CounterView } from "./app-types.ts";
   import { viewName } from "./app-types.ts";
   import { hostContextKey } from "./context.ts";
   import HostButtons from "./HostButtons.svelte";
   import { Tallies } from "./tallies.svelte.ts";
+  import { setContext } from "svelte";
+  import type { HostChannel } from "svelte-winui/state";
+  import { hostState } from "svelte-winui/state";
 
   interface Props {
     channel: HostChannel;
@@ -15,10 +15,13 @@
   const { channel }: Props = $props();
   const view = hostState<CounterView>(channel, viewName);
   const tallies = new Tallies();
-  setContext(hostContextKey, { channel, view });
+  setContext(hostContextKey, {
+    channel,
+    view
+  });
 </script>
 
-<stack-panel spacing={8} padding="12,12,12,12">
+<stack-panel padding="12,12,12,12" spacing={8}>
   <text-block>host count: {view.current?.count ?? "waiting"}</text-block>
   <text-block>host history length: {view.current?.history.length ?? 0}</text-block>
   <text-block>local count: {tallies.localCount} (doubled {tallies.doubled})</text-block>

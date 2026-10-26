@@ -14,5 +14,13 @@
   ],
   "ignorePatterns": [".winapp/**", "src-tauri/**"],
   // Run by package.json scripts, which dependency scanning can't see through.
-  "ignoreDependencies": ["@microsoft/winappcli", "@microsoft/dynwinrt-codegen", "oxlint-tsgolint"]
+  "ignoreDependencies": ["@microsoft/winappcli", "@microsoft/dynwinrt-codegen", "oxlint-tsgolint", "postcss-html", "stylelint-config-ccb"],
+  // As avi/youtube-time-manager: no coverage is fed to fallow, so CRAP is
+  // cyclomatic squared plus cyclomatic; the cognitive limit does the work. The
+  // local ESLint rules are tooling, not the window.
+  "health": {
+    "maxCognitive": 30,
+    "maxCrap": 10000,
+    "ignore": ["eslint-rules/**"]
+  }
 }

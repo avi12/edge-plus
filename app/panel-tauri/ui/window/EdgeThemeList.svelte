@@ -25,9 +25,9 @@
 
 <!-- Keyed by everything a row shows, so an unchanged row is left alone and
      only the rows that came or went play the panel's transition. -->
-<StackPanel spacing={4} childrenTransitions={motion.applied(motion.addDelete)}>
+<StackPanel childrenTransitions={motion.applied(motion.addDelete)} spacing={4}>
   {#each rows as row (rowKey(row))}
-    <ThemeRow theme={row} onRemove={null} />
+    <ThemeRow onRemove={null} theme={row} />
   {/each}
   {#if empty !== null}
     <TextBlock class="card-description" text={empty} />

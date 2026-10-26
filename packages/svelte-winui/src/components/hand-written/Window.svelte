@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { untrack } from "svelte";
+  import { attachWindow } from "../../window/window-host.svelte.ts";
   import type { FrameworkElement, Grid } from "../generated/bindings.ts";
   import { control } from "../runtime.ts";
   import type { WindowComponentProps } from "./Window.d.svelte.ts";
-  import { attachWindow } from "../../window/window-host.svelte.ts";
+  import { untrack } from "svelte";
 
   // A native window around its content. Mount it as the app's root (the
   // component itself is the window, nothing is placed in a page).
@@ -25,9 +25,9 @@
   }
 </script>
 
-<grid rows={hasTitleBar ? "Auto,*" : "*"} {@attach control((content: Grid) => untrack(() => open(content)))}>
+<grid {@attach control((content: Grid) => untrack(() => open(content)))} rows={hasTitleBar ? "Auto,*" : "*"}>
   {#if titleBar !== undefined}
-    <grid grid.row={0} {@attach control((bar: Grid) => untrack(() => holdTitleBar(bar)))}>
+    <grid {@attach control((bar: Grid) => untrack(() => holdTitleBar(bar)))} grid.row={0}>
       {@render titleBar()}
     </grid>
   {/if}

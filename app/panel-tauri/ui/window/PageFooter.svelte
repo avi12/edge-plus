@@ -6,10 +6,10 @@
   const { footer }: { footer: FooterView } = $props();
 </script>
 
-<Grid margin="4,14,4,0" columns="*,Auto">
+<Grid columns="*,Auto" margin="4,14,4,0">
   <StackPanel orientation="Horizontal" spacing={4}>
-    <TextBlock class="card-description" verticalAlignment="Center" text={footer.by} />
+    <TextBlock class="card-description" text={footer.by} verticalAlignment="Center" />
     <HyperlinkButton navigateUri={footer.authorUri} padding="2,0,2,0">{footer.author}</HyperlinkButton>
   </StackPanel>
-  <TextBlock class="card-description" verticalAlignment="Center" gridColumn={1} text={footer.version} />
+  <TextBlock class="card-description" gridColumn={1} text={footer.version} verticalAlignment="Center" />
 </Grid>

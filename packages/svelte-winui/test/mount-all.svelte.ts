@@ -79,6 +79,7 @@ type Linked = () => void;
 type Connect = (control: object, props: object, bound: object) => Linked;
 
 // Held until the process ends: a timer whose wrapper is collected stops.
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not component state
 const heldTimers = new Set<unknown>();
 
 // A native failure takes the process down without a message, so the last
@@ -126,6 +127,7 @@ function componentNames(): string[] {
 }
 
 async function loadConnectors(): Promise<Map<string, Connect>> {
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- not component state
   const connectors = new Map<string, Connect>();
   for (const name of componentNames()) {
     const loaded: unknown = await import(`../src/components/generated/controls/${name}.svelte.ts`);

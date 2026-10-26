@@ -5,7 +5,7 @@
 </script>
 
 <StackPanel padding={24} spacing={12}>
-  <TextBlock text="Hello from WinUI" fontSize={24} />
-  <ToggleSwitch bind:isOn header="Lights" />
+  <TextBlock fontSize={24} text="Hello from WinUI" />
+  <ToggleSwitch header="Lights" bind:isOn />
   <TextBlock text={isOn ? "The lights are on" : "The lights are off"} />
 </StackPanel>

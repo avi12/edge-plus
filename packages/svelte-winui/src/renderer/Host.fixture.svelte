@@ -5,7 +5,7 @@
   import { control } from "./control.ts";
   import type { FakeToggle } from "./fake-controls.ts";
 
-  let { isOn, label, isShown, log, hosted } = $props();
+  const { isOn, label, isShown, log, hosted } = $props();
 </script>
 
 <fake-panel class="card">

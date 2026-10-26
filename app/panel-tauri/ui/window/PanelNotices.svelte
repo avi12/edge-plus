@@ -10,14 +10,14 @@
   const panel = usePanel();
 </script>
 
-<TextBlock class="card-description" margin="4,0,4,4" visibility={view.openEdgeHint === null ? "Collapsed" : "Visible"} text={view.openEdgeHint ?? ""} />
-<InfoBar isClosable={false} severity="Warning" message={view.buildNotice} isOpen={view.buildNotice.length > 0} />
+<TextBlock class="card-description" margin="4,0,4,4" text={view.openEdgeHint ?? ""} visibility={view.openEdgeHint === null ? "Collapsed" : "Visible"} />
+<InfoBar isClosable={false} isOpen={view.buildNotice.length > 0} message={view.buildNotice} severity="Warning" />
 <InfoBar
   isClosable={true}
-  severity="Error"
-  message={panel.actionNotice}
   isOpen={panel.actionNotice.length > 0}
+  message={panel.actionNotice}
   onClosed={() => {
     panel.actionNotice = "";
   }}
+  severity="Error"
 />

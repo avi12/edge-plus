@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { GridView, ListView, MoveDirection, Window } from "svelte-winui/components";
-  import type { ListHandle } from "svelte-winui/components";
-  import { exitApplication } from "svelte-winui/window";
   import type { ExampleHost } from "../harness/contract.ts";
   import { makeItems } from "./example-item.ts";
   import ExampleRow from "./ExampleRow.svelte";
   import { liveRows, rowStats } from "./row-stats.ts";
+  import { GridView, ListView, MoveDirection, Window } from "svelte-winui/components";
+  import type { ListHandle } from "svelte-winui/components";
+  import { exitApplication } from "svelte-winui/window";
 
   const defaultRows = 1000;
   const { host }: { host: ExampleHost } = $props();
@@ -74,26 +74,36 @@
 {/snippet}
 
 <Window
+  activate={false}
+  height={640}
+  onClosed={exitApplication}
+  placement={{
+    x: -8000,
+    y: 0
+  }}
   title="Lists example"
   width={420}
-  height={640}
-  placement={{ x: -8000, y: 0 }}
-  activate={false}
-  onClosed={exitApplication}
 >
   {#if host.options["view"] === "grid"}
-    <GridView items={rows} key={row => row.id} itemName={row => row.name} onReorder={reorder} bind:handle item={rowOf} />
-  {:else}
-    <ListView
+    <GridView
+      item={rowOf}
+      itemName={row => row.name}
       items={rows}
       key={row => row.id}
-      itemName={row => row.name}
-      reorderable
-      keyboardReorder
-      selectionMode="None"
       onReorder={reorder}
       bind:handle
+    />
+  {:else}
+    <ListView
       item={rowOf}
+      itemName={row => row.name}
+      items={rows}
+      key={row => row.id}
+      keyboardReorder
+      onReorder={reorder}
+      reorderable
+      selectionMode="None"
+      bind:handle
     />
   {/if}
 </Window>

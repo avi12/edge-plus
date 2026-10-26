@@ -23,9 +23,15 @@
   }
 </script>
 
-<Grid class="veil" margin="12" opacity={isShown ? shownOpacity : hiddenOpacity} isHitTestVisible={false} opacityTransition={fade}>
-  <Rectangle class="frame" strokeDashArray={dashArray} radiusX={cornerRadius} radiusY={cornerRadius} />
-  <TextBlock class="card-title" horizontalAlignment="Center" verticalAlignment="Center" text={hint} />
+<Grid
+  class="veil"
+  isHitTestVisible={false}
+  margin="12"
+  opacity={isShown ? shownOpacity : hiddenOpacity}
+  opacityTransition={fade}
+>
+  <Rectangle class="frame" radiusX={cornerRadius} radiusY={cornerRadius} strokeDashArray={dashArray} />
+  <TextBlock class="card-title" horizontalAlignment="Center" text={hint} verticalAlignment="Center" />
 </Grid>
 
 <style>

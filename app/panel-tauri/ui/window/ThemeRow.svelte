@@ -1,7 +1,14 @@
 <script lang="ts">
   import type { ThemeRow } from "../protocol.g.ts";
   import { glyph } from "./layout.ts";
-  import { Border, Button, FontIcon, Grid, StackPanel, TextBlock } from "svelte-winui";
+  import {
+    Border,
+    Button,
+    FontIcon,
+    Grid,
+    StackPanel,
+    TextBlock
+  } from "svelte-winui";
 
   // One theme: a grip, its name, its badges and a remove button. `onRemove` is
   // null for a theme installed in Edge, whose grip and remove button are only
@@ -26,31 +33,43 @@
 </script>
 
 <!-- The row's inset lines the list's rows and Edge's rows up. -->
-<Grid columns="16,*,Auto,Auto" columnSpacing={8} padding="4,0,4,0" automationName={theme.name}>
-  <FontIcon glyph={glyph(gripGlyph)} fontSize={iconSize} opacity={isOwn ? shown : hidden} />
-  <TextBlock class="card-title" gridColumn={1} verticalAlignment="Center" textTrimming="CharacterEllipsis" text={theme.name} />
+<Grid automationName={theme.name} columnSpacing={8} columns="16,*,Auto,Auto" padding="4,0,4,0">
+  <FontIcon fontSize={iconSize} glyph={glyph(gripGlyph)} opacity={isOwn ? shown : hidden} />
+  <TextBlock
+    class="card-title"
+    gridColumn={1}
+    text={theme.name}
+    textTrimming="CharacterEllipsis"
+    verticalAlignment="Center"
+  />
   <StackPanel gridColumn={2} orientation="Horizontal" spacing={4}>
-    {#each theme.badges as badge}
+    {#each theme.badges as badge (badge)}
       <Border class="badge">
         <TextBlock class="badge-text" text={badge} />
       </Border>
     {/each}
   </StackPanel>
-  <Button gridColumn={3} automationName={theme.removeLabel} isEnabled={isOwn} opacity={isOwn ? shown : hidden} onClick={remove}>
-    <FontIcon glyph={glyph(removeGlyph)} fontSize={iconSize} />
+  <Button
+    automationName={theme.removeLabel}
+    gridColumn={3}
+    isEnabled={isOwn}
+    onClick={remove}
+    opacity={isOwn ? shown : hidden}
+  >
+    <FontIcon fontSize={iconSize} glyph={glyph(removeGlyph)} />
   </Button>
 </Grid>
 
 <style>
   :global(.badge) {
-    background: var(--subtle-fill-color-secondary);
-    border-radius: var(--control-corner-radius);
-    padding: 1px 6px;
     align-self: center;
+    padding: 1px 6px;
+    border-radius: var(--control-corner-radius);
+    background: var(--subtle-fill-color-secondary);
   }
 
   :global(.badge-text) {
-    -winui-based-on: CaptionTextBlockStyle;
     color: var(--text-fill-color-secondary);
+    -winui-based-on: CaptionTextBlockStyle;
   }
 </style>

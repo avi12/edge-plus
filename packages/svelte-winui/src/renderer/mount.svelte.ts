@@ -43,6 +43,8 @@ export function mountControl<Props extends object>(
   });
   flush();
   let root = rootControl(fragment);
+  // Plain bookkeeping read by the renderer, not state a component reacts to.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
   const rootListeners = new Set<(root: FrameworkElement) => void>();
   // A new root (a hot update, or a root inside {#if}) takes the old one's
   // place in the page, which holds the old control by then.

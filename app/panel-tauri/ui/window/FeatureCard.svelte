@@ -30,15 +30,15 @@
   {/if}
 {/snippet}
 
-<CardFrame wording={card.wording} note={card.note} body={card.theming === null ? undefined : themeLibrary}>
+<CardFrame body={card.theming === null ? undefined : themeLibrary} note={card.note} wording={card.wording}>
   {#snippet end()}
     <ToggleSwitch
-      bind:isOn={() => isOn, flip}
-      onContent=""
-      offContent=""
-      minWidth={0}
       automationName={card.wording.title}
       isEnabled={!card.isLocked}
+      minWidth={0}
+      offContent=""
+      onContent=""
+      bind:isOn={() => isOn, flip}
     />
   {/snippet}
 </CardFrame>

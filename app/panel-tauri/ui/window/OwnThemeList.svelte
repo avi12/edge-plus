@@ -25,21 +25,21 @@
 </script>
 
 <ListView
-  items={rows}
-  key={row => row.id}
-  itemName={row => row.name}
-  reorderable
-  keyboardReorder
-  {onReorder}
-  selectionMode="None"
+  automationHelpText={labels.reorderHelp}
+  automationName={labels.themeListName}
   isItemClickEnabled={false}
   itemContainerStyle={themeListItemStyle()}
-  automationName={labels.themeListName}
-  automationHelpText={labels.reorderHelp}
-  visibility={rows.length > 0 ? "Visible" : "Collapsed"}
+  itemName={row => row.name}
+  items={rows}
+  key={row => row.id}
+  keyboardReorder
   onControl={view => motion.animateItems(view, motion.listItems)}
+  {onReorder}
+  reorderable
+  selectionMode="None"
+  visibility={rows.length > 0 ? "Visible" : "Collapsed"}
 >
   {#snippet item(row)}
-    <ThemeRow theme={row} onRemove={() => onRemove(row.id)} />
+    <ThemeRow onRemove={() => onRemove(row.id)} theme={row} />
   {/snippet}
 </ListView>

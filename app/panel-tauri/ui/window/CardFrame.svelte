@@ -2,7 +2,13 @@
   import type { CardWording } from "../protocol.g.ts";
   import { glyph } from "./layout.ts";
   import type { Snippet } from "svelte";
-  import { Border, FontIcon, Grid, StackPanel, TextBlock } from "svelte-winui";
+  import {
+    Border,
+    FontIcon,
+    Grid,
+    StackPanel,
+    TextBlock
+  } from "svelte-winui";
 
   // The Windows Settings card, built by hand from WinUI's own controls rather
   // than a toolkit's SettingsCard (no UI library, to keep the supply chain
@@ -24,17 +30,17 @@
      bare border each, which places them in the grid. -->
 <Border class="card">
   <Grid columns="Auto,*,Auto" rows="Auto,Auto">
-    <FontIcon glyph={glyph(wording.glyph)} fontSize={20} margin="0,0,16,0" verticalAlignment="Center" />
+    <FontIcon fontSize={20} glyph={glyph(wording.glyph)} margin="0,0,16,0" verticalAlignment="Center" />
     <StackPanel gridColumn={1} margin="0,0,16,0" verticalAlignment="Center">
       <TextBlock class="card-title" text={wording.title} />
       <TextBlock class="card-description" text={wording.description} />
-      <TextBlock class="note" visibility={note.length > 0 ? "Visible" : "Collapsed"} text={note} />
+      <TextBlock class="note" text={note} visibility={note.length > 0 ? "Visible" : "Collapsed"} />
     </StackPanel>
     <Border gridColumn={2} verticalAlignment="Center">
       {@render end()}
     </Border>
     {#if body}
-      <Border gridRow={1} gridColumn={1} gridColumnSpan={2} margin="0,12,0,0">
+      <Border gridColumn={1} gridColumnSpan={2} gridRow={1} margin="0,12,0,0">
         {@render body()}
       </Border>
     {/if}
@@ -46,16 +52,16 @@
      these rules are global, with names no other component uses. -->
 <style>
   :global(.card) {
-    background: var(--card-background-fill-color-default);
+    min-height: 68px;
+    padding: 12px 16px;
     border: 1px solid var(--card-stroke-color-default);
     border-radius: var(--control-corner-radius);
-    padding: 12px 16px;
-    min-height: 68px;
+    background: var(--card-background-fill-color-default);
   }
 
   :global(.note) {
-    -winui-based-on: CaptionTextBlockStyle;
     color: var(--system-fill-color-caution);
     text-wrap: wrap;
+    -winui-based-on: CaptionTextBlockStyle;
   }
 </style>

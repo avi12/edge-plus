@@ -3,10 +3,10 @@
   import DropVeil from "./DropVeil.svelte";
   import * as motion from "./motion.ts";
   import PageFooter from "./PageFooter.svelte";
-  import PanelNotices from "./PanelNotices.svelte";
-  import PanelSection from "./PanelSection.svelte";
   import type { Panel } from "./panel.svelte.ts";
   import { providePanel } from "./panel.svelte.ts";
+  import PanelNotices from "./PanelNotices.svelte";
+  import PanelSection from "./PanelSection.svelte";
   import UpdateCard from "./UpdateCard.svelte";
   import { DataPackageOperation, DragEventArgs, projectAs, StandardDataFormats } from "./winui.ts";
   import { Grid, ScrollViewer, StackPanel } from "svelte-winui";
@@ -70,7 +70,7 @@
   }
 </script>
 
-<Grid allowDrop={true} {onDragOver} {onDragLeave} {onDrop}>
+<Grid allowDrop={true} {onDragLeave} {onDragOver} {onDrop}>
   <ScrollViewer verticalScrollBarVisibility="Auto">
     <StackPanel padding="16,4,16,16" spacing={4}>
       {#if view.update !== null}
@@ -80,7 +80,7 @@
         {/key}
       {/if}
       <PanelNotices {view} />
-      <StackPanel spacing={20} childrenTransitions={motion.applied(motion.reposition)}>
+      <StackPanel childrenTransitions={motion.applied(motion.reposition)} spacing={20}>
         {#each view.sections as section (section.name)}
           <PanelSection {section} />
         {/each}

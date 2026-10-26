@@ -1,14 +1,22 @@
-<script lang="ts" generics="Item">
-  import { untrack } from "svelte";
+<script generics="Item" lang="ts">
   import type { GridView } from "../generated/bindings.ts";
-  import { control } from "../runtime.ts";
   import { connectGridView } from "../generated/controls/GridView.svelte.ts";
+  import { control } from "../runtime.ts";
   import type { GridViewComponentProps } from "./GridView.d.svelte.ts";
   import { attachItems } from "./items-host.svelte.ts";
+  import { untrack } from "svelte";
 
   // Written by hand (scripts/codegen/tables.ts: handWrittenComponents): the
   // generated GridView has no items, only children.
-  let { selectedIndex = $bindable(), selectedItem = $bindable(), selectedValue = $bindable(), handle = $bindable(), class: className, style, ...rest }: GridViewComponentProps<Item> = $props();
+  let {
+    selectedIndex = $bindable(),
+    selectedItem = $bindable(),
+    selectedValue = $bindable(),
+    handle = $bindable(),
+    class: className,
+    style,
+    ...rest
+  }: GridViewComponentProps<Item> = $props();
   const bound = {
     get selectedIndex() {
       return selectedIndex;
@@ -41,4 +49,4 @@
   }
 </script>
 
-<grid-view class={className} {style} {@attach control((native: GridView) => untrack(() => connect(native)))} />
+<grid-view {style} class={className} {@attach control((native: GridView) => untrack(() => connect(native)))} />

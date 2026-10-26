@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { getContext } from "svelte";
   import type { CounterAction } from "./app-types.ts";
   import type { HostContext } from "./context.ts";
   import { hostContextKey } from "./context.ts";
+  import { getContext } from "svelte";
 
   const { channel } = getContext<HostContext>(hostContextKey);
   let outcome = $state("no action yet");

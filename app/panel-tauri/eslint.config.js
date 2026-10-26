@@ -1,11 +1,15 @@
 import expandNestedObjectExpression from "./eslint-rules/expand-nested-object-expression.js";
 import expandNestedTypeLiteral from "./eslint-rules/expand-nested-type-literal.js";
+import expandSvelteBlock from "./eslint-rules/expand-svelte-block.js";
 import multilineArgumentParenthesisNewline from "./eslint-rules/multiline-arg-paren-newline.js";
+import noPaddedTag from "./eslint-rules/no-padded-tag.js";
 import stylistic from "@stylistic/eslint-plugin";
 import importNewlines from "eslint-plugin-import-newlines";
 import perfectionist from "eslint-plugin-perfectionist";
+import svelteEslint from "eslint-plugin-svelte";
 import { globalIgnores } from "eslint/config";
 import globals from "globals";
+import svelteParser from "svelte-eslint-parser";
 import typescriptEslint from "typescript-eslint";
 
 // Adapted from avi/pade. Logic and correctness rules live in oxlint
@@ -189,6 +193,7 @@ const tsStyleRules = {
   "local/expand-nested-object-expression": "error",
   "local/expand-nested-type-literal": "error",
   "local/multiline-arg-paren-newline": "error",
+  "local/no-padded-tag": "error",
   // The window binds a DLL export in one file only, as the WinUI panel kept
   // every [DllImport] in its Native folder.
   "no-restricted-imports": [
@@ -231,6 +236,12 @@ const tsStyleRules = {
       // CLAUDE.md: a compound condition is extracted into a named boolean.
       selector: "IfStatement > LogicalExpression.test",
       message: "Extract the condition into a descriptively-named const (is/has/can/should) right before the if."
+    },
+    {
+      // Svelte content tags only: a `{cond ? a : b}` that outputs text reads as
+      // markup in an {#if}/{:else} block. Attribute values may keep a ternary.
+      selector: "SvelteMustacheTag:not([parent.type='SvelteAttribute']):not([parent.type='SvelteStyleDirective']) > ConditionalExpression",
+      message: "Do not use a ternary in a template tag - use an {#if}/{:else} block instead."
     }
   ]
 };
@@ -244,13 +255,16 @@ const sharedPlugins = {
     rules: {
       "expand-nested-object-expression": expandNestedObjectExpression,
       "expand-nested-type-literal": expandNestedTypeLiteral,
-      "multiline-arg-paren-newline": multilineArgumentParenthesisNewline
+      "expand-svelte-block": expandSvelteBlock,
+      "multiline-arg-paren-newline": multilineArgumentParenthesisNewline,
+      "no-padded-tag": noPaddedTag
     }
   }
 };
 
 // The window runs under Node, not in a webview.
 export default [
+  ...svelteEslint.configs["flat/recommended"],
   globalIgnores(["node_modules/", "dist/", "src-tauri/", "eslint-rules/", ".winapp/", "ui/protocol.g.ts", ".claude/worktrees/"]),
   {
     files: ["**/*.{ts,js,mjs}"],
@@ -260,5 +274,28 @@ export default [
     },
     plugins: sharedPlugins,
     rules: tsStyleRules
+  },
+  {
+    files: ["**/*.svelte"],
+    languageOptions: {
+      parser: svelteParser,
+      parserOptions: {
+        parser: typescriptEslint.parser,
+        extraFileExtensions: [".svelte"]
+      },
+      globals: globals.node
+    },
+    plugins: sharedPlugins,
+    rules: {
+      ...tsStyleRules,
+      "svelte/no-at-html-tags": "off",
+      "svelte/indent": ["error", { indent: 2 }],
+      "svelte/sort-attributes": "error",
+      "svelte/shorthand-directive": "error",
+      "svelte/first-attribute-linebreak": ["error"],
+      "svelte/shorthand-attribute": ["error", { prefer: "always" }],
+      "local/expand-svelte-block": "error",
+      "prefer-const": ["error", { destructuring: "all" }]
+    }
   }
 ];

@@ -13,7 +13,7 @@
   <FeatureCard {card} />
 {:else}
   <!-- Its add/delete transition slides the Inject card in and out. -->
-  <StackPanel spacing={4} childrenTransitions={motion.applied(motion.addDelete)}>
+  <StackPanel childrenTransitions={motion.applied(motion.addDelete)} spacing={4}>
     <FeatureCard {card} />
     {#if card.inject.offer !== null}
       <InjectCard offer={card.inject.offer} />
