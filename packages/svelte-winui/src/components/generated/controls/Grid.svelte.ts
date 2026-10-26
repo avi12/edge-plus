@@ -2,13 +2,13 @@
 
 import { brushOf, cornerRadiusOf, enumValue, thicknessOf } from "../../convert.ts";
 import type { BrushInput, CornerRadiusInput, EnumInput, ThicknessInput } from "../../convert.ts";
+import { linkGridExtras } from "../../extensions/grid.ts";
+import type { GridExtras } from "../../extensions/grid.ts";
 import { Linker } from "../../runtime.svelte.ts";
 import { BackgroundSizing } from "../bindings.ts";
 import type { Grid } from "../bindings.ts";
 import { linkPanel } from "./Panel.svelte.ts";
 import type { PanelBound, PanelProps } from "./Panel.svelte.ts";
-import { linkGridExtras } from "../../extensions/grid.ts";
-import type { GridExtras } from "../../extensions/grid.ts";
 
 export interface GridProps extends PanelProps, GridExtras {
   backgroundSizing?: EnumInput<typeof BackgroundSizing>;

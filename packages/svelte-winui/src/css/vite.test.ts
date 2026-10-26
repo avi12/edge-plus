@@ -81,31 +81,41 @@ test("a change to a component reloads its sheet module too", () => {
 
   const component = { id: styled };
   // A component with no sheet module is left to Vite's own reload.
-  assert.deepEqual(callHook(hotUpdate, { environment }, [{
-    file: `${folder}/new.svelte`,
-    modules: [component]
-  }]), undefined);
+  assert.deepEqual(
+    callHook(hotUpdate, { environment }, [{
+      file: `${folder}/new.svelte`,
+      modules: [component]
+    }]), undefined
+  );
   // After the component was compiled, an edit to its <style> alone is the
   // sheet's: the component keeps running.
   run("transform", "compiled();", styled);
-  assert.deepEqual(callHook(hotUpdate, { environment }, [{
-    file: styled,
-    modules: [component]
-  }]), [sheet]);
+  assert.deepEqual(
+    callHook(hotUpdate, { environment }, [{
+      file: styled,
+      modules: [component]
+    }]), [sheet]
+  );
   writeFileSync(styled, "<border class=\"a\" />\n<style>\n  .a { padding: 8px }\n</style>\n");
-  assert.deepEqual(callHook(hotUpdate, { environment }, [{
-    file: styled,
-    modules: [component]
-  }]), [sheet]);
+  assert.deepEqual(
+    callHook(hotUpdate, { environment }, [{
+      file: styled,
+      modules: [component]
+    }]), [sheet]
+  );
   writeFileSync(styled, "<border class=\"b\" />\n<style>\n  .a { padding: 8px }\n</style>\n");
-  assert.deepEqual(callHook(hotUpdate, { environment }, [{
-    file: styled,
-    modules: [component]
-  }]), [component, sheet]);
-  assert.equal(callHook(hotUpdate, { environment }, [{
-    file: plain,
-    modules: [component]
-  }]), undefined);
+  assert.deepEqual(
+    callHook(hotUpdate, { environment }, [{
+      file: styled,
+      modules: [component]
+    }]), [component, sheet]
+  );
+  assert.equal(
+    callHook(hotUpdate, { environment }, [{
+      file: plain,
+      modules: [component]
+    }]), undefined
+  );
 });
 
 test("a sheet with an error fails the load with its line", () => {

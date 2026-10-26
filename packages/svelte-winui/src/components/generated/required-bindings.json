@@ -17,6 +17,8 @@
     "classes": [
       "Application",
       "FrameworkElement",
+      "ResourceDictionary",
+      "Style",
       "UIElement",
       "Window"
     ]
@@ -220,6 +222,12 @@
       "Span",
       "TextElement",
       "Underline"
+    ]
+  },
+  {
+    "namespace": "Microsoft.UI.Xaml.Markup",
+    "classes": [
+      "XamlReader"
     ]
   },
   {

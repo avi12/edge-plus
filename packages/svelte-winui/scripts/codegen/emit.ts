@@ -375,9 +375,13 @@ function emitLevelBody(level: ClassModel, imports: LevelImports): LevelBody {
 
 function emitLevelImports(level: ClassModel, imports: LevelImports): string[] {
   const name = level.type.name;
+  const extras = extrasOf(level);
+  const extension = `../../extensions/${kebabCase(name)}.ts`;
   const lines = [
     ...importLine([...imports.convert], "../../convert.ts"),
     ...importLine([...imports.convertTypes], "../../convert.ts", true),
+    ...extras === null ? [] : importLine([`link${extras}`], extension),
+    ...extras === null ? [] : importLine([extras], extension, true),
     ...importLine(["Linker"], "../../runtime.svelte.ts"),
     ...importLine([...imports.bindingValues], "../bindings.ts"),
     ...importLine([name], "../bindings.ts", true)
@@ -385,13 +389,6 @@ function emitLevelImports(level: ClassModel, imports: LevelImports): string[] {
   for (const parent of imports.parents) {
     lines.push(`import { link${parent} } from "./${parent}.svelte.ts";`);
     lines.push(...importLine([`${parent}Bound`, `${parent}Props`], `./${parent}.svelte.ts`, true));
-  }
-
-  const extras = extrasOf(level);
-  if (extras !== null) {
-    const extension = `../../extensions/${kebabCase(name)}.ts`;
-    lines.push(...importLine([`link${extras}`], extension));
-    lines.push(...importLine([extras], extension, true));
   }
 
   lines.push(...importLine(level.declaresContent ? ["Snippet"] : [], "svelte", true));

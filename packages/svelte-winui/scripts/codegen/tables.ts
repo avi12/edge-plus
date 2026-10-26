@@ -224,11 +224,23 @@ export const coreClasses: TypeName[] = [
   },
   {
     namespace: "Microsoft.UI.Xaml",
+    name: "ResourceDictionary"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml",
+    name: "Style"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml",
     name: "Window"
   },
   {
     namespace: "Microsoft.UI.Xaml.Controls",
     name: "RowDefinition"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml.Markup",
+    name: "XamlReader"
   },
   {
     namespace: "Microsoft.UI.Xaml.Media",
