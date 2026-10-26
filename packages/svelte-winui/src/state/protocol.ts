@@ -1,22 +1,31 @@
-// The wire protocol between a host (Rust, Electron, Node) and the window: one
-// JSON value per message, in order, over any transport (transports/).
+// The state protocol: a ProtocolMap (messaging/) keyed by the message types
+// below. Over any transport (transports/) it is the frames messaging/ defines,
+// one JSON value per message, in order:
 //
 //   host   -> window  snapshot  the whole value of a named state
 //                     patch     changes to it, applied in place
-//                     reply     the end of one action
-//   window -> host    action    something the user did, with an id
+//   window -> host    action    something the user did; its answer is the
+//                     promise: resolved when the host did it, rejected with
+//                     the host's error text when it could not
 //
-// Messages are checked structurally by the guards below; a message that fails
-// them is reported and dropped, never thrown into the transport's loop.
+// Data is checked by the zod schemas below; a message that fails them
+// is answered with an error and reported, never thrown into the transport's
+// loop.
 
-export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
+import { jsonSchema } from "../messaging/json.ts";
+import type { Json } from "../messaging/json.ts";
+import type { ProtocolWithReturn } from "../messaging/protocol-map.ts";
+import { z } from "zod";
 
-export type PathSegment = string | number;
+export type { Json };
+
+const pathSegmentSchema = z.union([z.string(), z.int()]);
+
+export type PathSegment = z.infer<typeof pathSegmentSchema>;
 
 export const MessageType = {
   snapshot: "snapshot",
   patch: "patch",
-  reply: "reply",
   action: "action"
 } as const;
 
@@ -30,124 +39,49 @@ export const PatchOperation = {
   splice: "splice"
 } as const;
 
-export type PatchOp =
-  | {
-    op: typeof PatchOperation.set;
-    path: PathSegment[];
-    value: Json;
-  }
-  | {
-    op: typeof PatchOperation.remove;
-    path: PathSegment[];
-  }
-  | {
-    op: typeof PatchOperation.splice;
-    path: PathSegment[];
-    start: number;
-    deleteCount: number;
-    items: Json[];
-  };
+const pathSchema = z.array(pathSegmentSchema);
+const countSchema = z.int().nonnegative();
 
-export interface SnapshotMessage {
-  type: typeof MessageType.snapshot;
-  name: string;
-  value: Json;
+const patchOpSchema = z.discriminatedUnion("op", [
+  z.object({
+    op: z.literal(PatchOperation.set),
+    path: pathSchema,
+    value: jsonSchema
+  }),
+  z.object({
+    op: z.literal(PatchOperation.remove),
+    path: pathSchema
+  }),
+  z.object({
+    op: z.literal(PatchOperation.splice),
+    path: pathSchema,
+    start: countSchema,
+    deleteCount: countSchema,
+    items: z.array(jsonSchema)
+  })
+]);
+
+export const snapshotDataSchema = z.object({
+  name: z.string(),
+  value: jsonSchema
+});
+
+export const patchDataSchema = z.object({
+  name: z.string(),
+  ops: z.array(patchOpSchema)
+});
+
+export type PatchOp = z.infer<typeof patchOpSchema>;
+export type SnapshotData = z.infer<typeof snapshotDataSchema>;
+export type PatchData = z.infer<typeof patchDataSchema>;
+
+// `Action` is the app's own action type (Edge+ generates it from Rust).
+export interface StateProtocol<Action extends Json = Json> {
+  [MessageType.snapshot]: ProtocolWithReturn<SnapshotData, void>;
+  [MessageType.patch]: ProtocolWithReturn<PatchData, void>;
+  [MessageType.action]: ProtocolWithReturn<Action, void>;
 }
 
-export interface PatchMessage {
-  type: typeof MessageType.patch;
-  name: string;
-  ops: PatchOp[];
-}
-
-// `error` is null when the host did what the action asked.
-export interface ReplyMessage {
-  type: typeof MessageType.reply;
-  id: number;
-  error: string | null;
-}
-
-export interface ActionMessage<Action = Json> {
-  type: typeof MessageType.action;
-  id: number;
-  action: Action;
-}
-
-export type HostMessage = SnapshotMessage | PatchMessage | ReplyMessage;
-
-export function isJsonObject(value: unknown): value is Record<string, unknown> {
+export function isJsonObject(value: Json | undefined): value is Record<string, Json> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isJson(value: unknown): value is Json {
-  if (value === null) {
-    return true;
-  }
-
-  const isScalar = typeof value === "boolean" || typeof value === "string" || (typeof value === "number" && Number.isFinite(value));
-  if (isScalar) {
-    return true;
-  }
-
-  if (Array.isArray(value)) {
-    return value.every(isJson);
-  }
-
-  return isJsonObject(value) && Object.values(value).every(isJson);
-}
-
-function isPath(value: unknown): value is PathSegment[] {
-  return Array.isArray(value) && value.every(segment => typeof segment === "string" || Number.isInteger(segment));
-}
-
-function isCount(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value) && value >= 0;
-}
-
-function isPatchOp(value: unknown): value is PatchOp {
-  const hasPath = isJsonObject(value) && isPath(value["path"]);
-  if (!hasPath) {
-    return false;
-  }
-
-  switch (value["op"]) {
-    case PatchOperation.set:
-      return isJson(value["value"]);
-    case PatchOperation.remove:
-      return true;
-    case PatchOperation.splice:
-      return isCount(value["start"]) && isCount(value["deleteCount"]) && Array.isArray(value["items"]) && value["items"].every(isJson);
-    default:
-      return false;
-  }
-}
-
-export function isHostMessage(value: unknown): value is HostMessage {
-  if (!isJsonObject(value)) {
-    return false;
-  }
-
-  switch (value["type"]) {
-    case MessageType.snapshot:
-      return typeof value["name"] === "string" && isJson(value["value"]);
-    case MessageType.patch:
-      return typeof value["name"] === "string" && Array.isArray(value["ops"]) && value["ops"].every(isPatchOp);
-    case MessageType.reply: {
-      const error = value["error"];
-      const hasValidError = error === null || error === undefined || typeof error === "string";
-      return isCount(value["id"]) && hasValidError;
-    }
-    default:
-      return false;
-  }
-}
-
-// A host's own, unrelated messages (Edge+'s place, notice, close) are not
-// malformed: the channel hands them to its `onOther` listener.
-export function isTypedMessage(value: unknown): value is Record<string, unknown> & { type: string } {
-  return isJsonObject(value) && typeof value["type"] === "string";
-}
-
-export function isOwnMessageType(type: string): boolean {
-  return type === MessageType.snapshot || type === MessageType.patch || type === MessageType.reply;
 }

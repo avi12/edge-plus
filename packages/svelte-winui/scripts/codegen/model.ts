@@ -17,10 +17,17 @@ import {
   supportEnums,
   unimplementedEvents
 } from "./tables.ts";
-import type { AttributeInfo, TypeInfo, TypeName, TypeSignature } from "./winmd.ts";
+import type {
+  AttributeInfo,
+  AttributeValue,
+  TypeInfo,
+  TypeName,
+  TypeSignature
+} from "./winmd.ts";
 import { fullName, TypeAttribute, TypeIndex, WinMdFile } from "./winmd.ts";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { z } from "zod";
 
 // The components, read from WinUI's metadata: every activatable class below
 // UIElement or TextElement, with the properties, events and attached
@@ -97,13 +104,9 @@ export interface Model {
   }>;
 }
 
-interface LockFile {
-  packages: Array<{ winmds: string[] }>;
-}
-
-function isLockFile(value: unknown): value is LockFile {
-  return typeof value === "object" && value !== null && "packages" in value && Array.isArray(value.packages);
-}
+const lockFileSchema = z.object({
+  packages: z.array(z.object({ winmds: z.array(z.string()) }))
+});
 
 // The index of the metadata `winapp restore` locked, and the file the
 // components are in.
@@ -111,12 +114,12 @@ function loadMetadata(lockPath: string): {
   index: TypeIndex;
   components: WinMdFile;
 } {
-  const lock: unknown = JSON.parse(readFileSync(lockPath, "utf8"));
-  if (!isLockFile(lock)) {
+  const parsedLock = lockFileSchema.safeParse(JSON.parse(readFileSync(lockPath, "utf8")));
+  if (!parsedLock.success) {
     throw new Error(`${lockPath} is not a winapp lock file`);
   }
 
-  const files = lock.packages.flatMap(entry => entry.winmds);
+  const files = parsedLock.data.packages.flatMap(entry => entry.winmds);
   function find(name: string): string {
     const found = files.find(file => path.basename(file).toLowerCase() === name.toLowerCase());
     if (found === undefined) {
@@ -161,7 +164,7 @@ function findAttribute(attributes: AttributeInfo[], name: string): AttributeInfo
   return attributes.filter(attribute => fullName(attribute.type) === name);
 }
 
-function nameOfString(full: unknown): TypeName | null {
+function nameOfString(full: AttributeValue | undefined): TypeName | null {
   if (typeof full !== "string") {
     return null;
   }

@@ -1,5 +1,6 @@
+import { defineMessaging } from "../../messaging/index.ts";
 import { diff } from "../diff.ts";
-import type { Json } from "../protocol.ts";
+import type { Json, StateProtocol } from "../protocol.ts";
 import { isJsonObject, MessageType } from "../protocol.ts";
 import { createStdioTransport, reserveStdout } from "../transports/stdio.ts";
 
@@ -8,53 +9,37 @@ import { createStdioTransport, reserveStdout } from "../transports/stdio.ts";
 // prints with console.log, to prove stdout stays the protocol's).
 
 reserveStdout();
-const transport = createStdioTransport();
+const messaging = defineMessaging<StateProtocol>(createStdioTransport(), {
+  onError: error => process.stderr.write(`host: ${error.message}\n`)
+});
 let state: Json = { count: 0 };
 
+// The window going away rejects what is waiting; the process ends with its
+// stdin, so there is nothing to do about it.
+function ignoreClosed(): void {}
+
 function publish(next: Json): void {
-  transport.send({
-    type: MessageType.patch,
+  messaging.sendMessage(MessageType.patch, {
     name: "counter",
     ops: diff(state, next)
-  });
+  }).catch(ignoreClosed);
   state = next;
 }
 
-transport.listen({
-  message(value) {
-    const action = isJsonObject(value) ? value["action"] : undefined;
-    const isAction = isJsonObject(value) && value["type"] === MessageType.action && isJsonObject(action);
-    if (!isAction) {
-      return;
-    }
-
-    const kind = action["kind"];
-    let error: string | null = null;
-    const count = isJsonObject(state) ? state["count"] : undefined;
-    const canIncrement = kind === "increment" && typeof count === "number";
-    if (canIncrement) {
-      publish({ count: count + 1 });
-    } else if (kind === "fail") {
-      error = "asked to fail";
-    } else if (kind === "log") {
-      console.log("noise that must not reach stdout");
-    }
-
-    transport.send({
-      type: MessageType.reply,
-      id: value["id"],
-      error
-    });
-  },
-  malformed(reason) {
-    process.stderr.write(`host could not read a line: ${reason}\n`);
-  },
-  closed() {
-    process.exit(0);
+messaging.onMessage(MessageType.action, message => {
+  const action = message.data;
+  const kind = isJsonObject(action) ? action["kind"] : undefined;
+  const count = isJsonObject(state) ? state["count"] : undefined;
+  const canIncrement = kind === "increment" && typeof count === "number";
+  if (canIncrement) {
+    publish({ count: count + 1 });
+  } else if (kind === "fail") {
+    throw new Error("asked to fail");
+  } else if (kind === "log") {
+    console.log("noise that must not reach stdout");
   }
 });
-transport.send({
-  type: MessageType.snapshot,
+messaging.sendMessage(MessageType.snapshot, {
   name: "counter",
   value: state
-});
+}).catch(ignoreClosed);

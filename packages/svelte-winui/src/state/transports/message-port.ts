@@ -1,3 +1,4 @@
+import type { Frame as MessagingFrame } from "../../messaging/frame.ts";
 import type { Transport, TransportListener } from "./transport.ts";
 import type { MessagePort } from "node:worker_threads";
 import { receiveMessageOnPort } from "node:worker_threads";
@@ -13,10 +14,13 @@ export interface MessagePortOptions {
   poll?(drain: () => void): () => void;
 }
 
-export function createMessagePortTransport(port: MessagePort, options: MessagePortOptions = {}): Transport {
+export function createMessagePortTransport<Frame = MessagingFrame>(
+  port: MessagePort,
+  options: MessagePortOptions = {}
+): Transport<Frame> {
   return {
-    send(value) {
-      port.postMessage(value);
+    send(frame) {
+      port.postMessage(frame);
     },
     listen(listener: TransportListener) {
       const { poll } = options;

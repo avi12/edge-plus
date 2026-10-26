@@ -1,6 +1,7 @@
 import type { Transport } from "../state/transports/transport.ts";
-import type { RequestFrame, ResponseFrame } from "./frame.ts";
-import { isRequestFrame, isResponseFrame } from "./frame.ts";
+import type { Frame, RequestFrame, ResponseFrame } from "./frame.ts";
+import { requestFrameSchema, responseFrameSchema } from "./frame.ts";
+import type { WireValue } from "./json.ts";
 import type { GetReturnType, MessageHandler, RemoveListener, SendArguments } from "./protocol-map.ts";
 
 // defineMessaging(transport) is webext-core's defineExtensionMessaging for
@@ -46,22 +47,18 @@ export interface Messaging<TProtocolMap> {
 }
 
 interface Pending {
-  resolve(value: unknown): void;
+  resolve(value: WireValue): void;
   reject(error: Error): void;
   timer: ReturnType<typeof setTimeout> | null;
 }
 
-function describe(reason: unknown): string {
-  return reason instanceof Error ? reason.message : String(reason);
-}
-
 export function defineMessaging<TProtocolMap>(
-  transport: Transport,
+  transport: Transport<Frame>,
   options: MessagingOptions = {}
 ): Messaging<TProtocolMap> {
   const { now = Date.now, onError = () => {}, onUnhandled = () => {}, timeoutMilliseconds } = options;
   const pending = new Map<number, Pending>();
-  const handlers = new Map<string, (frame: RequestFrame) => unknown>();
+  const handlers = new Map<string, (frame: RequestFrame) => WireValue | Promise<WireValue>>();
   let nextIdentifier = 0;
 
   function respond(frame: ResponseFrame): void {
@@ -86,10 +83,11 @@ export function defineMessaging<TProtocolMap>(
         response: response === undefined ? null : response
       });
     } catch (error) {
-      onError(error instanceof Error ? error : new MessagingError(describe(error)));
+      const failure = error instanceof Error ? error : new MessagingError(String(error));
+      onError(failure);
       respond({
         id: request.id,
-        error: describe(error)
+        error: failure.message
       });
     }
   }
@@ -126,10 +124,12 @@ export function defineMessaging<TProtocolMap>(
 
   const stop = transport.listen({
     message(value) {
-      if (isRequestFrame(value)) {
-        void answer(value);
-      } else if (isResponseFrame(value)) {
-        settle(value);
+      const request = requestFrameSchema.safeParse(value);
+      const response = responseFrameSchema.safeParse(value);
+      if (request.success) {
+        void answer(request.data);
+      } else if (response.success) {
+        settle(response.data);
       } else {
         onError(new MessagingError(`not a message frame: ${JSON.stringify(value)}`));
       }
@@ -155,7 +155,10 @@ export function defineMessaging<TProtocolMap>(
             reject(new MessagingError(`no answer to message "${type}" in ${timeoutMilliseconds} ms`));
           }, timeoutMilliseconds);
         pending.set(id, {
-          resolve,
+          // The same trust as onMessage below: the answer is taken to be its
+          // message's declared return type.
+          // oxlint-disable-next-line typescript/consistent-type-assertions
+          resolve: answer => resolve(answer as Parameters<typeof resolve>[0]),
           reject,
           timer
         });

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
+import { z } from "zod";
 
 const required = [
   {
@@ -16,29 +17,27 @@ const required = [
   }
 ];
 
-interface PackageJson {
-  dependencies: Record<string, string>;
-  winapp: {
-    jsBindings: {
-      additionalWinmds: Array<{
-        namespace: string;
-        classes?: string[];
-      }>;
-    };
-  };
-}
+const packageJsonSchema = z.object({
+  dependencies: z.record(z.string(), z.string()),
+  winapp: z.object({
+    jsBindings: z.object({
+      additionalWinmds: z.array(
+        z.object({
+          namespace: z.string(),
+          classes: z.array(z.string()).optional()
+        })
+      )
+    })
+  })
+});
 
-function isPackageJson(value: unknown): value is PackageJson {
-  return typeof value === "object" && value !== null && "dependencies" in value && "winapp" in value;
-}
-
-function parsed(text: string): PackageJson {
-  const value: unknown = JSON.parse(text);
-  if (!isPackageJson(value)) {
+function parsed(text: string): z.infer<typeof packageJsonSchema> {
+  const result = packageJsonSchema.safeParse(JSON.parse(text));
+  if (!result.success) {
     throw new TypeError("packageJsonForApp wrote no dependencies or winapp");
   }
 
-  return value;
+  return result.data;
 }
 
 function packagesOf(text: string): string[] {

@@ -3,16 +3,28 @@ import { diff } from "./diff.ts";
 import type { Holder } from "./patch.ts";
 import { applyOps, PatchError, reconcile } from "./patch.ts";
 import type { Json, PatchOp } from "./protocol.ts";
-import { isHostMessage, MessageType, PatchOperation } from "./protocol.ts";
+import { isJsonObject, patchDataSchema, PatchOperation, snapshotDataSchema } from "./protocol.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { z } from "zod";
 
 function clone(value: Json): Json {
   return JSON.parse(JSON.stringify(value));
 }
 
-function valueAt(value: unknown, ...path: Array<string | number>): unknown {
-  return path.reduce((current, key) => read(current, String(key)), value);
+function valueAt(value: Json | undefined, ...path: Array<string | number>): Json | undefined {
+  let current = value;
+  for (const key of path) {
+    if (Array.isArray(current)) {
+      current = current[Number(key)];
+    } else if (isJsonObject(current)) {
+      current = current[String(key)];
+    } else {
+      return undefined;
+    }
+  }
+
+  return current;
 }
 
 function holderOf(value: Json): Holder {
@@ -183,10 +195,19 @@ test("an unchanged value diffs to nothing; a one-field change to one operation",
   );
 });
 
-test("message guards accept the protocol and reject the rest", () => {
+// What a message might hold: JSON, or a value JSON cannot carry.
+type Candidate = Json | {
+  name: string;
+  value: undefined;
+};
+
+function accepts(schema: z.ZodType, value: Candidate): boolean {
+  return schema.safeParse(value).success;
+}
+
+test("data schemas accept the protocol and reject the rest", () => {
   assert.ok(
-    isHostMessage({
-      type: MessageType.snapshot,
+    accepts(snapshotDataSchema, {
       name: "v",
       value: {
         a: [1]
@@ -194,21 +215,7 @@ test("message guards accept the protocol and reject the rest", () => {
     })
   );
   assert.ok(
-    isHostMessage({
-      type: MessageType.reply,
-      id: 1,
-      error: null
-    })
-  );
-  assert.ok(
-    isHostMessage({
-      type: MessageType.reply,
-      id: 1
-    })
-  );
-  assert.ok(
-    isHostMessage({
-      type: MessageType.patch,
+    accepts(patchDataSchema, {
       name: "v",
       ops: [{
         op: "remove",
@@ -216,29 +223,9 @@ test("message guards accept the protocol and reject the rest", () => {
       }]
     })
   );
+  assert.ok(!accepts(snapshotDataSchema, { value: 1 }));
   assert.ok(
-    !isHostMessage({
-      type: MessageType.snapshot,
-      value: 1
-    })
-  );
-  assert.ok(
-    !isHostMessage({
-      type: MessageType.reply,
-      id: -1,
-      error: null
-    })
-  );
-  assert.ok(
-    !isHostMessage({
-      type: MessageType.reply,
-      id: 1,
-      error: 5
-    })
-  );
-  assert.ok(
-    !isHostMessage({
-      type: MessageType.patch,
+    !accepts(patchDataSchema, {
       name: "v",
       ops: [{
         op: "move",
@@ -247,8 +234,7 @@ test("message guards accept the protocol and reject the rest", () => {
     })
   );
   assert.ok(
-    !isHostMessage({
-      type: MessageType.patch,
+    !accepts(patchDataSchema, {
       name: "v",
       ops: [{
         op: "splice",
@@ -260,11 +246,11 @@ test("message guards accept the protocol and reject the rest", () => {
     })
   );
   assert.ok(
-    !isHostMessage({
-      type: MessageType.snapshot,
+    !accepts(snapshotDataSchema, {
       name: "v",
       value: undefined
     })
   );
-  assert.ok(!isHostMessage("snapshot"));
+  assert.ok(!accepts(snapshotDataSchema, "snapshot"));
+  assert.ok(!accepts(patchDataSchema, null));
 });

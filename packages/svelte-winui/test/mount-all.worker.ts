@@ -1,7 +1,8 @@
 import { createWindowModuleRunner } from "../src/vite/runner.ts";
+import type { Report } from "./mount-report.ts";
 import { roInitialize } from "@microsoft/dynwinrt";
-import type { MessagePort } from "node:worker_threads";
-import { parentPort, workerData } from "node:worker_threads";
+import { MessagePort, parentPort, workerData } from "node:worker_threads";
+import { z } from "zod";
 
 // The UI thread of the mount test: its apartment first, then every module the
 // test needs through the dev server, and only then WinUI, which keeps the
@@ -9,27 +10,19 @@ import { parentPort, workerData } from "node:worker_threads";
 
 const singleThreadedApartment = 0;
 
-function isModulesPort(value: unknown): value is { modules: MessagePort } {
-  return typeof value === "object" && value !== null && "modules" in value;
-}
+const workerDataSchema = z.object({ modules: z.instanceof(MessagePort) });
 
 interface Harness {
-  run(report: (result: unknown) => void): Promise<void>;
-}
-
-function isHarness(value: unknown): value is Harness {
-  return typeof value === "object" && value !== null && "run" in value && typeof value.run === "function";
+  run(report: (result: Report) => void): Promise<void>;
 }
 
 roInitialize(singleThreadedApartment);
-const data: unknown = workerData;
-if (!isModulesPort(data)) {
-  throw new Error("the worker needs the module server's port");
-}
+const data = workerDataSchema.parse(workerData);
 
 const { runner } = createWindowModuleRunner(data.modules);
-const harness: unknown = await runner.import("/test/mount-all.svelte.ts");
-if (!isHarness(harness)) {
+const harness = await runner.import<Harness>("/test/mount-all.svelte.ts");
+const isHarness = typeof harness.run === "function";
+if (!isHarness) {
   throw new Error("mount-all.svelte.ts exports no run()");
 }
 

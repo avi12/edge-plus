@@ -1,5 +1,5 @@
 import { compileSvelte } from "./compile.ts";
-import { compileDiagnostic, describeError, formatDiagnostic } from "./diagnostics.ts";
+import { compileDiagnostic, describeError, errorOf, formatDiagnostic } from "./diagnostics.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -9,11 +9,11 @@ import { test } from "node:test";
 const brokenSource = "<script>\n  let a = 1;\n</script>\n\n<div>\n  {#if a}\n</div>\n";
 const brokenFile = "C:/app/bad.svelte";
 
-function compileBroken(): unknown {
+function compileBroken(): Error | null {
   try {
     compileSvelte(brokenFile, brokenSource);
   } catch (error) {
-    return error;
+    return errorOf(error);
   }
 
   return null;
@@ -30,6 +30,7 @@ test("a compile error names the file, line and column, with the code around it",
 test("a diagnostic is read from Svelte's error, or from the Vite error that wraps it", () => {
   const error = compileBroken();
   assert.ok(error instanceof Error);
+  assert.ok(error.cause instanceof Error);
   const direct = compileDiagnostic(error.cause);
   assert.equal(direct?.line, 7);
   assert.equal(direct?.column, 1);

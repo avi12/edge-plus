@@ -1,5 +1,6 @@
 import type { StyledElement } from "../../css/index.ts";
 import { styledElement } from "../../css/index.ts";
+import type { NativeValue } from "../../native-value.ts";
 import type { FrameworkElement, UIElement } from "../../winui.ts";
 import { ColumnDefinition, Grid, RowDefinition } from "../../winui.ts";
 import type { KeyedItems } from "../list/keyed-list.ts";
@@ -60,9 +61,9 @@ interface WinuiNative {
 }
 
 type WinuiElement = ElementNode<WinuiNative>;
-type AttributeHandler = (control: UIElement, name: string, value: unknown) => void;
-type ElementAttributeHandler = (element: WinuiElement, control: UIElement, value: unknown) => void;
-type TextConverter = (text: string, property: string) => unknown;
+type AttributeHandler = (control: UIElement, name: string, value: NativeValue) => void;
+type ElementAttributeHandler = (element: WinuiElement, control: UIElement, value: NativeValue) => void;
+type TextConverter = (text: string, property: string) => NativeValue;
 
 // What an app with Styles of its own makes of `class="..."`, before the
 // component's <style> rules see the same string.
@@ -77,7 +78,7 @@ const wordSeparator = "-";
 const thicknessProperties = new Set(["margin", "padding", "borderThickness"]);
 // The classes and enums a tag, an enum-valued attribute or an attached
 // property may name, by their WinUI names; the app registers its bindings.
-const controls = new Map<string, unknown>();
+const controls = new Map<string, NativeValue>();
 let classHandler: ClassHandler | null = null;
 const gridLengths = new Map<GridUnit, (length: GridLength) => object>([
   [GridUnit.Auto, () => autoLength()],
@@ -87,7 +88,7 @@ const gridLengths = new Map<GridUnit, (length: GridLength) => object>([
 
 // `winui` is the app's one import site of the bindings: every export it has
 // becomes a class a tag can name. Later calls add to earlier ones.
-export function registerControls(winui: Record<string, unknown>): void {
+export function registerControls(winui: Record<string, NativeValue>): void {
   for (const [name, value] of Object.entries(winui)) {
     controls.set(name, value);
   }
@@ -97,19 +98,19 @@ export function setClassHandler(handler: ClassHandler | null): void {
   classHandler = handler;
 }
 
-function isControlClass(value: unknown): value is new () => UIElement {
+function isControlClass(value: NativeValue): value is new () => UIElement {
   return typeof value === "function" && "prototype" in value;
 }
 
-function isControl(value: unknown): value is UIElement {
+function isControl(value: NativeValue): value is UIElement {
   return isRecord(value);
 }
 
-function isFrameworkElement(value: unknown): value is FrameworkElement {
+function isFrameworkElement(value: NativeValue): value is FrameworkElement {
   return isRecord(value) && "margin" in value;
 }
 
-function nativeLength(text: string): unknown {
+function nativeLength(text: string): NativeValue {
   const length = gridLength(text);
   return gridLengths.get(length.unit)?.(length);
 }
@@ -118,7 +119,7 @@ function nativeThickness(text: string): object {
   return thickness(...thicknessSides(text));
 }
 
-function enumMember(property: string, name: string): unknown {
+function enumMember(property: string, name: string): NativeValue {
   const typeName = pascalCase(property);
   const member = read(controls.get(typeName), name);
   if (member === undefined) {
@@ -128,7 +129,7 @@ function enumMember(property: string, name: string): unknown {
   return member;
 }
 
-function numberOrMember(text: string, property: string): unknown {
+function numberOrMember(text: string, property: string): NativeValue {
   return isNumeric(text) ? Number(text) : enumMember(property, text);
 }
 
@@ -140,13 +141,13 @@ const textConverters = new Map<string, TextConverter>([
   ["number", numberOrMember]
 ]);
 
-function boxedText(text: string): unknown {
+function boxedText(text: string): NativeValue {
   return boxed(text);
 }
 
 // A quoted value as the type the property holds now: an enum member by name,
 // a number, a flag or a Thickness.
-function convert(control: UIElement, property: string, value: unknown): unknown {
+function convert(control: UIElement, property: string, value: NativeValue): NativeValue {
   if (typeof value !== "string") {
     return value;
   }
@@ -169,7 +170,7 @@ function stylingOf(element: WinuiElement, control: UIElement): StyledElement {
   return element.native.styled;
 }
 
-function applyClass(element: WinuiElement, control: UIElement, value: unknown): void {
+function applyClass(element: WinuiElement, control: UIElement, value: NativeValue): void {
   const classNames = String(value ?? "");
   classHandler?.(control, classNames);
   const isStyled = element.native.styled !== null || classNames.trim() !== "";
@@ -180,7 +181,7 @@ function applyClass(element: WinuiElement, control: UIElement, value: unknown): 
 
 // Svelte hands over the whole style attribute, style:name={value}
 // directives merged into it.
-function applyInlineStyle(element: WinuiElement, control: UIElement, value: unknown): void {
+function applyInlineStyle(element: WinuiElement, control: UIElement, value: NativeValue): void {
   const isRemoved = value === null || value === undefined;
   const isUnstyled = isRemoved && element.native.styled === null;
   if (isUnstyled) {
@@ -209,13 +210,13 @@ function definitionsHandler(type: new () => object, collectionName: string, size
   };
 }
 
-function applyAttached(control: UIElement, name: string, value: unknown): void {
+function applyAttached(control: UIElement, name: string, value: NativeValue): void {
   const [owner = "", attached = ""] = name.split(attachedSeparator);
   const isNumber = typeof value === "string" && isNumeric(value);
   call(controls.get(pascalCase(owner)), `set${pascalCase(attached)}`, control, isNumber ? Number(value) : value);
 }
 
-function applyProperty(control: UIElement, name: string, value: unknown): void {
+function applyProperty(control: UIElement, name: string, value: NativeValue): void {
   const property = camelCase(name);
   write(control, property, convert(control, property, value));
 }
@@ -234,7 +235,7 @@ function attributeHandler(name: string): AttributeHandler {
   return namedAttributes.get(name) ?? (name.includes(attachedSeparator) ? applyAttached : applyProperty);
 }
 
-function applyAttribute(element: WinuiElement, name: string, value: unknown): void {
+function applyAttribute(element: WinuiElement, name: string, value: NativeValue): void {
   const control = element.native.control;
   if (control === null) {
     return;
@@ -275,7 +276,7 @@ function keyOf(control: UIElement): string {
 
 // The native collection as keyed-list sees it, read through `placed`: a
 // collection hands back a new wrapper for a control on every read.
-function placedItems(element: WinuiElement, collection: unknown): KeyedItems<UIElement> {
+function placedItems(element: WinuiElement, collection: NativeValue): KeyedItems<UIElement> {
   const placed = element.native.placed;
   return {
     get size() {
@@ -367,7 +368,7 @@ function syncParent(element: WinuiElement): void {
 // The event a lower-case name (Svelte's ontoggled) stands for: onToggled.
 function eventMethod(control: UIElement, type: string): string {
   const wanted = `on${type}`.toLowerCase();
-  for (let prototype: unknown = control; isRecord(prototype); prototype = Object.getPrototypeOf(prototype)) {
+  for (let prototype: NativeValue = control; isRecord(prototype); prototype = Object.getPrototypeOf(prototype)) {
     const name = Object.getOwnPropertyNames(prototype).find(key => key.toLowerCase() === wanted);
     if (name !== undefined) {
       return name;
@@ -384,7 +385,7 @@ function eventMethod(control: UIElement, type: string): string {
 // inline function is handed over as it is, so `on-content={() => "On"}` is
 // the form that works, read once when the element is made. A property that
 // changes is set through {@attach control(...)}, as components do.
-function applyPropertyNamedOn(control: UIElement, type: string, thunk: unknown): void {
+function applyPropertyNamedOn(control: UIElement, type: string, thunk: NativeValue): void {
   const name = `on${type}`;
   const guidance = `${name} on a raw element must be an inline function returning the value: ${name}={() => value}`;
   if (!isThunk(thunk)) {
@@ -399,11 +400,11 @@ function applyPropertyNamedOn(control: UIElement, type: string, thunk: unknown):
   applyProperty(control, name, value);
 }
 
-function isThunk(value: unknown): value is () => unknown {
+function isThunk(value: NativeValue): value is () => NativeValue {
   return typeof value === "function";
 }
 
-function valueOf(thunk: () => unknown, guidance: string): unknown {
+function valueOf(thunk: () => NativeValue, guidance: string): NativeValue {
   try {
     return thunk();
   } catch (error) {
@@ -415,7 +416,7 @@ function valueOf(thunk: () => unknown, guidance: string): unknown {
 // can take the old one's place with the same attributes.
 const hostOf = new WeakMap<UIElement, WinuiElement>();
 
-function hostControl(element: WinuiElement, control: unknown): void {
+function hostControl(element: WinuiElement, control: NativeValue): void {
   // The styling belongs to the control it was made for.
   disposeStyling(element);
   element.native.control = isControl(control) ? control : null;
@@ -425,7 +426,7 @@ function hostControl(element: WinuiElement, control: unknown): void {
   }
 }
 
-function placeHost(element: WinuiElement, control: unknown): void {
+function placeHost(element: WinuiElement, control: NativeValue): void {
   hostControl(element, control);
   for (const [name, value] of element.attributes) {
     if (name !== hostAttribute) {
@@ -529,7 +530,7 @@ const winuiHost: NativeHost<WinuiNative> = {
 };
 
 // What ends the subscription, or null for a handler that is not one.
-function subscribe(control: UIElement, type: string, handler: unknown): (() => void) | null {
+function subscribe(control: UIElement, type: string, handler: NativeValue): (() => void) | null {
   const isPropertyNamedOn = type.startsWith(wordSeparator);
   if (isPropertyNamedOn) {
     applyPropertyNamedOn(control, type, handler);
@@ -587,7 +588,7 @@ export function unwatchRoot(fragment: FragmentNode<WinuiNative>): void {
 
 const gridPlacements = ["Row", "Column", "RowSpan", "ColumnSpan"];
 
-function replaceInCollection(collection: unknown, previous: FrameworkElement, next: FrameworkElement): void {
+function replaceInCollection(collection: NativeValue, previous: FrameworkElement, next: FrameworkElement): void {
   const index = Number(call(collection, "indexOf", previous));
   call(collection, "removeAt", index);
   call(collection, "insertAt", index, next);

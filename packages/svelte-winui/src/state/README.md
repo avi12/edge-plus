@@ -33,11 +33,24 @@ const channel = createHostChannel(createStdioTransport());
 const view = hostState<View>(channel, "view");   // View: the app's own type
 view.current?.cards[0].title;                    // reactive, undefined before the snapshot
 await view.ready;                                // the first snapshot has arrived
-await channel.send<Action>({ kind: "toggle" }); // resolves on the host's reply, rejects with HostError
+await channel.send({ kind: "toggle" });         // resolves when the host did it, rejects with HostError
 ```
 
-`State` and `Action` are the app's types (Edge+ generates them from Rust); the
-channel checks that a value is JSON and trusts the host for its shape.
+`State` and the channel's `Action` (`createHostChannel<Action>`) are the app's
+types (Edge+ generates them from Rust); the channel checks that a value is JSON
+and trusts the host for its shape.
+
+The channel is built on `messaging/` (typed messages after
+@webext-core/messaging): `StateProtocol` is its ProtocolMap, keyed by
+`MessageType`, and `channel.messaging` is the link itself. A host's own message
+types are further handlers on it, with the app's protocol as the second type
+parameter:
+
+```ts
+const channel = createHostChannel<Action, NoticeProtocol>(transport);
+channel.messaging.onMessage(NoticeType.notice, message => show(message.data.text));
+await channel.messaging.sendMessage(NoticeType.place, 2);
+```
 
 ### Wire protocol
 
@@ -45,12 +58,24 @@ One JSON value per message, ordered, on any transport (`transports/`). On
 stdio it is one line each, and stdout carries nothing else: call
 `reserveStdout()` first so `console.log` goes to stderr.
 
-| Direction | Message |
-|---|---|
-| host to window | `{type:"snapshot", name, value}` the whole value; a later one is merged in place |
-| host to window | `{type:"patch", name, ops}` applied in place, in order |
-| host to window | `{type:"reply", id, error}` `error` is `null` or text |
-| window to host | `{type:"action", id, action}` |
+Every message is a request frame and is answered by a response frame
+(`messaging/`):
+
+```
+request   {id, type, data, timestamp}
+response  {id, response}  or  {id, error}
+```
+
+| Direction | `type` | `data` | answered with |
+|---|---|---|---|
+| host to window | `snapshot` | `{name, value}` the whole value; a later one is merged in place | `null` |
+| host to window | `patch` | `{name, ops}` applied in place, in order | `null` |
+| window to host | `action` | the action | `null`, or `error` text when the host could not |
+
+A host written in JavaScript uses `defineMessaging<StateProtocol>(transport)`
+from `svelte-winui/messaging` and registers `onMessage(MessageType.action, ...)`
+(a thrown error is the refusal); a Rust host reads and writes the frames.
+Ids are the sender's own counter, and a response carries the id of its request.
 
 Patch operations (paths are arrays of keys and indices; an empty path is the
 root):
@@ -62,13 +87,12 @@ root):
 
 A patch is applied property by property to the existing reactive object, so a
 binding re-runs only when what it read changed. Send the patches of a change
-before its reply: when `send` resolves, the state already shows the result.
+before the action's answer: when `send` resolves, the state already shows the result.
 `diff(previous, next)` makes the operations for a JavaScript host; a Rust host
 sends the same shapes. A malformed message, a patch before its snapshot, a path
-that does not exist or a reply for no action is reported to `onError` (stderr by
-default) and dropped; the remedy is a new snapshot. Messages with other `type`s
-(a host's own notices) go to `onOther`. When the link closes, waiting and later
-`send`s reject with `HostClosedError`.
+that does not exist or a `type` nobody handles is reported to `onError` (stderr
+by default) and answered with an error; the remedy is a new snapshot. When the
+link closes, waiting and later `send`s reject with `HostClosedError`.
 
 ## Running
 

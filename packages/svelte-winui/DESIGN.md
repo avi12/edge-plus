@@ -110,7 +110,7 @@ WinUI meaning fails the build with its line.
 
 Svelte's runes, context, `svelte/reactivity` and stores work unchanged. The
 package adds: updates scheduled on WinUI's DispatcherQueue (app code never
-calls `flushSync`), and `hostState<T>()` / `send(action)` over a transport
+calls `flushSync`), and `hostState<T>()` / `send(action)` over a transport (typed messages, `src/messaging/`)
 (JSON lines on stdio by default), so state the host owns appears as one
 `$state` object in the window.
 

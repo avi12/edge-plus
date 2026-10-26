@@ -1,3 +1,4 @@
+import type { NativeValue } from "../../native-value.ts";
 import { read } from "../../renderer/host/reflect.ts";
 import { loadWinuiCatalogue } from "../translate/catalogue.ts";
 import { translateStyleSheet } from "../translate/translate.ts";
@@ -16,10 +17,10 @@ interface FakeControl {
   styleChanges: number;
   columns: string | null;
   handlers: Map<string, () => void>;
-  properties: Record<string, unknown>;
+  properties: Record<string, NativeValue>;
 }
 
-function control(properties: Record<string, unknown> = {}): FakeControl {
+function control(properties: Record<string, NativeValue> = {}): FakeControl {
   return {
     style: null,
     styleChanges: 0,

@@ -1,4 +1,5 @@
-import { describeError } from "./diagnostics.ts";
+import type { Json } from "../messaging/json.ts";
+import { describeError, errorOf } from "./diagnostics.ts";
 import { format } from "node:util";
 import type { MessagePort } from "node:worker_threads";
 import { receiveMessageOnPort } from "node:worker_threads";
@@ -30,7 +31,7 @@ export const logEvent = "winui:log";
 const noTimeout = 0;
 const fullReload = "full-reload";
 
-function isHotPayload(value: unknown): value is HotPayload {
+function isHotPayload(value: HotPayload | Json): value is HotPayload {
   return typeof value === "object" && value !== null && "type" in value;
 }
 
@@ -39,11 +40,11 @@ function restartNotice(file: string | undefined): string {
 }
 
 export function createWindowModuleRunner(port: MessagePort): WindowModuleRunner {
-  let handle: ((payload: HotPayload) => unknown) | null = null;
+  let handle: ((payload: HotPayload) => void) | null = null;
 
   // An error is described by where it is (a compile error's file and line),
   // not dumped with everything it carries.
-  function log(...messages: unknown[]): void {
+  function log(...messages: Array<string | Error>): void {
     const lines = messages.map(message => message instanceof Error ? describeError(message) : message);
     port.postMessage({
       type: "custom",
@@ -55,19 +56,19 @@ export function createWindowModuleRunner(port: MessagePort): WindowModuleRunner 
   // An update that cannot be applied (a component that no longer compiles)
   // is reported and the window goes on with the code it has: an exception
   // here would end it, since it surfaces in a callback WinUI made.
-  function reportFailure(error: unknown): void {
+  function reportFailure(error: Error): void {
     log("the hot update failed:", error);
   }
 
   function handleSafely(payload: HotPayload): void {
     try {
-      Promise.resolve(handle?.(payload)).catch(reportFailure);
+      Promise.resolve(handle?.(payload)).catch((error: Error) => reportFailure(errorOf(error)));
     } catch (error) {
-      reportFailure(error);
+      reportFailure(errorOf(error));
     }
   }
 
-  function deliver(message: unknown): void {
+  function deliver(message: HotPayload | Json): void {
     if (!isHotPayload(message)) {
       return;
     }
@@ -82,7 +83,7 @@ export function createWindowModuleRunner(port: MessagePort): WindowModuleRunner 
     handleSafely(message);
   }
 
-  process.on("unhandledRejection", error => reportFailure(error));
+  process.on("unhandledRejection", error => reportFailure(errorOf(error)));
   const logger: HMRLogger = {
     debug: log,
     error: log

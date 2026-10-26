@@ -27,53 +27,41 @@ const worker = new Worker(new URL("./window.ts", import.meta.url), {
   },
   transferList: [channel.port2]
 });
-const transport = createMessagePortTransport(channel.port1);
+const messaging = defineMessaging<StateProtocol>(createMessagePortTransport(channel.port1), {
+  onError: error => process.stderr.write(
+    `host: ${error.message}
+`
+  )
+});
 let state: Json = {
   count: 0,
   history: []
 };
 
 function publish(next: Json): void {
-  transport.send({
-    type: MessageType.patch,
+  void messaging.sendMessage(MessageType.patch, {
     name: viewName,
     ops: diff(state, next)
   });
   state = next;
 }
 
-transport.listen({
-  message(value) {
-    const action = isJsonObject(value) ? value["action"] : undefined;
-    const isAction = isJsonObject(value) && value["type"] === MessageType.action && isJsonObject(action);
-    if (!isAction) {
-      return;
-    }
+// A refusal is a thrown error: the window's `send` rejects with its text.
+messaging.onMessage(MessageType.action, message => {
+  const action = message.data;
+  const count = isJsonObject(state) ? state["count"] : undefined;
+  const history = isJsonObject(state) ? state["history"] : undefined;
+  const isIncrement = isJsonObject(action) && action["kind"] === "increment" && typeof count === "number" && Array.isArray(history);
+  if (!isIncrement) {
+    throw new Error("the host does not do that");
+  }
 
-    let error: string | null = null;
-    const count = isJsonObject(state) ? state["count"] : undefined;
-    const history = isJsonObject(state) ? state["history"] : undefined;
-    const isIncrement = action["kind"] === "increment" && typeof count === "number" && Array.isArray(history);
-    if (isIncrement) {
-      publish({
-        count: count + 1,
-        history: [...history, count + 1].slice(-maximumHistory)
-      });
-    } else {
-      error = "the host does not do that";
-    }
-
-    transport.send({
-      type: MessageType.reply,
-      id: value["id"],
-      error
-    });
-  },
-  malformed: reason => process.stderr.write(`host: unreadable message: ${reason}\n`),
-  closed: () => process.exit(0)
+  publish({
+    count: count + 1,
+    history: [...history, count + 1].slice(-maximumHistory)
+  });
 });
-transport.send({
-  type: MessageType.snapshot,
+void messaging.sendMessage(MessageType.snapshot, {
   name: viewName,
   value: state
 });

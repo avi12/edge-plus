@@ -4,16 +4,14 @@ export { diff } from "./diff.ts";
 export type { Holder } from "./patch.ts";
 export { applyOps, PatchError, reconcile } from "./patch.ts";
 export type {
-  ActionMessage,
-  HostMessage,
   Json,
-  PatchMessage,
+  PatchData,
   PatchOp,
   PathSegment,
-  ReplyMessage,
-  SnapshotMessage
+  SnapshotData,
+  StateProtocol
 } from "./protocol.ts";
-export { isHostMessage, MessageType, PatchOperation } from "./protocol.ts";
+export { MessageType, patchDataSchema, PatchOperation, snapshotDataSchema } from "./protocol.ts";
 export { MemoryEnd } from "./transports/memory.ts";
 export type { MessagePortOptions } from "./transports/message-port.ts";
 export { createMessagePortTransport } from "./transports/message-port.ts";

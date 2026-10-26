@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ExampleHost } from "../harness/contract.ts";
+  import type { ExampleCommand, ExampleHost } from "../harness/contract.ts";
   import { makeItems } from "./example-item.ts";
   import ExampleRow from "./ExampleRow.svelte";
   import { liveRows, rowStats } from "./row-stats.ts";
@@ -33,7 +33,7 @@
   }
 
   // What a test or a script can ask of the window.
-  const commands = new Map<string, (command: Record<string, unknown>) => void>([
+  const commands = new Map<string, (command: ExampleCommand) => void>([
     ["stats", () => report("stats")],
     ["move", command => {
       const direction = command["direction"] === "up" ? MoveDirection.Up : MoveDirection.Down;

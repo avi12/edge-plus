@@ -3,7 +3,7 @@
 // window.
 
 export type { RequestFrame, ResponseFrame } from "./frame.ts";
-export { isRequestFrame, isResponseFrame } from "./frame.ts";
+export { requestFrameSchema, responseFrameSchema } from "./frame.ts";
 export type { Messaging, MessagingOptions } from "./messaging.ts";
 export { defineMessaging, MessagingClosedError, MessagingError } from "./messaging.ts";
 export type {

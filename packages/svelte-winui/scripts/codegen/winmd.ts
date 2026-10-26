@@ -181,10 +181,13 @@ export interface MethodInfo {
   returns: TypeSignature;
 }
 
+// What an attribute argument holds: a string or type name, or an integer.
+export type AttributeValue = string | number | null;
+
 export interface AttributeInfo {
   type: TypeName;
-  fixed: unknown[];
-  named: Map<string, unknown>;
+  fixed: AttributeValue[];
+  named: Map<string, AttributeValue>;
 }
 
 export interface InterfaceReference {
@@ -667,7 +670,7 @@ export class WinMdFile {
     };
   }
 
-  private attributeValue(reader: BlobReader, type: TypeSignature): unknown {
+  private attributeValue(reader: BlobReader, type: TypeSignature): AttributeValue {
     if (type.kind === "primitive") {
       const widths: Record<string, number> = {
         Boolean: 1,
@@ -754,7 +757,7 @@ export class WinMdFile {
     };
   }
 
-  private readNamedArguments(value: BlobReader, named: Map<string, unknown>): void {
+  private readNamedArguments(value: BlobReader, named: Map<string, AttributeValue>): void {
     const namedCount = value.integer(2);
     for (let index = 0; index < namedCount; index++) {
       value.byte();
@@ -779,8 +782,8 @@ export class WinMdFile {
     const value = this.blob(this.cell(TableId.CustomAttribute, row, 2));
     const prolog = value.integer(2);
     const hasProlog = prolog === 1;
-    const fixed: unknown[] = [];
-    const named = new Map<string, unknown>();
+    const fixed: AttributeValue[] = [];
+    const named = new Map<string, AttributeValue>();
     if (hasProlog) {
       try {
         for (const parameterType of parameterTypes) {

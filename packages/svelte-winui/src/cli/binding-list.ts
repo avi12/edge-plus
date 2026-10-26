@@ -1,26 +1,32 @@
+import type { Json } from "../messaging/json.ts";
+import { readList, readRecord } from "./json-shape.ts";
+import { z } from "zod";
+
 // The class list `winapp` generates bindings for (package.json's
 // winapp.jsBindings.additionalWinmds), and how an app's list takes in the
 // classes this package needs. Shared by the generator, which keeps the
 // Edge+ panel's list current, and the `setup` command of an app that uses
 // the package.
 
-export interface BindingEntry {
-  namespace: string;
+const bindingEntrySchema = z.object({
+  namespace: z.string(),
   // Absent: every class of the namespace.
-  classes?: string[];
-}
+  classes: z.array(z.string()).optional()
+});
+
+export type BindingEntry = z.infer<typeof bindingEntrySchema>;
 
 export interface ClassName {
   namespace: string;
   name: string;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-export function isBindingEntry(value: unknown): value is BindingEntry {
-  return isRecord(value) && typeof value["namespace"] === "string";
+// The entries of a parsed list; what is not an entry is left out.
+export function bindingEntriesOf(list: Json[]): BindingEntry[] {
+  return list.flatMap(item => {
+    const entry = bindingEntrySchema.safeParse(item);
+    return entry.success ? [entry.data] : [];
+  });
 }
 
 function compareText(left: string, right: string): number {
@@ -55,15 +61,20 @@ export function mergedEntries(existing: BindingEntry[], wanted: ClassName[]): Bi
 // of the file is kept as it is.
 export function packageJsonWithBindings(original: string, wanted: ClassName[]): string {
   const newline = original.includes("\r\n") ? "\r\n" : "\n";
-  const parsed: unknown = JSON.parse(original);
-  const winapp = isRecord(parsed) ? parsed["winapp"] : undefined;
-  const bindings = isRecord(winapp) ? winapp["jsBindings"] : undefined;
-  const list = isRecord(bindings) ? bindings["additionalWinmds"] : undefined;
-  const hasAdditionalWinmds = isRecord(bindings) && Array.isArray(list);
+  const root = readRecord(JSON.parse(original));
+  const winapp = readRecord(root?.["winapp"]);
+  const bindings = readRecord(winapp?.["jsBindings"]);
+  const list = readList(bindings?.["additionalWinmds"]);
+  const hasAdditionalWinmds =
+    root !== undefined && winapp !== undefined && bindings !== undefined && list !== undefined;
   if (!hasAdditionalWinmds) {
     throw new Error("package.json has no winapp.jsBindings.additionalWinmds");
   }
 
-  bindings["additionalWinmds"] = mergedEntries(list.filter(isBindingEntry), wanted);
-  return `${JSON.stringify(parsed, null, 2).replaceAll("\n", newline)}${newline}`;
+  // Each level is a copy with its keys in their order, so putting it back
+  // keeps the file's layout.
+  bindings["additionalWinmds"] = mergedEntries(bindingEntriesOf(list), wanted);
+  winapp["jsBindings"] = bindings;
+  root["winapp"] = winapp;
+  return `${JSON.stringify(root, null, 2).replaceAll("\n", newline)}${newline}`;
 }

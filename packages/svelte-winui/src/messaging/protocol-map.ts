@@ -11,21 +11,24 @@
 // The keys are an enum's members, so a message type is written once and
 // never as a string literal at the producer and the consumer.
 
-// A message whose data is TData and whose handler answers TReturn. The
-// members only carry the types; they never exist at run time.
-export interface ProtocolWithReturn<TData, TReturn> {
+import type { WireValue } from "./json.ts";
+
+// A message whose data is TData and whose handler answers TReturn, both JSON
+// values or `void`, since they cross a link. The members only carry the
+// types; they never exist at run time.
+export interface ProtocolWithReturn<TData extends WireValue, TReturn extends WireValue> {
   readonly dataType?: TData;
   readonly returnType?: TReturn;
 }
 
 // A map may also be written with functions, as webext-core allows:
 // `greet(data: { name: string }): string`.
-export type GetDataType<TProtocol> = TProtocol extends (data: infer TData) => unknown ? TData
-  : TProtocol extends ProtocolWithReturn<infer TData, unknown> ? TData
+export type GetDataType<TProtocol> = TProtocol extends (data: infer TData extends WireValue) => WireValue ? TData
+  : TProtocol extends ProtocolWithReturn<infer TData, WireValue> ? TData
     : never;
 
-export type GetReturnType<TProtocol> = TProtocol extends (data: never) => infer TReturn ? TReturn
-  : TProtocol extends ProtocolWithReturn<unknown, infer TReturn> ? TReturn
+export type GetReturnType<TProtocol> = TProtocol extends (data: never) => (infer TReturn extends WireValue) ? TReturn
+  : TProtocol extends ProtocolWithReturn<WireValue, infer TReturn> ? TReturn
     : never;
 
 // What a handler is given: the data with the frame's identity.

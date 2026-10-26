@@ -1,8 +1,8 @@
 import { registerHooks } from "node:module";
-import type { MessagePort } from "node:worker_threads";
-import { workerData } from "node:worker_threads";
+import { MessagePort, workerData } from "node:worker_threads";
 import { svelteHooks } from "svelte-winui/testing";
 import { runOnUiThread } from "svelte-winui/thread";
+import { z } from "zod";
 
 // The counter example's UI thread: the package's window start around its state
 // layer. The host's messages come in through a MessagePort drained by a
@@ -10,17 +10,15 @@ import { runOnUiThread } from "svelte-winui/thread";
 
 const pollMilliseconds = 30;
 
-function isPort(value: unknown): value is MessagePort {
-  return typeof value === "object" && value !== null && "postMessage" in value;
-}
+const workerDataSchema = z.object({ port: z.instanceof(MessagePort) });
 
-function portFrom(data: unknown): MessagePort {
-  const port = typeof data === "object" && data !== null && "port" in data ? data.port : undefined;
-  if (!isPort(port)) {
+function portFrom(data: object): MessagePort {
+  const parsed = workerDataSchema.safeParse(data);
+  if (!parsed.success) {
     throw new Error("the host passed no port");
   }
 
-  return port;
+  return parsed.data.port;
 }
 
 await runOnUiThread(async () => {

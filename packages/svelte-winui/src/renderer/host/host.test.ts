@@ -1,3 +1,4 @@
+import type { NativeValue } from "../../native-value.ts";
 import { svelteHooks } from "../../vite/loader.ts";
 import { FakeBorder, fakeControls, FakePanel, FakeToggle } from "../testing/fake-controls.ts";
 import { registerControls, setClassHandler } from "./host.ts";
@@ -18,7 +19,7 @@ registerHooks(svelteHooks(path.join(import.meta.dirname, "host.ts")));
 const { mountControl } = await import("./mount.svelte.ts");
 const { default: Fixture } = await import("../testing/Host.fixture.svelte");
 
-interface Props extends Record<string, unknown> {
+interface Props extends Record<string, NativeValue> {
   isOn: boolean;
   label: string;
   isShown: boolean;
@@ -38,7 +39,7 @@ function mountFixture(overrides: Partial<Props> = {}) {
     ...overrides
   });
   // Typed as the WinUI control it stands in for.
-  const root: unknown = mounted.root;
+  const root: object = mounted.root;
   assert.ok(root instanceof FakePanel);
   const [toggle, staticToggle] = root.children.items;
   assert.ok(toggle instanceof FakeToggle);

@@ -2,8 +2,8 @@ import * as bindings from "../../src/components/generated/bindings.ts";
 import { registerControls } from "../../src/renderer/host/host.ts";
 import { runWindow } from "../../src/window/index.ts";
 import { DispatcherQueue } from "../../src/winui.ts";
-import type { ExampleHost } from "./contract.ts";
-import { isExampleModule } from "./contract.ts";
+import type { ExampleCommand, ExampleHost } from "./contract.ts";
+import { exampleCommandSchema, exampleModuleSchema } from "./contract.ts";
 import type { MessagePort } from "node:worker_threads";
 import { receiveMessageOnPort } from "node:worker_threads";
 
@@ -17,21 +17,18 @@ const ticksPerMillisecond = 10_000n;
 
 // Held for as long as the window runs: a timer whose wrapper is collected
 // stops.
-const heldTimers = new Set<unknown>();
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
+const heldTimers = new Set<ReturnType<ReturnType<typeof DispatcherQueue.getForCurrentThread>["createTimer"]>>();
 
 export type RunExample = (entry: string, link: MessagePort, options: Record<string, string>) => Promise<void>;
 
 export async function runExample(entry: string, link: MessagePort, options: Record<string, string>): Promise<void> {
-  const example: unknown = await import(/* @vite-ignore */ entry);
-  if (!isExampleModule(example)) {
+  const parsedExample = exampleModuleSchema.safeParse(await import(/* @vite-ignore */ entry));
+  if (!parsedExample.success) {
     throw new Error(`${entry} exports no start()`);
   }
 
-  const handlers: Array<(command: Record<string, unknown>) => void> = [];
+  const { start } = parsedExample.data;
+  const handlers: Array<(command: ExampleCommand) => void> = [];
   const host: ExampleHost = {
     report: message => link.postMessage(message),
     onCommand(handler) {
@@ -42,16 +39,16 @@ export async function runExample(entry: string, link: MessagePort, options: Reco
   await runWindow({
     onStart() {
       registerControls(bindings);
-      example.start(host);
+      start(host);
       const timer = DispatcherQueue.getForCurrentThread().createTimer();
       timer.interval = { duration: BigInt(commandMilliseconds) * ticksPerMillisecond };
       timer.isRepeating = true;
       timer.onTick(() => {
         let received = receiveMessageOnPort(link);
         while (received !== undefined) {
-          const command: unknown = received.message;
-          if (isRecord(command)) {
-            handlers.forEach(handler => handler(command));
+          const parsedCommand = exampleCommandSchema.safeParse(received.message);
+          if (parsedCommand.success) {
+            handlers.forEach(handler => handler(parsedCommand.data));
           }
 
           received = receiveMessageOnPort(link);

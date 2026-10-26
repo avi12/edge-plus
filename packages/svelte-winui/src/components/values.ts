@@ -1,3 +1,5 @@
+import type { BoxedValue, NativeValue } from "../native-value.ts";
+
 // The plain values a component's props take, and how each is read: pure, so
 // they are tested without WinUI. convert.ts turns them into the bindings'.
 
@@ -59,7 +61,7 @@ export type ColorInput = string | ColorValue;
 
 // An object property such as a button's content takes any value; a string,
 // number or boolean is boxed first.
-export type ObjectInput = unknown;
+export type ObjectInput = BoxedValue;
 
 const cssSeparator = /\s+/u;
 const listSeparator = ",";
@@ -211,7 +213,7 @@ export function parseColor(text: string): ColorValue | null {
 
 // [Owner, "Property", value]: Owner's static Set<Property> is called with the
 // control and the value. A list of these sets several.
-export type AttachedEntry = readonly [owner: object, property: string, value: unknown];
+export type AttachedEntry = readonly [owner: object, property: string, value: NativeValue];
 export type AttachedInput = AttachedEntry | readonly AttachedEntry[];
 
 function isEntry(input: AttachedInput): input is AttachedEntry {

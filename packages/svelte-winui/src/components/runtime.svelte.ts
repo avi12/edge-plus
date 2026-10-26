@@ -1,3 +1,5 @@
+import type { Snippet } from "svelte";
+
 // What a generated component links its control to its props with. A prop
 // becomes an effect that writes the control's property when it changes; an
 // event prop becomes one subscription for the control's life; a bindable
@@ -40,7 +42,7 @@ export class Linker {
   }
 
   // The property the children are: a child, when there is one, is the value.
-  contentProperty<Props extends { children?: unknown }, Key extends keyof Props>(
+  contentProperty<Props extends { children?: Snippet }, Key extends keyof Props>(
     props: Props,
     key: Key,
     apply: (value: Props[Key] & ({} | null)) => void

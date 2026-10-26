@@ -119,7 +119,7 @@ test("a stray frame is reported, not thrown", async () => {
   const reported: string[] = [];
   const [left, right] = MemoryEnd.pair();
   defineMessaging<PingProtocol>(right, { onError: error => reported.push(error.message) });
-  left.send({ hello: "world" });
+  left.sendJson({ hello: "world" });
   await new Promise(resolve => setTimeout(resolve, 5));
   assert.equal(reported.length, 1);
 });

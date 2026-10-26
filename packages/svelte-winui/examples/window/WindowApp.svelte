@@ -1,6 +1,7 @@
 <script lang="ts">
+  import type { Json } from "../../src/messaging/json.ts";
   import { DesktopAcrylicBackdrop, MicaBackdrop, MicaKind, projectAs } from "../../src/winui.ts";
-  import type { ExampleHost } from "../harness/contract.ts";
+  import type { ExampleCommand, ExampleHost } from "../harness/contract.ts";
   import { flush } from "svelte-winui";
   import { Window } from "svelte-winui/components";
   import type { WindowBounds, WindowHandle } from "svelte-winui/components";
@@ -8,7 +9,7 @@
   import { Backdrop } from "svelte-winui/window";
 
   // The material named, or acrylic.
-  function backdropOf(name: unknown): Backdrop {
+  function backdropOf(name: Json | undefined): Backdrop {
     return Object.values(Backdrop).find(candidate => candidate === name) ?? Backdrop.Acrylic;
   }
 
@@ -66,7 +67,7 @@
     });
   }
 
-  const commands = new Map<string, (command: Record<string, unknown>) => void>([
+  const commands = new Map<string, (command: ExampleCommand) => void>([
     ["info", () => report("info")],
     ["backdrop", command => {
       backdrop = backdropOf(command["value"]);

@@ -1,18 +1,16 @@
 // What a host written in JavaScript (a Node process, Electron's main process)
-// needs to own state a window shows: the messages, `diff` for the patches, and
+// needs to own state a window shows: the protocol (`StateProtocol`, `MessageType`), `diff` for the patches, and
 // the transports. Nothing here uses runes, so it loads in plain Node; the
 // window's side (`hostState`, `createHostChannel`) is `svelte-winui/state`.
 
 export { diff } from "./diff.ts";
 export type {
-  ActionMessage,
-  HostMessage,
   Json,
-  PatchMessage,
+  PatchData,
   PatchOp,
   PathSegment,
-  ReplyMessage,
-  SnapshotMessage
+  SnapshotData,
+  StateProtocol
 } from "./protocol.ts";
 export { isJsonObject, MessageType, PatchOperation } from "./protocol.ts";
 export type { MessagePortOptions } from "./transports/message-port.ts";

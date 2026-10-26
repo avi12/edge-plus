@@ -80,7 +80,7 @@ test("a rule nested in a rule is recorded where it starts", () => {
 });
 
 test("a stray closing brace is a syntax error with its position", () => {
-  assert.throws(() => parseCss("a { color: red }\n}"), (error: unknown) => error instanceof CssSyntaxError && error.position.line === 2);
+  assert.throws(() => parseCss("a { color: red }\n}"), (error: Error) => error instanceof CssSyntaxError && error.position.line === 2);
 });
 
 test("a source map turns a generated position into the .svelte file's", () => {

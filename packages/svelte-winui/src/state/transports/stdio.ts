@@ -1,3 +1,5 @@
+import type { Frame as MessagingFrame } from "../../messaging/frame.ts";
+import { jsonSchema } from "../../messaging/json.ts";
 import type { Transport, TransportListener } from "./transport.ts";
 import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
@@ -11,13 +13,13 @@ export interface StdioStreams {
   output: Writable;
 }
 
-export function createStdioTransport(streams: StdioStreams = {
+export function createStdioTransport<Frame = MessagingFrame>(streams: StdioStreams = {
   input: process.stdin,
   output: process.stdout
-}): Transport {
+}): Transport<Frame> {
   return {
-    send(value) {
-      streams.output.write(`${JSON.stringify(value)}\n`);
+    send(frame) {
+      streams.output.write(`${JSON.stringify(frame)}\n`);
     },
     listen(listener: TransportListener) {
       const lines = createInterface({ input: streams.input });
@@ -28,7 +30,7 @@ export function createStdioTransport(streams: StdioStreams = {
         }
 
         try {
-          listener.message(JSON.parse(line));
+          listener.message(jsonSchema.parse(JSON.parse(line)));
         } catch (error) {
           listener.malformed(error instanceof Error ? error.message : String(error));
         }
@@ -42,7 +44,7 @@ export function createStdioTransport(streams: StdioStreams = {
 // Sends what the app prints with console.log/info/debug to stderr, so a stray
 // log line cannot corrupt the protocol. Call once, first thing in the process.
 export function reserveStdout(): void {
-  function toStderr(...values: unknown[]): void {
+  function toStderr(...values: Parameters<typeof console.error>): void {
     console.error(...values);
   }
   console.log = toStderr;

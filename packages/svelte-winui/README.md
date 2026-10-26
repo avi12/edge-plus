@@ -139,11 +139,11 @@ WinUI holds the thread):
 <!-- hello/window.ts:start -->
 
 ```ts
-import type { MessagePort } from "node:worker_threads";
-import { workerData } from "node:worker_threads";
+import { MessagePort, workerData } from "node:worker_threads";
 import { createWindowModuleRunner } from "svelte-winui/runner";
 import { runOnUiThread } from "svelte-winui/thread";
 import type * as WindowModule from "svelte-winui/window";
+import { z } from "zod";
 
 // The window: WinUI's thread. Its modules come from the host's dev server, and
 // a timer takes the server's hot updates in, since WinUI holds this thread.
@@ -154,19 +154,17 @@ const windowSize = {
   height: 320
 };
 
-function isModulesPort(value: unknown): value is { modules: MessagePort } {
-  return typeof value === "object" && value !== null && "modules" in value;
-}
+const workerDataSchema = z.object({ modules: z.instanceof(MessagePort) });
 
 await runOnUiThread(async () => {
-  const data: unknown = workerData;
-  if (!isModulesPort(data)) {
+  const parsedData = workerDataSchema.safeParse(workerData);
+  if (!parsedData.success) {
     throw new Error("the host passed no port to its dev server");
   }
 
   // Everything goes through the runner, so the window and the components
   // share one renderer.
-  const { runner, receive } = createWindowModuleRunner(data.modules);
+  const { runner, receive } = createWindowModuleRunner(parsedData.data.modules);
   const { createWindow, runWindow, startTimer } = await runner.import<typeof WindowModule>("svelte-winui/window");
   const { default: App } = await runner.import("/App.svelte");
   await runWindow({
@@ -264,9 +262,9 @@ and `send`.
 
 **Tauri** (what Edge+ does). The Rust core starts the window as a child process
 (a sidecar: your `main.ts`, or a bundled executable with Node inside) with its
-stdin and stdout piped, writes `{"type":"snapshot","name":"view","value":{...}}`
-and later `patch` lines, and reads `action` lines back, answering each with a
-`reply`. In the window, `createStdioTransport()` and `reserveStdout()` (so a
+stdin and stdout piped, writes request lines (`{"id":1,"type":"snapshot","data":{"name":"view","value":{...}},"timestamp":...}`)
+and later `patch` ones, and reads `action` requests back, answering each with a
+response line (`{"id":1,"response":null}` or `{"id":1,"error":"..."}`). In the window, `createStdioTransport()` and `reserveStdout()` (so a
 stray `console.log` goes to stderr and cannot corrupt the protocol) are the
 other end. `app/panel-tauri/ui/main.ts` is the working example, with the core in
 `app/panel-tauri/src-tauri`.

@@ -2,6 +2,8 @@
 // `file:line:column: message` and the code around it. Svelte's own errors
 // carry the pieces; Vite wraps them, keeping them on the error it throws.
 
+import { z } from "zod";
+
 export interface CompileDiagnostic {
   file: string;
   line: number;
@@ -11,40 +13,47 @@ export interface CompileDiagnostic {
   frame: string;
 }
 
-interface Position {
-  line: number;
-  column: number;
+const positionSchema = z.object({
+  line: z.number(),
+  column: z.number(),
+  file: z.string().optional().catch(undefined)
+});
+
+type Position = z.infer<typeof positionSchema>;
+
+// A field of the wrong type reads as absent, as the error may be anything a
+// compiler or plugin threw.
+function lenient<TSchema extends z.ZodType>(schema: TSchema) {
+  return schema.optional().catch(undefined);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
+// The fields of Svelte's error that a diagnostic is made of; Vite's copies
+// them onto its own error, or keeps Svelte's on `.cause`.
+const sourceSchema = z.object({
+  start: lenient(positionSchema),
+  loc: lenient(positionSchema),
+  filename: lenient(z.string()),
+  id: lenient(z.string()),
+  code: lenient(z.string()),
+  message: lenient(z.string()),
+  frame: lenient(z.string()),
+  cause: lenient(z.instanceof(Error))
+});
 
-function isPosition(value: unknown): value is Position {
-  return isRecord(value) && typeof value["line"] === "number" && typeof value["column"] === "number";
-}
+type Source = z.infer<typeof sourceSchema>;
 
-// Vite's error keeps Svelte's on `.cause`, or copies its fields onto itself.
-function sourceOf(error: unknown): Record<string, unknown> | null {
-  if (!isRecord(error)) {
-    return null;
+function sourceOf(error: Error): Source | null {
+  const source = sourceSchema.parse(error);
+  const hasPosition = source.start !== undefined || source.loc !== undefined;
+  if (hasPosition) {
+    return source;
   }
 
-  const hasPosition = isPosition(error["start"]) || isPosition(error["loc"]);
-  return hasPosition ? error : sourceOf(error["cause"]);
+  return source.cause === undefined ? null : sourceOf(source.cause);
 }
 
-function positionOf(source: Record<string, unknown>): Position | null {
-  const { start, loc } = source;
-  if (isPosition(start)) {
-    return start;
-  }
-
-  return isPosition(loc) ? loc : null;
-}
-
-function text(value: unknown, fallback: string): string {
-  return typeof value === "string" ? value : fallback;
+function positionOf(source: Source): Position | null {
+  return source.start ?? source.loc ?? null;
 }
 
 // Vite's message starts with the position again.
@@ -55,7 +64,7 @@ function firstLine(message: string): string {
   return (message.split("\n")[0] ?? message).replace(leadingPosition, "");
 }
 
-export function compileDiagnostic(error: unknown): CompileDiagnostic | null {
+export function compileDiagnostic(error: Error): CompileDiagnostic | null {
   const source = sourceOf(error);
   const position = source === null ? null : positionOf(source);
   const isLocated = source !== null && position !== null;
@@ -63,20 +72,16 @@ export function compileDiagnostic(error: unknown): CompileDiagnostic | null {
     return null;
   }
 
-  const file = text(source["filename"], text(source["id"], text(read(source["loc"], "file"), "")));
+  const file = source.filename ?? source.id ?? source.loc?.file ?? "";
   return {
     file,
     line: position.line,
     // Svelte counts columns from 0; editors from 1.
     column: position.column + 1,
-    code: text(source["code"], ""),
-    text: firstLine(text(source["message"], "compile error")),
-    frame: text(source["frame"], "")
+    code: source.code ?? "",
+    text: firstLine(source.message ?? "compile error"),
+    frame: source.frame ?? ""
   };
-}
-
-function read(value: unknown, key: string): unknown {
-  return isRecord(value) ? value[key] : undefined;
 }
 
 export function formatDiagnostic(diagnostic: CompileDiagnostic): string {
@@ -87,11 +92,20 @@ export function formatDiagnostic(diagnostic: CompileDiagnostic): string {
 
 // What an error reads as on stderr: a compile error with its position, any
 // other error as it is.
-export function describeError(error: unknown): string {
+// A value caught or rejected with, as the Error it is or one made of its text.
+export function errorOf<TThrown>(thrown: TThrown): Error {
+  return thrown instanceof Error ? thrown : new Error(String(thrown));
+}
+
+export function describeError(error: Error | string): string {
+  if (typeof error === "string") {
+    return error;
+  }
+
   const diagnostic = compileDiagnostic(error);
   if (diagnostic !== null) {
     return formatDiagnostic(diagnostic);
   }
 
-  return error instanceof Error ? error.stack ?? error.message : String(error);
+  return error.stack ?? error.message;
 }

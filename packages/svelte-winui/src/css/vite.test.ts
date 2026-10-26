@@ -1,3 +1,4 @@
+import type { NativeValue } from "../native-value.ts";
 import { winuiCss } from "./vite.ts";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -26,13 +27,15 @@ const context = {
   }
 };
 
+type HookResult = NativeValue | void;
+
 // A hook called with its own `this`, as Vite calls it, whatever stand-in the
 // test gives it for Vite's context.
-function callHook(hook: (...args: never[]) => unknown, thisArg: unknown, args: unknown[]): unknown {
+function callHook(hook: (...args: never[]) => HookResult, thisArg: object, args: NativeValue[]): HookResult {
   return Function.prototype.apply.call(hook, thisArg, args);
 }
 
-function run(name: "transform" | "resolveId" | "load", ...values: string[]): unknown {
+function run(name: "transform" | "resolveId" | "load", ...values: string[]) {
   const found = plugin[name];
   if (typeof found !== "function") {
     throw new TypeError(`${name} is not a function`);

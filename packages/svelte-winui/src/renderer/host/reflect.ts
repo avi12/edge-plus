@@ -1,15 +1,17 @@
+import type { NativeValue } from "../../native-value.ts";
+
 // Reading and writing a native control by property name, for the renderer,
 // which knows a control only by the kebab-case tag it was made from.
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: NativeValue): value is Record<string, NativeValue> {
   return (typeof value === "object" || typeof value === "function") && value !== null;
 }
 
-export function read(target: unknown, key: string): unknown {
+export function read(target: NativeValue, key: string): NativeValue {
   return isRecord(target) ? target[key] : undefined;
 }
 
-export function call(target: unknown, key: string, ...values: unknown[]): unknown {
+export function call(target: NativeValue, key: string, ...values: NativeValue[]): NativeValue {
   const method = read(target, key);
   if (typeof method !== "function") {
     throw new TypeError(`WinUI has no ${key} here`);
@@ -18,6 +20,6 @@ export function call(target: unknown, key: string, ...values: unknown[]): unknow
   return method.apply(target, values);
 }
 
-export function write(target: object, key: string, value: unknown): void {
+export function write(target: object, key: string, value: NativeValue): void {
   Object.assign(target, { [key]: value });
 }

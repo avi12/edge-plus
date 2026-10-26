@@ -12,10 +12,11 @@ monorepo needs no build step (the repository is a pnpm workspace, see
 |---|---|---|
 | `svelte-winui` | `src/index.ts` | `control`, `withControl`, `mountControl`, `registerControls`, `setClassHandler`, `dispatch` / `flush` / `onFlush`, the value helpers |
 | `svelte-winui/components` | `src/components/generated/index.ts` | every WinUI 3 control as a component (`StackPanel`, `ToggleSwitch`, ...) and its props type (`ToggleSwitchComponentProps`); importing it registers the generated bindings with the renderer |
-| `svelte-winui/state` | `src/state/index.ts` | `createHostChannel()`, `hostState()`, the transports (stdio, MessagePort, in-memory), `diff` / `applyOps` (see `src/state/README.md`) |
+| `svelte-winui/state` | `src/state/index.ts` | `createHostChannel()` (its `messaging` is the typed link), `hostState()`, `StateProtocol`, the transports (stdio, MessagePort, in-memory), `diff` / `applyOps` (see `src/state/README.md`) |
 | `svelte-winui/host` | `src/renderer/host/host.ts` | the custom renderer a compiled component imports (default export); not for app code |
 | `svelte-winui/keyed-list` | `src/renderer/list/keyed-list.ts` | `syncKeyed()`: sync a native collection to wanted keys, touching only what changed |
 | `svelte-winui/state` | `src/state/index.ts` | `createHostChannel()`, `hostState()`, the transports (see `src/state/README.md`) |
+| `svelte-winui/messaging` | `src/messaging/index.ts` | `defineMessaging(transport)`: typed `sendMessage` / `onMessage` over a ProtocolMap, as @webext-core/messaging; the state channel is built on it |
 | `svelte-winui/vite` | `src/vite/index.ts` | `svelteWinui()` Vite plugin, `startModuleServer()`, compile-error formatting |
 | `svelte-winui/runner` | `src/vite/runner.ts` | `createWindowModuleRunner()`, the window thread's side of the module server |
 | `svelte-winui/compile` | `src/vite/compile.ts` | `compileSvelte()` for bundlers (esbuild) and tests |

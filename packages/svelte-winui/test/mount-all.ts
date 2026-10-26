@@ -1,4 +1,5 @@
 import { startModuleServer } from "../src/vite/server.ts";
+import type { Report } from "./mount-report.ts";
 import { initWinappsdk } from "@microsoft/dynwinrt";
 import path from "node:path";
 import { MessageChannel, Worker } from "node:worker_threads";
@@ -41,7 +42,7 @@ const worker = new Worker(new URL("mount-all.worker.ts", import.meta.url), {
   },
   transferList: [modules.port2]
 });
-let report: unknown = null;
+let report: Report | null = null;
 worker.on("message", message => {
   report = message;
 });

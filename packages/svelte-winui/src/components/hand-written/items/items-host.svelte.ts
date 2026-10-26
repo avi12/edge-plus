@@ -1,3 +1,4 @@
+import type { BoxedValue } from "../../../native-value.ts";
 import { mountControl } from "../../../renderer/host/mount.svelte.ts";
 import type { ContainerContentChangingEventArgs, FrameworkElement, ListViewBase } from "../../generated/bindings.ts";
 import {
@@ -65,12 +66,12 @@ export interface ItemsHostProps<Item> {
   onControl?: (view: ListViewBase) => void | (() => void);
 }
 
-function keyText(boxedKey: unknown): string {
+function keyText(boxedKey: BoxedValue): string {
   const value = unboxObject(boxedKey);
   return typeof value === "string" ? value : "";
 }
 
-const keyBox: KeyBox<unknown> = {
+const keyBox: KeyBox<BoxedValue> = {
   box: key => PropertyValue.createString(key),
   unbox: keyText
 };
@@ -123,7 +124,7 @@ class ItemsHost<Item> implements ListHandle {
       view.onDragItemsCompleted(() => this.dragCompleted()),
       // Preview: the list's items take the arrow keys to move focus before a
       // bubbling KeyDown would see them.
-      view.onPreviewKeyDown((...args: unknown[]) => this.keyDown(projectAs(args[1], KeyRoutedEventArgs)))
+      view.onPreviewKeyDown((_sender, args) => this.keyDown(projectAs(args, KeyRoutedEventArgs)))
     );
     $effect(() => {
       this.sync(props.items ?? []);
@@ -305,7 +306,7 @@ class ItemsHost<Item> implements ListHandle {
   }
 
   // Focus is on the list item itself or on something inside it.
-  private focusedIndex(focused: unknown): number {
+  private focusedIndex(focused: KeyRoutedEventArgs["originalSource"]): number {
     let element: DependencyObject | null = focused === null ? null : projectAs(focused, DependencyObject);
     while (element !== null) {
       const index = this.view.indexFromContainer(element);

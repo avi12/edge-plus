@@ -1,3 +1,5 @@
+import type { BoxedValue, NativeValue } from "../native-value.ts";
+import { boxedObject } from "../native-value.ts";
 import { read } from "../renderer/host/reflect.ts";
 import {
   Application,
@@ -18,6 +20,7 @@ import type {
   CornerRadiusInput,
   CornerRadiusValue,
   GridLengthParts,
+  ObjectInput,
   ThicknessInput,
   ThicknessValue
 } from "./values.ts";
@@ -72,7 +75,7 @@ function isFlagMask(members: readonly number[]): boolean {
 
 // A number is a member of the table, or a combination of the bits of a flag
 // enum's members.
-function isMember<Table extends Record<string, number>>(table: Table, value: unknown): value is Table[keyof Table] {
+function isMember<Table extends Record<string, number>>(table: Table, value: NativeValue): value is Table[keyof Table] {
   const members: number[] = Object.values(table);
   const mask = members.reduce((all, member) => all | member, 0);
   const isCombination = typeof value === "number" && isFlagMask(members) && (value & ~mask) === 0;
@@ -83,7 +86,7 @@ export function enumValue<Table extends Record<string, number>>(
   table: Table,
   input: EnumInput<Table>
 ): Table[keyof Table] {
-  const value: unknown = typeof input === "string" ? read(table, input) : input;
+  const value: NativeValue = typeof input === "number" ? input : read(table, String(input));
   if (isMember(table, value)) {
     return value;
   }
@@ -199,18 +202,18 @@ export function imageSourceOf(input: ImageSourceInput): ImageSource {
 
 // A property of type object takes only a boxed value: a string, number or
 // boolean is boxed, anything else is the WinRT object it already is.
-export function objectOf(input: unknown): unknown {
+export function objectOf(input: ObjectInput): BoxedValue {
   if (typeof input === "string") {
-    return PropertyValue.createString(input);
+    return boxedObject(PropertyValue.createString(input));
   }
 
   if (typeof input === "boolean") {
-    return PropertyValue.createBoolean(input);
+    return boxedObject(PropertyValue.createBoolean(input));
   }
 
   if (typeof input === "number") {
     const isInteger = Number.isInteger(input) && Math.abs(input) <= maxInt32;
-    return isInteger ? PropertyValue.createInt32(input) : PropertyValue.createDouble(input);
+    return isInteger ? boxedObject(PropertyValue.createInt32(input)) : boxedObject(PropertyValue.createDouble(input));
   }
 
   return input;

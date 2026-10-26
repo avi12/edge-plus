@@ -1,8 +1,8 @@
 import { createWindowModuleRunner } from "../../src/vite/runner.ts";
 import { runOnUiThread } from "../../src/window/thread.ts";
 import type { RunExample } from "./run-example.ts";
-import type { MessagePort } from "node:worker_threads";
-import { workerData } from "node:worker_threads";
+import { MessagePort, workerData } from "node:worker_threads";
+import { z } from "zod";
 
 // The UI thread of an example: its apartment first, then every module the
 // example needs through the module server (run-example.ts and what it
@@ -10,31 +10,20 @@ import { workerData } from "node:worker_threads";
 
 const runExampleModule = "/examples/harness/run-example.ts";
 
-interface Ports {
-  modules: MessagePort;
-  link: MessagePort;
-  entry: string;
-  options: Record<string, string>;
-}
-
-function isPort(value: unknown): value is MessagePort {
-  return typeof value === "object" && value !== null && "postMessage" in value;
-}
-
-function isPorts(value: unknown): value is Ports {
-  return typeof value === "object" && value !== null
-    && "modules" in value && isPort(value.modules)
-    && "link" in value && isPort(value.link)
-    && "entry" in value && typeof value.entry === "string"
-    && "options" in value && typeof value.options === "object";
-}
+const portsSchema = z.object({
+  modules: z.instanceof(MessagePort),
+  link: z.instanceof(MessagePort),
+  entry: z.string(),
+  options: z.record(z.string(), z.string())
+});
 
 await runOnUiThread(async () => {
-  const data: unknown = workerData;
-  if (!isPorts(data)) {
+  const parsedPorts = portsSchema.safeParse(workerData);
+  if (!parsedPorts.success) {
     throw new Error("the host passed no ports");
   }
 
+  const data = parsedPorts.data;
   const { runner } = createWindowModuleRunner(data.modules);
   const { runExample } = await runner.import<{ runExample: RunExample }>(runExampleModule);
   await runExample(data.entry, data.link, data.options);

@@ -9,9 +9,9 @@ const { createHostChannel, HostError, hostState } = await import("../channel.sve
 
 const echoHost = path.join(import.meta.dirname, "..", "test-support", "echo-host.ts");
 
-interface Counter {
+type Counter = {
   count: number;
-}
+};
 
 test("state and actions round-trip with a host in a child process over stdio", async () => {
   const child = spawn(process.execPath, ["--disable-warning=ExperimentalWarning", echoHost], { stdio: ["pipe", "pipe", "pipe"] });

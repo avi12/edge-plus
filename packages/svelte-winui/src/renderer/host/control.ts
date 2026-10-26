@@ -1,3 +1,4 @@
+import type { NativeValue } from "../../native-value.ts";
 import { read } from "./reflect.ts";
 
 // The element's native control, handed to code. Svelte runs an attachment in
@@ -8,15 +9,15 @@ import { read } from "./reflect.ts";
 type Cleanup = () => void;
 
 // What `{@attach ...}` takes. A custom renderer's element is not a DOM
-// element, so it is typed as the unknown node it is.
-export type NodeAttachment = (node: unknown) => void | Cleanup;
+// element, so it is typed as the plain object it is.
+export type NodeAttachment = (node: object) => void | Cleanup;
 
 // A <host> that holds no control (yet) has nothing to hand over.
-function nativeControl(node: unknown): unknown {
+function nativeControl(node: object): NativeValue {
   return read(read(node, "native"), "control");
 }
 
-function isObject(value: unknown): value is object {
+function isObject(value: NativeValue): value is object {
   return typeof value === "object" && value !== null;
 }
 

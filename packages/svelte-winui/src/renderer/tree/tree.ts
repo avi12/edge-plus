@@ -1,3 +1,4 @@
+import type { NativeValue } from "../../native-value.ts";
 import { createRenderer } from "svelte/renderer";
 
 // The tree of nodes a Svelte custom renderer keeps, with no platform in it:
@@ -17,11 +18,11 @@ export interface ElementNode<Native> {
   type: typeof NodeType.Element;
   name: string;
   native: Native;
-  attributes: Map<string, unknown>;
+  attributes: Map<string, NativeValue>;
   children: Array<TreeNode<Native>>;
   parent: ParentNode<Native> | null;
   // By event type, then by handler: what ends each subscription.
-  listeners: Map<string, Map<unknown, () => void>>;
+  listeners: Map<string, Map<NativeValue, () => void>>;
 }
 
 export interface FragmentNode<Native> {
@@ -49,7 +50,7 @@ type AnyNode<Native> = TreeNode<Native> | FragmentNode<Native>;
 // What the tree asks of the platform its elements stand for.
 export interface NativeHost<Native> {
   create(name: string): Native;
-  setAttribute(element: ElementNode<Native>, name: string, value: unknown): void;
+  setAttribute(element: ElementNode<Native>, name: string, value: NativeValue): void;
   removeAttribute(element: ElementNode<Native>, name: string): void;
   childrenChanged(element: ElementNode<Native>): void;
   // A fragment's children changed: a mount target's, when a hot update
@@ -58,7 +59,7 @@ export interface NativeHost<Native> {
   // A subtree Svelte has removed and will not insert again.
   removed(node: TreeNode<Native>): void;
   // What ends the subscription, or null when nothing was subscribed.
-  listen(element: ElementNode<Native>, type: string, handler: unknown): (() => void) | null;
+  listen(element: ElementNode<Native>, type: string, handler: NativeValue): (() => void) | null;
 }
 
 export function parentElement<Native>(node: TreeNode<Native>): ElementNode<Native> | null {
@@ -170,13 +171,13 @@ function createText<Native>(value: string): TextNode<Native> {
   };
 }
 
-function listenersOf<Native>(element: ElementNode<Native>, type: string): Map<unknown, () => void> {
+function listenersOf<Native>(element: ElementNode<Native>, type: string): Map<NativeValue, () => void> {
   const existing = element.listeners.get(type);
   if (existing !== undefined) {
     return existing;
   }
 
-  const created = new Map<unknown, () => void>();
+  const created = new Map<NativeValue, () => void>();
   element.listeners.set(type, created);
   return created;
 }

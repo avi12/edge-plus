@@ -1,6 +1,7 @@
 import { ResourceKind } from "../../src/css/runtime/resources.ts";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { z } from "zod";
 
 // Writes src/css/winui-resources.g.json: every resource key WinUI's generic.xaml
 // defines (colors, brushes, thicknesses, radii, doubles, styles...), by kind,
@@ -66,20 +67,28 @@ function compareKeys(left: string, right: string): number {
   return left < right ? -1 : 1;
 }
 
-function compareEntries(left: [string, unknown], right: [string, unknown]): number {
+function compareEntries<Value>(left: [string, Value], right: [string, Value]): number {
   return compareKeys(left[0], right[0]);
 }
 
+const lockFileSchema = z.object({
+  packages: z.array(
+    z.object({
+      name: z.string(),
+      version: z.union([z.string(), z.number()])
+    })
+  ),
+  nuget_cache_dir: z.string()
+});
+
 function defaultGenericXaml(): string {
-  const lock: unknown = JSON.parse(readFileSync(lockFile, "utf8"));
-  const packages = typeof lock === "object" && lock !== null && "packages" in lock ? lock.packages : [];
-  const cacheFolder = typeof lock === "object" && lock !== null && "nuget_cache_dir" in lock ? lock.nuget_cache_dir : "";
-  const isLockFile = Array.isArray(packages) && typeof cacheFolder === "string";
-  if (!isLockFile) {
+  const parsedLock = lockFileSchema.safeParse(JSON.parse(readFileSync(lockFile, "utf8")));
+  if (!parsedLock.success) {
     throw new TypeError(`${lockFile} is not a winapp lock file`);
   }
 
-  const winUi = packages.find(candidate => candidate?.name === winUiPackage);
+  const { packages, nuget_cache_dir: cacheFolder } = parsedLock.data;
+  const winUi = packages.find(candidate => candidate.name === winUiPackage);
   if (winUi === undefined) {
     throw new Error(`${lockFile} names no ${winUiPackage}`);
   }

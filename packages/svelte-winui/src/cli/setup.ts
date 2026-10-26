@@ -1,5 +1,6 @@
 import type { BindingEntry } from "./binding-list.ts";
-import { isBindingEntry, packageJsonWithBindings } from "./binding-list.ts";
+import { bindingEntriesOf, packageJsonWithBindings } from "./binding-list.ts";
+import { readList, readRecord } from "./json-shape.ts";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -52,32 +53,28 @@ export interface SetupOptions {
   isDryRun?: boolean;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 export function requiredBindings(): BindingEntry[] {
-  const parsed: unknown = JSON.parse(readFileSync(requiredBindingsUrl, "utf8"));
-  if (!Array.isArray(parsed)) {
+  const list = readList(JSON.parse(readFileSync(requiredBindingsUrl, "utf8")));
+  if (list === undefined) {
     throw new TypeError("required-bindings.json is not a list");
   }
 
-  return parsed.filter(isBindingEntry);
+  return bindingEntriesOf(list);
 }
 
 // package.json's text ready for the package's controls: the class list started
 // if the app has none, filled with what the package needs, and the
 // @winapp/bindings dependency present.
 export function packageJsonForApp(original: string, required: BindingEntry[]): string {
-  const parsed: unknown = JSON.parse(original);
-  if (!isRecord(parsed)) {
+  const parsed = readRecord(JSON.parse(original));
+  if (parsed === undefined) {
     throw new TypeError("package.json is not an object");
   }
 
-  const winapp = isRecord(parsed["winapp"]) ? parsed["winapp"] : {};
-  const jsBindings = isRecord(winapp["jsBindings"]) ? winapp["jsBindings"] : {};
-  const additionalWinmds = Array.isArray(jsBindings["additionalWinmds"]) ? jsBindings["additionalWinmds"] : [];
-  const dependencies = isRecord(parsed["dependencies"]) ? parsed["dependencies"] : {};
+  const winapp = readRecord(parsed["winapp"]) ?? {};
+  const jsBindings = readRecord(winapp["jsBindings"]) ?? {};
+  const additionalWinmds = readList(jsBindings["additionalWinmds"]) ?? [];
+  const dependencies = readRecord(parsed["dependencies"]) ?? {};
   dependencies[bindingsDependency] ??= bindingsLink;
   const newline = original.includes("\r\n") ? "\r\n" : "\n";
   const started = {

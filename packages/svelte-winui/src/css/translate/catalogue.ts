@@ -1,6 +1,7 @@
 import type { ResourceCatalogue } from "../runtime/resources.ts";
 import { createCatalogue } from "../runtime/resources.ts";
 import { readFileSync } from "node:fs";
+import { z } from "zod";
 
 // The catalogue of WinUI's own resources, from winui-resources.g.json (which
 // scripts/css/export-winui-resources.ts writes). Node only: it runs where the
@@ -8,21 +9,21 @@ import { readFileSync } from "node:fs";
 
 const catalogueFile = new URL("../winui-resources.g.json", import.meta.url);
 
-function isStringList(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every(item => typeof item === "string");
-}
+const stringListSchema = z.array(z.string());
+const catalogueSchema = z.record(z.string(), z.unknown());
 
 export function loadWinuiCatalogue(): ResourceCatalogue {
-  const parsed: unknown = JSON.parse(readFileSync(catalogueFile, "utf8"));
-  const isCatalogue = typeof parsed === "object" && parsed !== null;
-  if (!isCatalogue) {
+  const catalogue = catalogueSchema.safeParse(JSON.parse(readFileSync(catalogueFile, "utf8")));
+  if (!catalogue.success) {
     throw new TypeError(`${catalogueFile.pathname} is not a resource catalogue`);
   }
 
+  // A kind whose keys are not a list of strings is left out.
   const groups: Record<string, string[]> = {};
-  for (const [kind, keys] of Object.entries(parsed)) {
-    if (isStringList(keys)) {
-      groups[kind] = keys;
+  for (const [kind, keys] of Object.entries(catalogue.data)) {
+    const list = stringListSchema.safeParse(keys);
+    if (list.success) {
+      groups[kind] = list.data;
     }
   }
 

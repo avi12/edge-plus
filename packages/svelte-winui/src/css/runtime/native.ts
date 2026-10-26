@@ -1,3 +1,4 @@
+import type { BoxedValue, NativeValue } from "../../native-value.ts";
 import type { CssNative } from "./runtime.ts";
 import { installCssRuntime } from "./runtime.ts";
 
@@ -11,11 +12,11 @@ interface ProjectedType<Instance extends object> {
 }
 
 interface DictionaryLike {
-  lookup(key: unknown): unknown;
+  lookup(key: BoxedValue): BoxedValue;
 }
 
 interface ListLike {
-  append(item: unknown): void;
+  append(item: object): void;
   clear(): void;
 }
 
@@ -27,9 +28,9 @@ export interface CssWinui {
   };
   ResourceDictionary: ProjectedType<DictionaryLike>;
   Style: ProjectedType<object>;
-  XamlReader: { load(xaml: string): unknown };
-  PropertyValue: { createString(value: string): unknown };
-  projectAs<Instance extends object>(value: unknown, type: ProjectedType<Instance>): Instance;
+  XamlReader: { load(xaml: string): BoxedValue };
+  PropertyValue: { createString(value: string): BoxedValue };
+  projectAs<Instance extends object>(value: BoxedValue, type: ProjectedType<Instance>): Instance;
   ColumnDefinition: new () => object;
   RowDefinition: new () => object;
   GridUnitType: {
@@ -43,23 +44,23 @@ const listSeparator = ",";
 const starSuffix = "*";
 const autoLength = "Auto";
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(value: NativeValue): value is Record<string, NativeValue> {
   return (typeof value === "object" || typeof value === "function") && value !== null;
 }
 
-function read(target: unknown, key: string): unknown {
+function read(target: NativeValue, key: string): NativeValue {
   return isRecord(target) ? target[key] : undefined;
 }
 
-function isDictionary(value: unknown): value is DictionaryLike {
+function isDictionary(value: NativeValue): value is DictionaryLike {
   return isRecord(value) && typeof value["lookup"] === "function";
 }
 
-function isList(value: unknown): value is ListLike {
+function isList(value: NativeValue): value is ListLike {
   return isRecord(value) && typeof value["append"] === "function" && typeof value["clear"] === "function";
 }
 
-function isEventMethod(value: unknown): value is (handler: () => void) => unknown {
+function isEventMethod(value: NativeValue): value is (handler: () => void) => NativeValue {
   return typeof value === "function";
 }
 

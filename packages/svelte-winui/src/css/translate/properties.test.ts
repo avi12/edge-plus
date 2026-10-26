@@ -181,8 +181,8 @@ const rows: Array<[string, string | null, string, Array<[string, string]>]> = [
   ]]
 ];
 
-function compareText(left: unknown, right: unknown): number {
-  return String(left).localeCompare(String(right));
+function compareText(left: readonly string[], right: readonly string[]): number {
+  return left.join().localeCompare(right.join());
 }
 
 for (const [name, elementType, declarations, expected] of rows) {

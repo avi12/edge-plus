@@ -1,6 +1,6 @@
 import { compileSheetModule, cssHash, SheetError } from "../css/runtime/sheet-module.ts";
 import { loadWinuiCatalogue } from "../css/translate/catalogue.ts";
-import { describeError } from "./diagnostics.ts";
+import { describeError, errorOf } from "./diagnostics.ts";
 import { stripTypeScriptTypes } from "node:module";
 import path from "node:path";
 import { compile, compileModule } from "svelte/compiler";
@@ -81,6 +81,7 @@ export function compileSvelte(filename: string, source: string, options: Compile
   try {
     return compileSource(filename, source, options);
   } catch (error) {
-    throw new Error(error instanceof SheetError ? error.message : describeError(error), { cause: error });
+    const failure = errorOf(error);
+    throw new Error(failure instanceof SheetError ? failure.message : describeError(failure), { cause: error });
   }
 }

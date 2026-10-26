@@ -1,9 +1,11 @@
+import { jsonSchema } from "../src/messaging/json.ts";
 import { spawn } from "node:child_process";
 import type { ChildProcessByStdio } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
+import { z } from "zod";
 
 // An example (examples/harness/launch.ts) run as a process, for tests: its
 // window is off screen and never activated, its reports come back as objects,
@@ -16,11 +18,9 @@ export const isWindowsAppSdkRestored = existsSync(bootstrapPath);
 const startMilliseconds = 90_000;
 const layoutMilliseconds = 900;
 
-export type Report = Record<string, unknown>;
+const reportSchema = z.record(z.string(), jsonSchema);
 
-function isReport(value: unknown): value is Report {
-  return typeof value === "object" && value !== null;
-}
+export type Report = z.infer<typeof reportSchema>;
 
 export class ExampleProcess {
   readonly pid: number;
@@ -35,11 +35,8 @@ export class ExampleProcess {
     createInterface({ input: child.stdout }).on("line", line => {
       const isReportLine = line.startsWith("{");
       if (isReportLine) {
-        const parsed: unknown = JSON.parse(line);
-        if (isReport(parsed)) {
-          this.reports.push(parsed);
-          this.waiting.splice(0).forEach(wake => wake());
-        }
+        this.reports.push(reportSchema.parse(JSON.parse(line)));
+        this.waiting.splice(0).forEach(wake => wake());
       }
     });
     this.exited = new Promise(resolve => {

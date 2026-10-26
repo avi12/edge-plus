@@ -1,11 +1,12 @@
+import { boxedObject } from "../../native-value.ts";
 import { GridUnitType, PropertyValue } from "../../winui.ts";
 
 // WinRT's plain values, built the way the bindings take them.
 
 // A string for an `object` property such as a button's content, which takes
 // only a boxed value.
-export function boxed(text: string): unknown {
-  return PropertyValue.createString(text);
+export function boxed(text: string): object {
+  return boxedObject(PropertyValue.createString(text));
 }
 
 export function thickness(left: number, top: number, right: number, bottom: number) {

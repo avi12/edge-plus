@@ -1,3 +1,4 @@
+import { reportSchema } from "./mount-report.ts";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -14,16 +15,6 @@ const script = path.join(import.meta.dirname, "mount-all.ts");
 const bootstrap = path.join(import.meta.dirname, "..", ".winapp", "bin", process.arch, "Microsoft.WindowsAppRuntime.Bootstrap.dll");
 const timeoutMilliseconds = 240_000;
 
-interface Failure {
-  name: string;
-  step: string;
-  message: string;
-}
-
-function isFailureList(value: unknown): value is Failure[] {
-  return Array.isArray(value);
-}
-
 test("every component mounts in a WinUI window", {
   skip: !existsSync(bootstrap),
   timeout: timeoutMilliseconds
@@ -37,10 +28,7 @@ test("every component mounts in a WinUI window", {
     maxBuffer: 64 * 1024 * 1024
   });
   const lines = stdout.trim().split("\n");
-  const report: unknown = JSON.parse(lines[lines.length - 1] ?? "null");
-  assert.ok(typeof report === "object" && report !== null, "the window reported nothing");
+  const report = reportSchema.parse(JSON.parse(lines[lines.length - 1] ?? "null"));
   process.stdout.write(`${JSON.stringify(report)}\n`);
-  const failures: unknown = "failures" in report ? report.failures : [];
-  assert.ok(isFailureList(failures));
-  assert.deepEqual(failures.map(failure => `${failure.name} (${failure.step}): ${failure.message}`), []);
+  assert.deepEqual(report.failures.map(failure => `${failure.name} (${failure.step}): ${failure.message}`), []);
 });

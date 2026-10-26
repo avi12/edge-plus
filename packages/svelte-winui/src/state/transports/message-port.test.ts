@@ -1,11 +1,12 @@
+import type { Json } from "../../messaging/json.ts";
 import { createMessagePortTransport } from "./message-port.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MessageChannel } from "node:worker_threads";
 
-function listenerInto(seen: unknown[]) {
+function listenerInto(seen: Json[]) {
   return {
-    message: (value: unknown) => seen.push(value),
+    message: (value: Json) => seen.push(value),
     malformed() {},
     closed() {}
   };
@@ -13,9 +14,9 @@ function listenerInto(seen: unknown[]) {
 
 test("messages cross a port by its events", async () => {
   const { port1, port2 } = new MessageChannel();
-  const seen: unknown[] = [];
+  const seen: Json[] = [];
   const stop = createMessagePortTransport(port1).listen(listenerInto(seen));
-  createMessagePortTransport(port2).send({
+  createMessagePortTransport<Json>(port2).send({
     type: "x",
     n: 1
   });
@@ -31,7 +32,7 @@ test("messages cross a port by its events", async () => {
 
 test("with `poll`, nothing arrives until the app's timer drains the port", async () => {
   const { port1, port2 } = new MessageChannel();
-  const seen: unknown[] = [];
+  const seen: Json[] = [];
   const drainer = { drain(): void {} };
   createMessagePortTransport(port1, {
     poll(next) {

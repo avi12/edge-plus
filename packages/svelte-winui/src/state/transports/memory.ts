@@ -1,3 +1,6 @@
+import type { Frame as MessagingFrame } from "../../messaging/frame.ts";
+import type { Json } from "../../messaging/json.ts";
+import { jsonSchema } from "../../messaging/json.ts";
 import type { Transport, TransportListener } from "./transport.ts";
 
 // Two ends of an in-memory link, for tests and for a host and a window in one
@@ -7,22 +10,29 @@ import type { Transport, TransportListener } from "./transport.ts";
 
 type Delivery = (listener: TransportListener) => void;
 
-export class MemoryEnd implements Transport {
-  private peer: MemoryEnd | null = null;
+export class MemoryEnd<Frame = MessagingFrame> implements Transport<Frame> {
+  private peer: MemoryEnd<Frame> | null = null;
   private listener: TransportListener | null = null;
   private readonly inbox: Delivery[] = [];
 
-  static pair(): [MemoryEnd, MemoryEnd] {
-    const left = new MemoryEnd();
-    const right = new MemoryEnd();
+  static pair<Frame = MessagingFrame>(): [MemoryEnd<Frame>, MemoryEnd<Frame>] {
+    const left = new MemoryEnd<Frame>();
+    const right = new MemoryEnd<Frame>();
     left.peer = right;
     right.peer = left;
     return [left, right];
   }
 
-  send(value: unknown): void {
-    const copy: unknown = JSON.parse(JSON.stringify(value));
+  send(frame: Frame): void {
+    const copy = jsonSchema.parse(JSON.parse(JSON.stringify(frame)));
     this.peer?.receive(listener => listener.message(copy));
+  }
+
+  // A JSON value that is no frame, which the other side must report (the
+  // messaging tests send it; fallow does not trace the tests).
+  // fallow-ignore-next-line unused-class-member
+  sendJson(value: Json): void {
+    this.peer?.receive(listener => listener.message(value));
   }
 
   // A line the other side could not read.

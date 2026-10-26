@@ -1,3 +1,4 @@
+import type { NativeValue } from "../../native-value.ts";
 import type { LowerOptions } from "../parse/reader.ts";
 import type { RankedRule } from "../translate/cascade.ts";
 import {
@@ -29,7 +30,7 @@ export interface CssNative {
   setGridDefinitions(control: object, target: "columns" | "rows", lengths: string): void;
   // Calls `handler` on a WinUI event (PointerEntered...); null if the control has no such event.
   subscribe(control: object, event: string, handler: () => void): (() => void) | null;
-  read(control: object, property: string): unknown;
+  read(control: object, property: string): NativeValue;
 }
 
 export interface StyledElement {
@@ -46,7 +47,7 @@ const keyboardFocus = 2;
 const cacheLimit = 2000;
 const classSeparator = /\s+/u;
 
-type ReadProperty = (property: string) => unknown;
+type ReadProperty = (property: string) => NativeValue;
 
 interface StateBinding {
   event: string;

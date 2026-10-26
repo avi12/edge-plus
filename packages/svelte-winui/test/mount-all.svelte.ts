@@ -2,8 +2,10 @@ import * as bindings from "../src/components/generated/bindings.ts";
 import type { LevelMetadata } from "../src/components/generated/metadata.ts";
 import { levels } from "../src/components/generated/metadata.ts";
 import ToggleSwitch from "../src/components/generated/ToggleSwitch.svelte";
+import type { NativeValue } from "../src/native-value.ts";
 import { mountControl } from "../src/renderer/host/mount.svelte.ts";
 import { read } from "../src/renderer/host/reflect.ts";
+import type { Counts, Failure, Report } from "./mount-report.ts";
 import { DispatcherQueue } from "#winui/microsoft/ui/dispatching/DispatcherQueue";
 import { Application } from "#winui/microsoft/ui/xaml/Application";
 import { Window } from "#winui/microsoft/ui/xaml/Window";
@@ -52,35 +54,12 @@ const refusedByWinui = new Map<string, string[]>([
   ["RichTextBlockOverflow", ["isTabStop", "tabIndex"]]
 ]);
 
-interface Failure {
-  name: string;
-  step: string;
-  message: string;
-}
-
-interface Report {
-  components: number;
-  mounted: number;
-  properties: number;
-  events: number;
-  attached: number;
-  bindables: number;
-  exercised: {
-    properties: number;
-    events: number;
-    attached: number;
-    bindables: number;
-  };
-  behaviours: number;
-  failures: Failure[];
-}
-
 type Linked = () => void;
 type Connect = (control: object, props: object, bound: object) => Linked;
 
 // Held until the process ends: a timer whose wrapper is collected stops.
 // eslint-disable-next-line svelte/prefer-svelte-reactivity -- not component state
-const heldTimers = new Set<unknown>();
+const heldTimers = new Set<object>();
 
 // A native failure takes the process down without a message, so the last
 // component started is written, synchronously, where this variable says.
@@ -92,7 +71,7 @@ function trace(line: string): void {
   }
 }
 
-function isConstructor(value: unknown): value is new () => object {
+function isConstructor(value: NativeValue): value is new () => object {
   return typeof value === "function";
 }
 
@@ -100,16 +79,8 @@ function isElement(value: object): value is bindings.UIElement {
   return "opacity" in value;
 }
 
-function isConnect(value: unknown): value is Connect {
+function isConnect(value: NativeValue): value is Connect {
   return typeof value === "function";
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 function chainOf(name: string): LevelMetadata[] {
@@ -130,8 +101,8 @@ async function loadConnectors(): Promise<Map<string, Connect>> {
   // eslint-disable-next-line svelte/prefer-svelte-reactivity -- not component state
   const connectors = new Map<string, Connect>();
   for (const name of componentNames()) {
-    const loaded: unknown = await import(`../src/components/generated/controls/${name}.svelte.ts`);
-    const connect = isRecord(loaded) ? loaded[`connect${name}`] : undefined;
+    const loaded: Record<string, NativeValue> = await import(`../src/components/generated/controls/${name}.svelte.ts`);
+    const connect = loaded[`connect${name}`];
     if (!isConnect(connect)) {
       throw new Error(`${name} has no connect${name}`);
     }
@@ -145,17 +116,12 @@ async function loadConnectors(): Promise<Map<string, Connect>> {
 // What a control would be given for each key: the value it has now (null
 // ones are left out, as they have nothing to write back).
 interface Sample {
-  props: Record<string, unknown>;
-  state: Record<string, unknown>;
-  counts: {
-    properties: number;
-    events: number;
-    attached: number;
-    bindables: number;
-  };
+  props: Record<string, NativeValue>;
+  state: Record<string, NativeValue>;
+  counts: Counts;
 }
 
-function attachedValue(owner: string, setter: string, control: object): unknown {
+function attachedValue(owner: string, setter: string, control: object): NativeValue {
   const getter = `get${setter.slice(attachedPrefix.length)}`;
   const holder = read(bindings, owner);
   const method = read(holder, getter);
@@ -222,8 +188,8 @@ function sampleOf(name: string, control: object, only: ReadonlySet<string> | nul
 
 // The props the component gets, and the bindables as getters and setters over
 // state the test holds, as the component's own destructuring would.
-function boundOver(state: Record<string, unknown>, name: string): object {
-  const bound: Record<string, unknown> = {};
+function boundOver(state: Record<string, NativeValue>, name: string): object {
+  const bound: Record<string, NativeValue> = {};
   for (const level of chainOf(name)) {
     for (const key of level.bindables) {
       Object.defineProperty(bound, key, {
@@ -276,13 +242,13 @@ function emptySample(): Sample {
   };
 }
 
-function describe(value: unknown): string {
+function describe(value: NativeValue): string {
   return typeof value === "object" && value !== null ? JSON.stringify(value, (_key, part) => typeof part === "bigint" ? String(part) : part) : String(value);
 }
 
 class Exercise {
   readonly failures: Failure[] = [];
-  readonly exercised = {
+  readonly exercised: Counts = {
     properties: 0,
     events: 0,
     attached: 0,
@@ -303,7 +269,7 @@ class Exercise {
       this.failures.push({
         name,
         step,
-        message: messageOf(error)
+        message: error instanceof Error ? error.message : String(error)
       });
       return false;
     }
@@ -412,7 +378,7 @@ function checkBehaviours(connectors: Map<string, Connect>, failures: Failure[]):
       failures.push({
         name: `behaviour: ${name}`,
         step: "check",
-        message: messageOf(error)
+        message: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -434,7 +400,7 @@ function checkBehaviours(connectors: Map<string, Connect>, failures: Failure[]):
 
   check("a bindable goes both ways (ToggleSwitch.isOn)", () => {
     const toggle = new bindings.ToggleSwitch();
-    const state = $state<Record<string, unknown>>({ isOn: true });
+    const state = $state<Record<string, NativeValue>>({ isOn: true });
     const close = open(connectorFor("ToggleSwitch"), toggle, {}, boundOver(state, "ToggleSwitch"));
     flushSync();
     expect(toggle.isOn, "the state's true did not reach the switch");
@@ -448,7 +414,7 @@ function checkBehaviours(connectors: Map<string, Connect>, failures: Failure[]):
 
   check("a bindable number goes both ways (Slider.value)", () => {
     const slider = new bindings.Slider();
-    const state = $state<Record<string, unknown>>({ value: 30 });
+    const state = $state<Record<string, NativeValue>>({ value: 30 });
     const close = open(connectorFor("Slider"), slider, {}, boundOver(state, "Slider"));
     flushSync();
     expect(slider.value === 30, "the state's value did not reach the slider");
@@ -459,7 +425,7 @@ function checkBehaviours(connectors: Map<string, Connect>, failures: Failure[]):
 
   check("a boolean-or-null bindable is written (CheckBox.isChecked)", () => {
     const box = new bindings.CheckBox();
-    const state = $state<Record<string, unknown>>({ isChecked: true });
+    const state = $state<Record<string, NativeValue>>({ isChecked: true });
     const close = open(connectorFor("CheckBox"), box, {}, boundOver(state, "CheckBox"));
     flushSync();
     expect(box.isChecked === true, `the state's true did not reach the box (it reads ${String(box.isChecked)})`);
@@ -468,7 +434,7 @@ function checkBehaviours(connectors: Map<string, Connect>, failures: Failure[]):
 
   check("a changed prop is written again (Border.opacity)", () => {
     const border = new bindings.Border();
-    const props = $state<Record<string, unknown>>({ opacity: 0.5 });
+    const props = $state<Record<string, NativeValue>>({ opacity: 0.5 });
     const close = open(connectorFor("Border"), border, props, {});
     flushSync();
     expect(border.opacity === 0.5, "the first value was not written");
@@ -543,7 +509,7 @@ function statistics(): Pick<Report, "components" | "properties" | "events" | "at
 
 function launch(
   connectors: Map<string, Connect>,
-  report: (result: unknown) => void,
+  report: (result: Report) => void,
   throughRenderer: (failures: Failure[]) => void
 ): void {
   const panel = new bindings.StackPanel();
@@ -611,12 +577,12 @@ function checkComponentThroughRenderer(failures: Failure[]): void {
     failures.push({
       name: "behaviour: ToggleSwitch.svelte through the renderer",
       step: "check",
-      message: messageOf(error)
+      message: error instanceof Error ? error.message : String(error)
     });
   }
 }
 
-export async function run(report: (result: unknown) => void): Promise<void> {
+export async function run(report: (result: Report) => void): Promise<void> {
   trace("loading");
   const connectors = await loadConnectors();
   trace("loaded");

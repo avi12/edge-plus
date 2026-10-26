@@ -1,19 +1,14 @@
-import { describeError } from "./diagnostics.ts";
+import { describeError, errorOf } from "./diagnostics.ts";
 import { svelteWinui, windowEnvironment } from "./plugin.ts";
 import type { SvelteWinuiOptions } from "./plugin.ts";
 import { logEvent } from "./runner.ts";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { MessagePort } from "node:worker_threads";
-import type {
-  CustomPayload,
-  HotChannel,
-  HotChannelClient,
-  ResolvedConfig,
-  ViteDevServer
-} from "vite";
+import type { HotChannel, HotChannelClient, ResolvedConfig, ViteDevServer } from "vite";
 import { createServer, DevEnvironment } from "vite";
 import type { FetchFunctionOptions, FetchResult } from "vite/module-runner";
+import { z } from "zod";
 
 // The development side of Svelte on WinUI: a Vite dev server, in-process and
 // with no HTTP server, that compiles a window's modules for a module runner
@@ -56,12 +51,26 @@ function isPackageBindingsSite(file: string): boolean {
   return packageBindingsSites.some(site => isSameFile(withoutExtension, site));
 }
 
-// What the runner sends: its module fetches and its own events.
-function isCustomPayload(value: unknown): value is CustomPayload {
-  return typeof value === "object" && value !== null && "type" in value && value.type === "custom";
-}
+// What the runner sends: its module fetches (Vite's invoke, whose arguments
+// may be undefined: a structured clone keeps that, JSON would not) and its log
+// lines. This is Vite's own protocol over the port, not the wire's JSON.
+const fetchOptionsSchema = z.object({
+  cached: z.boolean().optional(),
+  startOffset: z.number().optional()
+});
+const invokeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  data: z.array(z.union([z.string(), z.undefined(), fetchOptionsSchema]))
+});
+const customPayloadSchema = z.object({
+  type: z.literal("custom"),
+  event: z.string(),
+  data: z.union([z.string(), invokeSchema])
+});
 
-type Listener = (data: unknown, client: HotChannelClient) => void;
+type RunnerData = z.infer<typeof customPayloadSchema>["data"];
+type Listener = (data: RunnerData, client: HotChannelClient) => void;
 
 // Vite's hot channel over a MessagePort: what the runner sends arrives as
 // custom events (module fetches among them), and the server's updates go back.
@@ -87,13 +96,14 @@ function portChannel(port: MessagePort): HotChannel {
       }
     },
     listen() {
-      port.on("message", (message: unknown) => {
-        if (!isCustomPayload(message)) {
+      port.on("message", message => {
+        const payload = customPayloadSchema.safeParse(message);
+        if (!payload.success) {
           return;
         }
 
-        for (const listener of listeners.get(message.event) ?? []) {
-          listener(message.data, client);
+        for (const listener of listeners.get(payload.data.event) ?? []) {
+          listener(payload.data.data, client);
         }
       });
     },
@@ -112,8 +122,8 @@ class WindowEnvironment extends DevEnvironment {
       transport: portChannel(port)
     });
     this.isNative = isNative;
-    this.hot.on(logEvent, (line: unknown) => {
-      process.stderr.write(`[vite] ${String(line)}\n`);
+    this.hot.on(logEvent, (line: string) => {
+      process.stderr.write(`[vite] ${line}\n`);
     });
   }
 
@@ -133,7 +143,7 @@ class WindowEnvironment extends DevEnvironment {
     try {
       return await super.fetchModule(id, importer, options);
     } catch (error) {
-      process.stderr.write(`[vite] ${describeError(error)}\n`);
+      process.stderr.write(`[vite] ${describeError(errorOf(error))}\n`);
       throw error;
     }
   }

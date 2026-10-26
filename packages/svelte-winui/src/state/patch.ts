@@ -14,7 +14,7 @@ const forbiddenKeys = new Set(["__proto__", "constructor", "prototype"]);
 
 // What a state is kept in: the root can be replaced, so it sits in a holder.
 export interface Holder {
-  current: unknown;
+  current: Json | undefined;
 }
 
 function keyOf(segment: PathSegment): string {
@@ -35,7 +35,7 @@ function indexIn(segment: PathSegment, limit: number): number {
   return segment;
 }
 
-function childOf(container: unknown, segment: PathSegment): unknown {
+function childOf(container: Json | undefined, segment: PathSegment): Json | undefined {
   if (Array.isArray(container)) {
     return container[indexIn(segment, container.length - 1)];
   }
@@ -48,7 +48,7 @@ function childOf(container: unknown, segment: PathSegment): unknown {
   throw new PatchError(`cannot step into a ${typeof container}`);
 }
 
-function follow(root: unknown, path: PathSegment[]): unknown {
+function follow(root: Json | undefined, path: PathSegment[]): Json | undefined {
   let current = root;
   for (const segment of path) {
     current = childOf(current, segment);
@@ -63,7 +63,7 @@ function follow(root: unknown, path: PathSegment[]): unknown {
 
 // `next` merged into `previous`: equal parts keep their identity (and so
 // their reactivity), differing parts are assigned. Returns what to store.
-export function reconcile(previous: unknown, next: Json): unknown {
+export function reconcile(previous: Json | undefined, next: Json): Json {
   const areArrays = Array.isArray(previous) && Array.isArray(next);
   if (areArrays) {
     return reconcileArray(previous, next);
@@ -77,7 +77,7 @@ export function reconcile(previous: unknown, next: Json): unknown {
   return next;
 }
 
-function reconcileArray(previous: unknown[], next: Json[]): unknown[] {
+function reconcileArray(previous: Json[], next: Json[]): Json[] {
   for (let index = 0; index < next.length; index++) {
     previous[index] = reconcile(previous[index], next[index]);
   }
@@ -86,7 +86,7 @@ function reconcileArray(previous: unknown[], next: Json[]): unknown[] {
   return previous;
 }
 
-function reconcileRecord(previous: Record<string, unknown>, next: Record<string, Json>): Record<string, unknown> {
+function reconcileRecord(previous: Record<string, Json>, next: Record<string, Json>): Record<string, Json> {
   for (const key in previous) {
     if (!Object.hasOwn(next, key)) {
       delete previous[key];
