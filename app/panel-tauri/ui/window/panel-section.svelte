@@ -1,40 +1,24 @@
 <script lang="ts">
-  import type { SectionView, SwitchKey } from "../protocol.g.ts";
-  import { animated } from "./animated.ts";
+  import type { SectionView } from "../protocol.g.ts";
   import * as motion from "./motion.ts";
-  import type { FrameworkElement } from "./winui.ts";
+  import PanelCard from "./panel-card.svelte";
+  import { StackPanel, TextBlock } from "svelte-winui";
 
   // A section's header over its cards.
-  interface Props {
-    section: SectionView;
-    cardControl: (key: SwitchKey) => FrameworkElement;
-    injectCard: FrameworkElement | null;
-  }
-
-  const { section, cardControl, injectCard }: Props = $props();
+  const { section }: { section: SectionView } = $props();
 </script>
 
-<stack-panel spacing="4" {@attach animated(motion.reposition)}>
+<StackPanel spacing={4} childrenTransitions={motion.applied(motion.reposition)}>
   <!-- The left margin lines the header up with the cards' text, as Windows
        Settings does. -->
-  <text-block class="section-header" margin="4,0,0,4">{section.name}</text-block>
+  <TextBlock class="section-header" margin="4,0,0,4" text={section.name} />
   {#each section.cards as card (card.key)}
-    {#if card.inject === null}
-      <host element={cardControl(card.key)} />
-    {:else}
-      <!-- Its add/delete transition slides the Inject card in and out. -->
-      <stack-panel spacing="4" {@attach animated(motion.addDelete)}>
-        <host element={cardControl(card.key)} />
-        {#if injectCard !== null}
-          <host element={injectCard} />
-        {/if}
-      </stack-panel>
-    {/if}
+    <PanelCard {card} />
   {/each}
-</stack-panel>
+</StackPanel>
 
 <style>
-  .section-header {
+  :global(.section-header) {
     -winui-based-on: BodyStrongTextBlockStyle;
   }
 </style>

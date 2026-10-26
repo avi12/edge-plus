@@ -12,3 +12,4 @@ export {
   thickness
 } from "./renderer/values.ts";
 export { dispatch, flush, onFlush } from "./scheduling.ts";
+export * from "./components/generated/index.ts";

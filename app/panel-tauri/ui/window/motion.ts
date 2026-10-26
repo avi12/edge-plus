@@ -1,4 +1,4 @@
-import type { ListView, StackPanel } from "./winui.ts";
+import type { ListView } from "./winui.ts";
 import {
   AddDeleteThemeTransition,
   ReorderThemeTransition,
@@ -6,26 +6,41 @@ import {
   TransitionCollection,
   UISettings
 } from "./winui.ts";
+import { createSubscriber } from "svelte/reactivity";
 
-// The one place that honours Windows' "Animation effects" switch: a panel
-// registered here gets WinUI's theme transitions only while it is on, and
-// refresh() re-reads it live.
+// The one place that honours Windows' "Animation effects" switch: a panel's
+// `childrenTransitions={applied(reposition)}` gets WinUI's theme transitions
+// only while it is on, and refresh() re-reads it live (the prop follows, since
+// applied() reads the switch reactively).
 
 type Transitions = () => TransitionCollection;
 
-const panels: Array<[StackPanel, Transitions]> = [];
 const lists: Array<[ListView, Transitions]> = [];
 // Made on first use, once the UI thread's apartment exists.
 let settings: UISettings | undefined;
 let isOn = isSwitchOn();
+
+function ignoreSwitch(): void {
+  // Nothing reads the switch yet.
+}
+
+let announceSwitch = ignoreSwitch;
+const followSwitch = createSubscriber(update => {
+  announceSwitch = update;
+  return () => {
+    announceSwitch = ignoreSwitch;
+  };
+});
 
 function isSwitchOn(): boolean {
   settings ??= new UISettings();
   return settings.animationsEnabled;
 }
 
-// What a panel gets while the switch is as it is now.
-function applied(transitions: Transitions): TransitionCollection {
+// What a panel gets while the switch is as it is now; an effect that calls it
+// runs again when the switch flips.
+export function applied(transitions: Transitions): TransitionCollection {
+  followSwitch();
   return isOn ? transitions() : new TransitionCollection();
 }
 
@@ -49,11 +64,6 @@ export function listItems(): TransitionCollection {
   return collection;
 }
 
-export function animate(panel: StackPanel, transitions: Transitions): void {
-  panels.push([panel, transitions]);
-  panel.childrenTransitions = applied(transitions);
-}
-
 export function animateItems(list: ListView, transitions: Transitions): void {
   lists.push([list, transitions]);
   list.itemContainerTransitions = applied(transitions);
@@ -68,10 +78,7 @@ export function refresh(): void {
   }
 
   isOn = isNowOn;
-  for (const [panel, transitions] of panels) {
-    panel.childrenTransitions = applied(transitions);
-  }
-
+  announceSwitch();
   for (const [list, transitions] of lists) {
     list.itemContainerTransitions = applied(transitions);
   }

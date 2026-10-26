@@ -1,22 +1,32 @@
 <script lang="ts">
+  import type { UpdateView } from "../protocol.g.ts";
   import CardFrame from "./card-frame.svelte";
-  import type { UpdateCardProps } from "./update-card.d.svelte.ts";
+  import { usePanel } from "./panel.svelte.ts";
+  import { Button } from "svelte-winui";
 
   // A release that is downloaded and checked, with the button that restarts
-  // Edge+ into it. Hidden until one is ready.
-  const { update, isPressed, onClicked }: UpdateCardProps = $props();
+  // Edge+ into it. The page shows it once one is ready.
+  const { update }: { update: UpdateView } = $props();
+  const panel = usePanel();
 
-  const hiddenWording = {
-    title: "",
-    description: "",
-    glyph: 0
-  };
+  // Pressed and not yet answered: the button says it is restarting.
+  let isRestarting = $state(false);
+  const label = $derived(isRestarting ? update.restarting : update.button);
 
-  const label = $derived(isPressed ? update?.restarting : update?.button);
+  async function restart(): Promise<void> {
+    // Disabled at once, so a second click cannot start a second restart.
+    isRestarting = true;
+    const error = await panel.restartToUpdate();
+    if (error !== null) {
+      // The restart failed: the button comes back, so it can be tried again.
+      isRestarting = false;
+      panel.report(error);
+    }
+  }
 </script>
 
-<CardFrame wording={update?.wording ?? hiddenWording} isShown={update !== null}>
+<CardFrame wording={update.wording}>
   {#snippet end()}
-    <button class="accent-button" is-enabled={!isPressed} onclick={onClicked}>{label ?? ""}</button>
+    <Button class="accent-button" isEnabled={!isRestarting} onClick={() => void restart()}>{label}</Button>
   {/snippet}
 </CardFrame>

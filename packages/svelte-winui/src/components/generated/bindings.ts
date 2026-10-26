@@ -188,6 +188,7 @@ export { RichEditBox } from "#winui/microsoft/ui/xaml/controls/RichEditBox";
 export { RichEditClipboardFormat } from "#winui/microsoft/ui/xaml/controls/RichEditClipboardFormat";
 export { RichTextBlock } from "#winui/microsoft/ui/xaml/controls/RichTextBlock";
 export { RichTextBlockOverflow } from "#winui/microsoft/ui/xaml/controls/RichTextBlockOverflow";
+export { RowDefinition } from "#winui/microsoft/ui/xaml/controls/RowDefinition";
 export { ScrollBarVisibility } from "#winui/microsoft/ui/xaml/controls/ScrollBarVisibility";
 export { ScrollContentPresenter } from "#winui/microsoft/ui/xaml/controls/ScrollContentPresenter";
 export { ScrollingChainMode } from "#winui/microsoft/ui/xaml/controls/ScrollingChainMode";

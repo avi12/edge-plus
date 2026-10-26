@@ -7,8 +7,8 @@ import type {
   Model,
   PropertyModel
 } from "./model.ts";
-import { bindingClasses, requestedClasses } from "./model.ts";
-import { extraBindings, PropertyKind } from "./tables.ts";
+import { bindingClasses, kebabCase, requestedClasses } from "./model.ts";
+import { extendedClasses, extraBindings, PropertyKind } from "./tables.ts";
 import type { TypeName } from "./winmd.ts";
 import { fullName } from "./winmd.ts";
 
@@ -387,8 +387,22 @@ function emitLevelImports(level: ClassModel, imports: LevelImports): string[] {
     lines.push(...importLine([`${parent}Bound`, `${parent}Props`], `./${parent}.svelte.ts`, true));
   }
 
+  const extras = extrasOf(level);
+  if (extras !== null) {
+    const extension = `../../extensions/${kebabCase(name)}.ts`;
+    lines.push(...importLine([`link${extras}`], extension));
+    lines.push(...importLine([extras], extension, true));
+  }
+
   lines.push(...importLine(level.declaresContent ? ["Snippet"] : [], "svelte", true));
   return lines;
+}
+
+// A hand-written extension adds the props the metadata cannot give
+// (extendedClasses in tables.ts): its props mix into this level's.
+function extrasOf(level: ClassModel): string | null {
+  const name = level.type.name;
+  return extendedClasses.has(name) ? `${name}Extras` : null;
 }
 
 function boundTypeOf(level: ClassModel): string {
@@ -432,9 +446,14 @@ export function emitLevel(level: ClassModel): string {
     imports.convertTypes.add("AttachedInput");
   }
 
-  const propsExtends = parentName === undefined ? "" : ` extends ${parentName}Props`;
+  const extras = extrasOf(level);
+  const extended = [parentName === undefined ? null : `${parentName}Props`, extras].filter(part => part !== null);
+  const propsExtends = extended.length === 0 ? "" : ` extends ${extended.join(", ")}`;
   const isBoundUsed = level.parent !== null || level.bindables.length > 0;
-  const parentLink = parentName === undefined ? [] : [`  link${parentName}(control, props, bound, link);`];
+  const parentLink = [
+    ...parentName === undefined ? [] : [`  link${parentName}(control, props, bound, link);`],
+    ...extras === null ? [] : [`  link${extras}(control, props, link);`]
+  ];
   const lines = [
     generatedHeader,
     "",

@@ -1,38 +1,44 @@
 <script lang="ts">
+  import type { CardView } from "../protocol.g.ts";
   import CardFrame from "./card-frame.svelte";
-  import type { FeatureCardProps } from "./feature-card.d.svelte.ts";
-  import { projectAs, ToggleSwitch } from "./winui.ts";
+  import { usePanel } from "./panel.svelte.ts";
+  import ThemingBody from "./theming-body.svelte";
+  import { ToggleSwitch } from "svelte-winui";
 
-  // A card with a switch at its end.
-  const { wording, isOn, isLocked, note, body, onToggled }: FeatureCardProps = $props();
+  // A card with a switch at its end. The theming card carries the theme
+  // library under its words.
+  const { card }: { card: CardView } = $props();
+  const panel = usePanel();
 
-  // Svelte writing isOn raises Toggled too; only a switch that now differs
-  // from isOn was flipped by the user.
-  function toggled(sender: unknown): void {
-    const toggle = projectAs(sender, ToggleSwitch);
-    const isFlippedByUser = toggle.isOn !== isOn;
-    if (isFlippedByUser) {
-      onToggled(toggle.isOn);
-    }
+  // What the switch shows: the View's, until the user flips it. The binding's
+  // setter hears only the user's flips, never Svelte writing the View's value.
+  let isOn = $derived(card.isOn);
+
+  function flip(next: boolean): void {
+    isOn = next;
+    void panel.runAndReport({
+      kind: "setSwitch",
+      key: card.key,
+      isOn: next
+    });
   }
 </script>
 
-{#snippet hostedBody()}
-  <host element={body} />
+{#snippet themeLibrary()}
+  {#if card.theming !== null}
+    <ThemingBody {card} theming={card.theming} />
+  {/if}
 {/snippet}
 
-<CardFrame {wording} {note} body={body ? hostedBody : undefined}>
+<CardFrame wording={card.wording} note={card.note} body={card.theming === null ? undefined : themeLibrary}>
   {#snippet end()}
-    <!-- Svelte takes every attribute that starts with "on" for an event, so
-         OnContent is spelled with its capital. -->
-    <toggle-switch
-      On-content=""
-      off-content=""
-      min-width={0}
-      automation-properties.name={wording.title}
-      is-on={isOn}
-      is-enabled={!isLocked}
-      ontoggled={toggled}
+    <ToggleSwitch
+      bind:isOn={() => isOn, flip}
+      onContent=""
+      offContent=""
+      minWidth={0}
+      automationName={card.wording.title}
+      isEnabled={!card.isLocked}
     />
   {/snippet}
 </CardFrame>

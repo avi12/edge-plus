@@ -7,8 +7,10 @@ import { BackgroundSizing } from "../bindings.ts";
 import type { Grid } from "../bindings.ts";
 import { linkPanel } from "./Panel.svelte.ts";
 import type { PanelBound, PanelProps } from "./Panel.svelte.ts";
+import { linkGridExtras } from "../../extensions/grid.ts";
+import type { GridExtras } from "../../extensions/grid.ts";
 
-export interface GridProps extends PanelProps {
+export interface GridProps extends PanelProps, GridExtras {
   backgroundSizing?: EnumInput<typeof BackgroundSizing>;
   borderBrush?: BrushInput;
   borderThickness?: ThicknessInput;
@@ -27,6 +29,7 @@ export function linkGrid(
   link: Linker
 ): void {
   linkPanel(control, props, bound, link);
+  linkGridExtras(control, props, link);
   link.property(props, "backgroundSizing", value => {
     control.backgroundSizing = enumValue(BackgroundSizing, value);
   });

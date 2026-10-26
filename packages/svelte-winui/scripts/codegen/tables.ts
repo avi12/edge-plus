@@ -47,6 +47,12 @@ export const skippedProperties = new Map<string, string>([
   ["Style", "style is the CSS string of the element; WinUI's Style object is set from the class"]
 ]);
 
+// A component with props the metadata cannot give (Grid's columns and rows
+// are read-only collections): src/components/extensions/<kebab-name>.ts
+// exports `<Name>Extras` (the props) and `link<Name>Extras(control, props,
+// link)`, which the generated level mixes in.
+export const extendedClasses = new Set(["Grid"]);
+
 // A property that has its own props `children`, `class`, `style` or
 // `attached`, which every component takes.
 export const reservedKeys = new Set(["children", "class", "style", "attached"]);
@@ -165,6 +171,10 @@ export const supportClasses: TypeName[] = [
   {
     namespace: "Microsoft.UI.Xaml.Controls",
     name: "ColumnDefinition"
+  },
+  {
+    namespace: "Microsoft.UI.Xaml.Controls",
+    name: "RowDefinition"
   },
   {
     namespace: "Microsoft.UI.Xaml.Media",

@@ -91,6 +91,11 @@ through an attachment the renderer provides:
   `canvasTop`, `canvasZIndex`, `automationName`, `automationHelpText`,
   `toolTip`; anything else through `attached={[Owner, "Property", value]}`.
 
+- A grid's `columns="Auto,*,Auto"` and `rows="Auto,Auto"` (lengths separated
+  by commas) are hand-written props: WinUI's definition collections are
+  read-only, so `src/components/extensions/grid.ts` adds them and the
+  generator mixes them in (`extendedClasses` in `scripts/codegen/tables.ts`).
+
 ### CSS
 
 The Vite plugin compiles each component's `<style>` (Svelte scopes it) into

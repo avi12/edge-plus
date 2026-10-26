@@ -1,7 +1,9 @@
 <script lang="ts">
   import type { ThemeRow as Row } from "../protocol.g.ts";
+  import * as motion from "./motion.ts";
   import ThemeRow from "./theme-row.svelte";
   import { rowKey } from "./theme-row.ts";
+  import { StackPanel, TextBlock } from "svelte-winui";
 
   // The themes installed in Edge that the user did not add here: listed, never
   // reordered or removed. `empty` replaces the list (and the user's own) while
@@ -16,11 +18,11 @@
 
 <!-- Keyed by everything a row shows, so an unchanged row is left alone and
      only the rows that came or went play the panel's transition. -->
-<stack-panel spacing={4}>
+<StackPanel spacing={4} childrenTransitions={motion.applied(motion.addDelete)}>
   {#each rows as row (rowKey(row))}
     <ThemeRow theme={row} onRemove={null} />
   {/each}
   {#if empty !== null}
-    <text-block class="card-description">{empty}</text-block>
+    <TextBlock class="card-description" text={empty} />
   {/if}
-</stack-panel>
+</StackPanel>
