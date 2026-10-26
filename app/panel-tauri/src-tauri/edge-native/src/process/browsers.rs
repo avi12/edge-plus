@@ -20,8 +20,8 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetWindowTextLengthW, GetWindowThreadProcessId, IsWindowVisible,
 };
 
-use crate::handle;
-use crate::wide::from_wide;
+use crate::kernel::handle;
+use crate::kernel::wide::from_wide;
 
 const EDGE_IMAGE_NAME: &str = "msedge.exe";
 // u32::MAX is INFINITE to WaitForSingleObject; a longer timeout stops just short.

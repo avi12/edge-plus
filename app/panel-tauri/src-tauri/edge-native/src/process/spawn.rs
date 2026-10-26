@@ -6,8 +6,8 @@ use windows_sys::Win32::System::Threading::{
     PROCESS_CREATION_FLAGS, PROCESS_INFORMATION, STARTUPINFOW,
 };
 
-use crate::handle;
-use crate::wide::to_wide;
+use crate::kernel::handle;
+use crate::kernel::wide::to_wide;
 
 const NO_EXTRA_FLAGS: PROCESS_CREATION_FLAGS = 0;
 

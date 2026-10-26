@@ -12,8 +12,8 @@ use windows::UI::Notifications::{ToastNotification, ToastNotificationManager};
 use windows::core::HSTRING;
 use windows_sys::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
 
-use crate::registry::{self, Hive};
-use crate::wide::to_wide;
+use crate::kernel::wide::to_wide;
+use crate::system::registry::{self, Hive};
 
 const APP_ID_KEY: &str = r"Software\Classes\AppUserModelId";
 const DISPLAY_NAME_VALUE: &str = "DisplayName";

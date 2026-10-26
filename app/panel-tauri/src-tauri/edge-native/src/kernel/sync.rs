@@ -8,8 +8,8 @@ use windows_sys::Win32::System::Threading::{
     SetEvent,
 };
 
-use crate::handle;
-use crate::wide::to_wide;
+use crate::kernel::handle;
+use crate::kernel::wide::to_wide;
 
 /// Whether the named event exists (`OpenEventW` succeeds).
 #[must_use]

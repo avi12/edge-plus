@@ -8,7 +8,7 @@ use windows_sys::Win32::Storage::FileSystem::{
     GetFileVersionInfoSizeW, GetFileVersionInfoW, VS_FIXEDFILEINFO, VerQueryValueW,
 };
 
-use crate::wide::to_wide;
+use crate::kernel::wide::to_wide;
 
 // VerQueryValueW's sub-block for the VS_FIXEDFILEINFO root.
 const FIXED_FILE_INFO_BLOCK: &str = "\\";

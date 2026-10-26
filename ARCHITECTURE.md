@@ -59,7 +59,7 @@ the panel can tell whether it is running without tracking any process.*
 | Native calls | `app/panel-tauri/src-tauri/edge-native/` | Rust | Every Win32 / WinRT call the core makes; the only `unsafe`. |
 | Window | `app/panel-tauri/ui/` | TypeScript / WinUI 3 | A Node process the core starts: draws the View, sends back Actions, one JSON line each way. |
 | Split DLL | `app/native-split/` | C++20 | Runs inside Edge. Hooks, control window, hotkeys, tab drags. |
-| Injector | `edge-native/src/inject.rs`, `app/native-split/src/inject.cpp` | Rust / C++ | The panel's injector; `inject.exe` is a development harness. |
+| Injector | `edge-native/src/process/inject.rs`, `app/native-split/src/inject.cpp` | Rust / C++ | The panel's injector; `inject.exe` is a development harness. |
 | Reverse-engineering notes | `docs/re/` | Markdown | How each Edge hook was found and why it is safe. |
 
 ## Life of a change

@@ -12,7 +12,7 @@ use windows_sys::Win32::System::Registry::{
     RegCreateKeyExW, RegDeleteTreeW, RegDeleteValueW, RegGetValueW, RegOpenKeyExW, RegSetValueExW,
 };
 
-use crate::wide::{from_wide, to_wide};
+use crate::kernel::wide::{from_wide, to_wide};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Hive {

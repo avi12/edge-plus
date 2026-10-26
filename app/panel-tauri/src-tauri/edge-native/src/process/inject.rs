@@ -16,9 +16,9 @@ use windows_sys::Win32::System::Threading::{
     PROCESS_VM_WRITE, WaitForSingleObject,
 };
 
-use crate::handle;
-use crate::process::module_base;
-use crate::wide::to_wide;
+use crate::kernel::handle;
+use crate::kernel::wide::to_wide;
+use crate::process::browsers::module_base;
 
 const REMOTE_THREAD_TIMEOUT_MILLISECONDS: u32 = 10_000;
 // A DLL that unloaded itself but was re-injected meanwhile can hold several
