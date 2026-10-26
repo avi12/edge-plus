@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { compileSvelte } from "svelte-winui/compile";
+import { z } from "zod";
 
 // Builds dist/window, the window kit a published edgeplus.exe carries and
 // unpacks: Node itself, the window's scripts bundled, dynwinrt's native
@@ -55,16 +56,15 @@ function cppRuntimePath(): string {
   throw new Error(`No ${cppRuntime} under ${redist}: install Visual Studio's C++ workload`);
 }
 
+const winmdsLockSchema = z.object({ nuget_cache_dir: z.string() });
+
 function nugetCache(): string {
-  const lock: unknown = JSON.parse(readFileSync(path.join(root, ".winapp", "winmds.lock.json"), "utf8"));
-  const hasCache = typeof lock === "object" && lock !== null && "nuget_cache_dir" in lock;
-  const cache: unknown = hasCache ? lock.nuget_cache_dir : undefined;
-  const isNamed = typeof cache === "string";
-  if (!isNamed) {
+  const lock = winmdsLockSchema.safeParse(JSON.parse(readFileSync(path.join(root, ".winapp", "winmds.lock.json"), "utf8")));
+  if (!lock.success) {
     throw new Error("Run pnpm restore first: .winapp/winmds.lock.json names no NuGet cache");
   }
 
-  return cache;
+  return lock.data.nuget_cache_dir;
 }
 
 // The window's .svelte components, compiled as the bundle takes them in, each

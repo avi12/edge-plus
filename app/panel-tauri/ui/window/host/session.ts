@@ -1,12 +1,12 @@
-import type { Action, Bounds, UiMessage, View } from "../../protocol.g.ts";
+import type { Action, Bounds, EdgePlusProtocolMap, View } from "../../protocol.g.ts";
+import { CoreMessageType, UiMessageType } from "../../protocol.g.ts";
 import Shell from "../Shell.svelte";
 import { milliseconds } from "../style/layout.ts";
 import "../style/SharedStyles.svelte";
 import { installStyles } from "../style/styles.ts";
 import * as winui from "../winui.ts";
 import { DispatcherQueue } from "../winui.ts";
-import type { OtherMessage } from "./core-link.ts";
-import { isOtherMessage, viewAsSnapshot, viewStateName } from "./core-link.ts";
+import { viewAsSnapshot, viewStateName } from "./core-link.ts";
 import { Panel } from "./panel.svelte.ts";
 import type { MessagePort } from "node:worker_threads";
 import { mountControl, registerControls } from "svelte-winui";
@@ -22,13 +22,9 @@ const inboxMilliseconds = 30;
 // taking focus (the fixture also places it off screen).
 const backgroundVariable = "EDGEPLUS_WINDOW_BACKGROUND";
 
-type MessageType = OtherMessage["type"];
-type MessageOfType = { [Message in OtherMessage as Message["type"]]: Message };
-type Handlers = { [Type in MessageType]: (message: MessageOfType[Type]) => void };
-
-function dispatch<Type extends MessageType>(handlers: Handlers, message: MessageOfType[Type] & { type: Type }): void {
-  handlers[message.type](message);
-}
+// The messages the channel does not take for itself: its `view` is the
+// channel's snapshot (core-link.ts) and its `action` is channel.send.
+type SessionProtocol = Omit<EdgePlusProtocolMap, typeof CoreMessageType.view | typeof UiMessageType.action>;
 
 class Session {
   private readonly dispatcher = DispatcherQueue.getForCurrentThread();
@@ -37,7 +33,7 @@ class Session {
   private readonly inbox = this.dispatcher.createTimer();
   private readonly timers = new Set<ReturnType<DispatcherQueue["createTimer"]>>();
   private readonly transport: Transport;
-  private readonly channel: HostChannel;
+  private readonly channel: HostChannel<Action, SessionProtocol>;
   // The core's View, one reactive object the page reads; the core sends it
   // whole each time and the channel changes only what differs.
   private readonly view: HostState<View>;
@@ -50,8 +46,9 @@ class Session {
 
   constructor(port: MessagePort) {
     this.transport = viewAsSnapshot(createMessagePortTransport(port, { poll: drain => this.poll(drain) }));
-    this.channel = createHostChannel(this.transport, { onOther: message => this.handle(message) });
+    this.channel = createHostChannel<Action, SessionProtocol>(this.transport);
     this.view = hostState<View>(this.channel, viewStateName);
+    this.listen();
   }
 
   start(): void {
@@ -70,23 +67,24 @@ class Session {
     };
   }
 
-  private readonly handlers: Handlers = {
-    place: message => {
-      this.placement = message.bounds;
-    },
-    notice: message => {
-      this.panel.actionNotice = message.text;
-    },
-    status: message => this.panel.showStatus(message.line),
+  private listen(): void {
+    const { messaging } = this.channel;
+    messaging.onMessage(CoreMessageType.place, message => {
+      this.placement = message.data;
+    });
+    messaging.onMessage(CoreMessageType.notice, message => {
+      this.panel.actionNotice = message.data;
+    });
+    messaging.onMessage(CoreMessageType.status, message => {
+      this.panel.showStatus(message.data);
+    });
     // Launching Edge+ again lands here.
-    bringBack: () => this.panel.window?.bringToFront(),
-    close: () => this.close()
-  };
-
-  private handle(message: unknown): void {
-    if (isOtherMessage(message)) {
-      dispatch(this.handlers, message);
-    }
+    messaging.onMessage(CoreMessageType.bringBack, () => {
+      this.panel.window?.bringToFront();
+    });
+    messaging.onMessage(CoreMessageType.close, () => {
+      this.close();
+    });
   }
 
   private open(view: View): void {
@@ -95,11 +93,8 @@ class Session {
       panel: this.panel,
       placement: this.placement,
       isBackground: process.env[backgroundVariable] === "1",
-      refresh: () => this.send({ type: "refresh" }),
-      reportBounds: (bounds: Bounds) => this.send({
-        type: "bounds",
-        bounds
-      }),
+      refresh: () => this.tell(this.channel.messaging.sendMessage(UiMessageType.refresh)),
+      reportBounds: (bounds: Bounds) => this.tell(this.channel.messaging.sendMessage(UiMessageType.bounds, bounds)),
       onClosed: exitApplication
     });
   }
@@ -123,8 +118,10 @@ class Session {
     }
   }
 
-  private send(message: UiMessage): void {
-    this.transport.send(message);
+  // The window does not wait for the core to take a notice (the core's answer
+  // is empty); a failure to deliver is the channel's to report.
+  private tell(delivery: Promise<void>): void {
+    delivery.catch(() => {});
   }
 
   private after(count: number, callback: () => void): () => void {

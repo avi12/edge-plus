@@ -3,6 +3,7 @@
   import { LocalThemeKind } from "../cards/theming-card.ts";
   import { usePanel } from "../host/panel.svelte.ts";
   import * as motion from "../style/motion.ts";
+  import type { NativeEventArguments } from "../winui.ts";
   import { KeyRoutedEventArgs, projectAs, VirtualKey } from "../winui.ts";
   import EdgeThemeList from "./EdgeThemeList.svelte";
   import OwnThemeList from "./OwnThemeList.svelte";
@@ -67,7 +68,7 @@
     });
   }
 
-  function addStoreOnEnter(_sender: unknown, event: unknown): void {
+  function addStoreOnEnter(...[, event]: NativeEventArguments): void {
     const isEnter = projectAs(event, KeyRoutedEventArgs).key === VirtualKey.Enter;
     if (isEnter) {
       void addStore();

@@ -36,7 +36,8 @@
     "@microsoft/dynwinrt": "0.1.0-preview.23",
     "@winapp/bindings": "link:.winapp/bindings",
     "svelte": "https://pkg.pr.new/svelte@18042",
-    "svelte-winui": "workspace:*"
+    "svelte-winui": "workspace:*",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@microsoft/dynwinrt-codegen": "0.1.0-preview.23",

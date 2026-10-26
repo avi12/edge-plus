@@ -83,8 +83,8 @@ export function providePanel(panel: Panel): void {
 }
 
 export function usePanel(): Panel {
-  const panel: unknown = getContext(panelContext);
-  if (!(panel instanceof Panel)) {
+  const panel = getContext<Panel | undefined>(panelContext);
+  if (panel === undefined) {
     throw new Error("no panel was provided to this component");
   }
 

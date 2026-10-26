@@ -4,6 +4,7 @@
   import type { Panel } from "../host/panel.svelte.ts";
   import { providePanel } from "../host/panel.svelte.ts";
   import * as motion from "../style/motion.ts";
+  import type { NativeEventArguments } from "../winui.ts";
   import { DataPackageOperation, DragEventArgs, projectAs, StandardDataFormats } from "../winui.ts";
   import DropVeil from "./DropVeil.svelte";
   import PageFooter from "./PageFooter.svelte";
@@ -34,7 +35,7 @@
     return paths;
   }
 
-  function onDragOver(_sender: unknown, event: unknown): void {
+  function onDragOver(...[, event]: NativeEventArguments): void {
     const dragged = projectAs(event, DragEventArgs);
     const hasFiles = dragged.dataView.contains(StandardDataFormats.storageItems);
     if (!hasFiles) {
@@ -51,7 +52,7 @@
 
   // The core tells a folder, .zip and .crx apart; the last failure is the one
   // shown.
-  async function onDrop(_sender: unknown, event: unknown): Promise<void> {
+  async function onDrop(...[, event]: NativeEventArguments): Promise<void> {
     const dropped = projectAs(event, DragEventArgs);
     panel.isVeilShown = false;
     const hasFiles = dropped.dataView.contains(StandardDataFormats.storageItems);

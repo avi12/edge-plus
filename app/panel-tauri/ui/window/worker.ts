@@ -1,31 +1,26 @@
-import type { MessagePort } from "node:worker_threads";
-import { workerData } from "node:worker_threads";
+import { MessagePort, workerData } from "node:worker_threads";
 import { runOnUiThread } from "svelte-winui/thread";
+import { z } from "zod";
 
 // The UI thread (svelte-winui/thread): its apartment comes first, so
 // everything loaded after it may create WinRT objects as it loads.
 
 // What main.ts hands this thread: the link to the core and, run from source,
 // the port to the dev server the window's modules come from.
-export interface WindowPorts {
-  link: MessagePort;
-  modules?: MessagePort;
-}
+const windowPortsSchema = z.object({
+  link: z.instanceof(MessagePort),
+  modules: z.instanceof(MessagePort).optional()
+});
 
-function isPort(value: unknown): value is MessagePort {
-  return typeof value === "object" && value !== null && "postMessage" in value;
-}
-
-function isWindowPorts(value: unknown): value is WindowPorts {
-  return typeof value === "object" && value !== null && "link" in value && isPort(value.link);
-}
+export type WindowPorts = z.infer<typeof windowPortsSchema>;
 
 await runOnUiThread(async () => {
-  const ports: unknown = workerData;
-  if (!isWindowPorts(ports)) {
+  const parsed = windowPortsSchema.safeParse(workerData);
+  if (!parsed.success) {
     return;
   }
 
+  const ports = parsed.data;
   if (ports.modules === undefined) {
     const { runSession } = await import("./host/session.ts");
     await runSession(ports.link);

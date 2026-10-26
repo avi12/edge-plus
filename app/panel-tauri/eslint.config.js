@@ -233,6 +233,10 @@ const tsStyleRules = {
       message: "Declare a named function instead of assigning an arrow function to a variable - fold the condition inside the function body."
     },
     {
+      selector: "TSUnknownKeyword",
+      message: "Use the precise type (a schema's z.infer, Json, a generic, a union), not unknown."
+    },
+    {
       // CLAUDE.md: a compound condition is extracted into a named boolean.
       selector: "IfStatement > LogicalExpression.test",
       message: "Extract the condition into a descriptively-named const (is/has/can/should) right before the if."

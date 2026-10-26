@@ -1,30 +1,23 @@
-import type { CoreMessage } from "../../protocol.g.ts";
+import { CoreMessageType } from "../../protocol.g.ts";
 import type { Transport } from "svelte-winui/state";
 import { MessageType } from "svelte-winui/state";
+import { z } from "zod";
 
-// The core speaks its own protocol (protocol.rs): a `view` message carries the
-// whole View. The host channel's state is named, so the core's `view` is read
-// as the snapshot of the state called "view"; every other message of the
-// core's, and the actions and replies (which already have the channel's
-// shape), pass through as they are.
+// The core speaks its own protocol (protocol.rs, as EdgePlusProtocolMap): its
+// `view` request carries the whole View. The host channel's state is named, so
+// the core's `view` is read as the snapshot of the state called "view" - the
+// frame keeps its id, so the channel's answer settles the core's request.
+// Every other request of the core's goes through as it is, to the handlers the
+// session registers on the channel's messaging.
 
 export const viewStateName = "view";
 
-// The core's own process, so its messages are trusted to be well formed.
-function isCoreMessage(value: unknown): value is CoreMessage {
-  return typeof value === "object" && value !== null && "type" in value;
-}
-
-// What the channel takes for itself: the View, and the reply that settles an
-// action.
-const channelTypes: ReadonlyArray<CoreMessage["type"]> = ["view", "reply"];
-
-// The core's messages the window itself acts on.
-export type OtherMessage = Exclude<CoreMessage, { type: "view" | "reply" }>;
-
-export function isOtherMessage(value: unknown): value is OtherMessage {
-  return isCoreMessage(value) && !channelTypes.includes(value.type);
-}
+const viewRequestSchema = z.object({
+  id: z.number(),
+  type: z.literal(CoreMessageType.view),
+  data: z.json(),
+  timestamp: z.number()
+});
 
 export function viewAsSnapshot(transport: Transport): Transport {
   return {
@@ -34,12 +27,16 @@ export function viewAsSnapshot(transport: Transport): Transport {
     listen: listener => transport.listen({
       ...listener,
       message(value) {
-        const isView = isCoreMessage(value) && value.type === "view";
-        if (isView) {
+        const request = viewRequestSchema.safeParse(value);
+        if (request.success) {
           listener.message({
+            id: request.data.id,
             type: MessageType.snapshot,
-            name: viewStateName,
-            value: value.view
+            data: {
+              name: viewStateName,
+              value: request.data.data
+            },
+            timestamp: request.data.timestamp
           });
         } else {
           listener.message(value);

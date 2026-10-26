@@ -2,6 +2,13 @@
 // generates into .winapp/bindings (package.json's winapp.jsBindings names the
 // roots). One import site, so a missing binding shows up here first.
 
+import type { UIElement as ElementBinding } from "#winui/microsoft/ui/xaml/UIElement";
+
+// What an element's event subscriptions pass to a handler: the bindings leave
+// the sender and the event arguments untyped, and a handler narrows them with
+// projectAs.
+export type NativeEventArguments = Parameters<Parameters<ElementBinding["onDragOver"]>[0]>;
+
 export { AutomationProperties } from "#winui/microsoft/ui/xaml/automation/AutomationProperties";
 export { Border } from "#winui/microsoft/ui/xaml/controls/Border";
 export { Button } from "#winui/microsoft/ui/xaml/controls/Button";
