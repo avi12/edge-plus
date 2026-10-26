@@ -10,6 +10,7 @@
     "src/renderer/list/keyed-list.ts",
     "src/state/index.ts",
     "src/state/host.ts",
+    "src/messaging/index.ts",
     "src/state/transports/stdio.ts",
     "src/css/index.ts",
     "src/vite/index.ts",

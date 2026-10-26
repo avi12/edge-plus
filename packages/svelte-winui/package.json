@@ -30,6 +30,7 @@
     "./components": "./src/components/index.ts",
     "./state": "./src/state/index.ts",
     "./state/host": "./src/state/host.ts",
+    "./messaging": "./src/messaging/index.ts",
     "./host": "./src/renderer/host/host.ts",
     "./keyed-list": "./src/renderer/list/keyed-list.ts",
     "./css": "./src/css/index.ts",
@@ -80,6 +81,10 @@
       "./state/host": {
         "types": "./dist/state/host.d.ts",
         "default": "./dist/state/host.js"
+      },
+      "./messaging": {
+        "types": "./dist/messaging/index.d.ts",
+        "default": "./dist/messaging/index.js"
       },
       "./host": {
         "types": "./dist/renderer/host/host.d.ts",
