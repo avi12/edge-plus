@@ -1,7 +1,7 @@
 // Unit tests for motion.h.
 #include <cstdio>
 #include <vector>
-#include "../src/motion.h"
+#include "../src/layout/motion.h"
 
 using namespace edgeplus;
 using namespace edgeplus::motion;

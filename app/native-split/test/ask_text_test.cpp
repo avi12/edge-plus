@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
-#include "../src/ask_text.h"
+#include "../src/assistant/ask_text.h"
 
 using namespace edgeplus::ask_text;
 

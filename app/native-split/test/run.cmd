@@ -9,7 +9,7 @@ pushd "%ROOT%"
 set "RC=0"
 for %%T in (*_test.cpp) do (
   echo [%%~nT]
-  cl /nologo /EHsc /std:c++20 /W4 /Fe:%%~nT.exe "%ROOT%%%T" >build.log 2>&1 || (type build.log & set "RC=1")
+  cl /nologo /EHsc /std:c++20 /W4 /I "%ROOT%..\src" /Fe:%%~nT.exe "%ROOT%%%T" >build.log 2>&1 || (type build.log & set "RC=1")
   if exist %%~nT.exe (call "%ROOT%%%~nT.exe" || set "RC=1")
   del /q %%~nT.exe %%~nT.obj build.log 2>nul
 )

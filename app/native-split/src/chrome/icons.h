@@ -1,0 +1,267 @@
+// icons.h — the vector icons the DLL draws in Edge's own buttons, built in
+// Edge's heap and never freed, so a button that outlives this DLL never points
+// into unloaded memory. ← → are quarter turns of Edge's ↑, so all four arrows
+// come from one icon family.
+#pragma once
+#include <cmath>
+#include <cstdint>
+#include <cstring>
+#include <initializer_list>
+#include <vector>
+#include "edge/edge.h"
+#include "layout/pane_tree.h"
+
+namespace edgeplus::icons {
+
+// Edge's gfx::VectorIcon ABI — Chromium's VectorIcon {reps, reps_size, name},
+// each VectorIconRep {path, path_size}, each path element a 4-byte command id
+// or float argument.
+struct IconRepresentation {
+  const void* path = nullptr;
+  uint64_t pathSize = 0;
+};
+struct VectorIcon {
+  const IconRepresentation* representations = nullptr;
+  uint64_t representationCount = 0;
+  const char* name = nullptr;
+};
+static_assert(sizeof(IconRepresentation) == 16 && sizeof(VectorIcon) == 24,
+              "gfx::VectorIconRep and gfx::VectorIcon as Edge lays them out");
+
+using PathElement = uint32_t;
+
+inline constexpr PathElement CommandElement(int command) noexcept {
+  return static_cast<PathElement>(command);
+}
+inline PathElement ArgumentElement(float value) noexcept {
+  PathElement element = 0;
+  memcpy(&element, &value, sizeof(element));
+  return element;
+}
+inline float ArgumentOf(PathElement element) noexcept {
+  float value = 0.f;
+  memcpy(&value, &element, sizeof(value));
+  return value;
+}
+
+// One block: the two structs, then the path, then the name.
+inline const VectorIcon* Build(const char* name,
+                               const std::vector<PathElement>& path) {
+  const size_t nameSize = strlen(name) + 1;
+  const size_t pathBytes = path.size() * sizeof(PathElement);
+  const size_t byteCount =
+      sizeof(VectorIcon) + sizeof(IconRepresentation) + pathBytes + nameSize;
+  auto* block = static_cast<uint8_t*>(edge::EdgeNew(byteCount));
+  auto* vectorIcon = reinterpret_cast<VectorIcon*>(block);
+  auto* representation =
+      reinterpret_cast<IconRepresentation*>(block + sizeof(VectorIcon));
+  uint8_t* pathCopy = block + sizeof(VectorIcon) + sizeof(IconRepresentation);
+  auto* nameCopy = reinterpret_cast<char*>(pathCopy + pathBytes);
+  memcpy(pathCopy, path.data(), pathBytes);
+  memcpy(nameCopy, name, nameSize);
+  *representation = IconRepresentation{pathCopy, path.size()};
+  *vectorIcon = VectorIcon{representation, 1, nameCopy};
+  return vectorIcon;
+}
+
+// Drawn like Edge's ⋯ icon.
+inline const VectorIcon* Grip() {
+  static const VectorIcon* icon = [] {
+    constexpr int kRows = 3;
+    constexpr int kColumns = 2;
+    constexpr float kCanvasSize = 16.f;
+    constexpr float kFirstCenterX = 6.f;
+    constexpr float kFirstCenterY = 4.f;
+    constexpr float kDotSpacing = 4.f;
+    constexpr float kDotRadius = 1.f;
+    std::vector<PathElement> path{
+        CommandElement(edge155::off::ICON_CANVAS_DIMENSIONS),
+        ArgumentElement(kCanvasSize)};
+    for (int row = 0; row < kRows; row++) {
+      for (int column = 0; column < kColumns; column++) {
+        const float centerX =
+            kFirstCenterX + kDotSpacing * static_cast<float>(column);
+        const float centerY =
+            kFirstCenterY + kDotSpacing * static_cast<float>(row);
+        // The dot's right-most point, then two half arcs (rx ry rotation
+        // large-arc sweep dx dy) around it.
+        path.push_back(CommandElement(edge155::off::ICON_MOVE_TO));
+        path.push_back(ArgumentElement(centerX + kDotRadius));
+        path.push_back(ArgumentElement(centerY));
+        for (const float deltaX : {-2.f, 2.f}) {
+          path.push_back(CommandElement(edge155::off::ICON_R_ARC_TO));
+          for (const float argument : {1.f, 1.f, 0.f, 1.f, 1.f, deltaX, 0.f}) {
+            path.push_back(ArgumentElement(argument));
+          }
+        }
+        path.push_back(CommandElement(edge155::off::ICON_CLOSE));
+      }
+    }
+    return Build("kEdgePlusPaneGripIcon", path);
+  }();
+  return icon;
+}
+
+// R_ARC_TO's arguments, in order.
+enum class ArcArgument : size_t {
+  kRadiusX,
+  kRadiusY,
+  kRotation,
+  kIsLargeArc,
+  kIsSweep,
+  kDeltaX,
+  kDeltaY,
+  kCount,
+};
+inline constexpr size_t kArcArgumentCount =
+    static_cast<size_t>(ArcArgument::kCount);
+inline constexpr size_t kArcLeadingArguments =
+    static_cast<size_t>(ArcArgument::kDeltaX);
+
+inline constexpr size_t ArcArgumentIndex(ArcArgument argument) noexcept {
+  return static_cast<size_t>(argument);
+}
+
+inline constexpr int kUnknownArgumentCount = -1;
+
+// Only the commands Edge's arrow icon uses.
+inline constexpr int ArgumentCount(int command) noexcept {
+  switch (command) {
+    case edge155::off::ICON_NEW_PATH:
+    case edge155::off::ICON_CLOSE:
+      return 0;
+    case edge155::off::ICON_CANVAS_DIMENSIONS:
+    case edge155::off::ICON_V_LINE_TO:
+      return 1;
+    case edge155::off::ICON_MOVE_TO:
+    case edge155::off::ICON_LINE_TO:
+    case edge155::off::ICON_R_LINE_TO:
+      return 2;
+    case edge155::off::ICON_R_ARC_TO:
+      return static_cast<int>(kArcArgumentCount);
+    default:
+      return kUnknownArgumentCount;
+  }
+}
+
+// An up arrow turned to point left or right: absolute points turn about the
+// canvas, relative moves turn without the offset, and a vertical line becomes
+// an absolute line to its end point. Null on an unknown command.
+inline const VectorIcon* QuarterTurn(const VectorIcon* source,
+                                     Direction direction, const char* name) {
+  const IconRepresentation& representation = source->representations[0];
+  const auto* elements = static_cast<const PathElement*>(representation.path);
+  const bool isLeft = direction == Direction::kLeft;
+  float canvas = 0.f;
+  float currentX = 0.f;
+  float currentY = 0.f;
+  float startX = 0.f;
+  float startY = 0.f;
+  std::vector<PathElement> out;
+  auto appendPoint = [&](int command, float x, float y) {
+    out.push_back(CommandElement(command));
+    out.push_back(ArgumentElement(isLeft ? y : canvas - y));
+    out.push_back(ArgumentElement(isLeft ? canvas - x : x));
+  };
+  auto turnedDelta = [&](float deltaX, float deltaY, float* turnedX,
+                         float* turnedY) {
+    *turnedX = isLeft ? deltaY : -deltaY;
+    *turnedY = isLeft ? -deltaX : deltaX;
+  };
+  size_t i = 0;
+  while (i < representation.pathSize) {
+    const int command = static_cast<int>(elements[i]);
+    const int argumentCount = ArgumentCount(command);
+    const bool isKnownCommand =
+        argumentCount != kUnknownArgumentCount &&
+        i + static_cast<size_t>(argumentCount) < representation.pathSize;
+    if (!isKnownCommand) {
+      return nullptr;
+    }
+    const PathElement* arguments = elements + i + 1;
+    switch (command) {
+      case edge155::off::ICON_CANVAS_DIMENSIONS:
+        canvas = ArgumentOf(arguments[0]);
+        out.push_back(elements[i]);
+        out.push_back(arguments[0]);
+        break;
+      case edge155::off::ICON_MOVE_TO:
+      case edge155::off::ICON_LINE_TO:
+        currentX = ArgumentOf(arguments[0]);
+        currentY = ArgumentOf(arguments[1]);
+        if (command == edge155::off::ICON_MOVE_TO) {
+          startX = currentX;
+          startY = currentY;
+        }
+        appendPoint(command, currentX, currentY);
+        break;
+      case edge155::off::ICON_V_LINE_TO:
+        currentY = ArgumentOf(arguments[0]);
+        appendPoint(edge155::off::ICON_LINE_TO, currentX, currentY);
+        break;
+      case edge155::off::ICON_R_LINE_TO: {
+        const float deltaX = ArgumentOf(arguments[0]);
+        const float deltaY = ArgumentOf(arguments[1]);
+        currentX += deltaX;
+        currentY += deltaY;
+        float turnedX = 0.f;
+        float turnedY = 0.f;
+        turnedDelta(deltaX, deltaY, &turnedX, &turnedY);
+        out.push_back(elements[i]);
+        out.push_back(ArgumentElement(turnedX));
+        out.push_back(ArgumentElement(turnedY));
+        break;
+      }
+      case edge155::off::ICON_R_ARC_TO: {
+        const float deltaX =
+            ArgumentOf(arguments[ArcArgumentIndex(ArcArgument::kDeltaX)]);
+        const float deltaY =
+            ArgumentOf(arguments[ArcArgumentIndex(ArcArgument::kDeltaY)]);
+        currentX += deltaX;
+        currentY += deltaY;
+        float turnedX = 0.f;
+        float turnedY = 0.f;
+        turnedDelta(deltaX, deltaY, &turnedX, &turnedY);
+        out.push_back(elements[i]);
+        out.insert(out.end(), arguments, arguments + kArcLeadingArguments);
+        out.push_back(ArgumentElement(turnedX));
+        out.push_back(ArgumentElement(turnedY));
+        break;
+      }
+      case edge155::off::ICON_CLOSE:
+        currentX = startX;
+        currentY = startY;
+        out.push_back(elements[i]);
+        break;
+      default:  // NEW_PATH
+        out.push_back(elements[i]);
+        break;
+    }
+    i += 1 + static_cast<size_t>(argumentCount);
+  }
+  return Build(name, out);
+}
+
+// Edge's back / forward arrows if the turn is refused.
+inline const void* Arrow(Direction direction) {
+  const auto* upArrow =
+      static_cast<const VectorIcon*>(edge::At(edge155::rva::Icon_ArrowUp));
+  switch (direction) {
+    case Direction::kUp:
+      return upArrow;
+    case Direction::kDown:
+      return edge::At(edge155::rva::Icon_ArrowDown);
+    case Direction::kLeft: {
+      static const VectorIcon* left =
+          QuarterTurn(upArrow, Direction::kLeft, "kEdgePlusArrowLeftIcon");
+      return left ? left : edge::At(edge155::rva::Icon_ArrowBack);
+    }
+    default: {
+      static const VectorIcon* right =
+          QuarterTurn(upArrow, Direction::kRight, "kEdgePlusArrowRightIcon");
+      return right ? right : edge::At(edge155::rva::Icon_ArrowForward);
+    }
+  }
+}
+
+}  // namespace edgeplus::icons

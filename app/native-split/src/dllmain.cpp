@@ -3,10 +3,10 @@
 // is gated on count > 2, so a stock two-pane split is untouched.
 #include <windows.h>
 #include <cstdlib>
-#include "edge.h"
-#include "handles.h"
-#include "verify.h"
-#include "hooks.h"
+#include "edge/edge.h"
+#include "core/handles.h"
+#include "core/verify.h"
+#include "edge/hooks.h"
 
 using namespace edgeplus;
 

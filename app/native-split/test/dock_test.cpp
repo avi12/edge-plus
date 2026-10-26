@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
-#include "../src/dock.h"
+#include "../src/layout/dock.h"
 
 using namespace edgeplus;
 using namespace edgeplus::dock;

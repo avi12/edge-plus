@@ -1,7 +1,7 @@
 // Unit tests for reading_themes.h.
 #include <cstdio>
 #include <cstring>
-#include "../src/reading_themes.h"
+#include "../src/theme/reading_themes.h"
 
 using namespace edgeplus::reading_themes;
 

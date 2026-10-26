@@ -1,6 +1,6 @@
 // Unit tests for geom.h.
 #include <cstdio>
-#include "../src/geom.h"
+#include "../src/edge/geom.h"
 
 using namespace edgeplus;
 

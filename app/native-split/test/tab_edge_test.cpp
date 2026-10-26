@@ -1,6 +1,6 @@
 // Unit tests for tab_edge.h.
 #include <cstdio>
-#include "../src/tab_edge.h"
+#include "../src/chrome/tab_edge.h"
 
 using namespace edgeplus;
 using namespace edgeplus::tab_edge;

@@ -6,7 +6,7 @@
 #include <random>
 #include <string>
 #include <vector>
-#include "../src/pane_tree.h"
+#include "../src/layout/pane_tree.h"
 
 using namespace edgeplus;
 

@@ -1,6 +1,6 @@
 // Unit tests for followed_pages.h.
 #include <cstdio>
-#include "../src/followed_pages.h"
+#include "../src/theme/followed_pages.h"
 
 using edgeplus::followed_pages::Follows;
 

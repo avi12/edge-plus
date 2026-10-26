@@ -4,16 +4,16 @@
 //
 // Every value here is one the DLL also reads. Change it there.
 
-// app/native-split/src/config.h:15
+// app/native-split/src/core/config.h:15
 pub const WIRE_ID_CAPACITY: u32 = 64;
 
-// app/native-split/src/config.h:40
+// app/native-split/src/core/config.h:40
 pub const WIRE_FIELD_COUNT: u32 = 11;
 
-// app/native-split/src/config.h:42
+// app/native-split/src/core/config.h:42
 pub const WIRE_ID_COUNT: u32 = 2;
 
-// app/native-split/src/config.h:61
+// app/native-split/src/core/config.h:61
 pub const CONFIG_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-config.bin";
 
 // app/native-split/src/dllmain.cpp:20
@@ -22,17 +22,17 @@ pub const UNLOAD_EVENT: &str = "Local\\edgeplus-split-unload";
 // app/native-split/src/dllmain.cpp:23
 pub const CONFIG_EVENT: &str = "Local\\edgeplus-config-changed";
 
-// app/native-split/src/offsets.h:15
+// app/native-split/src/edge/offsets.h:15
 pub const EDGE_MODULE: &str = "msedge.dll";
 
-// app/native-split/src/offsets.h:17
+// app/native-split/src/edge/offsets.h:17
 pub const EDGE_VERSION_MAJOR: u32 = 156;
 
-// app/native-split/src/offsets.h:19
+// app/native-split/src/edge/offsets.h:19
 pub const EDGE_VERSION_MINOR: u32 = 0;
 
-// app/native-split/src/offsets.h:21
+// app/native-split/src/edge/offsets.h:21
 pub const EDGE_VERSION_BUILD: u32 = 4314;
 
-// app/native-split/src/offsets.h:23
+// app/native-split/src/edge/offsets.h:23
 pub const EDGE_VERSION_REVISION: u32 = 42;

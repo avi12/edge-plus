@@ -1,7 +1,7 @@
 // Unit tests for find_text.h.
 #include <cstdio>
 #include <string>
-#include "../src/find_text.h"
+#include "../src/find/find_text.h"
 
 using namespace edgeplus::find_text;
 
