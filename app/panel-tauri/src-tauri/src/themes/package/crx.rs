@@ -8,9 +8,11 @@ use std::io::{Cursor, Read};
 use serde_json::Value;
 use zip::ZipArchive;
 
-use crate::themes::extension_id;
-use crate::themes::protobuf::{self, Field, FieldNumber};
-use crate::themes::theme_manifest::{MANIFEST_NAME, ThemeFileResult, invalid, manifest_keys};
+use crate::themes::package::extension_id;
+use crate::themes::package::protobuf::{self, Field, FieldNumber};
+use crate::themes::package::theme_manifest::{
+    MANIFEST_NAME, ThemeFileResult, invalid, manifest_keys,
+};
 use crate::ui::wording;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

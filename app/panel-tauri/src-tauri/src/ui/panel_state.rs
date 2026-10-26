@@ -3,7 +3,7 @@
 use crate::edge::edge_support::{self, FeatureState};
 use crate::edge::file_version::FileVersion;
 use crate::platform::settings::{Feature, Features, Theming};
-use crate::themes::installed_themes::InstalledTheme;
+use crate::themes::sources::installed_themes::InstalledTheme;
 
 #[derive(Clone, Debug)]
 #[allow(clippy::struct_excessive_bools, reason = "each is an independent fact")]

@@ -8,7 +8,7 @@ use std::path::Path;
 
 use edge_native::Hive;
 
-use crate::themes::store_url::ThemeStore;
+use crate::themes::sources::store_url::ThemeStore;
 
 const EXTENSIONS_KEY: &str = r"Software\Microsoft\Edge\Extensions";
 const CHROME_STORE_UPDATE_URL: &str = "https://clients2.google.com/service/update2/crx";

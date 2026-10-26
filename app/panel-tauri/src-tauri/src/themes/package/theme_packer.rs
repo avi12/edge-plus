@@ -13,10 +13,10 @@ use edge_native::RsaKey;
 use sha2::{Digest, Sha256};
 use zip::write::{SimpleFileOptions, ZipWriter};
 
-use crate::themes::crx::{self, CrxHeaderField, KeyProofField, SignedDataField};
-use crate::themes::extension_id;
-use crate::themes::protobuf::length_delimited_field;
-use crate::themes::theme_manifest::{self, ThemeFileResult, invalid};
+use crate::themes::package::crx::{self, CrxHeaderField, KeyProofField, SignedDataField};
+use crate::themes::package::extension_id;
+use crate::themes::package::protobuf::length_delimited_field;
+use crate::themes::package::theme_manifest::{self, ThemeFileResult, invalid};
 use crate::ui::wording;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -162,8 +162,8 @@ mod tests {
     use zip::ZipArchive;
 
     use super::*;
-    use crate::themes::theme_manifest::MANIFEST_NAME;
-    use crate::themes::theme_manifest::tests::zip_of;
+    use crate::themes::package::theme_manifest::MANIFEST_NAME;
+    use crate::themes::package::theme_manifest::tests::zip_of;
 
     const PNG: &[u8] = &[0x89, b'P', b'N', b'G', 1, 2, 3];
 

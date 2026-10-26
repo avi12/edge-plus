@@ -1,7 +1,7 @@
 //! Only the real stores are recognised, each by its exact host and the path
 //! before the theme: <prefix>/<slug>/<id> or <prefix>/<id>. No network.
 
-use crate::themes::extension_id;
+use crate::themes::package::extension_id;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ThemeStore {

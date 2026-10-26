@@ -1,7 +1,7 @@
 //! The slice of the protobuf wire format a CRX3 header uses: varints and
 //! length-delimited fields.
 
-use crate::themes::theme_manifest::{ThemeFileResult, invalid};
+use crate::themes::package::theme_manifest::{ThemeFileResult, invalid};
 use crate::ui::wording;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

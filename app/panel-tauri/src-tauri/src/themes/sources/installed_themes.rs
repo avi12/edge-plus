@@ -8,8 +8,8 @@ use std::path::{Path, PathBuf};
 use serde_json::Value;
 
 use crate::edge::edge_user_data::{PREFERENCES_FILE, read_json};
-use crate::themes::extension_id;
-use crate::themes::theme_manifest::{MANIFEST_NAME, manifest_keys};
+use crate::themes::package::extension_id;
+use crate::themes::package::theme_manifest::{MANIFEST_NAME, manifest_keys};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InstalledTheme {
