@@ -1,4 +1,4 @@
-import type { Declaration, SourcePosition } from "./types.ts";
+import type { Declaration, SourcePosition } from "../translate/types.ts";
 
 // The CSS Svelte emits for a component, read into rules and at-rules with the
 // position of every declaration. Only what a stylesheet written for a

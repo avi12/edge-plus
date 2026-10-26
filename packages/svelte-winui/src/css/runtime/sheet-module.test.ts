@@ -1,4 +1,4 @@
-import { loadWinuiCatalogue } from "./catalogue.ts";
+import { loadWinuiCatalogue } from "../translate/catalogue.ts";
 import { compileSheetModule, cssHash, SheetError } from "./sheet-module.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";

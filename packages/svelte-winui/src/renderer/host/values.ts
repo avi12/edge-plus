@@ -1,4 +1,4 @@
-import { GridUnitType, PropertyValue } from "../winui.ts";
+import { GridUnitType, PropertyValue } from "../../winui.ts";
 
 // WinRT's plain values, built the way the bindings take them.
 

@@ -1,4 +1,4 @@
-import { read } from "../renderer/reflect.ts";
+import { read } from "../renderer/host/reflect.ts";
 import {
   Application,
   BitmapImage,

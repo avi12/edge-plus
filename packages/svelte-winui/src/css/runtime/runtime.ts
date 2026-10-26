@@ -1,10 +1,15 @@
-import type { RankedRule } from "./cascade.ts";
-import { computeDeclarations, matchingRanked, resolveBuiltVariable, styleDictionaryXaml } from "./cascade.ts";
+import type { LowerOptions } from "../parse/reader.ts";
+import type { RankedRule } from "../translate/cascade.ts";
+import {
+  computeDeclarations,
+  matchingRanked,
+  resolveBuiltVariable,
+  styleDictionaryXaml
+} from "../translate/cascade.ts";
+import type { LoweredStyle } from "../translate/properties.ts";
+import { lowerDeclarations } from "../translate/properties.ts";
+import type { Declaration, PseudoState, StyleSheetData } from "../translate/types.ts";
 import { parseInlineStyle } from "./inline.ts";
-import type { LoweredStyle } from "./properties.ts";
-import { lowerDeclarations } from "./properties.ts";
-import type { LowerOptions } from "./reader.ts";
-import type { Declaration, PseudoState, StyleSheetData } from "./types.ts";
 
 // Applies the translated stylesheets to the controls the renderer makes: for
 // each element it matches the rules by type, classes and states (CSS's

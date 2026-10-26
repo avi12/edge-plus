@@ -1,6 +1,6 @@
-import { loadWinuiCatalogue } from "./catalogue.ts";
-import { compileSheetModule, SheetError, sheetSuffix } from "./sheet-module.ts";
-import { formatDiagnostic } from "./translate.ts";
+import { compileSheetModule, SheetError, sheetSuffix } from "./runtime/sheet-module.ts";
+import { loadWinuiCatalogue } from "./translate/catalogue.ts";
+import { formatDiagnostic } from "./translate/translate.ts";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { CompileOptions } from "svelte/compiler";

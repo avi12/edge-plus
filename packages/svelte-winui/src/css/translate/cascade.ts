@@ -1,5 +1,5 @@
+import type { VariableResolution } from "../runtime/resources.ts";
 import type { LoweredStyle } from "./properties.ts";
-import type { VariableResolution } from "./resources.ts";
 import type { Declaration, PseudoState, Rule } from "./types.ts";
 
 // CSS's cascade for one element: which rules apply to it (its type, classes and

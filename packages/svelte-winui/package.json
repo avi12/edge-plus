@@ -30,11 +30,11 @@
     "./components": "./src/components/index.ts",
     "./state": "./src/state/index.ts",
     "./state/host": "./src/state/host.ts",
-    "./host": "./src/renderer/host.ts",
-    "./keyed-list": "./src/renderer/keyed-list.ts",
+    "./host": "./src/renderer/host/host.ts",
+    "./keyed-list": "./src/renderer/list/keyed-list.ts",
     "./css": "./src/css/index.ts",
     "./css/vite": "./src/css/vite.ts",
-    "./css/sheet-module": "./src/css/sheet-module.ts",
+    "./css/sheet-module": "./src/css/runtime/sheet-module.ts",
     "./vite": "./src/vite/index.ts",
     "./runner": "./src/vite/runner.ts",
     "./compile": "./src/vite/compile.ts",
@@ -82,14 +82,14 @@
         "default": "./dist/state/host.js"
       },
       "./host": {
-        "types": "./dist/renderer/host.d.ts",
-        "svelte": "./dist/renderer/host.js",
-        "default": "./dist/renderer/host.js"
+        "types": "./dist/renderer/host/host.d.ts",
+        "svelte": "./dist/renderer/host/host.js",
+        "default": "./dist/renderer/host/host.js"
       },
       "./keyed-list": {
-        "types": "./dist/renderer/keyed-list.d.ts",
-        "svelte": "./dist/renderer/keyed-list.js",
-        "default": "./dist/renderer/keyed-list.js"
+        "types": "./dist/renderer/list/keyed-list.d.ts",
+        "svelte": "./dist/renderer/list/keyed-list.js",
+        "default": "./dist/renderer/list/keyed-list.js"
       },
       "./css": {
         "types": "./dist/css/index.d.ts",
@@ -100,8 +100,8 @@
         "default": "./dist/css/vite.js"
       },
       "./css/sheet-module": {
-        "types": "./dist/css/sheet-module.d.ts",
-        "default": "./dist/css/sheet-module.js"
+        "types": "./dist/css/runtime/sheet-module.d.ts",
+        "default": "./dist/css/runtime/sheet-module.js"
       },
       "./vite": {
         "types": "./dist/vite/index.d.ts",

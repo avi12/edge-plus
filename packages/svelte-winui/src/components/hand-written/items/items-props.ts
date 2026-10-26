@@ -1,5 +1,5 @@
-import type { ElementProps } from "../convert.ts";
-import type { ListViewBaseProps } from "../generated/controls/ListViewBase.svelte.ts";
+import type { ElementProps } from "../../convert.ts";
+import type { ListViewBaseProps } from "../../generated/controls/ListViewBase.svelte.ts";
 import type { ItemsHostProps, ListHandle } from "./items-host.svelte.ts";
 
 // What the list controls take besides the control's own properties: the items

@@ -1,7 +1,7 @@
+import { parseSelectorList } from "../parse/selectors.ts";
 import { computeDeclarations, matchingRules, resolveBuiltVariable, styleXaml } from "./cascade.ts";
 import { loadWinuiCatalogue } from "./catalogue.ts";
 import { lowerDeclarations } from "./properties.ts";
-import { parseSelectorList } from "./selectors.ts";
 import { errorsOf, formatDiagnostic, translateStyleSheet } from "./translate.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";

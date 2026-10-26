@@ -1,4 +1,4 @@
-import { cssHash } from "../css/sheet-module.ts";
+import { cssHash } from "../css/runtime/sheet-module.ts";
 import { winuiCss } from "../css/vite.ts";
 import { winuiRenderer } from "./compile.ts";
 import type { Options } from "@sveltejs/vite-plugin-svelte";

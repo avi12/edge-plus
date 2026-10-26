@@ -2,7 +2,7 @@
   import type { ListView } from "../generated/bindings.ts";
   import { connectListView } from "../generated/controls/ListView.svelte.ts";
   import { control } from "../runtime.ts";
-  import { attachItems } from "./items-host.svelte.ts";
+  import { attachItems } from "./items/items-host.svelte.ts";
   import type { ListViewComponentProps } from "./ListView.d.svelte.ts";
   import { untrack } from "svelte";
 

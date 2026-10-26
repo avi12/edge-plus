@@ -3,7 +3,7 @@
   import { connectGridView } from "../generated/controls/GridView.svelte.ts";
   import { control } from "../runtime.ts";
   import type { GridViewComponentProps } from "./GridView.d.svelte.ts";
-  import { attachItems } from "./items-host.svelte.ts";
+  import { attachItems } from "./items/items-host.svelte.ts";
   import { untrack } from "svelte";
 
   // Written by hand (scripts/codegen/tables.ts: handWrittenComponents): the

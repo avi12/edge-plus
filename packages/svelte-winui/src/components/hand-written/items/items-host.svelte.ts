@@ -1,5 +1,5 @@
-import { mountControl } from "../../renderer/mount.svelte.ts";
-import type { ContainerContentChangingEventArgs, FrameworkElement, ListViewBase } from "../generated/bindings.ts";
+import { mountControl } from "../../../renderer/host/mount.svelte.ts";
+import type { ContainerContentChangingEventArgs, FrameworkElement, ListViewBase } from "../../generated/bindings.ts";
 import {
   AutomationProperties,
   ContentControl,
@@ -15,7 +15,7 @@ import {
   VisualStateManager,
   VisualTreeHelper,
   XamlReader
-} from "../generated/bindings.ts";
+} from "../../generated/bindings.ts";
 import type { KeyBox } from "./key-vector.ts";
 import { duplicateKey, syncKeyVector } from "./key-vector.ts";
 import type { LiveRow } from "./live-rows.ts";

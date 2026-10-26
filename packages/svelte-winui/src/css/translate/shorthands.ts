@@ -1,7 +1,7 @@
-import type { LowerOptions } from "./reader.ts";
-import { Reader } from "./reader.ts";
+import type { LowerOptions } from "../parse/reader.ts";
+import { Reader } from "../parse/reader.ts";
+import { parseLength, parseVariable, splitSlash } from "../parse/values.ts";
 import type { Declaration } from "./types.ts";
-import { parseLength, parseVariable, splitSlash } from "./values.ts";
 
 // CSS shorthands, expanded into the longhands the property table lowers
 // (margin into its four sides, border into width, style and color...). A

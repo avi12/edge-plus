@@ -1,4 +1,4 @@
-import { read } from "../renderer/reflect.ts";
+import { read } from "../renderer/host/reflect.ts";
 import { diff } from "./diff.ts";
 import type { Holder } from "./patch.ts";
 import { applyOps, PatchError, reconcile } from "./patch.ts";

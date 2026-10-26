@@ -1,4 +1,4 @@
-import { PseudoState } from "./types.ts";
+import { PseudoState } from "../translate/types.ts";
 import { splitCommas } from "./values.ts";
 
 // The selectors a component's stylesheet may use: a compound of an element

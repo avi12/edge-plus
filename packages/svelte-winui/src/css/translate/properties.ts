@@ -1,6 +1,5 @@
-import type { LowerOptions } from "./reader.ts";
-import { NotANumber, Reader, Unbounded } from "./reader.ts";
-import type { Declaration } from "./types.ts";
+import type { LowerOptions } from "../parse/reader.ts";
+import { NotANumber, Reader, Unbounded } from "../parse/reader.ts";
 import {
   parseLength,
   parseMilliseconds,
@@ -8,7 +7,8 @@ import {
   parsePercent,
   splitCommas,
   splitWords
-} from "./values.ts";
+} from "../parse/values.ts";
+import type { Declaration } from "./types.ts";
 
 // THE property map: which CSS property becomes which WinUI property, and how
 // its value is spelled. One table of groups (a group is the CSS properties

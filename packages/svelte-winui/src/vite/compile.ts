@@ -1,5 +1,5 @@
-import { loadWinuiCatalogue } from "../css/catalogue.ts";
-import { compileSheetModule, cssHash, SheetError } from "../css/sheet-module.ts";
+import { compileSheetModule, cssHash, SheetError } from "../css/runtime/sheet-module.ts";
+import { loadWinuiCatalogue } from "../css/translate/catalogue.ts";
 import { describeError } from "./diagnostics.ts";
 import { stripTypeScriptTypes } from "node:module";
 import path from "node:path";

@@ -1,12 +1,12 @@
-import type { ResourceCatalogue } from "./resources.ts";
-import { createCatalogue } from "./resources.ts";
+import type { ResourceCatalogue } from "../runtime/resources.ts";
+import { createCatalogue } from "../runtime/resources.ts";
 import { readFileSync } from "node:fs";
 
 // The catalogue of WinUI's own resources, from winui-resources.g.json (which
 // scripts/css/export-winui-resources.ts writes). Node only: it runs where the
 // Vite plugin and the tests do, never in the window.
 
-const catalogueFile = new URL("./winui-resources.g.json", import.meta.url);
+const catalogueFile = new URL("../winui-resources.g.json", import.meta.url);
 
 function isStringList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(item => typeof item === "string");

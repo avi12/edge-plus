@@ -1,4 +1,4 @@
-import { syncKeyed } from "../../renderer/keyed-list.ts";
+import { syncKeyed } from "../../../renderer/list/keyed-list.ts";
 
 // The vector of keys a list control shows (a WinRT IVector of boxed strings),
 // brought to a wanted order of keys.

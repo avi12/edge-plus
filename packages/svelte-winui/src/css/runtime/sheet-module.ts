@@ -1,6 +1,6 @@
+import { errorsOf, formatDiagnostic, translateStyleSheet } from "../translate/translate.ts";
+import type { Diagnostic, StyleSheetData } from "../translate/types.ts";
 import type { ResourceCatalogue } from "./resources.ts";
-import { errorsOf, formatDiagnostic, translateStyleSheet } from "./translate.ts";
-import type { Diagnostic, StyleSheetData } from "./types.ts";
 import type { CompileOptions } from "svelte/compiler";
 import { compile } from "svelte/compiler";
 

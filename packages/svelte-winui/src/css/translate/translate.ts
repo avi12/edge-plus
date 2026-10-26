@@ -1,15 +1,16 @@
+import type { AtRuleBlock, Block, RuleBlock } from "../parse/parser.ts";
+import { BlockKind, CssSyntaxError, parseCss } from "../parse/parser.ts";
+import type { LowerOptions } from "../parse/reader.ts";
+import type { ParsedSelector } from "../parse/selectors.ts";
+import { parseSelectorList } from "../parse/selectors.ts";
+import type { PositionMapper, SourceMapV3 } from "../parse/source-map.ts";
+import { createPositionMapper } from "../parse/source-map.ts";
+import { parseColor, parseLength, parseNumber } from "../parse/values.ts";
+import type { ResourceCatalogue } from "../runtime/resources.ts";
+import { hasStyle, resolveVariable, ResourceKind, resourceNameOf } from "../runtime/resources.ts";
 import { computeDeclarations, XamlNamespaces } from "./cascade.ts";
-import type { AtRuleBlock, Block, RuleBlock } from "./parser.ts";
-import { BlockKind, CssSyntaxError, parseCss } from "./parser.ts";
 import { lowerDeclarations } from "./properties.ts";
-import type { LowerOptions } from "./reader.ts";
-import type { ResourceCatalogue } from "./resources.ts";
-import { hasStyle, resolveVariable, ResourceKind, resourceNameOf } from "./resources.ts";
-import type { ParsedSelector } from "./selectors.ts";
-import { parseSelectorList } from "./selectors.ts";
 import { expandDeclaration } from "./shorthands.ts";
-import type { PositionMapper, SourceMapV3 } from "./source-map.ts";
-import { createPositionMapper } from "./source-map.ts";
 import type {
   Declaration,
   Diagnostic,
@@ -19,7 +20,6 @@ import type {
   StyleSheetData,
   Translation
 } from "./types.ts";
-import { parseColor, parseLength, parseNumber } from "./values.ts";
 
 // Svelte's compiled CSS for one component, translated: its rules become data
 // the runtime matches against elements, its custom properties (`--accent`)

@@ -1,5 +1,5 @@
-import type { Mounted } from "../renderer/mount.svelte.ts";
-import { mountControl } from "../renderer/mount.svelte.ts";
+import type { Mounted } from "../renderer/host/mount.svelte.ts";
+import { mountControl } from "../renderer/host/mount.svelte.ts";
 import { Grid, Window } from "../winui.ts";
 import type { FrameworkElement } from "../winui.ts";
 import { applyBackdrop, Backdrop } from "./backdrop.ts";

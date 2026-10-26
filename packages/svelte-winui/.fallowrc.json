@@ -6,8 +6,8 @@
   "entry": [
     "src/index.ts",
     "src/components/generated/index.ts",
-    "src/renderer/host.ts",
-    "src/renderer/keyed-list.ts",
+    "src/renderer/host/host.ts",
+    "src/renderer/list/keyed-list.ts",
     "src/state/index.ts",
     "src/state/host.ts",
     "src/state/transports/stdio.ts",

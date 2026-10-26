@@ -1,4 +1,4 @@
-import { cssHash } from "../css/sheet-module.ts";
+import { cssHash } from "../css/runtime/sheet-module.ts";
 import { compileSvelte, rendererImport } from "./compile.ts";
 import { svelteWinui, windowConfig, windowEnvironment, winuiPluginOptions } from "./plugin.ts";
 import assert from "node:assert/strict";

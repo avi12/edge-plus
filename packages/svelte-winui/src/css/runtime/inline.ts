@@ -1,7 +1,7 @@
-import { BlockKind, parseCss } from "./parser.ts";
-import type { LowerOptions } from "./reader.ts";
-import { expandDeclaration } from "./shorthands.ts";
-import type { Declaration, SourcePosition } from "./types.ts";
+import { BlockKind, parseCss } from "../parse/parser.ts";
+import type { LowerOptions } from "../parse/reader.ts";
+import { expandDeclaration } from "../translate/shorthands.ts";
+import type { Declaration, SourcePosition } from "../translate/types.ts";
 
 // `style="padding: 8px; opacity: .5"`: declarations that belong to one element
 // and beat every rule of the stylesheet. Svelte merges `style:padding={value}`

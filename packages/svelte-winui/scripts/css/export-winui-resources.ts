@@ -1,4 +1,4 @@
-import { ResourceKind } from "../../src/css/resources.ts";
+import { ResourceKind } from "../../src/css/runtime/resources.ts";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 

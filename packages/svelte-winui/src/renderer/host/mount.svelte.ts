@@ -1,5 +1,5 @@
-import { flush } from "../scheduling.ts";
-import type { FrameworkElement } from "../winui.ts";
+import { flush } from "../../scheduling.ts";
+import type { FrameworkElement } from "../../winui.ts";
 import renderer, {
   releaseFragment,
   rootControl,

@@ -1,7 +1,7 @@
-import { svelteHooks } from "../vite/loader.ts";
+import { svelteHooks } from "../../vite/loader.ts";
+import { NodeType } from "../tree/tree.ts";
 import type { ProbeElement } from "./tree-probe.ts";
 import probeRenderer, { outline } from "./tree-probe.ts";
-import { NodeType } from "./tree.ts";
 import assert from "node:assert/strict";
 import { registerHooks } from "node:module";
 import path from "node:path";

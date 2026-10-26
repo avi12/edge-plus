@@ -1,5 +1,5 @@
-import { svelteHooks } from "../vite/loader.ts";
-import { FakeBorder, fakeControls, FakePanel, FakeToggle } from "./fake-controls.ts";
+import { svelteHooks } from "../../vite/loader.ts";
+import { FakeBorder, fakeControls, FakePanel, FakeToggle } from "../testing/fake-controls.ts";
 import { registerControls, setClassHandler } from "./host.ts";
 import assert from "node:assert/strict";
 import { registerHooks } from "node:module";
@@ -16,7 +16,7 @@ setClassHandler((control, value) => {
 });
 registerHooks(svelteHooks(path.join(import.meta.dirname, "host.ts")));
 const { mountControl } = await import("./mount.svelte.ts");
-const { default: Fixture } = await import("./Host.fixture.svelte");
+const { default: Fixture } = await import("../testing/Host.fixture.svelte");
 
 interface Props extends Record<string, unknown> {
   isOn: boolean;

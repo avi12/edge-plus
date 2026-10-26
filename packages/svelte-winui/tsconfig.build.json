@@ -11,7 +11,7 @@
   "exclude": [
     "src/**/*.test.ts",
     "src/state/test-support/**",
-    "src/renderer/fake-controls.ts",
-    "src/renderer/tree-probe.ts"
+    "src/renderer/testing/fake-controls.ts",
+    "src/renderer/testing/tree-probe.ts"
   ]
 }

@@ -1,5 +1,5 @@
 import * as bindings from "../../src/components/generated/bindings.ts";
-import { registerControls } from "../../src/renderer/host.ts";
+import { registerControls } from "../../src/renderer/host/host.ts";
 import { runWindow } from "../../src/window/index.ts";
 import { DispatcherQueue } from "../../src/winui.ts";
 import type { ExampleHost } from "./contract.ts";

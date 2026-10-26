@@ -1,5 +1,5 @@
-import type { ResourceKind, VariableResolution } from "./resources.ts";
-import type { Declaration, Severity, SourcePosition } from "./types.ts";
+import type { ResourceKind, VariableResolution } from "../runtime/resources.ts";
+import type { Declaration, Severity, SourcePosition } from "../translate/types.ts";
 import { parseColor, parseLength, parseVariable, splitWords } from "./values.ts";
 
 // What the lowering of a declaration needs from its surroundings, and a reader

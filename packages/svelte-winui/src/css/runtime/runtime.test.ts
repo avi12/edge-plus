@@ -1,8 +1,8 @@
-import { read } from "../renderer/reflect.ts";
-import { loadWinuiCatalogue } from "./catalogue.ts";
+import { read } from "../../renderer/host/reflect.ts";
+import { loadWinuiCatalogue } from "../translate/catalogue.ts";
+import { translateStyleSheet } from "../translate/translate.ts";
 import type { CssNative } from "./runtime.ts";
 import { installCssRuntime, registerStyleSheet, styledElement, unregisterStyleSheet } from "./runtime.ts";
-import { translateStyleSheet } from "./translate.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 

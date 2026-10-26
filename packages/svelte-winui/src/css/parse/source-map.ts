@@ -1,4 +1,4 @@
-import type { SourcePosition } from "./types.ts";
+import type { SourcePosition } from "../translate/types.ts";
 
 // Svelte's css.map (a version 3 source map) read just far enough to turn a
 // position in the CSS it emitted into the position in the .svelte file, so an

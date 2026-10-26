@@ -1,4 +1,4 @@
-import { write } from "../renderer/reflect.ts";
+import { write } from "../renderer/host/reflect.ts";
 import type { SystemBackdrop, Window } from "../winui.ts";
 import { DesktopAcrylicBackdrop, MicaBackdrop, MicaKind } from "../winui.ts";
 
