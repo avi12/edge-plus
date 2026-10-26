@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { CardWording } from "../protocol.g.ts";
-  import { glyph } from "./layout.ts";
+  import type { CardWording } from "../../protocol.g.ts";
+  import { glyph } from "../style/layout.ts";
   import type { Snippet } from "svelte";
   import {
     Border,

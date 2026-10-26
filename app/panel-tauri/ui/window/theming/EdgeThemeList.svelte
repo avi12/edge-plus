@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ThemeRow as Row } from "../protocol.g.ts";
-  import * as motion from "./motion.ts";
+  import type { ThemeRow as Row } from "../../protocol.g.ts";
+  import * as motion from "../style/motion.ts";
   import ThemeRow from "./ThemeRow.svelte";
   import { StackPanel, TextBlock } from "svelte-winui";
 

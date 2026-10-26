@@ -1,4 +1,4 @@
-import type { Action } from "../protocol.g.ts";
+import type { Action } from "../../protocol.g.ts";
 
 // What the theme library asks of the window: the kinds of local theme it can
 // pick, and how an action runs.

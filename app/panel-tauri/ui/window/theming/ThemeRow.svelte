@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ThemeRow } from "../protocol.g.ts";
-  import { glyph } from "./layout.ts";
+  import type { ThemeRow } from "../../protocol.g.ts";
+  import { glyph } from "../style/layout.ts";
   import {
     Border,
     Button,

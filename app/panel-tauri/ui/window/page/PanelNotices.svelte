@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { View } from "../protocol.g.ts";
-  import { usePanel } from "./panel.svelte.ts";
+  import type { View } from "../../protocol.g.ts";
+  import { usePanel } from "../host/panel.svelte.ts";
   import { InfoBar, TextBlock } from "svelte-winui";
 
   // What the page says above the cards: the hint to open Edge, the warning

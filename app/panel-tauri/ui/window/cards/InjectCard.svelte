@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { InjectView } from "../protocol.g.ts";
+  import type { InjectView } from "../../protocol.g.ts";
+  import { usePanel } from "../host/panel.svelte.ts";
   import CardFrame from "./CardFrame.svelte";
-  import { usePanel } from "./panel.svelte.ts";
   import { Button } from "svelte-winui";
 
   // The Inject button, as a card under the Inject automatically switch. When it

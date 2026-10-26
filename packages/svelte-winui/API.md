@@ -221,7 +221,7 @@ worker whose file calls `runOnUiThread(() => ...)`, which loads the app and
 calls `runWindow`. A transport (JSON lines on stdio, a MessagePort) is not in
 these files: it is `src/state`'s, which uses `dispatch` to put host messages
 on the UI thread. Edge+'s `ui/main.ts`, `ui/window/worker.ts` and
-`ui/window/session.ts` are the working example.
+`ui/window/host/session.ts` are the working example.
 
 ## Components written by hand (`svelte-winui/components`)
 

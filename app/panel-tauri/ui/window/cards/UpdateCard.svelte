@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { UpdateView } from "../protocol.g.ts";
+  import type { UpdateView } from "../../protocol.g.ts";
+  import { usePanel } from "../host/panel.svelte.ts";
   import CardFrame from "./CardFrame.svelte";
-  import { usePanel } from "./panel.svelte.ts";
   import { Button } from "svelte-winui";
 
   // A release that is downloaded and checked, with the button that restarts

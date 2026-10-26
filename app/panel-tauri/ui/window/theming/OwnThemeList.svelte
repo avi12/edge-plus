@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { ThemeRow as Row, ThemingLabels } from "../protocol.g.ts";
-  import * as motion from "./motion.ts";
-  import { themeListItemStyle } from "./styles.ts";
+  import type { ThemeRow as Row, ThemingLabels } from "../../protocol.g.ts";
+  import * as motion from "../style/motion.ts";
+  import { themeListItemStyle } from "../style/styles.ts";
   import ThemeRow from "./ThemeRow.svelte";
   import { ListView } from "svelte-winui";
 

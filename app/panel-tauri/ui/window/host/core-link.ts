@@ -1,4 +1,4 @@
-import type { CoreMessage } from "../protocol.g.ts";
+import type { CoreMessage } from "../../protocol.g.ts";
 import type { Transport } from "svelte-winui/state";
 import { MessageType } from "svelte-winui/state";
 

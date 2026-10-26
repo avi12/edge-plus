@@ -1,11 +1,11 @@
-import type { ListViewBase } from "./winui.ts";
+import type { ListViewBase } from "../winui.ts";
 import {
   AddDeleteThemeTransition,
   ReorderThemeTransition,
   RepositionThemeTransition,
   TransitionCollection,
   UISettings
-} from "./winui.ts";
+} from "../winui.ts";
 import { createSubscriber } from "svelte/reactivity";
 
 // The one place that honours Windows' "Animation effects" switch: a panel's

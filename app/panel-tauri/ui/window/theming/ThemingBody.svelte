@@ -1,12 +1,12 @@
 <script lang="ts">
-  import type { Action, CardView, ColorMode, ThemingView } from "../protocol.g.ts";
+  import type { Action, CardView, ColorMode, ThemingView } from "../../protocol.g.ts";
+  import { LocalThemeKind } from "../cards/theming-card.ts";
+  import { usePanel } from "../host/panel.svelte.ts";
+  import * as motion from "../style/motion.ts";
+  import { KeyRoutedEventArgs, projectAs, VirtualKey } from "../winui.ts";
   import EdgeThemeList from "./EdgeThemeList.svelte";
-  import * as motion from "./motion.ts";
   import OwnThemeList from "./OwnThemeList.svelte";
-  import { usePanel } from "./panel.svelte.ts";
   import ThemePicker from "./ThemePicker.svelte";
-  import { LocalThemeKind } from "./theming-card.ts";
-  import { KeyRoutedEventArgs, projectAs, VirtualKey } from "./winui.ts";
   import {
     Button,
     Grid,

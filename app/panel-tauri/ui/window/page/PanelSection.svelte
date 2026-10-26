@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { SectionView } from "../protocol.g.ts";
-  import * as motion from "./motion.ts";
+  import type { SectionView } from "../../protocol.g.ts";
+  import * as motion from "../style/motion.ts";
   import PanelCard from "./PanelCard.svelte";
   import { StackPanel, TextBlock } from "svelte-winui";
 

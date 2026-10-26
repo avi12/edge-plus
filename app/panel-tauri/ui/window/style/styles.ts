@@ -1,4 +1,4 @@
-import type { Style } from "./winui.ts";
+import type { Style } from "../winui.ts";
 import {
   Application,
   projectAs,
@@ -6,10 +6,10 @@ import {
   ResourceDictionary,
   Style as StyleType,
   XamlReader
-} from "./winui.ts";
+} from "../winui.ts";
 
 // The one Style the window keeps in XAML. Every other look is a `<style>` in
-// the component that uses it (or ui/window/SharedStyles.svelte), but this one
+// the component that uses it (or ui/window/style/SharedStyles.svelte), but this one
 // is a ListView's item container style, set from TypeScript, and it needs
 // HorizontalContentAlignment, which CSS has no property for (justify-content
 // is a child's own alignment in WinUI). Light and dark follow Windows live.

@@ -27,7 +27,7 @@ await runOnUiThread(async () => {
   }
 
   if (ports.modules === undefined) {
-    const { runSession } = await import("./session.ts");
+    const { runSession } = await import("./host/session.ts");
     await runSession(ports.link);
   } else {
     // Imported by name, so the window kit's bundle leaves Vite out.

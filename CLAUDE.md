@@ -173,8 +173,8 @@ must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h}`).
   one JSON line each way. `ui/protocol.g.ts` is generated from
   `src-tauri/src/ui/protocol.rs` (`cargo test export_the_window_types`; the lint
   gate fails when it is stale). WinUI's loop runs on a worker thread. No UI
-  library; styles are `ui/window/styles.ts`, motion goes through
-  `ui/window/motion.ts`, which follows Windows' Animation effects switch.
+  library; styles are `ui/window/style/styles.ts`, motion goes through
+  `ui/window/style/motion.ts`, which follows Windows' Animation effects switch.
   The Svelte-on-WinUI machinery (the custom renderer, the Vite plugin and hot
   reload, the WinUI start-up) is the generic package `packages/svelte-winui`
   (`DESIGN.md`, `API.md`), a pnpm workspace member with the panel: the panel

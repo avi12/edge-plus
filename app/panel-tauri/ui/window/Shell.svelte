@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { Bounds, View } from "../protocol.g.ts";
-  import * as motion from "./motion.ts";
-  import type { Panel } from "./panel.svelte.ts";
-  import PanelPage from "./PanelPage.svelte";
+  import type { Panel } from "./host/panel.svelte.ts";
+  import PanelPage from "./page/PanelPage.svelte";
+  import * as motion from "./style/motion.ts";
   import { pathToFileURL } from "node:url";
   import { Grid, Image, TextBlock } from "svelte-winui";
   import { Window } from "svelte-winui/components";

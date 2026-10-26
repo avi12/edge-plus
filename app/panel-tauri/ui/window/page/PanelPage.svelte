@@ -1,14 +1,14 @@
 <script lang="ts">
-  import type { View } from "../protocol.g.ts";
+  import type { View } from "../../protocol.g.ts";
+  import UpdateCard from "../cards/UpdateCard.svelte";
+  import type { Panel } from "../host/panel.svelte.ts";
+  import { providePanel } from "../host/panel.svelte.ts";
+  import * as motion from "../style/motion.ts";
+  import { DataPackageOperation, DragEventArgs, projectAs, StandardDataFormats } from "../winui.ts";
   import DropVeil from "./DropVeil.svelte";
-  import * as motion from "./motion.ts";
   import PageFooter from "./PageFooter.svelte";
-  import type { Panel } from "./panel.svelte.ts";
-  import { providePanel } from "./panel.svelte.ts";
   import PanelNotices from "./PanelNotices.svelte";
   import PanelSection from "./PanelSection.svelte";
-  import UpdateCard from "./UpdateCard.svelte";
-  import { DataPackageOperation, DragEventArgs, projectAs, StandardDataFormats } from "./winui.ts";
   import { Grid, ScrollViewer, StackPanel } from "svelte-winui";
 
   // The window's content: the update card, the notices, each section's cards
