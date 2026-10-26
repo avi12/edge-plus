@@ -1,14 +1,16 @@
 # Edge+ on the package's `<ListView>` and `<Window>`
 
-How `app/panel-tauri/ui/window/own-theme-list.ts` becomes a `<ListView>` and
-`shell.ts` a `<Window>`. **Both were done once as a proof**, on this tree as it
-is (before the components' own conversion lands): branch
-`edgeplus-migration-proof` (one commit on top of this work). Its capture is
-pixel-identical to `bg-ref-default-1.png` and `bg-ref-states.png` (0 differing
-pixels each, the states view lists two own themes), and `pnpm check` passes.
-`git diff HEAD edgeplus-migration-proof -- app/panel-tauri/ui` is the whole
-change; the tables below say what moved where, so it can be redone on top of the
-converted components.
+How `app/panel-tauri/ui/window/own-theme-list.ts` became a `<ListView>`
+(`own-theme-list.svelte`) and `shell.ts` a `<Window>` (`shell.svelte`). **Both
+are done** on the converted Edge+ (commits "the own themes list is a ListView
+of the package" and "the shell is a Window of the package"), pixel-identical
+to the window before them (0 differing pixels, default and states views, with
+and without the Edge hint and build notice, from source and from the window
+kit). The tables below say what moved where. Two differences from the first
+proof on `edgeplus-migration-proof`: there is no `Shell` facade class (the
+panel's state holds the status line, the open window and the pickers, and
+`session.ts` mounts `shell.svelte` itself), and `onBoundsChanged` also reports
+the bounds the window opens with.
 
 ## Before anything: regenerate the bindings
 
