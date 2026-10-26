@@ -1,8 +1,8 @@
 //! Every sentence Edge+ shows: the window's (sent to it in each View), the
 //! toast's and the errors'. The window itself holds none.
 
-use crate::edge::edge_support::FeatureState;
-use crate::edge::file_version::FileVersion;
+use crate::edge::version::edge_support::FeatureState;
+use crate::edge::version::file_version::FileVersion;
 use crate::platform::settings::Feature;
 use crate::ui::panel_layout::{OwnCard, Section};
 use crate::ui::panel_state::PanelState;

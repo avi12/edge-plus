@@ -148,13 +148,13 @@ A Rust core and a WinUI 3 window drawn from TypeScript, ported from the WinUI /
 C# panel (in git history before it was removed) and **pixel-identical to it**:
 keep it that way. It keeps `%LOCALAPPDATA%\EdgePlus\settings.json` in the shape
 every earlier panel used, so existing settings carry over; keep that path and
-format as they are. `edge/legacy_install.rs` carries the project's old name
-(`FixEdge`) over and holds the old names it has to match (that folder,
+format as they are. `edge/legacy/legacy_install.rs` carries the project's old
+name (`FixEdge`) over and holds the old names it has to match (that folder,
 `fixedge-split.dll`, `Local\fixedge-split-unload`); the only other old names
-left are what `legacy_cleanup.rs` and `startup_entry.rs` match from the
-extension and earlier panels. A value the panel and the DLL both need (event
-names, the config wire layout, data-folder paths) has one home per side and
-must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h}`).
+left are what `edge/legacy/legacy_cleanup.rs` and `setup/startup_entry.rs`
+match from the extension and earlier panels. A value the panel and the DLL both
+need (event names, the config wire layout, data-folder paths) has one home per
+side and must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h}`).
 
 - **The core** (`src-tauri/src/`, Rust): process, single instance, settings,
   Edge watching, themes, injection and updates, one module per concern —

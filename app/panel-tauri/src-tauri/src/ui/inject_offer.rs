@@ -33,7 +33,7 @@ pub fn next(previous: InjectOffer, state: &PanelState) -> InjectOffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::edge::file_version::FileVersion;
+    use crate::edge::version::file_version::FileVersion;
     use crate::platform::settings::{Features, Theming};
 
     const SUPPORTED: FileVersion = FileVersion::new(155, 0, 4283, 62);

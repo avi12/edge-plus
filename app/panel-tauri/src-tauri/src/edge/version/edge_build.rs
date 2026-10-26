@@ -3,7 +3,7 @@
 //! DLL feature calls into msedge.dll by RVA, so any other build breaks them all;
 //! the developer-mode prompt only edits Preferences and survives an update.
 
-use crate::edge::file_version::FileVersion;
+use crate::edge::version::file_version::FileVersion;
 use crate::platform::settings::Feature;
 use crate::platform::shared;
 
@@ -58,7 +58,7 @@ pub fn judged(builds: &[FileVersion], pinned: FileVersion) -> Option<FileVersion
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::edge::edge_support;
+    use crate::edge::version::edge_support;
     use crate::platform::settings::Features;
 
     const DLL_FEATURES: [Feature; 8] = [

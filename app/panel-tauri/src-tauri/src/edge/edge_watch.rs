@@ -11,9 +11,9 @@ use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, SystemTime};
 
 use crate::dll::dll_sync;
-use crate::edge::edge_build::{self, BuildChange};
-use crate::edge::file_version::FileVersion;
-use crate::edge::{edge_install, edge_support};
+use crate::edge::version::edge_build::{self, BuildChange};
+use crate::edge::version::file_version::FileVersion;
+use crate::edge::version::{edge_install, edge_support};
 use crate::platform::service::poll_thread::PollThread;
 use crate::platform::settings::{self, Settings};
 use crate::platform::shared;

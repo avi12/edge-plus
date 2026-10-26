@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use edge_native::Hive;
 
-use crate::edge::file_version::FileVersion;
+use crate::edge::version::file_version::FileVersion;
 
 pub const SIMULATED_DIRECTORY_VARIABLE: &str = "EDGEPLUS_SIMULATE_EDGE_DIR";
 pub const LAUNCHER_NAME: &str = "msedge.exe";

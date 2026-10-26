@@ -5,8 +5,8 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, OnceLock};
 
-use crate::edge::edge_build::BuildChange;
 use crate::edge::edge_watch::EdgeWatch;
+use crate::edge::version::edge_build::BuildChange;
 use crate::platform::service::paused_toast;
 use crate::platform::settings::Settings;
 use crate::setup::update_watch::{ReadyUpdate, UpdateWatch};

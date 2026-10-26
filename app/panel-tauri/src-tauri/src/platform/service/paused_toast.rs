@@ -4,10 +4,10 @@
 use std::fs;
 use std::sync::Mutex;
 
-use crate::edge::edge_build::BuildChange;
-use crate::edge::edge_install;
-use crate::edge::edge_support;
-use crate::edge::file_version::FileVersion;
+use crate::edge::version::edge_build::BuildChange;
+use crate::edge::version::edge_install;
+use crate::edge::version::edge_support;
+use crate::edge::version::file_version::FileVersion;
 use crate::platform::actions::panel_log;
 use crate::platform::identity::app_identity::APP_ID;
 use crate::platform::paths;

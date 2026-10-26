@@ -9,7 +9,9 @@ use std::time::Duration;
 
 use crate::dll::config_wire::DllConfig;
 use crate::dll::{dll_channel, payload};
-use crate::edge::{edge_build, edge_install, edge_support, edge_watch, legacy_install};
+use crate::edge::edge_watch;
+use crate::edge::legacy::legacy_install;
+use crate::edge::version::{edge_build, edge_install, edge_support};
 use crate::platform::paths;
 use crate::platform::settings::{self, Features, Settings};
 

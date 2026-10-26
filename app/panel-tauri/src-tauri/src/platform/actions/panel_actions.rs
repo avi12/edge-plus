@@ -5,7 +5,8 @@
 use std::path::Path;
 
 use crate::dll::{dll_channel, dll_sync};
-use crate::edge::{dev_mode_prompt, edge_build, edge_watch};
+use crate::edge::version::edge_build;
+use crate::edge::{dev_mode_prompt, edge_watch};
 use crate::platform::actions::action_error::{ActionError, ActionResult};
 use crate::platform::service::background_service;
 use crate::platform::settings::{self, ColorMode, Feature, Settings};

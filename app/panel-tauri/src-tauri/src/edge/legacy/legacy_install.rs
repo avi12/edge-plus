@@ -8,7 +8,8 @@
 use std::thread;
 use std::time::Duration;
 
-use crate::edge::{edge_install, legacy_data};
+use crate::edge::legacy::legacy_data;
+use crate::edge::version::edge_install;
 use crate::platform::actions::panel_log;
 use crate::platform::paths;
 

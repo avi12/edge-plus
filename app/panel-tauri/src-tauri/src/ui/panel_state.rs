@@ -1,7 +1,7 @@
 //! Everything the window shows, read fresh after every action.
 
-use crate::edge::edge_support::{self, FeatureState};
-use crate::edge::file_version::FileVersion;
+use crate::edge::version::edge_support::{self, FeatureState};
+use crate::edge::version::file_version::FileVersion;
 use crate::platform::settings::{Feature, Features, Theming};
 use crate::themes::sources::installed_themes::InstalledTheme;
 
