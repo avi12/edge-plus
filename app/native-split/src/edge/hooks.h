@@ -159,6 +159,38 @@ inline void __fastcall h_close_split_view(void* mcv) {
   panes::EmptyGrownContainers(mcv);
 }
 
+// chrome::ReloadInternal(browser, disposition, bypassCache): reloads every
+// selected tab once more are selected than the active tab's split needs, and a
+// split of three or more has all its members selected, so the reload button
+// reloaded every pane. In such a split the active pane alone is reloaded.
+using ReloadInternal_t = void(__fastcall*)(void*, int32_t, bool);
+inline constinit ReloadInternal_t o_reload_internal = nullptr;
+inline void __fastcall h_reload_internal(void* browser, int32_t disposition,
+                                         bool isBypassingCache) {
+  void* const tsm = edge::TabStripModelOf(browser);
+  void* const activeTab = tsm ? edge::ActiveTab(tsm) : nullptr;
+  const bool isActiveTabInSplit = activeTab && edge::TabIsSplit(activeTab);
+  edge::OptionalSplitId splitId = {};
+  int paneCount = 0;
+  if (isActiveTabInSplit) {
+    splitId = edge::TabSplitId(activeTab);
+    paneCount = splitId.hasValue
+                    ? edge::SplitMembers(tsm, splitId.token).Count()
+                    : 0;
+  }
+  const bool isGrownSplit = paneCount > split_data::kMinSplitMembers;
+  const bool isInCurrentTab =
+      disposition == edge155::off::DISPOSITION_current_tab;
+  const bool isReloadingOnlyActivePane = isGrownSplit && isInCurrentTab;
+  if (!isReloadingOnlyActivePane) {
+    return o_reload_internal(browser, disposition, isBypassingCache);
+  }
+  edge::ReloadPage(edge::TabContents(activeTab),
+                   isBypassingCache ? edge155::off::RELOADTYPE_bypassing_cache
+                                    : edge155::off::RELOADTYPE_normal);
+  Log("[reload] active pane of a %d-pane split only", paneCount);
+}
+
 // MultiContentsView::GetFocusableViewsMapFor: Edge keeps a focus map only for
 // the two containers it built, so for pane 3+ the lookup is null, and
 // switching to a tab whose pane is ours crashed in the caller. Our panes get
@@ -546,6 +578,9 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   Install(edge155::rva::MultiContentsView_GetFocusableViewsMapFor,
           reinterpret_cast<void*>(h_focus_map), &o_focus_map,
           "MultiContentsView::GetFocusableViewsMapFor");
+  Install(edge155::rva::chrome_ReloadInternal,
+          reinterpret_cast<void*>(h_reload_internal), &o_reload_internal,
+          "chrome::ReloadInternal");
   Install(edge155::rva::MultiContentsView_SetActiveIndex,
           reinterpret_cast<void*>(h_set_active), &o_set_active,
           "SetActiveIndex");

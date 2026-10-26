@@ -647,6 +647,13 @@ inline constexpr uintptr_t WebContentsImpl_OnColorProviderChanged = 0x2f294b0;
 // check_for_repost): the controller is embedded in the WebContentsImpl at
 // off::WEBCONTENTS_controller.
 inline constexpr uintptr_t NavigationControllerImpl_Reload = 0x7940fd0;
+// void chrome::(anonymous)::ReloadInternal(Browser*, WindowOpenDisposition, bool
+// bypass_cache): the one body behind chrome::Reload and ReloadBypassingCache
+// (the reload button, F5, Ctrl+R). It reloads every SELECTED tab when more are
+// selected than the active tab's split needs, and a split of three or more has
+// all its members selected, so one pane's reload reloaded them all
+// (docs/re/pane-reload.md).
+inline constexpr uintptr_t chrome_ReloadInternal = 0xa2b4827;
 // ColorProvider* WebContentsImpl::GetColorProvider(this): the provider the
 // WebUI's colors.css is generated from (ThemeSource::SendColorsCss reads it
 // through the contents' vtable). It asks the contents' color provider source,
@@ -1038,6 +1045,10 @@ inline constexpr int UICOLOR_active_tab_alert[] = {
 inline constexpr uintptr_t WEBCONTENTS_controller = 0x280;
 // content::ReloadType::NORMAL.
 inline constexpr int32_t RELOADTYPE_normal = 1;
+// content::ReloadType::BYPASSING_CACHE.
+inline constexpr int32_t RELOADTYPE_bypassing_cache = 2;
+// WindowOpenDisposition::CURRENT_TAB: the reload that stays in its own tab.
+inline constexpr int32_t DISPOSITION_current_tab = 1;
 // WebContentsImpl: the ColorProviderSourceObserver subobject.
 inline constexpr uintptr_t WEBCONTENTS_color_observer = 0x80;
 // WebContents: the virtual at +0x68 is GetVisibleURL, the URL the address bar

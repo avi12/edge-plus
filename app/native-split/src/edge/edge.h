@@ -1412,13 +1412,14 @@ inline void NotifyColorProviderChanged(void* webContents) {
 }
 
 // Reload the page in `webContents` as the reload button does (no repost
-// prompt).
-inline void ReloadPage(void* webContents) {
+// prompt); `reloadType` is a content::ReloadType (off::RELOADTYPE_*).
+inline void ReloadPage(void* webContents,
+                       int32_t reloadType = edge155::off::RELOADTYPE_normal) {
   using Fn = void(__fastcall*)(void*, int32_t, bool);
   reinterpret_cast<Fn>(At(edge155::rva::NavigationControllerImpl_Reload))(
       reinterpret_cast<uint8_t*>(webContents) +
           edge155::off::WEBCONTENTS_controller,
-      edge155::off::RELOADTYPE_normal, false);
+      reloadType, false);
 }
 
 // --- web protocol handlers -------------------------------------------------------
