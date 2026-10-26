@@ -189,7 +189,7 @@ inline bool FocusNeighbour(void* mcv, Direction direction) {
 }
 
 // After a pure tree edit: the tab list orders a split's tabs by where their
-// panes are (tabrows::PaneOrder), and nothing else would lay it out again.
+// panes are (tabrows::GridOfSplit), and nothing else would lay it out again.
 inline void RelayoutTabList(void* mcv) {
   void* tabStrip = edge::BrowserViewTabStrip(edge::McvBrowserView(mcv));
   if (tabStrip) {
