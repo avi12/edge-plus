@@ -7,7 +7,12 @@ import type { ItemsHostProps, ListHandle } from "./items-host.svelte.ts";
 // component owns.
 type OwnedByComponent = "children" | "itemsSource" | "itemTemplate" | "itemTemplateSelector";
 
-export type ItemsComponentProps<Item> = ItemsHostProps<Item> & Omit<ListViewBaseProps, OwnedByComponent> & ElementProps & {
+interface HandleProps {
   // The list's imperative side (`bind:handle`).
   handle?: ListHandle;
-};
+}
+
+export type ItemsComponentProps<Item> = ItemsHostProps<Item>
+  & Omit<ListViewBaseProps, OwnedByComponent>
+  & ElementProps
+  & HandleProps;

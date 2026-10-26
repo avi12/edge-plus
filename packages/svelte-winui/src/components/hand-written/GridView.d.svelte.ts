@@ -1,5 +1,5 @@
-import type { ComponentInternals } from "svelte";
 import type { ItemsComponentProps } from "./items-props.ts";
+import type { ComponentInternals } from "svelte";
 
 export type GridViewComponentProps<Item = unknown> = ItemsComponentProps<Item>;
 

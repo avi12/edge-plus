@@ -1,9 +1,5 @@
 import { mountControl } from "../../renderer/mount.svelte.ts";
-import type {
-  ContainerContentChangingEventArgs,
-  FrameworkElement,
-  ListViewBase
-} from "../generated/bindings.ts";
+import type { ContainerContentChangingEventArgs, FrameworkElement, ListViewBase } from "../generated/bindings.ts";
 import {
   AutomationProperties,
   ContentControl,
@@ -24,9 +20,9 @@ import type { KeyBox } from "./key-vector.ts";
 import { duplicateKey, syncKeyVector } from "./key-vector.ts";
 import type { LiveRow } from "./live-rows.ts";
 import { LiveRows } from "./live-rows.ts";
-import { MoveDirection, movedIndex, sameOrder } from "./reorder.ts";
-import Row from "./Row.svelte";
+import { movedIndex, MoveDirection, sameOrder } from "./reorder.ts";
 import { RowSource } from "./row-source.svelte.ts";
+import Row from "./Row.svelte";
 import { DynWinRtType, DynWinRtValue, unboxObject } from "@microsoft/dynwinrt";
 import type { Snippet } from "svelte";
 

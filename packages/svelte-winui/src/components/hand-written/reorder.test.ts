@@ -1,4 +1,4 @@
-import { MoveDirection, movedIndex, sameOrder } from "./reorder.ts";
+import { movedIndex, MoveDirection, sameOrder } from "./reorder.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
