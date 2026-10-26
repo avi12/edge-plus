@@ -3,3 +3,5 @@
 
 # rustfmt.toml asks for Unix newlines; core.autocrlf would check Rust out as CRLF.
 *.rs text eol=lf
+# Written by cargo test with LF; a CRLF checkout shows it as changed after every run.
+app/panel-tauri/ui/protocol.g.ts text eol=lf
