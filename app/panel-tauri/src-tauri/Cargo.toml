@@ -37,9 +37,11 @@ edge-native = { path = "edge-native" }
 ts-rs = { version = "11", features = ["no-serde-warnings"] }
 
 [profile.release]
-codegen-units = 1
-lto = true
-opt-level = 3
+# The panel idles at 0% CPU, so the build's speed matters more than the code's:
+# one codegen unit with fat LTO took two minutes to rebuild after a one-line edit.
+codegen-units = 16
+lto = "thin"
+opt-level = "s"
 strip = true
 
 # `cargo clippy -- -D warnings` (pnpm lint:rust) turns these into errors.
