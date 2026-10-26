@@ -11,7 +11,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 use std::thread;
 use std::time::{Duration, SystemTime};
@@ -23,12 +23,16 @@ use crate::platform::panel_log;
 use crate::ui::inject_offer::{self, InjectOffer};
 use crate::ui::panel_layout::{CardSlot, OwnCard};
 use crate::ui::panel_state::PanelState;
-use crate::ui::protocol::{Action, Bounds, CoreMessage, UiMessage};
+use crate::ui::protocol::{
+    Action, Bounds, CoreMessage, Incoming, RequestFrame, ResponseFrame, UiMessage, parse_incoming,
+};
 use crate::ui::{view, window_kit, wording};
 
 /// Keeps Node's console from flashing up.
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const WINDOW_SOURCE_EXTENSION: &str = "ts";
+/// Ids of the core's requests to the window, increasing from 1.
+static NEXT_REQUEST_ID: AtomicU32 = AtomicU32::new(1);
 const DEV_POLL: Duration = Duration::from_secs(1);
 /// An editor saves in several writes; a swap waits for them to settle.
 const DEV_SETTLE: Duration = Duration::from_millis(400);
@@ -101,9 +105,9 @@ pub fn show() {
 pub fn on_service_event(event: &ServiceEvent) {
     match event {
         ServiceEvent::ToastClicked => show(),
-        ServiceEvent::ThemeRefreshed(refresh) => send(&CoreMessage::Notice {
-            text: refresh.error.clone().unwrap_or_default(),
-        }),
+        ServiceEvent::ThemeRefreshed(refresh) => send(&CoreMessage::Notice(
+            refresh.error.clone().unwrap_or_default(),
+        )),
         ServiceEvent::BuildChanged | ServiceEvent::BrowsersChanged | ServiceEvent::UpdateReady => {
             refresh();
         }
@@ -149,14 +153,14 @@ fn open(placement: Option<Bounds>, status: Option<String>) {
     });
     background_service::set_window_open(true);
     if let Some(bounds) = placement {
-        send(&CoreMessage::Place { bounds });
+        send(&CoreMessage::Place(bounds));
     }
     send_view(&panel_actions::load());
     if let Some(line) = status {
-        send(&CoreMessage::Status { line });
+        send(&CoreMessage::Status(line));
     }
     if let Some(mut old) = replaced {
-        write_line(&mut old.stdin, &CoreMessage::Close);
+        write_line(&mut old.stdin, &request_frame(CoreMessage::Close));
     }
     thread::Builder::new()
         .name("window stderr".to_owned())
@@ -178,8 +182,9 @@ fn log_stderr(stderr: impl std::io::Read) {
 /// the core decides whether to keep running.
 fn listen(id: u64, stdout: impl std::io::Read, mut child: Child) {
     for line in BufReader::new(stdout).lines().map_while(Result::ok) {
-        match serde_json::from_str::<UiMessage>(&line) {
-            Ok(message) => handle(id, message),
+        match parse_incoming(&line) {
+            Ok(Incoming::Request(frame)) => handle(id, frame),
+            Ok(Incoming::Response) => {}
             Err(error) => panel_log::write_error("the window sent an unreadable message", &error),
         }
     }
@@ -206,23 +211,21 @@ fn listen(id: u64, stdout: impl std::io::Read, mut child: Child) {
     (host().on_last_close)();
 }
 
-fn handle(id: u64, message: UiMessage) {
-    match message {
+fn handle(id: u64, frame: RequestFrame<UiMessage>) {
+    let request = frame.id;
+    match frame.message {
         UiMessage::RuntimeMissing => {
             if let Some(session) = lock(&host().session).as_mut().filter(|open| open.id == id) {
                 session.is_runtime_missing = true;
             }
         }
         UiMessage::Refresh => refresh(),
-        UiMessage::Bounds { bounds } => {
+        UiMessage::Bounds(bounds) => {
             if let Some(session) = lock(&host().session).as_mut().filter(|open| open.id == id) {
                 session.bounds = Some(bounds);
             }
         }
-        UiMessage::Action {
-            id: request,
-            action,
-        } => {
+        UiMessage::Action(action) => {
             thread::Builder::new()
                 .name("window action".to_owned())
                 .spawn(move || run(request, action))
@@ -244,7 +247,7 @@ fn run(request: u32, action: Action) {
         }
         Err(error) => Some(shown(&error)),
     };
-    send(&CoreMessage::Reply { id: request, error });
+    send_line(&ResponseFrame::of(request, error));
 }
 
 /// Only a User error carries a sentence for the window; anything else is
@@ -297,10 +300,10 @@ fn restart_to_update(request: u32) {
         }
         Err(error) => {
             panel_log::write(&format!("restarting into the update failed: {error}"));
-            send(&CoreMessage::Reply {
-                id: request,
-                error: Some(wording::UPDATE_FAILED.to_owned()),
-            });
+            send_line(&ResponseFrame::of(
+                request,
+                Some(wording::UPDATE_FAILED.to_owned()),
+            ));
         }
     }
 }
@@ -318,25 +321,39 @@ fn send_view(state: &PanelState) {
             return;
         };
         open.offer = inject_offer::next(open.offer, state);
-        CoreMessage::View {
-            view: Box::new(view::build(
-                state,
-                open.offer,
-                background_service::pending_update().as_ref(),
-            )),
-        }
+        CoreMessage::View(Box::new(view::build(
+            state,
+            open.offer,
+            background_service::pending_update().as_ref(),
+        )))
     };
     send(&message);
 }
 
+/// Sent as a request with a fresh id; the window's answers are not tracked.
 fn send(message: &CoreMessage) {
-    if let Some(open) = lock(&host().session).as_mut() {
-        write_line(&mut open.stdin, message);
+    send_line(&request_frame(message.clone()));
+}
+
+fn request_frame(message: CoreMessage) -> RequestFrame<CoreMessage> {
+    let timestamp = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map_or(0, |elapsed| u64::try_from(elapsed.as_millis()).unwrap_or(0));
+    RequestFrame {
+        id: NEXT_REQUEST_ID.fetch_add(1, Ordering::Relaxed),
+        message,
+        timestamp,
     }
 }
 
-fn write_line(stdin: &mut ChildStdin, message: &CoreMessage) {
-    let Ok(mut line) = serde_json::to_string(message) else {
+fn send_line(frame: &impl serde::Serialize) {
+    if let Some(open) = lock(&host().session).as_mut() {
+        write_line(&mut open.stdin, frame);
+    }
+}
+
+fn write_line(stdin: &mut ChildStdin, frame: &impl serde::Serialize) {
+    let Ok(mut line) = serde_json::to_string(frame) else {
         return;
     };
     line.push('\n');

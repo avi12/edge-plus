@@ -1,6 +1,8 @@
 // Generated from src-tauri/src/ui/protocol.rs by its export test (cargo test).
 // Do not edit: change protocol.rs and run the test again.
 
+import type { ProtocolWithReturn } from "svelte-winui/messaging";
+
 export type CardWording = { title: string, description: string, 
 /**
  * A Segoe Fluent Icons code point.
@@ -50,7 +52,31 @@ export type Action = { "kind": "setSwitch", key: SwitchKey, isOn: boolean, } | {
 
 export type Bounds = { x: number, y: number, width: number, height: number, };
 
-export type CoreMessage = { "type": "place", bounds: Bounds, } | { "type": "view", view: View, } | { "type": "reply", id: number, error: string | null, } | { "type": "notice", text: string, } | { "type": "status", line: string, } | { "type": "bringBack" } | { "type": "close" };
+export const CoreMessageType = {
+  place: "place",
+  view: "view",
+  notice: "notice",
+  status: "status",
+  bringBack: "bringBack",
+  close: "close",
+} as const;
 
-export type UiMessage = { "type": "runtimeMissing" } | { "type": "refresh" } | { "type": "action", id: number, action: Action, } | { "type": "bounds", bounds: Bounds, };
+export const UiMessageType = {
+  runtimeMissing: "runtimeMissing",
+  refresh: "refresh",
+  action: "action",
+  bounds: "bounds",
+} as const;
 
+export interface EdgePlusProtocolMap {
+  [CoreMessageType.place]: ProtocolWithReturn<Bounds, void>;
+  [CoreMessageType.view]: ProtocolWithReturn<View, void>;
+  [CoreMessageType.notice]: ProtocolWithReturn<string, void>;
+  [CoreMessageType.status]: ProtocolWithReturn<string, void>;
+  [CoreMessageType.bringBack]: ProtocolWithReturn<void, void>;
+  [CoreMessageType.close]: ProtocolWithReturn<void, void>;
+  [UiMessageType.runtimeMissing]: ProtocolWithReturn<void, void>;
+  [UiMessageType.refresh]: ProtocolWithReturn<void, void>;
+  [UiMessageType.action]: ProtocolWithReturn<Action, void>;
+  [UiMessageType.bounds]: ProtocolWithReturn<Bounds, void>;
+}
