@@ -214,7 +214,7 @@ tells a live DLL from a stale one, so no per-process state is kept.
 ### Hooks
 
 Each hook is a MinHook detour on a function in `msedge.dll`, placed by its
-address (an RVA, given in `src/offsets.h`). Every detour checks whether the
+address (an RVA, given in `src/edge/offsets.h`). Every detour checks whether the
 split is active and calls Edge's original code otherwise. A tab that is not in
 a split runs exactly as Edge wrote it.
 
@@ -308,10 +308,10 @@ with the tools in `docs/re/`.
 | What a switch does at startup | `app/panel-tauri/src-tauri/src/dll/dll_sync.rs` |
 | How the panel finds Edge's build | `app/panel-tauri/src-tauri/src/edge/edge_watch.rs` |
 | How the DLL starts and stops | `app/native-split/src/dllmain.cpp` |
-| The config the panel writes | `app/native-split/src/config.h`, `src-tauri/src/dll/config_wire.rs` |
-| Which Edge functions are hooked | `app/native-split/src/hooks.h` |
-| How a split changes | `app/native-split/src/split_ops.h` |
-| How a tab is dragged into a split | `app/native-split/src/tabdrag.h` |
+| The config the panel writes | `app/native-split/src/core/config.h`, `src-tauri/src/dll/config_wire.rs` |
+| Which Edge functions are hooked | `app/native-split/src/edge/hooks.h` |
+| How a split changes | `app/native-split/src/split/split_ops.h` |
+| How a tab is dragged into a split | `app/native-split/src/chrome/tabdrag.h` |
 | How an Edge function was found | `docs/re/` |
 
 ## Building and testing

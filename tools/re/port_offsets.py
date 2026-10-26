@@ -1,4 +1,4 @@
-# Port app/native-split/src/offsets.h from one msedge.dll build to the next.
+# Port app/native-split/src/edge/offsets.h from one msedge.dll build to the next.
 #
 #   python tools/re/port_offsets.py --old-pdb OLD.pdb --new-pdb NEW.pdb \
 #       --new-dll "<...>\msedge.dll" [--old-dll OLD.dll] \

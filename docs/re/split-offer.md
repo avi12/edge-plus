@@ -1,14 +1,14 @@
 # A new pane's tab offer
 
 Target: `msedge.dll` 155.0.4283.45. All addresses are **RVAs**; their one home
-in code is `app/native-split/src/offsets.h`.
+in code is `app/native-split/src/edge/offsets.h`.
 
 A pane added from the ⋯ d-pad or the toolbar's split menu opens on Edge's
 split **starting page**, the "Tabs you've opened" page Edge's own split button
 puts in its second pane. The user picks the pane's tab there, types an
 address, or closes the pane with the page's X.
 
-Code: `src/offer.h`.
+Code: `src/split/offer.h`.
 
 ## How Edge opens it
 

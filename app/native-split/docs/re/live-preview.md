@@ -2,7 +2,7 @@
 
 Make a hovered tab's card show a **live** miniature instead of a frozen snapshot,
 by reusing Edge's own capture pipeline. Implemented in
-`app/native-split/src/live_preview.h`; RVAs in `offsets.h`.
+`app/native-split/src/chrome/live_preview.h`; RVAs in `offsets.h`.
 
 ## What Edge already does
 

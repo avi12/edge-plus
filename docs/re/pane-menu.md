@@ -1,7 +1,7 @@
 # The pane bar's ⋯ menu — Edge's items and the "Add pane" d-pad row
 
 Target: `msedge.dll` 155.0.4283.45. All addresses are **RVAs**; their one home
-in code is `app/native-split/src/offsets.h`.
+in code is `app/native-split/src/edge/offsets.h`.
 
 The ⋯ button in a pane's hover bar opens `SplitWindowControlMenu`, not the
 toolbar's `SplitTabMenuModel` (`split-menu.md`). We append one row to it:
@@ -9,7 +9,7 @@ Edge's split icon, the label "Add pane", and a d-pad of ↑ ← → ↓ buttons.
 row itself does nothing; an arrow adds a pane beside the pane whose ⋯ it was,
 in that direction. The new pane opens on Edge's tab offer, the starting page
 its own split button opens (`split-offer.md`). Edge's own items are fitted to
-the N-pane split first (code: `src/pane_menu.h`).
+the N-pane split first (code: `src/chrome/pane_menu.h`).
 
 ## Edge's own items
 

@@ -1,7 +1,7 @@
 # A split pane's new-tab links
 
 Target: `msedge.dll` 155.0.4283.45. All addresses are **RVAs**; their one home
-in code is `app/native-split/src/offsets.h`.
+in code is `app/native-split/src/edge/offsets.h`.
 
 The pane ⋯ menu's toggle "Open left links to the right", relabelled "Open
 new-tab links in a new pane" (`pane-menu.md`), now decides where a link that
@@ -13,7 +13,7 @@ in any pane of a split:
 | off | in the pane itself; no tab is made |
 | on | in a new pane right next to that pane |
 
-Code: `src/links.h`. Out of scope: modifier clicks, popups, and pages that
+Code: `src/split/links.h`. Out of scope: modifier clicks, popups, and pages that
 open a window to script it.
 
 ## The toggle

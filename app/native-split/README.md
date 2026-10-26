@@ -37,6 +37,21 @@ reverse-engineered ABI). Authorized personal customization of the user's own Edg
 - [x] Companion-app toggle: inject / unload / hot-swap from the panel; toggling
       off breaks every split of 3+ panes back into standalone tabs first
 
+## Source layout
+
+`dllmain.cpp` and `inject.cpp` sit at `src/`; every header lives in a folder by concern.
+
+| folder | concern |
+|---|---|
+| `core/` | config wire, log, handles, control channel, verification |
+| `edge/` | calls into msedge.dll, RVAs and offsets, hooks, Edge geometry |
+| `layout/` | pane tree, geometry, state, motion, docking, collapse, repaint |
+| `split/` | split data and operations, panes, tabs, control codes, links, offers |
+| `chrome/` | dividers, grips, drag, overlay, menus, icons, tab drawing and rows |
+| `find/` | find, its flags, scripts and text, tab list, web text |
+| `assistant/` | Ask / assistant chat, chat menu, scripts and target |
+| `theme/` | themes, following, tone, reading mode, focus, protocol handlers |
+
 ## Build
 
 ```powershell

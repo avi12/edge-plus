@@ -52,7 +52,7 @@ new feature users would notice.
 ## A release for a new Edge build
 
 When Edge updates, every feature that calls into `msedge.dll` pauses until
-`app/native-split/src/offsets.h` is re-pinned to the new build. Ship that
+`app/native-split/src/edge/offsets.h` is re-pinned to the new build. Ship that
 release as soon as it is ready, and say in its notes which Edge build it
 supports.
 

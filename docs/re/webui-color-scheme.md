@@ -1,8 +1,8 @@
 # Why edge://settings and edge://extensions ignore the theme's light or dark
 
-Pinned to msedge.dll 155.0.4283.62. RVAs live in `src/offsets.h`; the calls in
-`src/edge.h`; the detours in `src/theme_follow.h`; the page test in
-`src/followed_pages.h`. PDB names below are from the public PDB.
+Pinned to msedge.dll 155.0.4283.62. RVAs live in `src/edge/offsets.h`; the calls in
+`src/edge/edge.h`; the detours in `src/theme/theme_follow.h`; the page test in
+`src/theme/followed_pages.h`. PDB names below are from the public PDB.
 
 ## What decides a page's light or dark
 

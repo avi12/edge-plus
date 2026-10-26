@@ -13,7 +13,7 @@
 Targets: Chromium source at tag `155.0.8059.85` (the Chrome build installed
 beside Edge), `chrome.dll` 155.0.8059.85, and `msedge.dll` 155.0.4283.45. All
 Edge addresses are **RVAs**; any the DLL uses live only in
-`app/native-split/src/offsets.h`.
+`app/native-split/src/edge/offsets.h`.
 
 The question: can Edge's chat button open Gemini, with the page context and
 multi-tab sharing Gemini gets in Chrome?

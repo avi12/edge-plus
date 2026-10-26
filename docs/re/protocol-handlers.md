@@ -1,7 +1,7 @@
 # Web protocol handlers (`mailto:` -> Gmail)
 
 Target: `msedge.dll` 155.0.4283.45. All addresses are **RVAs**. The DLL's
-"ask to handle links, like Chrome" switch (`app/native-split/src/protocol_handlers.h`)
+"ask to handle links, like Chrome" switch (`app/native-split/src/theme/protocol_handlers.h`)
 is built on section 5.
 
 **Short answer.** Edge ships Chromium's `custom_handlers` stack *and* Chrome's

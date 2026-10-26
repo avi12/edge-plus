@@ -1,4 +1,4 @@
-//! Mirrors struct Wire in app/native-split/src/config.h field for field, every
+//! Mirrors struct Wire in app/native-split/src/core/config.h field for field, every
 //! u32 little-endian as the DLL reads it on x64. The reserved u32 was once the
 //! chosen assistant: written as zero, never read.
 

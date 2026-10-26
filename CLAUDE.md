@@ -4,7 +4,7 @@ Live feature switches for Microsoft Edge (see `README.md`):
 
 - `app/native-split/` — C++20 DLL injected into Edge's browser process that grows
   Edge's native split view to N panes; pinned to one `msedge.dll` build
-  (`src/offsets.h`), reverse-engineered in `docs/re/`
+  (`src/edge/offsets.h`), reverse-engineered in `docs/re/`
 - `app/panel-tauri/` — the panel that toggles each feature and injects the DLL:
   a Rust core (every Win32 call in its `edge-native` crate) and a WinUI 3
   window drawn from TypeScript
@@ -75,7 +75,7 @@ for C++, rustfmt and clippy for the core, oxlint's `curly` for the window). Rule
   `SCREAMING_SNAKE_CASE` `const` in Rust, a `camelCase` `const` in TypeScript),
   unless it is self-evident (`0`, `1`, a `/ 2`).
 - An Edge ABI value (an RVA, a struct offset, a vtable slot) is not a magic
-  number to extract elsewhere: its one home is `src/offsets.h`.
+  number to extract elsewhere: its one home is `src/edge/offsets.h`.
 
 # C++ (`app/native-split/`)
 
@@ -113,7 +113,7 @@ class`** (see "hardcoded values" above), unless it is self-evident (`0`,
 Two deliberate exceptions, both because the name is a reference rather than a
 choice:
 
-- `src/offsets.h` names every RVA and offset after the reversed symbol —
+- `src/edge/offsets.h` names every RVA and offset after the reversed symbol —
   `MultiContentsView_SetActiveIndex`, `MCV_containers_data` — so it greps
   against the PDB and `docs/re/`.
 - Hook pairs are `h_name` (the detour) and `o_name` (the original it calls).
@@ -233,7 +233,7 @@ must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h}`).
   overwritten) from `out/`, never from temp/scratchpad. Each new hash triggers a
   Defender cloud scan; `out/` is the one folder Avi excluded from Defender.
 - Capture the test window with `PrintWindow`, never the screen.
-- The DLL's control channel (`edgeplus.addpane`, codes in `src/control.h`) drives
+- The DLL's control channel (`edgeplus.addpane`, codes in `src/split/control.h`) drives
   every pane action from a script, so changes can be verified without clicks.
 
 # Commits
