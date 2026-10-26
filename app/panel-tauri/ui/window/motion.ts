@@ -1,4 +1,4 @@
-import type { ListView } from "./winui.ts";
+import type { ListViewBase } from "./winui.ts";
 import {
   AddDeleteThemeTransition,
   ReorderThemeTransition,
@@ -15,7 +15,7 @@ import { createSubscriber } from "svelte/reactivity";
 
 type Transitions = () => TransitionCollection;
 
-const lists: Array<[ListView, Transitions]> = [];
+const lists: Array<[ListViewBase, Transitions]> = [];
 // Made on first use, once the UI thread's apartment exists.
 let settings: UISettings | undefined;
 let isOn = isSwitchOn();
@@ -64,9 +64,14 @@ export function listItems(): TransitionCollection {
   return collection;
 }
 
-export function animateItems(list: ListView, transitions: Transitions): void {
-  lists.push([list, transitions]);
+// Returns what stops the list following the switch, for when the list goes.
+export function animateItems(list: ListViewBase, transitions: Transitions): () => void {
+  const entry: [ListViewBase, Transitions] = [list, transitions];
+  lists.push(entry);
   list.itemContainerTransitions = applied(transitions);
+  return () => {
+    lists.splice(lists.indexOf(entry), 1);
+  };
 }
 
 // Read again whenever the window is activated: the switch is flipped in

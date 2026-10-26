@@ -2,7 +2,6 @@
   import type { ThemeRow as Row } from "../protocol.g.ts";
   import * as motion from "./motion.ts";
   import ThemeRow from "./theme-row.svelte";
-  import { rowKey } from "./theme-row.ts";
   import { StackPanel, TextBlock } from "svelte-winui";
 
   // The themes installed in Edge that the user did not add here: listed, never
@@ -14,6 +13,14 @@
   }
 
   const { rows, empty }: Props = $props();
+
+  const rowKeySeparator = "\n";
+
+  // Everything a row shows, so an unchanged row is left alone (and does not
+  // re-animate).
+  function rowKey(row: Row): string {
+    return [row.id, row.name, row.badges.join(",")].join(rowKeySeparator);
+  }
 </script>
 
 <!-- Keyed by everything a row shows, so an unchanged row is left alone and

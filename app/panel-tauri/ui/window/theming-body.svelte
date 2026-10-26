@@ -2,7 +2,7 @@
   import type { Action, CardView, ColorMode, ThemingView } from "../protocol.g.ts";
   import EdgeThemeList from "./edge-theme-list.svelte";
   import * as motion from "./motion.ts";
-  import { OwnThemeList } from "./own-theme-list.ts";
+  import OwnThemeList from "./own-theme-list.svelte";
   import { usePanel } from "./panel.svelte.ts";
   import ThemePicker from "./theme-picker.svelte";
   import { LocalThemeKind } from "./theming-card.ts";
@@ -27,35 +27,6 @@
   let isBusy = $state(false);
   // Why the last add or choice failed, under the add rows.
   let error = $state("");
-
-  // The list is still drawn from TypeScript (a ListView with its own drag and
-  // keyboard reordering), until the package has a list component.
-  // svelte-ignore state_referenced_locally
-  const ownThemes = new OwnThemeList(theming.labels, {
-    remove(id) {
-      void runBusy({
-        kind: "removeTheme",
-        id
-      });
-    },
-    reorder(ids) {
-      void runQuietly({
-        kind: "reorderThemes",
-        ids
-      });
-    },
-    move(id, offset) {
-      return runQuietly({
-        kind: "moveTheme",
-        id,
-        offset
-      });
-    }
-  });
-
-  $effect(() => {
-    ownThemes.update(theming.own);
-  });
 
   async function addStore(): Promise<void> {
     const link = storeLink.trim();
@@ -97,10 +68,20 @@
     }
   }
 
+  function remove(id: string): void {
+    void runBusy({
+      kind: "removeTheme",
+      id
+    });
+  }
+
   // None of runBusy's busy state: holding the add buttons for a reorder
   // flickered File… and Folder… on every drop.
-  async function runQuietly(action: Action): Promise<void> {
-    const failure = await panel.run(action);
+  async function reorder(ids: string[]): Promise<void> {
+    const failure = await panel.run({
+      kind: "reorderThemes",
+      ids
+    });
     if (failure !== null) {
       error = failure;
     }
@@ -130,7 +111,7 @@
   <TextBlock class="error" visibility={error.length > 0 ? "Visible" : "Collapsed"} text={error} />
   <ThemePicker label={theming.labels.whenLight} options={theming.options} assignedId={theming.light} onPick={id => assign("light", id)} />
   <ThemePicker label={theming.labels.whenDark} options={theming.options} assignedId={theming.dark} onPick={id => assign("dark", id)} />
-  <host element={ownThemes.view} />
+  <OwnThemeList rows={theming.own} labels={theming.labels} onRemove={remove} onReorder={ids => void reorder(ids)} />
   <EdgeThemeList rows={theming.edge} empty={theming.empty} />
 </StackPanel>
 
