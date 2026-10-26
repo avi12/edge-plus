@@ -13,6 +13,14 @@
     "src/window/bootstrap.ts",
     "src/window/thread.ts",
     "src/window/index.ts",
+    "src/components/index.ts",
+    "examples/harness/launch.ts",
+    "examples/harness/worker.ts",
+    "examples/harness/run-example.ts",
+    "examples/lists/main.ts",
+    "examples/window/main.ts",
+    "test/lists.test.ts",
+    "test/window.test.ts",
     "eslint.config.js"
   ],
   // The bindings are reached through the #winui/* import map, and the linters

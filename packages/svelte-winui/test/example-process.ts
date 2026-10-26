@@ -11,7 +11,7 @@ import type { Readable, Writable } from "node:stream";
 
 const packageRoot = path.join(import.meta.dirname, "..");
 const launcher = path.join(packageRoot, "examples", "harness", "launch.ts");
-export const bootstrapPath = path.join(packageRoot, ".winapp", "bin", process.arch, "Microsoft.WindowsAppRuntime.Bootstrap.dll");
+const bootstrapPath = path.join(packageRoot, ".winapp", "bin", process.arch, "Microsoft.WindowsAppRuntime.Bootstrap.dll");
 export const isWindowsAppSdkRestored = existsSync(bootstrapPath);
 const startMilliseconds = 90_000;
 const layoutMilliseconds = 900;
@@ -86,11 +86,6 @@ export class ExampleProcess {
     await this.ask(command, kind);
     await new Promise(resolve => setTimeout(resolve, layoutMilliseconds));
     return this.ask({ cmd: "stats" }, "stats");
-  }
-
-  async close(): Promise<number | null> {
-    this.child.stdin.end();
-    return this.exited;
   }
 
   // For a test that failed: end this process, and only it.
