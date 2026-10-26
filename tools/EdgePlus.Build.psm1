@@ -96,9 +96,11 @@ function Set-ProductVersion([string] $version) {
 # release, which embeds it. Returns the exe.
 function Build-ReleaseExe {
     $panel = Join-Path (Get-RepoRoot) 'app\panel-tauri'
-    Invoke-Checked 'pnpm install' { pnpm --dir $panel install --frozen-lockfile }
-    Invoke-Checked 'pnpm restore' { pnpm --dir $panel restore }
-    Invoke-Checked 'pnpm build' { pnpm --dir $panel build }
+    # Their output goes to the console: left in the pipeline, a line such as
+    # pnpm's "Scope: all 3 workspace projects" was returned along with the path.
+    Invoke-Checked 'pnpm install' { pnpm --dir $panel install --frozen-lockfile } | Out-Host
+    Invoke-Checked 'pnpm restore' { pnpm --dir $panel restore } | Out-Host
+    Invoke-Checked 'pnpm build' { pnpm --dir $panel build } | Out-Host
     return Join-Path $panel 'src-tauri\target\release\edgeplus.exe'
 }
 
