@@ -392,7 +392,15 @@ inline constinit bool g_hasPendingConfig = false;
 
 // Runs on dllmain's waiter thread. Posting to our own subclassed window means the
 // app never has to guess which window we hooked.
+inline bool AdoptBrowserWindow(HWND excluded);
+
 inline void OnConfigChanged() {
+  // Every browser window closed with Edge still running (in the background):
+  // the next one opened takes the channel, so this apply reaches it.
+  const bool isWithoutWindow = !channel::g_window;
+  if (isWithoutWindow) {
+    AdoptBrowserWindow(nullptr);
+  }
   g_hasPendingConfig = config::LoadFromFile(&g_pendingConfig);
   if (g_hasPendingConfig) {
     channel::Post(CodeOf(Command::kApplyConfig));
@@ -631,10 +639,29 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   if (isColorSchemeChange) {
     channel::Post(CodeOf(Command::kApplyTheme));
   }
+  // The window the channel lives in is closing while Edge keeps others open:
+  // without moving on, every later config, theme and script command was posted
+  // to a dead window and the DLL went silent until Edge restarted.
+  const bool isClosing = message == WM_NCDESTROY;
+  if (isClosing) {
+    const WNDPROC originalProc = g_originalProc;
+    SetWindowLongPtrW(hwnd, GWLP_WNDPROC,
+                      reinterpret_cast<LONG_PTR>(originalProc));
+    anim::Remove();
+    // Its hot-keys went with it; the next window registers them again.
+    g_hasHotKeys = false;
+    AdoptBrowserWindow(hwnd);
+    return CallWindowProcW(originalProc, hwnd, message, wparam, lparam);
+  }
   return CallWindowProcW(g_originalProc, hwnd, message, wparam, lparam);
 }
 
-inline BOOL CALLBACK FindBrowserWindow(HWND hwnd, LPARAM /*unused*/) {
+// `excluded` (an LPARAM-packed HWND) is a window that is closing.
+inline BOOL CALLBACK FindBrowserWindow(HWND hwnd, LPARAM excluded) {
+  const bool isExcluded = hwnd == reinterpret_cast<HWND>(excluded);
+  if (isExcluded) {
+    return TRUE;
+  }
   const bool isVisibleWithTitle =
       IsWindowVisible(hwnd) && GetWindowTextLengthW(hwnd) != 0;
   if (!isVisibleWithTitle) {
@@ -655,13 +682,15 @@ inline BOOL CALLBACK FindBrowserWindow(HWND hwnd, LPARAM /*unused*/) {
   return FALSE;
 }
 
-inline void Install() {
-  channel::g_message = RegisterWindowMessageW(channel::kMessageName);
-  EnumWindows(FindBrowserWindow, 0);
+// Subclasses a browser window other than `excluded` and points the channel at
+// it; false when Edge has none open.
+inline bool AdoptBrowserWindow(HWND excluded) {
+  channel::g_window = nullptr;
+  EnumWindows(FindBrowserWindow, reinterpret_cast<LPARAM>(excluded));
   HWND hwnd = channel::g_window;
   if (!hwnd) {
     Log("[control] no browser window to subclass");
-    return;
+    return false;
   }
   g_originalProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(
       hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc)));
@@ -676,6 +705,12 @@ inline void Install() {
   }
   // A (re)load into a split that is already grown: add the grips on the UI thread.
   channel::Post(CodeOf(Command::kEnsureGrips));
+  return true;
+}
+
+inline void Install() {
+  channel::g_message = RegisterWindowMessageW(channel::kMessageName);
+  AdoptBrowserWindow(nullptr);
 }
 
 // Runs on the unload thread: hand the UI-side teardown to the UI thread and wait
