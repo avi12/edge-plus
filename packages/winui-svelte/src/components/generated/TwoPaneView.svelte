@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<two-pane-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TwoPaneView) => untrack(() => connectTwoPaneView(native, rest, bound)))} />
+<two-pane-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TwoPaneView) => untrack(() => connectTwoPaneView(native, rest, bound)))}></two-pane-view>

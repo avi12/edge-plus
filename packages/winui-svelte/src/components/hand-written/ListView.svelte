@@ -54,4 +54,4 @@
   {style}
   class={className}
   {@attach control((native: ListView) => untrack(() => connect(native)))}
-/>
+></list-view>

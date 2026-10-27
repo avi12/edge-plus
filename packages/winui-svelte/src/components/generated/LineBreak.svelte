@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<line-break {...attachmentsOf(rest)} class={className} {style} {@attach control((native: LineBreak) => untrack(() => connectLineBreak(native, rest, bound)))} />
+<line-break {...attachmentsOf(rest)} class={className} {style} {@attach control((native: LineBreak) => untrack(() => connectLineBreak(native, rest, bound)))}></line-break>

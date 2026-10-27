@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<parallax-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ParallaxView) => untrack(() => connectParallaxView(native, rest, bound)))} />
+<parallax-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ParallaxView) => untrack(() => connectParallaxView(native, rest, bound)))}></parallax-view>

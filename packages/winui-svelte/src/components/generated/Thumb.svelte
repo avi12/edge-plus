@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<thumb {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Thumb) => untrack(() => connectThumb(native, rest, bound)))} />
+<thumb {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Thumb) => untrack(() => connectThumb(native, rest, bound)))}></thumb>

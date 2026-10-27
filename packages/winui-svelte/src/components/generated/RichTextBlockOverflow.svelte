@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<rich-text-block-overflow {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RichTextBlockOverflow) => untrack(() => connectRichTextBlockOverflow(native, rest, bound)))} />
+<rich-text-block-overflow {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RichTextBlockOverflow) => untrack(() => connectRichTextBlockOverflow(native, rest, bound)))}></rich-text-block-overflow>

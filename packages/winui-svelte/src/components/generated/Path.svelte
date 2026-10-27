@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<path {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Path) => untrack(() => connectPath(native, rest, bound)))} />
+<path {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Path) => untrack(() => connectPath(native, rest, bound)))}></path>

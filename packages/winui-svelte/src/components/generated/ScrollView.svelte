@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<scroll-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ScrollView) => untrack(() => connectScrollView(native, rest, bound)))} />
+<scroll-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ScrollView) => untrack(() => connectScrollView(native, rest, bound)))}></scroll-view>

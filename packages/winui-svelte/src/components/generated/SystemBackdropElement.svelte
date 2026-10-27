@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<system-backdrop-element {...attachmentsOf(rest)} class={className} {style} {@attach control((native: SystemBackdropElement) => untrack(() => connectSystemBackdropElement(native, rest, bound)))} />
+<system-backdrop-element {...attachmentsOf(rest)} class={className} {style} {@attach control((native: SystemBackdropElement) => untrack(() => connectSystemBackdropElement(native, rest, bound)))}></system-backdrop-element>

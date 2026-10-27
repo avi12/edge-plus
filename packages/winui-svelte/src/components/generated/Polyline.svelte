@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<polyline {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Polyline) => untrack(() => connectPolyline(native, rest, bound)))} />
+<polyline {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Polyline) => untrack(() => connectPolyline(native, rest, bound)))}></polyline>

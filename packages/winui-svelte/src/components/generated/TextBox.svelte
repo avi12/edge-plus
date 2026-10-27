@@ -17,4 +17,4 @@
   };
 </script>
 
-<text-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TextBox) => untrack(() => connectTextBox(native, rest, bound)))} />
+<text-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TextBox) => untrack(() => connectTextBox(native, rest, bound)))}></text-box>

@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<map-control {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MapControl) => untrack(() => connectMapControl(native, rest, bound)))} />
+<map-control {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MapControl) => untrack(() => connectMapControl(native, rest, bound)))}></map-control>

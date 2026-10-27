@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<polygon {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Polygon) => untrack(() => connectPolygon(native, rest, bound)))} />
+<polygon {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Polygon) => untrack(() => connectPolygon(native, rest, bound)))}></polygon>

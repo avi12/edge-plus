@@ -17,4 +17,4 @@
   };
 </script>
 
-<color-picker {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ColorPicker) => untrack(() => connectColorPicker(native, rest, bound)))} />
+<color-picker {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ColorPicker) => untrack(() => connectColorPicker(native, rest, bound)))}></color-picker>

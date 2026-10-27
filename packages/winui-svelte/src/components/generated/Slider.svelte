@@ -17,4 +17,4 @@
   };
 </script>
 
-<slider {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Slider) => untrack(() => connectSlider(native, rest, bound)))} />
+<slider {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Slider) => untrack(() => connectSlider(native, rest, bound)))}></slider>

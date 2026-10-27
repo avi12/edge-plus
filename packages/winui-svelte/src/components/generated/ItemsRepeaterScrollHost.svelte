@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<items-repeater-scroll-host {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemsRepeaterScrollHost) => untrack(() => connectItemsRepeaterScrollHost(native, rest, bound)))} />
+<items-repeater-scroll-host {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemsRepeaterScrollHost) => untrack(() => connectItemsRepeaterScrollHost(native, rest, bound)))}></items-repeater-scroll-host>

@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<info-badge {...attachmentsOf(rest)} class={className} {style} {@attach control((native: InfoBadge) => untrack(() => connectInfoBadge(native, rest, bound)))} />
+<info-badge {...attachmentsOf(rest)} class={className} {style} {@attach control((native: InfoBadge) => untrack(() => connectInfoBadge(native, rest, bound)))}></info-badge>

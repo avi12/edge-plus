@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<media-player-presenter {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MediaPlayerPresenter) => untrack(() => connectMediaPlayerPresenter(native, rest, bound)))} />
+<media-player-presenter {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MediaPlayerPresenter) => untrack(() => connectMediaPlayerPresenter(native, rest, bound)))}></media-player-presenter>

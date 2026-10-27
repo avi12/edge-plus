@@ -23,4 +23,4 @@
   };
 </script>
 
-<tab-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TabView) => untrack(() => connectTabView(native, rest, bound)))} />
+<tab-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TabView) => untrack(() => connectTabView(native, rest, bound)))}></tab-view>

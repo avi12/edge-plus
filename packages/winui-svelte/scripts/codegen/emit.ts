@@ -509,8 +509,10 @@ export function emitComponent(level: ClassModel): string {
   const bound = bindables.length === 0 ? "{}" : `{\n${bag.join(",\n")}\n  }`;
   const attachment = `{@attach control((native: ${name}) => untrack(() => connect${name}(native, rest, bound)))}`;
   const open = `<${level.tag} {...attachmentsOf(rest)} class={className} {style} ${attachment}`;
+  // Never self-closed: Svelte warns that `<tag />` is ambiguous for an element
+  // that is not void, which every custom element is.
   const markup = level.contentProperty === null
-    ? `${open} />`
+    ? `${open}></${level.tag}>`
     : `${open}>\n  {@render children?.()}\n</${level.tag}>`;
   return `${[
     svelteHeader,

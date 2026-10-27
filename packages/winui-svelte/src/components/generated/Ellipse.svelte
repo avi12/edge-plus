@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<ellipse {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Ellipse) => untrack(() => connectEllipse(native, rest, bound)))} />
+<ellipse {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Ellipse) => untrack(() => connectEllipse(native, rest, bound)))}></ellipse>

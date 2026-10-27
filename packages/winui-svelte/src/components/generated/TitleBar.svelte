@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<title-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TitleBar) => untrack(() => connectTitleBar(native, rest, bound)))} />
+<title-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TitleBar) => untrack(() => connectTitleBar(native, rest, bound)))}></title-bar>

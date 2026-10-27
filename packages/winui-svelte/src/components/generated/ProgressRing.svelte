@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<progress-ring {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ProgressRing) => untrack(() => connectProgressRing(native, rest, bound)))} />
+<progress-ring {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ProgressRing) => untrack(() => connectProgressRing(native, rest, bound)))}></progress-ring>

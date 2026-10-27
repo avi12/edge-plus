@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<media-transport-controls {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MediaTransportControls) => untrack(() => connectMediaTransportControls(native, rest, bound)))} />
+<media-transport-controls {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MediaTransportControls) => untrack(() => connectMediaTransportControls(native, rest, bound)))}></media-transport-controls>

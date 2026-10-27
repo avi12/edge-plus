@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<bitmap-icon {...attachmentsOf(rest)} class={className} {style} {@attach control((native: BitmapIcon) => untrack(() => connectBitmapIcon(native, rest, bound)))} />
+<bitmap-icon {...attachmentsOf(rest)} class={className} {style} {@attach control((native: BitmapIcon) => untrack(() => connectBitmapIcon(native, rest, bound)))}></bitmap-icon>

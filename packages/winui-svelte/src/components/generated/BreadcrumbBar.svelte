@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<breadcrumb-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: BreadcrumbBar) => untrack(() => connectBreadcrumbBar(native, rest, bound)))} />
+<breadcrumb-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: BreadcrumbBar) => untrack(() => connectBreadcrumbBar(native, rest, bound)))}></breadcrumb-bar>

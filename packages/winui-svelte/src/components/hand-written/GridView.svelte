@@ -54,4 +54,4 @@
   {style}
   class={className}
   {@attach control((native: GridView) => untrack(() => connect(native)))}
-/>
+></grid-view>

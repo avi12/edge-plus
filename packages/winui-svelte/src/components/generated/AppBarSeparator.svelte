@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<app-bar-separator {...attachmentsOf(rest)} class={className} {style} {@attach control((native: AppBarSeparator) => untrack(() => connectAppBarSeparator(native, rest, bound)))} />
+<app-bar-separator {...attachmentsOf(rest)} class={className} {style} {@attach control((native: AppBarSeparator) => untrack(() => connectAppBarSeparator(native, rest, bound)))}></app-bar-separator>

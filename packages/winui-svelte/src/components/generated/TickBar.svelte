@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<tick-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TickBar) => untrack(() => connectTickBar(native, rest, bound)))} />
+<tick-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TickBar) => untrack(() => connectTickBar(native, rest, bound)))}></tick-bar>

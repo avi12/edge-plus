@@ -17,4 +17,4 @@
   };
 </script>
 
-<tree-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TreeView) => untrack(() => connectTreeView(native, rest, bound)))} />
+<tree-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TreeView) => untrack(() => connectTreeView(native, rest, bound)))}></tree-view>

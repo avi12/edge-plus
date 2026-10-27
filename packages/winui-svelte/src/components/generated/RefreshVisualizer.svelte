@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<refresh-visualizer {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RefreshVisualizer) => untrack(() => connectRefreshVisualizer(native, rest, bound)))} />
+<refresh-visualizer {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RefreshVisualizer) => untrack(() => connectRefreshVisualizer(native, rest, bound)))}></refresh-visualizer>

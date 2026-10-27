@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<selector-bar-item {...attachmentsOf(rest)} class={className} {style} {@attach control((native: SelectorBarItem) => untrack(() => connectSelectorBarItem(native, rest, bound)))} />
+<selector-bar-item {...attachmentsOf(rest)} class={className} {style} {@attach control((native: SelectorBarItem) => untrack(() => connectSelectorBarItem(native, rest, bound)))}></selector-bar-item>

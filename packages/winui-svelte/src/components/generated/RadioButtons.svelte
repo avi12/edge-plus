@@ -23,4 +23,4 @@
   };
 </script>
 
-<radio-buttons {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RadioButtons) => untrack(() => connectRadioButtons(native, rest, bound)))} />
+<radio-buttons {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RadioButtons) => untrack(() => connectRadioButtons(native, rest, bound)))}></radio-buttons>

@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<calendar-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: CalendarView) => untrack(() => connectCalendarView(native, rest, bound)))} />
+<calendar-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: CalendarView) => untrack(() => connectCalendarView(native, rest, bound)))}></calendar-view>

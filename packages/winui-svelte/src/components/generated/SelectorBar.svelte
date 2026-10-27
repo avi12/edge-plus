@@ -17,4 +17,4 @@
   };
 </script>
 
-<selector-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: SelectorBar) => untrack(() => connectSelectorBar(native, rest, bound)))} />
+<selector-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: SelectorBar) => untrack(() => connectSelectorBar(native, rest, bound)))}></selector-bar>

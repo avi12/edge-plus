@@ -17,4 +17,4 @@
   };
 </script>
 
-<number-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: NumberBox) => untrack(() => connectNumberBox(native, rest, bound)))} />
+<number-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: NumberBox) => untrack(() => connectNumberBox(native, rest, bound)))}></number-box>

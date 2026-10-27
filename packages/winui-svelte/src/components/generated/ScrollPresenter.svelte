@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<scroll-presenter {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ScrollPresenter) => untrack(() => connectScrollPresenter(native, rest, bound)))} />
+<scroll-presenter {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ScrollPresenter) => untrack(() => connectScrollPresenter(native, rest, bound)))}></scroll-presenter>

@@ -17,4 +17,4 @@
   };
 </script>
 
-<password-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: PasswordBox) => untrack(() => connectPasswordBox(native, rest, bound)))} />
+<password-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: PasswordBox) => untrack(() => connectPasswordBox(native, rest, bound)))}></password-box>

@@ -17,4 +17,4 @@
   };
 </script>
 
-<progress-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ProgressBar) => untrack(() => connectProgressBar(native, rest, bound)))} />
+<progress-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ProgressBar) => untrack(() => connectProgressBar(native, rest, bound)))}></progress-bar>

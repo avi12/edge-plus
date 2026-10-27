@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<glyphs {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Glyphs) => untrack(() => connectGlyphs(native, rest, bound)))} />
+<glyphs {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Glyphs) => untrack(() => connectGlyphs(native, rest, bound)))}></glyphs>

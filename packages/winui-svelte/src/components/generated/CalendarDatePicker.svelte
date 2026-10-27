@@ -17,4 +17,4 @@
   };
 </script>
 
-<calendar-date-picker {...attachmentsOf(rest)} class={className} {style} {@attach control((native: CalendarDatePicker) => untrack(() => connectCalendarDatePicker(native, rest, bound)))} />
+<calendar-date-picker {...attachmentsOf(rest)} class={className} {style} {@attach control((native: CalendarDatePicker) => untrack(() => connectCalendarDatePicker(native, rest, bound)))}></calendar-date-picker>

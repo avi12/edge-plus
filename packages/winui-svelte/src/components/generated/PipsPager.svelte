@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<pips-pager {...attachmentsOf(rest)} class={className} {style} {@attach control((native: PipsPager) => untrack(() => connectPipsPager(native, rest, bound)))} />
+<pips-pager {...attachmentsOf(rest)} class={className} {style} {@attach control((native: PipsPager) => untrack(() => connectPipsPager(native, rest, bound)))}></pips-pager>

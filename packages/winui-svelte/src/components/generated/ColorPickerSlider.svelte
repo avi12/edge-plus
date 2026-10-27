@@ -17,4 +17,4 @@
   };
 </script>
 
-<color-picker-slider {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ColorPickerSlider) => untrack(() => connectColorPickerSlider(native, rest, bound)))} />
+<color-picker-slider {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ColorPickerSlider) => untrack(() => connectColorPickerSlider(native, rest, bound)))}></color-picker-slider>

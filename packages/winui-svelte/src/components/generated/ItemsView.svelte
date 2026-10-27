@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<items-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemsView) => untrack(() => connectItemsView(native, rest, bound)))} />
+<items-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemsView) => untrack(() => connectItemsView(native, rest, bound)))}></items-view>

@@ -17,4 +17,4 @@
   };
 </script>
 
-<rating-control {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RatingControl) => untrack(() => connectRatingControl(native, rest, bound)))} />
+<rating-control {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RatingControl) => untrack(() => connectRatingControl(native, rest, bound)))}></rating-control>

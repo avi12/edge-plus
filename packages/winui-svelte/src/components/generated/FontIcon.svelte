@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<font-icon {...attachmentsOf(rest)} class={className} {style} {@attach control((native: FontIcon) => untrack(() => connectFontIcon(native, rest, bound)))} />
+<font-icon {...attachmentsOf(rest)} class={className} {style} {@attach control((native: FontIcon) => untrack(() => connectFontIcon(native, rest, bound)))}></font-icon>

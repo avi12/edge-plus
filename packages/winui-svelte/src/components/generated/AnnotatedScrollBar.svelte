@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<annotated-scroll-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: AnnotatedScrollBar) => untrack(() => connectAnnotatedScrollBar(native, rest, bound)))} />
+<annotated-scroll-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: AnnotatedScrollBar) => untrack(() => connectAnnotatedScrollBar(native, rest, bound)))}></annotated-scroll-bar>

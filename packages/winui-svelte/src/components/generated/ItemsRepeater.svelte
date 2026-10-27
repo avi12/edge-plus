@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<items-repeater {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemsRepeater) => untrack(() => connectItemsRepeater(native, rest, bound)))} />
+<items-repeater {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemsRepeater) => untrack(() => connectItemsRepeater(native, rest, bound)))}></items-repeater>

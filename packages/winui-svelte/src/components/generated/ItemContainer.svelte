@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<item-container {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemContainer) => untrack(() => connectItemContainer(native, rest, bound)))} />
+<item-container {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemContainer) => untrack(() => connectItemContainer(native, rest, bound)))}></item-container>

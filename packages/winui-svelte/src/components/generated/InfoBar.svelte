@@ -17,4 +17,4 @@
   };
 </script>
 
-<info-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: InfoBar) => untrack(() => connectInfoBar(native, rest, bound)))} />
+<info-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: InfoBar) => untrack(() => connectInfoBar(native, rest, bound)))}></info-bar>

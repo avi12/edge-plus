@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<rich-edit-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RichEditBox) => untrack(() => connectRichEditBox(native, rest, bound)))} />
+<rich-edit-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RichEditBox) => untrack(() => connectRichEditBox(native, rest, bound)))}></rich-edit-box>

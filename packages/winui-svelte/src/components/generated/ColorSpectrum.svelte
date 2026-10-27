@@ -17,4 +17,4 @@
   };
 </script>
 
-<color-spectrum {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ColorSpectrum) => untrack(() => connectColorSpectrum(native, rest, bound)))} />
+<color-spectrum {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ColorSpectrum) => untrack(() => connectColorSpectrum(native, rest, bound)))}></color-spectrum>

@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<animated-visual-player {...attachmentsOf(rest)} class={className} {style} {@attach control((native: AnimatedVisualPlayer) => untrack(() => connectAnimatedVisualPlayer(native, rest, bound)))} />
+<animated-visual-player {...attachmentsOf(rest)} class={className} {style} {@attach control((native: AnimatedVisualPlayer) => untrack(() => connectAnimatedVisualPlayer(native, rest, bound)))}></animated-visual-player>

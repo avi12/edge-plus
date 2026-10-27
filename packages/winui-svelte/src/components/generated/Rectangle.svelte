@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<rectangle {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Rectangle) => untrack(() => connectRectangle(native, rest, bound)))} />
+<rectangle {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Rectangle) => untrack(() => connectRectangle(native, rest, bound)))}></rectangle>

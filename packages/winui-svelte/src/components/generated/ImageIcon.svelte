@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<image-icon {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ImageIcon) => untrack(() => connectImageIcon(native, rest, bound)))} />
+<image-icon {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ImageIcon) => untrack(() => connectImageIcon(native, rest, bound)))}></image-icon>

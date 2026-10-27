@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<menu-flyout-separator {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MenuFlyoutSeparator) => untrack(() => connectMenuFlyoutSeparator(native, rest, bound)))} />
+<menu-flyout-separator {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MenuFlyoutSeparator) => untrack(() => connectMenuFlyoutSeparator(native, rest, bound)))}></menu-flyout-separator>

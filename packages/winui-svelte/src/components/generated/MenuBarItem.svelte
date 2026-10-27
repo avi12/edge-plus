@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<menu-bar-item {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MenuBarItem) => untrack(() => connectMenuBarItem(native, rest, bound)))} />
+<menu-bar-item {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MenuBarItem) => untrack(() => connectMenuBarItem(native, rest, bound)))}></menu-bar-item>

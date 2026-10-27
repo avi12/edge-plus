@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<items-presenter {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemsPresenter) => untrack(() => connectItemsPresenter(native, rest, bound)))} />
+<items-presenter {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemsPresenter) => untrack(() => connectItemsPresenter(native, rest, bound)))}></items-presenter>

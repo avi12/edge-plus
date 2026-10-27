@@ -17,4 +17,4 @@
   };
 </script>
 
-<scroll-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ScrollBar) => untrack(() => connectScrollBar(native, rest, bound)))} />
+<scroll-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ScrollBar) => untrack(() => connectScrollBar(native, rest, bound)))}></scroll-bar>
