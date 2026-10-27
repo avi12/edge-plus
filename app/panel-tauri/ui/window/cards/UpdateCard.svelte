@@ -1,7 +1,9 @@
 <script lang="ts">
   import type { UpdateView } from "../../protocol.g.ts";
   import { usePanel } from "../host/panel.svelte.ts";
+  import CardDescription from "./CardDescription.svelte";
   import CardFrame from "./CardFrame.svelte";
+  import CardTitle from "./CardTitle.svelte";
   import { Button } from "winui-svelte";
 
   // A release that is downloaded and checked, with the button that restarts
@@ -37,8 +39,9 @@
   }
 </script>
 
-<CardFrame glyph={0xE777} title="Edge+ {update.version} is ready">
-  {how} Edge keeps running, and your splits and themes stay as they are.
+<CardFrame glyph={0xE777}>
+  <CardTitle>Edge+ {update.version} is ready</CardTitle>
+  <CardDescription>{how} Edge keeps running, and your splits and themes stay as they are.</CardDescription>
   {#snippet end()}
     <Button class="accent-button" isEnabled={!isRestarting} onClick={() => void restart()}>{label}</Button>
   {/snippet}

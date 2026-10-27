@@ -9,6 +9,9 @@ const edgePlaceholder = "{edge}";
 const leadPlaceholder = "{lead}";
 const titlesPlaceholder = "{titles}";
 
+// Each feature's title, for its card: <CardTitle>{featureTitles.theming}</CardTitle>.
+export const featureTitles: Readonly<Record<Feature, string>> = shared.featureTitles;
+
 function isFeature(key: SwitchKey): key is Feature {
   return Object.hasOwn(shared.featureTitles, key);
 }

@@ -6,23 +6,20 @@
   import type { Snippet } from "svelte";
   import { ToggleSwitch } from "winui-svelte";
 
-  // A card with a switch at its end, saying why the switch is held when it
-  // is. A feature's title is the one the core's toast uses too, so only Edge+'s
-  // own cards name theirs; the theming card carries the theme library as its
-  // body. The description is the children; the title stays a prop because the
-  // switch's automationName and the hold note need it as a string.
+  // A card with a switch at its end, named by the card's title, saying why the
+  // switch is held when it is. Only a feature is ever held, and its title is
+  // the one the core's toast uses too (wording/shared-wording.json). The
+  // theming card carries the theme library as its body.
   interface Props {
     card: CardView;
-    title?: string;
     glyph: number;
     children: Snippet;
     body?: Snippet;
   }
 
-  const { card, title, glyph, children, body }: Props = $props();
+  const { card, glyph, children, body }: Props = $props();
   const panel = usePanel();
 
-  const shownTitle = $derived(title ?? featureTitle(card.key) ?? "");
   const note = $derived(card.hold === null ? "" : holdNote(card.hold));
 
   // What the switch shows: the View's, until the user flips it. The binding's
@@ -30,12 +27,13 @@
   let isOn = $derived(card.isOn);
 
   function holdNote(hold: CardHold): string {
+    const title = featureTitle(card.key) ?? "";
     switch (hold.kind) {
       case "paused": {
-        return `${edgeLead(hold.edge)} ${shownTitle} is paused until Edge+ supports this version.`;
+        return `${edgeLead(hold.edge)} ${title} is paused until Edge+ supports this version.`;
       }
       case "unavailable": {
-        return `${edgeLead(hold.edge)} ${shownTitle} is unavailable until Edge+ supports this version.`;
+        return `${edgeLead(hold.edge)} ${title} is unavailable until Edge+ supports this version.`;
       }
       case "needs": {
         return `Turn on ${featureTitle(hold.feature)} to use this.`;
@@ -53,12 +51,12 @@
   }
 </script>
 
-<CardFrame {body} {glyph} {note} title={shownTitle}>
+<CardFrame {body} {glyph} {note}>
   {@render children()}
-  {#snippet end()}
+  {#snippet end(label)}
     <ToggleSwitch
       class="card-switch"
-      automationName={shownTitle}
+      automationLabeledBy={label.current}
       isEnabled={!card.isLocked}
       offContent=""
       onContent=""

@@ -1,7 +1,9 @@
 <script lang="ts">
   import type { InjectOffer } from "../../protocol.g.ts";
   import { usePanel } from "../host/panel.svelte.ts";
+  import CardDescription from "./CardDescription.svelte";
   import CardFrame from "./CardFrame.svelte";
+  import CardTitle from "./CardTitle.svelte";
   import { Button } from "winui-svelte";
 
   // The Inject button, as a card under the Inject automatically switch. When it
@@ -30,12 +32,21 @@
   }
 </script>
 
-<CardFrame glyph={isReady ? 0xE768 : 0xE73E} title={isReady ? "Edge is open without Edge+" : "Edge+ is in Edge"}>
-  {#if isReady}
-    Inject automatically is off, so this Edge started without Edge+. Inject it to turn your switches on.
-  {:else}
-    Injected. When Edge next starts, Edge+ offers this button again.
-  {/if}
+<CardFrame glyph={isReady ? 0xE768 : 0xE73E}>
+  <CardTitle>
+    {#if isReady}
+      Edge is open without Edge+
+    {:else}
+      Edge+ is in Edge
+    {/if}
+  </CardTitle>
+  <CardDescription>
+    {#if isReady}
+      Inject automatically is off, so this Edge started without Edge+. Inject it to turn your switches on.
+    {:else}
+      Injected. When Edge next starts, Edge+ offers this button again.
+    {/if}
+  </CardDescription>
   {#snippet end()}
     <Button class="accent-button" isEnabled={canPress} onClick={() => void inject()}>Inject into Edge</Button>
   {/snippet}
