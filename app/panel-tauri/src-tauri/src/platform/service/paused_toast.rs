@@ -11,6 +11,7 @@ use crate::edge::version::file_version::FileVersion;
 use crate::platform::actions::panel_log;
 use crate::platform::identity::app_identity::APP_ID;
 use crate::platform::paths;
+use crate::ui::protocol::EdgeBuild;
 use crate::ui::wording;
 
 /// A simulation (`edge_install`) remembers in memory only, so the real record
@@ -22,7 +23,8 @@ pub fn show_once_per_build(change: &BuildChange, on_click: impl Fn() + Send + Sy
     if !edge_support::should_notify(&change.paused, Some(change.edge_build), notified_for) {
         return;
     }
-    let body = wording::describe_paused(change.edge_build, change.supported_build, &change.paused);
+    let edge = EdgeBuild::of(change.edge_build, change.supported_build);
+    let body = wording::describe_paused(&edge, &change.paused);
     match edge_native::show_toast(APP_ID, wording::PAUSED_TOAST_TITLE, &body, on_click) {
         Ok(()) => remember(change.edge_build),
         // No toast is no reason to stop listening; the window still says it.

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ThemeRow as Row, ThemingLabels } from "../../protocol.g.ts";
+  import type { ThemeRow as Row } from "../../protocol.g.ts";
   import * as motion from "../style/motion.ts";
   import { themeListItemStyle } from "../style/styles.ts";
   import ThemeRow from "./ThemeRow.svelte";
@@ -10,7 +10,6 @@
   // the accent bar, so two drags looked like two selected themes.
   interface Props {
     rows: Row[];
-    labels: ThemingLabels;
     onRemove: (id: string) => void;
     // The ids in the order the user left them in.
     onReorder: (ids: string[]) => void;
@@ -18,15 +17,14 @@
 
   const {
     rows,
-    labels,
     onRemove,
     onReorder
   }: Props = $props();
 </script>
 
 <ListView
-  automationHelpText={labels.reorderHelp}
-  automationName={labels.themeListName}
+  automationHelpText="Drag a theme, or press Alt+Up or Alt+Down, to move it in this list and in the pickers."
+  automationName="Your themes"
   isItemClickEnabled={false}
   itemContainerStyle={themeListItemStyle()}
   itemName={row => row.name}

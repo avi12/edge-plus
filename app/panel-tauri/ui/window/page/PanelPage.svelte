@@ -3,13 +3,12 @@
   import UpdateCard from "../cards/UpdateCard.svelte";
   import type { Panel } from "../host/panel.svelte.ts";
   import { providePanel } from "../host/panel.svelte.ts";
-  import * as motion from "../style/motion.ts";
   import type { NativeEventArguments } from "../winui.ts";
   import { DataPackageOperation, DragEventArgs, projectAs, StandardDataFormats } from "../winui.ts";
   import DropVeil from "./DropVeil.svelte";
   import PageFooter from "./PageFooter.svelte";
+  import PanelCards from "./PanelCards.svelte";
   import PanelNotices from "./PanelNotices.svelte";
-  import PanelSection from "./PanelSection.svelte";
   import { Grid, ScrollViewer, StackPanel } from "winui-svelte";
 
   // The window's content: the update card, the notices, each section's cards
@@ -81,13 +80,9 @@
         {/key}
       {/if}
       <PanelNotices {view} />
-      <StackPanel childrenTransitions={motion.applied(motion.reposition)} spacing={20}>
-        {#each view.sections as section (section.name)}
-          <PanelSection {section} />
-        {/each}
-      </StackPanel>
+      <PanelCards {view} />
       <PageFooter footer={view.footer} />
     </StackPanel>
   </ScrollViewer>
-  <DropVeil hint={view.dropHint} isShown={panel.isVeilShown} />
+  <DropVeil isShown={panel.isVeilShown} />
 </Grid>

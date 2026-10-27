@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ThemeRow } from "../../protocol.g.ts";
+  import type { ThemeBadge, ThemeRow } from "../../protocol.g.ts";
   import { glyph } from "../style/layout.ts";
   import {
     Border,
@@ -20,6 +20,12 @@
 
   const { theme, onRemove }: Props = $props();
 
+  const badgeText: Record<ThemeBadge, string> = {
+    store: "Store",
+    local: "Local",
+    inUse: "In use",
+    installedInEdge: "Installed in Edge"
+  };
   const removeGlyph = 0xE711;
   const gripGlyph = 0xE76F;
   const iconSize = 12;
@@ -45,12 +51,12 @@
   <StackPanel gridColumn={2} orientation="Horizontal" spacing={4}>
     {#each theme.badges as badge (badge)}
       <Border class="badge">
-        <TextBlock class="badge-text" text={badge} />
+        <TextBlock class="badge-text" text={badgeText[badge]} />
       </Border>
     {/each}
   </StackPanel>
   <Button
-    automationName={theme.removeLabel}
+    automationName="Remove {theme.name}"
     gridColumn={3}
     isEnabled={isOwn}
     onClick={remove}

@@ -1,6 +1,9 @@
-//! Turns the state the actions return into the View the window renders: which
-//! cards, in which sections, saying what.
+//! Turns the state the actions return into the View the window renders: each
+//! card's state, the theme library, the build and the offers. What the window
+//! says about them is its own markup.
 
+use crate::edge::version::edge_support::FeatureState;
+use crate::edge::version::file_version::FileVersion;
 use crate::platform::identity::{app_identity, product};
 use crate::platform::settings::{Feature, ThemeSource};
 use crate::setup::update_watch::ReadyUpdate;
@@ -8,17 +11,16 @@ use crate::ui::inject_offer::InjectOffer;
 use crate::ui::panel_layout::{self, CardSlot, OwnCard};
 use crate::ui::panel_state::PanelState;
 use crate::ui::protocol::{
-    CardView, CardWording, FooterView, InjectSlot, InjectView, SectionView, SwitchKey, ThemeOption,
-    ThemeRow, ThemingLabels, ThemingView, UpdateView, View,
+    CardHold, CardView, EdgeBuild, FooterView, SwitchKey, ThemeBadge, ThemeOption, ThemeRow,
+    ThemingView, UpdateView, View,
 };
-use crate::ui::wording;
 
-impl From<wording::CardWording> for CardWording {
-    fn from(wording: wording::CardWording) -> Self {
+impl EdgeBuild {
+    #[must_use]
+    pub fn of(edge: FileVersion, supported: FileVersion) -> Self {
         Self {
-            title: wording.title,
-            description: wording.description,
-            glyph: wording.glyph,
+            version: edge.to_string(),
+            is_updated: edge > supported,
         }
     }
 }
@@ -51,165 +53,209 @@ pub fn slot_of(key: SwitchKey) -> Option<CardSlot> {
 
 #[must_use]
 pub fn build(state: &PanelState, offer: InjectOffer, update: Option<&ReadyUpdate>) -> View {
-    let build_notice = state.edge_build.map_or_else(String::new, |edge| {
-        wording::describe_paused(edge, state.supported_edge_build, &state.paused())
-    });
     View {
         product_name: product::NAME.to_owned(),
         app_user_model_id: app_identity::APP_ID.to_owned(),
         icon: app_identity::icon_path().to_string_lossy().into_owned(),
-        open_edge_hint: (!state.is_edge_running).then(|| wording::OPEN_EDGE_HINT.to_owned()),
-        build_notice,
-        sections: panel_layout::SECTIONS
-            .iter()
-            .map(|(section, cards)| SectionView {
-                name: wording::section_name(*section).to_owned(),
-                cards: cards.iter().map(|&slot| card(state, slot, offer)).collect(),
-            })
+        is_edge_running: state.is_edge_running,
+        edge: edge_build(state),
+        paused: state.paused(),
+        cards: panel_layout::all_cards()
+            .map(|slot| card(state, slot))
             .collect(),
+        theming: theming(state),
+        inject: offer,
         update: update.map(|ready| UpdateView {
-            wording: wording::update_ready(&ready.version, ready.is_installer).into(),
-            button: wording::UPDATE_BUTTON.to_owned(),
-            restarting: wording::UPDATE_RESTARTING.to_owned(),
+            version: ready.version.clone(),
+            is_installer: ready.is_installer,
         }),
         footer: FooterView {
-            by: wording::BY.to_owned(),
             author: product::AUTHOR.to_owned(),
             author_uri: product::AUTHOR_URI.to_owned(),
             version: product::VERSION.to_owned(),
         },
-        drop_hint: wording::DROP_HINT.to_owned(),
     }
 }
 
-fn card(state: &PanelState, slot: CardSlot, offer: InjectOffer) -> CardView {
+fn edge_build(state: &PanelState) -> Option<EdgeBuild> {
+    state
+        .edge_build
+        .map(|edge| EdgeBuild::of(edge, state.supported_edge_build))
+}
+
+fn card(state: &PanelState, slot: CardSlot) -> CardView {
     let key = switch_key(slot);
     match slot {
         CardSlot::Own(own) => CardView {
             key,
-            wording: wording::for_own(own).into(),
             is_on: match own {
                 OwnCard::StartWithWindows => state.is_start_with_windows,
                 OwnCard::AutoInject => state.is_auto_inject,
                 OwnCard::AutoUpdate => state.is_auto_update,
             },
             is_locked: false,
-            note: String::new(),
-            theming: None,
-            inject: (own == OwnCard::AutoInject).then(|| InjectSlot {
-                offer: inject_view(offer),
-            }),
+            hold: None,
         },
         CardSlot::Feature { feature, needs } => {
             // A paused switch shows the user's choice (on), locked, with why;
             // so does one whose needed feature is off.
             let is_needed_off = needs.is_some_and(|needed| !state.features.is_on(needed));
-            let mut note = wording::describe_feature(state, feature);
-            if let Some(needed) = needs.filter(|_| note.is_empty() && is_needed_off) {
-                note = wording::needs_feature(needed);
-            }
+            let needs_hold = needs
+                .filter(|_| is_needed_off)
+                .map(|needed| CardHold::Needs { feature: needed });
             CardView {
                 key,
-                wording: wording::for_feature(feature).into(),
                 is_on: state.features.is_on(feature),
                 is_locked: state.is_locked(feature) || is_needed_off,
-                note,
-                theming: (feature == Feature::Theming).then(|| theming(state)),
-                inject: None,
+                hold: build_hold(state, feature).or(needs_hold),
             }
         }
     }
 }
 
-fn inject_view(offer: InjectOffer) -> Option<InjectView> {
-    let wording = match offer {
-        InjectOffer::Hidden => return None,
-        InjectOffer::Ready => wording::inject_ready(),
-        InjectOffer::Injected => wording::injected(),
-    };
-    Some(InjectView {
-        wording: wording.into(),
-        button: wording::INJECT_BUTTON.to_owned(),
-        is_enabled: offer == InjectOffer::Ready,
-    })
+/// Held by the build: said only while the build is known.
+fn build_hold(state: &PanelState, feature: Feature) -> Option<CardHold> {
+    let edge = edge_build(state)?;
+    match state.state_of(feature) {
+        FeatureState::Paused => Some(CardHold::Paused { edge }),
+        FeatureState::Unavailable => Some(CardHold::Unavailable { edge }),
+        FeatureState::On | FeatureState::Off => None,
+    }
 }
 
-fn theme_row(id: &str, name: &str, badges: Vec<&str>) -> ThemeRow {
+fn theme_row(id: &str, name: &str, badges: Vec<ThemeBadge>) -> ThemeRow {
     ThemeRow {
         id: id.to_owned(),
         name: name.to_owned(),
-        badges: badges.into_iter().map(str::to_owned).collect(),
-        remove_label: wording::remove_theme(name),
+        badges,
     }
 }
 
 fn theming(state: &PanelState) -> ThemingView {
-    let mut options = vec![ThemeOption {
-        id: String::new(),
-        label: wording::DEFAULT_THEME.to_owned(),
-    }];
-    options.extend(state.theming.themes.iter().map(|theme| ThemeOption {
+    let own_options = state.theming.themes.iter().map(|theme| ThemeOption {
         id: theme.id.clone(),
-        label: theme.name.clone(),
-    }));
-    options.extend(state.edge_themes.iter().map(|theme| ThemeOption {
+        name: theme.name.clone(),
+    });
+    let edge_options = state.edge_themes.iter().map(|theme| ThemeOption {
         id: theme.id.clone(),
-        label: theme.name.clone(),
-    }));
-    let own: Vec<ThemeRow> = state
+        name: theme.name.clone(),
+    });
+    let own = state
         .theming
         .themes
         .iter()
         .map(|theme| {
             let badge = match theme.source {
-                ThemeSource::Store => wording::STORE_BADGE,
-                ThemeSource::Local => wording::LOCAL_BADGE,
+                ThemeSource::Store => ThemeBadge::Store,
+                ThemeSource::Local => ThemeBadge::Local,
             };
             theme_row(&theme.id, &theme.name, vec![badge])
         })
         .collect();
-    let edge: Vec<ThemeRow> = state
+    let edge = state
         .edge_themes
         .iter()
         .map(|theme| {
             let badges = if theme.is_active {
-                vec![wording::IN_USE_BADGE, wording::INSTALLED_IN_EDGE_BADGE]
+                vec![ThemeBadge::InUse, ThemeBadge::InstalledInEdge]
             } else {
-                vec![wording::INSTALLED_IN_EDGE_BADGE]
+                vec![ThemeBadge::InstalledInEdge]
             };
             theme_row(&theme.id, &theme.name, badges)
         })
         .collect();
-    let has_no_themes = own.is_empty() && edge.is_empty();
     ThemingView {
-        labels: ThemingLabels {
-            store_link_placeholder: wording::STORE_LINK_PLACEHOLDER.to_owned(),
-            add: wording::ADD_THEME.to_owned(),
-            add_local: wording::ADD_LOCAL_THEME.to_owned(),
-            pick_file: wording::PICK_FILE.to_owned(),
-            pick_folder: wording::PICK_FOLDER.to_owned(),
-            when_light: wording::WHEN_LIGHT.to_owned(),
-            when_dark: wording::WHEN_DARK.to_owned(),
-            theme_list_name: wording::THEME_LIST_NAME.to_owned(),
-            reorder_help: wording::REORDER_HELP.to_owned(),
-        },
-        options,
+        options: own_options.chain(edge_options).collect(),
         light: state.theming.light.clone(),
         dark: state.theming.dark.clone(),
         own,
         edge,
-        empty: has_no_themes.then(|| wording::NO_THEMES.to_owned()),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::platform::settings::{Features, Theming};
+
+    const SUPPORTED: FileVersion = FileVersion::new(155, 0, 4283, 45);
+    const UPDATED: FileVersion = FileVersion::new(156, 0, 1, 0);
+
+    fn state(choice: Features, edge: Option<FileVersion>) -> PanelState {
+        PanelState {
+            features: choice,
+            theming: Theming::default(),
+            edge_themes: Vec::new(),
+            is_edge_running: edge.is_some(),
+            is_start_with_windows: false,
+            is_split_loaded: false,
+            is_split_wanted: true,
+            is_auto_inject: true,
+            is_auto_update: true,
+            edge_build: edge,
+            supported_edge_build: SUPPORTED,
+        }
+    }
+
+    fn hold_of(view: &View, key: SwitchKey) -> Option<CardHold> {
+        view.cards
+            .iter()
+            .find(|card| card.key == key)
+            .and_then(|card| card.hold.clone())
+    }
 
     #[test]
     fn every_switch_key_names_one_card() {
         for slot in panel_layout::all_cards() {
             assert_eq!(Some(slot), slot_of(switch_key(slot)));
         }
+    }
+
+    #[test]
+    fn a_held_card_says_why() {
+        let mut choice = Features::none();
+        choice.native_split = true;
+        choice.tab_shape = true;
+        let updated = build(&state(choice, Some(UPDATED)), InjectOffer::Hidden, None);
+        let edge = EdgeBuild {
+            version: "156.0.1.0".to_owned(),
+            is_updated: true,
+        };
+        assert_eq!(
+            Some(CardHold::Paused { edge: edge.clone() }),
+            hold_of(&updated, SwitchKey::NativeSplit)
+        );
+        assert_eq!(
+            Some(CardHold::Unavailable { edge }),
+            hold_of(&updated, SwitchKey::LivePreview)
+        );
+        assert_eq!(None, hold_of(&updated, SwitchKey::QuietDevMode));
+        assert_eq!(
+            vec![Feature::NativeSplit, Feature::TabShape],
+            updated.paused
+        );
+
+        let supported = build(&state(choice, Some(SUPPORTED)), InjectOffer::Hidden, None);
+        assert_eq!(None, hold_of(&supported, SwitchKey::NativeSplit));
+        assert_eq!(
+            Some(CardHold::Needs {
+                feature: Feature::Theming
+            }),
+            hold_of(&supported, SwitchKey::TabShape)
+        );
+        let tab_shape = supported
+            .cards
+            .iter()
+            .find(|card| card.key == SwitchKey::TabShape)
+            .expect("a tab shape card");
+        assert!(tab_shape.is_on && tab_shape.is_locked);
+    }
+
+    #[test]
+    fn an_unread_build_holds_nothing() {
+        let view = build(&state(Features::default(), None), InjectOffer::Hidden, None);
+        assert_eq!(None, view.edge);
+        assert_eq!(Vec::<Feature>::new(), view.paused);
+        assert_eq!(None, hold_of(&view, SwitchKey::NativeSplit));
     }
 }

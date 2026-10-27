@@ -27,6 +27,7 @@ pub fn gate() -> MutexGuard<'static, ()> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub enum Feature {
     NativeSplit,
     Theming,

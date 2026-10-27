@@ -1,8 +1,12 @@
 //! The window's Inject button, offered while auto-inject is off.
 
+use serde::Serialize;
+
 use crate::ui::panel_state::PanelState;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub enum InjectOffer {
     /// Not shown: auto-inject is on, Edge is closed, or no switch needs the DLL.
     #[default]

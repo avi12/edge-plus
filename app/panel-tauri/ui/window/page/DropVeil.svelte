@@ -4,10 +4,7 @@
   import { Grid, Rectangle, TextBlock } from "winui-svelte";
 
   // Fades in over the page while files are dragged over the window.
-  const { hint, isShown }: {
-    hint: string;
-    isShown: boolean;
-  } = $props();
+  const { isShown }: { isShown: boolean } = $props();
 
   const shownOpacity = 1;
   const hiddenOpacity = 0;
@@ -31,7 +28,7 @@
   opacityTransition={fade}
 >
   <Rectangle class="frame" radiusX={cornerRadius} radiusY={cornerRadius} strokeDashArray={dashArray} />
-  <TextBlock class="card-title" horizontalAlignment="Center" text={hint} verticalAlignment="Center" />
+  <TextBlock class="card-title" horizontalAlignment="Center" text="Drop a theme folder, .zip or .crx to add it" verticalAlignment="Center" />
 </Grid>
 
 <style>

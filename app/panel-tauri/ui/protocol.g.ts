@@ -3,37 +3,33 @@
 
 import type { ProtocolWithReturn } from "winui-svelte/messaging";
 
-export type CardWording = { title: string, description: string, 
-/**
- * A Segoe Fluent Icons code point.
- */
-glyph: number, };
+export type Feature = "nativeSplit" | "theming" | "quietDevMode" | "protocolHandlers" | "enhancedFind" | "webUiFollowsTheme" | "livePreview" | "tabShape" | "readingTheme";
 
-export type ThemeRow = { id: string, name: string, badges: Array<string>, removeLabel: string, };
+export type ThemeBadge = "store" | "local" | "inUse" | "installedInEdge";
 
-export type ThemeOption = { id: string, label: string, };
+export type ThemeRow = { id: string, name: string, badges: Array<ThemeBadge>, };
 
-export type ThemingLabels = { storeLinkPlaceholder: string, add: string, addLocal: string, pickFile: string, pickFolder: string, whenLight: string, whenDark: string, themeListName: string, reorderHelp: string, };
+export type ThemeOption = { id: string, name: string, };
 
-export type ThemingView = { labels: ThemingLabels, options: Array<ThemeOption>, light: string, dark: string, own: Array<ThemeRow>, edge: Array<ThemeRow>, 
-/**
- * Shown in place of both lists while there are no themes.
- */
-empty: string | null, };
-
-export type InjectView = { wording: CardWording, button: string, isEnabled: boolean, };
-
-export type InjectSlot = { offer: InjectView | null, };
+export type ThemingView = { options: Array<ThemeOption>, light: string, dark: string, own: Array<ThemeRow>, edge: Array<ThemeRow>, };
 
 export type SwitchKey = "nativeSplit" | "theming" | "quietDevMode" | "protocolHandlers" | "enhancedFind" | "webUiFollowsTheme" | "livePreview" | "tabShape" | "readingTheme" | "startWithWindows" | "autoInject" | "autoUpdate";
 
-export type CardView = { key: SwitchKey, wording: CardWording, isOn: boolean, isLocked: boolean, note: string, theming: ThemingView | null, inject: InjectSlot | null, };
+export type EdgeBuild = { version: string, isUpdated: boolean, };
 
-export type SectionView = { name: string, cards: Array<CardView>, };
+export type CardHold = { "kind": "paused", edge: EdgeBuild, } | { "kind": "unavailable", edge: EdgeBuild, } | { "kind": "needs", feature: Feature, };
 
-export type UpdateView = { wording: CardWording, button: string, restarting: string, };
+export type CardView = { key: SwitchKey, isOn: boolean, isLocked: boolean, hold: CardHold | null, };
 
-export type FooterView = { by: string, author: string, authorUri: string, version: string, };
+export type InjectOffer = "hidden" | "ready" | "injected";
+
+export type UpdateView = { version: string, 
+/**
+ * The MSI installs it, which Windows asks to allow.
+ */
+isInstaller: boolean, };
+
+export type FooterView = { author: string, authorUri: string, version: string, };
 
 export type View = { productName: string, 
 /**
@@ -44,7 +40,15 @@ appUserModelId: string,
 /**
  * The icon file the core wrote, for the title bar and the taskbar.
  */
-icon: string, openEdgeHint: string | null, buildNotice: string, sections: Array<SectionView>, update: UpdateView | null, footer: FooterView, dropHint: string, };
+icon: string, isEdgeRunning: boolean, 
+/**
+ * None when the build cannot be read.
+ */
+edge: EdgeBuild | null, 
+/**
+ * The features this build pauses.
+ */
+paused: Array<Feature>, cards: Array<CardView>, theming: ThemingView, inject: InjectOffer, update: UpdateView | null, footer: FooterView, };
 
 export type ColorMode = "light" | "dark";
 

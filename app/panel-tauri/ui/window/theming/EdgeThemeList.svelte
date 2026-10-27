@@ -5,14 +5,14 @@
   import { StackPanel, TextBlock } from "winui-svelte";
 
   // The themes installed in Edge that the user did not add here: listed, never
-  // reordered or removed. `empty` replaces the list (and the user's own) while
-  // there are no themes.
+  // reordered or removed. While there are no themes at all, a hint stands in
+  // for this list and the user's own.
   interface Props {
     rows: Row[];
-    empty: string | null;
+    hasThemes: boolean;
   }
 
-  const { rows, empty }: Props = $props();
+  const { rows, hasThemes }: Props = $props();
 
   const rowKeySeparator = "\n";
 
@@ -29,7 +29,7 @@
   {#each rows as row (rowKey(row))}
     <ThemeRow onRemove={null} theme={row} />
   {/each}
-  {#if empty !== null}
-    <TextBlock class="card-description" text={empty} />
+  {#if !hasThemes}
+    <TextBlock class="card-description" text="No themes yet — paste a store link or add a local theme (.crx, .zip or folder)." />
   {/if}
 </StackPanel>

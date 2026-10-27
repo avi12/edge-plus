@@ -1,20 +1,20 @@
 <script lang="ts">
-  import type { SectionView } from "../../protocol.g.ts";
   import * as motion from "../style/motion.ts";
-  import PanelCard from "./PanelCard.svelte";
+  import type { Snippet } from "svelte";
   import { StackPanel, TextBlock } from "winui-svelte";
 
   // A section's header over its cards.
-  const { section }: { section: SectionView } = $props();
+  const { name, children }: {
+    name: string;
+    children: Snippet;
+  } = $props();
 </script>
 
 <StackPanel childrenTransitions={motion.applied(motion.reposition)} spacing={4}>
   <!-- The left margin lines the header up with the cards' text, as Windows
        Settings does. -->
-  <TextBlock class="section-header" margin="4,0,0,4" text={section.name} />
-  {#each section.cards as card (card.key)}
-    <PanelCard {card} />
-  {/each}
+  <TextBlock class="section-header" margin="4,0,0,4" text={name} />
+  {@render children()}
 </StackPanel>
 
 <style>

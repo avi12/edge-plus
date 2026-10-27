@@ -38,8 +38,8 @@
     minWidth={pickerMinimumWidth}
     bind:selectedIndex={() => selectedIndex, pick}
   >
-    {#each options as option (option.label)}
-      <ComboBoxItem>{option.label}</ComboBoxItem>
+    {#each options as option (option.name)}
+      <ComboBoxItem>{option.name}</ComboBoxItem>
     {/each}
   </ComboBox>
 </Grid>

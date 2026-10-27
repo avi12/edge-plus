@@ -1,17 +1,20 @@
 <script lang="ts">
-  import type { InjectView } from "../../protocol.g.ts";
+  import type { InjectOffer } from "../../protocol.g.ts";
   import { usePanel } from "../host/panel.svelte.ts";
   import CardFrame from "./CardFrame.svelte";
   import { Button } from "winui-svelte";
 
   // The Inject button, as a card under the Inject automatically switch. When it
-  // is shown, and whether it can be pressed, is the core's decision.
-  const { offer }: { offer: InjectView } = $props();
+  // is shown, and whether it can be pressed, is the core's decision: ready, or
+  // injected and so disabled. One card either way, so the change is in place.
+  const { offer }: { offer: Exclude<InjectOffer, "hidden"> } = $props();
   const panel = usePanel();
+
+  const isReady = $derived(offer === "ready");
 
   // Pressed and not yet answered: the button stays disabled.
   let isPressed = $state(false);
-  const canPress = $derived(offer.isEnabled && !isPressed);
+  const canPress = $derived(isReady && !isPressed);
 
   async function inject(): Promise<void> {
     // Disabled at once, so a second click cannot queue a second injection.
@@ -23,8 +26,14 @@
   }
 </script>
 
-<CardFrame wording={offer.wording}>
+<CardFrame
+  description={isReady
+    ? "Inject automatically is off, so this Edge started without Edge+. Inject it to turn your switches on."
+    : "Injected. When Edge next starts, Edge+ offers this button again."}
+  glyph={isReady ? 0xE768 : 0xE73E}
+  title={isReady ? "Edge is open without Edge+" : "Edge+ is in Edge"}
+>
   {#snippet end()}
-    <Button class="accent-button" isEnabled={canPress} onClick={() => void inject()}>{offer.button}</Button>
+    <Button class="accent-button" isEnabled={canPress} onClick={() => void inject()}>Inject into Edge</Button>
   {/snippet}
 </CardFrame>

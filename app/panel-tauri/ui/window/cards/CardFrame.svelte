@@ -1,6 +1,5 @@
 <script lang="ts">
-  import type { CardWording } from "../../protocol.g.ts";
-  import { glyph } from "../style/layout.ts";
+  import { glyph as glyphText } from "../style/layout.ts";
   import type { Snippet } from "svelte";
   import {
     Border,
@@ -16,13 +15,16 @@
   // A feature card puts a switch there, the Inject card a button; a card may
   // carry a body under its words.
   interface Props {
-    wording: CardWording;
+    title: string;
+    description: string;
+    // A Segoe Fluent Icons code point.
+    glyph: number;
     note?: string;
     end: Snippet;
     body?: Snippet;
   }
 
-  const { wording, note = "", end, body }: Props = $props();
+  const { title, description, glyph, note = "", end, body }: Props = $props();
 </script>
 
 <!-- The right margin on the words keeps a wrapped description off the
@@ -30,10 +32,10 @@
      bare border each, which places them in the grid. -->
 <Border class="card">
   <Grid columns="Auto,*,Auto" rows="Auto,Auto">
-    <FontIcon fontSize={20} glyph={glyph(wording.glyph)} margin="0,0,16,0" verticalAlignment="Center" />
+    <FontIcon fontSize={20} glyph={glyphText(glyph)} margin="0,0,16,0" verticalAlignment="Center" />
     <StackPanel gridColumn={1} margin="0,0,16,0" verticalAlignment="Center">
-      <TextBlock class="card-title" text={wording.title} />
-      <TextBlock class="card-description" text={wording.description} />
+      <TextBlock class="card-title" text={title} />
+      <TextBlock class="card-description" text={description} />
       <TextBlock class="note" text={note} visibility={note.length > 0 ? "Visible" : "Collapsed"} />
     </StackPanel>
     <Border gridColumn={2} verticalAlignment="Center">

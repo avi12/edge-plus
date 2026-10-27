@@ -8,7 +8,7 @@
 
 <Grid columns="*,Auto" margin="4,14,4,0">
   <StackPanel orientation="Horizontal" spacing={4}>
-    <TextBlock class="card-description" text={footer.by} verticalAlignment="Center" />
+    <TextBlock class="card-description" text="by" verticalAlignment="Center" />
     <HyperlinkButton navigateUri={footer.authorUri} padding="2,0,2,0">{footer.author}</HyperlinkButton>
   </StackPanel>
   <TextBlock class="card-description" gridColumn={1} text={footer.version} verticalAlignment="Center" />

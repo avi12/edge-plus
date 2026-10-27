@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Action, CardView, ColorMode, ThemingView } from "../../protocol.g.ts";
+  import type { Action, ColorMode, ThemeOption, ThemingView } from "../../protocol.g.ts";
   import { LocalThemeKind } from "../cards/theming-card.ts";
   import { usePanel } from "../host/panel.svelte.ts";
   import * as motion from "../style/motion.ts";
@@ -17,17 +17,26 @@
   } from "winui-svelte";
 
   // The theme library under the theming switch: add from a store link or a
-  // local file, pick a theme for each Windows mode, and order the list.
+  // local file, pick a theme for each Windows mode, and order the list. Dimmed
+  // while the theming switch is off.
   interface Props {
-    card: CardView;
+    isOn: boolean;
     theming: ThemingView;
   }
 
-  const { card, theming }: Props = $props();
+  const { isOn, theming }: Props = $props();
   const panel = usePanel();
 
   const fullOpacity = 1;
   const dimmedOpacity = 0.5;
+  // Edge's default theme, the pickers' first option.
+  const defaultTheme: ThemeOption = {
+    id: "",
+    name: "Default theme"
+  };
+
+  const options = $derived([defaultTheme, ...theming.options]);
+  const hasThemes = $derived(theming.own.length > 0 || theming.edge.length > 0);
 
   let storeLink = $state("");
   // While an add or a choice runs, the add buttons wait for it.
@@ -107,13 +116,13 @@
 
 <StackPanel
   childrenTransitions={motion.applied(motion.reposition)}
-  opacity={card.isOn ? fullOpacity : dimmedOpacity}
+  opacity={isOn ? fullOpacity : dimmedOpacity}
   spacing={8}
 >
   <Grid columnSpacing={8} columns="*,Auto">
     <TextBox
       onKeyDown={addStoreOnEnter}
-      placeholderText={theming.labels.storeLinkPlaceholder}
+      placeholderText="Paste a Chrome Web Store or Edge Add-ons link"
       bind:text={storeLink}
     />
     <Button
@@ -121,21 +130,21 @@
       gridColumn={1}
       isEnabled={!isBusy}
       onClick={() => void addStore()}
-    >{theming.labels.add}</Button>
+    >Add</Button>
   </Grid>
   <StackPanel orientation="Horizontal" spacing={8}>
-    <TextBlock class="card-description" text={theming.labels.addLocal} verticalAlignment="Center" />
-    <Button isEnabled={!isBusy} onClick={() => void addLocal(LocalThemeKind.File)}>{theming.labels.pickFile}</Button>
+    <TextBlock class="card-description" text="Or add a local theme" verticalAlignment="Center" />
+    <Button isEnabled={!isBusy} onClick={() => void addLocal(LocalThemeKind.File)}>File…</Button>
     <Button
       isEnabled={!isBusy}
       onClick={() => void addLocal(LocalThemeKind.Folder)}
-    >{theming.labels.pickFolder}</Button>
+    >Folder…</Button>
   </StackPanel>
   <TextBlock class="error" text={error} visibility={error.length > 0 ? "Visible" : "Collapsed"} />
-  <ThemePicker assignedId={theming.light} label={theming.labels.whenLight} onPick={id => assign("light", id)} options={theming.options} />
-  <ThemePicker assignedId={theming.dark} label={theming.labels.whenDark} onPick={id => assign("dark", id)} options={theming.options} />
-  <OwnThemeList labels={theming.labels} onRemove={remove} onReorder={ids => void reorder(ids)} rows={theming.own} />
-  <EdgeThemeList empty={theming.empty} rows={theming.edge} />
+  <ThemePicker assignedId={theming.light} label="When Windows is light" onPick={id => assign("light", id)} {options} />
+  <ThemePicker assignedId={theming.dark} label="When Windows is dark" onPick={id => assign("dark", id)} {options} />
+  <OwnThemeList onRemove={remove} onReorder={ids => void reorder(ids)} rows={theming.own} />
+  <EdgeThemeList {hasThemes} rows={theming.edge} />
 </StackPanel>
 
 <style>

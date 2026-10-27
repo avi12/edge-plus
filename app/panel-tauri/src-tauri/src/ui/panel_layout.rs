@@ -1,14 +1,8 @@
-//! The window's sections and the cards in each, in order.
+//! The window's cards: each feature's switch and Edge+'s own. Which section
+//! each sits in, in which order and saying what, is the window's markup
+//! (`ui/window/page/PanelCards.svelte`).
 
 use crate::platform::settings::Feature;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Section {
-    TabsAndWindows,
-    LookAndThemes,
-    Browsing,
-    EdgePlusItself,
-}
 
 /// Edge+'s own cards: about Edge+ itself, not a feature it adds to Edge.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -37,47 +31,27 @@ const fn feature(feature: Feature) -> CardSlot {
     }
 }
 
-pub const SECTIONS: [(Section, &[CardSlot]); 4] = [
-    (
-        Section::TabsAndWindows,
-        &[feature(Feature::NativeSplit), feature(Feature::LivePreview)],
-    ),
-    (
-        Section::LookAndThemes,
-        &[
-            feature(Feature::Theming),
-            // The cut corners are cut from the theme's tab fill (tab_shape.h),
-            // so it is under it.
-            CardSlot::Feature {
-                feature: Feature::TabShape,
-                needs: Some(Feature::Theming),
-            },
-            feature(Feature::WebUiFollowsTheme),
-            feature(Feature::ReadingTheme),
-        ],
-    ),
-    (
-        Section::Browsing,
-        &[
-            feature(Feature::EnhancedFind),
-            feature(Feature::ProtocolHandlers),
-            // An Edge prompt, so with Edge's behaviour, not with Edge+'s own
-            // settings.
-            feature(Feature::QuietDevMode),
-        ],
-    ),
-    (
-        Section::EdgePlusItself,
-        &[
-            CardSlot::Own(OwnCard::StartWithWindows),
-            CardSlot::Own(OwnCard::AutoInject),
-            CardSlot::Own(OwnCard::AutoUpdate),
-        ],
-    ),
+pub const CARDS: [CardSlot; 12] = [
+    feature(Feature::NativeSplit),
+    feature(Feature::LivePreview),
+    feature(Feature::Theming),
+    // The cut corners are cut from the theme's tab fill (tab_shape.h).
+    CardSlot::Feature {
+        feature: Feature::TabShape,
+        needs: Some(Feature::Theming),
+    },
+    feature(Feature::WebUiFollowsTheme),
+    feature(Feature::ReadingTheme),
+    feature(Feature::EnhancedFind),
+    feature(Feature::ProtocolHandlers),
+    feature(Feature::QuietDevMode),
+    CardSlot::Own(OwnCard::StartWithWindows),
+    CardSlot::Own(OwnCard::AutoInject),
+    CardSlot::Own(OwnCard::AutoUpdate),
 ];
 
 pub fn all_cards() -> impl Iterator<Item = CardSlot> {
-    SECTIONS.iter().flat_map(|(_, cards)| cards.iter().copied())
+    CARDS.into_iter()
 }
 
 #[cfg(test)]
