@@ -35,8 +35,6 @@
   const windowWidth = 560;
   const windowHeight = 640;
   const minimumHeight = 420;
-  const titleBarHeight = 40;
-  const iconSize = 16;
   const statusShown = 1;
   const statusHidden = 0;
 
@@ -73,18 +71,43 @@
   bind:handle={panel.window}
 >
   {#snippet titleBar()}
-    <Grid columns="Auto,Auto,*" height={titleBarHeight} padding="14,0,0,0">
-      <Image height={iconSize} source={pathToFileURL(view.icon).href} verticalAlignment="Center" width={iconSize} />
-      <TextBlock class="caption" gridColumn={1} margin="10,0,0,0" text={view.productName} verticalAlignment="Center" />
+    <Grid class="title-bar">
+      <Image class="title-icon" source={pathToFileURL(view.icon).href} />
+      <TextBlock class="caption title-name" text={view.productName} />
       <TextBlock
-        class="card-description"
-        gridColumn={2}
-        margin="12,0,0,0"
+        class="card-description title-status"
         opacity={panel.isStatusShown ? statusShown : statusHidden}
         text={panel.statusLine}
-        verticalAlignment="Center"
       />
     </Grid>
   {/snippet}
   <PanelPage {panel} {view} />
 </Window>
+
+<!-- A class on a component is not an element's, so Svelte does not scope it:
+     these rules are global, with names no other component uses. -->
+<style>
+  :global(.title-bar) {
+    grid-template-columns: auto auto 1fr;
+    height: 40px;
+    padding-left: 14px;
+  }
+
+  :global(.title-icon) {
+    align-self: center;
+    width: 16px;
+    height: 16px;
+  }
+
+  :global(.title-name) {
+    grid-column: 2;
+    align-self: center;
+    margin-left: 10px;
+  }
+
+  :global(.title-status) {
+    grid-column: 3;
+    align-self: center;
+    margin-left: 12px;
+  }
+</style>

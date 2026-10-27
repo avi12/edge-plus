@@ -10,15 +10,21 @@
   } = $props();
 </script>
 
-<StackPanel childrenTransitions={motion.applied(motion.reposition)} spacing={4}>
-  <!-- The left margin lines the header up with the cards' text, as Windows
-       Settings does. -->
-  <TextBlock class="section-header" margin="4,0,0,4" text={name} />
+<StackPanel class="section" childrenTransitions={motion.applied(motion.reposition)}>
+  <TextBlock class="section-header" text={name} />
   {@render children()}
 </StackPanel>
 
 <style>
+  :global(.section) {
+    gap: 4px;
+  }
+
+  /* The left margin lines the header up with the cards' text, as Windows
+     Settings does. */
   :global(.section-header) {
+    margin-bottom: 4px;
+    margin-left: 4px;
     -winui-based-on: BodyStrongTextBlockStyle;
   }
 </style>

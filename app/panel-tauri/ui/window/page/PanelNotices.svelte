@@ -13,7 +13,7 @@
   const buildNotice = $derived(pausedNotice(view.edge, view.paused));
 </script>
 
-<TextBlock class="card-description" margin="4,0,4,4" text="Open Edge to apply changes." visibility={view.isEdgeRunning ? "Collapsed" : "Visible"} />
+<TextBlock class="card-description open-edge-hint" text="Open Edge to apply changes." visibility={view.isEdgeRunning ? "Collapsed" : "Visible"} />
 <InfoBar isClosable={false} isOpen={buildNotice.length > 0} message={buildNotice} severity="Warning" />
 <InfoBar
   isClosable={true}
@@ -24,3 +24,12 @@
   }}
   severity="Error"
 />
+
+<!-- Global: a class on a component is not an element's, so Svelte does not
+     scope it. -->
+<style>
+  :global(.open-edge-hint) {
+    margin: 0 4px;
+    margin-bottom: 4px;
+  }
+</style>

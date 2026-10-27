@@ -55,12 +55,20 @@
 <CardFrame {body} {description} {glyph} {note} title={shownTitle}>
   {#snippet end()}
     <ToggleSwitch
+      class="card-switch"
       automationName={shownTitle}
       isEnabled={!card.isLocked}
-      minWidth={0}
       offContent=""
       onContent=""
       bind:isOn={() => isOn, flip}
     />
   {/snippet}
 </CardFrame>
+
+<!-- Global: a class on a component is not an element's, so Svelte does not
+     scope it. With no words beside it, the switch needs none of its width. -->
+<style>
+  :global(.card-switch) {
+    min-width: 0;
+  }
+</style>

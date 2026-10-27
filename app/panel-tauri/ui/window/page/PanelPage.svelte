@@ -72,7 +72,7 @@
 
 <Grid allowDrop={true} {onDragLeave} {onDragOver} {onDrop}>
   <ScrollViewer verticalScrollBarVisibility="Auto">
-    <StackPanel padding="16,4,16,16" spacing={4}>
+    <StackPanel class="page">
       {#if view.update !== null}
         <!-- A newer release brings the button back, so it is a new card. -->
         {#key JSON.stringify(view.update)}
@@ -86,3 +86,13 @@
   </ScrollViewer>
   <DropVeil isShown={panel.isVeilShown} />
 </Grid>
+
+<!-- Global: a class on a component is not an element's, so Svelte does not
+     scope it. -->
+<style>
+  :global(.page) {
+    gap: 4px;
+    padding: 16px;
+    padding-top: 4px;
+  }
+</style>

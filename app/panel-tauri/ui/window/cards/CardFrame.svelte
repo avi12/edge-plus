@@ -31,18 +31,18 @@
      control, as in Windows Settings. The end control and the body sit in a
      bare border each, which places them in the grid. -->
 <Border class="card">
-  <Grid columns="Auto,*,Auto" rows="Auto,Auto">
-    <FontIcon fontSize={20} glyph={glyphText(glyph)} margin="0,0,16,0" verticalAlignment="Center" />
-    <StackPanel gridColumn={1} margin="0,0,16,0" verticalAlignment="Center">
+  <Grid class="card-grid">
+    <FontIcon class="card-icon" glyph={glyphText(glyph)} />
+    <StackPanel class="card-words">
       <TextBlock class="card-title" text={title} />
       <TextBlock class="card-description" text={description} />
       <TextBlock class="note" text={note} visibility={note.length > 0 ? "Visible" : "Collapsed"} />
     </StackPanel>
-    <Border gridColumn={2} verticalAlignment="Center">
+    <Border class="card-end">
       {@render end()}
     </Border>
     {#if body}
-      <Border gridColumn={1} gridColumnSpan={2} gridRow={1} margin="0,12,0,0">
+      <Border class="card-body">
         {@render body()}
       </Border>
     {/if}
@@ -59,6 +59,34 @@
     border: 1px solid var(--card-stroke-color-default);
     border-radius: var(--control-corner-radius);
     background: var(--card-background-fill-color-default);
+  }
+
+  :global(.card-grid) {
+    grid-template-rows: auto auto;
+    grid-template-columns: auto 1fr auto;
+  }
+
+  :global(.card-icon) {
+    align-self: center;
+    margin-right: 16px;
+    font-size: 20px;
+  }
+
+  :global(.card-words) {
+    grid-column: 2;
+    align-self: center;
+    margin-right: 16px;
+  }
+
+  :global(.card-end) {
+    grid-column: 3;
+    align-self: center;
+  }
+
+  :global(.card-body) {
+    grid-row: 2;
+    grid-column: 2 / span 2;
+    margin-top: 12px;
   }
 
   :global(.note) {

@@ -25,7 +25,7 @@
 
 <!-- Keyed by everything a row shows, so an unchanged row is left alone and
      only the rows that came or went play the panel's transition. -->
-<StackPanel childrenTransitions={motion.applied(motion.addDelete)} spacing={4}>
+<StackPanel class="edge-themes" childrenTransitions={motion.applied(motion.addDelete)}>
   {#each rows as row (rowKey(row))}
     <ThemeRow onRemove={null} theme={row} />
   {/each}
@@ -33,3 +33,11 @@
     <TextBlock class="card-description" text="No themes yet — paste a store link or add a local theme (.crx, .zip or folder)." />
   {/if}
 </StackPanel>
+
+<!-- Global: a class on a component is not an element's, so Svelte does not
+     scope it. -->
+<style>
+  :global(.edge-themes) {
+    gap: 4px;
+  }
+</style>

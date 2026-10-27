@@ -23,17 +23,21 @@
 <Grid
   class="veil"
   isHitTestVisible={false}
-  margin="12"
   opacity={isShown ? shownOpacity : hiddenOpacity}
   opacityTransition={fade}
 >
   <Rectangle class="frame" radiusX={cornerRadius} radiusY={cornerRadius} strokeDashArray={dashArray} />
-  <TextBlock class="card-title" horizontalAlignment="Center" text="Drop a theme folder, .zip or .crx to add it" verticalAlignment="Center" />
+  <TextBlock class="card-title veil-hint" text="Drop a theme folder, .zip or .crx to add it" />
 </Grid>
 
 <style>
   :global(.veil) {
+    margin: 12px;
     background: var(--solid-background-fill-color-base);
+  }
+
+  :global(.veil-hint) {
+    place-self: center;
   }
 
   :global(.frame) {

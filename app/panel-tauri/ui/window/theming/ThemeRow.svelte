@@ -28,7 +28,6 @@
   };
   const removeGlyph = 0xE711;
   const gripGlyph = 0xE76F;
-  const iconSize = 12;
   const shown = 1;
   const hidden = 0;
   const isOwn = $derived(onRemove !== null);
@@ -38,17 +37,10 @@
   }
 </script>
 
-<!-- The row's inset lines the list's rows and Edge's rows up. -->
-<Grid automationName={theme.name} columnSpacing={8} columns="16,*,Auto,Auto" padding="4,0,4,0">
-  <FontIcon fontSize={iconSize} glyph={glyph(gripGlyph)} opacity={isOwn ? shown : hidden} />
-  <TextBlock
-    class="card-title"
-    gridColumn={1}
-    text={theme.name}
-    textTrimming="CharacterEllipsis"
-    verticalAlignment="Center"
-  />
-  <StackPanel gridColumn={2} orientation="Horizontal" spacing={4}>
+<Grid class="theme-row" automationName={theme.name}>
+  <FontIcon class="theme-row-icon" glyph={glyph(gripGlyph)} opacity={isOwn ? shown : hidden} />
+  <TextBlock class="card-title theme-row-name" text={theme.name} />
+  <StackPanel class="theme-row-badges">
     {#each theme.badges as badge (badge)}
       <Border class="badge">
         <TextBlock class="badge-text" text={badgeText[badge]} />
@@ -56,17 +48,44 @@
     {/each}
   </StackPanel>
   <Button
+    class="theme-row-remove"
     automationName="Remove {theme.name}"
-    gridColumn={3}
     isEnabled={isOwn}
     onClick={remove}
     opacity={isOwn ? shown : hidden}
   >
-    <FontIcon fontSize={iconSize} glyph={glyph(removeGlyph)} />
+    <FontIcon class="theme-row-icon" glyph={glyph(removeGlyph)} />
   </Button>
 </Grid>
 
 <style>
+  /* The row's inset lines the list's rows and Edge's rows up. */
+  :global(.theme-row) {
+    grid-template-columns: 16px 1fr auto auto;
+    padding: 0 4px;
+    column-gap: 8px;
+  }
+
+  :global(.theme-row-icon) {
+    font-size: 12px;
+  }
+
+  :global(.theme-row-name) {
+    grid-column: 2;
+    align-self: center;
+    text-overflow: ellipsis;
+  }
+
+  :global(.theme-row-badges) {
+    flex-direction: row;
+    grid-column: 3;
+    gap: 4px;
+  }
+
+  :global(.theme-row-remove) {
+    grid-column: 4;
+  }
+
   :global(.badge) {
     align-self: center;
     padding: 1px 6px;

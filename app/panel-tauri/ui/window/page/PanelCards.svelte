@@ -23,7 +23,7 @@
   }
 </script>
 
-<StackPanel childrenTransitions={motion.applied(motion.reposition)} spacing={20}>
+<StackPanel class="sections" childrenTransitions={motion.applied(motion.reposition)}>
   <PanelSection name="Tabs and windows">
     <FeatureCard
       card={cardOf("nativeSplit")}
@@ -90,7 +90,7 @@
       title="Start Edge+ when Windows starts"
     />
     <!-- Its add/delete transition slides the Inject card in and out. -->
-    <StackPanel childrenTransitions={motion.applied(motion.addDelete)} spacing={4}>
+    <StackPanel class="inject-cards" childrenTransitions={motion.applied(motion.addDelete)}>
       <FeatureCard
         card={cardOf("autoInject")}
         description="Puts Edge+ into Edge each time Edge starts. Off, Edge starts without it and Edge+ offers an Inject button."
@@ -109,3 +109,15 @@
     />
   </PanelSection>
 </StackPanel>
+
+<!-- Global: a class on a component is not an element's, so Svelte does not
+     scope it. -->
+<style>
+  :global(.sections) {
+    gap: 20px;
+  }
+
+  :global(.inject-cards) {
+    gap: 4px;
+  }
+</style>

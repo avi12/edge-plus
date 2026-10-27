@@ -115,25 +115,24 @@
 </script>
 
 <StackPanel
+  class="theming"
   childrenTransitions={motion.applied(motion.reposition)}
   opacity={isOn ? fullOpacity : dimmedOpacity}
-  spacing={8}
 >
-  <Grid columnSpacing={8} columns="*,Auto">
+  <Grid class="store-add">
     <TextBox
       onKeyDown={addStoreOnEnter}
       placeholderText="Paste a Chrome Web Store or Edge Add-ons link"
       bind:text={storeLink}
     />
     <Button
-      class="accent-button"
-      gridColumn={1}
+      class="accent-button store-add-button"
       isEnabled={!isBusy}
       onClick={() => void addStore()}
     >Add</Button>
   </Grid>
-  <StackPanel orientation="Horizontal" spacing={8}>
-    <TextBlock class="card-description" text="Or add a local theme" verticalAlignment="Center" />
+  <StackPanel class="local-add">
+    <TextBlock class="card-description local-add-label" text="Or add a local theme" />
     <Button isEnabled={!isBusy} onClick={() => void addLocal(LocalThemeKind.File)}>File…</Button>
     <Button
       isEnabled={!isBusy}
@@ -148,6 +147,28 @@
 </StackPanel>
 
 <style>
+  :global(.theming) {
+    gap: 8px;
+  }
+
+  :global(.store-add) {
+    grid-template-columns: 1fr auto;
+    column-gap: 8px;
+  }
+
+  :global(.store-add-button) {
+    grid-column: 2;
+  }
+
+  :global(.local-add) {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  :global(.local-add-label) {
+    align-self: center;
+  }
+
   :global(.error) {
     color: var(--system-fill-color-critical);
     text-wrap: wrap;

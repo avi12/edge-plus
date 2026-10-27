@@ -14,8 +14,6 @@
 
   const { label, options, assignedId, onPick }: Props = $props();
 
-  const pickerMinimumWidth = 200;
-
   // A theme removed meanwhile falls back to the default theme, the first
   // option. The binding's setter hears only the user's choices, never the
   // selection Svelte writes.
@@ -30,16 +28,29 @@
   }
 </script>
 
-<Grid columnSpacing={8} columns="*,Auto">
-  <TextBlock class="card-title" text={label} verticalAlignment="Center" />
-  <ComboBox
-    automationName={label}
-    gridColumn={1}
-    minWidth={pickerMinimumWidth}
-    bind:selectedIndex={() => selectedIndex, pick}
-  >
+<Grid class="picker">
+  <TextBlock class="card-title picker-label" text={label} />
+  <ComboBox class="picker-choice" automationName={label} bind:selectedIndex={() => selectedIndex, pick}>
     {#each options as option (option.name)}
       <ComboBoxItem>{option.name}</ComboBoxItem>
     {/each}
   </ComboBox>
 </Grid>
+
+<!-- Global: a class on a component is not an element's, so Svelte does not
+     scope it. -->
+<style>
+  :global(.picker) {
+    grid-template-columns: 1fr auto;
+    column-gap: 8px;
+  }
+
+  :global(.picker-label) {
+    align-self: center;
+  }
+
+  :global(.picker-choice) {
+    grid-column: 2;
+    min-width: 200px;
+  }
+</style>
