@@ -16,6 +16,9 @@ import typescriptEslint from "typescript-eslint";
 // (.oxlintrc.json) - ESLint only carries what oxlint cannot: formatting,
 // selector bans and the local custom rules
 const tsStyleRules = {
+  // oxlint bans it in .ts; this carries the ban into .svelte, which oxlint
+  // does not read.
+  "@typescript-eslint/no-explicit-any": "error",
   "perfectionist/sort-imports": [
     "error",
     {
