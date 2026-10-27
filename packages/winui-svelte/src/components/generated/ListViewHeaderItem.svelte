@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ListViewHeaderItem } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ListViewHeaderItemComponentProps } from "./ListViewHeaderItem.d.svelte.ts";
   import { connectListViewHeaderItem } from "./controls/ListViewHeaderItem.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<list-view-header-item class={className} {style} {@attach control((native: ListViewHeaderItem) => untrack(() => connectListViewHeaderItem(native, rest, bound)))}>
+<list-view-header-item {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ListViewHeaderItem) => untrack(() => connectListViewHeaderItem(native, rest, bound)))}>
   {@render children?.()}
 </list-view-header-item>

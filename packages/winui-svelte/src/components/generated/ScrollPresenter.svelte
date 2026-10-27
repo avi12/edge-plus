@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ScrollPresenter } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ScrollPresenterComponentProps } from "./ScrollPresenter.d.svelte.ts";
   import { connectScrollPresenter } from "./controls/ScrollPresenter.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<scroll-presenter class={className} {style} {@attach control((native: ScrollPresenter) => untrack(() => connectScrollPresenter(native, rest, bound)))} />
+<scroll-presenter {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ScrollPresenter) => untrack(() => connectScrollPresenter(native, rest, bound)))} />

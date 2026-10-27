@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { CommandBar } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { CommandBarComponentProps } from "./CommandBar.d.svelte.ts";
   import { connectCommandBar } from "./controls/CommandBar.svelte.ts";
 
@@ -17,6 +17,6 @@
   };
 </script>
 
-<command-bar class={className} {style} {@attach control((native: CommandBar) => untrack(() => connectCommandBar(native, rest, bound)))}>
+<command-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: CommandBar) => untrack(() => connectCommandBar(native, rest, bound)))}>
   {@render children?.()}
 </command-bar>

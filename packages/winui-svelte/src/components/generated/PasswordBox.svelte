@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { PasswordBox } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { PasswordBoxComponentProps } from "./PasswordBox.d.svelte.ts";
   import { connectPasswordBox } from "./controls/PasswordBox.svelte.ts";
 
@@ -17,4 +17,4 @@
   };
 </script>
 
-<password-box class={className} {style} {@attach control((native: PasswordBox) => untrack(() => connectPasswordBox(native, rest, bound)))} />
+<password-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: PasswordBox) => untrack(() => connectPasswordBox(native, rest, bound)))} />

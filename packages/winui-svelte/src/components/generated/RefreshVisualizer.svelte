@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { RefreshVisualizer } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { RefreshVisualizerComponentProps } from "./RefreshVisualizer.d.svelte.ts";
   import { connectRefreshVisualizer } from "./controls/RefreshVisualizer.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<refresh-visualizer class={className} {style} {@attach control((native: RefreshVisualizer) => untrack(() => connectRefreshVisualizer(native, rest, bound)))} />
+<refresh-visualizer {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RefreshVisualizer) => untrack(() => connectRefreshVisualizer(native, rest, bound)))} />

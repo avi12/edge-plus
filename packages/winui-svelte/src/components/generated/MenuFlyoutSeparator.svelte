@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { MenuFlyoutSeparator } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { MenuFlyoutSeparatorComponentProps } from "./MenuFlyoutSeparator.d.svelte.ts";
   import { connectMenuFlyoutSeparator } from "./controls/MenuFlyoutSeparator.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<menu-flyout-separator class={className} {style} {@attach control((native: MenuFlyoutSeparator) => untrack(() => connectMenuFlyoutSeparator(native, rest, bound)))} />
+<menu-flyout-separator {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MenuFlyoutSeparator) => untrack(() => connectMenuFlyoutSeparator(native, rest, bound)))} />

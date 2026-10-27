@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { AnimatedIcon } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { AnimatedIconComponentProps } from "./AnimatedIcon.d.svelte.ts";
   import { connectAnimatedIcon } from "./controls/AnimatedIcon.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<animated-icon class={className} {style} {@attach control((native: AnimatedIcon) => untrack(() => connectAnimatedIcon(native, rest, bound)))} />
+<animated-icon {...attachmentsOf(rest)} class={className} {style} {@attach control((native: AnimatedIcon) => untrack(() => connectAnimatedIcon(native, rest, bound)))} />

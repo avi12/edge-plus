@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ScrollView } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ScrollViewComponentProps } from "./ScrollView.d.svelte.ts";
   import { connectScrollView } from "./controls/ScrollView.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<scroll-view class={className} {style} {@attach control((native: ScrollView) => untrack(() => connectScrollView(native, rest, bound)))} />
+<scroll-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ScrollView) => untrack(() => connectScrollView(native, rest, bound)))} />

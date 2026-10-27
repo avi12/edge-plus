@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { SplitButton } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { SplitButtonComponentProps } from "./SplitButton.d.svelte.ts";
   import { connectSplitButton } from "./controls/SplitButton.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<split-button class={className} {style} {@attach control((native: SplitButton) => untrack(() => connectSplitButton(native, rest, bound)))}>
+<split-button {...attachmentsOf(rest)} class={className} {style} {@attach control((native: SplitButton) => untrack(() => connectSplitButton(native, rest, bound)))}>
   {@render children?.()}
 </split-button>

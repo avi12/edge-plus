@@ -1,7 +1,7 @@
 <script generics="Item" lang="ts">
   import type { ListView } from "../generated/bindings.ts";
   import { connectListView } from "../generated/controls/ListView.svelte.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import { attachItems } from "./items/items-host.svelte.ts";
   import type { ListViewComponentProps } from "./ListView.d.svelte.ts";
   import { untrack } from "svelte";
@@ -49,4 +49,9 @@
   }
 </script>
 
-<list-view {style} class={className} {@attach control((native: ListView) => untrack(() => connect(native)))} />
+<list-view
+  {...attachmentsOf(rest)}
+  {style}
+  class={className}
+  {@attach control((native: ListView) => untrack(() => connect(native)))}
+/>

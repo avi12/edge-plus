@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { MapControl } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { MapControlComponentProps } from "./MapControl.d.svelte.ts";
   import { connectMapControl } from "./controls/MapControl.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<map-control class={className} {style} {@attach control((native: MapControl) => untrack(() => connectMapControl(native, rest, bound)))} />
+<map-control {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MapControl) => untrack(() => connectMapControl(native, rest, bound)))} />

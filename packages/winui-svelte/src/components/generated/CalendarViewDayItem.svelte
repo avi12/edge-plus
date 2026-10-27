@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { CalendarViewDayItem } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { CalendarViewDayItemComponentProps } from "./CalendarViewDayItem.d.svelte.ts";
   import { connectCalendarViewDayItem } from "./controls/CalendarViewDayItem.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<calendar-view-day-item class={className} {style} {@attach control((native: CalendarViewDayItem) => untrack(() => connectCalendarViewDayItem(native, rest, bound)))} />
+<calendar-view-day-item {...attachmentsOf(rest)} class={className} {style} {@attach control((native: CalendarViewDayItem) => untrack(() => connectCalendarViewDayItem(native, rest, bound)))} />

@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { MenuBar } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { MenuBarComponentProps } from "./MenuBar.d.svelte.ts";
   import { connectMenuBar } from "./controls/MenuBar.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<menu-bar class={className} {style} {@attach control((native: MenuBar) => untrack(() => connectMenuBar(native, rest, bound)))} />
+<menu-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MenuBar) => untrack(() => connectMenuBar(native, rest, bound)))} />

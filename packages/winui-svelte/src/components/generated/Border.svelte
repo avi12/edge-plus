@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Border } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { BorderComponentProps } from "./Border.d.svelte.ts";
   import { connectBorder } from "./controls/Border.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<border class={className} {style} {@attach control((native: Border) => untrack(() => connectBorder(native, rest, bound)))}>
+<border {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Border) => untrack(() => connectBorder(native, rest, bound)))}>
   {@render children?.()}
 </border>

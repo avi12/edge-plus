@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { InlineUIContainer } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { InlineUIContainerComponentProps } from "./InlineUIContainer.d.svelte.ts";
   import { connectInlineUIContainer } from "./controls/InlineUIContainer.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<inline-ui-container class={className} {style} {@attach control((native: InlineUIContainer) => untrack(() => connectInlineUIContainer(native, rest, bound)))}>
+<inline-ui-container {...attachmentsOf(rest)} class={className} {style} {@attach control((native: InlineUIContainer) => untrack(() => connectInlineUIContainer(native, rest, bound)))}>
   {@render children?.()}
 </inline-ui-container>

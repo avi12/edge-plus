@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Underline } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { UnderlineComponentProps } from "./Underline.d.svelte.ts";
   import { connectUnderline } from "./controls/Underline.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<underline class={className} {style} {@attach control((native: Underline) => untrack(() => connectUnderline(native, rest, bound)))}>
+<underline {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Underline) => untrack(() => connectUnderline(native, rest, bound)))}>
   {@render children?.()}
 </underline>

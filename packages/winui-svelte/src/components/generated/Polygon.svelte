@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Polygon } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { PolygonComponentProps } from "./Polygon.d.svelte.ts";
   import { connectPolygon } from "./controls/Polygon.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<polygon class={className} {style} {@attach control((native: Polygon) => untrack(() => connectPolygon(native, rest, bound)))} />
+<polygon {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Polygon) => untrack(() => connectPolygon(native, rest, bound)))} />

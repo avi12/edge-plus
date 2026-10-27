@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { TimePicker } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { TimePickerComponentProps } from "./TimePicker.d.svelte.ts";
   import { connectTimePicker } from "./controls/TimePicker.svelte.ts";
 
@@ -23,6 +23,6 @@
   };
 </script>
 
-<time-picker class={className} {style} {@attach control((native: TimePicker) => untrack(() => connectTimePicker(native, rest, bound)))}>
+<time-picker {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TimePicker) => untrack(() => connectTimePicker(native, rest, bound)))}>
   {@render children?.()}
 </time-picker>

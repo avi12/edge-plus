@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ItemsView } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ItemsViewComponentProps } from "./ItemsView.d.svelte.ts";
   import { connectItemsView } from "./controls/ItemsView.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<items-view class={className} {style} {@attach control((native: ItemsView) => untrack(() => connectItemsView(native, rest, bound)))} />
+<items-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemsView) => untrack(() => connectItemsView(native, rest, bound)))} />

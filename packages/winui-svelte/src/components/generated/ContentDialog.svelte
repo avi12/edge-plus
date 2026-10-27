@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ContentDialog } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ContentDialogComponentProps } from "./ContentDialog.d.svelte.ts";
   import { connectContentDialog } from "./controls/ContentDialog.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<content-dialog class={className} {style} {@attach control((native: ContentDialog) => untrack(() => connectContentDialog(native, rest, bound)))}>
+<content-dialog {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ContentDialog) => untrack(() => connectContentDialog(native, rest, bound)))}>
   {@render children?.()}
 </content-dialog>

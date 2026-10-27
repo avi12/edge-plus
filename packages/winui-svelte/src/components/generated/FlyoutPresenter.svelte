@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { FlyoutPresenter } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { FlyoutPresenterComponentProps } from "./FlyoutPresenter.d.svelte.ts";
   import { connectFlyoutPresenter } from "./controls/FlyoutPresenter.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<flyout-presenter class={className} {style} {@attach control((native: FlyoutPresenter) => untrack(() => connectFlyoutPresenter(native, rest, bound)))}>
+<flyout-presenter {...attachmentsOf(rest)} class={className} {style} {@attach control((native: FlyoutPresenter) => untrack(() => connectFlyoutPresenter(native, rest, bound)))}>
   {@render children?.()}
 </flyout-presenter>

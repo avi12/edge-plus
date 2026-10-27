@@ -41,6 +41,20 @@ export function control<Control extends object>(handler: (control: Control) => v
   };
 }
 
+// Svelte hands a component the attachments written on it as symbol-keyed
+// props; a component spreads these onto its element, as web Svelte does, so
+// `{@attach ...}` on <TextBlock> reaches the TextBlock's control.
+export function attachmentsOf(props: Partial<Record<symbol, NodeAttachment>>): Record<symbol, NodeAttachment> {
+  const attachments: Record<symbol, NodeAttachment> = {};
+  for (const key of Object.getOwnPropertySymbols(props)) {
+    const attachment = props[key];
+    if (attachment !== undefined) {
+      attachments[key] = attachment;
+    }
+  }
+  return attachments;
+}
+
 // {@attach withControl(StackPanel, panel => ...)}: the same, for code that
 // wants the class checked (registering a panel for motion, reading a text
 // box); a control of another class is skipped.

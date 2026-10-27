@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ItemsRepeater } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ItemsRepeaterComponentProps } from "./ItemsRepeater.d.svelte.ts";
   import { connectItemsRepeater } from "./controls/ItemsRepeater.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<items-repeater class={className} {style} {@attach control((native: ItemsRepeater) => untrack(() => connectItemsRepeater(native, rest, bound)))} />
+<items-repeater {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemsRepeater) => untrack(() => connectItemsRepeater(native, rest, bound)))} />

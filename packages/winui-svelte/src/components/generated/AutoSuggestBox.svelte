@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { AutoSuggestBox } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { AutoSuggestBoxComponentProps } from "./AutoSuggestBox.d.svelte.ts";
   import { connectAutoSuggestBox } from "./controls/AutoSuggestBox.svelte.ts";
 
@@ -17,6 +17,6 @@
   };
 </script>
 
-<auto-suggest-box class={className} {style} {@attach control((native: AutoSuggestBox) => untrack(() => connectAutoSuggestBox(native, rest, bound)))}>
+<auto-suggest-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: AutoSuggestBox) => untrack(() => connectAutoSuggestBox(native, rest, bound)))}>
   {@render children?.()}
 </auto-suggest-box>

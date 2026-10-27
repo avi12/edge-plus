@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Hyperlink } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { HyperlinkComponentProps } from "./Hyperlink.d.svelte.ts";
   import { connectHyperlink } from "./controls/Hyperlink.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<hyperlink class={className} {style} {@attach control((native: Hyperlink) => untrack(() => connectHyperlink(native, rest, bound)))}>
+<hyperlink {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Hyperlink) => untrack(() => connectHyperlink(native, rest, bound)))}>
   {@render children?.()}
 </hyperlink>

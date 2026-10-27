@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { RadioMenuFlyoutItem } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { RadioMenuFlyoutItemComponentProps } from "./RadioMenuFlyoutItem.d.svelte.ts";
   import { connectRadioMenuFlyoutItem } from "./controls/RadioMenuFlyoutItem.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<radio-menu-flyout-item class={className} {style} {@attach control((native: RadioMenuFlyoutItem) => untrack(() => connectRadioMenuFlyoutItem(native, rest, bound)))}>
+<radio-menu-flyout-item {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RadioMenuFlyoutItem) => untrack(() => connectRadioMenuFlyoutItem(native, rest, bound)))}>
   {@render children?.()}
 </radio-menu-flyout-item>

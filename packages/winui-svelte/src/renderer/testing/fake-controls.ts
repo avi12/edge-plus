@@ -44,6 +44,8 @@ export class FakeToggle {
   readonly margin = null;
   isOn = false;
   onContent = "";
+  // AutomationProperties.LabeledBy, as the label test sets it.
+  labeledBy: object | null = null;
   subscriptions = 0;
 
   onToggled(_handler: (isOn: boolean) => void): () => void {

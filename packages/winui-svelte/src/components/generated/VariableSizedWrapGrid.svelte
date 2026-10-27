@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { VariableSizedWrapGrid } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { VariableSizedWrapGridComponentProps } from "./VariableSizedWrapGrid.d.svelte.ts";
   import { connectVariableSizedWrapGrid } from "./controls/VariableSizedWrapGrid.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<variable-sized-wrap-grid class={className} {style} {@attach control((native: VariableSizedWrapGrid) => untrack(() => connectVariableSizedWrapGrid(native, rest, bound)))}>
+<variable-sized-wrap-grid {...attachmentsOf(rest)} class={className} {style} {@attach control((native: VariableSizedWrapGrid) => untrack(() => connectVariableSizedWrapGrid(native, rest, bound)))}>
   {@render children?.()}
 </variable-sized-wrap-grid>

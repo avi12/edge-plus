@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { PivotPanel } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { PivotPanelComponentProps } from "./PivotPanel.d.svelte.ts";
   import { connectPivotPanel } from "./controls/PivotPanel.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<pivot-panel class={className} {style} {@attach control((native: PivotPanel) => untrack(() => connectPivotPanel(native, rest, bound)))}>
+<pivot-panel {...attachmentsOf(rest)} class={className} {style} {@attach control((native: PivotPanel) => untrack(() => connectPivotPanel(native, rest, bound)))}>
   {@render children?.()}
 </pivot-panel>

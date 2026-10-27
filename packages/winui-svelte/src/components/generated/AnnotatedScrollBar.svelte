@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { AnnotatedScrollBar } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { AnnotatedScrollBarComponentProps } from "./AnnotatedScrollBar.d.svelte.ts";
   import { connectAnnotatedScrollBar } from "./controls/AnnotatedScrollBar.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<annotated-scroll-bar class={className} {style} {@attach control((native: AnnotatedScrollBar) => untrack(() => connectAnnotatedScrollBar(native, rest, bound)))} />
+<annotated-scroll-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: AnnotatedScrollBar) => untrack(() => connectAnnotatedScrollBar(native, rest, bound)))} />

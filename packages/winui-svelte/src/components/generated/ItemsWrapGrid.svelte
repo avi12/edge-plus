@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ItemsWrapGrid } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ItemsWrapGridComponentProps } from "./ItemsWrapGrid.d.svelte.ts";
   import { connectItemsWrapGrid } from "./controls/ItemsWrapGrid.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<items-wrap-grid class={className} {style} {@attach control((native: ItemsWrapGrid) => untrack(() => connectItemsWrapGrid(native, rest, bound)))}>
+<items-wrap-grid {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemsWrapGrid) => untrack(() => connectItemsWrapGrid(native, rest, bound)))}>
   {@render children?.()}
 </items-wrap-grid>

@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { TabView } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { TabViewComponentProps } from "./TabView.d.svelte.ts";
   import { connectTabView } from "./controls/TabView.svelte.ts";
 
@@ -23,4 +23,4 @@
   };
 </script>
 
-<tab-view class={className} {style} {@attach control((native: TabView) => untrack(() => connectTabView(native, rest, bound)))} />
+<tab-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TabView) => untrack(() => connectTabView(native, rest, bound)))} />

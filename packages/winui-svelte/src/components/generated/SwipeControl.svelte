@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { SwipeControl } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { SwipeControlComponentProps } from "./SwipeControl.d.svelte.ts";
   import { connectSwipeControl } from "./controls/SwipeControl.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<swipe-control class={className} {style} {@attach control((native: SwipeControl) => untrack(() => connectSwipeControl(native, rest, bound)))}>
+<swipe-control {...attachmentsOf(rest)} class={className} {style} {@attach control((native: SwipeControl) => untrack(() => connectSwipeControl(native, rest, bound)))}>
   {@render children?.()}
 </swipe-control>

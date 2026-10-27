@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { InfoBarPanel } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { InfoBarPanelComponentProps } from "./InfoBarPanel.d.svelte.ts";
   import { connectInfoBarPanel } from "./controls/InfoBarPanel.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<info-bar-panel class={className} {style} {@attach control((native: InfoBarPanel) => untrack(() => connectInfoBarPanel(native, rest, bound)))}>
+<info-bar-panel {...attachmentsOf(rest)} class={className} {style} {@attach control((native: InfoBarPanel) => untrack(() => connectInfoBarPanel(native, rest, bound)))}>
   {@render children?.()}
 </info-bar-panel>

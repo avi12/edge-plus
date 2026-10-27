@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Expander } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ExpanderComponentProps } from "./Expander.d.svelte.ts";
   import { connectExpander } from "./controls/Expander.svelte.ts";
 
@@ -17,6 +17,6 @@
   };
 </script>
 
-<expander class={className} {style} {@attach control((native: Expander) => untrack(() => connectExpander(native, rest, bound)))}>
+<expander {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Expander) => untrack(() => connectExpander(native, rest, bound)))}>
   {@render children?.()}
 </expander>

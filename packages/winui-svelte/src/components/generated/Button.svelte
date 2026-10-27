@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Button } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ButtonComponentProps } from "./Button.d.svelte.ts";
   import { connectButton } from "./controls/Button.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<button class={className} {style} {@attach control((native: Button) => untrack(() => connectButton(native, rest, bound)))}>
+<button {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Button) => untrack(() => connectButton(native, rest, bound)))}>
   {@render children?.()}
 </button>

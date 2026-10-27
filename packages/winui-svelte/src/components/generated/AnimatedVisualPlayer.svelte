@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { AnimatedVisualPlayer } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { AnimatedVisualPlayerComponentProps } from "./AnimatedVisualPlayer.d.svelte.ts";
   import { connectAnimatedVisualPlayer } from "./controls/AnimatedVisualPlayer.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<animated-visual-player class={className} {style} {@attach control((native: AnimatedVisualPlayer) => untrack(() => connectAnimatedVisualPlayer(native, rest, bound)))} />
+<animated-visual-player {...attachmentsOf(rest)} class={className} {style} {@attach control((native: AnimatedVisualPlayer) => untrack(() => connectAnimatedVisualPlayer(native, rest, bound)))} />

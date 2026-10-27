@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { NavigationViewItemPresenter } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { NavigationViewItemPresenterComponentProps } from "./NavigationViewItemPresenter.d.svelte.ts";
   import { connectNavigationViewItemPresenter } from "./controls/NavigationViewItemPresenter.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<navigation-view-item-presenter class={className} {style} {@attach control((native: NavigationViewItemPresenter) => untrack(() => connectNavigationViewItemPresenter(native, rest, bound)))}>
+<navigation-view-item-presenter {...attachmentsOf(rest)} class={className} {style} {@attach control((native: NavigationViewItemPresenter) => untrack(() => connectNavigationViewItemPresenter(native, rest, bound)))}>
   {@render children?.()}
 </navigation-view-item-presenter>

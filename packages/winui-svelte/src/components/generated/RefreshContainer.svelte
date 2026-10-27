@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { RefreshContainer } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { RefreshContainerComponentProps } from "./RefreshContainer.d.svelte.ts";
   import { connectRefreshContainer } from "./controls/RefreshContainer.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<refresh-container class={className} {style} {@attach control((native: RefreshContainer) => untrack(() => connectRefreshContainer(native, rest, bound)))}>
+<refresh-container {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RefreshContainer) => untrack(() => connectRefreshContainer(native, rest, bound)))}>
   {@render children?.()}
 </refresh-container>

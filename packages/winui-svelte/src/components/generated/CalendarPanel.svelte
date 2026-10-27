@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { CalendarPanel } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { CalendarPanelComponentProps } from "./CalendarPanel.d.svelte.ts";
   import { connectCalendarPanel } from "./controls/CalendarPanel.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<calendar-panel class={className} {style} {@attach control((native: CalendarPanel) => untrack(() => connectCalendarPanel(native, rest, bound)))}>
+<calendar-panel {...attachmentsOf(rest)} class={className} {style} {@attach control((native: CalendarPanel) => untrack(() => connectCalendarPanel(native, rest, bound)))}>
   {@render children?.()}
 </calendar-panel>

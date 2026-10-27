@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { PipsPager } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { PipsPagerComponentProps } from "./PipsPager.d.svelte.ts";
   import { connectPipsPager } from "./controls/PipsPager.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<pips-pager class={className} {style} {@attach control((native: PipsPager) => untrack(() => connectPipsPager(native, rest, bound)))} />
+<pips-pager {...attachmentsOf(rest)} class={className} {style} {@attach control((native: PipsPager) => untrack(() => connectPipsPager(native, rest, bound)))} />

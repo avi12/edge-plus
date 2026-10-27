@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ContentControl } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ContentControlComponentProps } from "./ContentControl.d.svelte.ts";
   import { connectContentControl } from "./controls/ContentControl.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<content-control class={className} {style} {@attach control((native: ContentControl) => untrack(() => connectContentControl(native, rest, bound)))}>
+<content-control {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ContentControl) => untrack(() => connectContentControl(native, rest, bound)))}>
   {@render children?.()}
 </content-control>

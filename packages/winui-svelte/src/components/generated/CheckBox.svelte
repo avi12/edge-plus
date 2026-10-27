@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { CheckBox } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { CheckBoxComponentProps } from "./CheckBox.d.svelte.ts";
   import { connectCheckBox } from "./controls/CheckBox.svelte.ts";
 
@@ -17,6 +17,6 @@
   };
 </script>
 
-<check-box class={className} {style} {@attach control((native: CheckBox) => untrack(() => connectCheckBox(native, rest, bound)))}>
+<check-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: CheckBox) => untrack(() => connectCheckBox(native, rest, bound)))}>
   {@render children?.()}
 </check-box>

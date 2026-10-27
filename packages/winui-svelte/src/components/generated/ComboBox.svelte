@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ComboBox } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ComboBoxComponentProps } from "./ComboBox.d.svelte.ts";
   import { connectComboBox } from "./controls/ComboBox.svelte.ts";
 
@@ -35,6 +35,6 @@
   };
 </script>
 
-<combo-box class={className} {style} {@attach control((native: ComboBox) => untrack(() => connectComboBox(native, rest, bound)))}>
+<combo-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ComboBox) => untrack(() => connectComboBox(native, rest, bound)))}>
   {@render children?.()}
 </combo-box>

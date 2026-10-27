@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { RichTextBlock } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { RichTextBlockComponentProps } from "./RichTextBlock.d.svelte.ts";
   import { connectRichTextBlock } from "./controls/RichTextBlock.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<rich-text-block class={className} {style} {@attach control((native: RichTextBlock) => untrack(() => connectRichTextBlock(native, rest, bound)))}>
+<rich-text-block {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RichTextBlock) => untrack(() => connectRichTextBlock(native, rest, bound)))}>
   {@render children?.()}
 </rich-text-block>

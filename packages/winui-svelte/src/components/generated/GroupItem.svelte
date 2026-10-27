@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { GroupItem } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { GroupItemComponentProps } from "./GroupItem.d.svelte.ts";
   import { connectGroupItem } from "./controls/GroupItem.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<group-item class={className} {style} {@attach control((native: GroupItem) => untrack(() => connectGroupItem(native, rest, bound)))}>
+<group-item {...attachmentsOf(rest)} class={className} {style} {@attach control((native: GroupItem) => untrack(() => connectGroupItem(native, rest, bound)))}>
   {@render children?.()}
 </group-item>

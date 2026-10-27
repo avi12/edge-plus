@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { NavigationView } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { NavigationViewComponentProps } from "./NavigationView.d.svelte.ts";
   import { connectNavigationView } from "./controls/NavigationView.svelte.ts";
 
@@ -23,6 +23,6 @@
   };
 </script>
 
-<navigation-view class={className} {style} {@attach control((native: NavigationView) => untrack(() => connectNavigationView(native, rest, bound)))}>
+<navigation-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: NavigationView) => untrack(() => connectNavigationView(native, rest, bound)))}>
   {@render children?.()}
 </navigation-view>

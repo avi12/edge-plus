@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { RatingControl } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { RatingControlComponentProps } from "./RatingControl.d.svelte.ts";
   import { connectRatingControl } from "./controls/RatingControl.svelte.ts";
 
@@ -17,4 +17,4 @@
   };
 </script>
 
-<rating-control class={className} {style} {@attach control((native: RatingControl) => untrack(() => connectRatingControl(native, rest, bound)))} />
+<rating-control {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RatingControl) => untrack(() => connectRatingControl(native, rest, bound)))} />

@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { CommandBarOverflowPresenter } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { CommandBarOverflowPresenterComponentProps } from "./CommandBarOverflowPresenter.d.svelte.ts";
   import { connectCommandBarOverflowPresenter } from "./controls/CommandBarOverflowPresenter.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<command-bar-overflow-presenter class={className} {style} {@attach control((native: CommandBarOverflowPresenter) => untrack(() => connectCommandBarOverflowPresenter(native, rest, bound)))}>
+<command-bar-overflow-presenter {...attachmentsOf(rest)} class={className} {style} {@attach control((native: CommandBarOverflowPresenter) => untrack(() => connectCommandBarOverflowPresenter(native, rest, bound)))}>
   {@render children?.()}
 </command-bar-overflow-presenter>

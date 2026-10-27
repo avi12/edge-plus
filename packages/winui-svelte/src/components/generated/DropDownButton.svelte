@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { DropDownButton } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { DropDownButtonComponentProps } from "./DropDownButton.d.svelte.ts";
   import { connectDropDownButton } from "./controls/DropDownButton.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<drop-down-button class={className} {style} {@attach control((native: DropDownButton) => untrack(() => connectDropDownButton(native, rest, bound)))}>
+<drop-down-button {...attachmentsOf(rest)} class={className} {style} {@attach control((native: DropDownButton) => untrack(() => connectDropDownButton(native, rest, bound)))}>
   {@render children?.()}
 </drop-down-button>

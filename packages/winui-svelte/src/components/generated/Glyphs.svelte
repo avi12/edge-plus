@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Glyphs } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { GlyphsComponentProps } from "./Glyphs.d.svelte.ts";
   import { connectGlyphs } from "./controls/Glyphs.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<glyphs class={className} {style} {@attach control((native: Glyphs) => untrack(() => connectGlyphs(native, rest, bound)))} />
+<glyphs {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Glyphs) => untrack(() => connectGlyphs(native, rest, bound)))} />

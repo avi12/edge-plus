@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Line } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { LineComponentProps } from "./Line.d.svelte.ts";
   import { connectLine } from "./controls/Line.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<line class={className} {style} {@attach control((native: Line) => untrack(() => connectLine(native, rest, bound)))} />
+<line {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Line) => untrack(() => connectLine(native, rest, bound)))} />

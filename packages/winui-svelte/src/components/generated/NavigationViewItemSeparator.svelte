@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { NavigationViewItemSeparator } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { NavigationViewItemSeparatorComponentProps } from "./NavigationViewItemSeparator.d.svelte.ts";
   import { connectNavigationViewItemSeparator } from "./controls/NavigationViewItemSeparator.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<navigation-view-item-separator class={className} {style} {@attach control((native: NavigationViewItemSeparator) => untrack(() => connectNavigationViewItemSeparator(native, rest, bound)))}>
+<navigation-view-item-separator {...attachmentsOf(rest)} class={className} {style} {@attach control((native: NavigationViewItemSeparator) => untrack(() => connectNavigationViewItemSeparator(native, rest, bound)))}>
   {@render children?.()}
 </navigation-view-item-separator>

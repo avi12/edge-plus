@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { TabViewListView } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { TabViewListViewComponentProps } from "./TabViewListView.d.svelte.ts";
   import { connectTabViewListView } from "./controls/TabViewListView.svelte.ts";
 
@@ -29,6 +29,6 @@
   };
 </script>
 
-<tab-view-list-view class={className} {style} {@attach control((native: TabViewListView) => untrack(() => connectTabViewListView(native, rest, bound)))}>
+<tab-view-list-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TabViewListView) => untrack(() => connectTabViewListView(native, rest, bound)))}>
   {@render children?.()}
 </tab-view-list-view>

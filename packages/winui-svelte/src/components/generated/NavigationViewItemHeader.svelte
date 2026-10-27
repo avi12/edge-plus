@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { NavigationViewItemHeader } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { NavigationViewItemHeaderComponentProps } from "./NavigationViewItemHeader.d.svelte.ts";
   import { connectNavigationViewItemHeader } from "./controls/NavigationViewItemHeader.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<navigation-view-item-header class={className} {style} {@attach control((native: NavigationViewItemHeader) => untrack(() => connectNavigationViewItemHeader(native, rest, bound)))}>
+<navigation-view-item-header {...attachmentsOf(rest)} class={className} {style} {@attach control((native: NavigationViewItemHeader) => untrack(() => connectNavigationViewItemHeader(native, rest, bound)))}>
   {@render children?.()}
 </navigation-view-item-header>

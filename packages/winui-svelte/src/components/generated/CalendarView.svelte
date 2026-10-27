@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { CalendarView } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { CalendarViewComponentProps } from "./CalendarView.d.svelte.ts";
   import { connectCalendarView } from "./controls/CalendarView.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<calendar-view class={className} {style} {@attach control((native: CalendarView) => untrack(() => connectCalendarView(native, rest, bound)))} />
+<calendar-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: CalendarView) => untrack(() => connectCalendarView(native, rest, bound)))} />

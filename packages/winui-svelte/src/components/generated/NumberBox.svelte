@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { NumberBox } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { NumberBoxComponentProps } from "./NumberBox.d.svelte.ts";
   import { connectNumberBox } from "./controls/NumberBox.svelte.ts";
 
@@ -17,4 +17,4 @@
   };
 </script>
 
-<number-box class={className} {style} {@attach control((native: NumberBox) => untrack(() => connectNumberBox(native, rest, bound)))} />
+<number-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: NumberBox) => untrack(() => connectNumberBox(native, rest, bound)))} />

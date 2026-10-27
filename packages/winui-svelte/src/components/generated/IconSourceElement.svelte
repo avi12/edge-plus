@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { IconSourceElement } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { IconSourceElementComponentProps } from "./IconSourceElement.d.svelte.ts";
   import { connectIconSourceElement } from "./controls/IconSourceElement.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<icon-source-element class={className} {style} {@attach control((native: IconSourceElement) => untrack(() => connectIconSourceElement(native, rest, bound)))}>
+<icon-source-element {...attachmentsOf(rest)} class={className} {style} {@attach control((native: IconSourceElement) => untrack(() => connectIconSourceElement(native, rest, bound)))}>
   {@render children?.()}
 </icon-source-element>

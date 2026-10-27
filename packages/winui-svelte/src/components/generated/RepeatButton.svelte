@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { RepeatButton } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { RepeatButtonComponentProps } from "./RepeatButton.d.svelte.ts";
   import { connectRepeatButton } from "./controls/RepeatButton.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<repeat-button class={className} {style} {@attach control((native: RepeatButton) => untrack(() => connectRepeatButton(native, rest, bound)))}>
+<repeat-button {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RepeatButton) => untrack(() => connectRepeatButton(native, rest, bound)))}>
   {@render children?.()}
 </repeat-button>

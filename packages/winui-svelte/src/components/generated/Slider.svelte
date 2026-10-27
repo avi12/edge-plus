@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Slider } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { SliderComponentProps } from "./Slider.d.svelte.ts";
   import { connectSlider } from "./controls/Slider.svelte.ts";
 
@@ -17,4 +17,4 @@
   };
 </script>
 
-<slider class={className} {style} {@attach control((native: Slider) => untrack(() => connectSlider(native, rest, bound)))} />
+<slider {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Slider) => untrack(() => connectSlider(native, rest, bound)))} />

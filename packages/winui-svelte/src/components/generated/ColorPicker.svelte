@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ColorPicker } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ColorPickerComponentProps } from "./ColorPicker.d.svelte.ts";
   import { connectColorPicker } from "./controls/ColorPicker.svelte.ts";
 
@@ -17,4 +17,4 @@
   };
 </script>
 
-<color-picker class={className} {style} {@attach control((native: ColorPicker) => untrack(() => connectColorPicker(native, rest, bound)))} />
+<color-picker {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ColorPicker) => untrack(() => connectColorPicker(native, rest, bound)))} />

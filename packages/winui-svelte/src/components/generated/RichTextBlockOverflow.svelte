@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { RichTextBlockOverflow } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { RichTextBlockOverflowComponentProps } from "./RichTextBlockOverflow.d.svelte.ts";
   import { connectRichTextBlockOverflow } from "./controls/RichTextBlockOverflow.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<rich-text-block-overflow class={className} {style} {@attach control((native: RichTextBlockOverflow) => untrack(() => connectRichTextBlockOverflow(native, rest, bound)))} />
+<rich-text-block-overflow {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RichTextBlockOverflow) => untrack(() => connectRichTextBlockOverflow(native, rest, bound)))} />

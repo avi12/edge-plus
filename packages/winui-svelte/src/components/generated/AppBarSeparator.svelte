@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { AppBarSeparator } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { AppBarSeparatorComponentProps } from "./AppBarSeparator.d.svelte.ts";
   import { connectAppBarSeparator } from "./controls/AppBarSeparator.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<app-bar-separator class={className} {style} {@attach control((native: AppBarSeparator) => untrack(() => connectAppBarSeparator(native, rest, bound)))} />
+<app-bar-separator {...attachmentsOf(rest)} class={className} {style} {@attach control((native: AppBarSeparator) => untrack(() => connectAppBarSeparator(native, rest, bound)))} />

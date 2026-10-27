@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Rectangle } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { RectangleComponentProps } from "./Rectangle.d.svelte.ts";
   import { connectRectangle } from "./controls/Rectangle.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<rectangle class={className} {style} {@attach control((native: Rectangle) => untrack(() => connectRectangle(native, rest, bound)))} />
+<rectangle {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Rectangle) => untrack(() => connectRectangle(native, rest, bound)))} />

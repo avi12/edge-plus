@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { MediaTransportControls } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { MediaTransportControlsComponentProps } from "./MediaTransportControls.d.svelte.ts";
   import { connectMediaTransportControls } from "./controls/MediaTransportControls.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<media-transport-controls class={className} {style} {@attach control((native: MediaTransportControls) => untrack(() => connectMediaTransportControls(native, rest, bound)))} />
+<media-transport-controls {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MediaTransportControls) => untrack(() => connectMediaTransportControls(native, rest, bound)))} />

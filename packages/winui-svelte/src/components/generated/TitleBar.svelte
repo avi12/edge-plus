@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { TitleBar } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { TitleBarComponentProps } from "./TitleBar.d.svelte.ts";
   import { connectTitleBar } from "./controls/TitleBar.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<title-bar class={className} {style} {@attach control((native: TitleBar) => untrack(() => connectTitleBar(native, rest, bound)))} />
+<title-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TitleBar) => untrack(() => connectTitleBar(native, rest, bound)))} />

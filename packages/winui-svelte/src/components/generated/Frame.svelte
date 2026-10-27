@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Frame } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { FrameComponentProps } from "./Frame.d.svelte.ts";
   import { connectFrame } from "./controls/Frame.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<frame class={className} {style} {@attach control((native: Frame) => untrack(() => connectFrame(native, rest, bound)))}>
+<frame {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Frame) => untrack(() => connectFrame(native, rest, bound)))}>
   {@render children?.()}
 </frame>

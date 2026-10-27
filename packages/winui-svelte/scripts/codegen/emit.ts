@@ -508,7 +508,7 @@ export function emitComponent(level: ClassModel): string {
   );
   const bound = bindables.length === 0 ? "{}" : `{\n${bag.join(",\n")}\n  }`;
   const attachment = `{@attach control((native: ${name}) => untrack(() => connect${name}(native, rest, bound)))}`;
-  const open = `<${level.tag} class={className} {style} ${attachment}`;
+  const open = `<${level.tag} {...attachmentsOf(rest)} class={className} {style} ${attachment}`;
   const markup = level.contentProperty === null
     ? `${open} />`
     : `${open}>\n  {@render children?.()}\n</${level.tag}>`;
@@ -517,7 +517,7 @@ export function emitComponent(level: ClassModel): string {
     "<script lang=\"ts\">",
     "  import { untrack } from \"svelte\";",
     `  import type { ${name} } from "./bindings.ts";`,
-    "  import { control } from \"../runtime.ts\";",
+    "  import { attachmentsOf, control } from \"../runtime.ts\";",
     `  import type { ${name}ComponentProps } from "./${name}.d.svelte.ts";`,
     `  import { connect${name} } from "./controls/${name}.svelte.ts";`,
     "",

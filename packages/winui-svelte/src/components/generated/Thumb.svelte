@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Thumb } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ThumbComponentProps } from "./Thumb.d.svelte.ts";
   import { connectThumb } from "./controls/Thumb.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<thumb class={className} {style} {@attach control((native: Thumb) => untrack(() => connectThumb(native, rest, bound)))} />
+<thumb {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Thumb) => untrack(() => connectThumb(native, rest, bound)))} />

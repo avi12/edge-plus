@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { VirtualizingStackPanel } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { VirtualizingStackPanelComponentProps } from "./VirtualizingStackPanel.d.svelte.ts";
   import { connectVirtualizingStackPanel } from "./controls/VirtualizingStackPanel.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<virtualizing-stack-panel class={className} {style} {@attach control((native: VirtualizingStackPanel) => untrack(() => connectVirtualizingStackPanel(native, rest, bound)))}>
+<virtualizing-stack-panel {...attachmentsOf(rest)} class={className} {style} {@attach control((native: VirtualizingStackPanel) => untrack(() => connectVirtualizingStackPanel(native, rest, bound)))}>
   {@render children?.()}
 </virtualizing-stack-panel>

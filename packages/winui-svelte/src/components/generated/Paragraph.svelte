@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Paragraph } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ParagraphComponentProps } from "./Paragraph.d.svelte.ts";
   import { connectParagraph } from "./controls/Paragraph.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<paragraph class={className} {style} {@attach control((native: Paragraph) => untrack(() => connectParagraph(native, rest, bound)))}>
+<paragraph {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Paragraph) => untrack(() => connectParagraph(native, rest, bound)))}>
   {@render children?.()}
 </paragraph>

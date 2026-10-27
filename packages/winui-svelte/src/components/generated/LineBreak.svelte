@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { LineBreak } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { LineBreakComponentProps } from "./LineBreak.d.svelte.ts";
   import { connectLineBreak } from "./controls/LineBreak.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<line-break class={className} {style} {@attach control((native: LineBreak) => untrack(() => connectLineBreak(native, rest, bound)))} />
+<line-break {...attachmentsOf(rest)} class={className} {style} {@attach control((native: LineBreak) => untrack(() => connectLineBreak(native, rest, bound)))} />

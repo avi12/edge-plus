@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ToggleSwitch } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ToggleSwitchComponentProps } from "./ToggleSwitch.d.svelte.ts";
   import { connectToggleSwitch } from "./controls/ToggleSwitch.svelte.ts";
 
@@ -17,6 +17,6 @@
   };
 </script>
 
-<toggle-switch class={className} {style} {@attach control((native: ToggleSwitch) => untrack(() => connectToggleSwitch(native, rest, bound)))}>
+<toggle-switch {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ToggleSwitch) => untrack(() => connectToggleSwitch(native, rest, bound)))}>
   {@render children?.()}
 </toggle-switch>

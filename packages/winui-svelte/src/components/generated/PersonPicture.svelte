@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { PersonPicture } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { PersonPictureComponentProps } from "./PersonPicture.d.svelte.ts";
   import { connectPersonPicture } from "./controls/PersonPicture.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<person-picture class={className} {style} {@attach control((native: PersonPicture) => untrack(() => connectPersonPicture(native, rest, bound)))} />
+<person-picture {...attachmentsOf(rest)} class={className} {style} {@attach control((native: PersonPicture) => untrack(() => connectPersonPicture(native, rest, bound)))} />

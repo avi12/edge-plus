@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { SemanticZoom } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { SemanticZoomComponentProps } from "./SemanticZoom.d.svelte.ts";
   import { connectSemanticZoom } from "./controls/SemanticZoom.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<semantic-zoom class={className} {style} {@attach control((native: SemanticZoom) => untrack(() => connectSemanticZoom(native, rest, bound)))}>
+<semantic-zoom {...attachmentsOf(rest)} class={className} {style} {@attach control((native: SemanticZoom) => untrack(() => connectSemanticZoom(native, rest, bound)))}>
   {@render children?.()}
 </semantic-zoom>

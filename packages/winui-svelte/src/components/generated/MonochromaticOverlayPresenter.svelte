@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { MonochromaticOverlayPresenter } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { MonochromaticOverlayPresenterComponentProps } from "./MonochromaticOverlayPresenter.d.svelte.ts";
   import { connectMonochromaticOverlayPresenter } from "./controls/MonochromaticOverlayPresenter.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<monochromatic-overlay-presenter class={className} {style} {@attach control((native: MonochromaticOverlayPresenter) => untrack(() => connectMonochromaticOverlayPresenter(native, rest, bound)))}>
+<monochromatic-overlay-presenter {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MonochromaticOverlayPresenter) => untrack(() => connectMonochromaticOverlayPresenter(native, rest, bound)))}>
   {@render children?.()}
 </monochromatic-overlay-presenter>

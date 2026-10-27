@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { InfoBar } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { InfoBarComponentProps } from "./InfoBar.d.svelte.ts";
   import { connectInfoBar } from "./controls/InfoBar.svelte.ts";
 
@@ -17,4 +17,4 @@
   };
 </script>
 
-<info-bar class={className} {style} {@attach control((native: InfoBar) => untrack(() => connectInfoBar(native, rest, bound)))} />
+<info-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: InfoBar) => untrack(() => connectInfoBar(native, rest, bound)))} />

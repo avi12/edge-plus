@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { TeachingTip } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { TeachingTipComponentProps } from "./TeachingTip.d.svelte.ts";
   import { connectTeachingTip } from "./controls/TeachingTip.svelte.ts";
 
@@ -17,6 +17,6 @@
   };
 </script>
 
-<teaching-tip class={className} {style} {@attach control((native: TeachingTip) => untrack(() => connectTeachingTip(native, rest, bound)))}>
+<teaching-tip {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TeachingTip) => untrack(() => connectTeachingTip(native, rest, bound)))}>
   {@render children?.()}
 </teaching-tip>

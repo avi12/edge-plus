@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ScrollBar } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ScrollBarComponentProps } from "./ScrollBar.d.svelte.ts";
   import { connectScrollBar } from "./controls/ScrollBar.svelte.ts";
 
@@ -17,4 +17,4 @@
   };
 </script>
 
-<scroll-bar class={className} {style} {@attach control((native: ScrollBar) => untrack(() => connectScrollBar(native, rest, bound)))} />
+<scroll-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ScrollBar) => untrack(() => connectScrollBar(native, rest, bound)))} />

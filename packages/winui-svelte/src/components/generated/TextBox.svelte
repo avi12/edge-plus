@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { TextBox } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { TextBoxComponentProps } from "./TextBox.d.svelte.ts";
   import { connectTextBox } from "./controls/TextBox.svelte.ts";
 
@@ -17,4 +17,4 @@
   };
 </script>
 
-<text-box class={className} {style} {@attach control((native: TextBox) => untrack(() => connectTextBox(native, rest, bound)))} />
+<text-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TextBox) => untrack(() => connectTextBox(native, rest, bound)))} />

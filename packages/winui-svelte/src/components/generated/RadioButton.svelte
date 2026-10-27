@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { RadioButton } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { RadioButtonComponentProps } from "./RadioButton.d.svelte.ts";
   import { connectRadioButton } from "./controls/RadioButton.svelte.ts";
 
@@ -17,6 +17,6 @@
   };
 </script>
 
-<radio-button class={className} {style} {@attach control((native: RadioButton) => untrack(() => connectRadioButton(native, rest, bound)))}>
+<radio-button {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RadioButton) => untrack(() => connectRadioButton(native, rest, bound)))}>
   {@render children?.()}
 </radio-button>

@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ColorSpectrum } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ColorSpectrumComponentProps } from "./ColorSpectrum.d.svelte.ts";
   import { connectColorSpectrum } from "./controls/ColorSpectrum.svelte.ts";
 
@@ -17,4 +17,4 @@
   };
 </script>
 
-<color-spectrum class={className} {style} {@attach control((native: ColorSpectrum) => untrack(() => connectColorSpectrum(native, rest, bound)))} />
+<color-spectrum {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ColorSpectrum) => untrack(() => connectColorSpectrum(native, rest, bound)))} />

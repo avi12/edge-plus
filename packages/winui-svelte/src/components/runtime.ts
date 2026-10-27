@@ -6,6 +6,6 @@
 import { registerControls } from "../renderer/host/host.ts";
 import * as bindings from "./generated/bindings.ts";
 
-export { control } from "../renderer/host/control.ts";
+export { attachmentsOf, control } from "../renderer/host/control.ts";
 
 registerControls(bindings);

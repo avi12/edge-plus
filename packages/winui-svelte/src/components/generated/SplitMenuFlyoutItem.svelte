@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { SplitMenuFlyoutItem } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { SplitMenuFlyoutItemComponentProps } from "./SplitMenuFlyoutItem.d.svelte.ts";
   import { connectSplitMenuFlyoutItem } from "./controls/SplitMenuFlyoutItem.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<split-menu-flyout-item class={className} {style} {@attach control((native: SplitMenuFlyoutItem) => untrack(() => connectSplitMenuFlyoutItem(native, rest, bound)))}>
+<split-menu-flyout-item {...attachmentsOf(rest)} class={className} {style} {@attach control((native: SplitMenuFlyoutItem) => untrack(() => connectSplitMenuFlyoutItem(native, rest, bound)))}>
   {@render children?.()}
 </split-menu-flyout-item>

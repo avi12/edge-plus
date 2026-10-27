@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ProgressBar } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ProgressBarComponentProps } from "./ProgressBar.d.svelte.ts";
   import { connectProgressBar } from "./controls/ProgressBar.svelte.ts";
 
@@ -17,4 +17,4 @@
   };
 </script>
 
-<progress-bar class={className} {style} {@attach control((native: ProgressBar) => untrack(() => connectProgressBar(native, rest, bound)))} />
+<progress-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ProgressBar) => untrack(() => connectProgressBar(native, rest, bound)))} />

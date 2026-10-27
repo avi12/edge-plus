@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { RichEditBox } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { RichEditBoxComponentProps } from "./RichEditBox.d.svelte.ts";
   import { connectRichEditBox } from "./controls/RichEditBox.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<rich-edit-box class={className} {style} {@attach control((native: RichEditBox) => untrack(() => connectRichEditBox(native, rest, bound)))} />
+<rich-edit-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RichEditBox) => untrack(() => connectRichEditBox(native, rest, bound)))} />

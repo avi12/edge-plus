@@ -1,5 +1,7 @@
 export type { NodeAttachment } from "./renderer/host/control.ts";
 export { control, withControl } from "./renderer/host/control.ts";
+export type { ElementRef } from "./renderer/host/element-ref.svelte.ts";
+export { elementRef } from "./renderer/host/element-ref.svelte.ts";
 export type { ClassHandler } from "./renderer/host/host.ts";
 export { registerControls, setClassHandler } from "./renderer/host/host.ts";
 export type { Mounted } from "./renderer/host/mount.svelte.ts";

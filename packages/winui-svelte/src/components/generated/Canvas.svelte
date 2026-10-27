@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Canvas } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { CanvasComponentProps } from "./Canvas.d.svelte.ts";
   import { connectCanvas } from "./controls/Canvas.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<canvas class={className} {style} {@attach control((native: Canvas) => untrack(() => connectCanvas(native, rest, bound)))}>
+<canvas {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Canvas) => untrack(() => connectCanvas(native, rest, bound)))}>
   {@render children?.()}
 </canvas>

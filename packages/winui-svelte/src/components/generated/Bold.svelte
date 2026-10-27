@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Bold } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { BoldComponentProps } from "./Bold.d.svelte.ts";
   import { connectBold } from "./controls/Bold.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<bold class={className} {style} {@attach control((native: Bold) => untrack(() => connectBold(native, rest, bound)))}>
+<bold {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Bold) => untrack(() => connectBold(native, rest, bound)))}>
   {@render children?.()}
 </bold>

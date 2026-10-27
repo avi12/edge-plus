@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Page } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { PageComponentProps } from "./Page.d.svelte.ts";
   import { connectPage } from "./controls/Page.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<page class={className} {style} {@attach control((native: Page) => untrack(() => connectPage(native, rest, bound)))}>
+<page {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Page) => untrack(() => connectPage(native, rest, bound)))}>
   {@render children?.()}
 </page>

@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Grid } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { GridComponentProps } from "./Grid.d.svelte.ts";
   import { connectGrid } from "./controls/Grid.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<grid class={className} {style} {@attach control((native: Grid) => untrack(() => connectGrid(native, rest, bound)))}>
+<grid {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Grid) => untrack(() => connectGrid(native, rest, bound)))}>
   {@render children?.()}
 </grid>

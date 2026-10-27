@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { GridViewItemPresenter } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { GridViewItemPresenterComponentProps } from "./GridViewItemPresenter.d.svelte.ts";
   import { connectGridViewItemPresenter } from "./controls/GridViewItemPresenter.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<grid-view-item-presenter class={className} {style} {@attach control((native: GridViewItemPresenter) => untrack(() => connectGridViewItemPresenter(native, rest, bound)))}>
+<grid-view-item-presenter {...attachmentsOf(rest)} class={className} {style} {@attach control((native: GridViewItemPresenter) => untrack(() => connectGridViewItemPresenter(native, rest, bound)))}>
   {@render children?.()}
 </grid-view-item-presenter>

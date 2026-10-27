@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { SystemBackdropElement } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { SystemBackdropElementComponentProps } from "./SystemBackdropElement.d.svelte.ts";
   import { connectSystemBackdropElement } from "./controls/SystemBackdropElement.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<system-backdrop-element class={className} {style} {@attach control((native: SystemBackdropElement) => untrack(() => connectSystemBackdropElement(native, rest, bound)))} />
+<system-backdrop-element {...attachmentsOf(rest)} class={className} {style} {@attach control((native: SystemBackdropElement) => untrack(() => connectSystemBackdropElement(native, rest, bound)))} />

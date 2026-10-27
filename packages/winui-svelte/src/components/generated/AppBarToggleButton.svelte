@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { AppBarToggleButton } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { AppBarToggleButtonComponentProps } from "./AppBarToggleButton.d.svelte.ts";
   import { connectAppBarToggleButton } from "./controls/AppBarToggleButton.svelte.ts";
 
@@ -17,6 +17,6 @@
   };
 </script>
 
-<app-bar-toggle-button class={className} {style} {@attach control((native: AppBarToggleButton) => untrack(() => connectAppBarToggleButton(native, rest, bound)))}>
+<app-bar-toggle-button {...attachmentsOf(rest)} class={className} {style} {@attach control((native: AppBarToggleButton) => untrack(() => connectAppBarToggleButton(native, rest, bound)))}>
   {@render children?.()}
 </app-bar-toggle-button>

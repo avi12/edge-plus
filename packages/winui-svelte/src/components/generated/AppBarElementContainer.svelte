@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { AppBarElementContainer } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { AppBarElementContainerComponentProps } from "./AppBarElementContainer.d.svelte.ts";
   import { connectAppBarElementContainer } from "./controls/AppBarElementContainer.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<app-bar-element-container class={className} {style} {@attach control((native: AppBarElementContainer) => untrack(() => connectAppBarElementContainer(native, rest, bound)))}>
+<app-bar-element-container {...attachmentsOf(rest)} class={className} {style} {@attach control((native: AppBarElementContainer) => untrack(() => connectAppBarElementContainer(native, rest, bound)))}>
   {@render children?.()}
 </app-bar-element-container>

@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Path } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { PathComponentProps } from "./Path.d.svelte.ts";
   import { connectPath } from "./controls/Path.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<path class={className} {style} {@attach control((native: Path) => untrack(() => connectPath(native, rest, bound)))} />
+<path {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Path) => untrack(() => connectPath(native, rest, bound)))} />

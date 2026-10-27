@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { RelativePanel } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { RelativePanelComponentProps } from "./RelativePanel.d.svelte.ts";
   import { connectRelativePanel } from "./controls/RelativePanel.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<relative-panel class={className} {style} {@attach control((native: RelativePanel) => untrack(() => connectRelativePanel(native, rest, bound)))}>
+<relative-panel {...attachmentsOf(rest)} class={className} {style} {@attach control((native: RelativePanel) => untrack(() => connectRelativePanel(native, rest, bound)))}>
   {@render children?.()}
 </relative-panel>

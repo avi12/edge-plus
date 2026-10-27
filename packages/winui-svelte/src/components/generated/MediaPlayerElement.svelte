@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { MediaPlayerElement } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { MediaPlayerElementComponentProps } from "./MediaPlayerElement.d.svelte.ts";
   import { connectMediaPlayerElement } from "./controls/MediaPlayerElement.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<media-player-element class={className} {style} {@attach control((native: MediaPlayerElement) => untrack(() => connectMediaPlayerElement(native, rest, bound)))} />
+<media-player-element {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MediaPlayerElement) => untrack(() => connectMediaPlayerElement(native, rest, bound)))} />

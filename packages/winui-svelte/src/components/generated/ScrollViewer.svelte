@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ScrollViewer } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ScrollViewerComponentProps } from "./ScrollViewer.d.svelte.ts";
   import { connectScrollViewer } from "./controls/ScrollViewer.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<scroll-viewer class={className} {style} {@attach control((native: ScrollViewer) => untrack(() => connectScrollViewer(native, rest, bound)))}>
+<scroll-viewer {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ScrollViewer) => untrack(() => connectScrollViewer(native, rest, bound)))}>
   {@render children?.()}
 </scroll-viewer>

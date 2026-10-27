@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ListBox } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ListBoxComponentProps } from "./ListBox.d.svelte.ts";
   import { connectListBox } from "./controls/ListBox.svelte.ts";
 
@@ -29,6 +29,6 @@
   };
 </script>
 
-<list-box class={className} {style} {@attach control((native: ListBox) => untrack(() => connectListBox(native, rest, bound)))}>
+<list-box {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ListBox) => untrack(() => connectListBox(native, rest, bound)))}>
   {@render children?.()}
 </list-box>

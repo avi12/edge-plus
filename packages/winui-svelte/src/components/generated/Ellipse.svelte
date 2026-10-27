@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Ellipse } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { EllipseComponentProps } from "./Ellipse.d.svelte.ts";
   import { connectEllipse } from "./controls/Ellipse.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<ellipse class={className} {style} {@attach control((native: Ellipse) => untrack(() => connectEllipse(native, rest, bound)))} />
+<ellipse {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Ellipse) => untrack(() => connectEllipse(native, rest, bound)))} />

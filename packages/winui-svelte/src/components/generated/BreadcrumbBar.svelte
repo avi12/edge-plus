@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { BreadcrumbBar } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { BreadcrumbBarComponentProps } from "./BreadcrumbBar.d.svelte.ts";
   import { connectBreadcrumbBar } from "./controls/BreadcrumbBar.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<breadcrumb-bar class={className} {style} {@attach control((native: BreadcrumbBar) => untrack(() => connectBreadcrumbBar(native, rest, bound)))} />
+<breadcrumb-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: BreadcrumbBar) => untrack(() => connectBreadcrumbBar(native, rest, bound)))} />

@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ParallaxView } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ParallaxViewComponentProps } from "./ParallaxView.d.svelte.ts";
   import { connectParallaxView } from "./controls/ParallaxView.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<parallax-view class={className} {style} {@attach control((native: ParallaxView) => untrack(() => connectParallaxView(native, rest, bound)))} />
+<parallax-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ParallaxView) => untrack(() => connectParallaxView(native, rest, bound)))} />

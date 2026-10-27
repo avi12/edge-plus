@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { TwoPaneView } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { TwoPaneViewComponentProps } from "./TwoPaneView.d.svelte.ts";
   import { connectTwoPaneView } from "./controls/TwoPaneView.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<two-pane-view class={className} {style} {@attach control((native: TwoPaneView) => untrack(() => connectTwoPaneView(native, rest, bound)))} />
+<two-pane-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TwoPaneView) => untrack(() => connectTwoPaneView(native, rest, bound)))} />

@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ProgressRing } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ProgressRingComponentProps } from "./ProgressRing.d.svelte.ts";
   import { connectProgressRing } from "./controls/ProgressRing.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<progress-ring class={className} {style} {@attach control((native: ProgressRing) => untrack(() => connectProgressRing(native, rest, bound)))} />
+<progress-ring {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ProgressRing) => untrack(() => connectProgressRing(native, rest, bound)))} />

@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { StackPanel } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { StackPanelComponentProps } from "./StackPanel.d.svelte.ts";
   import { connectStackPanel } from "./controls/StackPanel.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<stack-panel class={className} {style} {@attach control((native: StackPanel) => untrack(() => connectStackPanel(native, rest, bound)))}>
+<stack-panel {...attachmentsOf(rest)} class={className} {style} {@attach control((native: StackPanel) => untrack(() => connectStackPanel(native, rest, bound)))}>
   {@render children?.()}
 </stack-panel>

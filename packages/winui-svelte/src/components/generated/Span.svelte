@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Span } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { SpanComponentProps } from "./Span.d.svelte.ts";
   import { connectSpan } from "./controls/Span.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<span class={className} {style} {@attach control((native: Span) => untrack(() => connectSpan(native, rest, bound)))}>
+<span {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Span) => untrack(() => connectSpan(native, rest, bound)))}>
   {@render children?.()}
 </span>

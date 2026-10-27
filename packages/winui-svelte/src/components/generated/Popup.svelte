@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Popup } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { PopupComponentProps } from "./Popup.d.svelte.ts";
   import { connectPopup } from "./controls/Popup.svelte.ts";
 
@@ -17,6 +17,6 @@
   };
 </script>
 
-<popup class={className} {style} {@attach control((native: Popup) => untrack(() => connectPopup(native, rest, bound)))}>
+<popup {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Popup) => untrack(() => connectPopup(native, rest, bound)))}>
   {@render children?.()}
 </popup>

@@ -74,6 +74,11 @@ through an attachment the renderer provides:
   the ends are trimmed, so a sentence can wrap over indented source lines.
 - `class` and `style` on a component are passed to the element unchanged; the
   renderer hands them to the CSS runtime (below).
+- `{@attach ...}` on a component reaches its element, as on the web: Svelte
+  hands a component its attachments as symbol-keyed props, and every
+  component spreads them onto its element (`attachmentsOf(rest)`). That is how
+  `elementRef` holds a component's control, for `automationLabeledBy` to name
+  the visible label rather than repeat its text.
 
 ### Props
 

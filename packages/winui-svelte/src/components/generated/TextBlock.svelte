@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { TextBlock } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { TextBlockComponentProps } from "./TextBlock.d.svelte.ts";
   import { connectTextBlock } from "./controls/TextBlock.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<text-block class={className} {style} {@attach control((native: TextBlock) => untrack(() => connectTextBlock(native, rest, bound)))}>
+<text-block {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TextBlock) => untrack(() => connectTextBlock(native, rest, bound)))}>
   {@render children?.()}
 </text-block>

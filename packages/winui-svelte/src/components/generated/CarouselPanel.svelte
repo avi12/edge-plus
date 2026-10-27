@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { CarouselPanel } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { CarouselPanelComponentProps } from "./CarouselPanel.d.svelte.ts";
   import { connectCarouselPanel } from "./controls/CarouselPanel.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<carousel-panel class={className} {style} {@attach control((native: CarouselPanel) => untrack(() => connectCarouselPanel(native, rest, bound)))}>
+<carousel-panel {...attachmentsOf(rest)} class={className} {style} {@attach control((native: CarouselPanel) => untrack(() => connectCarouselPanel(native, rest, bound)))}>
   {@render children?.()}
 </carousel-panel>

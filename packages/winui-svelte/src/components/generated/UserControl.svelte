@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { UserControl } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { UserControlComponentProps } from "./UserControl.d.svelte.ts";
   import { connectUserControl } from "./controls/UserControl.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<user-control class={className} {style} {@attach control((native: UserControl) => untrack(() => connectUserControl(native, rest, bound)))}>
+<user-control {...attachmentsOf(rest)} class={className} {style} {@attach control((native: UserControl) => untrack(() => connectUserControl(native, rest, bound)))}>
   {@render children?.()}
 </user-control>

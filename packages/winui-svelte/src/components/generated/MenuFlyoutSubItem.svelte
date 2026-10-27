@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { MenuFlyoutSubItem } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { MenuFlyoutSubItemComponentProps } from "./MenuFlyoutSubItem.d.svelte.ts";
   import { connectMenuFlyoutSubItem } from "./controls/MenuFlyoutSubItem.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<menu-flyout-sub-item class={className} {style} {@attach control((native: MenuFlyoutSubItem) => untrack(() => connectMenuFlyoutSubItem(native, rest, bound)))}>
+<menu-flyout-sub-item {...attachmentsOf(rest)} class={className} {style} {@attach control((native: MenuFlyoutSubItem) => untrack(() => connectMenuFlyoutSubItem(native, rest, bound)))}>
   {@render children?.()}
 </menu-flyout-sub-item>

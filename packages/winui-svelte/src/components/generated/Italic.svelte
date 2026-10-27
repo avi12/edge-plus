@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Italic } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ItalicComponentProps } from "./Italic.d.svelte.ts";
   import { connectItalic } from "./controls/Italic.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<italic class={className} {style} {@attach control((native: Italic) => untrack(() => connectItalic(native, rest, bound)))}>
+<italic {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Italic) => untrack(() => connectItalic(native, rest, bound)))}>
   {@render children?.()}
 </italic>

@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { SplitView } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { SplitViewComponentProps } from "./SplitView.d.svelte.ts";
   import { connectSplitView } from "./controls/SplitView.svelte.ts";
 
@@ -17,6 +17,6 @@
   };
 </script>
 
-<split-view class={className} {style} {@attach control((native: SplitView) => untrack(() => connectSplitView(native, rest, bound)))}>
+<split-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: SplitView) => untrack(() => connectSplitView(native, rest, bound)))}>
   {@render children?.()}
 </split-view>

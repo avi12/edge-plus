@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { HubSection } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { HubSectionComponentProps } from "./HubSection.d.svelte.ts";
   import { connectHubSection } from "./controls/HubSection.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<hub-section class={className} {style} {@attach control((native: HubSection) => untrack(() => connectHubSection(native, rest, bound)))}>
+<hub-section {...attachmentsOf(rest)} class={className} {style} {@attach control((native: HubSection) => untrack(() => connectHubSection(native, rest, bound)))}>
   {@render children?.()}
 </hub-section>

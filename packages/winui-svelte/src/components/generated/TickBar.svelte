@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { TickBar } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { TickBarComponentProps } from "./TickBar.d.svelte.ts";
   import { connectTickBar } from "./controls/TickBar.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<tick-bar class={className} {style} {@attach control((native: TickBar) => untrack(() => connectTickBar(native, rest, bound)))} />
+<tick-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TickBar) => untrack(() => connectTickBar(native, rest, bound)))} />

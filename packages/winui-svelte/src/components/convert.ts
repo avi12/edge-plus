@@ -1,5 +1,6 @@
 import type { BoxedValue, NativeValue } from "../native-value.ts";
 import { boxedObject } from "../native-value.ts";
+import type { NodeAttachment } from "../renderer/host/control.ts";
 import { read } from "../renderer/host/reflect.ts";
 import {
   Application,
@@ -43,6 +44,8 @@ export type { AttachedInput, ColorInput, CornerRadiusInput, ObjectInput, Thickne
 export interface ElementProps {
   class?: string;
   style?: string;
+  // `{@attach ...}` on the component, handed on to its element.
+  [attachment: symbol]: NodeAttachment;
 }
 
 // A member of an enum by name or value. A flag enum also takes a combination

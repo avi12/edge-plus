@@ -1,7 +1,7 @@
 <script generics="Item" lang="ts">
   import type { GridView } from "../generated/bindings.ts";
   import { connectGridView } from "../generated/controls/GridView.svelte.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { GridViewComponentProps } from "./GridView.d.svelte.ts";
   import { attachItems } from "./items/items-host.svelte.ts";
   import { untrack } from "svelte";
@@ -49,4 +49,9 @@
   }
 </script>
 
-<grid-view {style} class={className} {@attach control((native: GridView) => untrack(() => connect(native)))} />
+<grid-view
+  {...attachmentsOf(rest)}
+  {style}
+  class={className}
+  {@attach control((native: GridView) => untrack(() => connect(native)))}
+/>

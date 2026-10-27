@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ItemsRepeaterScrollHost } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ItemsRepeaterScrollHostComponentProps } from "./ItemsRepeaterScrollHost.d.svelte.ts";
   import { connectItemsRepeaterScrollHost } from "./controls/ItemsRepeaterScrollHost.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<items-repeater-scroll-host class={className} {style} {@attach control((native: ItemsRepeaterScrollHost) => untrack(() => connectItemsRepeaterScrollHost(native, rest, bound)))} />
+<items-repeater-scroll-host {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemsRepeaterScrollHost) => untrack(() => connectItemsRepeaterScrollHost(native, rest, bound)))} />

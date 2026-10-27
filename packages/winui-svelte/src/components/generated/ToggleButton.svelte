@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ToggleButton } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ToggleButtonComponentProps } from "./ToggleButton.d.svelte.ts";
   import { connectToggleButton } from "./controls/ToggleButton.svelte.ts";
 
@@ -17,6 +17,6 @@
   };
 </script>
 
-<toggle-button class={className} {style} {@attach control((native: ToggleButton) => untrack(() => connectToggleButton(native, rest, bound)))}>
+<toggle-button {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ToggleButton) => untrack(() => connectToggleButton(native, rest, bound)))}>
   {@render children?.()}
 </toggle-button>

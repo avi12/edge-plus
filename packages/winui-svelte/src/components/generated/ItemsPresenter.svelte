@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { ItemsPresenter } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ItemsPresenterComponentProps } from "./ItemsPresenter.d.svelte.ts";
   import { connectItemsPresenter } from "./controls/ItemsPresenter.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<items-presenter class={className} {style} {@attach control((native: ItemsPresenter) => untrack(() => connectItemsPresenter(native, rest, bound)))} />
+<items-presenter {...attachmentsOf(rest)} class={className} {style} {@attach control((native: ItemsPresenter) => untrack(() => connectItemsPresenter(native, rest, bound)))} />

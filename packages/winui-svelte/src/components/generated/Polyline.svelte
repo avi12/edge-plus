@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Polyline } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { PolylineComponentProps } from "./Polyline.d.svelte.ts";
   import { connectPolyline } from "./controls/Polyline.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<polyline class={className} {style} {@attach control((native: Polyline) => untrack(() => connectPolyline(native, rest, bound)))} />
+<polyline {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Polyline) => untrack(() => connectPolyline(native, rest, bound)))} />

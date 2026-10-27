@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { PathIcon } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { PathIconComponentProps } from "./PathIcon.d.svelte.ts";
   import { connectPathIcon } from "./controls/PathIcon.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<path-icon class={className} {style} {@attach control((native: PathIcon) => untrack(() => connectPathIcon(native, rest, bound)))} />
+<path-icon {...attachmentsOf(rest)} class={className} {style} {@attach control((native: PathIcon) => untrack(() => connectPathIcon(native, rest, bound)))} />

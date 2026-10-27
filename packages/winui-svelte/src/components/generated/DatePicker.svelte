@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { DatePicker } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { DatePickerComponentProps } from "./DatePicker.d.svelte.ts";
   import { connectDatePicker } from "./controls/DatePicker.svelte.ts";
 
@@ -23,6 +23,6 @@
   };
 </script>
 
-<date-picker class={className} {style} {@attach control((native: DatePicker) => untrack(() => connectDatePicker(native, rest, bound)))}>
+<date-picker {...attachmentsOf(rest)} class={className} {style} {@attach control((native: DatePicker) => untrack(() => connectDatePicker(native, rest, bound)))}>
   {@render children?.()}
 </date-picker>

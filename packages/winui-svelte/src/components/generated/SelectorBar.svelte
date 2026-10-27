@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { SelectorBar } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { SelectorBarComponentProps } from "./SelectorBar.d.svelte.ts";
   import { connectSelectorBar } from "./controls/SelectorBar.svelte.ts";
 
@@ -17,4 +17,4 @@
   };
 </script>
 
-<selector-bar class={className} {style} {@attach control((native: SelectorBar) => untrack(() => connectSelectorBar(native, rest, bound)))} />
+<selector-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: SelectorBar) => untrack(() => connectSelectorBar(native, rest, bound)))} />

@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { FlipViewItem } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { FlipViewItemComponentProps } from "./FlipViewItem.d.svelte.ts";
   import { connectFlipViewItem } from "./controls/FlipViewItem.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<flip-view-item class={className} {style} {@attach control((native: FlipViewItem) => untrack(() => connectFlipViewItem(native, rest, bound)))}>
+<flip-view-item {...attachmentsOf(rest)} class={className} {style} {@attach control((native: FlipViewItem) => untrack(() => connectFlipViewItem(native, rest, bound)))}>
   {@render children?.()}
 </flip-view-item>

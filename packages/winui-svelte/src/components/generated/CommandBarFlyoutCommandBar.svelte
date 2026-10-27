@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { CommandBarFlyoutCommandBar } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { CommandBarFlyoutCommandBarComponentProps } from "./CommandBarFlyoutCommandBar.d.svelte.ts";
   import { connectCommandBarFlyoutCommandBar } from "./controls/CommandBarFlyoutCommandBar.svelte.ts";
 
@@ -17,6 +17,6 @@
   };
 </script>
 
-<command-bar-flyout-command-bar class={className} {style} {@attach control((native: CommandBarFlyoutCommandBar) => untrack(() => connectCommandBarFlyoutCommandBar(native, rest, bound)))}>
+<command-bar-flyout-command-bar {...attachmentsOf(rest)} class={className} {style} {@attach control((native: CommandBarFlyoutCommandBar) => untrack(() => connectCommandBarFlyoutCommandBar(native, rest, bound)))}>
   {@render children?.()}
 </command-bar-flyout-command-bar>

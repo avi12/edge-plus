@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { TreeView } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { TreeViewComponentProps } from "./TreeView.d.svelte.ts";
   import { connectTreeView } from "./controls/TreeView.svelte.ts";
 
@@ -17,4 +17,4 @@
   };
 </script>
 
-<tree-view class={className} {style} {@attach control((native: TreeView) => untrack(() => connectTreeView(native, rest, bound)))} />
+<tree-view {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TreeView) => untrack(() => connectTreeView(native, rest, bound)))} />

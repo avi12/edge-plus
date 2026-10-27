@@ -10,7 +10,7 @@ monorepo needs no build step (the repository is a pnpm workspace, see
 
 | Specifier | File | What |
 |---|---|---|
-| `winui-svelte` | `src/index.ts` | `control`, `withControl`, `mountControl`, `registerControls`, `setClassHandler`, `dispatch` / `flush` / `onFlush`, the value helpers |
+| `winui-svelte` | `src/index.ts` | `control`, `withControl`, `elementRef`, `mountControl`, `registerControls`, `setClassHandler`, `dispatch` / `flush` / `onFlush`, the value helpers |
 | `winui-svelte/components` | `src/components/generated/index.ts` | every WinUI 3 control as a component (`StackPanel`, `ToggleSwitch`, ...) and its props type (`ToggleSwitchComponentProps`); importing it registers the generated bindings with the renderer |
 | `winui-svelte/state` | `src/state/index.ts` | `createHostChannel()` (its `messaging` is the typed link), `hostState()`, `StateProtocol`, the transports (stdio, MessagePort, in-memory), `diff` / `applyOps` (see `src/state/README.md`) |
 | `winui-svelte/host` | `src/renderer/host/host.ts` | the custom renderer a compiled component imports (default export); not for app code |
@@ -67,6 +67,19 @@ function withControl<Control>(
 ): NodeAttachment;
 
 type NodeAttachment = (node: unknown) => void | (() => void);
+
+// One element's control, held for another element to point at: what an id is
+// to aria-labelledby. The visible label keeps its text as children, and the
+// control it names reads it from there:
+//   const label = elementRef<UIElement>();
+//   <TextBlock {@attach label.attach}>Start with Windows</TextBlock>
+//   <ToggleSwitch automationLabeledBy={label.current} />
+// `current` is reactive: undefined until the element is made and after it goes.
+interface ElementRef<Control extends object> {
+  readonly current: Control | undefined;
+  readonly attach: NodeAttachment;
+}
+function elementRef<Control extends object>(): ElementRef<Control>;
 
 interface Mounted<Props> {
   readonly root: FrameworkElement;       // the component's first control

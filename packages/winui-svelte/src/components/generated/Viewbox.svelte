@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Viewbox } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { ViewboxComponentProps } from "./Viewbox.d.svelte.ts";
   import { connectViewbox } from "./controls/Viewbox.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<viewbox class={className} {style} {@attach control((native: Viewbox) => untrack(() => connectViewbox(native, rest, bound)))}>
+<viewbox {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Viewbox) => untrack(() => connectViewbox(native, rest, bound)))}>
   {@render children?.()}
 </viewbox>

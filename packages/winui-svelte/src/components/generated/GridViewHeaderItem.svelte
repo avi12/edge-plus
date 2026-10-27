@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { GridViewHeaderItem } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { GridViewHeaderItemComponentProps } from "./GridViewHeaderItem.d.svelte.ts";
   import { connectGridViewHeaderItem } from "./controls/GridViewHeaderItem.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<grid-view-header-item class={className} {style} {@attach control((native: GridViewHeaderItem) => untrack(() => connectGridViewHeaderItem(native, rest, bound)))}>
+<grid-view-header-item {...attachmentsOf(rest)} class={className} {style} {@attach control((native: GridViewHeaderItem) => untrack(() => connectGridViewHeaderItem(native, rest, bound)))}>
   {@render children?.()}
 </grid-view-header-item>

@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Run } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { RunComponentProps } from "./Run.d.svelte.ts";
   import { connectRun } from "./controls/Run.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<run class={className} {style} {@attach control((native: Run) => untrack(() => connectRun(native, rest, bound)))}>
+<run {...attachmentsOf(rest)} class={className} {style} {@attach control((native: Run) => untrack(() => connectRun(native, rest, bound)))}>
   {@render children?.()}
 </run>

@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { InfoBadge } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { InfoBadgeComponentProps } from "./InfoBadge.d.svelte.ts";
   import { connectInfoBadge } from "./controls/InfoBadge.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<info-badge class={className} {style} {@attach control((native: InfoBadge) => untrack(() => connectInfoBadge(native, rest, bound)))} />
+<info-badge {...attachmentsOf(rest)} class={className} {style} {@attach control((native: InfoBadge) => untrack(() => connectInfoBadge(native, rest, bound)))} />

@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { CalendarDatePicker } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { CalendarDatePickerComponentProps } from "./CalendarDatePicker.d.svelte.ts";
   import { connectCalendarDatePicker } from "./controls/CalendarDatePicker.svelte.ts";
 
@@ -17,4 +17,4 @@
   };
 </script>
 
-<calendar-date-picker class={className} {style} {@attach control((native: CalendarDatePicker) => untrack(() => connectCalendarDatePicker(native, rest, bound)))} />
+<calendar-date-picker {...attachmentsOf(rest)} class={className} {style} {@attach control((native: CalendarDatePicker) => untrack(() => connectCalendarDatePicker(native, rest, bound)))} />

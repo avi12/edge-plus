@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { FontIcon } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { FontIconComponentProps } from "./FontIcon.d.svelte.ts";
   import { connectFontIcon } from "./controls/FontIcon.svelte.ts";
 
@@ -10,4 +10,4 @@
   const bound = {};
 </script>
 
-<font-icon class={className} {style} {@attach control((native: FontIcon) => untrack(() => connectFontIcon(native, rest, bound)))} />
+<font-icon {...attachmentsOf(rest)} class={className} {style} {@attach control((native: FontIcon) => untrack(() => connectFontIcon(native, rest, bound)))} />

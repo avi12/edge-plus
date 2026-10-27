@@ -2,7 +2,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { TabViewItem } from "./bindings.ts";
-  import { control } from "../runtime.ts";
+  import { attachmentsOf, control } from "../runtime.ts";
   import type { TabViewItemComponentProps } from "./TabViewItem.d.svelte.ts";
   import { connectTabViewItem } from "./controls/TabViewItem.svelte.ts";
 
@@ -10,6 +10,6 @@
   const bound = {};
 </script>
 
-<tab-view-item class={className} {style} {@attach control((native: TabViewItem) => untrack(() => connectTabViewItem(native, rest, bound)))}>
+<tab-view-item {...attachmentsOf(rest)} class={className} {style} {@attach control((native: TabViewItem) => untrack(() => connectTabViewItem(native, rest, bound)))}>
   {@render children?.()}
 </tab-view-item>
