@@ -6,3 +6,5 @@ allowBuilds:
   "@microsoft/winappcli": false
   # Installs its platform binary, which bundling the window needs (as in avi/pade).
   esbuild: true
+patchedDependencies:
+  svelte-language-server@0.18.5: patches/svelte-language-server@0.18.5.patch

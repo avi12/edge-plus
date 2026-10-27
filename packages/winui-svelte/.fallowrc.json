@@ -29,6 +29,7 @@
     "scripts/codegen/generate.ts",
     "scripts/css/export-winui-resources.ts",
     "scripts/pack/build.ts",
+    "scripts/editor/check-editor.ts",
     // Read by tsc only: it fails there on a component prop typed any or
     // unknown.
     "src/components/generated/props-strictness.ts",
@@ -47,9 +48,10 @@
     "examples/window/main.ts",
     "eslint.config.js"
   ],
-  // The bindings are reached through the #winui/* import map, and the linters
-  // run from package.json scripts.
-  "ignoreDependencies": ["@winapp/bindings", "oxlint-tsgolint", "@sveltejs/package"],
+  // The bindings are reached through the #winui/* import map, the linters run
+  // from package.json scripts, and the editor check starts the Svelte language
+  // server as a process.
+  "ignoreDependencies": ["@winapp/bindings", "oxlint-tsgolint", "@sveltejs/package", "svelte-language-server"],
   // Generated from WinUI's metadata: 167 components that differ by their
   // property lists, and an app renders them, not the package.
   // Called on the in-memory link by the state tests, through a type fallow

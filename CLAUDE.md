@@ -224,7 +224,11 @@ side and must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h
   clang-format (`.clang-format`), clang-tidy (`.clang-tidy`, correctness as
   errors), a restricted-syntax pass, the `shared.g.rs` freshness check, the
   panel's `pnpm lint:verify` (oxlint, ESLint, clippy at `-D warnings`, rustfmt,
-  `tsc` and the fallow audit) and the window protocol's freshness.
+  `tsc`, svelte-check, the fallow audit and winui-svelte's `check:editor`,
+  which fails on anything VS Code's Svelte language server would underline or
+  show as `any`) and the window protocol's freshness. Every `.svelte` file
+  must be in a tsconfig's `include`: the language server parses one that is
+  not with its own Svelte 4.
   `pwsh tools/lint.ps1 -InstallHook` gates every commit on its staged C++.
 
 # Native split: build and test

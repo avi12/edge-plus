@@ -1,0 +1,40 @@
+diff --git a/dist/src/plugins/typescript/features/InlayHintProvider.js b/dist/src/plugins/typescript/features/InlayHintProvider.js
+index 776bb55983a114b2b81b7c8f257878aed1204ea5..8a7d6518546aa471af0f0381f7c2ced6ecae8882 100644
+--- a/dist/src/plugins/typescript/features/InlayHintProvider.js
++++ b/dist/src/plugins/typescript/features/InlayHintProvider.js
+@@ -37,7 +37,8 @@ class InlayHintProviderImpl {
+             !this.isSvelte2tsxFunctionHints(sourceFile, inlayHint) &&
+             !this.isGeneratedVariableTypeHint(sourceFile, inlayHint) &&
+             !this.isGeneratedAsyncFunctionReturnType(sourceFile, inlayHint) &&
+-            !this.isGeneratedFunctionReturnType(sourceFile, inlayHint))
++            !this.isGeneratedFunctionReturnType(sourceFile, inlayHint) &&
++            !this.isGeneratedSnippetReturnType(sourceFile, inlayHint))
+             .map(async (inlayHint) => ({
+             label: await this.convertInlayHintLabelParts(inlayHint, snapshotMap),
+             position: this.getOriginalPosition(document, tsDoc, inlayHint),
+@@ -185,6 +186,25 @@ class InlayHintProviderImpl {
+             typescript_1.default.isArrowFunction(expression.arguments[0]) &&
+             this.getTypeAnnotationPosition(expression.arguments[0]) === inlayHint.position);
+     }
++    /**
++     * `true` for the snippet svelte2tsx writes for a component's content:
++     * `children:() => { return __sveltets_2_any(0); }`. Its return type is always
++     * `any` and shows on the component's tag as `: any`, though no code of the
++     * user's has that type.
++     */
++    isGeneratedSnippetReturnType(sourceFile, inlayHint) {
++        if (inlayHint.kind !== typescript_1.default.InlayHintKind.Type) {
++            return false;
++        }
++        // The innermost arrow: the whole template is itself an arrow function.
++        const expression = (0, utils_1.findClosestContainingNode)(sourceFile, { start: inlayHint.position, length: 0 }, (node) => typescript_1.default.isArrowFunction(node));
++        if (!expression ||
++            this.getTypeAnnotationPosition(expression) !== inlayHint.position ||
++            !typescript_1.default.isPropertyAssignment(expression.parent)) {
++            return false;
++        }
++        return /^\{\s*return __sveltets_2_any\(0\);\s*\}$/.test(expression.body.getText());
++    }
+     getTypeAnnotationPosition(decl) {
+         const closeParenToken = (0, utils_1.findChildOfKind)(decl, typescript_1.default.SyntaxKind.CloseParenToken);
+         if (closeParenToken) {

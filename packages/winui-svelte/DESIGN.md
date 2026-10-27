@@ -132,3 +132,15 @@ calls `flushSync`), and `hostState<T>()` / `send(action)` over a transport (type
   generator gets wrong fails a test.
 - Edge+'s window (`app/panel-tauri`) is checked pixel by pixel against its
   references after every change (0 differing pixels).
+- `pnpm check:editor` opens every `.svelte` file of the package and the panel
+  in the Svelte language server VS Code runs (pinned, with
+  `patches/svelte-language-server@0.18.5.patch`, which hides the `: any` hint
+  it shows on every component tag for the content snippet it generates) and
+  fails on any diagnostic or any inlay hint typed `any`: what the editor
+  underlines, svelte-check can miss (a file no tsconfig includes is parsed by
+  the server's own Svelte 4).
+- `generated/props-strictness.ts` puts every component's props through
+  `StrictProps` (`src/components/strictness.ts`): `tsc` fails on a prop typed
+  `any` or `unknown`. A WinUI property typed Object takes `ObjectInput` (a
+  string, number or boolean, boxed, or an object), or a narrower input from
+  `narrowedObjectInputs` in `scripts/codegen/tables.ts`.

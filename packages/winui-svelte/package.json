@@ -143,7 +143,8 @@
   "scripts": {
     "build": "node --disable-warning=ExperimentalWarning scripts/pack/build.ts",
     "check": "tsc --noEmit && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
-    "lint": "oxlint --type-aware && eslint . && stylelint \"**/*.svelte\" --config ../../app/panel-tauri/.stylelintrc.json --ignore-pattern src/components/generated && pnpm check && pnpm fallow && pnpm gen:components:check",
+    "check:editor": "node --disable-warning=ExperimentalWarning scripts/editor/check-editor.ts --project ../../app/panel-tauri",
+    "lint": "oxlint --type-aware && eslint . && stylelint \"**/*.svelte\" --config ../../app/panel-tauri/.stylelintrc.json --ignore-pattern src/components/generated && pnpm check && pnpm check:editor && pnpm fallow && pnpm gen:components:check",
     "fallow": "fallow",
     "gen:components": "node --disable-warning=ExperimentalWarning scripts/codegen/generate.ts --project ../../app/panel-tauri",
     "gen:components:check": "node --disable-warning=ExperimentalWarning scripts/codegen/generate.ts --project ../../app/panel-tauri --check",
@@ -176,6 +177,7 @@
     "stylelint": "^17.16.0",
     "svelte": "https://pkg.pr.new/svelte@18042",
     "svelte-check": "^4.7.7",
+    "svelte-language-server": "0.18.5",
     "typescript": "^6.0.3",
     "vite": "8.3.4",
     "winui-svelte": "link:."
