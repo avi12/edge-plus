@@ -1,19 +1,28 @@
 <script lang="ts">
   import type { ThemeOption } from "../../protocol.g.ts";
-  import { ComboBox, ComboBoxItem, Grid, TextBlock } from "winui-svelte";
+  import type { UIElement } from "../winui.ts";
+  import type { Snippet } from "svelte";
+  import {
+    ComboBox,
+    ComboBoxItem,
+    elementRef,
+    Grid,
+    TextBlock
+  } from "winui-svelte";
 
   // The theme for one Windows mode: Edge's default theme, then the user's
-  // themes, then Edge's own, beside the mode's name. The label is a prop, not
-  // children, because the ComboBox's automationName needs it as a string.
+  // themes, then Edge's own, beside the mode's name. The name is the children,
+  // and the ComboBox is named by it.
   interface Props {
-    label: string;
     options: ThemeOption[];
     // The theme the core assigned to this mode.
     assignedId: string;
     onPick: (id: string) => void;
+    children: Snippet;
   }
 
-  const { label, options, assignedId, onPick }: Props = $props();
+  const { options, assignedId, onPick, children }: Props = $props();
+  const label = elementRef<UIElement>();
 
   // A theme removed meanwhile falls back to the default theme, the first
   // option. The binding's setter hears only the user's choices, never the
@@ -30,8 +39,12 @@
 </script>
 
 <Grid class="picker">
-  <TextBlock class="card-title picker-label">{label}</TextBlock>
-  <ComboBox class="picker-choice" automationName={label} bind:selectedIndex={() => selectedIndex, pick}>
+  <TextBlock class="card-title picker-label" {@attach label.attach}>{@render children()}</TextBlock>
+  <ComboBox
+    class="picker-choice"
+    automationLabeledBy={label.current}
+    bind:selectedIndex={() => selectedIndex, pick}
+  >
     {#each options as option (option.name)}
       <ComboBoxItem>{option.name}</ComboBoxItem>
     {/each}

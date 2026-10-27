@@ -140,8 +140,8 @@
     >Folder…</Button>
   </StackPanel>
   <TextBlock class="error" visibility={error.length > 0 ? "Visible" : "Collapsed"}>{error}</TextBlock>
-  <ThemePicker assignedId={theming.light} label="When Windows is light" onPick={id => assign("light", id)} {options} />
-  <ThemePicker assignedId={theming.dark} label="When Windows is dark" onPick={id => assign("dark", id)} {options} />
+  <ThemePicker assignedId={theming.light} onPick={id => assign("light", id)} {options}>When Windows is light</ThemePicker>
+  <ThemePicker assignedId={theming.dark} onPick={id => assign("dark", id)} {options}>When Windows is dark</ThemePicker>
   <OwnThemeList onRemove={remove} onReorder={ids => void reorder(ids)} rows={theming.own} />
   <EdgeThemeList {hasThemes} rows={theming.edge} />
 </StackPanel>
