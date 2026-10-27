@@ -121,7 +121,9 @@ const tsStyleRules = {
       ignoreStrings: true,
       ignoreTemplateLiterals: true,
       ignoreRegExpLiterals: true,
-      ignorePattern: "d=\"[^\"]*\""
+      // An SVG path, and the window's prose: a sentence in a markup attribute
+      // is a string like any other, and a line break in it would be shown.
+      ignorePattern: "d=\"[^\"]*\"|[\\w-]+=\"[^\"{}]{40,}\""
     }
   ],
   "@stylistic/padded-blocks": ["error", "never"],
