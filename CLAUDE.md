@@ -162,7 +162,8 @@ side and must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h
   config wire, its events, the embedded DLL, `dll_sync`), `edge/` (the pinned
   build, the Edge watcher, the dev-mode waiter, legacy carry-over), `themes/`,
   `setup/` (start at sign-in, updates, the MSI hand-off) and `ui/` (the View the
-  window renders, every sentence in `wording.rs`, the window's process).
+  window renders, the sentences the core says itself in `wording.rs`, the
+  window's process).
 - **`edge-native`** (`src-tauri/edge-native/`) is the **only** crate with
   `unsafe` and every Win32 / WinRT call the core makes; the core forbids
   `unsafe`.
@@ -170,7 +171,13 @@ side and must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h
   starts. It draws WinUI's own controls through dynwinrt's bindings (`pnpm
   restore` generates them into `.winapp/bindings`; `ui/window/winui.ts` is their
   one import site), renders the View the core sends and answers with Actions,
-  one JSON line each way. `ui/protocol.g.ts` is generated from
+  one JSON line each way. The View is state only (enums and values): every
+  word the window shows is in its `.svelte` markup, so a saved text edit hot
+  reloads like any other, in `pnpm window` and `pnpm app` alike. The feature
+  titles and the paused-build sentence, which the core's toast says too, have
+  one home both read: `ui/window/wording/shared-wording.json`. The core's own
+  sentences (toasts, action errors) stay in `wording.rs`. `ui/protocol.g.ts` is
+  generated from
   `src-tauri/src/ui/protocol.rs` (`cargo test export_the_window_types`; the lint
   gate fails when it is stale). WinUI's loop runs on a worker thread. No UI
   library; styles are `ui/window/style/styles.ts`, motion goes through
