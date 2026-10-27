@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ColorPicker } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ColorPickerComponentProps } from "./ColorPicker.d.svelte.ts";
+  import type { ColorPickerComponentProps } from "./controls/ColorPicker.svelte.ts";
   import { connectColorPicker } from "./controls/ColorPicker.svelte.ts";
 
   let { color = $bindable(), class: className, style, ...rest }: ColorPickerComponentProps = $props();

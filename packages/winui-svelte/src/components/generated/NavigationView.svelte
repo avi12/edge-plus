@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { NavigationView } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { NavigationViewComponentProps } from "./NavigationView.d.svelte.ts";
+  import type { NavigationViewComponentProps } from "./controls/NavigationView.svelte.ts";
   import { connectNavigationView } from "./controls/NavigationView.svelte.ts";
 
   let { isPaneOpen = $bindable(), selectedItem = $bindable(), children, class: className, style, ...rest }: NavigationViewComponentProps = $props();

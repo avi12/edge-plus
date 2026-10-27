@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { CheckBox } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { CheckBoxComponentProps } from "./CheckBox.d.svelte.ts";
+  import type { CheckBoxComponentProps } from "./controls/CheckBox.svelte.ts";
   import { connectCheckBox } from "./controls/CheckBox.svelte.ts";
 
   let { isChecked = $bindable(), children, class: className, style, ...rest }: CheckBoxComponentProps = $props();

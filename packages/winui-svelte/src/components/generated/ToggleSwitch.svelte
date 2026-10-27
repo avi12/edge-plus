@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ToggleSwitch } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ToggleSwitchComponentProps } from "./ToggleSwitch.d.svelte.ts";
+  import type { ToggleSwitchComponentProps } from "./controls/ToggleSwitch.svelte.ts";
   import { connectToggleSwitch } from "./controls/ToggleSwitch.svelte.ts";
 
   let { isOn = $bindable(), children, class: className, style, ...rest }: ToggleSwitchComponentProps = $props();

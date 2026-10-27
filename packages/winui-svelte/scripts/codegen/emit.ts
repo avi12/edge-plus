@@ -443,6 +443,10 @@ export function emitLevel(level: ClassModel): string {
     imports.convertTypes.add("AttachedInput");
   }
 
+  if (level.isComponent) {
+    imports.convertTypes.add("ElementProps");
+  }
+
   const extras = extrasOf(level);
   const extended = [parentName === undefined ? null : `${parentName}Props`, extras].filter(part => part !== null);
   const propsExtends = extended.length === 0 ? "" : ` extends ${extended.join(", ")}`;
@@ -462,6 +466,10 @@ export function emitLevel(level: ClassModel): string {
     "",
     `export type ${name}Bound = ${boundTypeOf(level)};`,
     "",
+    // Here, not in the component's .d.svelte.ts: the Svelte language server
+    // reads `./X.d.svelte.ts` imported from X.svelte as X.svelte itself, which
+    // exports only the component.
+    ...level.isComponent ? [`export type ${name}ComponentProps = ${name}Props & ElementProps;`, ""] : [],
     `export function link${name}(`,
     `  control: ${name},`,
     `  props: ${name}Props,`,
@@ -482,11 +490,10 @@ export function emitDeclaration(level: ClassModel): string {
   return `${[
     generatedHeader,
     "",
-    "import type { ElementProps } from \"../convert.ts\";",
-    `import type { ${name}Props } from "./controls/${name}.svelte.ts";`,
+    `import type { ${name}ComponentProps } from "./controls/${name}.svelte.ts";`,
     "import type { Component } from \"svelte\";",
     "",
-    `export type ${name}ComponentProps = ${name}Props & ElementProps;`,
+    `export type { ${name}ComponentProps };`,
     "",
     `declare const ${name}: Component<${name}ComponentProps, Record<string, never>, ${bindings === "" ? "\"\"" : bindings}>;`,
     `export default ${name};`
@@ -520,7 +527,7 @@ export function emitComponent(level: ClassModel): string {
     "  import { untrack } from \"svelte\";",
     `  import type { ${name} } from "./bindings.ts";`,
     "  import { attachmentsOf, control } from \"../runtime.ts\";",
-    `  import type { ${name}ComponentProps } from "./${name}.d.svelte.ts";`,
+    `  import type { ${name}ComponentProps } from "./controls/${name}.svelte.ts";`,
     `  import { connect${name} } from "./controls/${name}.svelte.ts";`,
     "",
     `  let { ${destructured.join(", ")} }: ${name}ComponentProps = $props();`,

@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { CommandBarOverflowPresenter } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { CommandBarOverflowPresenterComponentProps } from "./CommandBarOverflowPresenter.d.svelte.ts";
+  import type { CommandBarOverflowPresenterComponentProps } from "./controls/CommandBarOverflowPresenter.svelte.ts";
   import { connectCommandBarOverflowPresenter } from "./controls/CommandBarOverflowPresenter.svelte.ts";
 
   let { children, class: className, style, ...rest }: CommandBarOverflowPresenterComponentProps = $props();

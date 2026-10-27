@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ProgressRing } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ProgressRingComponentProps } from "./ProgressRing.d.svelte.ts";
+  import type { ProgressRingComponentProps } from "./controls/ProgressRing.svelte.ts";
   import { connectProgressRing } from "./controls/ProgressRing.svelte.ts";
 
   let { class: className, style, ...rest }: ProgressRingComponentProps = $props();

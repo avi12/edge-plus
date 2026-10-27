@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { InlineUIContainer } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { InlineUIContainerComponentProps } from "./InlineUIContainer.d.svelte.ts";
+  import type { InlineUIContainerComponentProps } from "./controls/InlineUIContainer.svelte.ts";
   import { connectInlineUIContainer } from "./controls/InlineUIContainer.svelte.ts";
 
   let { children, class: className, style, ...rest }: InlineUIContainerComponentProps = $props();

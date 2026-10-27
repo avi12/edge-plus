@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { RelativePanel } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { RelativePanelComponentProps } from "./RelativePanel.d.svelte.ts";
+  import type { RelativePanelComponentProps } from "./controls/RelativePanel.svelte.ts";
   import { connectRelativePanel } from "./controls/RelativePanel.svelte.ts";
 
   let { children, class: className, style, ...rest }: RelativePanelComponentProps = $props();

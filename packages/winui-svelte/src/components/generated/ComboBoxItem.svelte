@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ComboBoxItem } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ComboBoxItemComponentProps } from "./ComboBoxItem.d.svelte.ts";
+  import type { ComboBoxItemComponentProps } from "./controls/ComboBoxItem.svelte.ts";
   import { connectComboBoxItem } from "./controls/ComboBoxItem.svelte.ts";
 
   let { children, class: className, style, ...rest }: ComboBoxItemComponentProps = $props();

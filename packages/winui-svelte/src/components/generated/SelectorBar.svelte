@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { SelectorBar } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { SelectorBarComponentProps } from "./SelectorBar.d.svelte.ts";
+  import type { SelectorBarComponentProps } from "./controls/SelectorBar.svelte.ts";
   import { connectSelectorBar } from "./controls/SelectorBar.svelte.ts";
 
   let { selectedItem = $bindable(), class: className, style, ...rest }: SelectorBarComponentProps = $props();

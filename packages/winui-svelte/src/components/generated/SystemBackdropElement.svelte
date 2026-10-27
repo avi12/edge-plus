@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { SystemBackdropElement } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { SystemBackdropElementComponentProps } from "./SystemBackdropElement.d.svelte.ts";
+  import type { SystemBackdropElementComponentProps } from "./controls/SystemBackdropElement.svelte.ts";
   import { connectSystemBackdropElement } from "./controls/SystemBackdropElement.svelte.ts";
 
   let { class: className, style, ...rest }: SystemBackdropElementComponentProps = $props();

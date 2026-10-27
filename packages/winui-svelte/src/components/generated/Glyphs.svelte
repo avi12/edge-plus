@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Glyphs } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { GlyphsComponentProps } from "./Glyphs.d.svelte.ts";
+  import type { GlyphsComponentProps } from "./controls/Glyphs.svelte.ts";
   import { connectGlyphs } from "./controls/Glyphs.svelte.ts";
 
   let { class: className, style, ...rest }: GlyphsComponentProps = $props();

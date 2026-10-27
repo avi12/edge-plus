@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { InfoBarPanel } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { InfoBarPanelComponentProps } from "./InfoBarPanel.d.svelte.ts";
+  import type { InfoBarPanelComponentProps } from "./controls/InfoBarPanel.svelte.ts";
   import { connectInfoBarPanel } from "./controls/InfoBarPanel.svelte.ts";
 
   let { children, class: className, style, ...rest }: InfoBarPanelComponentProps = $props();

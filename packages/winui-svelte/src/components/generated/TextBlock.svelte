@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { TextBlock } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { TextBlockComponentProps } from "./TextBlock.d.svelte.ts";
+  import type { TextBlockComponentProps } from "./controls/TextBlock.svelte.ts";
   import { connectTextBlock } from "./controls/TextBlock.svelte.ts";
 
   let { children, class: className, style, ...rest }: TextBlockComponentProps = $props();

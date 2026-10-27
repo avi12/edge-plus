@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { MediaTransportControls } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { MediaTransportControlsComponentProps } from "./MediaTransportControls.d.svelte.ts";
+  import type { MediaTransportControlsComponentProps } from "./controls/MediaTransportControls.svelte.ts";
   import { connectMediaTransportControls } from "./controls/MediaTransportControls.svelte.ts";
 
   let { class: className, style, ...rest }: MediaTransportControlsComponentProps = $props();

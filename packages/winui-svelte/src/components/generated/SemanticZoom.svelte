@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { SemanticZoom } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { SemanticZoomComponentProps } from "./SemanticZoom.d.svelte.ts";
+  import type { SemanticZoomComponentProps } from "./controls/SemanticZoom.svelte.ts";
   import { connectSemanticZoom } from "./controls/SemanticZoom.svelte.ts";
 
   let { children, class: className, style, ...rest }: SemanticZoomComponentProps = $props();

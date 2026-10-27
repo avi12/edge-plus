@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { CalendarView } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { CalendarViewComponentProps } from "./CalendarView.d.svelte.ts";
+  import type { CalendarViewComponentProps } from "./controls/CalendarView.svelte.ts";
   import { connectCalendarView } from "./controls/CalendarView.svelte.ts";
 
   let { class: className, style, ...rest }: CalendarViewComponentProps = $props();

@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ListBox } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ListBoxComponentProps } from "./ListBox.d.svelte.ts";
+  import type { ListBoxComponentProps } from "./controls/ListBox.svelte.ts";
   import { connectListBox } from "./controls/ListBox.svelte.ts";
 
   let { selectedIndex = $bindable(), selectedItem = $bindable(), selectedValue = $bindable(), children, class: className, style, ...rest }: ListBoxComponentProps = $props();

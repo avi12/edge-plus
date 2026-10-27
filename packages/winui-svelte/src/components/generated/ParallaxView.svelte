@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ParallaxView } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ParallaxViewComponentProps } from "./ParallaxView.d.svelte.ts";
+  import type { ParallaxViewComponentProps } from "./controls/ParallaxView.svelte.ts";
   import { connectParallaxView } from "./controls/ParallaxView.svelte.ts";
 
   let { class: className, style, ...rest }: ParallaxViewComponentProps = $props();

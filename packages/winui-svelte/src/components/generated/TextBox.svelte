@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { TextBox } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { TextBoxComponentProps } from "./TextBox.d.svelte.ts";
+  import type { TextBoxComponentProps } from "./controls/TextBox.svelte.ts";
   import { connectTextBox } from "./controls/TextBox.svelte.ts";
 
   let { text = $bindable(), class: className, style, ...rest }: TextBoxComponentProps = $props();

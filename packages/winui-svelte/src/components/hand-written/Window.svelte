@@ -2,7 +2,7 @@
   import { attachWindow } from "../../window/window-host.svelte.ts";
   import type { FrameworkElement, Grid } from "../generated/bindings.ts";
   import { control } from "../runtime.ts";
-  import type { WindowComponentProps } from "./Window.d.svelte.ts";
+  import type { WindowComponentProps } from "./window-props.ts";
   import { untrack } from "svelte";
 
   // A native window around its content. Mount it as the app's root (the

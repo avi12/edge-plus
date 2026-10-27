@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ContentControl } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ContentControlComponentProps } from "./ContentControl.d.svelte.ts";
+  import type { ContentControlComponentProps } from "./controls/ContentControl.svelte.ts";
   import { connectContentControl } from "./controls/ContentControl.svelte.ts";
 
   let { children, class: className, style, ...rest }: ContentControlComponentProps = $props();

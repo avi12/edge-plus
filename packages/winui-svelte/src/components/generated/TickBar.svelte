@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { TickBar } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { TickBarComponentProps } from "./TickBar.d.svelte.ts";
+  import type { TickBarComponentProps } from "./controls/TickBar.svelte.ts";
   import { connectTickBar } from "./controls/TickBar.svelte.ts";
 
   let { class: className, style, ...rest }: TickBarComponentProps = $props();

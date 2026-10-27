@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Viewbox } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ViewboxComponentProps } from "./Viewbox.d.svelte.ts";
+  import type { ViewboxComponentProps } from "./controls/Viewbox.svelte.ts";
   import { connectViewbox } from "./controls/Viewbox.svelte.ts";
 
   let { children, class: className, style, ...rest }: ViewboxComponentProps = $props();

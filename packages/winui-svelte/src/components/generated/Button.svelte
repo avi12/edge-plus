@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Button } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ButtonComponentProps } from "./Button.d.svelte.ts";
+  import type { ButtonComponentProps } from "./controls/Button.svelte.ts";
   import { connectButton } from "./controls/Button.svelte.ts";
 
   let { children, class: className, style, ...rest }: ButtonComponentProps = $props();

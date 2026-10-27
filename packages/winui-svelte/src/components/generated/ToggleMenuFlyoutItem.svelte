@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ToggleMenuFlyoutItem } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ToggleMenuFlyoutItemComponentProps } from "./ToggleMenuFlyoutItem.d.svelte.ts";
+  import type { ToggleMenuFlyoutItemComponentProps } from "./controls/ToggleMenuFlyoutItem.svelte.ts";
   import { connectToggleMenuFlyoutItem } from "./controls/ToggleMenuFlyoutItem.svelte.ts";
 
   let { children, class: className, style, ...rest }: ToggleMenuFlyoutItemComponentProps = $props();

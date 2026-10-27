@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ScrollView } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ScrollViewComponentProps } from "./ScrollView.d.svelte.ts";
+  import type { ScrollViewComponentProps } from "./controls/ScrollView.svelte.ts";
   import { connectScrollView } from "./controls/ScrollView.svelte.ts";
 
   let { class: className, style, ...rest }: ScrollViewComponentProps = $props();

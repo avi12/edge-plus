@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ItemsRepeaterScrollHost } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ItemsRepeaterScrollHostComponentProps } from "./ItemsRepeaterScrollHost.d.svelte.ts";
+  import type { ItemsRepeaterScrollHostComponentProps } from "./controls/ItemsRepeaterScrollHost.svelte.ts";
   import { connectItemsRepeaterScrollHost } from "./controls/ItemsRepeaterScrollHost.svelte.ts";
 
   let { class: className, style, ...rest }: ItemsRepeaterScrollHostComponentProps = $props();

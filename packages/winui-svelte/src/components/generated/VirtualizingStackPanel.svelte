@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { VirtualizingStackPanel } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { VirtualizingStackPanelComponentProps } from "./VirtualizingStackPanel.d.svelte.ts";
+  import type { VirtualizingStackPanelComponentProps } from "./controls/VirtualizingStackPanel.svelte.ts";
   import { connectVirtualizingStackPanel } from "./controls/VirtualizingStackPanel.svelte.ts";
 
   let { children, class: className, style, ...rest }: VirtualizingStackPanelComponentProps = $props();

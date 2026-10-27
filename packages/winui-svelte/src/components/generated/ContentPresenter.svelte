@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ContentPresenter } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ContentPresenterComponentProps } from "./ContentPresenter.d.svelte.ts";
+  import type { ContentPresenterComponentProps } from "./controls/ContentPresenter.svelte.ts";
   import { connectContentPresenter } from "./controls/ContentPresenter.svelte.ts";
 
   let { children, class: className, style, ...rest }: ContentPresenterComponentProps = $props();

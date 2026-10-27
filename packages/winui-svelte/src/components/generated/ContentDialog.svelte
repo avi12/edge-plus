@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ContentDialog } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ContentDialogComponentProps } from "./ContentDialog.d.svelte.ts";
+  import type { ContentDialogComponentProps } from "./controls/ContentDialog.svelte.ts";
   import { connectContentDialog } from "./controls/ContentDialog.svelte.ts";
 
   let { children, class: className, style, ...rest }: ContentDialogComponentProps = $props();

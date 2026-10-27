@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { DatePicker } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { DatePickerComponentProps } from "./DatePicker.d.svelte.ts";
+  import type { DatePickerComponentProps } from "./controls/DatePicker.svelte.ts";
   import { connectDatePicker } from "./controls/DatePicker.svelte.ts";
 
   let { date = $bindable(), selectedDate = $bindable(), children, class: className, style, ...rest }: DatePickerComponentProps = $props();

@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { PivotPanel } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { PivotPanelComponentProps } from "./PivotPanel.d.svelte.ts";
+  import type { PivotPanelComponentProps } from "./controls/PivotPanel.svelte.ts";
   import { connectPivotPanel } from "./controls/PivotPanel.svelte.ts";
 
   let { children, class: className, style, ...rest }: PivotPanelComponentProps = $props();

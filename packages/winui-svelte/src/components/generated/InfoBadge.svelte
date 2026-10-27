@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { InfoBadge } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { InfoBadgeComponentProps } from "./InfoBadge.d.svelte.ts";
+  import type { InfoBadgeComponentProps } from "./controls/InfoBadge.svelte.ts";
   import { connectInfoBadge } from "./controls/InfoBadge.svelte.ts";
 
   let { class: className, style, ...rest }: InfoBadgeComponentProps = $props();

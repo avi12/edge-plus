@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { AnimatedVisualPlayer } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { AnimatedVisualPlayerComponentProps } from "./AnimatedVisualPlayer.d.svelte.ts";
+  import type { AnimatedVisualPlayerComponentProps } from "./controls/AnimatedVisualPlayer.svelte.ts";
   import { connectAnimatedVisualPlayer } from "./controls/AnimatedVisualPlayer.svelte.ts";
 
   let { class: className, style, ...rest }: AnimatedVisualPlayerComponentProps = $props();

@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Hub } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { HubComponentProps } from "./Hub.d.svelte.ts";
+  import type { HubComponentProps } from "./controls/Hub.svelte.ts";
   import { connectHub } from "./controls/Hub.svelte.ts";
 
   let { children, class: className, style, ...rest }: HubComponentProps = $props();

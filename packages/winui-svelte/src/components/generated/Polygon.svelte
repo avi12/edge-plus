@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Polygon } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { PolygonComponentProps } from "./Polygon.d.svelte.ts";
+  import type { PolygonComponentProps } from "./controls/Polygon.svelte.ts";
   import { connectPolygon } from "./controls/Polygon.svelte.ts";
 
   let { class: className, style, ...rest }: PolygonComponentProps = $props();

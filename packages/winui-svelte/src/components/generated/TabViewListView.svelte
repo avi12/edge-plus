@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { TabViewListView } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { TabViewListViewComponentProps } from "./TabViewListView.d.svelte.ts";
+  import type { TabViewListViewComponentProps } from "./controls/TabViewListView.svelte.ts";
   import { connectTabViewListView } from "./controls/TabViewListView.svelte.ts";
 
   let { selectedIndex = $bindable(), selectedItem = $bindable(), selectedValue = $bindable(), children, class: className, style, ...rest }: TabViewListViewComponentProps = $props();

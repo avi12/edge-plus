@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { AppBarSeparator } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { AppBarSeparatorComponentProps } from "./AppBarSeparator.d.svelte.ts";
+  import type { AppBarSeparatorComponentProps } from "./controls/AppBarSeparator.svelte.ts";
   import { connectAppBarSeparator } from "./controls/AppBarSeparator.svelte.ts";
 
   let { class: className, style, ...rest }: AppBarSeparatorComponentProps = $props();

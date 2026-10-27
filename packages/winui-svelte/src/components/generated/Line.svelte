@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Line } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { LineComponentProps } from "./Line.d.svelte.ts";
+  import type { LineComponentProps } from "./controls/Line.svelte.ts";
   import { connectLine } from "./controls/Line.svelte.ts";
 
   let { class: className, style, ...rest }: LineComponentProps = $props();

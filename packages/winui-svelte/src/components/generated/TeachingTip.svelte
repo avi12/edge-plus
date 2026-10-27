@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { TeachingTip } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { TeachingTipComponentProps } from "./TeachingTip.d.svelte.ts";
+  import type { TeachingTipComponentProps } from "./controls/TeachingTip.svelte.ts";
   import { connectTeachingTip } from "./controls/TeachingTip.svelte.ts";
 
   let { isOpen = $bindable(), children, class: className, style, ...rest }: TeachingTipComponentProps = $props();

@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Expander } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ExpanderComponentProps } from "./Expander.d.svelte.ts";
+  import type { ExpanderComponentProps } from "./controls/Expander.svelte.ts";
   import { connectExpander } from "./controls/Expander.svelte.ts";
 
   let { isExpanded = $bindable(), children, class: className, style, ...rest }: ExpanderComponentProps = $props();

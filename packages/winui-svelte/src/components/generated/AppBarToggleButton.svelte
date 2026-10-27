@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { AppBarToggleButton } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { AppBarToggleButtonComponentProps } from "./AppBarToggleButton.d.svelte.ts";
+  import type { AppBarToggleButtonComponentProps } from "./controls/AppBarToggleButton.svelte.ts";
   import { connectAppBarToggleButton } from "./controls/AppBarToggleButton.svelte.ts";
 
   let { isChecked = $bindable(), children, class: className, style, ...rest }: AppBarToggleButtonComponentProps = $props();

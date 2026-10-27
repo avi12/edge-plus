@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Image } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ImageComponentProps } from "./Image.d.svelte.ts";
+  import type { ImageComponentProps } from "./controls/Image.svelte.ts";
   import { connectImage } from "./controls/Image.svelte.ts";
 
   let { class: className, style, ...rest }: ImageComponentProps = $props();

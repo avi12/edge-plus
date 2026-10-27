@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { CarouselPanel } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { CarouselPanelComponentProps } from "./CarouselPanel.d.svelte.ts";
+  import type { CarouselPanelComponentProps } from "./controls/CarouselPanel.svelte.ts";
   import { connectCarouselPanel } from "./controls/CarouselPanel.svelte.ts";
 
   let { children, class: className, style, ...rest }: CarouselPanelComponentProps = $props();

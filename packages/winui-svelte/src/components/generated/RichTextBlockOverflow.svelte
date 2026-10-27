@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { RichTextBlockOverflow } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { RichTextBlockOverflowComponentProps } from "./RichTextBlockOverflow.d.svelte.ts";
+  import type { RichTextBlockOverflowComponentProps } from "./controls/RichTextBlockOverflow.svelte.ts";
   import { connectRichTextBlockOverflow } from "./controls/RichTextBlockOverflow.svelte.ts";
 
   let { class: className, style, ...rest }: RichTextBlockOverflowComponentProps = $props();

@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { TreeViewItem } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { TreeViewItemComponentProps } from "./TreeViewItem.d.svelte.ts";
+  import type { TreeViewItemComponentProps } from "./controls/TreeViewItem.svelte.ts";
   import { connectTreeViewItem } from "./controls/TreeViewItem.svelte.ts";
 
   let { children, class: className, style, ...rest }: TreeViewItemComponentProps = $props();

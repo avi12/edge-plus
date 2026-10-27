@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Run } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { RunComponentProps } from "./Run.d.svelte.ts";
+  import type { RunComponentProps } from "./controls/Run.svelte.ts";
   import { connectRun } from "./controls/Run.svelte.ts";
 
   let { children, class: className, style, ...rest }: RunComponentProps = $props();

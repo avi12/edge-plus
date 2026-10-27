@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Italic } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ItalicComponentProps } from "./Italic.d.svelte.ts";
+  import type { ItalicComponentProps } from "./controls/Italic.svelte.ts";
   import { connectItalic } from "./controls/Italic.svelte.ts";
 
   let { children, class: className, style, ...rest }: ItalicComponentProps = $props();

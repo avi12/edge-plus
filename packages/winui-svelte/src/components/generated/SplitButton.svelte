@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { SplitButton } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { SplitButtonComponentProps } from "./SplitButton.d.svelte.ts";
+  import type { SplitButtonComponentProps } from "./controls/SplitButton.svelte.ts";
   import { connectSplitButton } from "./controls/SplitButton.svelte.ts";
 
   let { children, class: className, style, ...rest }: SplitButtonComponentProps = $props();

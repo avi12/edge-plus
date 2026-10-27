@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { MenuFlyoutSeparator } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { MenuFlyoutSeparatorComponentProps } from "./MenuFlyoutSeparator.d.svelte.ts";
+  import type { MenuFlyoutSeparatorComponentProps } from "./controls/MenuFlyoutSeparator.svelte.ts";
   import { connectMenuFlyoutSeparator } from "./controls/MenuFlyoutSeparator.svelte.ts";
 
   let { class: className, style, ...rest }: MenuFlyoutSeparatorComponentProps = $props();

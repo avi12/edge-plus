@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ItemContainer } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ItemContainerComponentProps } from "./ItemContainer.d.svelte.ts";
+  import type { ItemContainerComponentProps } from "./controls/ItemContainer.svelte.ts";
   import { connectItemContainer } from "./controls/ItemContainer.svelte.ts";
 
   let { class: className, style, ...rest }: ItemContainerComponentProps = $props();

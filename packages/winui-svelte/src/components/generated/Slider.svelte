@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Slider } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { SliderComponentProps } from "./Slider.d.svelte.ts";
+  import type { SliderComponentProps } from "./controls/Slider.svelte.ts";
   import { connectSlider } from "./controls/Slider.svelte.ts";
 
   let { value = $bindable(), class: className, style, ...rest }: SliderComponentProps = $props();

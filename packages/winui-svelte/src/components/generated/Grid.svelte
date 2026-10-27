@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Grid } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { GridComponentProps } from "./Grid.d.svelte.ts";
+  import type { GridComponentProps } from "./controls/Grid.svelte.ts";
   import { connectGrid } from "./controls/Grid.svelte.ts";
 
   let { children, class: className, style, ...rest }: GridComponentProps = $props();

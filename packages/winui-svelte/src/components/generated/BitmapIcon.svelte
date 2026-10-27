@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { BitmapIcon } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { BitmapIconComponentProps } from "./BitmapIcon.d.svelte.ts";
+  import type { BitmapIconComponentProps } from "./controls/BitmapIcon.svelte.ts";
   import { connectBitmapIcon } from "./controls/BitmapIcon.svelte.ts";
 
   let { class: className, style, ...rest }: BitmapIconComponentProps = $props();

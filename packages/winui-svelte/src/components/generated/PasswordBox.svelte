@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { PasswordBox } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { PasswordBoxComponentProps } from "./PasswordBox.d.svelte.ts";
+  import type { PasswordBoxComponentProps } from "./controls/PasswordBox.svelte.ts";
   import { connectPasswordBox } from "./controls/PasswordBox.svelte.ts";
 
   let { password = $bindable(), class: className, style, ...rest }: PasswordBoxComponentProps = $props();

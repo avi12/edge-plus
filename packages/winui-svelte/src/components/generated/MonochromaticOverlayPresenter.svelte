@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { MonochromaticOverlayPresenter } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { MonochromaticOverlayPresenterComponentProps } from "./MonochromaticOverlayPresenter.d.svelte.ts";
+  import type { MonochromaticOverlayPresenterComponentProps } from "./controls/MonochromaticOverlayPresenter.svelte.ts";
   import { connectMonochromaticOverlayPresenter } from "./controls/MonochromaticOverlayPresenter.svelte.ts";
 
   let { children, class: className, style, ...rest }: MonochromaticOverlayPresenterComponentProps = $props();

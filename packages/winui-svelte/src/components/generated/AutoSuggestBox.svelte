@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { AutoSuggestBox } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { AutoSuggestBoxComponentProps } from "./AutoSuggestBox.d.svelte.ts";
+  import type { AutoSuggestBoxComponentProps } from "./controls/AutoSuggestBox.svelte.ts";
   import { connectAutoSuggestBox } from "./controls/AutoSuggestBox.svelte.ts";
 
   let { text = $bindable(), children, class: className, style, ...rest }: AutoSuggestBoxComponentProps = $props();

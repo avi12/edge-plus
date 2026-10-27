@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { SplitView } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { SplitViewComponentProps } from "./SplitView.d.svelte.ts";
+  import type { SplitViewComponentProps } from "./controls/SplitView.svelte.ts";
   import { connectSplitView } from "./controls/SplitView.svelte.ts";
 
   let { isPaneOpen = $bindable(), children, class: className, style, ...rest }: SplitViewComponentProps = $props();

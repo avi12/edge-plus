@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { LineBreak } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { LineBreakComponentProps } from "./LineBreak.d.svelte.ts";
+  import type { LineBreakComponentProps } from "./controls/LineBreak.svelte.ts";
   import { connectLineBreak } from "./controls/LineBreak.svelte.ts";
 
   let { class: className, style, ...rest }: LineBreakComponentProps = $props();

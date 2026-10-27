@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { NavigationViewItem } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { NavigationViewItemComponentProps } from "./NavigationViewItem.d.svelte.ts";
+  import type { NavigationViewItemComponentProps } from "./controls/NavigationViewItem.svelte.ts";
   import { connectNavigationViewItem } from "./controls/NavigationViewItem.svelte.ts";
 
   let { children, class: className, style, ...rest }: NavigationViewItemComponentProps = $props();

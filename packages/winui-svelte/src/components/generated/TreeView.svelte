@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { TreeView } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { TreeViewComponentProps } from "./TreeView.d.svelte.ts";
+  import type { TreeViewComponentProps } from "./controls/TreeView.svelte.ts";
   import { connectTreeView } from "./controls/TreeView.svelte.ts";
 
   let { selectedItem = $bindable(), class: className, style, ...rest }: TreeViewComponentProps = $props();

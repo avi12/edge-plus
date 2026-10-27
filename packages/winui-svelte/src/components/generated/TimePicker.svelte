@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { TimePicker } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { TimePickerComponentProps } from "./TimePicker.d.svelte.ts";
+  import type { TimePickerComponentProps } from "./controls/TimePicker.svelte.ts";
   import { connectTimePicker } from "./controls/TimePicker.svelte.ts";
 
   let { selectedTime = $bindable(), time = $bindable(), children, class: className, style, ...rest }: TimePickerComponentProps = $props();

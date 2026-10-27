@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { NumberBox } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { NumberBoxComponentProps } from "./NumberBox.d.svelte.ts";
+  import type { NumberBoxComponentProps } from "./controls/NumberBox.svelte.ts";
   import { connectNumberBox } from "./controls/NumberBox.svelte.ts";
 
   let { value = $bindable(), class: className, style, ...rest }: NumberBoxComponentProps = $props();

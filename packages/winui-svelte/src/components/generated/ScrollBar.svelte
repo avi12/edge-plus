@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ScrollBar } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ScrollBarComponentProps } from "./ScrollBar.d.svelte.ts";
+  import type { ScrollBarComponentProps } from "./controls/ScrollBar.svelte.ts";
   import { connectScrollBar } from "./controls/ScrollBar.svelte.ts";
 
   let { value = $bindable(), class: className, style, ...rest }: ScrollBarComponentProps = $props();

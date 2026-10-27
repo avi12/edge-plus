@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ScrollPresenter } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ScrollPresenterComponentProps } from "./ScrollPresenter.d.svelte.ts";
+  import type { ScrollPresenterComponentProps } from "./controls/ScrollPresenter.svelte.ts";
   import { connectScrollPresenter } from "./controls/ScrollPresenter.svelte.ts";
 
   let { class: className, style, ...rest }: ScrollPresenterComponentProps = $props();

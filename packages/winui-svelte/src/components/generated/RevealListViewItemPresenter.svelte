@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { RevealListViewItemPresenter } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { RevealListViewItemPresenterComponentProps } from "./RevealListViewItemPresenter.d.svelte.ts";
+  import type { RevealListViewItemPresenterComponentProps } from "./controls/RevealListViewItemPresenter.svelte.ts";
   import { connectRevealListViewItemPresenter } from "./controls/RevealListViewItemPresenter.svelte.ts";
 
   let { children, class: className, style, ...rest }: RevealListViewItemPresenterComponentProps = $props();

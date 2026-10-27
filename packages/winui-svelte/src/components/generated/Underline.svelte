@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Underline } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { UnderlineComponentProps } from "./Underline.d.svelte.ts";
+  import type { UnderlineComponentProps } from "./controls/Underline.svelte.ts";
   import { connectUnderline } from "./controls/Underline.svelte.ts";
 
   let { children, class: className, style, ...rest }: UnderlineComponentProps = $props();

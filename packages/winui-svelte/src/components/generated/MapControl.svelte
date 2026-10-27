@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { MapControl } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { MapControlComponentProps } from "./MapControl.d.svelte.ts";
+  import type { MapControlComponentProps } from "./controls/MapControl.svelte.ts";
   import { connectMapControl } from "./controls/MapControl.svelte.ts";
 
   let { class: className, style, ...rest }: MapControlComponentProps = $props();

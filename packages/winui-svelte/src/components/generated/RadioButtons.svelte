@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { RadioButtons } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { RadioButtonsComponentProps } from "./RadioButtons.d.svelte.ts";
+  import type { RadioButtonsComponentProps } from "./controls/RadioButtons.svelte.ts";
   import { connectRadioButtons } from "./controls/RadioButtons.svelte.ts";
 
   let { selectedIndex = $bindable(), selectedItem = $bindable(), class: className, style, ...rest }: RadioButtonsComponentProps = $props();

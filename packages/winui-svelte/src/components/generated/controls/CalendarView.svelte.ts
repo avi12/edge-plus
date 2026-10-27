@@ -10,6 +10,7 @@ import {
 import type {
   BrushInput,
   CornerRadiusInput,
+  ElementProps,
   EnumInput,
   FontFamilyInput,
   ThicknessInput
@@ -106,6 +107,8 @@ export interface CalendarViewProps extends ControlProps {
 }
 
 export type CalendarViewBound = ControlBound;
+
+export type CalendarViewComponentProps = CalendarViewProps & ElementProps;
 
 export function linkCalendarView(
   control: CalendarView,

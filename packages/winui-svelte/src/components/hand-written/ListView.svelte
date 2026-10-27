@@ -3,7 +3,7 @@
   import { connectListView } from "../generated/controls/ListView.svelte.ts";
   import { attachmentsOf, control } from "../runtime.ts";
   import { attachItems } from "./items/items-host.svelte.ts";
-  import type { ListViewComponentProps } from "./ListView.d.svelte.ts";
+  import type { ItemsComponentProps } from "./items/items-props.ts";
   import { untrack } from "svelte";
 
   // Written by hand (scripts/codegen/tables.ts: handWrittenComponents): the
@@ -16,7 +16,7 @@
     class: className,
     style,
     ...rest
-  }: ListViewComponentProps<Item> = $props();
+  }: ItemsComponentProps<Item> = $props();
   const bound = {
     get selectedIndex() {
       return selectedIndex;

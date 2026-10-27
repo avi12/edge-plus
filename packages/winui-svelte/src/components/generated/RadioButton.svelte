@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { RadioButton } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { RadioButtonComponentProps } from "./RadioButton.d.svelte.ts";
+  import type { RadioButtonComponentProps } from "./controls/RadioButton.svelte.ts";
   import { connectRadioButton } from "./controls/RadioButton.svelte.ts";
 
   let { isChecked = $bindable(), children, class: className, style, ...rest }: RadioButtonComponentProps = $props();

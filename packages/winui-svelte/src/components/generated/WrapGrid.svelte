@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { WrapGrid } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { WrapGridComponentProps } from "./WrapGrid.d.svelte.ts";
+  import type { WrapGridComponentProps } from "./controls/WrapGrid.svelte.ts";
   import { connectWrapGrid } from "./controls/WrapGrid.svelte.ts";
 
   let { children, class: className, style, ...rest }: WrapGridComponentProps = $props();

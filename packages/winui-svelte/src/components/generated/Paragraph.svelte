@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Paragraph } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ParagraphComponentProps } from "./Paragraph.d.svelte.ts";
+  import type { ParagraphComponentProps } from "./controls/Paragraph.svelte.ts";
   import { connectParagraph } from "./controls/Paragraph.svelte.ts";
 
   let { children, class: className, style, ...rest }: ParagraphComponentProps = $props();

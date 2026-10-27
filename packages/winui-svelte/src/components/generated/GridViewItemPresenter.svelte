@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { GridViewItemPresenter } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { GridViewItemPresenterComponentProps } from "./GridViewItemPresenter.d.svelte.ts";
+  import type { GridViewItemPresenterComponentProps } from "./controls/GridViewItemPresenter.svelte.ts";
   import { connectGridViewItemPresenter } from "./controls/GridViewItemPresenter.svelte.ts";
 
   let { children, class: className, style, ...rest }: GridViewItemPresenterComponentProps = $props();

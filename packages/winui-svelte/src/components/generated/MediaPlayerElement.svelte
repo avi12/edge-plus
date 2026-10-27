@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { MediaPlayerElement } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { MediaPlayerElementComponentProps } from "./MediaPlayerElement.d.svelte.ts";
+  import type { MediaPlayerElementComponentProps } from "./controls/MediaPlayerElement.svelte.ts";
   import { connectMediaPlayerElement } from "./controls/MediaPlayerElement.svelte.ts";
 
   let { class: className, style, ...rest }: MediaPlayerElementComponentProps = $props();

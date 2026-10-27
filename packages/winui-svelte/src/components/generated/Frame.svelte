@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Frame } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { FrameComponentProps } from "./Frame.d.svelte.ts";
+  import type { FrameComponentProps } from "./controls/Frame.svelte.ts";
   import { connectFrame } from "./controls/Frame.svelte.ts";
 
   let { children, class: className, style, ...rest }: FrameComponentProps = $props();

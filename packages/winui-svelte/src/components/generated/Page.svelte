@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Page } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { PageComponentProps } from "./Page.d.svelte.ts";
+  import type { PageComponentProps } from "./controls/Page.svelte.ts";
   import { connectPage } from "./controls/Page.svelte.ts";
 
   let { children, class: className, style, ...rest }: PageComponentProps = $props();

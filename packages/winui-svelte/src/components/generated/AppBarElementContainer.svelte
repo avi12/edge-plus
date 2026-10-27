@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { AppBarElementContainer } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { AppBarElementContainerComponentProps } from "./AppBarElementContainer.d.svelte.ts";
+  import type { AppBarElementContainerComponentProps } from "./controls/AppBarElementContainer.svelte.ts";
   import { connectAppBarElementContainer } from "./controls/AppBarElementContainer.svelte.ts";
 
   let { children, class: className, style, ...rest }: AppBarElementContainerComponentProps = $props();

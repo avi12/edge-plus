@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ListViewHeaderItem } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ListViewHeaderItemComponentProps } from "./ListViewHeaderItem.d.svelte.ts";
+  import type { ListViewHeaderItemComponentProps } from "./controls/ListViewHeaderItem.svelte.ts";
   import { connectListViewHeaderItem } from "./controls/ListViewHeaderItem.svelte.ts";
 
   let { children, class: className, style, ...rest }: ListViewHeaderItemComponentProps = $props();

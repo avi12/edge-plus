@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { FlyoutPresenter } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { FlyoutPresenterComponentProps } from "./FlyoutPresenter.d.svelte.ts";
+  import type { FlyoutPresenterComponentProps } from "./controls/FlyoutPresenter.svelte.ts";
   import { connectFlyoutPresenter } from "./controls/FlyoutPresenter.svelte.ts";
 
   let { children, class: className, style, ...rest }: FlyoutPresenterComponentProps = $props();

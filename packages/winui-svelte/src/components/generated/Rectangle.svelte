@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Rectangle } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { RectangleComponentProps } from "./Rectangle.d.svelte.ts";
+  import type { RectangleComponentProps } from "./controls/Rectangle.svelte.ts";
   import { connectRectangle } from "./controls/Rectangle.svelte.ts";
 
   let { class: className, style, ...rest }: RectangleComponentProps = $props();

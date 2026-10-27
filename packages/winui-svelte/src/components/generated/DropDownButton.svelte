@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { DropDownButton } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { DropDownButtonComponentProps } from "./DropDownButton.d.svelte.ts";
+  import type { DropDownButtonComponentProps } from "./controls/DropDownButton.svelte.ts";
   import { connectDropDownButton } from "./controls/DropDownButton.svelte.ts";
 
   let { children, class: className, style, ...rest }: DropDownButtonComponentProps = $props();

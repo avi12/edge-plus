@@ -11,6 +11,7 @@ import {
 import type {
   BrushInput,
   CornerRadiusInput,
+  ElementProps,
   EnumInput,
   FontFamilyInput,
   ObjectInput,
@@ -65,6 +66,8 @@ export interface ContentPresenterProps extends FrameworkElementProps {
 }
 
 export type ContentPresenterBound = FrameworkElementBound;
+
+export type ContentPresenterComponentProps = ContentPresenterProps & ElementProps;
 
 export function linkContentPresenter(
   control: ContentPresenter,

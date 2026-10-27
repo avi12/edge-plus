@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { PathIcon } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { PathIconComponentProps } from "./PathIcon.d.svelte.ts";
+  import type { PathIconComponentProps } from "./controls/PathIcon.svelte.ts";
   import { connectPathIcon } from "./controls/PathIcon.svelte.ts";
 
   let { class: className, style, ...rest }: PathIconComponentProps = $props();

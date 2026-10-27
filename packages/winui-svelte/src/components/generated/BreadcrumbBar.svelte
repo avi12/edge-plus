@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { BreadcrumbBar } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { BreadcrumbBarComponentProps } from "./BreadcrumbBar.d.svelte.ts";
+  import type { BreadcrumbBarComponentProps } from "./controls/BreadcrumbBar.svelte.ts";
   import { connectBreadcrumbBar } from "./controls/BreadcrumbBar.svelte.ts";
 
   let { class: className, style, ...rest }: BreadcrumbBarComponentProps = $props();

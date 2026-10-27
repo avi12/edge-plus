@@ -2,8 +2,8 @@
   import type { GridView } from "../generated/bindings.ts";
   import { connectGridView } from "../generated/controls/GridView.svelte.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { GridViewComponentProps } from "./GridView.d.svelte.ts";
   import { attachItems } from "./items/items-host.svelte.ts";
+  import type { ItemsComponentProps } from "./items/items-props.ts";
   import { untrack } from "svelte";
 
   // Written by hand (scripts/codegen/tables.ts: handWrittenComponents): the
@@ -16,7 +16,7 @@
     class: className,
     style,
     ...rest
-  }: GridViewComponentProps<Item> = $props();
+  }: ItemsComponentProps<Item> = $props();
   const bound = {
     get selectedIndex() {
       return selectedIndex;

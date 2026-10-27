@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { RichTextBlock } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { RichTextBlockComponentProps } from "./RichTextBlock.d.svelte.ts";
+  import type { RichTextBlockComponentProps } from "./controls/RichTextBlock.svelte.ts";
   import { connectRichTextBlock } from "./controls/RichTextBlock.svelte.ts";
 
   let { children, class: className, style, ...rest }: RichTextBlockComponentProps = $props();

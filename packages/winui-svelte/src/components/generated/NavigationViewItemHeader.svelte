@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { NavigationViewItemHeader } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { NavigationViewItemHeaderComponentProps } from "./NavigationViewItemHeader.d.svelte.ts";
+  import type { NavigationViewItemHeaderComponentProps } from "./controls/NavigationViewItemHeader.svelte.ts";
   import { connectNavigationViewItemHeader } from "./controls/NavigationViewItemHeader.svelte.ts";
 
   let { children, class: className, style, ...rest }: NavigationViewItemHeaderComponentProps = $props();

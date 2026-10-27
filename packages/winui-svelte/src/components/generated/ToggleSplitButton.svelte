@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ToggleSplitButton } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ToggleSplitButtonComponentProps } from "./ToggleSplitButton.d.svelte.ts";
+  import type { ToggleSplitButtonComponentProps } from "./controls/ToggleSplitButton.svelte.ts";
   import { connectToggleSplitButton } from "./controls/ToggleSplitButton.svelte.ts";
 
   let { isChecked = $bindable(), children, class: className, style, ...rest }: ToggleSplitButtonComponentProps = $props();

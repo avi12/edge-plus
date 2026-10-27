@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ComboBox } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ComboBoxComponentProps } from "./ComboBox.d.svelte.ts";
+  import type { ComboBoxComponentProps } from "./controls/ComboBox.svelte.ts";
   import { connectComboBox } from "./controls/ComboBox.svelte.ts";
 
   let { selectedIndex = $bindable(), selectedItem = $bindable(), selectedValue = $bindable(), isDropDownOpen = $bindable(), children, class: className, style, ...rest }: ComboBoxComponentProps = $props();

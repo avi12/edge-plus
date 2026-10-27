@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { SwipeControl } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { SwipeControlComponentProps } from "./SwipeControl.d.svelte.ts";
+  import type { SwipeControlComponentProps } from "./controls/SwipeControl.svelte.ts";
   import { connectSwipeControl } from "./controls/SwipeControl.svelte.ts";
 
   let { children, class: className, style, ...rest }: SwipeControlComponentProps = $props();

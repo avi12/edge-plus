@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Span } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { SpanComponentProps } from "./Span.d.svelte.ts";
+  import type { SpanComponentProps } from "./controls/Span.svelte.ts";
   import { connectSpan } from "./controls/Span.svelte.ts";
 
   let { children, class: className, style, ...rest }: SpanComponentProps = $props();

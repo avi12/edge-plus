@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ListViewItem } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ListViewItemComponentProps } from "./ListViewItem.d.svelte.ts";
+  import type { ListViewItemComponentProps } from "./controls/ListViewItem.svelte.ts";
   import { connectListViewItem } from "./controls/ListViewItem.svelte.ts";
 
   let { children, class: className, style, ...rest }: ListViewItemComponentProps = $props();

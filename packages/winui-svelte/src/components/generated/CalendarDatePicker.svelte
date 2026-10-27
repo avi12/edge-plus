@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { CalendarDatePicker } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { CalendarDatePickerComponentProps } from "./CalendarDatePicker.d.svelte.ts";
+  import type { CalendarDatePickerComponentProps } from "./controls/CalendarDatePicker.svelte.ts";
   import { connectCalendarDatePicker } from "./controls/CalendarDatePicker.svelte.ts";
 
   let { date = $bindable(), class: className, style, ...rest }: CalendarDatePickerComponentProps = $props();

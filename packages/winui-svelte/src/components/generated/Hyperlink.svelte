@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Hyperlink } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { HyperlinkComponentProps } from "./Hyperlink.d.svelte.ts";
+  import type { HyperlinkComponentProps } from "./controls/Hyperlink.svelte.ts";
   import { connectHyperlink } from "./controls/Hyperlink.svelte.ts";
 
   let { children, class: className, style, ...rest }: HyperlinkComponentProps = $props();

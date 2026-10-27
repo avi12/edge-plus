@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Canvas } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { CanvasComponentProps } from "./Canvas.d.svelte.ts";
+  import type { CanvasComponentProps } from "./controls/Canvas.svelte.ts";
   import { connectCanvas } from "./controls/Canvas.svelte.ts";
 
   let { children, class: className, style, ...rest }: CanvasComponentProps = $props();

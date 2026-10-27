@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { SplitMenuFlyoutItem } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { SplitMenuFlyoutItemComponentProps } from "./SplitMenuFlyoutItem.d.svelte.ts";
+  import type { SplitMenuFlyoutItemComponentProps } from "./controls/SplitMenuFlyoutItem.svelte.ts";
   import { connectSplitMenuFlyoutItem } from "./controls/SplitMenuFlyoutItem.svelte.ts";
 
   let { children, class: className, style, ...rest }: SplitMenuFlyoutItemComponentProps = $props();

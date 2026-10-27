@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { FlipViewItem } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { FlipViewItemComponentProps } from "./FlipViewItem.d.svelte.ts";
+  import type { FlipViewItemComponentProps } from "./controls/FlipViewItem.svelte.ts";
   import { connectFlipViewItem } from "./controls/FlipViewItem.svelte.ts";
 
   let { children, class: className, style, ...rest }: FlipViewItemComponentProps = $props();

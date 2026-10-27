@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { RepeatButton } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { RepeatButtonComponentProps } from "./RepeatButton.d.svelte.ts";
+  import type { RepeatButtonComponentProps } from "./controls/RepeatButton.svelte.ts";
   import { connectRepeatButton } from "./controls/RepeatButton.svelte.ts";
 
   let { children, class: className, style, ...rest }: RepeatButtonComponentProps = $props();

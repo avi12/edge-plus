@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { TwoPaneView } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { TwoPaneViewComponentProps } from "./TwoPaneView.d.svelte.ts";
+  import type { TwoPaneViewComponentProps } from "./controls/TwoPaneView.svelte.ts";
   import { connectTwoPaneView } from "./controls/TwoPaneView.svelte.ts";
 
   let { class: className, style, ...rest }: TwoPaneViewComponentProps = $props();

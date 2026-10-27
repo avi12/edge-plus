@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { AnnotatedScrollBar } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { AnnotatedScrollBarComponentProps } from "./AnnotatedScrollBar.d.svelte.ts";
+  import type { AnnotatedScrollBarComponentProps } from "./controls/AnnotatedScrollBar.svelte.ts";
   import { connectAnnotatedScrollBar } from "./controls/AnnotatedScrollBar.svelte.ts";
 
   let { class: className, style, ...rest }: AnnotatedScrollBarComponentProps = $props();

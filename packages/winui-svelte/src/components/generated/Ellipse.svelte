@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Ellipse } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { EllipseComponentProps } from "./Ellipse.d.svelte.ts";
+  import type { EllipseComponentProps } from "./controls/Ellipse.svelte.ts";
   import { connectEllipse } from "./controls/Ellipse.svelte.ts";
 
   let { class: className, style, ...rest }: EllipseComponentProps = $props();

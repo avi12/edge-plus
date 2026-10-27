@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { RadioMenuFlyoutItem } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { RadioMenuFlyoutItemComponentProps } from "./RadioMenuFlyoutItem.d.svelte.ts";
+  import type { RadioMenuFlyoutItemComponentProps } from "./controls/RadioMenuFlyoutItem.svelte.ts";
   import { connectRadioMenuFlyoutItem } from "./controls/RadioMenuFlyoutItem.svelte.ts";
 
   let { children, class: className, style, ...rest }: RadioMenuFlyoutItemComponentProps = $props();

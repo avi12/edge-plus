@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { CalendarPanel } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { CalendarPanelComponentProps } from "./CalendarPanel.d.svelte.ts";
+  import type { CalendarPanelComponentProps } from "./controls/CalendarPanel.svelte.ts";
   import { connectCalendarPanel } from "./controls/CalendarPanel.svelte.ts";
 
   let { children, class: className, style, ...rest }: CalendarPanelComponentProps = $props();

@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { UserControl } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { UserControlComponentProps } from "./UserControl.d.svelte.ts";
+  import type { UserControlComponentProps } from "./controls/UserControl.svelte.ts";
   import { connectUserControl } from "./controls/UserControl.svelte.ts";
 
   let { children, class: className, style, ...rest }: UserControlComponentProps = $props();

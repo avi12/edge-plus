@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { StackPanel } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { StackPanelComponentProps } from "./StackPanel.d.svelte.ts";
+  import type { StackPanelComponentProps } from "./controls/StackPanel.svelte.ts";
   import { connectStackPanel } from "./controls/StackPanel.svelte.ts";
 
   let { children, class: className, style, ...rest }: StackPanelComponentProps = $props();

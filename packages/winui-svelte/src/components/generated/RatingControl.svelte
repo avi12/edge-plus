@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { RatingControl } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { RatingControlComponentProps } from "./RatingControl.d.svelte.ts";
+  import type { RatingControlComponentProps } from "./controls/RatingControl.svelte.ts";
   import { connectRatingControl } from "./controls/RatingControl.svelte.ts";
 
   let { value = $bindable(), class: className, style, ...rest }: RatingControlComponentProps = $props();

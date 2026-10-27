@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { CommandBarFlyoutCommandBar } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { CommandBarFlyoutCommandBarComponentProps } from "./CommandBarFlyoutCommandBar.d.svelte.ts";
+  import type { CommandBarFlyoutCommandBarComponentProps } from "./controls/CommandBarFlyoutCommandBar.svelte.ts";
   import { connectCommandBarFlyoutCommandBar } from "./controls/CommandBarFlyoutCommandBar.svelte.ts";
 
   let { isOpen = $bindable(), children, class: className, style, ...rest }: CommandBarFlyoutCommandBarComponentProps = $props();

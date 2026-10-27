@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { RichEditBox } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { RichEditBoxComponentProps } from "./RichEditBox.d.svelte.ts";
+  import type { RichEditBoxComponentProps } from "./controls/RichEditBox.svelte.ts";
   import { connectRichEditBox } from "./controls/RichEditBox.svelte.ts";
 
   let { class: className, style, ...rest }: RichEditBoxComponentProps = $props();

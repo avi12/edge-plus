@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ProgressBar } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ProgressBarComponentProps } from "./ProgressBar.d.svelte.ts";
+  import type { ProgressBarComponentProps } from "./controls/ProgressBar.svelte.ts";
   import { connectProgressBar } from "./controls/ProgressBar.svelte.ts";
 
   let { value = $bindable(), class: className, style, ...rest }: ProgressBarComponentProps = $props();

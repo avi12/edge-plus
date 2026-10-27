@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Polyline } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { PolylineComponentProps } from "./Polyline.d.svelte.ts";
+  import type { PolylineComponentProps } from "./controls/Polyline.svelte.ts";
   import { connectPolyline } from "./controls/Polyline.svelte.ts";
 
   let { class: className, style, ...rest }: PolylineComponentProps = $props();

@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { RefreshContainer } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { RefreshContainerComponentProps } from "./RefreshContainer.d.svelte.ts";
+  import type { RefreshContainerComponentProps } from "./controls/RefreshContainer.svelte.ts";
   import { connectRefreshContainer } from "./controls/RefreshContainer.svelte.ts";
 
   let { children, class: className, style, ...rest }: RefreshContainerComponentProps = $props();

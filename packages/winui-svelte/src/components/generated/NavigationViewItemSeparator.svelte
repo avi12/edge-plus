@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { NavigationViewItemSeparator } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { NavigationViewItemSeparatorComponentProps } from "./NavigationViewItemSeparator.d.svelte.ts";
+  import type { NavigationViewItemSeparatorComponentProps } from "./controls/NavigationViewItemSeparator.svelte.ts";
   import { connectNavigationViewItemSeparator } from "./controls/NavigationViewItemSeparator.svelte.ts";
 
   let { children, class: className, style, ...rest }: NavigationViewItemSeparatorComponentProps = $props();

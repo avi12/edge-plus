@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { CommandBar } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { CommandBarComponentProps } from "./CommandBar.d.svelte.ts";
+  import type { CommandBarComponentProps } from "./controls/CommandBar.svelte.ts";
   import { connectCommandBar } from "./controls/CommandBar.svelte.ts";
 
   let { isOpen = $bindable(), children, class: className, style, ...rest }: CommandBarComponentProps = $props();

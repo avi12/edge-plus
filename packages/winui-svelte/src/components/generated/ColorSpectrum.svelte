@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ColorSpectrum } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ColorSpectrumComponentProps } from "./ColorSpectrum.d.svelte.ts";
+  import type { ColorSpectrumComponentProps } from "./controls/ColorSpectrum.svelte.ts";
   import { connectColorSpectrum } from "./controls/ColorSpectrum.svelte.ts";
 
   let { color = $bindable(), class: className, style, ...rest }: ColorSpectrumComponentProps = $props();

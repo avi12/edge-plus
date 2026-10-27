@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { PipsPager } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { PipsPagerComponentProps } from "./PipsPager.d.svelte.ts";
+  import type { PipsPagerComponentProps } from "./controls/PipsPager.svelte.ts";
   import { connectPipsPager } from "./controls/PipsPager.svelte.ts";
 
   let { class: className, style, ...rest }: PipsPagerComponentProps = $props();

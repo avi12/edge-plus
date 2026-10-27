@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ToolTip } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ToolTipComponentProps } from "./ToolTip.d.svelte.ts";
+  import type { ToolTipComponentProps } from "./controls/ToolTip.svelte.ts";
   import { connectToolTip } from "./controls/ToolTip.svelte.ts";
 
   let { isOpen = $bindable(), children, class: className, style, ...rest }: ToolTipComponentProps = $props();

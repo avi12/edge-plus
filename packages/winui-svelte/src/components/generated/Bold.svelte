@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Bold } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { BoldComponentProps } from "./Bold.d.svelte.ts";
+  import type { BoldComponentProps } from "./controls/Bold.svelte.ts";
   import { connectBold } from "./controls/Bold.svelte.ts";
 
   let { children, class: className, style, ...rest }: BoldComponentProps = $props();

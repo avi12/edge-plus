@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { ToggleButton } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ToggleButtonComponentProps } from "./ToggleButton.d.svelte.ts";
+  import type { ToggleButtonComponentProps } from "./controls/ToggleButton.svelte.ts";
   import { connectToggleButton } from "./controls/ToggleButton.svelte.ts";
 
   let { isChecked = $bindable(), children, class: className, style, ...rest }: ToggleButtonComponentProps = $props();

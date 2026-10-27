@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Thumb } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { ThumbComponentProps } from "./Thumb.d.svelte.ts";
+  import type { ThumbComponentProps } from "./controls/Thumb.svelte.ts";
   import { connectThumb } from "./controls/Thumb.svelte.ts";
 
   let { class: className, style, ...rest }: ThumbComponentProps = $props();

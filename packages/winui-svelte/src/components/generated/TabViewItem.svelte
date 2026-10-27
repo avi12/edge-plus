@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { TabViewItem } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { TabViewItemComponentProps } from "./TabViewItem.d.svelte.ts";
+  import type { TabViewItemComponentProps } from "./controls/TabViewItem.svelte.ts";
   import { connectTabViewItem } from "./controls/TabViewItem.svelte.ts";
 
   let { children, class: className, style, ...rest }: TabViewItemComponentProps = $props();

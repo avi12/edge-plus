@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Border } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { BorderComponentProps } from "./Border.d.svelte.ts";
+  import type { BorderComponentProps } from "./controls/Border.svelte.ts";
   import { connectBorder } from "./controls/Border.svelte.ts";
 
   let { children, class: className, style, ...rest }: BorderComponentProps = $props();

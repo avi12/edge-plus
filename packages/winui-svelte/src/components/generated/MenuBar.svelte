@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { MenuBar } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { MenuBarComponentProps } from "./MenuBar.d.svelte.ts";
+  import type { MenuBarComponentProps } from "./controls/MenuBar.svelte.ts";
   import { connectMenuBar } from "./controls/MenuBar.svelte.ts";
 
   let { class: className, style, ...rest }: MenuBarComponentProps = $props();

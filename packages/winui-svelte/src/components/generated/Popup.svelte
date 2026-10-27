@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { Popup } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { PopupComponentProps } from "./Popup.d.svelte.ts";
+  import type { PopupComponentProps } from "./controls/Popup.svelte.ts";
   import { connectPopup } from "./controls/Popup.svelte.ts";
 
   let { isOpen = $bindable(), children, class: className, style, ...rest }: PopupComponentProps = $props();

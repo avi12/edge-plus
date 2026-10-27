@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { FontIcon } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { FontIconComponentProps } from "./FontIcon.d.svelte.ts";
+  import type { FontIconComponentProps } from "./controls/FontIcon.svelte.ts";
   import { connectFontIcon } from "./controls/FontIcon.svelte.ts";
 
   let { class: className, style, ...rest }: FontIconComponentProps = $props();

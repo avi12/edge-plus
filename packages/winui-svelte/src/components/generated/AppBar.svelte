@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { AppBar } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { AppBarComponentProps } from "./AppBar.d.svelte.ts";
+  import type { AppBarComponentProps } from "./controls/AppBar.svelte.ts";
   import { connectAppBar } from "./controls/AppBar.svelte.ts";
 
   let { isOpen = $bindable(), children, class: className, style, ...rest }: AppBarComponentProps = $props();

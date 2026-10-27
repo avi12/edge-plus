@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { TitleBar } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { TitleBarComponentProps } from "./TitleBar.d.svelte.ts";
+  import type { TitleBarComponentProps } from "./controls/TitleBar.svelte.ts";
   import { connectTitleBar } from "./controls/TitleBar.svelte.ts";
 
   let { class: className, style, ...rest }: TitleBarComponentProps = $props();

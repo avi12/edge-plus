@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { RefreshVisualizer } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { RefreshVisualizerComponentProps } from "./RefreshVisualizer.d.svelte.ts";
+  import type { RefreshVisualizerComponentProps } from "./controls/RefreshVisualizer.svelte.ts";
   import { connectRefreshVisualizer } from "./controls/RefreshVisualizer.svelte.ts";
 
   let { class: className, style, ...rest }: RefreshVisualizerComponentProps = $props();

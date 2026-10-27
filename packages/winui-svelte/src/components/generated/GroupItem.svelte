@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import type { GroupItem } from "./bindings.ts";
   import { attachmentsOf, control } from "../runtime.ts";
-  import type { GroupItemComponentProps } from "./GroupItem.d.svelte.ts";
+  import type { GroupItemComponentProps } from "./controls/GroupItem.svelte.ts";
   import { connectGroupItem } from "./controls/GroupItem.svelte.ts";
 
   let { children, class: className, style, ...rest }: GroupItemComponentProps = $props();
