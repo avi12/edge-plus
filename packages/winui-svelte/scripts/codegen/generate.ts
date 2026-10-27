@@ -9,7 +9,8 @@ import {
   emitIndex,
   emitLevel,
   emitMetadata,
-  emitRequiredBindings
+  emitRequiredBindings,
+  emitStrictness
 } from "./emit.ts";
 import type { Model } from "./model.ts";
 import { bindingClasses, buildModel, requestedClasses } from "./model.ts";
@@ -130,6 +131,10 @@ function generatedFiles(project: string): OutputFile[] {
     {
       file: path.join(generatedFolder, "metadata.ts"),
       text: emitMetadata(model)
+    },
+    {
+      file: path.join(generatedFolder, "props-strictness.ts"),
+      text: emitStrictness(model)
     },
     {
       file: path.join(generatedFolder, "required-bindings.json"),

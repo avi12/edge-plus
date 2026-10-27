@@ -29,6 +29,9 @@
     "scripts/codegen/generate.ts",
     "scripts/css/export-winui-resources.ts",
     "scripts/pack/build.ts",
+    // Read by tsc only: it fails there on a component prop typed any or
+    // unknown.
+    "src/components/generated/props-strictness.ts",
     "examples/counter/launch.ts",
     "examples/counter/window.ts",
     "examples/scheduling/launch.ts",

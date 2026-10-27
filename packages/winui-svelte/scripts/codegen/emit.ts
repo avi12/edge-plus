@@ -607,6 +607,23 @@ export function emitIndex(model: Model): string {
   return `${lines.join("\n")}\n`;
 }
 
+// Every component's props through StrictProps (src/components/strictness.ts):
+// tsc fails here on a prop typed any or unknown, naming it.
+export function emitStrictness(model: Model): string {
+  const names = model.classes.filter(level => level.isComponent).map(level => level.type.name);
+  const lines = [
+    generatedHeader,
+    "",
+    "import type { Expect, StrictProps } from \"../strictness.ts\";",
+    `import type { ${names.map(name => `${name}ComponentProps`).join(", ")} } from "./index.ts";`,
+    "",
+    "export type PropsStrictness = [",
+    ...names.map(name => `  Expect<StrictProps<"${name}", ${name}ComponentProps>>,`),
+    "];"
+  ];
+  return `${lines.join("\n")}\n`;
+}
+
 function quoted(values: string[]): string {
   return `[${values.map(value => JSON.stringify(value)).join(", ")}]`;
 }
