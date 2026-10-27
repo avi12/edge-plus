@@ -13,18 +13,19 @@
   // than a toolkit's SettingsCard (no UI library, to keep the supply chain
   // small): an icon, a title over a description, and one control at the end.
   // A feature card puts a switch there, the Inject card a button; a card may
-  // carry a body under its words.
+  // carry a body under its words. The description is the children; the title
+  // stays a prop because the switch's automationName needs it as a string.
   interface Props {
     title: string;
-    description: string;
     // A Segoe Fluent Icons code point.
     glyph: number;
     note?: string;
+    children: Snippet;
     end: Snippet;
     body?: Snippet;
   }
 
-  const { title, description, glyph, note = "", end, body }: Props = $props();
+  const { title, glyph, note = "", children, end, body }: Props = $props();
 </script>
 
 <!-- The right margin on the words keeps a wrapped description off the
@@ -35,7 +36,7 @@
     <FontIcon class="card-icon" glyph={glyphText(glyph)} />
     <StackPanel class="card-words">
       <TextBlock class="card-title">{title}</TextBlock>
-      <TextBlock class="card-description">{description}</TextBlock>
+      <TextBlock class="card-description">{@render children()}</TextBlock>
       <TextBlock class="note" visibility={note.length > 0 ? "Visible" : "Collapsed"}>{note}</TextBlock>
     </StackPanel>
     <Border class="card-end">

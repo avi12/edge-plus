@@ -9,16 +9,17 @@
   // A card with a switch at its end, saying why the switch is held when it
   // is. A feature's title is the one the core's toast uses too, so only Edge+'s
   // own cards name theirs; the theming card carries the theme library as its
-  // body.
+  // body. The description is the children; the title stays a prop because the
+  // switch's automationName and the hold note need it as a string.
   interface Props {
     card: CardView;
     title?: string;
-    description: string;
     glyph: number;
+    children: Snippet;
     body?: Snippet;
   }
 
-  const { card, title, description, glyph, body }: Props = $props();
+  const { card, title, glyph, children, body }: Props = $props();
   const panel = usePanel();
 
   const shownTitle = $derived(title ?? featureTitle(card.key) ?? "");
@@ -52,7 +53,8 @@
   }
 </script>
 
-<CardFrame {body} {description} {glyph} {note} title={shownTitle}>
+<CardFrame {body} {glyph} {note} title={shownTitle}>
+  {@render children()}
   {#snippet end()}
     <ToggleSwitch
       class="card-switch"

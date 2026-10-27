@@ -37,11 +37,8 @@
   }
 </script>
 
-<CardFrame
-  description="{how} Edge keeps running, and your splits and themes stay as they are."
-  glyph={0xE777}
-  title="Edge+ {update.version} is ready"
->
+<CardFrame glyph={0xE777} title="Edge+ {update.version} is ready">
+  {how} Edge keeps running, and your splits and themes stay as they are.
   {#snippet end()}
     <Button class="accent-button" isEnabled={!isRestarting} onClick={() => void restart()}>{label}</Button>
   {/snippet}

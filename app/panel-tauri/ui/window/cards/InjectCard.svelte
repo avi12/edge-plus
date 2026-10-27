@@ -30,13 +30,12 @@
   }
 </script>
 
-<CardFrame
-  description={isReady
-    ? "Inject automatically is off, so this Edge started without Edge+. Inject it to turn your switches on."
-    : "Injected. When Edge next starts, Edge+ offers this button again."}
-  glyph={isReady ? 0xE768 : 0xE73E}
-  title={isReady ? "Edge is open without Edge+" : "Edge+ is in Edge"}
->
+<CardFrame glyph={isReady ? 0xE768 : 0xE73E} title={isReady ? "Edge is open without Edge+" : "Edge+ is in Edge"}>
+  {#if isReady}
+    Inject automatically is off, so this Edge started without Edge+. Inject it to turn your switches on.
+  {:else}
+    Injected. When Edge next starts, Edge+ offers this button again.
+  {/if}
   {#snippet end()}
     <Button class="accent-button" isEnabled={canPress} onClick={() => void inject()}>Inject into Edge</Button>
   {/snippet}

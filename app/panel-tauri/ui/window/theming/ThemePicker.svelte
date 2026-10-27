@@ -3,7 +3,8 @@
   import { ComboBox, ComboBoxItem, Grid, TextBlock } from "winui-svelte";
 
   // The theme for one Windows mode: Edge's default theme, then the user's
-  // themes, then Edge's own, beside the mode's name.
+  // themes, then Edge's own, beside the mode's name. The label is a prop, not
+  // children, because the ComboBox's automationName needs it as a string.
   interface Props {
     label: string;
     options: ThemeOption[];
