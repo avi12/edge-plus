@@ -16,5 +16,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["ui/**/*.ts", "vite.config.ts"]
+  "include": ["ui/**/*.ts", "ui/**/*.svelte", "vite.config.ts"]
 }

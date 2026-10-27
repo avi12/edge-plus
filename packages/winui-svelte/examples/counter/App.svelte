@@ -4,7 +4,7 @@
   import { hostContextKey } from "./context.ts";
   import HostButtons from "./HostButtons.svelte";
   import { Tallies } from "./tallies.svelte.ts";
-  import { setContext } from "svelte";
+  import { setContext, untrack } from "svelte";
   import type { HostChannel } from "winui-svelte/state";
   import { hostState } from "winui-svelte/state";
 
@@ -12,7 +12,9 @@
     channel: HostChannel;
   }
 
-  const { channel }: Props = $props();
+  const props: Props = $props();
+  // The channel is the window's for its whole life: read once, on purpose.
+  const channel = untrack(() => props.channel);
   const view = hostState<CounterView>(channel, viewName);
   const tallies = new Tallies();
   setContext(hostContextKey, {

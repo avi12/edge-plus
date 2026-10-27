@@ -1,7 +1,8 @@
 import { startWindowsAppSdk } from "../bootstrap.ts";
 import { viewName } from "./app-types.ts";
 import { MessageChannel, Worker } from "node:worker_threads";
-import type { Json } from "winui-svelte/state/host";
+import { defineMessaging } from "winui-svelte/messaging";
+import type { Json, StateProtocol } from "winui-svelte/state/host";
 import { createMessagePortTransport, diff, isJsonObject, MessageType } from "winui-svelte/state/host";
 
 // The counter example's host: it owns the app's state (a count and a

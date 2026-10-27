@@ -14,13 +14,15 @@
     "noFallthroughCasesInSwitch": true,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "src/**/*.ts",
-    "examples/harness/**/*.ts",
-    "examples/lists/*.ts",
-    "examples/window/*.ts",
+    "src/**/*.svelte",
+    "examples/**/*.ts",
+    "examples/**/*.svelte",
     "test/example-process.ts",
     "test/lists.test.ts",
     "test/window.test.ts"
