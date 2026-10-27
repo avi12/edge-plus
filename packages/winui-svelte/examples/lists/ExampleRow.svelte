@@ -11,6 +11,6 @@
 </script>
 
 <stack-panel orientation="Horizontal" padding="12,8,12,8" spacing={12}>
-  <text-block text={row.name} />
-  <text-block opacity={0.6} text={`#${row.id}`} />
+  <text-block>{row.name}</text-block>
+  <text-block opacity={0.6}>#{row.id}</text-block>
 </stack-panel>

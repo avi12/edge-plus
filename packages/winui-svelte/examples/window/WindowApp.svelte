@@ -13,11 +13,13 @@
     return Object.values(Backdrop).find(candidate => candidate === name) ?? Backdrop.Acrylic;
   }
 
+  // The host is the harness's, handed over once: it never changes.
   const { host, icon }: {
     host: ExampleHost;
     icon: string;
   } = $props();
 
+  // svelte-ignore state_referenced_locally
   let backdrop = $state(backdropOf(host.options["backdrop"]));
   let title = $state("Window example");
   let width = $state(520);
@@ -90,6 +92,7 @@
     }],
     ["close", () => handle?.close()]
   ]);
+  // svelte-ignore state_referenced_locally
   host.onCommand(command => commands.get(String(command["cmd"]))?.(command));
 </script>
 
@@ -124,11 +127,11 @@
 >
   {#snippet titleBar()}
     <stack-panel height={40} orientation="Horizontal" padding="14,0,0,0" spacing={10}>
-      <text-block text={title} vertical-alignment="Center" />
+      <text-block vertical-alignment="Center">{title}</text-block>
     </stack-panel>
   {/snippet}
   <stack-panel padding="24" spacing={8}>
-    <text-block font-size={20} text={`Backdrop: ${backdrop}`} />
-    <text-block text="The content runs into the title bar; the backdrop shows through." />
+    <text-block font-size={20}>Backdrop: {backdrop}</text-block>
+    <text-block>The content runs into the title bar; the backdrop shows through.</text-block>
   </stack-panel>
 </Window>

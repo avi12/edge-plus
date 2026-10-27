@@ -5,7 +5,15 @@
   import { control } from "../host/control.ts";
   import type { FakeToggle } from "./fake-controls.ts";
 
-  const { isOn, label, isShown, log, hosted } = $props();
+  interface Props {
+    isOn: boolean;
+    label: string;
+    isShown: boolean;
+    log: (line: string) => void;
+    hosted: object;
+  }
+
+  const { isOn, label, isShown, log, hosted }: Props = $props();
 </script>
 
 <fake-panel class="card">
@@ -19,12 +27,12 @@
     })}
     on-content={() => label}
     ontoggled={() => log("toggled")}
-  />
-  <fake-toggle on-content={() => "Static"} />
+  ></fake-toggle>
+  <fake-toggle on-content={() => "Static"}></fake-toggle>
   {#if isShown}
     <fake-panel>
-      <fake-toggle ontoggled={() => log("toggled")} />
-      <host element={hosted} />
+      <fake-toggle ontoggled={() => log("toggled")}></fake-toggle>
+      <host element={hosted}></host>
     </fake-panel>
   {/if}
 </fake-panel>

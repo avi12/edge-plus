@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ExampleCommand, ExampleHost } from "../harness/contract.ts";
+  import type { ExampleItem } from "./example-item.ts";
   import { makeItems } from "./example-item.ts";
   import ExampleRow from "./ExampleRow.svelte";
   import { liveRows, rowStats } from "./row-stats.ts";
@@ -8,8 +9,10 @@
   import { exitApplication } from "winui-svelte/window";
 
   const defaultRows = 1000;
+  // The host is the harness's, handed over once: it never changes.
   const { host }: { host: ExampleHost } = $props();
 
+  // svelte-ignore state_referenced_locally
   let rows = $state(makeItems(Number(host.options["rows"] ?? defaultRows)));
   let handle: ListHandle | undefined = $state();
   let reorders = 0;
@@ -66,10 +69,11 @@
     }],
     ["close", () => exitApplication()]
   ]);
+  // svelte-ignore state_referenced_locally
   host.onCommand(command => commands.get(String(command["cmd"]))?.(command));
 </script>
 
-{#snippet rowOf(row)}
+{#snippet rowOf(row: ExampleItem)}
   <ExampleRow {row} />
 {/snippet}
 
