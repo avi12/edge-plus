@@ -102,7 +102,9 @@ The Vite plugin compiles each component's `<style>` (Svelte scopes it) into
 WinUI Styles: one per (element type, class combination), with
 `{ThemeResource}` setters for `var(--name)` so light and dark stay WinUI's.
 The runtime registers them and the renderer applies the Style when an
-element's classes change. Layout properties map to WinUI's panels (gap to
+element's classes change. A Style that names no `-winui-based-on` builds on
+the control's `Default<Type>Style` where WinUI has one, since a Style set on a
+control replaces the implicit one that gives it its Fluent look. Layout properties map to WinUI's panels (gap to
 Spacing, grid-template-columns to ColumnDefinitions, …). A declaration with no
 WinUI meaning fails the build with its line.
 

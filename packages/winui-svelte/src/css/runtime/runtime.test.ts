@@ -2,6 +2,7 @@ import type { NativeValue } from "../../native-value.ts";
 import { read } from "../../renderer/host/reflect.ts";
 import { loadWinuiCatalogue } from "../translate/catalogue.ts";
 import { translateStyleSheet } from "../translate/translate.ts";
+import { hasStyle } from "./resources.ts";
 import type { CssNative } from "./runtime.ts";
 import { installCssRuntime, registerStyleSheet, styledElement, unregisterStyleSheet } from "./runtime.ts";
 import assert from "node:assert/strict";
@@ -49,6 +50,7 @@ const fakeNative: CssNative = {
     mergedResources.push(String(read(dictionary, "xaml")));
   },
   lookupStyle: dictionary => dictionary,
+  hasApplicationResource: key => hasStyle(resources, key),
   setStyle(target, style) {
     const fakeControl = fake(target);
     fakeControl.style = style === null ? null : String(read(style, "xaml"));
@@ -99,6 +101,27 @@ test("classes become a Style, and a class toggled off removes it", () => {
   element.setClasses("");
   assert.equal(target.style, null);
   element.dispose();
+});
+
+test("a Style with no base builds on the control's default style, where WinUI has one", () => {
+  registerStyleSheet(sheet("switch.svelte", ".narrow { min-width: 0 }\n.caption { -winui-based-on: CaptionTextBlockStyle }"));
+  const toggle = control();
+  const toggleElement = styledElement(toggle, "toggle-switch");
+  toggleElement.setClasses("narrow");
+  assert.match(toggle.style ?? "", /TargetType="ToggleSwitch" BasedOn="\{StaticResource DefaultToggleSwitchStyle\}"/u);
+
+  const panel = control();
+  const panelElement = styledElement(panel, "stack-panel");
+  panelElement.setClasses("narrow");
+  assert.doesNotMatch(panel.style ?? "", /BasedOn/u);
+
+  const text = control();
+  const textElement = styledElement(text, "text-block");
+  textElement.setClasses("caption");
+  assert.match(text.style ?? "", /BasedOn="\{StaticResource CaptionTextBlockStyle\}"/u);
+  for (const element of [toggleElement, panelElement, textElement]) {
+    element.dispose();
+  }
 });
 
 test("an element that matches nothing is left alone", () => {

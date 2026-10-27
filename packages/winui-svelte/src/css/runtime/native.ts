@@ -23,7 +23,7 @@ interface ListLike {
 export interface CssWinui {
   Application: {
     current: {
-      resources: { mergedDictionaries: ListLike | null };
+      resources: DictionaryLike & { mergedDictionaries: ListLike | null };
     };
   };
   ResourceDictionary: ProjectedType<DictionaryLike>;
@@ -100,6 +100,16 @@ export function createCssNative(winui: CssWinui): CssNative {
       }
 
       return winui.projectAs(dictionary.lookup(winui.PropertyValue.createString(key)), winui.Style);
+    },
+    // Lookup searches the merged dictionaries (WinUI's own are one); it throws
+    // for a key that is in none of them.
+    hasApplicationResource(key) {
+      try {
+        const value = winui.Application.current.resources.lookup(winui.PropertyValue.createString(key));
+        return value !== null && value !== undefined;
+      } catch {
+        return false;
+      }
     },
     setStyle(control, style) {
       Object.assign(control, { style });

@@ -5,7 +5,8 @@ import {
   computeDeclarations,
   matchingRanked,
   resolveBuiltVariable,
-  styleDictionaryXaml
+  styleDictionaryXaml,
+  xamlTypeName
 } from "../translate/cascade.ts";
 import type { LoweredStyle } from "../translate/properties.ts";
 import { lowerDeclarations } from "../translate/properties.ts";
@@ -25,6 +26,8 @@ export interface CssNative {
   loadDictionary(xaml: string): object;
   mergeIntoApplication(dictionary: object): void;
   lookupStyle(dictionary: object, key: string): object;
+  // Whether the application's resources (merged dictionaries included) hold `key`.
+  hasApplicationResource(key: string): boolean;
   setStyle(control: object, style: object | null): void;
   // A grid's columns or rows, from "Auto,*,2*,120" (empty clears them).
   setGridDefinitions(control: object, target: "columns" | "rows", lengths: string): void;
@@ -177,6 +180,24 @@ let nextSequence = 0;
 // Each Style is loaded in a dictionary of its own, so one key does for all.
 const styleResourceKey = "css-style";
 const stylesByXaml = new Map<string, object>();
+// Each element type's Default<Type>Style, or null where WinUI has none.
+const defaultStyles = new Map<string, string | null>();
+
+// WinUI gives a control its Fluent look through an implicit style based on
+// Default<Type>Style. A Style set on the control replaces that implicit one, so
+// a Style that names no base builds on it: a class adds to the control's look,
+// as CSS does, instead of dropping it (a ToggleSwitch lost its MinWidth of 0).
+function defaultStyleOf(currentNative: CssNative, elementType: string): string | null {
+  const known = defaultStyles.get(elementType);
+  if (known !== undefined) {
+    return known;
+  }
+
+  const key = `Default${xamlTypeName(elementType)}Style`;
+  const found = currentNative.hasApplicationResource(key) ? key : null;
+  defaultStyles.set(elementType, found);
+  return found;
+}
 
 function warnOnce(message: string): void {
   if (!warned.has(message)) {
@@ -295,7 +316,11 @@ function buildStyle(elementType: string, matched: RankedRule[], inline: Declarat
 
   // The same XAML is the same Style object, so a hot reload that left an
   // element's declarations as they were does not set a new one on it.
-  const xaml = styleDictionaryXaml(styleResourceKey, elementType, lowered);
+  const based = {
+    ...lowered,
+    basedOn: lowered.basedOn ?? defaultStyleOf(native, elementType)
+  };
+  const xaml = styleDictionaryXaml(styleResourceKey, elementType, based);
   const known = stylesByXaml.get(xaml);
   if (known !== undefined) {
     return {
