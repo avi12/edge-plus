@@ -128,6 +128,10 @@ function textsOf(panel: FakePanel): Array<string | null> {
   return panel.children.items.map(item => (item instanceof FakeTextBlock ? item.text : null));
 }
 
+// The fixture's last block, as a browser shows it: its line breaks and
+// indentation collapse to single spaces, its no-break space stays.
+const wrappedSentence = "A sentence long enough to wrap over lines, indented.";
+
 test("text written as children is a text block's text, and follows what it shows", () => {
   const mounted = mountControl<TextProps>(TextFixture, {
     version: "0.2.0",
@@ -136,13 +140,18 @@ test("text written as children is a text block's text, and follows what it shows
   });
   const root: object = mounted.root;
   assert.ok(root instanceof FakePanel);
-  assert.deepEqual(textsOf(root), ["Edge+ 0.2.0 is ready", "Saved", "Saved 2 themes"]);
+  assert.deepEqual(textsOf(root), [
+    "Edge+ 0.2.0 is ready",
+    "Saved",
+    "Saved 2 themes",
+    wrappedSentence
+  ]);
 
   mounted.set({
     version: "0.3.0",
     status: "",
     count: 3
   });
-  assert.deepEqual(textsOf(root), ["Edge+ 0.3.0 is ready", "", "Saved 3 themes"]);
+  assert.deepEqual(textsOf(root), ["Edge+ 0.3.0 is ready", "", "Saved 3 themes", wrappedSentence]);
   mounted.unmount();
 });

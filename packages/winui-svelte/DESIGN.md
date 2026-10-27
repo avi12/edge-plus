@@ -69,7 +69,9 @@ through an attachment the renderer provides:
 - Children: `{@render children?.()}` inside the element; the renderer places
   child controls where the control holds them (Panel.Children, Border.Child,
   ContentControl.Content, ItemsControl.Items, a TextBlock's Inlines/Text), as
-  the WinUI content property names it.
+  the WinUI content property names it. Child text reads as a browser shows
+  it (`white-space: normal`): runs of whitespace collapse to one space and
+  the ends are trimmed, so a sentence can wrap over indented source lines.
 - `class` and `style` on a component are passed to the element unchanged; the
   renderer hands them to the CSS runtime (below).
 

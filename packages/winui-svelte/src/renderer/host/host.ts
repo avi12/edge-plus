@@ -254,8 +254,15 @@ function controlsOf(node: TreeNode<WinuiNative>): UIElement[] {
   return control === null ? [] : [control];
 }
 
+// HTML's white-space: normal. Svelte keeps a text node's line breaks and
+// indentation, which a browser collapses and WinUI would draw.
+const htmlWhitespaceRun = /[ \t\n\r\f]+/gu;
+
+// An element's text as a browser would show it: whitespace runs collapsed to
+// one space and the ends trimmed. A no-break space is kept, as in HTML.
 function textOf(element: WinuiElement): string {
-  return element.children.map(child => child.type === NodeType.Text ? child.value : "").join("");
+  const raw = element.children.map(child => child.type === NodeType.Text ? child.value : "").join("");
+  return raw.replaceAll(htmlWhitespaceRun, " ").replace(/^ | $/gu, "");
 }
 
 // Each control's key in the panels it is placed in.
@@ -332,7 +339,7 @@ function syncChild(element: WinuiElement, control: UIElement): void {
 // A control, or else the element's text, boxed.
 function syncContent(element: WinuiElement, control: UIElement): void {
   const [first] = element.children.flatMap(controlsOf);
-  const text = textOf(element).trim();
+  const text = textOf(element);
   const textContent = text === "" ? null : boxed(text);
   write(control, "content", first ?? textContent);
 }
