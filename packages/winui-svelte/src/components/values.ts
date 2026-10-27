@@ -1,4 +1,4 @@
-import type { BoxedValue, NativeValue } from "../native-value.ts";
+import type { NativeValue } from "../native-value.ts";
 
 // The plain values a component's props take, and how each is read: pure, so
 // they are tested without WinUI. convert.ts turns them into the bindings'.
@@ -59,9 +59,14 @@ export type CornerRadiusInput =
 // "#rgb", "#rrggbb", "#aarrggbb", "transparent", or WinUI's own value.
 export type ColorInput = string | ColorValue;
 
-// An object property such as a button's content takes any value; a string,
-// number or boolean is boxed first.
-export type ObjectInput = BoxedValue;
+// An object property such as a button's content: a string, number or boolean
+// (boxed first) or an object (a control, a WinRT value) as it is; null clears
+// it. WinUI types these Object, and they hold whatever the app puts there.
+export type ObjectInput = string | number | boolean | object | null;
+
+// An object property that holds only a WinRT object (a collection, a template,
+// a scroll host), never a boxed value; null clears it.
+export type ObjectReferenceInput = object | null;
 
 const cssSeparator = /\s+/u;
 const listSeparator = ",";

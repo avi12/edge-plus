@@ -47,6 +47,33 @@ export const skippedProperties = new Map<string, string>([
   ["Style", "style is the CSS string of the element; WinUI's Style object is set from the class"]
 ]);
 
+// The metadata types these properties Object, but WinUI takes less than any
+// value: the input type (src/components/convert.ts) each prop is narrowed to.
+// Every other Object property keeps ObjectInput (a boxed string, number or
+// boolean, or an object): content, headers, tool tips, command parameters,
+// selected items, data contexts and tags hold whatever the app puts there.
+export const narrowedObjectInputs = new Map<string, string>([
+  // A collection or a template (DataTemplate, selector or element factory): a
+  // boxed primitive is never one.
+  ["itemsSource", "ObjectReferenceInput"],
+  ["menuItemsSource", "ObjectReferenceInput"],
+  ["footerMenuItemsSource", "ObjectReferenceInput"],
+  ["tabItemsSource", "ObjectReferenceInput"],
+  ["itemTemplate", "ObjectReferenceInput"],
+  ["scrollOwner", "ObjectReferenceInput"],
+  // RelativePanel places an element by another element, or by its name.
+  ["relativePanelLeftOf", "ElementReferenceInput"],
+  ["relativePanelAbove", "ElementReferenceInput"],
+  ["relativePanelRightOf", "ElementReferenceInput"],
+  ["relativePanelBelow", "ElementReferenceInput"],
+  ["relativePanelAlignHorizontalCenterWith", "ElementReferenceInput"],
+  ["relativePanelAlignVerticalCenterWith", "ElementReferenceInput"],
+  ["relativePanelAlignLeftWith", "ElementReferenceInput"],
+  ["relativePanelAlignTopWith", "ElementReferenceInput"],
+  ["relativePanelAlignRightWith", "ElementReferenceInput"],
+  ["relativePanelAlignBottomWith", "ElementReferenceInput"]
+]);
+
 // A component with props the metadata cannot give (Grid's columns and rows
 // are read-only collections): src/components/extensions/<kebab-name>.ts
 // exports `<Name>Extras` (the props) and `link<Name>Extras(control, props,

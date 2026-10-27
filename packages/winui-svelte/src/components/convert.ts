@@ -13,7 +13,7 @@ import {
   SolidColorBrush,
   Uri
 } from "./generated/bindings.ts";
-import type { ImageSource } from "./generated/bindings.ts";
+import type { ImageSource, UIElement } from "./generated/bindings.ts";
 import type {
   AttachedInput,
   ColorInput,
@@ -37,7 +37,18 @@ import {
 // A prop's value as the bindings take it: the generated components call these
 // where a prop is not already the bindings' own type.
 
-export type { AttachedInput, ColorInput, CornerRadiusInput, ObjectInput, ThicknessInput } from "./values.ts";
+export type {
+  AttachedInput,
+  ColorInput,
+  CornerRadiusInput,
+  ObjectInput,
+  ObjectReferenceInput,
+  ThicknessInput
+} from "./values.ts";
+
+// RelativePanel places an element by another element, or by that element's
+// name.
+export type ElementReferenceInput = string | UIElement;
 
 // What every component takes besides its control's properties; the element
 // itself gets them (the CSS runtime reads them).
@@ -220,6 +231,19 @@ export function objectOf(input: ObjectInput): BoxedValue {
   }
 
   return input;
+}
+
+// An object property read back, for a bindable prop: the bindings type it
+// unknown (an IInspectable they cannot name). A value no prop could have set
+// reads as null.
+export function objectInputOf(value: BoxedValue): ObjectInput {
+  const isObjectInput =
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "object" ||
+    typeof value === "function";
+  return isObjectInput ? value : null;
 }
 
 // Calls each Owner.set<Property>(control, value) an `attached` prop lists.

@@ -8,7 +8,13 @@ import type {
   PropertyModel
 } from "./model.ts";
 import { bindingClasses, kebabCase, requestedClasses } from "./model.ts";
-import { extendedClasses, extraBindings, handWrittenComponents, PropertyKind } from "./tables.ts";
+import {
+  extendedClasses,
+  extraBindings,
+  handWrittenComponents,
+  narrowedObjectInputs,
+  PropertyKind
+} from "./tables.ts";
 import type { TypeName } from "./winmd.ts";
 import { fullName } from "./winmd.ts";
 
@@ -123,14 +129,21 @@ function enumName(property: { enumType: TypeName | null }): string {
   return property.enumType.name;
 }
 
+// The input type a converted prop takes: its kind's, or for an Object prop
+// the narrower one narrowedObjectInputs gives it.
+function inputTypeOf(kind: PropertyKind, key: string): string | undefined {
+  const narrowed = kind === PropertyKind.Object ? narrowedObjectInputs.get(key) : undefined;
+  return narrowed ?? converters.get(kind)?.inputType;
+}
+
 function propertyType(property: PropertyModel, className: string): string {
   if (property.kind === PropertyKind.Enum) {
     return `EnumInput<typeof ${enumName(property)}>`;
   }
 
-  const converter = converters.get(property.kind);
-  if (converter !== undefined) {
-    return converter.inputType;
+  const inputType = inputTypeOf(property.kind, property.key);
+  if (inputType !== undefined) {
+    return inputType;
   }
 
   return plainTypes.get(property.kind) ?? `${className}["${property.key}"]`;
@@ -150,9 +163,9 @@ function attachedType(attached: AttachedModel): string {
     return `EnumInput<typeof ${enumName(attached)}>`;
   }
 
-  const converter = converters.get(attached.kind);
-  if (converter !== undefined) {
-    return converter.inputType;
+  const inputType = inputTypeOf(attached.kind, attached.key);
+  if (inputType !== undefined) {
+    return inputType;
   }
 
   return plainTypes.get(attached.kind) ?? `Parameters<typeof ${attached.owner.name}.${attached.setter}>[1]`;
@@ -170,7 +183,7 @@ class LevelImports {
   readonly runtimeTypes = new Set<string>();
   readonly parents = new Set<string>();
 
-  note(kind: PropertyKind, enumType: TypeName | null): void {
+  note(kind: PropertyKind, enumType: TypeName | null, key: string): void {
     if (kind === PropertyKind.Enum) {
       this.bindingValues.add(enumName({ enumType }));
       this.convert.add("enumValue");
@@ -179,10 +192,12 @@ class LevelImports {
     }
 
     const converter = converters.get(kind);
-    if (converter !== undefined) {
-      this.convert.add(converter.convert);
-      this.convertTypes.add(converter.inputType);
+    if (converter === undefined) {
+      return;
     }
+
+    this.convert.add(converter.convert);
+    this.convertTypes.add(inputTypeOf(kind, key) ?? converter.inputType);
   }
 }
 
@@ -194,7 +209,7 @@ function emitProperty(
   member: string;
   body: string[];
 } {
-  imports.note(property.kind, property.enumType);
+  imports.note(property.kind, property.enumType, property.key);
   const method = property.isContent ? "contentProperty" : "property";
   return {
     member: `  ${property.key}?: ${propertyType(property, className)};`,
@@ -210,7 +225,7 @@ function emitAttached(attached: AttachedModel, imports: LevelImports): {
   member: string;
   body: string[];
 } {
-  imports.note(attached.kind, attached.enumType);
+  imports.note(attached.kind, attached.enumType, attached.key);
   imports.bindingValues.add(attached.owner.name);
   return {
     member: `  ${attached.key}?: ${attachedType(attached)};`,
@@ -227,11 +242,18 @@ function emitBindable(
   property: PropertyModel,
   imports: LevelImports
 ): string[] {
-  imports.note(property.kind, property.enumType);
+  imports.note(property.kind, property.enumType, property.key);
   const subscribers = bindable.events.map(name => `    handler => control.on${name}(handler)`);
+  // The bindings read an Object property back as unknown.
+  const isObject = property.kind === PropertyKind.Object;
+  if (isObject) {
+    imports.convert.add("objectInputOf");
+  }
+
+  const read = isObject ? `objectInputOf(control.${bindable.key})` : `control.${bindable.key}`;
   return [
     `  link.bindable(bound, "${bindable.key}", {`,
-    `    read: () => control.${bindable.key},`,
+    `    read: () => ${read},`,
     "    write(value) {",
     `      control.${bindable.key} = ${valueExpression(property.kind, property.enumType)};`,
     "    }",
