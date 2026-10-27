@@ -22,6 +22,7 @@ import { duplicateKey, syncKeyVector } from "./key-vector.ts";
 import type { LiveRow } from "./live-rows.ts";
 import { LiveRows } from "./live-rows.ts";
 import { movedIndex, MoveDirection, sameOrder } from "./reorder.ts";
+import type { RowProps } from "./row-source.svelte.ts";
 import { RowSource } from "./row-source.svelte.ts";
 import Row from "./Row.svelte";
 import { DynWinRtType, DynWinRtValue, unboxObject } from "@microsoft/dynwinrt";
@@ -210,7 +211,7 @@ class ItemsHost<Item> implements ListHandle {
     }
 
     const source = new RowSource(item);
-    const mounted = mountControl(Row, {
+    const mounted = mountControl<RowProps<Item>>(Row, {
       snippet,
       source
     });

@@ -1,10 +1,6 @@
-import type { ItemsComponentProps } from "./items/items-props.ts";
-import type { ComponentInternals } from "svelte";
+import type { ItemsComponent, ItemsComponentProps } from "./items/items-props.ts";
 
 export type GridViewComponentProps<Item = object> = ItemsComponentProps<Item>;
 
-declare function GridView<Item>(
-  internals: ComponentInternals,
-  props: GridViewComponentProps<Item>
-): Record<string, never>;
+declare const GridView: ItemsComponent;
 export default GridView;

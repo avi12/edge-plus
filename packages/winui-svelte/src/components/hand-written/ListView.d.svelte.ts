@@ -1,10 +1,6 @@
-import type { ItemsComponentProps } from "./items/items-props.ts";
-import type { ComponentInternals } from "svelte";
+import type { ItemsComponent, ItemsComponentProps } from "./items/items-props.ts";
 
 export type ListViewComponentProps<Item = object> = ItemsComponentProps<Item>;
 
-declare function ListView<Item>(
-  internals: ComponentInternals,
-  props: ListViewComponentProps<Item>
-): Record<string, never>;
+declare const ListView: ItemsComponent;
 export default ListView;
