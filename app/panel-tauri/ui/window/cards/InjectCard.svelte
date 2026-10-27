@@ -7,7 +7,11 @@
   // The Inject button, as a card under the Inject automatically switch. When it
   // is shown, and whether it can be pressed, is the core's decision: ready, or
   // injected and so disabled. One card either way, so the change is in place.
-  const { offer }: { offer: Exclude<InjectOffer, "hidden"> } = $props();
+  interface Props {
+    offer: Exclude<InjectOffer, "hidden">;
+  }
+
+  const { offer }: Props = $props();
   const panel = usePanel();
 
   const isReady = $derived(offer === "ready");

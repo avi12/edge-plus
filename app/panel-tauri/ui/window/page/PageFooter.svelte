@@ -3,7 +3,11 @@
   import { Grid, HyperlinkButton, StackPanel, TextBlock } from "winui-svelte";
 
   // Who made it, linked, with the version at the end.
-  const { footer }: { footer: FooterView } = $props();
+  interface Props {
+    footer: FooterView;
+  }
+
+  const { footer }: Props = $props();
 </script>
 
 <Grid class="footer">

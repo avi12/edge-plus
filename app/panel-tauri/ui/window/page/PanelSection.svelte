@@ -4,10 +4,12 @@
   import { StackPanel, TextBlock } from "winui-svelte";
 
   // A section's header over its cards.
-  const { name, children }: {
+  interface Props {
     name: string;
     children: Snippet;
-  } = $props();
+  }
+
+  const { name, children }: Props = $props();
 </script>
 
 <StackPanel class="section" childrenTransitions={motion.applied(motion.reposition)}>

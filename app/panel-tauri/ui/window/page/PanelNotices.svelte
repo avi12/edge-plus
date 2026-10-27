@@ -7,7 +7,11 @@
   // What the page says above the cards: the hint to open Edge, the warning
   // that Edge's build is not the one Edge+ was made for, and the error of an
   // action that failed.
-  const { view }: { view: View } = $props();
+  interface Props {
+    view: View;
+  }
+
+  const { view }: Props = $props();
   const panel = usePanel();
 
   const buildNotice = $derived(pausedNotice(view.edge, view.paused));

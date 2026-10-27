@@ -11,7 +11,11 @@
   // only their state. A feature card's title is shared with the core's toast
   // (wording/shared-wording.json); "RegExp" and "Copilot" must match the DLL's
   // names for them (find_text.h, chat_target.h).
-  const { view }: { view: View } = $props();
+  interface Props {
+    view: View;
+  }
+
+  const { view }: Props = $props();
 
   function cardOf(key: SwitchKey): CardView {
     const card = view.cards.find(candidate => candidate.key === key);

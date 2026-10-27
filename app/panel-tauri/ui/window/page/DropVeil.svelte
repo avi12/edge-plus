@@ -4,7 +4,11 @@
   import { Grid, Rectangle, TextBlock } from "winui-svelte";
 
   // Fades in over the page while files are dragged over the window.
-  const { isShown }: { isShown: boolean } = $props();
+  interface Props {
+    isShown: boolean;
+  }
+
+  const { isShown }: Props = $props();
 
   const shownOpacity = 1;
   const hiddenOpacity = 0;

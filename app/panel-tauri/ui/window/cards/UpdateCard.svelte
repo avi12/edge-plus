@@ -8,7 +8,11 @@
   // Edge+ into it. The page shows it once one is ready. A copy the installer
   // put under Program Files updates through the new installer, which Windows
   // asks to allow.
-  const { update }: { update: UpdateView } = $props();
+  interface Props {
+    update: UpdateView;
+  }
+
+  const { update }: Props = $props();
   const panel = usePanel();
 
   const how = $derived(
