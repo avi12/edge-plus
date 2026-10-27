@@ -1,6 +1,12 @@
 import type { NativeValue } from "../../native-value.ts";
 import { svelteHooks } from "../../vite/loader.ts";
-import { FakeBorder, fakeControls, FakePanel, FakeToggle } from "../testing/fake-controls.ts";
+import {
+  FakeBorder,
+  fakeControls,
+  FakePanel,
+  FakeTextBlock,
+  FakeToggle
+} from "../testing/fake-controls.ts";
 import { registerControls, setClassHandler } from "./host.ts";
 import assert from "node:assert/strict";
 import { registerHooks } from "node:module";
@@ -18,6 +24,13 @@ setClassHandler((control, value) => {
 registerHooks(svelteHooks(path.join(import.meta.dirname, "host.ts")));
 const { mountControl } = await import("./mount.svelte.ts");
 const { default: Fixture } = await import("../testing/Host.fixture.svelte");
+const { default: TextFixture } = await import("../testing/Text.fixture.svelte");
+
+interface TextProps extends Record<string, NativeValue> {
+  version: string;
+  status: string;
+  count: number;
+}
 
 interface Props extends Record<string, NativeValue> {
   isOn: boolean;
@@ -109,4 +122,27 @@ test("a hosted control can be placed again after its subtree is removed", () => 
   const [, , panel] = root.children.items;
   assert.ok(panel instanceof FakePanel);
   assert.equal(panel.children.items.includes(hosted), true);
+});
+
+function textsOf(panel: FakePanel): Array<string | null> {
+  return panel.children.items.map(item => (item instanceof FakeTextBlock ? item.text : null));
+}
+
+test("text written as children is a text block's text, and follows what it shows", () => {
+  const mounted = mountControl<TextProps>(TextFixture, {
+    version: "0.2.0",
+    status: "Saved",
+    count: 2
+  });
+  const root: object = mounted.root;
+  assert.ok(root instanceof FakePanel);
+  assert.deepEqual(textsOf(root), ["Edge+ 0.2.0 is ready", "Saved", "Saved 2 themes"]);
+
+  mounted.set({
+    version: "0.3.0",
+    status: "",
+    count: 3
+  });
+  assert.deepEqual(textsOf(root), ["Edge+ 0.3.0 is ready", "", "Saved 3 themes"]);
+  mounted.unmount();
 });

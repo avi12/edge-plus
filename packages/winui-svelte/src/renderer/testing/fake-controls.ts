@@ -59,8 +59,14 @@ export class FakeBorder {
   child: object | null = null;
 }
 
+export class FakeTextBlock {
+  readonly margin = null;
+  text = "";
+}
+
 export const fakeControls = {
   FakePanel,
   FakeToggle,
-  FakeBorder
+  FakeBorder,
+  FakeTextBlock
 };
