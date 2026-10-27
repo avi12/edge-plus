@@ -8,10 +8,10 @@
 
 <Grid class="footer">
   <StackPanel class="footer-author">
-    <TextBlock class="card-description footer-by" text="by" />
+    <TextBlock class="card-description footer-by">by</TextBlock>
     <HyperlinkButton class="footer-link" navigateUri={footer.authorUri}>{footer.author}</HyperlinkButton>
   </StackPanel>
-  <TextBlock class="card-description footer-version" text={footer.version} />
+  <TextBlock class="card-description footer-version">{footer.version}</TextBlock>
 </Grid>
 
 <!-- Global: a class on a component is not an element's, so Svelte does not

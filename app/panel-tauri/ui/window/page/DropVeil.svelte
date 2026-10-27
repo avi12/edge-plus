@@ -27,7 +27,7 @@
   opacityTransition={fade}
 >
   <Rectangle class="frame" radiusX={cornerRadius} radiusY={cornerRadius} strokeDashArray={dashArray} />
-  <TextBlock class="card-title veil-hint" text="Drop a theme folder, .zip or .crx to add it" />
+  <TextBlock class="card-title veil-hint">Drop a theme folder, .zip or .crx to add it</TextBlock>
 </Grid>
 
 <style>

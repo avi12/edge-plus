@@ -11,7 +11,7 @@
 </script>
 
 <StackPanel class="section" childrenTransitions={motion.applied(motion.reposition)}>
-  <TextBlock class="section-header" text={name} />
+  <TextBlock class="section-header">{name}</TextBlock>
   {@render children()}
 </StackPanel>
 

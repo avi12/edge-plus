@@ -39,11 +39,11 @@
 
 <Grid class="theme-row" automationName={theme.name}>
   <FontIcon class="theme-row-icon" glyph={glyph(gripGlyph)} opacity={isOwn ? shown : hidden} />
-  <TextBlock class="card-title theme-row-name" text={theme.name} />
+  <TextBlock class="card-title theme-row-name">{theme.name}</TextBlock>
   <StackPanel class="theme-row-badges">
     {#each theme.badges as badge (badge)}
       <Border class="badge">
-        <TextBlock class="badge-text" text={badgeText[badge]} />
+        <TextBlock class="badge-text">{badgeText[badge]}</TextBlock>
       </Border>
     {/each}
   </StackPanel>

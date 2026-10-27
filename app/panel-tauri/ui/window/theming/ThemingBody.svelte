@@ -132,14 +132,14 @@
     >Add</Button>
   </Grid>
   <StackPanel class="local-add">
-    <TextBlock class="card-description local-add-label" text="Or add a local theme" />
+    <TextBlock class="card-description local-add-label">Or add a local theme</TextBlock>
     <Button isEnabled={!isBusy} onClick={() => void addLocal(LocalThemeKind.File)}>File…</Button>
     <Button
       isEnabled={!isBusy}
       onClick={() => void addLocal(LocalThemeKind.Folder)}
     >Folder…</Button>
   </StackPanel>
-  <TextBlock class="error" text={error} visibility={error.length > 0 ? "Visible" : "Collapsed"} />
+  <TextBlock class="error" visibility={error.length > 0 ? "Visible" : "Collapsed"}>{error}</TextBlock>
   <ThemePicker assignedId={theming.light} label="When Windows is light" onPick={id => assign("light", id)} {options} />
   <ThemePicker assignedId={theming.dark} label="When Windows is dark" onPick={id => assign("dark", id)} {options} />
   <OwnThemeList onRemove={remove} onReorder={ids => void reorder(ids)} rows={theming.own} />

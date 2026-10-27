@@ -73,12 +73,11 @@
   {#snippet titleBar()}
     <Grid class="title-bar">
       <Image class="title-icon" source={pathToFileURL(view.icon).href} />
-      <TextBlock class="caption title-name" text={view.productName} />
+      <TextBlock class="caption title-name">{view.productName}</TextBlock>
       <TextBlock
         class="card-description title-status"
         opacity={panel.isStatusShown ? statusShown : statusHidden}
-        text={panel.statusLine}
-      />
+      >{panel.statusLine}</TextBlock>
     </Grid>
   {/snippet}
   <PanelPage {panel} {view} />

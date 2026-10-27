@@ -30,7 +30,9 @@
     <ThemeRow onRemove={null} theme={row} />
   {/each}
   {#if !hasThemes}
-    <TextBlock class="card-description" text="No themes yet — paste a store link or add a local theme (.crx, .zip or folder)." />
+    <TextBlock class="card-description">
+      No themes yet — paste a store link or add a local theme (.crx, .zip or folder).
+    </TextBlock>
   {/if}
 </StackPanel>
 

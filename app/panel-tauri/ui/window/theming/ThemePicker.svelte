@@ -29,7 +29,7 @@
 </script>
 
 <Grid class="picker">
-  <TextBlock class="card-title picker-label" text={label} />
+  <TextBlock class="card-title picker-label">{label}</TextBlock>
   <ComboBox class="picker-choice" automationName={label} bind:selectedIndex={() => selectedIndex, pick}>
     {#each options as option (option.name)}
       <ComboBoxItem>{option.name}</ComboBoxItem>

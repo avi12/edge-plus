@@ -34,9 +34,9 @@
   <Grid class="card-grid">
     <FontIcon class="card-icon" glyph={glyphText(glyph)} />
     <StackPanel class="card-words">
-      <TextBlock class="card-title" text={title} />
-      <TextBlock class="card-description" text={description} />
-      <TextBlock class="note" text={note} visibility={note.length > 0 ? "Visible" : "Collapsed"} />
+      <TextBlock class="card-title">{title}</TextBlock>
+      <TextBlock class="card-description">{description}</TextBlock>
+      <TextBlock class="note" visibility={note.length > 0 ? "Visible" : "Collapsed"}>{note}</TextBlock>
     </StackPanel>
     <Border class="card-end">
       {@render end()}
