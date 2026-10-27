@@ -5,6 +5,7 @@
   import * as motion from "../style/motion.ts";
   import ThemingBody from "../theming/ThemingBody.svelte";
   import PanelSection from "./PanelSection.svelte";
+  import SectionHeader from "./SectionHeader.svelte";
   import { StackPanel } from "winui-svelte";
 
   // Every section and card, in order, and what each says: the View carries
@@ -28,7 +29,8 @@
 </script>
 
 <StackPanel class="sections" childrenTransitions={motion.applied(motion.reposition)}>
-  <PanelSection name="Tabs and windows">
+  <PanelSection>
+    <SectionHeader>Tabs and windows</SectionHeader>
     <FeatureCard
       card={cardOf("nativeSplit")}
       description="Grows Edge's own split past two panes: add panes on any side, drag the dividers, move with Shift+Alt+arrow. Live, no restart. Open Edge first."
@@ -40,7 +42,8 @@
       glyph={0xE890}
     />
   </PanelSection>
-  <PanelSection name="Look and themes">
+  <PanelSection>
+    <SectionHeader>Look and themes</SectionHeader>
     <FeatureCard
       card={cardOf("theming")}
       description="Use one theme when Windows is light and another when it is dark, switched live. Add themes from the Chrome Web Store, Edge Add-ons or a local file."
@@ -67,7 +70,8 @@
       glyph={0xE736}
     />
   </PanelSection>
-  <PanelSection name="Browsing">
+  <PanelSection>
+    <SectionHeader>Browsing</SectionHeader>
     <FeatureCard
       card={cardOf("enhancedFind")}
       description="Adds RegExp (with its flags) and Ask Copilot to the options of Edge's Ctrl+F bar. RegExp highlights every match; Ask sends your question to Copilot, which opens in its side panel. Live, no restart. Open Edge first."
@@ -86,7 +90,8 @@
       glyph={0xE7BA}
     />
   </PanelSection>
-  <PanelSection name="Edge+ itself">
+  <PanelSection>
+    <SectionHeader>Edge+ itself</SectionHeader>
     <FeatureCard
       card={cardOf("startWithWindows")}
       description="Runs Edge+ in the background, with no window, from when you sign in to Windows: your settings apply and an Edge update that needs a newer Edge+ is caught. Launch Edge+ to open its window."
