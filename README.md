@@ -12,7 +12,7 @@ and cut at the corner.*
 ## Requirements
 
 - Windows 10 version 2004 (build 19041) or later, 64-bit.
-- Microsoft Edge (Stable, 64-bit) 156.0.4314.42, the one build the DLL is
+- Microsoft Edge (Stable, 64-bit) 156.0.4314.50, the one build the DLL is
   pinned to (`app/native-split/src/edge/offsets.h`). On any other build every
   feature that calls into `msedge.dll` pauses itself and Edge is left
   untouched; see *Setup*.

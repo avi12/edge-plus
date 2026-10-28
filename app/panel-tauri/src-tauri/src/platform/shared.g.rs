@@ -35,4 +35,4 @@ pub const EDGE_VERSION_MINOR: u32 = 0;
 pub const EDGE_VERSION_BUILD: u32 = 4314;
 
 // app/native-split/src/edge/offsets.h:23
-pub const EDGE_VERSION_REVISION: u32 = 42;
+pub const EDGE_VERSION_REVISION: u32 = 50;
