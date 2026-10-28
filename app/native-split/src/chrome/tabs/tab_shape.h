@@ -4,7 +4,10 @@
 // four arcs for a horizontal one; changing the outline shapes the tab in
 // whatever colour Edge paints it, so nothing is painted over the fill except a
 // split group's (SplitTabView::OnPaint). The same outline, through GetPath,
-// is what the horizontal strip's drop shadow follows. UI thread only.
+// is what the horizontal strip's drop shadow follows. In a right-to-left UI the
+// whole outline mirrors: a vertical tab's by tab_edge::LeadingSide, a horizontal
+// one's by Edge, which draws it left to right on a flipped canvas. UI thread
+// only.
 #pragma once
 #include <windows.h>
 #include <intrin.h>
@@ -171,17 +174,16 @@ inline float ChamferLeg(float radius) {
 // With no radius an arc is a straight line to its end, so the flared feet end
 // level with the tab's bottom, the top corners are square and the right foot
 // (or a vertical tab's bottom-right arc) becomes the cut, from where h_line_to
-// stops the right side. A right-to-left UI keeps Edge's corners: its leading
-// corner is built from different calls.
+// stops the right side. A right-to-left UI needs nothing more: GetPath builds
+// the same outline left to right whatever the direction (the same calls from the
+// same addresses) and Edge flips the canvas it paints on, so the cut at the
+// outline's right shows at the tab's left.
 inline void* __fastcall h_arc_to(void* path, uint64_t radii, float rotation,
                                  int arcSize, uint8_t direction, uint64_t end) {
   const OutlineArc corner =
       g_outlinedTab ? ArcOfCaller(_ReturnAddress()) : OutlineArc::kNone;
-  const bool isHandled =
-      corner != OutlineArc::kNone &&
-      (!edge::IsUiRightToLeft() || corner == OutlineArc::kLeftFoot ||
-       corner == OutlineArc::kRightFoot);
-  if (!isHandled) {
+  const bool isOutlineArc = corner != OutlineArc::kNone;
+  if (!isOutlineArc) {
     return o_arc_to(path, radii, rotation, arcSize, direction, end);
   }
   const PointF radius = UnpackPoint(radii);
@@ -222,13 +224,12 @@ inline constinit LineTo_t o_line_to = nullptr;
 // arc would start when that corner is cut.
 inline void* __fastcall h_line_to(void* path, uint64_t point) {
   const void* caller = _ReturnAddress();
-  const bool isShaped = g_outlinedTab && !edge::IsUiRightToLeft();
   const bool isTopEdge =
-      isShaped &&
+      g_outlinedTab &&
       caller ==
           edge::At(edge155::rva::EdgeTabStyleViews_GetPath_topEdge_return);
   const bool isCutRightEdge =
-      isShaped && g_isTrailingCut &&
+      g_outlinedTab && g_isTrailingCut &&
       caller ==
           edge::At(edge155::rva::EdgeTabStyleViews_GetPath_rightEdge_return);
   PointF target = UnpackPoint(point);
