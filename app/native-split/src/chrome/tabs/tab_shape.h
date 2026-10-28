@@ -272,28 +272,22 @@ inline void* __fastcall h_add_rrect(void* path, const void* roundedRect,
   const float top = edge::Field<float>(roundedRect, kRRectTop);
   const float right = edge::Field<float>(roundedRect, kRRectRight);
   const float bottom = edge::Field<float>(roundedRect, kRRectBottom);
-  const bool isLeftToRight = !edge::IsUiRightToLeft();
-  const tab_edge::Corner trailingBottom = isLeftToRight
-                                              ? tab_edge::Corner::kLowerRight
-                                              : tab_edge::Corner::kLowerLeft;
+  const tab_edge::Side leading = tab_edge::LeadingSide(edge::IsUiRightToLeft());
+  const tab_edge::Corner trailingBottom =
+      tab_edge::TrailingBottomCorner(leading);
   const float radius = edge::Field<float>(
       roundedRect,
       kRRectRadii + static_cast<uintptr_t>(trailingBottom) * sizeof(PointF));
-  const float leg = ChamferLeg(radius);
-  const float trailingX = isLeftToRight ? right : left;
-  const float leadingX = isLeftToRight ? left : right;
-  const float legX = isLeftToRight ? -leg : leg;
-  const auto point = [](float x, float y) {
-    return PackPoint(PointF{x, y});
-  };
+  const tab_edge::CutOutline outline = tab_edge::CutOutlineOf(
+      left, top, right, bottom, ChamferLeg(radius), leading);
   const auto moveTo =
       reinterpret_cast<MoveTo_t>(edge::At(edge155::rva::SkPath_moveTo));
-  moveTo(path, point(leadingX, top));
-  o_line_to(path, point(trailingX, top));
-  o_line_to(path, point(trailingX, bottom - leg));
-  o_line_to(path, point(trailingX + legX, bottom));
-  o_line_to(path, point(leadingX, bottom));
-  return o_line_to(path, point(leadingX, top));
+  moveTo(path, PackPoint(outline.points[0]));
+  void* result = path;
+  for (size_t i = 1; i < tab_edge::kCutOutlinePointCount; i++) {
+    result = o_line_to(path, PackPoint(outline.points[i]));
+  }
+  return result;
 }
 
 using DrawRoundRect_t = void(__fastcall*)(void*, const Rect*, int, const void*);
