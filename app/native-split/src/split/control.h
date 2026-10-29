@@ -308,6 +308,8 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     // (the theme garbage-collector suppressor keeps both assigned themes
     // installed for live switching) and those of features with their own switch.
     MH_EnableHook(edge::At(edge155::rva::ThemeService_RemoveUnusedThemes));
+    MH_EnableHook(
+        edge::At(edge155::rva::ThemeService_OnThemeBuiltFromExtension));
     MH_EnableHook(edge::At(edge155::rva::BrowserThemePack_GetColor));
     MH_EnableHook(edge::At(edge155::rva::ColorProvider_GetColor));
     MH_EnableHook(edge::At(edge155::rva::EdgeTab_UpdateForegroundColors));

@@ -567,6 +567,15 @@ inline constexpr uintptr_t
 // restart. (RevertToExtensionTheme only re-enables an already-enabled theme
 // extension, so it does not switch the active theme.)
 inline constexpr uintptr_t ThemeService_DoSetTheme = 0x8833f00;
+// void ThemeService::OnThemeBuiltFromExtension(this, const std::string& id,
+// scoped_refptr<BrowserThemePack>, bool suppress_infobar): where DoSetTheme's
+// asynchronous pack build lands, and the one place every route that makes a
+// theme extension active ends (Edge's loader after an install, DoSetTheme, the
+// sync migration). After the swap it shows the "Installed theme ... Undo" bubble
+// (ThemeInstalledInfoBarDelegate::CreateForLastActiveTab, or
+// ThemeService::ShowThemeInstalledInfoBar once infobars are migrated) unless the
+// 4th argument (r9) is set. docs/re/theming.md.
+inline constexpr uintptr_t ThemeService_OnThemeBuiltFromExtension = 0x8834460;
 // extensions::ExtensionRegistry* ExtensionRegistry::Get(BrowserContext*) and
 // the Extension* lookup on either of its sets (off::REGISTRY_*_set):
 // const Extension* ExtensionSet::GetByID(this, const std::string& id).

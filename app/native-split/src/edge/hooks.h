@@ -8,6 +8,8 @@
 #include "edge/edge.h"
 #include "theme/focus.h"
 #include "theme/theme_tone.h"
+#include "theme/theme_notice.h"
+#include "theme/theme.h"
 #include "split/panes.h"
 #include "layout/geometry.h"
 #include "layout/collapse.h"
@@ -374,6 +376,27 @@ inline void __fastcall h_remove_unused_themes(void* themeService) {
   o_remove_unused_themes(themeService);
 }
 
+// ThemeService::OnThemeBuiltFromExtension(this, id, pack, suppress_infobar):
+// asks for no "Installed theme ... Undo" bubble when the theme is one Edge+
+// applies itself (theme_notice.h). A store install is any other id and passes
+// through untouched, bubble and all. Rides theming, not the split (control.h).
+using OnThemeBuilt_t = void(__fastcall*)(void*, const void*, void*, bool);
+inline constinit OnThemeBuilt_t o_on_theme_built = nullptr;
+inline void __fastcall h_on_theme_built(void* themeService, const void* themeId,
+                                        void* pack, bool isSuppressed) {
+  const std::string idText = edge::StdStringText(themeId);
+  const theme_notice::Assigned assigned{
+      std::string_view(theme::g_lightTheme.value, theme::g_lightTheme.length),
+      std::string_view(theme::g_darkTheme.value, theme::g_darkTheme.length),
+      theme::g_isActive};
+  const bool isSuppressedNow =
+      theme_notice::ShouldSuppress(assigned, idText, isSuppressed);
+  const bool isSuppressedByUs = isSuppressedNow && !isSuppressed;
+  Log("[theme] built %s: bubble %s", idText.c_str(),
+      isSuppressedByUs ? "suppressed (Edge+ theme)" : "left to Edge");
+  o_on_theme_built(themeService, themeId, pack, isSuppressedNow);
+}
+
 // BrowserThemePack::GetColor(this, id, SkColor* out): a theme extension's colour
 // for `id`, false when the theme left it unset. Edge derives the whole vertical-
 // tab strip from the toolbar colour (offsets.h VTABCOLOR_*), so a theme cannot
@@ -719,6 +742,9 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   Install(edge155::rva::ThemeService_RemoveUnusedThemes,
           reinterpret_cast<void*>(h_remove_unused_themes),
           &o_remove_unused_themes, "ThemeService::RemoveUnusedThemes");
+  Install(edge155::rva::ThemeService_OnThemeBuiltFromExtension,
+          reinterpret_cast<void*>(h_on_theme_built), &o_on_theme_built,
+          "ThemeService::OnThemeBuiltFromExtension (no bubble for Edge+)");
   Install(edge155::rva::BrowserThemePack_GetColor,
           reinterpret_cast<void*>(h_getcolor), &o_getcolor,
           "BrowserThemePack::GetColor (vertical-tab recolour)");
