@@ -1,9 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { TextBlock } from "winui-svelte";
+  import { TextBlock } from "winui-svelte/components";
 
-  // What a card's switch or button does, under its title, written as the
-  // element's children.
   interface Props {
     children: Snippet;
   }
@@ -12,3 +10,11 @@
 </script>
 
 <TextBlock class="card-description">{@render children()}</TextBlock>
+
+<style>
+  .card-description {
+    color: var(--text-fill-color-secondary);
+    text-wrap: wrap;
+    -winui-based-on: CaptionTextBlockStyle;
+  }
+</style>

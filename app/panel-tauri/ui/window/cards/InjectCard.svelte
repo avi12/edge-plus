@@ -1,14 +1,12 @@
 <script lang="ts">
-  import type { InjectOffer } from "../../protocol.g.ts";
-  import { usePanel } from "../host/panel.svelte.ts";
+  import AccentButton from "./AccentButton.svelte";
   import CardDescription from "./CardDescription.svelte";
   import CardFrame from "./CardFrame.svelte";
   import CardTitle from "./CardTitle.svelte";
-  import { Button } from "winui-svelte";
+  import { GLYPHS } from "./glyphs.ts";
+  import type { InjectOffer } from "#src/protocol.g.ts";
+  import { runAndReport, usePanel } from "#src/window/host/panel.svelte.ts";
 
-  // The Inject button, as a card under the Inject automatically switch. When it
-  // is shown, and whether it can be pressed, is the core's decision: ready, or
-  // injected and so disabled. One card either way, so the change is in place.
   interface Props {
     offer: Exclude<InjectOffer, "hidden">;
   }
@@ -18,21 +16,22 @@
 
   const isReady = $derived(offer === "ready");
 
-  // Pressed and not yet answered: the button stays disabled.
   let isPressed = $state(false);
   const canPress = $derived(isReady && !isPressed);
 
-  async function inject(): Promise<void> {
-    // Disabled at once, so a second click cannot queue a second injection.
+  async function inject() {
     isPressed = true;
-    await panel.runAndReport({ kind: "inject" });
-    // A failed injection renders no new view; the button the click disabled
-    // comes back as the offer last shown.
+    await runAndReport({
+      panel,
+      action: {
+        kind: "inject"
+      }
+    });
     isPressed = false;
   }
 </script>
 
-<CardFrame glyph={isReady ? 0xE768 : 0xE73E}>
+<CardFrame glyph={isReady ? GLYPHS.injectReady : GLYPHS.injected}>
   <CardTitle>
     {#if isReady}
       Edge is open without Edge+
@@ -48,6 +47,6 @@
     {/if}
   </CardDescription>
   {#snippet end()}
-    <Button class="accent-button" isEnabled={canPress} onClick={() => void inject()}>Inject into Edge</Button>
+    <AccentButton automationId="inject" isEnabled={canPress} onclick={inject}>Inject into Edge</AccentButton>
   {/snippet}
 </CardFrame>

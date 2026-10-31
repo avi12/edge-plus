@@ -1,48 +1,41 @@
 <script lang="ts">
-  import { DoubleCollection } from "../winui.ts";
-  import { Grid, Rectangle, TextBlock } from "winui-svelte";
+  import { Grid, Rectangle, TextBlock } from "winui-svelte/components";
 
-  // Fades in over the page while files are dragged over the window. The
-  // frame's dashes and rounded corners stay props: CSS has no WinUI meaning for
-  // a Rectangle's radii or its dash array.
   interface Props {
     isShown: boolean;
   }
 
   const { isShown }: Props = $props();
-
-  const dashes = [4, 3];
-  const cornerRadius = 8;
-
-  const dashArray = new DoubleCollection();
-  for (const dash of dashes) {
-    dashArray.append(dash);
-  }
+  const CORNER_RADIUS = 8;
+  const DASH_LENGTH = 4;
+  const GAP_LENGTH = 3;
+  const DASH_PATTERN = [DASH_LENGTH, GAP_LENGTH];
 </script>
 
-<Grid class="veil {isShown ? "veil-shown" : ""}">
-  <Rectangle class="frame" radiusX={cornerRadius} radiusY={cornerRadius} strokeDashArray={dashArray} />
-  <TextBlock class="card-title veil-hint">Drop a theme folder, .zip or .crx to add it</TextBlock>
+<Grid class="veil" class:shown={isShown}>
+  <Rectangle class="frame" radiusX={CORNER_RADIUS} radiusY={CORNER_RADIUS} strokeDashArray={DASH_PATTERN} />
+  <TextBlock class="veil-hint">Drop a theme folder, .zip or .crx to add it</TextBlock>
 </Grid>
 
 <style>
-  :global(.veil) {
+  .veil {
     margin: 12px;
     background: var(--solid-background-fill-color-base);
-    opacity: 0%;
+    opacity: 0;
     pointer-events: none;
     transition: opacity 120ms;
   }
 
-  :global(.veil-shown) {
-    opacity: 100%;
+  .veil.shown {
+    opacity: 1;
   }
 
-  :global(.veil-hint) {
+  .veil-hint {
     place-self: center;
+    -winui-based-on: BodyTextBlockStyle;
   }
 
-  :global(.frame) {
+  .frame {
     stroke: var(--accent-fill-color-default);
     stroke-width: 2px;
   }

@@ -1,4 +1,3 @@
-// A .svelte component, as TypeScript sees it from a .ts file.
 declare module "*.svelte" {
   import type { Component } from "svelte";
 

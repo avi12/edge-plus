@@ -1,10 +1,8 @@
 <script lang="ts">
   import { useCardLabel } from "./card-label.ts";
   import type { Snippet } from "svelte";
-  import { TextBlock } from "winui-svelte";
+  import { TextBlock } from "winui-svelte/components";
 
-  // A card's title, its text written as the element's children. The control
-  // at the card's end is named by it.
   interface Props {
     children: Snippet;
   }
@@ -14,3 +12,10 @@
 </script>
 
 <TextBlock class="card-title" {@attach label.attach}>{@render children()}</TextBlock>
+
+<style>
+  .card-title {
+    text-wrap: wrap;
+    -winui-based-on: BodyTextBlockStyle;
+  }
+</style>

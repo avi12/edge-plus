@@ -1,12 +1,10 @@
 <script lang="ts">
-  import type { View } from "../../protocol.g.ts";
-  import { usePanel } from "../host/panel.svelte.ts";
-  import { pausedNotice } from "../wording/shared-wording.ts";
-  import { InfoBar, TextBlock } from "winui-svelte";
+  import type { View } from "#src/protocol.g.ts";
+  import { usePanel } from "#src/window/host/panel.svelte.ts";
+  import { pausedNotice } from "#src/window/wording/shared-wording.ts";
+  import { InfoBar, TextBlock } from "winui-svelte/components";
+  import { InfoBarSeverity, Visibility } from "winui-svelte/enums";
 
-  // What the page says above the cards: the hint to open Edge, the warning
-  // that Edge's build is not the one Edge+ was made for, and the error of an
-  // action that failed.
   interface Props {
     view: View;
   }
@@ -14,26 +12,29 @@
   const { view }: Props = $props();
   const panel = usePanel();
 
-  const buildNotice = $derived(pausedNotice(view.edge, view.paused));
+  const buildNotice = $derived(pausedNotice(view));
 </script>
 
-<TextBlock class="card-description open-edge-hint {view.isEdgeRunning ? "collapsed" : ""}">Open Edge to apply changes.</TextBlock>
-<InfoBar isClosable={false} isOpen={buildNotice.length > 0} message={buildNotice} severity="Warning" />
+<TextBlock class="open-edge-hint" visibility={view.isEdgeRunning ? Visibility.Collapsed : Visibility.Visible}>
+  Open Edge to apply changes.
+</TextBlock>
+<InfoBar isClosable={false} isOpen={buildNotice.length > 0} message={buildNotice} severity={InfoBarSeverity.Warning} />
 <InfoBar
-  isClosable={true}
+  isClosable
   isOpen={panel.actionNotice.length > 0}
   message={panel.actionNotice}
-  onClosed={() => {
+  onclosed={() => {
     panel.actionNotice = "";
   }}
-  severity="Error"
+  severity={InfoBarSeverity.Error}
 />
 
-<!-- Global: a class on a component is not an element's, so Svelte does not
-     scope it. -->
 <style>
-  :global(.open-edge-hint) {
-    margin: 0 4px;
+  .open-edge-hint {
+    margin-right: 4px;
     margin-bottom: 4px;
+    margin-left: 4px;
+    color: var(--text-fill-color-secondary);
+    -winui-based-on: CaptionTextBlockStyle;
   }
 </style>

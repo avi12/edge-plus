@@ -1,25 +1,21 @@
 <script lang="ts">
-  import type { Bounds, View } from "../protocol.g.ts";
   import type { Panel } from "./host/panel.svelte.ts";
   import PanelPage from "./page/PanelPage.svelte";
-  import * as motion from "./style/motion.ts";
+  import type { Bounds, View } from "#src/protocol.g.ts";
   import { pathToFileURL } from "node:url";
-  import { Grid, Image, TextBlock } from "winui-svelte";
-  import { Window } from "winui-svelte/components";
+  import { Grid, Image, TextBlock, Window } from "winui-svelte/components";
+  import { Backdrop } from "winui-svelte/enums";
+  import type { WindowTheme } from "winui-svelte/enums";
 
-  // The window: dressed like any-stt's panel (acrylic, the content running into
-  // the title bar), so the two tools read as one family. Sizes are in
-  // device-independent pixels; only the height is the user's.
   interface Props {
     view: View;
     panel: Panel;
-    // A dev swap places the new window where the old one was.
     placement: Bounds | null;
-    // Shown without taking focus: for unattended captures.
     isBackground: boolean;
+    theme: WindowTheme;
     refresh: () => void;
     reportBounds: (bounds: Bounds) => void;
-    onClosed: () => void;
+    onclosed: () => void;
   }
 
   const {
@@ -27,81 +23,81 @@
     panel,
     placement,
     isBackground,
+    theme,
     refresh,
     reportBounds,
-    onClosed
+    onclosed
   }: Props = $props();
 
-  const windowWidth = 560;
-  const windowHeight = 640;
-  const minimumHeight = 420;
-
-  // Windows' animation switch and the core's View are read again whenever the
-  // window is activated.
-  function onActiveChanged(isActive: boolean): void {
-    if (isActive) {
-      motion.refresh();
-      refresh();
-    }
-  }
+  const WINDOW_WIDTH = 560;
+  const WINDOW_HEIGHT = 640;
+  const MINIMUM_HEIGHT = 420;
 </script>
 
 <Window
   activate={!isBackground}
   appUserModelId={view.appUserModelId}
-  backdrop="acrylic"
-  height={windowHeight}
+  backdrop={Backdrop.acrylic}
+  height={WINDOW_HEIGHT}
   icon={view.icon}
   isMaximizable={false}
-  maxWidth={windowWidth}
-  minHeight={minimumHeight}
-  minWidth={windowWidth}
-  {onActiveChanged}
-  onBoundsChanged={reportBounds}
-  {onClosed}
-  placement={placement === null ? null : {
+  maxWidth={WINDOW_WIDTH}
+  minHeight={MINIMUM_HEIGHT}
+  minWidth={WINDOW_WIDTH}
+  onactivechanged={isActive => isActive && refresh()}
+  onboundschanged={reportBounds}
+  {onclosed}
+  placement={placement && {
     x: placement.x,
     y: placement.y,
     height: placement.height
   }}
+  {theme}
   title={view.productName}
-  width={windowWidth}
+  width={WINDOW_WIDTH}
   bind:handle={panel.window}
 >
   {#snippet titleBar()}
     <Grid class="title-bar">
       <Image class="title-icon" source={pathToFileURL(view.icon).href} />
-      <TextBlock class="caption title-name">{view.productName}</TextBlock>
-      <TextBlock class="card-description title-status {panel.isStatusShown ? "" : "concealed"}">{panel.statusLine}</TextBlock>
+      <TextBlock class="title-name">{view.productName}</TextBlock>
+      <TextBlock class="title-status" class:shown={panel.isStatusShown}>{panel.statusLine}</TextBlock>
     </Grid>
   {/snippet}
   <PanelPage {panel} {view} />
 </Window>
 
-<!-- A class on a component is not an element's, so Svelte does not scope it:
-     these rules are global, with names no other component uses. -->
 <style>
-  :global(.title-bar) {
+  .title-bar {
     grid-template-columns: auto auto 1fr;
     height: 40px;
     padding-left: 14px;
   }
 
-  :global(.title-icon) {
+  .title-icon {
     align-self: center;
     width: 16px;
     height: 16px;
   }
 
-  :global(.title-name) {
+  .title-name {
     grid-column: 2;
     align-self: center;
     margin-left: 10px;
+    -winui-based-on: CaptionTextBlockStyle;
   }
 
-  :global(.title-status) {
+  .title-status {
     grid-column: 3;
     align-self: center;
     margin-left: 12px;
+    color: var(--text-fill-color-secondary);
+    opacity: 0;
+    transition: opacity 120ms;
+    -winui-based-on: CaptionTextBlockStyle;
+  }
+
+  .title-status.shown {
+    opacity: 1;
   }
 </style>

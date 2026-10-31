@@ -1,24 +1,22 @@
 <script lang="ts">
-  import type { Action, ColorMode, ThemeOption, ThemingView } from "../../protocol.g.ts";
-  import { LocalThemeKind } from "../cards/theming-card.ts";
-  import { usePanel } from "../host/panel.svelte.ts";
-  import * as motion from "../style/motion.ts";
-  import type { NativeEventArguments } from "../winui.ts";
-  import { KeyRoutedEventArgs, projectAs, VirtualKey } from "../winui.ts";
   import EdgeThemeList from "./EdgeThemeList.svelte";
   import OwnThemeList from "./OwnThemeList.svelte";
   import ThemePicker from "./ThemePicker.svelte";
+  import type { Action, ColorMode, ThemeOption, ThemingView } from "#src/protocol.g.ts";
+  import AccentButton from "#src/window/cards/AccentButton.svelte";
+  import { usePanel } from "#src/window/host/panel.svelte.ts";
   import {
     Button,
     Grid,
+    RepositionThemeTransition,
     StackPanel,
     TextBlock,
     TextBox
-  } from "winui-svelte";
+  } from "winui-svelte/components";
+  import { Visibility } from "winui-svelte/enums";
+  import { ButtonKind, Form, formButton, textField } from "winui-svelte/forms";
+  import { z } from "zod";
 
-  // The theme library under the theming switch: add from a store link or a
-  // local file, pick a theme for each Windows mode, and order the list. Dimmed
-  // while the theming switch is off.
   interface Props {
     isOn: boolean;
     theming: ThemingView;
@@ -27,82 +25,21 @@
   const { isOn, theming }: Props = $props();
   const panel = usePanel();
 
-  // Edge's default theme, the pickers' first option.
-  const defaultTheme: ThemeOption = {
+  const DEFAULT_THEME: ThemeOption = {
     id: "",
     name: "Default theme"
   };
+  const THEME_FILE_TYPES = [".crx", ".zip"];
+  const storeLinkSchema = z.object({ storeLink: z.string().trim().min(1) });
 
-  const options = $derived([defaultTheme, ...theming.options]);
+  const options = $derived([DEFAULT_THEME, ...theming.options]);
   const hasThemes = $derived(theming.own.length > 0 || theming.edge.length > 0);
 
   let storeLink = $state("");
-  // While an add or a choice runs, the add buttons wait for it.
   let isBusy = $state(false);
-  // Why the last add or choice failed, under the add rows.
   let error = $state("");
 
-  async function addStore(): Promise<void> {
-    const link = storeLink.trim();
-    if (link.length === 0) {
-      return;
-    }
-
-    const isAdded = await runBusy({
-      kind: "addStoreTheme",
-      url: link
-    });
-    if (isAdded) {
-      storeLink = "";
-    }
-  }
-
-  async function addLocal(kind: LocalThemeKind): Promise<void> {
-    const path = await panel.pick(kind);
-    if (path !== null) {
-      await runBusy({
-        kind: "addLocalTheme",
-        path
-      });
-    }
-  }
-
-  function assign(mode: ColorMode, id: string): void {
-    void runBusy({
-      kind: "assignTheme",
-      mode,
-      id
-    });
-  }
-
-  function addStoreOnEnter(...[, event]: NativeEventArguments): void {
-    const isEnter = projectAs(event, KeyRoutedEventArgs).key === VirtualKey.Enter;
-    if (isEnter) {
-      void addStore();
-    }
-  }
-
-  function remove(id: string): void {
-    void runBusy({
-      kind: "removeTheme",
-      id
-    });
-  }
-
-  // None of runBusy's busy state: holding the add buttons for a reorder
-  // flickered File… and Folder… on every drop.
-  async function reorder(ids: string[]): Promise<void> {
-    const failure = await panel.run({
-      kind: "reorderThemes",
-      ids
-    });
-    if (failure !== null) {
-      error = failure;
-    }
-  }
-
-  // Resolves to whether the core did what the action asked.
-  async function runBusy(action: Action): Promise<boolean> {
+  async function runBusy(action: Action) {
     error = "";
     isBusy = true;
     const failure = await panel.run(action);
@@ -110,67 +47,126 @@
     error = failure ?? "";
     return failure === null;
   }
+
+  async function addStore({ data }: { data: z.output<typeof storeLinkSchema> }) {
+    const isAdded = await runBusy({
+      kind: "addStoreTheme",
+      url: data.storeLink
+    });
+    if (isAdded) {
+      storeLink = "";
+    }
+  }
+
+  async function addLocal(path: string | null | undefined) {
+    const hasPath = path != null;
+    if (hasPath) {
+      await runBusy({
+        kind: "addLocalTheme",
+        path
+      });
+    }
+  }
+
+  function assign({ mode, id }: {
+    mode: ColorMode;
+    id: string;
+  }) {
+    void runBusy({
+      kind: "assignTheme",
+      mode,
+      id
+    });
+  }
+
+  async function reorder(ids: string[]) {
+    const failure = await panel.run({
+      kind: "reorderThemes",
+      ids
+    });
+    const isFailure = failure !== null;
+    if (isFailure) {
+      error = failure;
+    }
+  }
 </script>
 
-<StackPanel
-  class="theming {isOn ? "" : "dimmed"}"
-  childrenTransitions={motion.applied(motion.reposition)}
->
-  <Grid class="store-add">
-    <TextBox
-      onKeyDown={addStoreOnEnter}
-      placeholderText="Paste a Chrome Web Store or Edge Add-ons link"
-      bind:text={storeLink}
-    />
-    <Button
-      class="accent-button store-add-button"
-      isEnabled={!isBusy}
-      onClick={() => void addStore()}
-    >Add</Button>
-  </Grid>
+<StackPanel class="theming" class:dimmed={!isOn}>
+  {#snippet childrenTransitions()}
+    <RepositionThemeTransition />
+  {/snippet}
+  <Form onsubmit={addStore} schema={storeLinkSchema}>
+    <Grid class="store-add">
+      <TextBox
+        {@attach textField({
+          name: "storeLink",
+          required: true,
+          label: "Theme store link"
+        })}
+        automationId="store-link"
+        placeholderText="Paste a Chrome Web Store or Edge Add-ons link"
+        bind:text={storeLink}
+      />
+      <AccentButton class="store-add-button" {@attach formButton({ kind: ButtonKind.SUBMIT })} automationId="store-add" isEnabled={!isBusy}>Add</AccentButton>
+    </Grid>
+  </Form>
   <StackPanel class="local-add">
-    <TextBlock class="card-description local-add-label">Or add a local theme</TextBlock>
-    <Button isEnabled={!isBusy} onClick={() => void addLocal(LocalThemeKind.File)}>File…</Button>
+    <TextBlock class="local-add-label">Or add a local theme</TextBlock>
     <Button
       isEnabled={!isBusy}
-      onClick={() => void addLocal(LocalThemeKind.Folder)}
-    >Folder…</Button>
+      onclick={async () => addLocal(await panel.window?.pickFile({ fileTypes: THEME_FILE_TYPES }))}
+    >File…</Button>
+    <Button isEnabled={!isBusy} onclick={async () => addLocal(await panel.window?.pickFolder())}>Folder…</Button>
   </StackPanel>
-  <TextBlock class="error {error.length > 0 ? "" : "collapsed"}">{error}</TextBlock>
-  <ThemePicker assignedId={theming.light} onPick={id => assign("light", id)} {options}>When Windows is light</ThemePicker>
-  <ThemePicker assignedId={theming.dark} onPick={id => assign("dark", id)} {options}>When Windows is dark</ThemePicker>
-  <OwnThemeList onRemove={remove} onReorder={ids => void reorder(ids)} rows={theming.own} />
+  <TextBlock class="error" visibility={error.length > 0 ? Visibility.Visible : Visibility.Collapsed}>{error}</TextBlock>
+  <ThemePicker
+    assignedId={theming.light} onpick={id => assign({
+      mode: "light",
+      id
+    })} {options} pickerId="light">When Windows is light</ThemePicker>
+  <ThemePicker
+    assignedId={theming.dark} onpick={id => assign({
+      mode: "dark",
+      id
+    })} {options} pickerId="dark">When Windows is dark</ThemePicker>
+  <OwnThemeList
+    onremove={id => runBusy({
+      kind: "removeTheme",
+      id
+    })} onreorder={reorder} rows={theming.own} />
   <EdgeThemeList {hasThemes} rows={theming.edge} />
 </StackPanel>
 
 <style>
-  :global(.theming) {
+  .theming {
     gap: 8px;
   }
 
-  :global(.dimmed) {
-    opacity: 50%;
+  .dimmed {
+    opacity: 0.5;
   }
 
-  :global(.store-add) {
+  .store-add {
     grid-template-columns: 1fr auto;
     column-gap: 8px;
   }
 
-  :global(.store-add-button) {
+  .store-add-button {
     grid-column: 2;
   }
 
-  :global(.local-add) {
+  .local-add {
     flex-direction: row;
     gap: 8px;
   }
 
-  :global(.local-add-label) {
+  .local-add-label {
     align-self: center;
+    color: var(--text-fill-color-secondary);
+    -winui-based-on: CaptionTextBlockStyle;
   }
 
-  :global(.error) {
+  .error {
     color: var(--system-fill-color-critical);
     text-wrap: wrap;
     -winui-based-on: CaptionTextBlockStyle;

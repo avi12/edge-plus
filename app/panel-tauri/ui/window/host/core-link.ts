@@ -1,16 +1,10 @@
-import { CoreMessageType } from "../../protocol.g.ts";
-import type { Transport } from "winui-svelte/state";
-import { MessageType } from "winui-svelte/state";
+import { CoreMessageType } from "#src/protocol.g.ts";
+import type { Transport } from "winui-svelte/state/host";
+import { MessageType } from "winui-svelte/state/host";
 import { z } from "zod";
 
-// The core speaks its own protocol (protocol.rs, as EdgePlusProtocolMap): its
-// `view` request carries the whole View. The host channel's state is named, so
-// the core's `view` is read as the snapshot of the state called "view" - the
-// frame keeps its id, so the channel's answer settles the core's request.
-// Every other request of the core's goes through as it is, to the handlers the
-// session registers on the channel's messaging.
-
-export const viewStateName = "view";
+/** The name the core's `view` request is read as: the channel's state of that name. */
+export const VIEW_STATE_NAME = "view";
 
 const viewRequestSchema = z.object({
   id: z.number(),
@@ -19,8 +13,13 @@ const viewRequestSchema = z.object({
   timestamp: z.number()
 });
 
-export function viewAsSnapshot(transport: Transport): Transport {
-  return {
+/**
+ * The core sends its View as a `view` request; the channel's state protocol
+ * calls that a snapshot. The frame keeps its id, so the channel's answer
+ * settles the core's request. Every other frame goes through as it is.
+ */
+export function viewAsSnapshot(transport: Transport) {
+  const wrapped: Transport = {
     send(value) {
       transport.send(value);
     },
@@ -28,20 +27,22 @@ export function viewAsSnapshot(transport: Transport): Transport {
       ...listener,
       message(value) {
         const request = viewRequestSchema.safeParse(value);
-        if (request.success) {
-          listener.message({
-            id: request.data.id,
-            type: MessageType.snapshot,
-            data: {
-              name: viewStateName,
-              value: request.data.data
-            },
-            timestamp: request.data.timestamp
-          });
-        } else {
+        if (!request.success) {
           listener.message(value);
+          return;
         }
+
+        listener.message({
+          id: request.data.id,
+          type: MessageType.snapshot,
+          data: {
+            name: VIEW_STATE_NAME,
+            value: request.data.data
+          },
+          timestamp: request.data.timestamp
+        });
       }
     })
   };
+  return wrapped;
 }

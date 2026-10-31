@@ -1,22 +1,31 @@
 <script lang="ts">
-  import * as motion from "../style/motion.ts";
   import type { Snippet } from "svelte";
-  import { StackPanel } from "winui-svelte";
+  import { RepositionThemeTransition, StackPanel, TextBlock } from "winui-svelte/components";
 
-  // A section: its SectionHeader, then its cards.
   interface Props {
+    title: string;
     children: Snippet;
   }
 
-  const { children }: Props = $props();
+  const { title, children }: Props = $props();
 </script>
 
-<StackPanel class="section" childrenTransitions={motion.applied(motion.reposition)}>
+<StackPanel class="section">
+  {#snippet childrenTransitions()}
+    <RepositionThemeTransition />
+  {/snippet}
+  <TextBlock class="section-header">{title}</TextBlock>
   {@render children()}
 </StackPanel>
 
 <style>
-  :global(.section) {
+  .section {
     gap: 4px;
+  }
+
+  .section-header {
+    margin-bottom: 4px;
+    margin-left: 4px;
+    -winui-based-on: BodyStrongTextBlockStyle;
   }
 </style>

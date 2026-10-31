@@ -1,43 +1,51 @@
 <script lang="ts">
-  import type { ThemeRow as Row } from "../../protocol.g.ts";
-  import * as motion from "../style/motion.ts";
-  import { themeListItemStyle } from "../style/styles.ts";
   import ThemeRow from "./ThemeRow.svelte";
-  import { ListView } from "winui-svelte";
+  import type { ThemeRow as Row } from "#src/protocol.g.ts";
+  import {
+    AddDeleteThemeTransition,
+    ListView,
+    ReorderThemeTransition,
+    RepositionThemeTransition
+  } from "winui-svelte/components";
+  import { ListViewSelectionMode, Visibility } from "winui-svelte/enums";
 
-  // The user's own themes, in the order of the pickers, reordered by dragging
-  // or with Alt+Up / Alt+Down. No selection: with it on, each dragged row kept
-  // the accent bar, so two drags looked like two selected themes.
   interface Props {
     rows: Row[];
-    onRemove: (id: string) => void;
-    // The ids in the order the user left them in.
-    onReorder: (ids: string[]) => void;
+    onremove: (id: string) => void;
+    onreorder: (ids: string[]) => void;
   }
 
-  const {
-    rows,
-    onRemove,
-    onReorder
-  }: Props = $props();
+  const { rows, onremove, onreorder }: Props = $props();
 </script>
 
 <ListView
-  class={rows.length > 0 ? "" : "collapsed"}
+  class="own-themes"
   automationHelpText="Drag a theme, or press Alt+Up or Alt+Down, to move it in this list and in the pickers."
   automationName="Your themes"
   isItemClickEnabled={false}
-  itemContainerStyle={themeListItemStyle()}
+  itemContainerStyle="theme-list-item"
   itemName={row => row.name}
   items={rows}
   key={row => row.id}
   keyboardReorder
-  onControl={view => motion.animateItems(view, motion.listItems)}
-  {onReorder}
+  {onreorder}
   reorderable
-  selectionMode="None"
+  selectionMode={ListViewSelectionMode.None}
+  visibility={rows.length > 0 ? Visibility.Visible : Visibility.Collapsed}
 >
+  {#snippet itemContainerTransitions()}
+    <AddDeleteThemeTransition />
+    <ReorderThemeTransition />
+    <RepositionThemeTransition />
+  {/snippet}
   {#snippet item(row)}
-    <ThemeRow onRemove={() => onRemove(row.id)} theme={row} />
+    <ThemeRow onremove={() => onremove(row.id)} theme={row} />
   {/snippet}
 </ListView>
+
+<style>
+  .theme-list-item {
+    min-height: 36px;
+    padding: 0;
+  }
+</style>

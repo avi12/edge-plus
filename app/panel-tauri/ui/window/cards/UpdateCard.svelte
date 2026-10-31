@@ -1,15 +1,12 @@
 <script lang="ts">
-  import type { UpdateView } from "../../protocol.g.ts";
-  import { usePanel } from "../host/panel.svelte.ts";
+  import AccentButton from "./AccentButton.svelte";
   import CardDescription from "./CardDescription.svelte";
   import CardFrame from "./CardFrame.svelte";
   import CardTitle from "./CardTitle.svelte";
-  import { Button } from "winui-svelte";
+  import { GLYPHS } from "./glyphs.ts";
+  import type { UpdateView } from "#src/protocol.g.ts";
+  import { usePanel } from "#src/window/host/panel.svelte.ts";
 
-  // A release that is downloaded and checked, with the button that restarts
-  // Edge+ into it. The page shows it once one is ready. A copy the installer
-  // put under Program Files updates through the new installer, which Windows
-  // asks to allow.
   interface Props {
     update: UpdateView;
   }
@@ -17,32 +14,30 @@
   const { update }: Props = $props();
   const panel = usePanel();
 
-  const how = $derived(
+  const instruction = $derived(
     update.isInstaller
       ? "Restart Edge+ to finish updating, and allow the installer when Windows asks."
       : "Restart Edge+ to finish updating."
   );
 
-  // Pressed and not yet answered: the button says it is restarting.
   let isRestarting = $state(false);
-  const label = $derived(isRestarting ? "Restarting" : "Restart to update");
+  const buttonLabel = $derived(isRestarting ? "Restarting" : "Restart to update");
 
-  async function restart(): Promise<void> {
-    // Disabled at once, so a second click cannot start a second restart.
+  async function restart() {
     isRestarting = true;
-    const error = await panel.restartToUpdate();
-    if (error !== null) {
-      // The restart failed: the button comes back, so it can be tried again.
+    const error = await panel.run({ kind: "restartToUpdate" });
+    const isRefused = error !== null;
+    if (isRefused) {
       isRestarting = false;
       panel.report(error);
     }
   }
 </script>
 
-<CardFrame glyph={0xE777}>
+<CardFrame glyph={GLYPHS.update}>
   <CardTitle>Edge+ {update.version} is ready</CardTitle>
-  <CardDescription>{how} Edge keeps running, and your splits and themes stay as they are.</CardDescription>
+  <CardDescription>{instruction} Edge keeps running, and your splits and themes stay as they are.</CardDescription>
   {#snippet end()}
-    <Button class="accent-button" isEnabled={!isRestarting} onClick={() => void restart()}>{label}</Button>
+    <AccentButton automationId="restart-to-update" isEnabled={!isRestarting} onclick={restart}>{buttonLabel}</AccentButton>
   {/snippet}
 </CardFrame>

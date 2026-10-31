@@ -1,80 +1,51 @@
 <script lang="ts">
-  import type { View } from "../../protocol.g.ts";
-  import UpdateCard from "../cards/UpdateCard.svelte";
-  import type { Panel } from "../host/panel.svelte.ts";
-  import { providePanel } from "../host/panel.svelte.ts";
-  import type { NativeEventArguments } from "../winui.ts";
-  import { DataPackageOperation, DragEventArgs, projectAs, StandardDataFormats } from "../winui.ts";
   import DropVeil from "./DropVeil.svelte";
   import PageFooter from "./PageFooter.svelte";
   import PanelCards from "./PanelCards.svelte";
   import PanelNotices from "./PanelNotices.svelte";
-  import { Grid, ScrollViewer, StackPanel } from "winui-svelte";
+  import type { View } from "#src/protocol.g.ts";
+  import UpdateCard from "#src/window/cards/UpdateCard.svelte";
+  import type { Panel } from "#src/window/host/panel.svelte.ts";
+  import { providePanel } from "#src/window/host/panel.svelte.ts";
+  import { Grid, ScrollViewer, StackPanel } from "winui-svelte/components";
+  import { dropzone } from "winui-svelte/data-transfer";
+  import type { DragEvent } from "winui-svelte/data-transfer";
+  import { ScrollBarVisibility } from "winui-svelte/enums";
 
-  // The window's content: the update card, the notices, each section's cards
-  // and the footer, with the veil a drag of files over the window shows. The
-  // View is the host's state, so it changes under the page by itself.
   interface Props {
     view: View;
     panel: Panel;
   }
 
   const { view, panel }: Props = $props();
-  // The props never change: the page is made once, with its panel.
   // svelte-ignore state_referenced_locally
   providePanel(panel);
 
-  async function droppedPaths(event: DragEventArgs): Promise<string[]> {
-    const items = await event.dataView.getStorageItemsAsync();
-    const paths: string[] = [];
-    for (const item of items ?? []) {
-      paths.push(item.path);
-    }
-
-    return paths;
-  }
-
-  function onDragOver(...[, event]: NativeEventArguments): void {
-    const dragged = projectAs(event, DragEventArgs);
-    const hasFiles = dragged.dataView.contains(StandardDataFormats.storageItems);
-    if (!hasFiles) {
-      return;
-    }
-
-    dragged.acceptedOperation = DataPackageOperation.Copy;
-    panel.isVeilShown = true;
-  }
-
-  function onDragLeave(): void {
+  async function addDroppedThemes(event: DragEvent) {
     panel.isVeilShown = false;
-  }
-
-  // The core tells a folder, .zip and .crx apart; the last failure is the one
-  // shown.
-  async function onDrop(...[, event]: NativeEventArguments): Promise<void> {
-    const dropped = projectAs(event, DragEventArgs);
-    panel.isVeilShown = false;
-    const hasFiles = dropped.dataView.contains(StandardDataFormats.storageItems);
-    if (!hasFiles) {
-      return;
-    }
-
     panel.actionNotice = "";
-    for (const path of await droppedPaths(dropped)) {
-      const error = await panel.run({
-        kind: "addLocalTheme",
-        path
-      });
-      panel.report(error);
+    for (const file of event.dataTransfer.files) {
+      panel.report(
+        await panel.run({
+          kind: "addLocalTheme",
+          path: file.path
+        })
+      );
     }
   }
 </script>
 
-<Grid allowDrop={true} {onDragLeave} {onDragOver} {onDrop}>
-  <ScrollViewer verticalScrollBarVisibility="Auto">
+<Grid
+  {@attach dropzone({
+    onDragStateChange: isOver => {
+      panel.isVeilShown = isOver;
+    },
+    onDrop: addDroppedThemes
+  })}
+>
+  <ScrollViewer verticalScrollBarVisibility={ScrollBarVisibility.Auto}>
     <StackPanel class="page">
       {#if view.update !== null}
-        <!-- A newer release brings the button back, so it is a new card. -->
         {#key JSON.stringify(view.update)}
           <UpdateCard update={view.update} />
         {/key}
@@ -87,10 +58,8 @@
   <DropVeil isShown={panel.isVeilShown} />
 </Grid>
 
-<!-- Global: a class on a component is not an element's, so Svelte does not
-     scope it. -->
 <style>
-  :global(.page) {
+  .page {
     gap: 4px;
     padding: 16px;
     padding-top: 4px;

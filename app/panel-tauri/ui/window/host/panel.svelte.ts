@@ -1,92 +1,81 @@
-import type { Action } from "../../protocol.g.ts";
-import type { LocalThemeKind, RunAction } from "../cards/theming-card.ts";
-import { pickLocalTheme } from "../theming/local-theme-picker.ts";
+import type { Action } from "#src/protocol.g.ts";
 import { getContext, setContext } from "svelte";
 import type { WindowHandle } from "winui-svelte/components";
+import { startTimer } from "winui-svelte/window";
 
-const statusMilliseconds = 4000;
+const STATUS_MILLISECONDS = 4000;
 
-// What the page asks of the process it runs in.
-export interface PanelActions {
-  run: RunAction;
-  restartToUpdate(): Promise<string | null>;
-  // Calls back after the delay; the result cancels it.
-  after(milliseconds: number, callback: () => void): () => void;
-}
+/** Runs an action in the core; resolves to why it failed, or null. */
+export type RunAction = (action: Action) => Promise<string | null>;
 
-// The page's own state and the actions its components run, shared down the
-// tree through context (providePanel / usePanel). The View is not here: the
-// page reads it from the host's state.
+/**
+ * The page's own state and the actions its components run, shared down the
+ * tree through context. The View is not here: the page reads it from the
+ * host's state.
+ */
 export class Panel {
-  // The error of an action that failed, shown under the update card until the
-  // user closes it. The core's own notices land here too.
+  /** The error of an action that failed, shown until the user closes it. */
   actionNotice = $state("");
-  // While files are dragged over the window.
+
+  /** While files are dragged over the window. */
   isVeilShown = $state(false);
-  // What the core says in the title bar, shown for a moment.
+
+  /** What the core says in the title bar, for a moment. */
   statusLine = $state("");
   isStatusShown = $state(false);
-  // The open window (shell.svelte binds it), which owns the pickers.
+
+  /** The open window, which owns the pickers. */
   window = $state.raw<WindowHandle | undefined>();
-  private readonly actions: PanelActions;
-  private cancelStatus: (() => void) | null = null;
+  readonly run: RunAction;
+  private stopStatus: (() => void) | null = null;
 
-  constructor(actions: PanelActions) {
-    this.actions = actions;
+  constructor(run: RunAction) {
+    this.run = run;
   }
 
-  run(action: Action): Promise<string | null> {
-    return this.actions.run(action);
-  }
-
-  // The components call these through usePanel(), which fallow does not trace
-  // from a .svelte file.
-  // fallow-ignore-next-line unused-class-member
-  pick(kind: LocalThemeKind): Promise<string | null> {
-    if (this.window === undefined) {
-      throw new Error("the window is not open");
-    }
-
-    return pickLocalTheme(kind, this.window);
-  }
-
-  // fallow-ignore-next-line unused-class-member
-  restartToUpdate(): Promise<string | null> {
-    return this.actions.restartToUpdate();
-  }
-
-  // fallow-ignore-next-line unused-class-member
-  async runAndReport(action: Action): Promise<void> {
-    this.report(await this.run(action));
-  }
-
-  report(error: string | null): void {
-    if (error !== null) {
+  report(error: string | null) {
+    const isFailure = error !== null;
+    if (isFailure) {
       this.actionNotice = error;
     }
   }
 
-  showStatus(line: string): void {
+  showStatus(line: string) {
     this.statusLine = line;
     this.isStatusShown = true;
-    this.cancelStatus?.();
-    this.cancelStatus = this.actions.after(statusMilliseconds, () => {
-      this.isStatusShown = false;
+    this.stopStatus?.();
+    this.stopStatus = startTimer({
+      milliseconds: STATUS_MILLISECONDS,
+      isRepeating: false,
+      onTick: () => {
+        this.isStatusShown = false;
+      }
     });
   }
 }
 
 const panelContext = Symbol("panel");
 
-export function providePanel(panel: Panel): void {
+/** Shares the panel with every component below the caller. */
+export function providePanel(panel: Panel) {
   setContext(panelContext, panel);
 }
 
-export function usePanel(): Panel {
+/** The panel the page provided. */
+export function usePanel() {
   const panel = getContext<Panel | undefined>(panelContext);
-  if (panel === undefined) {
+  const isMissing = panel === undefined;
+  if (isMissing) {
     throw new Error("no panel was provided to this component");
   }
 
   return panel;
+}
+
+/** Runs an action and shows why the core refused it, if it did. */
+export async function runAndReport({ panel, action }: {
+  panel: Panel;
+  action: Action;
+}) {
+  panel.report(await panel.run(action));
 }
