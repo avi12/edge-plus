@@ -20,11 +20,11 @@ importers:
         specifier: link:.winapp/bindings
         version: link:.winapp/bindings
       svelte:
-        specifier: https://pkg.pr.new/svelte@18042
-        version: https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0)
+        specifier: 5.56.7
+        version: 5.56.7(@typescript-eslint/types@8.72.0)
       winui-svelte:
         specifier: link:C:/repositories/avi/winui-svelte
-        version: link:C:/repositories/avi/winui-svelte
+        version: link:../../../../winui-svelte
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -55,7 +55,7 @@ importers:
         version: 5.13.0(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
       eslint-plugin-svelte:
         specifier: ^3.23.1
-        version: 3.23.1(eslint@10.13.0(supports-color@10.2.2))(svelte@https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0))
+        version: 3.23.1(eslint@10.13.0(supports-color@10.2.2))(svelte@5.56.7(@typescript-eslint/types@8.72.0))
       fallow:
         specifier: 2.103.0
         version: 2.103.0
@@ -82,10 +82,10 @@ importers:
         version: 3.32.0(stylelint@17.16.0(supports-color@10.2.2)(typescript@6.0.3))(supports-color@10.2.2)(typescript@6.0.3)
       svelte-check:
         specifier: ^4.7.7
-        version: 4.7.7(picomatch@4.0.7)(svelte@https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0))(typescript@6.0.3)
+        version: 4.7.7(picomatch@4.0.7)(svelte@5.56.7(@typescript-eslint/types@8.72.0))(typescript@6.0.3)
       svelte-eslint-parser:
         specifier: ^1.10.0
-        version: 1.10.0(svelte@https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0))
+        version: 1.10.0(svelte@5.56.7(@typescript-eslint/types@8.72.0))
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -1219,7 +1219,6 @@ packages:
 
   eslint-plugin-svelte@3.23.1:
     resolution: {integrity: sha512-+w86Jlx4IRUuuvtqD6j4njql+akx+81JnpvbN5de3AV5iq2SexvST/Jr51CiTlKeY0i+vhoKjPO/ywFKIP75sA==}
-    version: 3.23.1
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     peerDependencies:
       eslint: ^8.57.1 || ^9.0.0 || ^10.0.0
@@ -2176,7 +2175,6 @@ packages:
 
   svelte-eslint-parser@1.10.0:
     resolution: {integrity: sha512-1bNtsoGwEx/J1qNz1xa5dSt/Ue5+C7+WpV92cCPZDbF6dx/YXHKzC9yTP25vFvAK40yd/mHXi1WACZO7FGf0Bw==}
-    version: 1.10.0
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0, pnpm: 10.34.6}
     peerDependencies:
       svelte: ^3.37.0 || ^4.0.0 || ^5.0.0
@@ -2200,6 +2198,10 @@ packages:
   svelte@4.2.20:
     resolution: {integrity: sha512-eeEgGc2DtiUil5ANdtd8vPwt9AgaMdnuUFnPft9F5oMvU/FHu5IHFic+p1dR/UOB7XU2mX2yHW+NcTch4DCh5Q==}
     engines: {node: '>=16'}
+
+  svelte@5.56.7:
+    resolution: {integrity: sha512-5qERUZX80oQj6XrDMUmD2Uhd/cIpCPDWWKBK3ZHmyRUC9apPyamWM8xMo31mbWsIQxwG2hVoSnOJ/EcnhVkkzQ==}
+    engines: {node: '>=18'}
 
   svelte@https://pkg.pr.new/svelte@18042:
     resolution: {integrity: sha512-Clurk8N5MWaYo9mpd/XiKfliza8TcBNb4tztTwlDdFi7p1UtMWYMkNx+LrQNAoBbizGmSoROL1KzvHl1SMgoxg==, tarball: https://pkg.pr.new/svelte@18042}
@@ -3275,7 +3277,7 @@ snapshots:
       - supports-color
       - typescript
 
-  eslint-plugin-svelte@3.23.1(eslint@10.13.0(supports-color@10.2.2))(svelte@https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0)):
+  eslint-plugin-svelte@3.23.1(eslint@10.13.0(supports-color@10.2.2))(svelte@5.56.7(@typescript-eslint/types@8.72.0)):
     dependencies:
       '@eslint-community/eslint-utils': 4.10.1(eslint@10.13.0(supports-color@10.2.2))
       '@jridgewell/sourcemap-codec': 1.6.0
@@ -3287,9 +3289,9 @@ snapshots:
       postcss-load-config: 3.1.4(postcss@8.5.31)
       postcss-safe-parser: 7.1.0(postcss@8.5.31)
       semver: 7.8.5
-      svelte-eslint-parser: 1.10.0(svelte@https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0))
+      svelte-eslint-parser: 1.10.0(svelte@5.56.7(@typescript-eslint/types@8.72.0))
     optionalDependencies:
-      svelte: https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0)
+      svelte: 5.56.7(@typescript-eslint/types@8.72.0)
     transitivePeerDependencies:
       - ts-node
 
@@ -4267,6 +4269,19 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
+  svelte-check@4.7.7(picomatch@4.0.7)(svelte@5.56.7(@typescript-eslint/types@8.72.0))(typescript@6.0.3):
+    dependencies:
+      '@jridgewell/trace-mapping': 0.3.31
+      '@sveltejs/load-config': 0.2.3
+      chokidar: 4.0.3
+      fdir: 6.5.0(picomatch@4.0.7)
+      picocolors: 1.1.1
+      sade: 1.8.1
+      svelte: 5.56.7(@typescript-eslint/types@8.72.0)
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - picomatch
+
   svelte-check@4.7.7(picomatch@4.0.7)(svelte@https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0))(typescript@6.0.3):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
@@ -4280,7 +4295,7 @@ snapshots:
     transitivePeerDependencies:
       - picomatch
 
-  svelte-eslint-parser@1.10.0(svelte@https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0)):
+  svelte-eslint-parser@1.10.0(svelte@5.56.7(@typescript-eslint/types@8.72.0)):
     dependencies:
       eslint-scope: 8.4.0
       eslint-visitor-keys: 4.2.1
@@ -4290,7 +4305,7 @@ snapshots:
       postcss-selector-parser: 7.1.7
       semver: 7.8.5
     optionalDependencies:
-      svelte: https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0)
+      svelte: 5.56.7(@typescript-eslint/types@8.72.0)
 
   svelte-language-server@0.18.5(patch_hash=d5c020454899cb6dee6d0636d40d08926e4b97eab4dadae2435442b360fa39a8)(picomatch@4.0.7)(typescript@6.0.3):
     dependencies:
@@ -4341,6 +4356,27 @@ snapshots:
       locate-character: 3.0.0
       magic-string: 0.30.21
       periscopic: 3.1.0
+
+  svelte@5.56.7(@typescript-eslint/types@8.72.0):
+    dependencies:
+      '@jridgewell/remapping': 2.3.5
+      '@jridgewell/sourcemap-codec': 1.6.0
+      '@sveltejs/acorn-typescript': 1.0.13(acorn@8.19.0)
+      '@types/estree': 1.0.9
+      '@types/trusted-types': 2.0.7
+      acorn: 8.19.0
+      aria-query: 5.3.1
+      axobject-query: 4.1.0
+      clsx: 2.1.1
+      devalue: 5.9.4
+      esm-env: 1.2.2
+      esrap: 2.4.0(@typescript-eslint/types@8.72.0)
+      is-reference: 3.0.3
+      locate-character: 3.0.0
+      magic-string: 0.30.21
+      zimmerframe: 1.1.5
+    transitivePeerDependencies:
+      - '@typescript-eslint/types'
 
   svelte@https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0):
     dependencies:

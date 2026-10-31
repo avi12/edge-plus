@@ -12,9 +12,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true,
     "isolatedModules": true,
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["ui/**/*.ts", "ui/**/*.svelte", "vite.config.ts"]
+  "include": ["ui/**/*.ts", "ui/**/*.svelte", "scripts/**/*.ts", "test/**/*.ts", "vite.config.ts"]
 }
