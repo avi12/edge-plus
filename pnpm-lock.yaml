@@ -23,8 +23,8 @@ importers:
         specifier: https://pkg.pr.new/svelte@18042
         version: https://pkg.pr.new/svelte@18042(@typescript-eslint/types@8.72.0)
       winui-svelte:
-        specifier: link:../../../winui-svelte
-        version: link:../../../winui-svelte
+        specifier: link:C:/repositories/avi/winui-svelte
+        version: link:C:/repositories/avi/winui-svelte
       zod:
         specifier: ^4.6.7
         version: 4.6.7
