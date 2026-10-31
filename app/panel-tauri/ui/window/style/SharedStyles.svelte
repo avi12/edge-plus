@@ -21,4 +21,14 @@
   :global(.accent-button) {
     -winui-based-on: AccentButtonStyle;
   }
+
+  /* Out of sight but still holding its place, so what is beside it stays put. */
+  :global(.concealed) {
+    opacity: 0%;
+  }
+
+  /* Out of sight and out of the layout. */
+  :global(.collapsed) {
+    display: none;
+  }
 </style>

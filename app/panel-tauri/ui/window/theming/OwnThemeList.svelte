@@ -23,6 +23,7 @@
 </script>
 
 <ListView
+  class={rows.length > 0 ? "" : "collapsed"}
   automationHelpText="Drag a theme, or press Alt+Up or Alt+Down, to move it in this list and in the pickers."
   automationName="Your themes"
   isItemClickEnabled={false}
@@ -35,7 +36,6 @@
   {onReorder}
   reorderable
   selectionMode="None"
-  visibility={rows.length > 0 ? "Visible" : "Collapsed"}
 >
   {#snippet item(row)}
     <ThemeRow onRemove={() => onRemove(row.id)} theme={row} />

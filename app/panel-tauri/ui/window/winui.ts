@@ -41,7 +41,6 @@ export { RepositionThemeTransition } from "#winui/microsoft/ui/xaml/media/animat
 export { TransitionCollection } from "#winui/microsoft/ui/xaml/media/animation/TransitionCollection";
 export { DoubleCollection } from "#winui/microsoft/ui/xaml/media/DoubleCollection";
 export { ResourceDictionary } from "#winui/microsoft/ui/xaml/ResourceDictionary";
-export { ScalarTransition } from "#winui/microsoft/ui/xaml/ScalarTransition";
 export { Rectangle } from "#winui/microsoft/ui/xaml/shapes/Rectangle";
 export { Style } from "#winui/microsoft/ui/xaml/Style";
 export { TextTrimming } from "#winui/microsoft/ui/xaml/TextTrimming";

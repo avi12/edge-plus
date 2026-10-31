@@ -28,9 +28,8 @@
   };
   const removeGlyph = 0xE711;
   const gripGlyph = 0xE76F;
-  const shown = 1;
-  const hidden = 0;
   const isOwn = $derived(onRemove !== null);
+  const ownOnly = $derived(isOwn ? "" : "concealed");
 
   function remove(): void {
     onRemove?.();
@@ -38,7 +37,7 @@
 </script>
 
 <Grid class="theme-row" automationName={theme.name}>
-  <FontIcon class="theme-row-icon" glyph={glyph(gripGlyph)} opacity={isOwn ? shown : hidden} />
+  <FontIcon class="theme-row-icon {ownOnly}" glyph={glyph(gripGlyph)} />
   <TextBlock class="card-title theme-row-name">{theme.name}</TextBlock>
   <StackPanel class="theme-row-badges">
     {#each theme.badges as badge (badge)}
@@ -48,11 +47,10 @@
     {/each}
   </StackPanel>
   <Button
-    class="theme-row-remove"
+    class="theme-row-remove {ownOnly}"
     automationName="Remove {theme.name}"
     isEnabled={isOwn}
     onClick={remove}
-    opacity={isOwn ? shown : hidden}
   >
     <FontIcon class="theme-row-icon" glyph={glyph(removeGlyph)} />
   </Button>

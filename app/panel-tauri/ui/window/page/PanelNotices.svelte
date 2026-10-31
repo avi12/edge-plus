@@ -17,7 +17,7 @@
   const buildNotice = $derived(pausedNotice(view.edge, view.paused));
 </script>
 
-<TextBlock class="card-description open-edge-hint" visibility={view.isEdgeRunning ? "Collapsed" : "Visible"}>Open Edge to apply changes.</TextBlock>
+<TextBlock class="card-description open-edge-hint {view.isEdgeRunning ? "collapsed" : ""}">Open Edge to apply changes.</TextBlock>
 <InfoBar isClosable={false} isOpen={buildNotice.length > 0} message={buildNotice} severity="Warning" />
 <InfoBar
   isClosable={true}

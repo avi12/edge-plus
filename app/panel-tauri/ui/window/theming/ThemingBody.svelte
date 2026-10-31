@@ -27,8 +27,6 @@
   const { isOn, theming }: Props = $props();
   const panel = usePanel();
 
-  const fullOpacity = 1;
-  const dimmedOpacity = 0.5;
   // Edge's default theme, the pickers' first option.
   const defaultTheme: ThemeOption = {
     id: "",
@@ -115,9 +113,8 @@
 </script>
 
 <StackPanel
-  class="theming"
+  class="theming {isOn ? "" : "dimmed"}"
   childrenTransitions={motion.applied(motion.reposition)}
-  opacity={isOn ? fullOpacity : dimmedOpacity}
 >
   <Grid class="store-add">
     <TextBox
@@ -139,7 +136,7 @@
       onClick={() => void addLocal(LocalThemeKind.Folder)}
     >Folder…</Button>
   </StackPanel>
-  <TextBlock class="error" visibility={error.length > 0 ? "Visible" : "Collapsed"}>{error}</TextBlock>
+  <TextBlock class="error {error.length > 0 ? "" : "collapsed"}">{error}</TextBlock>
   <ThemePicker assignedId={theming.light} onPick={id => assign("light", id)} {options}>When Windows is light</ThemePicker>
   <ThemePicker assignedId={theming.dark} onPick={id => assign("dark", id)} {options}>When Windows is dark</ThemePicker>
   <OwnThemeList onRemove={remove} onReorder={ids => void reorder(ids)} rows={theming.own} />
@@ -149,6 +146,10 @@
 <style>
   :global(.theming) {
     gap: 8px;
+  }
+
+  :global(.dimmed) {
+    opacity: 50%;
   }
 
   :global(.store-add) {

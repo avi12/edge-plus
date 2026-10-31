@@ -29,6 +29,7 @@
   }
 
   const { glyph, note = "", children, end, body }: Props = $props();
+  const hasNote = $derived(note.length > 0);
   const label = elementRef<UIElement>();
   provideCardLabel(label);
 </script>
@@ -41,7 +42,7 @@
     <FontIcon class="card-icon" glyph={glyphText(glyph)} />
     <StackPanel class="card-words">
       {@render children()}
-      <TextBlock class="note" visibility={note.length > 0 ? "Visible" : "Collapsed"}>{note}</TextBlock>
+      <TextBlock class="note {hasNote ? "" : "collapsed"}">{note}</TextBlock>
     </StackPanel>
     <Border class="card-end">
       {@render end(label)}

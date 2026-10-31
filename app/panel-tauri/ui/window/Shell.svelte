@@ -35,8 +35,6 @@
   const windowWidth = 560;
   const windowHeight = 640;
   const minimumHeight = 420;
-  const statusShown = 1;
-  const statusHidden = 0;
 
   // Windows' animation switch and the core's View are read again whenever the
   // window is activated.
@@ -74,10 +72,7 @@
     <Grid class="title-bar">
       <Image class="title-icon" source={pathToFileURL(view.icon).href} />
       <TextBlock class="caption title-name">{view.productName}</TextBlock>
-      <TextBlock
-        class="card-description title-status"
-        opacity={panel.isStatusShown ? statusShown : statusHidden}
-      >{panel.statusLine}</TextBlock>
+      <TextBlock class="card-description title-status {panel.isStatusShown ? "" : "concealed"}">{panel.statusLine}</TextBlock>
     </Grid>
   {/snippet}
   <PanelPage {panel} {view} />
