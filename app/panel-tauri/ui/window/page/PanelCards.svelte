@@ -1,5 +1,6 @@
 <script lang="ts">
   import PanelSection from "./PanelSection.svelte";
+  import SectionHeader from "./SectionHeader.svelte";
   import type { SwitchKey, View } from "#src/protocol.g.ts";
   import CardDescription from "#src/window/cards/CardDescription.svelte";
   import CardTitle from "#src/window/cards/CardTitle.svelte";
@@ -30,7 +31,8 @@
   {#snippet childrenTransitions()}
     <RepositionThemeTransition />
   {/snippet}
-  <PanelSection title="Tabs and windows">
+  <PanelSection>
+    <SectionHeader>Tabs and windows</SectionHeader>
     <FeatureCard card={cardOf("nativeSplit")}>
       <CardTitle>{featureTitles.nativeSplit}</CardTitle>
       <CardDescription>
@@ -46,7 +48,8 @@
       </CardDescription>
     </FeatureCard>
   </PanelSection>
-  <PanelSection title="Look and themes">
+  <PanelSection>
+    <SectionHeader>Look and themes</SectionHeader>
     <FeatureCard card={cardOf("theming")}>
       <CardTitle>{featureTitles.theming}</CardTitle>
       <CardDescription>
@@ -80,7 +83,8 @@
       </CardDescription>
     </FeatureCard>
   </PanelSection>
-  <PanelSection title="Browsing">
+  <PanelSection>
+    <SectionHeader>Browsing</SectionHeader>
     <FeatureCard card={cardOf("enhancedFind")}>
       <CardTitle>{featureTitles.enhancedFind}</CardTitle>
       <CardDescription>
@@ -105,7 +109,8 @@
       </CardDescription>
     </FeatureCard>
   </PanelSection>
-  <PanelSection title="Edge+ itself">
+  <PanelSection>
+    <SectionHeader>Edge+ itself</SectionHeader>
     <FeatureCard card={cardOf("startWithWindows")}>
       <CardTitle>Start Edge+ when Windows starts</CardTitle>
       <CardDescription>
