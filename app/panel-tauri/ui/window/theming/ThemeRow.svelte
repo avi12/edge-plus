@@ -24,13 +24,11 @@
     inUse: "In use",
     installedInEdge: "Installed in Edge"
   };
-  const REMOVE_GLYPH = String.fromCodePoint(GLYPHS.remove);
-  const GRIP_GLYPH = String.fromCodePoint(GLYPHS.grip);
   const isOwn = $derived(onremove !== null);
 </script>
 
 <Grid class="theme-row" automationName={theme.name}>
-  <FontIcon class="theme-row-icon" class:concealed={!isOwn} glyph={GRIP_GLYPH} />
+  <FontIcon class="theme-row-icon" class:concealed={!isOwn} glyph={GLYPHS.grip} />
   <Border class="theme-row-name">
     <CardTitle>{theme.name}</CardTitle>
   </Border>
@@ -48,7 +46,7 @@
     isEnabled={isOwn}
     onclick={() => onremove?.()}
   >
-    <FontIcon class="theme-row-icon" glyph={REMOVE_GLYPH} />
+    <FontIcon class="theme-row-icon" glyph={GLYPHS.remove} />
   </Button>
 </Grid>
 

@@ -28,7 +28,7 @@
 
 <Border class="card">
   <Grid class="card-grid">
-    <FontIcon class="card-icon" glyph={String.fromCodePoint(glyph)} />
+    <FontIcon class="card-icon" {glyph} />
     <StackPanel class="card-words">
       {@render children()}
       <TextBlock class="note" visibility={hasNote ? Visibility.Visible : Visibility.Collapsed}>{note}</TextBlock>
