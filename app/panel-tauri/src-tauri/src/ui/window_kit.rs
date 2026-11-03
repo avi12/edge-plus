@@ -12,6 +12,9 @@ use std::path::{Path, PathBuf};
 use crate::platform::actions::panel_log;
 use crate::platform::paths;
 
+/// A JSON array, program first: the command a dev run starts as the window
+/// (`pnpm dev:real` points it at a relay to the window it keeps up).
+const COMMAND_VARIABLE: &str = "EDGEPLUS_WINDOW_COMMAND";
 const NODE: &str = "node";
 const NODE_FLAGS: [&str; 1] = ["--disable-warning=ExperimentalWarning"];
 const SOURCE_ENTRY: &str = "main.ts";
@@ -58,6 +61,9 @@ pub fn dev_sources() -> Option<PathBuf> {
 #[must_use]
 pub fn locate() -> Option<WindowCommand> {
     if let Some(sources) = dev_sources() {
+        if let Some(command) = command_from_environment() {
+            return Some(command);
+        }
         let mut arguments: Vec<String> = NODE_FLAGS.iter().map(|&flag| flag.to_owned()).collect();
         arguments.push(sources.join(SOURCE_ENTRY).to_string_lossy().into_owned());
         return Some(WindowCommand {
@@ -67,6 +73,25 @@ pub fn locate() -> Option<WindowCommand> {
         });
     }
     unpacked_kit()
+}
+
+/// Only a dev run honors it: a published exe never starts what its environment
+/// names.
+fn command_from_environment() -> Option<WindowCommand> {
+    let named = std::env::var(COMMAND_VARIABLE).ok()?;
+    let parts: Vec<String> = match serde_json::from_str(&named) {
+        Ok(parts) => parts,
+        Err(error) => {
+            panel_log::write_error("EDGEPLUS_WINDOW_COMMAND is not a JSON array", &error);
+            return None;
+        }
+    };
+    let (program, arguments) = parts.split_first()?;
+    Some(WindowCommand {
+        program: PathBuf::from(program),
+        arguments: arguments.to_vec(),
+        kit: None,
+    })
 }
 
 #[cfg(window_kit)]
