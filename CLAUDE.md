@@ -209,7 +209,15 @@ side and must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h
   build` (the kit, then the release exe), `pnpm test` (`node --test` and `cargo
   test`), `pnpm app` (the full panel from source), `pnpm window` (the window
   alone on `ui/dev/fixture-view.json`, with no core: it never touches Edge, so
-  it is the way to work on the UI).
+  it is the way to work on the UI). `pnpm dev` keeps that window up for good
+  (`ui/dev/dev-server.ts`): a saved `.svelte`/`.ts` hot reloads in place and a
+  saved `fixture-view.json` or `fake-host.ts` restarts the fake core's session
+  over the same link. `pnpm dev:real` does the same for the real Rust core
+  (it **injects into every Edge on the pinned build**; it refuses to start
+  while an `edgeplus.exe` runs): a saved `.rs` rebuilds, a good build swaps the
+  core it started, a failed one keeps the old core and prints the error, and
+  the window never closes (the core is told to start `ui/dev/relay.ts` as its
+  window through `EDGEPLUS_WINDOW_COMMAND`).
 - **Never run the full panel against Avi's Edge** unless asked: at start it
   injects the DLL into every Edge browser process on the pinned build,
   replacing a loaded DLL that differs from the one it carries. To compare it

@@ -12,6 +12,8 @@
     "restore": "winapp restore",
     "bindings": "winapp node generate-bindings",
     "app": "cargo run --manifest-path src-tauri/Cargo.toml",
+    "dev": "node --disable-warning=ExperimentalWarning ui/dev/dev-server.ts",
+    "dev:real": "node --disable-warning=ExperimentalWarning ui/dev/dev-server.ts --real",
     "window": "node --disable-warning=ExperimentalWarning ui/dev/fixture.ts",
     "build:window": "node --disable-warning=ExperimentalWarning scripts/build-window.ts",
     "build": "pnpm build:window && cargo build --release --manifest-path src-tauri/Cargo.toml",
