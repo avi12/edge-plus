@@ -3,9 +3,9 @@
 //! JSON message per line (protocol.rs). The window renders the View it is sent
 //! and asks for Actions; it never touches settings, Edge or the DLL.
 //!
-//! In a dev run the window's TypeScript is watched, and an edit swaps a fresh
-//! window in where the old one was (the panel's version of the split DLL's hot
-//! reload).
+//! In a dev run the window's modules hot reload inside the one window process
+//! (ui/main.ts serves them through a Vite dev server), so the core never
+//! restarts the window for a source edit.
 
 use std::io::{BufRead, BufReader, Write};
 use std::os::windows::process::CommandExt;
@@ -14,7 +14,7 @@ use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 use std::thread;
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 
 use crate::platform::actions::action_error::{ActionError, ActionResult};
 use crate::platform::actions::panel_actions;
@@ -30,12 +30,8 @@ use crate::ui::{view, window_kit, wording};
 
 /// Keeps Node's console from flashing up.
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-const WINDOW_SOURCE_EXTENSION: &str = "ts";
 /// Ids of the core's requests to the window, increasing from 1.
 static NEXT_REQUEST_ID: AtomicU32 = AtomicU32::new(1);
-const DEV_POLL: Duration = Duration::from_secs(1);
-/// An editor saves in several writes; a swap waits for them to settle.
-const DEV_SETTLE: Duration = Duration::from_millis(400);
 
 /// How the core decides what to do once the last window closes.
 pub type OnLastClose = fn();
@@ -71,7 +67,7 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-/// Once, at start. In a dev run it also starts watching the window's sources.
+/// Once, at start.
 pub fn init(on_last_close: OnLastClose) {
     let _ = HOST.set(Host {
         session: Mutex::new(None),
@@ -79,12 +75,6 @@ pub fn init(on_last_close: OnLastClose) {
         on_last_close,
         has_installed_runtime: AtomicBool::new(false),
     });
-    if let Some(sources) = window_kit::dev_sources() {
-        thread::Builder::new()
-            .name("window sources".to_owned())
-            .spawn(move || watch_sources(&sources))
-            .ok();
-    }
 }
 
 #[must_use]
@@ -360,53 +350,4 @@ fn write_line(stdin: &mut ChildStdin, frame: &impl serde::Serialize) {
     let _ = stdin
         .write_all(line.as_bytes())
         .and_then(|()| stdin.flush());
-}
-
-fn watch_sources(sources: &Path) {
-    let mut known = newest_change(sources);
-    loop {
-        thread::sleep(DEV_POLL);
-        let latest = newest_change(sources);
-        if latest == known {
-            continue;
-        }
-        thread::sleep(DEV_SETTLE);
-        known = newest_change(sources);
-        if is_open() {
-            swap();
-        }
-    }
-}
-
-/// A fresh window where the old one was; the old one closes once the new one
-/// is up.
-fn swap() {
-    let placement = lock(&host().session).as_ref().and_then(|open| open.bounds);
-    let line = format!("Panel updated {}", edge_native::local_time_of_day());
-    open(placement, Some(line));
-}
-
-fn newest_change(folder: &Path) -> Option<SystemTime> {
-    let mut newest: Option<SystemTime> = None;
-    let entries = std::fs::read_dir(folder).ok()?;
-    for entry in entries.flatten() {
-        let path = entry.path();
-        let changed = if path.is_dir() {
-            newest_change(&path)
-        } else {
-            let is_source = path
-                .extension()
-                .is_some_and(|extension| extension == WINDOW_SOURCE_EXTENSION);
-            is_source
-                .then(|| {
-                    entry
-                        .metadata()
-                        .and_then(|metadata| metadata.modified())
-                        .ok()
-                })
-                .flatten()
-        };
-        newest = newest.max(changed);
-    }
-    newest
 }
