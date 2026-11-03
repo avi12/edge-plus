@@ -20,39 +20,39 @@ inline constexpr int kVersionMinor = 0;
 // @share EdgeVersionBuild
 inline constexpr int kVersionBuild = 4314;
 // @share EdgeVersionRevision
-inline constexpr int kVersionRevision = 50;
+inline constexpr int kVersionRevision = 58;
 // The preferred load address the PDB and the disassembly are written against.
 inline constexpr uintptr_t kImageBase = 0x180000000;
 
 // --- function RVAs (add to the msedge.dll base at runtime) ---
 namespace rva {
 // cap: index < 2
-inline constexpr uintptr_t MultiContentsView_SetWebContentsAtIndex = 0xa66f396;
+inline constexpr uintptr_t MultiContentsView_SetWebContentsAtIndex = 0xa677626;
 // the `2` in cmp index,2
-inline constexpr uintptr_t SetWebContentsAtIndex_guard_imm = 0xa66f3a0;
+inline constexpr uintptr_t SetWebContentsAtIndex_guard_imm = 0xa677630;
 // CHECK(index < 2)
-inline constexpr uintptr_t MultiContentsView_SetActiveIndex = 0xa66f7fc;
+inline constexpr uintptr_t MultiContentsView_SetActiveIndex = 0xa677a8c;
 // void CloseSplitView(this): the view leaves split mode (BrowserView::
 // MaybeUpdateSplitView, once the active tab is in no split). Returns at once
 // unless the resize area (+0x3f0) is visible; else swaps the active pane's
 // page into pane 0, empties pane 1 (ContentsWebView::SetWebContents(null)) and
 // hides it and the resize area. Panes 2+ it never touches.
-inline constexpr uintptr_t MultiContentsView_CloseSplitView = 0xa66f5f8;
+inline constexpr uintptr_t MultiContentsView_CloseSplitView = 0xa677888;
 // loops the vector
 inline constexpr uintptr_t MultiContentsView_UpdateContentsBorderAndOverlay =
-    0x2e267aa;
+    0x2e5a01a;
 // 2 entries + 1 sep
 inline constexpr uintptr_t MultiContentsView_CalculateProposedLayout =
-    0x2c01ad0;
+    0x2c2f6f0;
 // FocusableViewsMap* GetFocusableViewsMapFor(this, ContentsContainerView*):
 // a lookup in MCV+0x4c8, a flat_map with an entry per container Edge itself
 // built (two), so null for ours. Its one caller,
 // BrowserView::MaybeUpdateStoredFocusForWebContents (every tab switch),
 // dereferences it.
 inline constexpr uintptr_t MultiContentsView_GetFocusableViewsMapFor =
-    0x2a4acf0;
-inline constexpr uintptr_t EdgeMultiContentsResizeArea_ctor = 0x2b0d732;
-inline constexpr uintptr_t EdgeContentsContainerView_ctor = 0x2b0d832;
+    0x2a7e560;
+inline constexpr uintptr_t EdgeMultiContentsResizeArea_ctor = 0x2b389c2;
+inline constexpr uintptr_t EdgeContentsContainerView_ctor = 0x2b38ac2;
 // The one append primitive the geometry uses. EmplaceBack grows the real
 // absl::InlinedVector<ChildLayout, 8> (onto the heap past 8 entries) with the
 // real allocator, so calling it is the only safe way to add pane/separator
@@ -60,16 +60,16 @@ inline constexpr uintptr_t EdgeContentsContainerView_ctor = 0x2b0d832;
 // absl::inlined_vector_internal::Storage<ChildLayout, 8>::EmplaceBack<View*,
 // bool, const gfx::Rect&>
 //   (rcx = &vector, rdx = View**, r8 = bool*, r9 = gfx::Rect*)
-inline constexpr uintptr_t ChildLayouts_emplace_back = 0x284365c;
+inline constexpr uintptr_t ChildLayouts_emplace_back = 0x2878bac;
 
 // --- pane construction (ctor.md) — all must run on the UI thread ---
 // (size)->void*  View allocator
-inline constexpr uintptr_t CheckedOperatorNew3 = 0x10df660;
+inline constexpr uintptr_t CheckedOperatorNew3 = 0x110a520;
 // (parent, child, index)
-inline constexpr uintptr_t AddChildViewAtImpl = 0x10dafee;
+inline constexpr uintptr_t AddChildViewAtImpl = 0x1105eae;
 // (this, bool)  vtable+0x98
-inline constexpr uintptr_t View_SetVisible = 0x1056220;
-inline constexpr uintptr_t View_GetVisible = 0x0fe0af2;  // bool (this)
+inline constexpr uintptr_t View_SetVisible = 0x1085100;
+inline constexpr uintptr_t View_GetVisible = 0x100e972;  // bool (this)
 // vector<raw_ptr<ContentsContainerView,1>>::emplace_back<raw_ptr<...>>
 // (&vec@+0x368, raw_ptr*): it MOVES the raw_ptr in, taking no BackupRefPtr
 // reference, so the entry must hold one already (edge::AcquireRawPtrRef);
@@ -77,32 +77,32 @@ inline constexpr uintptr_t View_GetVisible = 0x0fe0af2;  // bool (this)
 // raw_ptr left the count one short: closing the window freed our pane while
 // its cached ChildLayout still pointed at it, and ReleaseInternal CHECKed
 // (seen: a window with a grown split closed or torn off crashed Edge).
-inline constexpr uintptr_t Containers_emplace_back = 0x2b0ca68;
+inline constexpr uintptr_t Containers_emplace_back = 0x2b37cf8;
 // MultiContentsView::~MultiContentsView(this), the complete destructor (the
-// deleting one, 0x3223860, calls it): the window closing, a torn-off tab's
+// deleting one, 0x3255020, calls it): the window closing, a torn-off tab's
 // window included.
-inline constexpr uintptr_t MultiContentsView_dtor = 0x3223898;
+inline constexpr uintptr_t MultiContentsView_dtor = 0x3255058;
 // base::internal::RawPtrBackupRefImpl<0>::AcquireInternal(uintptr_t), and the
 // test raw_ptr's constructor makes before calling it: the address masked by
 // BRP_pool_mask equals the BRP pool's base, a uint64 global at
 // BRP_pool_base_global (read at the call in ChildLayouts_emplace_back).
-inline constexpr uintptr_t RawPtrBackupRef_AcquireInternal = 0xfde2d0;
-inline constexpr uintptr_t BRP_pool_base_global = 0x142db588;
+inline constexpr uintptr_t RawPtrBackupRef_AcquireInternal = 0x100c150;
+inline constexpr uintptr_t BRP_pool_base_global = 0x142e5608;
 inline constexpr uint64_t BRP_pool_mask = 0xfffffffc00000000;
 // (this) mark layout dirty
-inline constexpr uintptr_t View_InvalidateLayout = 0x0ffa880;
+inline constexpr uintptr_t View_InvalidateLayout = 0x1028650;
 // (view): queue a repaint of the whole view.
-inline constexpr uintptr_t View_SchedulePaint = 0x10038f0;
+inline constexpr uintptr_t View_SchedulePaint = 0x1031690;
 // (this) relayout now
-inline constexpr uintptr_t View_LayoutImmediately = 0x10339ce;
+inline constexpr uintptr_t View_LayoutImmediately = 0x10626ae;
 
 // --- tab wiring (docs/re/tab-wiring.md): give a grown pane real web content ---
 // (cwv, WebContents*)
-inline constexpr uintptr_t ContentsWebView_SetWebContents = 0x2a49ec0;
+inline constexpr uintptr_t ContentsWebView_SetWebContents = 0x2a7d730;
 // (WebContents*) force-paint a bg tab
-inline constexpr uintptr_t WebContents_WasShown = 0x29ff9d0;
+inline constexpr uintptr_t WebContents_WasShown = 0x2a34420;
 // (tsm, int index) bounds-checked
-inline constexpr uintptr_t TabStripModel_GetWebContentsAt = 0x105e38e;
+inline constexpr uintptr_t TabStripModel_GetWebContentsAt = 0x108cd4e;
 
 // --- the feed pipeline (controller.md) ---
 // void BrowserView::MaybeUpdateSplitView(this, WebContents* forContents): with
@@ -110,191 +110,191 @@ inline constexpr uintptr_t TabStripModel_GetWebContentsAt = 0x105e38e;
 // (clears pane 1, hides the resize area, moves content to container 0). The
 // relayout a tab leaving a split would trigger, so a window is full-width right
 // after a split is dissolved rather than on the user's next interaction.
-inline constexpr uintptr_t BrowserView_MaybeUpdateSplitView = 0x2e0fa60;
+inline constexpr uintptr_t BrowserView_MaybeUpdateSplitView = 0x2e3d4f0;
 
 // --- native split data-model grow (docs/re/split-insert.md, split-grow-impl.md) ---
 // (size)->void*  (non-View new)
-inline constexpr uintptr_t EdgeOperatorNew = 0x36cdf90;
+inline constexpr uintptr_t EdgeOperatorNew = 0x370aec0;
 // operator delete(void*): jumps to Edge's free (the allocator shim).
-inline constexpr uintptr_t EdgeOperatorDelete = 0x36cdfe0;
+inline constexpr uintptr_t EdgeOperatorDelete = 0x370af10;
 // split_tabs::LogSplitView{Created,Updated}UKM(TabStripModel*, const
 // SplitTabId&): split metrics, each CHECK(ListTabs().size() == 2). Created runs
 // from AddToSplitImpl, Updated from UpdateTabInSplitImpl and when a split
 // member's page becomes primary (it navigates).
-inline constexpr uintptr_t SplitTabs_LogSplitViewCreatedUKM = 0xa3ce4f7;
-inline constexpr uintptr_t SplitTabs_LogSplitViewUpdatedUKM = 0xa3ce645;
+inline constexpr uintptr_t SplitTabs_LogSplitViewCreatedUKM = 0xa3d6787;
+inline constexpr uintptr_t SplitTabs_LogSplitViewUpdatedUKM = 0xa3d68d5;
 // (out base::Token*) random 16B id
-inline constexpr uintptr_t TokenCreateRandom = 0x1eb83b0;
+inline constexpr uintptr_t TokenCreateRandom = 0x1ee3f60;
 // create 2-pane (caps at 2)
-inline constexpr uintptr_t TabStripModel_AddToNewSplit = 0xa40c036;
+inline constexpr uintptr_t TabStripModel_AddToNewSplit = 0xa4142b6;
 // N-generic add worker
-inline constexpr uintptr_t TabStripModel_AddToSplitImpl = 0xa40c540;
+inline constexpr uintptr_t TabStripModel_AddToSplitImpl = 0xa4147c0;
 // (tsm, anchorMember, newIdx, 0) add-to-split
-inline constexpr uintptr_t TabStripModel_UpdateTabInSplit = 0xa40b3e6;
-inline constexpr uintptr_t TabStripModel_RemoveSplitImpl = 0xa40675e;
-inline constexpr uintptr_t GetTabsAndIndicesInSplit = 0xa40225e;
+inline constexpr uintptr_t TabStripModel_UpdateTabInSplit = 0xa413666;
+inline constexpr uintptr_t TabStripModel_RemoveSplitImpl = 0xa40e9de;
+inline constexpr uintptr_t GetTabsAndIndicesInSplit = 0xa40a4de;
 // (tsm, &id)->SplitTabData*
-inline constexpr uintptr_t GetSplitData = 0xa402e68;
+inline constexpr uintptr_t GetSplitData = 0xa40b0e8;
 // (rootColl, int)->TabModel*
-inline constexpr uintptr_t GetTabAtIndexRecursive = 0x0ffc972;
+inline constexpr uintptr_t GetTabAtIndexRecursive = 0x102a742;
 // (rootColl, TabModel*)->int
-inline constexpr uintptr_t GetIndexOfTabRecursive = 0x0ffc6c8;
+inline constexpr uintptr_t GetIndexOfTabRecursive = 0x102a498;
 // (aura::Window*)->BrowserView*
-inline constexpr uintptr_t BrowserView_ForNativeWindow = 0x10cdae8;
+inline constexpr uintptr_t BrowserView_ForNativeWindow = 0x10fc148;
 // (HWND)->aura::Window*
-inline constexpr uintptr_t GetContentWindowForHWND = 0x26a4dc6;
+inline constexpr uintptr_t GetContentWindowForHWND = 0x26dc8b6;
 
 // --- the split's 3-dot menu (extension point for directional "add pane") ---
-inline constexpr uintptr_t SplitTabMenuModel_ctor = 0xa3fdb3e;
-inline constexpr uintptr_t SplitTabMenuModel_ExecuteCommand = 0xa3fe3e0;
+inline constexpr uintptr_t SplitTabMenuModel_ctor = 0xa405dbe;
+inline constexpr uintptr_t SplitTabMenuModel_ExecuteCommand = 0xa406660;
 // (model, cmd_id, &u16string)
-inline constexpr uintptr_t SimpleMenuModel_AddItem = 0x10dfb3e;
+inline constexpr uintptr_t SimpleMenuModel_AddItem = 0x110a9fe;
 // diag: the ⋯ split menu
-inline constexpr uintptr_t WebUISplitTabsControl_HandleContextMenu = 0xa472060;
-inline constexpr uintptr_t UTF8ToUTF16 = 0x10e07d0;  // (&out_u16, &string_view)
+inline constexpr uintptr_t WebUISplitTabsControl_HandleContextMenu = 0xa47a3a0;
+inline constexpr uintptr_t UTF8ToUTF16 = 0x110b690;  // (&out_u16, &string_view)
 
 // --- collapse (docs/re/collapse.md): split button while split = keep active ---
 // SplitWindowControllerImplV2::DoActionToSplitWindow(controller, WebContents*,
 // int action), `action` one of off::SplitAction.
-inline constexpr uintptr_t SplitWindowController_DoAction = 0xa12c770;
+inline constexpr uintptr_t SplitWindowController_DoAction = 0xa135ca0;
 
 // --- per-pane hover controls (the X / ⋯ bar, old-toolbar mode) ---
 // EnsureControlButtons builds a ControlButtons bar for containers 0 and 1 only,
 // and ShowSplitView registers hover on the FIRST and LAST member's WebContents
 // only, so a middle pane has a bar but no hover and pane 3+ has hover but no bar.
 // (this, BrowserView*, bool not_first)
-inline constexpr uintptr_t ControlButtons_ctor = 0xa11c1ea;
+inline constexpr uintptr_t ControlButtons_ctor = 0xa12571a;
 // ControlButtons::Button(this, const gfx::VectorIcon&): one round icon button
 // of the bar (AddButton allocates it with ControlButtons_button_size bytes).
-inline constexpr uintptr_t ControlButtons_Button_ctor = 0xa11c81a;
+inline constexpr uintptr_t ControlButtons_Button_ctor = 0xa125d4a;
 // Static: (WebContents* a, WebContents* b) -> CreateOrGet + StartObserving each
 // (idempotent; a no-op under the new toolbar).
-inline constexpr uintptr_t SplitWindow_ListenWebContentsInputEvent = 0xa12b59e;
+inline constexpr uintptr_t SplitWindow_ListenWebContentsInputEvent = 0xa134ace;
 // What a pane's hover runs: show the bar of the container showing the given
 // WebContents, hide the rest. (controller, WebContents*) -> bool. Controller
 // from the Browser.
-inline constexpr uintptr_t SplitWindowController_ShowControlButton = 0xa12c590;
+inline constexpr uintptr_t SplitWindowController_ShowControlButton = 0xa135ac0;
 // (Browser*)
-inline constexpr uintptr_t SplitWindowController_FromBrowser = 0x2e7e9fa;
+inline constexpr uintptr_t SplitWindowController_FromBrowser = 0x2eac42a;
 
 // --- the drag grip in the hover bar (docs/re/drag-dock.md) ---
 // AddButton(bar, int tooltip_string_id, const gfx::VectorIcon*, bool clickable)
 // -> ControlButtons::Button*; clickable=false wires no click handler.
-inline constexpr uintptr_t ControlButtons_AddButton = 0xa11cf36;
+inline constexpr uintptr_t ControlButtons_AddButton = 0xa126466;
 // InitLayout(bar): BoxLayout + preferred size {32 * visible children, 32}.
-inline constexpr uintptr_t ControlButtons_InitLayout = 0xa11c40c;
+inline constexpr uintptr_t ControlButtons_InitLayout = 0xa12593c;
 // (parent, child, size_t index)
-inline constexpr uintptr_t View_ReorderChildView = 0x27845a8;
+inline constexpr uintptr_t View_ReorderChildView = 0x27a0b88;
 // (parent, child) non-deleting
-inline constexpr uintptr_t View_RemoveChildView = 0x2787802;
+inline constexpr uintptr_t View_RemoveChildView = 0x27a3de2;
 // static (src, dst, gfx::Point*) in place
-inline constexpr uintptr_t View_ConvertPointToTarget = 0x1020936;
+inline constexpr uintptr_t View_ConvertPointToTarget = 0x1051a86;
 // (view, const std::u16string&)
-inline constexpr uintptr_t View_SetTooltipText = 0x10155f0;
+inline constexpr uintptr_t View_SetTooltipText = 0x10443c0;
 // views::Button's mouse handlers (vtable +0x118..+0x130 of every button,
 // ControlButtons::Button included). A real press on a pane bar never reaches
 // the window procedure as WM_LBUTTONDOWN, so the grip is driven from here.
 // bool (button, const ui::MouseEvent&)
-inline constexpr uintptr_t Button_OnMousePressed = 0xb3fb460;
+inline constexpr uintptr_t Button_OnMousePressed = 0xb4036d0;
 // bool (button, const ui::MouseEvent&)
-inline constexpr uintptr_t Button_OnMouseDragged = 0xb3fb4f0;
+inline constexpr uintptr_t Button_OnMouseDragged = 0xb403760;
 // void (button, const ui::MouseEvent&)
-inline constexpr uintptr_t Button_OnMouseReleased = 0xb3fb660;
+inline constexpr uintptr_t Button_OnMouseReleased = 0xb4038d0;
 // void (button)
-inline constexpr uintptr_t Button_OnMouseCaptureLost = 0xb3fb680;
+inline constexpr uintptr_t Button_OnMouseCaptureLost = 0xb4038f0;
 // int ui::MouseEvent::GetClickCount(this): 2 on the second click of a double
 // click (EdgeTwoDimensionalResizeArea resets its panes on that release).
-inline constexpr uintptr_t MouseEvent_GetClickCount = 0xb7a3028;
+inline constexpr uintptr_t MouseEvent_GetClickCount = 0xb7ab618;
 // bool views::View::IsMouseHovered(this): the cursor is over the view now.
-inline constexpr uintptr_t View_IsMouseHovered = 0x2880344;
+inline constexpr uintptr_t View_IsMouseHovered = 0x28b50d4;
 
 // --- closing one pane of a grown split (docs/re/close-pane.md) ---
 // Edge's X: ControlButtons::HandleButtonClick(bar, Button*). For pane 2+ it
 // calls SplitWindowController::HideSplitView(true), which closes the split's
 // LAST tab (not the clicked one), and closing any member dissolves the split.
-inline constexpr uintptr_t ControlButtons_HandleButtonClick = 0xa11d260;
+inline constexpr uintptr_t ControlButtons_HandleButtonClick = 0xa126790;
 // ControlButtons::ToggleContextMenu(bar, ...): the ⋯ of a pane's hover bar. It
 // builds a SplitTabMenuModel that only knows "first pane or not", so the pane
 // whose ⋯ was clicked is remembered here.
-inline constexpr uintptr_t ControlButtons_ToggleContextMenu = 0xa11d480;
+inline constexpr uintptr_t ControlButtons_ToggleContextMenu = 0xa1269b0;
 // The bar's ⋯ menu: SplitWindowControlMenu. BuildMenuModel(this) builds a
 // ui::SimpleMenuModel (kept at this+0x10, delegate this+8) and RETURNS it, and
 // Run passes the return value to PopulateMenu(this, MenuItemView* root, model),
 // which creates one item view per model item, so an item removed from the
 // model first never shows. ExecuteCommand(this, int id, int flags) switches on
 // off::ControlMenuCommand; IsCommandIdEnabled returns true above 5.
-inline constexpr uintptr_t SplitWindowControlMenu_BuildMenuModel = 0xa12378c;
-inline constexpr uintptr_t SplitWindowControlMenu_PopulateMenu = 0xa1236f4;
-inline constexpr uintptr_t SplitWindowControlMenu_ExecuteCommand = 0xa123e90;
+inline constexpr uintptr_t SplitWindowControlMenu_BuildMenuModel = 0xa12ccbc;
+inline constexpr uintptr_t SplitWindowControlMenu_PopulateMenu = 0xa12cc24;
+inline constexpr uintptr_t SplitWindowControlMenu_ExecuteCommand = 0xa12d3c0;
 // ShouldExecuteCommandWithoutClosingMenu(this, int id, const ui::Event&) ->
 // bool, `return id == 6`. Identical-code-folded: the SAME function serves
 // other menus (e.g. EdgeDownloadsBtrItemContextMenu::IsItemForCommandIdDynamic),
 // so a detour must pass every id but its own straight through.
 inline constexpr uintptr_t SplitWindowControlMenu_ShouldExecuteWithoutClosing =
-    0xa124280;
+    0xa12d7b0;
 // gfx::VectorIcon data the ⋯ row's arrows reuse (Edge's own arrow icons).
-inline constexpr uintptr_t Icon_ArrowUp = 0x122eff18;    // kArrowUpIcon
-inline constexpr uintptr_t Icon_ArrowDown = 0x122efee0;  // kArrowDownIcon
+inline constexpr uintptr_t Icon_ArrowUp = 0x122f8ff8;    // kArrowUpIcon
+inline constexpr uintptr_t Icon_ArrowDown = 0x122f8fc0;  // kArrowDownIcon
 // ← and → are kArrowUpIcon turned (icons.h); these are the fallback.
-inline constexpr uintptr_t Icon_ArrowBack = 0x12c60438;     // kArrowBackIcon
-inline constexpr uintptr_t Icon_ArrowForward = 0x12c60500;  // kArrowForwardIcon
+inline constexpr uintptr_t Icon_ArrowBack = 0x12c6a428;     // kArrowBackIcon
+inline constexpr uintptr_t Icon_ArrowForward = 0x12c6a4f0;  // kArrowForwardIcon
 // The ⋯ row's own leading icon (Chromium's split-view icon).
-inline constexpr uintptr_t Icon_SplitScene = 0x122ee698;  // kSplitSceneIcon
+inline constexpr uintptr_t Icon_SplitScene = 0x122f7778;  // kSplitSceneIcon
 // static ui::ImageModel FromVectorIcon(out, const VectorIcon&, ColorVariant
 // (by value, 8 bytes), int size (0 = default), const VectorIcon* badge)
-inline constexpr uintptr_t ImageModel_FromVectorIcon = 0x100567a;
-inline constexpr uintptr_t ImageModel_dtor = 0x1005520;
+inline constexpr uintptr_t ImageModel_FromVectorIcon = 0x103344a;
+inline constexpr uintptr_t ImageModel_dtor = 0x10332f0;
 // ui::ColorVariant::ColorVariant(this, ui::ColorId)
-inline constexpr uintptr_t ColorVariant_ctor = 0x10a1480;
+inline constexpr uintptr_t ColorVariant_ctor = 0x10cfbb0;
 // (model, int id, const std::u16string& label, const ui::ImageModel& icon)
-inline constexpr uintptr_t SimpleMenuModel_AddItemWithIcon = 0x2e14f00;
+inline constexpr uintptr_t SimpleMenuModel_AddItemWithIcon = 0x2e42990;
 // views::View::View(this): a plain view (no layout manager).
-inline constexpr uintptr_t View_ctor = 0x10e1b9a;
+inline constexpr uintptr_t View_ctor = 0x110ca5a;
 // The outline of every tab, vertical ones included, in which it draws its fill,
 // hover and press: SkPath EdgeTabStyleViews::GetPath(this, SkPath* out, int
 // pathType, float scale, const int* isUnscaled). A vertical tab's is one rounded
 // rectangle, built by the SkRRect::setRectXY call whose return address is
 // EdgeTabStyleViews_GetPath_setRectXY_return, so the tab's shape is decided there.
-inline constexpr uintptr_t EdgeTabStyleViews_GetPath = 0x27bd000;
+inline constexpr uintptr_t EdgeTabStyleViews_GetPath = 0x27d9ee0;
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_setRectXY_return =
-    0x27bd6f0;
+    0x27da5d0;
 // SkPath& SkPath::arcTo(this, SkPoint radii, float rotation, ArcSize, Direction,
 // SkPoint end): how GetPath rounds each corner of a horizontal tab's outline. It
 // makes four arcs, in order: the left foot (a concave tail from the bottom, one
 // radius out from the left side), the top-left corner, the top-right corner and
 // the right foot. Their return addresses are below.
-inline constexpr uintptr_t SkPath_arcTo = 0x10f74e0;
+inline constexpr uintptr_t SkPath_arcTo = 0x1123390;
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_leftFoot_return =
-    0x27bd4eb;
+    0x27da3cb;
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_topLeftArc_return =
-    0x27bd550;
+    0x27da430;
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_topRightArc_return =
-    0x27bd5bd;
+    0x27da49d;
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_rightFoot_return =
-    0x27bd639;
+    0x27da519;
 // A vertical tab's outline (pathTypes 0 and 1) is built by the same four arcs,
 // except that its fourth, the bottom-right corner, is a call at its own return
 // address: it ends one radius in from the right side, at the tab's bottom.
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_bottomRightArc_return =
-    0x474ebc4;
+    0x4755382;
 // A vertical tab's outline: GetPath builds an SkRRect (setRectXY, above) and adds
 // it to the path with SkPath::addRRect(this, const SkRRect&, direction,
 // startIndex), whose call returns to EdgeTabStyleViews_GetPath_addRRect_return.
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_addRRect_return =
-    0x27bd709;
-inline constexpr uintptr_t SkPath_addRRect = 0x27bd950;
+    0x27da5e9;
+inline constexpr uintptr_t SkPath_addRRect = 0x27da830;
 // SkPath& SkPath::moveTo(this, SkPoint).
-inline constexpr uintptr_t SkPath_moveTo = 0x1207860;
+inline constexpr uintptr_t SkPath_moveTo = 0x12354e0;
 // SkPath& SkPath::lineTo(this, SkPoint): the call in GetPath, returning to
 // EdgeTabStyleViews_GetPath_topEdge_return, draws the top edge from the top-left
 // corner to where the top-right arc begins.
-inline constexpr uintptr_t SkPath_lineTo = 0x1209ae0;
-inline constexpr uintptr_t EdgeTabStyleViews_GetPath_topEdge_return = 0x27bd58d;
+inline constexpr uintptr_t SkPath_lineTo = 0x1237760;
+inline constexpr uintptr_t EdgeTabStyleViews_GetPath_topEdge_return = 0x27da46d;
 // The lineTo after the top-right arc draws the right side down to where the
 // right foot (or a vertical tab's bottom-right arc) begins.
 inline constexpr uintptr_t EdgeTabStyleViews_GetPath_rightEdge_return =
-    0x27bd5f4;
-// EdgeTabStrip::UpdateDropShadow (rva 0x2954ab0) shadows the horizontal strip's
+    0x27da4d4;
+// EdgeTabStrip::UpdateDropShadow (rva 0x2989460) shadows the horizontal strip's
 // active tab, outlined by GetPath (pathType 1) through the call returning to
 // EdgeTabStrip_UpdateDropShadow_activeTabPath_return. When that tab is in a
 // split, it extends the outline by every other tab of TabStrip::GetTabsInSplit
@@ -302,9 +302,9 @@ inline constexpr uintptr_t EdgeTabStyleViews_GetPath_rightEdge_return =
 // EdgeTabStrip_UpdateDropShadow_splitMemberPath_return; with none, it closes
 // the outline.
 inline constexpr uintptr_t EdgeTabStrip_UpdateDropShadow_activeTabPath_return =
-    0x2954e5e;
+    0x298980e;
 inline constexpr uintptr_t
-    EdgeTabStrip_UpdateDropShadow_splitMemberPath_return = 0x4750811;
+    EdgeTabStrip_UpdateDropShadow_splitMemberPath_return = 0x4756fcf;
 // bool EdgeTabStyleViews::IsLeftSplitTab / IsRightSplitTab(Tab*): the tab is
 // the first of its TabStrip::GetTabsInSplit / the last. GetPath asks after the
 // top-left arc and again after the top-right one; for a first member it draws
@@ -312,79 +312,79 @@ inline constexpr uintptr_t
 // the top edge and top-right arc above, and leaves a later one without its
 // left foot and top-left arc. Edge pairs a split's tabs two by two, so in a
 // grown split the first member alone came out square.
-inline constexpr uintptr_t EdgeTabStyleViews_IsLeftSplitTab = 0x10f6b7c;
-inline constexpr uintptr_t EdgeTabStyleViews_IsRightSplitTab = 0x10f6bc4;
+inline constexpr uintptr_t EdgeTabStyleViews_IsLeftSplitTab = 0x1122a2c;
+inline constexpr uintptr_t EdgeTabStyleViews_IsRightSplitTab = 0x1122a74;
 // SkPath::SkPath(this, SkPathFillType): an empty path.
-inline constexpr uintptr_t SkPath_ctor = 0x1021730;
+inline constexpr uintptr_t SkPath_ctor = 0x104fcd0;
 // SkRRect::setRectXY(this, const SkRect*, float rx, float ry): zeroes the rest
 // of `this` itself when the rect is valid; one radius on every corner.
-inline constexpr uintptr_t SkRRect_setRectXY = 0x1022420;
+inline constexpr uintptr_t SkRRect_setRectXY = 0x10509c0;
 // The vftable (offset 0) of SplitTabView, the view that holds a split's member
 // tabs side by side in one row of the vertical list and paints their shared
 // rounded group fill in its OnPaint.
-inline constexpr uintptr_t SplitTabView_vftable = 0x11843398;
+inline constexpr uintptr_t SplitTabView_vftable = 0x1184bbc0;
 // The return address of SplitTabView::OnPaint's call to Canvas::DrawRoundRect
-// (rva 0x9a002a0 +0x1cf): the call that paints the group's rounded fill.
+// (rva 0x9a09b50 +0x1cf): the call that paints the group's rounded fill.
 inline constexpr uintptr_t SplitTabView_OnPaint_DrawRoundRect_return =
-    0x9a0046f;
+    0x9a09d1f;
 // void gfx::Canvas::DrawRoundRect(this, const gfx::Rect*, int radius,
 // const cc::PaintFlags*), a rounded rectangle of one radius on every corner.
-inline constexpr uintptr_t Canvas_DrawRoundRect = 0x5406f60;
+inline constexpr uintptr_t Canvas_DrawRoundRect = 0x5403770;
 // void gfx::Canvas::DrawRect(this, const gfx::Rect*, const cc::PaintFlags*).
-inline constexpr uintptr_t Canvas_DrawRect = 0x27bc834;
+inline constexpr uintptr_t Canvas_DrawRect = 0x27d9714;
 // SkRRect::setRectRadii(this, const SkRect*, const SkVector radii[4]): the
 // radii run upper-left, upper-right, lower-right, lower-left.
-inline constexpr uintptr_t SkRRect_setRectRadii = 0x8515b0;
+inline constexpr uintptr_t SkRRect_setRectRadii = 0x83e2d0;
 // (view, const std::optional<gfx::Size>*): {int width, int height, bool}.
-inline constexpr uintptr_t View_SetPreferredSize = 0x2c4af3c;
+inline constexpr uintptr_t View_SetPreferredSize = 0x2c8188c;
 // (view, const gfx::Rect&)
-inline constexpr uintptr_t View_SetBoundsRect = 0x1021e78;
+inline constexpr uintptr_t View_SetBoundsRect = 0x1050418;
 // gfx::Rect View::GetBoundsInScreen(this) (through the hidden out pointer),
 // in screen DIPs.
-inline constexpr uintptr_t View_GetBoundsInScreen = 0x28c8e20;
+inline constexpr uintptr_t View_GetBoundsInScreen = 0x28fd760;
 // static View::ConvertPointFromScreen(const View* to, gfx::Point* in out):
 // screen DIPs -> `to`'s coordinates.
-inline constexpr uintptr_t View_ConvertPointFromScreen = 0x28804b2;
+inline constexpr uintptr_t View_ConvertPointFromScreen = 0x28b5242;
 // static View::ConvertPointToScreen(const View* from, gfx::Point* in out):
 // `from`'s coordinates -> screen DIPs.
-inline constexpr uintptr_t View_ConvertPointToScreen = 0x28c8f06;
+inline constexpr uintptr_t View_ConvertPointToScreen = 0x28fd846;
 // gfx::Size View::GetPreferredSize(this, const SizeBounds&) (returned through
 // the hidden out pointer); zeroed SizeBounds = unbounded.
-inline constexpr uintptr_t View_GetPreferredSize = 0x0ff5374;
+inline constexpr uintptr_t View_GetPreferredSize = 0x1023184;
 // ProposedLayout* MenuItemView::CalculateProposedLayout(LayoutDelegate* this,
 // ProposedLayout* out, const SizeBounds&): every child's bounds in the row.
 // `this` is the item's LayoutDelegate base (MENUITEM_layout_delegate). Edge
 // centres the icon on a STANDARD row's height and pins other children to the
 // row's top.
-inline constexpr uintptr_t MenuItemView_CalculateProposedLayout = 0xb3d1be0;
+inline constexpr uintptr_t MenuItemView_CalculateProposedLayout = 0xb3d9f20;
 // MenuController* MenuController::GetActiveInstance(): the open menu's, or null.
-inline constexpr uintptr_t MenuController_GetActiveInstance = 0xb3d667e;
+inline constexpr uintptr_t MenuController_GetActiveInstance = 0xb3de9be;
 // MenuController::Cancel(this, ExitType, int): as MenuRunnerImpl::Cancel calls
 // it, with (MENU_exit_all, 0).
-inline constexpr uintptr_t MenuController_Cancel = 0xb3d66d0;
+inline constexpr uintptr_t MenuController_Cancel = 0xb3dea10;
 // MenuItemView::ChildPreferredSizeChanged(this, View* child): drops the
 // item's cached dimensions so it is measured again.
-inline constexpr uintptr_t MenuItemView_ChildPreferredSizeChanged = 0xb3cf290;
+inline constexpr uintptr_t MenuItemView_ChildPreferredSizeChanged = 0xb3d75d0;
 // MenuItemView* MenuItemView::GetMenuItemByID(this, int id)
-inline constexpr uintptr_t MenuItemView_GetMenuItemByID = 0xb3d08c6;
-inline constexpr uintptr_t SimpleMenuModel_AddSeparator = 0x2790e08;
+inline constexpr uintptr_t MenuItemView_GetMenuItemByID = 0xb3d8c06;
+inline constexpr uintptr_t SimpleMenuModel_AddSeparator = 0x27ad3e8;
 // size_t GetItemCount(model)
-inline constexpr uintptr_t SimpleMenuModel_GetItemCount = 0x28d5840;
+inline constexpr uintptr_t SimpleMenuModel_GetItemCount = 0x290a1d0;
 // int GetCommandIdAt(model, size_t index)
-inline constexpr uintptr_t SimpleMenuModel_GetCommandIdAt = 0x342d460;
+inline constexpr uintptr_t SimpleMenuModel_GetCommandIdAt = 0x34675d0;
 // void RemoveItemAt(model, size_t index)
-inline constexpr uintptr_t SimpleMenuModel_RemoveItemAt = 0xb7cefe0;
+inline constexpr uintptr_t SimpleMenuModel_RemoveItemAt = 0xb7d75d0;
 // void SetLabel(model, size_t index, const std::u16string& label)
-inline constexpr uintptr_t SimpleMenuModel_SetLabel = 0xb7cf22e;
+inline constexpr uintptr_t SimpleMenuModel_SetLabel = 0xb7d781e;
 // (tsm, int index, uint32 closeTypes); HideSplitView passes 1
-inline constexpr uintptr_t TabStripModel_CloseWebContentsAt = 0xa4080ea;
+inline constexpr uintptr_t TabStripModel_CloseWebContentsAt = 0xa41036a;
 // (tsm, int index, const TabStripUserGestureDetails*)
-inline constexpr uintptr_t TabStripModel_ActivateTabAt = 0xa404c92;
+inline constexpr uintptr_t TabStripModel_ActivateTabAt = 0xa40cf12;
 // int TabStripModel::GetIndexOfWebContents(this, WebContents*): -1 if absent.
-inline constexpr uintptr_t TabStripModel_GetIndexOfWebContents = 0x10f5c1a;
+inline constexpr uintptr_t TabStripModel_GetIndexOfWebContents = 0x1121aca;
 // int TabStripModel::MoveWebContentsAt(this, int index, int to_position,
 // bool select_after_move): `to_position` is the tab's index after the move.
-inline constexpr uintptr_t TabStripModel_MoveWebContentsAt = 0xa404f1c;
+inline constexpr uintptr_t TabStripModel_MoveWebContentsAt = 0xa40d19c;
 // A split pane's links (docs/re/split-links.md):
 // bool BrowserWebContentsDelegate::ShouldOverrideNewWindowCreation(this,
 // WebContents* source, RenderFrameHost* opener, WindowOpenDisposition, bool,
@@ -392,125 +392,125 @@ inline constexpr uintptr_t TabStripModel_MoveWebContentsAt = 0xa404f1c;
 // WebContentsImpl::EdgeShouldCreateNewWindowAsync) once a page's new window is
 // allowed and before it is made; true = handled, make no window.
 inline constexpr uintptr_t
-    BrowserWebContentsDelegate_ShouldOverrideNewWindowCreation = 0xa0bd830;
+    BrowserWebContentsDelegate_ShouldOverrideNewWindowCreation = 0xa0c6d60;
 // WebContents* BrowserWebContentsDelegate::AddNewContents(this, WebContents*
 // source, unique_ptr<WebContents>* new_contents, const GURL& target_url,
 // WindowOpenDisposition, const WindowFeatures&, bool user_gesture, bool*
 // was_blocked): puts a page's new tab or window into the browser.
 inline constexpr uintptr_t BrowserWebContentsDelegate_AddNewContents =
-    0xa0bae60;
+    0xa0c4390;
 // unique_ptr<NavigationThrottle> SplitWindowLinkModeNavigationThrottle::
 // MaybeCreateThrottleFor(out, ...): Edge's own use of the "open left links to
 // the right" toggle (the first pane's same-tab links load in the last pane).
-inline constexpr uintptr_t SplitWindowLinkModeThrottle_MaybeCreate = 0x29ef634;
+inline constexpr uintptr_t SplitWindowLinkModeThrottle_MaybeCreate = 0x2a24084;
 // void SplitWindowControllerImplV2::UpdateLinkedModeState(this, bool on): after
-// the toggle's bool is stored (SetLinkedModeStateForTab, 0xa12bfd0), tells the
+// the toggle's bool is stored (SetLinkedModeStateForTab, 0xa135500), tells the
 // split's observers, which wire Edge's two-pane link mode (readying a target
 // pane: it navigated pane 1 of three to a new tab page).
 inline constexpr uintptr_t SplitWindowControllerV2_UpdateLinkedModeState =
-    0xa12b710;
+    0xa134c40;
 // NavigationController::LoadURLParams(this, const GURL&) and its dtor.
-inline constexpr uintptr_t LoadURLParams_ctor = 0x2d5ee90;
-inline constexpr uintptr_t LoadURLParams_dtor = 0x2d5ebce;
+inline constexpr uintptr_t LoadURLParams_ctor = 0x2db6130;
+inline constexpr uintptr_t LoadURLParams_dtor = 0x2db5e6e;
 // NavigationController::LoadURLWithParams(this, WeakPtr<NavigationHandle>*
 // out, const LoadURLParams&): since 156 a wrapper around the Impl's
 // LoadURLWithParamsForResult, which writes a base::expected instead.
 inline constexpr uintptr_t NavigationControllerImpl_LoadURLWithParams =
-    0x2d5e9f6;
+    0x2db5c96;
 // NavigationControllerImpl* WebContentsImpl::GetController(this).
-inline constexpr uintptr_t WebContentsImpl_GetController = 0x1164500;
+inline constexpr uintptr_t WebContentsImpl_GetController = 0x1192380;
 // bool WebContentsImpl::HasOpener(this).
-inline constexpr uintptr_t WebContentsImpl_HasOpener = 0x3420220;
+inline constexpr uintptr_t WebContentsImpl_HasOpener = 0x3459e70;
 // const GURL& WebContentsImpl::GetLastCommittedURL(this) (WebContents vtable
 // +0x80).
-inline constexpr uintptr_t WebContentsImpl_GetLastCommittedURL = 0x115b9e0;
+inline constexpr uintptr_t WebContentsImpl_GetLastCommittedURL = 0x1189850;
 // base::internal::WeakReference::~WeakReference(this): a WeakPtr's first field.
-inline constexpr uintptr_t WeakReference_dtor = 0x0fe4860;
+inline constexpr uintptr_t WeakReference_dtor = 0x1012680;
 
 // A new pane's tab offer (docs/re/split-offer.md):
 // WebContents* chrome::AddAndReturnTabAt(BrowserWindowInterface*, const GURL&,
 // uint32 extra transition flags, int index, bool foreground,
 // optional<TabGroupId>*, bool pinned, optional<int>): a new tab at `index`,
 // loading the URL; returns its contents.
-inline constexpr uintptr_t Chrome_AddAndReturnTabAt = 0xa86622c;
+inline constexpr uintptr_t Chrome_AddAndReturnTabAt = 0xa86e81c;
 // GURL::GURL(this, const std::string_view*) and its dtor.
-inline constexpr uintptr_t GURL_ctor_string = 0x1016852;
-inline constexpr uintptr_t GURL_dtor = 0x0fdecaa;
+inline constexpr uintptr_t GURL_ctor_string = 0x1045742;
+inline constexpr uintptr_t GURL_dtor = 0x100c67a;
 // chrome::kEdgeUISplitWindowStartingPageURL ("edge://split-window-starting-page"):
 // the page Edge's split button shows in the new pane, offering the window's
 // other tabs.
-inline constexpr uintptr_t EdgeUISplitWindowStartingPageURL = 0x123a6c90;
+inline constexpr uintptr_t EdgeUISplitWindowStartingPageURL = 0x123afd70;
 // bool SplitWindowController::IsStartingPage(WebContents*, bool by_url).
-inline constexpr uintptr_t SplitWindowController_IsStartingPage = 0xa12e792;
+inline constexpr uintptr_t SplitWindowController_IsStartingPage = 0xa137cc2;
 // void SplitWindowControllerImplV2::OpenTabInCurrentSplitWindow(this,
 // WebContents* chosen): the starting page's pick. It puts the chosen tab in
 // place of the active split's LAST member (UpdateTabInSplit), where a
 // two-pane split always has its starting page.
 inline constexpr uintptr_t SplitWindowControllerV2_OpenTabInCurrentSplitWindow =
-    0xa12cb00;
+    0xa136030;
 // void SplitWindowStartingUIHandler::GetTabs(this, GetTabsCallback*): the
 // page's tab list, every tab of its window but those
 // SplitWindowController::IsSplitWindowWebContents(WebContents*) claims (the
 // contents of Edge's older split, marked by their user data).
-inline constexpr uintptr_t SplitWindowStartingUIHandler_GetTabs = 0x9ba05a0;
+inline constexpr uintptr_t SplitWindowStartingUIHandler_GetTabs = 0x9baa810;
 inline constexpr uintptr_t SplitWindowController_IsSplitWindowWebContents =
-    0x29f2704;
+    0x2a27154;
 // void base::internal::Invoker<lambda at split_window_controller_impl_v2.cc:1331,
 // WeakPtr<WebContents>>::RunOnce(BindStateBase*): the task OnSplitTabRemoved
-// (0xa12d846) posts when the removed split's last member is a starting page;
+// (0xa136d76) posts when the removed split's last member is a starting page;
 // it loads chrome::kChromeUINewTabURL there, replacing the entry.
-inline constexpr uintptr_t StartingPageLeftSplitTask_RunOnce = 0xa12e570;
+inline constexpr uintptr_t StartingPageLeftSplitTask_RunOnce = 0xa137aa0;
 // void StartingPageNotifierImpl::OnTabClosing(this, WebContents*): tells every
 // registered starting page that the tab is gone (Page::OnTabRemoved(tab id)).
-inline constexpr uintptr_t StartingPageNotifierImpl_OnTabClosing = 0xa13482c;
+inline constexpr uintptr_t StartingPageNotifierImpl_OnTabClosing = 0xa13dd5c;
 // void SplitWindowStartingUIHandler::CloseSplitWindow(this): the starting
 // page's X. Edge then closes the split's LAST member too
-// (SplitWindowControllerImplV2::HideSplitView(true), 0xa12b940).
+// (SplitWindowControllerImplV2::HideSplitView(true), 0xa134e70).
 inline constexpr uintptr_t SplitWindowStartingUIHandler_CloseSplitWindow =
-    0x9ba13a0;
+    0x9bab610;
 
 // A tab drag (docs/re/tab-drag.md):
 // int TabDragController::ContinueDragging(this, const gfx::Point* screen DIPs):
 // every pointer move of a started drag; it reorders the SELECTED tabs, or tears
 // them off into a new window ~15 DIP below the strip. 0 = the drag lives on.
-inline constexpr uintptr_t TabDragController_ContinueDragging = 0xa785e58;
+inline constexpr uintptr_t TabDragController_ContinueDragging = 0xa78e448;
 // void TabDragController::EndDrag(this, EndDragReason); frees the controller.
-inline constexpr uintptr_t TabDragController_EndDrag = 0xa783fc0;
+inline constexpr uintptr_t TabDragController_EndDrag = 0xa78c5b0;
 // void EventTracker::OnEvent(this, const ui::Event&): the drag's key watcher.
 // Escape cancels the drag; ANY other key press or release ends it in place.
-inline constexpr uintptr_t EventTracker_OnEvent = 0xa78cd10;
+inline constexpr uintptr_t EventTracker_OnEvent = 0xa795300;
 // int TabDragController::Drag(this, const gfx::Point* screen DIPs): what the
 // strip's OnMouseDragged reaches (TabDragContextImpl::ContinueDrag converts the
 // event to screen DIPs and calls it); starts the drag past the drag threshold,
 // then runs ContinueDragging.
-inline constexpr uintptr_t TabDragController_Drag = 0xa784586;
+inline constexpr uintptr_t TabDragController_Drag = 0xa78cb76;
 // bool TabDragController::SetCapture(this, TabDragContext*): hands the mouse
 // capture to that strip (its widget's Widget::SetCapture(context)), as the
 // attach of a tab dragged in from another window does. From then on views
 // sends the strip the drags and the release.
-inline constexpr uintptr_t TabDragController_SetCapture = 0xa784332;
+inline constexpr uintptr_t TabDragController_SetCapture = 0xa78c922;
 // TabStrip* BrowserView::tabstrip(this): the strip the window's tab list
 // draws, vertical tabs included.
-inline constexpr uintptr_t BrowserView_tabstrip = 0x29307c4;
+inline constexpr uintptr_t BrowserView_tabstrip = 0x2964e04;
 // TabDragContext* TabStrip::GetDragContext(this).
-inline constexpr uintptr_t TabStrip_GetDragContext = 0x30baeae;
+inline constexpr uintptr_t TabStrip_GetDragContext = 0x30ed10e;
 // void TabStrip::StopAnimating(this): its TabContainerImpl's
 // CompleteAnimationAndLayout. TabStrip::MaybeStartDrag starts nothing while the
 // strip animates (TabStrip::IsAnimatingInTabStrip), as it does right after a
 // tab moved or was activated.
-inline constexpr uintptr_t TabStrip_StopAnimating = 0x2afe4f2;
+inline constexpr uintptr_t TabStrip_StopAnimating = 0x2b29782;
 // ui::MouseEvent::MouseEvent(this, EventType, const gfx::Point* location,
 // const gfx::Point* root_location, base::TimeTicks, int flags,
 // int changed_button_flags, const PointerDetails*).
-inline constexpr uintptr_t MouseEvent_ctor = 0x2c31482;
+inline constexpr uintptr_t MouseEvent_ctor = 0x2c5f172;
 // ui::PointerDetails::PointerDetails(this): a mouse's.
-inline constexpr uintptr_t PointerDetails_ctor = 0xb78f25a;
+inline constexpr uintptr_t PointerDetails_ctor = 0xb79784a;
 // ui::Event::~Event(this): all a MouseEvent needs (Tab::OnMousePressed ends
 // its own synthesized one so).
-inline constexpr uintptr_t Event_dtor = 0x109b15a;
+inline constexpr uintptr_t Event_dtor = 0x10c8efa;
 // static base::TimeTicks base::TimeTicks::Now() (through the hidden out
 // pointer).
-inline constexpr uintptr_t TimeTicks_Now = 0xfe1da0;
+inline constexpr uintptr_t TimeTicks_Now = 0x100fbc0;
 
 // --- the dividers between panes (docs/re/close-pane.md) ---
 // EdgeMultiContentsResizeArea(this, MultiContentsView*): the 2-pane split's
@@ -519,21 +519,21 @@ inline constexpr uintptr_t TimeTicks_Now = 0xfe1da0;
 // views::EdgeTwoDimensionalResizeArea's own mouse handlers (overriding
 // views::ResizeArea's): bool (view, const ui::MouseEvent&) for press / drag,
 // void (view, const ui::MouseEvent&) for release, void (view) for capture lost.
-inline constexpr uintptr_t ResizeArea2D_OnMousePressed = 0xb368e40;
-inline constexpr uintptr_t ResizeArea2D_OnMouseDragged = 0xb368ed0;
-inline constexpr uintptr_t ResizeArea2D_OnMouseReleased = 0xb368f10;
-inline constexpr uintptr_t ResizeArea2D_OnMouseCaptureLost = 0xb368f70;
+inline constexpr uintptr_t ResizeArea2D_OnMousePressed = 0xb371110;
+inline constexpr uintptr_t ResizeArea2D_OnMouseDragged = 0xb3711a0;
+inline constexpr uintptr_t ResizeArea2D_OnMouseReleased = 0xb3711e0;
+inline constexpr uintptr_t ResizeArea2D_OnMouseCaptureLost = 0xb371240;
 
 // --- 2-pane-only CHECK sites that int3 when a split grows past 2 members ---
 // Accessible-label builder: maps a split tab's pane index to a string id
 // (0x3e89 pane0 / 0x3e8a pane1) and `cmp eax,1; jne <int3>` crashes at index>=2.
-// `jne 0x431d05d` (0F 85 rel32, 6 bytes); NOP it so index>=2 falls through to
+// `jne 0x432e16e` (0F 85 rel32, 6 bytes); NOP it so index>=2 falls through to
 // the pane-1 label instead of crashing. a11y text for pane 3+ is cosmetic.
-inline constexpr uintptr_t SplitA11yLabel_paneidx_jne = 0x431ccc1;
+inline constexpr uintptr_t SplitA11yLabel_paneidx_jne = 0x432ddd2;
 // MultiContentsView::SetActiveIndex's `cmp edx,2; jae <int3>` (0F 83 rel32, 6
 // bytes). The detour replaces the function while loaded; NOPing the CHECK too
 // means a click on pane 3+ after unload only mis-flags the primary pane.
-inline constexpr uintptr_t SetActiveIndex_index_jae = 0xa66f806;
+inline constexpr uintptr_t SetActiveIndex_index_jae = 0xa677a96;
 
 // --- a split's tabs in the tab list (tabrows.h) ---
 // The horizontal strip and the vertical list lay tabs out through
@@ -545,14 +545,14 @@ inline constexpr uintptr_t SetActiveIndex_index_jae = 0xa66f806;
 // count} at the start of the result. UpdateIdealBounds stores it and
 // EdgeTabStripLayoutHelper::CalculatePreferredHeight sizes the container from it.
 inline constexpr uintptr_t TabStripLayoutHelper_CalculateIdealBounds =
-    0x109c5aa;
+    0x10ca34a;
 // std::vector<gfx::Rect> EdgeTabDragContextImpl::CalculateBoundsForDraggedViews(
 //     this, out vector, base::span<TabSlotView* const> views): where the tabs
 // being dragged are drawn, one rect per view. It too draws a split as a pair,
 // and a grown split's later members each on a row of their own (seen while
 // dragging a 4-pane split's tab in the vertical list).
 inline constexpr uintptr_t
-    EdgeTabDragContextImpl_CalculateBoundsForDraggedViews = 0xa77d1e0;
+    EdgeTabDragContextImpl_CalculateBoundsForDraggedViews = 0xa7857d0;
 
 // --- theming (docs/re/theming.md) ---
 // The whole feature rides one Edge entry point. ThemeService applies a theme
@@ -566,7 +566,7 @@ inline constexpr uintptr_t
 // notifies, which repaints the browser in place — Edge's own path, live, no
 // restart. (RevertToExtensionTheme only re-enables an already-enabled theme
 // extension, so it does not switch the active theme.)
-inline constexpr uintptr_t ThemeService_DoSetTheme = 0x8833f00;
+inline constexpr uintptr_t ThemeService_DoSetTheme = 0x883dd70;
 // void ThemeService::OnThemeBuiltFromExtension(this, const std::string& id,
 // scoped_refptr<BrowserThemePack>, bool suppress_infobar): where DoSetTheme's
 // asynchronous pack build lands, and the one place every route that makes a
@@ -575,23 +575,23 @@ inline constexpr uintptr_t ThemeService_DoSetTheme = 0x8833f00;
 // (ThemeInstalledInfoBarDelegate::CreateForLastActiveTab, or
 // ThemeService::ShowThemeInstalledInfoBar once infobars are migrated) unless the
 // 4th argument (r9) is set. docs/re/theming.md.
-inline constexpr uintptr_t ThemeService_OnThemeBuiltFromExtension = 0x8834460;
+inline constexpr uintptr_t ThemeService_OnThemeBuiltFromExtension = 0x883e2d0;
 // extensions::ExtensionRegistry* ExtensionRegistry::Get(BrowserContext*) and
 // the Extension* lookup on either of its sets (off::REGISTRY_*_set):
 // const Extension* ExtensionSet::GetByID(this, const std::string& id).
-inline constexpr uintptr_t ExtensionRegistry_Get = 0x10a6052;
-inline constexpr uintptr_t ExtensionSet_GetByID = 0x10d0c7a;
+inline constexpr uintptr_t ExtensionRegistry_Get = 0x10d478a;
+inline constexpr uintptr_t ExtensionSet_GetByID = 0x10ff2da;
 // A theme the panel installs through the external-extension loader arrives
 // DISABLED (disable reason "external extension") until the user accepts Edge's
 // "extension added" prompt, and Edge also switches a theme off when another
 // becomes active; a disabled theme never paints. Before a theme is applied the
 // DLL turns it on with the call the prompt's Enable button makes.
 // ExtensionRegistrar* ExtensionRegistrar::Get(BrowserContext*)
-inline constexpr uintptr_t ExtensionRegistrar_Get = 0x2c55d20;
+inline constexpr uintptr_t ExtensionRegistrar_Get = 0x2c8d570;
 // void ExtensionRegistrar::EnableExtension(this, const std::string& id): moves
 // the extension from the disabled set to the enabled one. It CHECKs that the
 // extension is in the disabled set, so only call it for one found there.
-inline constexpr uintptr_t ExtensionRegistrar_EnableExtension = 0x7f33756;
+inline constexpr uintptr_t ExtensionRegistrar_EnableExtension = 0x7f3d6c6;
 // A theme once removed from Edge's extensions page is recorded in the profile's
 // "external uninstalls" and the external-extension loader never installs it
 // again, however often its registry entry is read. ExtensionPrefs::Get takes the
@@ -599,15 +599,15 @@ inline constexpr uintptr_t ExtensionRegistrar_EnableExtension = 0x7f33756;
 // drops the record. ExternalProviderManager::Get(BrowserContext*) reaches the
 // manager whose CheckForExternalUpdates(this) revisits every registered external
 // extension, now past the cleared record, and installs it.
-inline constexpr uintptr_t ExtensionPrefs_Get = 0x280ddc6;
+inline constexpr uintptr_t ExtensionPrefs_Get = 0x2828f66;
 inline constexpr uintptr_t ExtensionPrefs_ClearExternalExtensionUninstalled =
-    0x7f2f09e;
-inline constexpr uintptr_t ExternalProviderManager_Get = 0x2c5f1b8;
+    0x7f3900e;
+inline constexpr uintptr_t ExternalProviderManager_Get = 0x2c96a08;
 inline constexpr uintptr_t ExternalProviderManager_CheckForExternalUpdates =
-    0x2c549fe;
+    0x2c8c24e;
 // void ThemeService::UseDefaultTheme(this): drop any extension theme. Used when
 // a mode has no theme assigned.
-inline constexpr uintptr_t ThemeService_UseDefaultTheme = 0x2fc7700;
+inline constexpr uintptr_t ThemeService_UseDefaultTheme = 0x2ff71d0;
 // void ThemeService::RemoveUnusedThemes(this): Chromium keeps only the one
 // active theme extension and unloads every other theme from the profile, so the
 // two themes a user assigns to light and dark modes cannot both stay installed —
@@ -615,26 +615,26 @@ inline constexpr uintptr_t ThemeService_UseDefaultTheme = 0x2fc7700;
 // finds it gone. The detour no-ops it while theming is active (hooks.h), so both
 // assigned themes remain installed and either mode's flip switches instantly.
 // Takes the primary `this` (rcx), reads large member offsets (+0x728, +0x6b8).
-inline constexpr uintptr_t ThemeService_RemoveUnusedThemes = 0x331bf30;
+inline constexpr uintptr_t ThemeService_RemoveUnusedThemes = 0x3352920;
 // ThemeService* ThemeServiceFactory::GetForProfile(Profile*): the per-profile
 // ThemeService (creates it if needed). Profile is a content::BrowserContext.
-inline constexpr uintptr_t ThemeServiceFactory_GetForProfile = 0xfe5d38;
+inline constexpr uintptr_t ThemeServiceFactory_GetForProfile = 0x1013b58;
 // content::BrowserContext* WebContentsImpl::GetBrowserContext(this): the Profile
 // behind any WebContents, our bridge from a pane to its ThemeService.
-inline constexpr uintptr_t WebContentsImpl_GetBrowserContext = 0x1164510;
+inline constexpr uintptr_t WebContentsImpl_GetBrowserContext = 0x1192390;
 
 // --- reading mode's page theme (docs/re/reading-mode-theme.md) ---
 // DomDistillerContextKeyedService* DomDistillerServiceFactory::
 // GetForBrowserContext(content::BrowserContext*): the profile's distiller
 // service (its DomDistillerService base at DOMDISTILLERKEYED_service).
 inline constexpr uintptr_t DomDistillerServiceFactory_GetForBrowserContext =
-    0x2e3d1e0;
+    0x2e6ca70;
 // void DistilledPagePrefs::SetTheme(this, dom_distiller::Theme, std::string
 // source): writes the reading_view.theme pref and posts NotifyOnChangeTheme, so
 // every open reading view runs readingViewController.setPreferences({theme}).
 // `source` (the viewer that asked, which is skipped) is passed by value and the
 // callee frees it; an empty one notifies every viewer.
-inline constexpr uintptr_t DistilledPagePrefs_SetTheme = 0xc11a0b0;
+inline constexpr uintptr_t DistilledPagePrefs_SetTheme = 0xc121e80;
 
 // --- WebUI pages follow the theme (docs/re/webui-color-scheme.md) ---
 // Two pieces make a page light or dark, and Edge feeds neither from the theme:
@@ -646,68 +646,68 @@ inline constexpr uintptr_t DistilledPagePrefs_SetTheme = 0xc11a0b0;
 // ChromeContentBrowserClient::OverrideWebPreferences (and its after-navigation
 // and need-update siblings); out->+0 is the preferred color scheme as blink
 // stores it (0 = dark, 1 = light), out->+4 the root scrollbar scheme (1 = dark).
-inline constexpr uintptr_t EdgeComputePreferredColorScheme = 0x54a1809;
+inline constexpr uintptr_t EdgeComputePreferredColorScheme = 0x54c92ec;
 // void WebContentsImpl::OnColorProviderChanged(this): `this` is the contents'
 // ColorProviderSourceObserver subobject (off::WEBCONTENTS_color_observer). It
 // tells the contents' observers, which makes a WebUI page fetch its colors.css
 // again, then recomputes the web preferences (prefers-color-scheme).
-inline constexpr uintptr_t WebContentsImpl_OnColorProviderChanged = 0x2f29b50;
+inline constexpr uintptr_t WebContentsImpl_OnColorProviderChanged = 0x312e0f0;
 // void NavigationControllerImpl::Reload(this, ReloadType, bool
 // check_for_repost): the controller is embedded in the WebContentsImpl at
 // off::WEBCONTENTS_controller.
-inline constexpr uintptr_t NavigationControllerImpl_Reload = 0x7941460;
+inline constexpr uintptr_t NavigationControllerImpl_Reload = 0x794b360;
 // void chrome::(anonymous)::ReloadInternal(Browser*, WindowOpenDisposition, bool
 // bypass_cache): the one body behind chrome::Reload and ReloadBypassingCache
 // (the reload button, F5, Ctrl+R). It reloads every SELECTED tab when more are
 // selected than the active tab's split needs, and a split of three or more has
 // all its members selected, so one pane's reload reloaded them all
 // (docs/re/pane-reload.md).
-inline constexpr uintptr_t chrome_ReloadInternal = 0xa2b5917;
+inline constexpr uintptr_t chrome_ReloadInternal = 0xa2bdba7;
 // ColorProvider* WebContentsImpl::GetColorProvider(this): the provider the
 // WebUI's colors.css is generated from (ThemeSource::SendColorsCss reads it
 // through the contents' vtable). It asks the contents' color provider source,
 // the browser window, which builds its key through ThemeService below on every
 // call, so a detour on that key decides the mode for the one call.
-inline constexpr uintptr_t WebContentsImpl_GetColorProvider = 0x115d4c0;
+inline constexpr uintptr_t WebContentsImpl_GetColorProvider = 0x118b330;
 // ColorProviderKey* ThemeService::GetColorProviderKey(this, ColorProviderKey*
 // out, const ColorProviderKey& nativeKey, Profile*): fills the key the browser's
 // color provider is built from and returns `out`. Its mode starts as the OS's
 // and is replaced only when the Appearance setting says Light or Dark.
-inline constexpr uintptr_t ThemeService_GetColorProviderKey = 0xfe5e22;
+inline constexpr uintptr_t ThemeService_GetColorProviderKey = 0x1013c42;
 // bool BrowserThemePack::GetColor(this, int id, SkColor* out): a theme
 // extension's color for `id`, false when the theme did not set it. Its colors
 // are a table of 8-byte {int id, SkColor} entries.
-inline constexpr uintptr_t BrowserThemePack_GetColor = 0x8839510;
+inline constexpr uintptr_t BrowserThemePack_GetColor = 0x8843380;
 // SkColor ui::ColorProvider::GetColor(this, ui::ColorId id): the browser-wide
 // colour read every view resolves an id through. Signature:
 // SkColor __fastcall(void* this, int id).
-inline constexpr uintptr_t ColorProvider_GetColor = 0x100309e;
+inline constexpr uintptr_t ColorProvider_GetColor = 0x1030e6e;
 // void EdgeTab::UpdateForegroundColors(this): recomputes a tab's title, close
 // and icon colours (through EdgeTabStyleViews::CalculateTargetColors and
 // TabStyle::GetTabForegroundColor) whenever its state, hover, theme or window
 // focus changes, and hands them to its views.
-inline constexpr uintptr_t EdgeTab_UpdateForegroundColors = 0x2a5ac00;
+inline constexpr uintptr_t EdgeTab_UpdateForegroundColors = 0x2a8f090;
 // bool Tab::IsActive(this): the tab is the strip's active one. EdgeTab's Tab
 // base is at +0, so an EdgeTab* passes as is.
-inline constexpr uintptr_t Tab_IsActive = 0x1055940;
-// EdgeTabStyleViews::PaintInactiveTabBackground (rva 0x27bbd38) +0x75: the return
+inline constexpr uintptr_t Tab_IsActive = 0x1084820;
+// EdgeTabStyleViews::PaintInactiveTabBackground (rva 0x27d8c18) +0x75: the return
 // address of its call to PaintTabBackground, on the stack whenever a tab other
 // than the active one paints its fill (a hovered one).
 inline constexpr uintptr_t
     EdgeTabStyleViews_PaintInactiveTabBackground_PaintTabBackground_return =
-        0x27bbdad;
-// EdgeTabStyleViews::CalculateTargetColors (rva 0x287ac50) +0xbd / +0xcf: the
+        0x27d8c8d;
+// EdgeTabStyleViews::CalculateTargetColors (rva 0x28af9e0) +0xbd / +0xcf: the
 // return addresses of its two EdgeGetTabBackgroundColor calls (the active and
 // the inactive fill), which it blends into a tab's hover target.
 inline constexpr uintptr_t
-    EdgeTabStyleViews_CalculateTargetColors_active_return = 0x287ad0d;
+    EdgeTabStyleViews_CalculateTargetColors_active_return = 0x28afa9d;
 inline constexpr uintptr_t
-    EdgeTabStyleViews_CalculateTargetColors_inactive_return = 0x287ad1f;
+    EdgeTabStyleViews_CalculateTargetColors_inactive_return = 0x28afaaf;
 // EdgeTabStyleViews::PaintTab's cold part: after a SaveLayerAlpha at the tab's
 // hover (throb) value it paints the tab as active (PaintTabBackground, active =
 // true); this is that call's return address.
 inline constexpr uintptr_t EdgeTabStyleViews_PaintTab_hover_layer_return =
-    0x474f344;
+    0x4755b02;
 // The OS light/dark signal does NOT come through Edge. ui::NativeThemeObserver
 // is a base::CheckedObserver (the observer list uses CheckedObserverAdapter), so
 // a hand-rolled observer object would have to fake a weak-ptr factory. Instead
@@ -720,8 +720,8 @@ inline constexpr uintptr_t EdgeTabStyleViews_PaintTab_hover_layer_return =
 // assign(size_type n, char c) at n = 0 clears it, keeping any heap buffer, then
 // append(const char* s). The *string* overloads of assign/append read a source
 // string's own fields, not a raw pointer, so these char-pointer ones are used.
-inline constexpr uintptr_t BasicStringChar_assignFill = 0x2023462;
-inline constexpr uintptr_t BasicStringChar_append = 0x27d7554;
+inline constexpr uintptr_t BasicStringChar_assignFill = 0x204fde2;
+inline constexpr uintptr_t BasicStringChar_append = 0x27f4174;
 
 // --- web protocol handlers (docs/re/protocol-handlers.md) ---
 // A site's registerProtocolHandler without a user gesture lights the omnibox
@@ -731,15 +731,15 @@ inline constexpr uintptr_t BasicStringChar_append = 0x27d7554;
 // list. void ContentSettingRPHBubbleModel::CommitChanges(this): performs the
 // selected radio's action, then clears the pending handler (hides the icon).
 inline constexpr uintptr_t ContentSettingRPHBubbleModel_CommitChanges =
-    0xa399f50;
+    0xa3a21e0;
 // The bubble model's vftable. Its Done button is the dialog's accept callback,
 // bound to the model's virtual at off::BubbleModel_OnDoneButtonClicked_slot
 // (a `vcall'{56}` thunk); for this model that slot holds the base class's empty
 // virtual below, so it is the one place that sees Done as distinct from every
 // other way the bubble closes.
-inline constexpr uintptr_t ContentSettingRPHBubbleModel_vftable = 0x11409690;
+inline constexpr uintptr_t ContentSettingRPHBubbleModel_vftable = 0x114125d0;
 // The shared empty virtual (`ret`) the slot holds before we point it at ours.
-inline constexpr uintptr_t ContentSettingBubbleModel_EmptyVirtual = 0x548b230;
+inline constexpr uintptr_t ContentSettingBubbleModel_EmptyVirtual = 0x54923e0;
 // void RegisterProtocolHandlerPermissionRequest::PermissionDecided(this,
 // const Decision* decision): Edge's permission prompt (the user-gesture path).
 // With a decision, 0 (Allow) accepts and EVERY other value ignores - including
@@ -747,14 +747,14 @@ inline constexpr uintptr_t ContentSettingBubbleModel_EmptyVirtual = 0x548b230;
 // No decision (the prompt dismissed) does nothing. Decision layout:
 // off::PERMISSION_DECISION_*.
 inline constexpr uintptr_t
-    RegisterProtocolHandlerPermissionRequest_PermissionDecided = 0xbf345a0;
+    RegisterProtocolHandlerPermissionRequest_PermissionDecided = 0xbf3c370;
 // Lifting the blocks: once a handler is ignored, Edge drops every later request
 // from it, so the icon never returns. While the feature turns on, the DLL
 // lifts each one with Edge's own call (the bubble's Allow path makes it too).
 // ProtocolHandlerRegistry* ProtocolHandlerRegistryFactory::GetForBrowserContext(
 // BrowserContext*): the profile's registry (GetServiceForBrowserContext, create).
 inline constexpr uintptr_t ProtocolHandlerRegistryFactory_GetForBrowserContext =
-    0x29c7a5c;
+    0x29fc224;
 // void ProtocolHandlerRegistry::RemoveIgnoredHandler(this, const
 // ProtocolHandler& handler, bool save): erases the handler from the user's
 // ignored list and, unless policy also ignores it, from the live ignored list
@@ -763,90 +763,90 @@ inline constexpr uintptr_t ProtocolHandlerRegistryFactory_GetForBrowserContext =
 // `handler` while shifting the very vector it erases from, so `handler` must
 // be a copy, never an element of that list.
 inline constexpr uintptr_t ProtocolHandlerRegistry_RemoveIgnoredHandler =
-    0xbf36cfe;
+    0xbf3eace;
 // ProtocolHandler::ProtocolHandler(this, const ProtocolHandler& other): the
 // copy constructor (what vector<ProtocolHandler>'s copy, used by
 // GetIgnoredHandlers, calls per element). The other ProtocolHandler ctor,
-// 0xbf38398, is the by-field one.
-inline constexpr uintptr_t ProtocolHandler_CopyConstructor = 0x2d708e4;
+// 0xbf40168, is the by-field one.
+inline constexpr uintptr_t ProtocolHandler_CopyConstructor = 0x2d97224;
 // ProtocolHandler::~ProtocolHandler(this): frees its strings and GURL.
-inline constexpr uintptr_t ProtocolHandler_Destructor = 0x2d52158;
+inline constexpr uintptr_t ProtocolHandler_Destructor = 0x2d872e8;
 
 // --- the browser assistant's toolbar button ---
 // The button's vftables (one per base; EdgeCopilotToolbarLabelButton has
 // multiple inheritance). A view is a chat button when its object+0 vptr is any
 // of these, so the recognition does not depend on which base is primary.
 inline constexpr uintptr_t CopilotButton_vftables[] = {
-    0x1153fc50, 0x1153fc70, 0x1153fc90, 0x1153fcb0, 0x1153fcf0, 0x1153fd40,
-    0x1153fd58, 0x1153fd70, 0x1153fda0, 0x1153fe50, 0x1153fe70, 0x1153feb0,
-    0x1153fec8, 0x1153fee0, 0x1153ff10, 0x1153ff28, 0x117896a8, 0x1191f5b8};
+    0x115490d0, 0x115490f0, 0x11549110, 0x11549130, 0x11549170, 0x115491c0,
+    0x115491d8, 0x115491f0, 0x11549220, 0x115492d0, 0x115492f0, 0x11549330,
+    0x11549348, 0x11549360, 0x11549390, 0x115493a8, 0x11791ed0, 0x11927de0};
 
 // The vftable of an EdgeTab's view. One class serves both layouts: a row of the
 // vertical tab list and a tab of the horizontal strip share it (found by
 // tabrows::Dump), so only the tab's layout mode (EDGETAB_layout_controller)
 // tells them apart.
-inline constexpr uintptr_t EdgeTab_vftable = 0x11845e98;
+inline constexpr uintptr_t EdgeTab_vftable = 0x1184e6c0;
 // EdgeCopilotDropdownMenuButton: the chevron beside the chat pill (a sibling in
 // EdgeCopilotToolbarSplitButtonContainer). Its constructor sets both its tooltip
 // and its accessible name from the formatted string "$1 menu"; the vftables
 // are matched like the chat button's.
 inline constexpr uintptr_t CopilotDropdownButton_vftables[] = {
-    0x1159fa60, 0x1159fa80, 0x1159faa0, 0x1159fac0, 0x1159fb00,
-    0x1159fb50, 0x1159fb68, 0x1159fb80, 0x1159fbb0, 0x1159fc60,
-    0x1159fc80, 0x1159fcc0, 0x1159fcd8, 0x119498f8};
+    0x115a9240, 0x115a9260, 0x115a9280, 0x115a92a0, 0x115a92e0,
+    0x115a9330, 0x115a9348, 0x115a9360, 0x115a9390, 0x115a9440,
+    0x115a9460, 0x115a94a0, 0x115a94b8, 0x11952120};
 // bool IsConsumerCopilotLabelButtonWithDropdownEnabled(bool): the one question
 // EdgeToolbarView::CreateDiscoverButtonIfNecessary asks (through
 // IsCopilotLabeledButtonWithDropdownEnabled) before building the chevron's
 // split-button container for a personal profile; false builds the bare chat
 // button. See docs/re/removed-gemini-integration.md section 12.
 inline constexpr uintptr_t Copilot_IsConsumerLabelButtonWithDropdownEnabled =
-    0x31ed1db;
+    0x321e94b;
 // void EdgeToolbarView::CreateDiscoverButtonIfNecessary(this = the toolbar's
 // secondary base, EDGETOOLBAR_discoverBase into the toolbar): builds the chat
 // button, inside a split-button container with its chevron when
 // IsConsumerCopilotLabelButtonWithDropdownEnabled says so. It does not check
 // for a button already built, and stores the new one in EDGETOOLBAR_chatButton.
 inline constexpr uintptr_t EdgeToolbarView_CreateDiscoverButtonIfNecessary =
-    0x31ed000;
+    0x321e770;
 // --- running a script in a page, and reading a tab ---
 // RenderFrameHost* WebContentsImpl::GetPrimaryMainFrame(this).
-inline constexpr uintptr_t WebContentsImpl_GetPrimaryMainFrame = 0x1164520;
+inline constexpr uintptr_t WebContentsImpl_GetPrimaryMainFrame = 0x11923a0;
 // WebContentsImpl::ForEachRenderFrameHost(this, FunctionRef<void(RenderFrameHost*)>*):
 // every frame of a page, main frame first. A FunctionRef is {object, invoker}:
 // the invoker is called (object, frame). RenderFrameHostImpl::GetLastCommittedURL
 // (frame) is the frame's GURL.
-inline constexpr uintptr_t WebContentsImpl_ForEachRenderFrameHost = 0x2791bc0;
-inline constexpr uintptr_t RenderFrameHostImpl_GetLastCommittedURL = 0x1163fa0;
+inline constexpr uintptr_t WebContentsImpl_ForEachRenderFrameHost = 0x27ae1a0;
+inline constexpr uintptr_t RenderFrameHostImpl_GetLastCommittedURL = 0x1191e20;
 // const std::string& GURL::spec(this).
-inline constexpr uintptr_t GURL_spec = 0xfed20a;
+inline constexpr uintptr_t GURL_spec = 0x101b01a;
 // bool RenderFrameHostImpl::IsRenderFrameLive(this): false for a discarded tab.
-inline constexpr uintptr_t RenderFrameHostImpl_IsRenderFrameLive = 0x115cb20;
+inline constexpr uintptr_t RenderFrameHostImpl_IsRenderFrameLive = 0x118a990;
 // void RenderFrameHostImpl::ExecuteJavaScriptInIsolatedWorld(this,
 // const std::u16string*, JavaScriptResultCallback* (a OnceCallback<void(Value)>,
 // moved from), int worldId). The main-world ExecuteJavaScript CHECKs
 // CanExecuteJavaScript, which a web page fails, so this is the one to call.
 inline constexpr uintptr_t
-    RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld = 0x795acf0;
+    RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld = 0x7964bf0;
 // BindStateBase::BindStateBase(this, polymorphic_invoke, destructor): refcount 1
 // at +0, invoke at +8, destructor at +0x10, the default cancellation query at
 // +0x18; a BindState's bound state starts at BINDSTATE_first_bound_argument.
-inline constexpr uintptr_t BindStateBase_ctor = 0xfdee60;
+inline constexpr uintptr_t BindStateBase_ctor = 0x100c830;
 // The native find bar (docs/re/find-bar.md). FindBarView is the bar's content
 // view; its text field's edits end in Find(this, const u16string_view*), and
 // Enter and the arrow buttons in FindNext(this, bool reverse), which reads the
 // text field itself. Both go on to FindTabHelper::StartFinding.
-inline constexpr uintptr_t FindBarView_Find = 0xa500a00;
-inline constexpr uintptr_t FindBarView_FindNext = 0xa4ff3b0;
+inline constexpr uintptr_t FindBarView_Find = 0xa508c90;
+inline constexpr uintptr_t FindBarView_FindNext = 0xa507640;
 // bool HandleKeyEvent(this = the FindBarView's TextfieldController subobject,
 // Textfield*, const ui::KeyEvent&): Enter starts the search itself (FindNext is
 // inlined into it), so Enter needs its own hook.
-inline constexpr uintptr_t FindBarView_HandleKeyEvent = 0xa500510;
+inline constexpr uintptr_t FindBarView_HandleKeyEvent = 0xa5087a0;
 // void UpdateForResult(this, const FindNotificationDetails&, const
 // std::u16string& findText): the "n/m" label and the buttons' enabled state.
-inline constexpr uintptr_t FindBarView_UpdateForResult = 0xa4ff754;
+inline constexpr uintptr_t FindBarView_UpdateForResult = 0xa5079e4;
 // void EndFindSession(this, ?, bool): the bar is closing (Esc, the X, a click
 // into the page); FindBarView::EndFindSession ends in it.
-inline constexpr uintptr_t FindBarController_EndFindSession = 0xa172ef0;
+inline constexpr uintptr_t FindBarController_EndFindSession = 0xa17b180;
 // Copilot's side panel, the path the page's "Ask Copilot" menu uses.
 // edge_copilot::utils::SendPageContextualPromptToChatImpl(
 // BrowserWindowInterface* browser, const std::string& pageText, <unused>,
@@ -857,14 +857,14 @@ inline constexpr uintptr_t FindBarController_EndFindSession = 0xa172ef0;
 // public SendPageContextualPromptToChat: since 156 it empties a prompt that is
 // not a short run of letters and digits (Edge's own menu passes a code there).
 inline constexpr uintptr_t CopilotUtils_SendPageContextualPromptToChatImpl =
-    0x94536ca;
+    0x945d006;
 // bool edge_copilot::utils::IsUndersideChatVisible(BrowserWindowInterface*):
 // whether Copilot's side panel is open in that window.
-inline constexpr uintptr_t CopilotUtils_IsUndersideChatVisible = 0x273b47d;
+inline constexpr uintptr_t CopilotUtils_IsUndersideChatVisible = 0x277276d;
 // void edge_copilot::utils::CloseUndersideChat(BrowserWindowInterface*, bool):
 // closes the side panel, as the panel page's own close message does (it passes
 // true: OnPostMessageClosePane).
-inline constexpr uintptr_t CopilotUtils_CloseUndersideChat = 0x944ffa4;
+inline constexpr uintptr_t CopilotUtils_CloseUndersideChat = 0x9459854;
 // void edge_copilot::utils::FrontLoadSidePaneImmediate(
 // base::WeakPtr<BrowserWindowInterface>): Edge's own preload of the side
 // panel's chat. For the iframeless panel (no host manager) it asks the window's
@@ -874,11 +874,11 @@ inline constexpr uintptr_t CopilotUtils_CloseUndersideChat = 0x944ffa4;
 // (16 bytes) is passed by address and destroyed by the callee. Its caller
 // FrontLoadUndersideChatForImmediateUse first asks IsFrontLoadPossible (memory,
 // efficiency mode, prefs), which we skip. [infer from its disassembly; run]
-inline constexpr uintptr_t CopilotUtils_FrontLoadSidePaneImmediate = 0x9450617;
+inline constexpr uintptr_t CopilotUtils_FrontLoadSidePaneImmediate = 0x9459efd;
 // base::WeakPtr<BrowserWindowInterface> GetWeakPtr(this = the browser BrowserOf
 // returns, WeakPtr* out): what IframelessPromptDispatcher binds the browser
 // with (the PDB names it Browser::GetWeakPtr).
-inline constexpr uintptr_t Browser_GetWeakPtr = 0x2afc880;
+inline constexpr uintptr_t Browser_GetWeakPtr = 0x2b27b10;
 // The request the side panel's chat page is sent, and the function that delivers
 // it with no panel UI: IframelessPromptDispatcher::DispatchAskCopilotToDocument(
 // RenderFrameHost* chatFrame, const AskCopilotRequest&) checks the frame is
@@ -886,73 +886,73 @@ inline constexpr uintptr_t Browser_GetWeakPtr = 0x2afc880;
 // extension event OnAskCopilot in that document. SendPageContextualPromptToChat
 // builds the request with exactly these calls. [infer from its disassembly; run]
 // AskCopilotRequest::AskCopilotRequest(this) / ~AskCopilotRequest(this)
-inline constexpr uintptr_t AskCopilotRequest_ctor = 0xc361f70;
-inline constexpr uintptr_t AskCopilotRequest_dtor = 0xc361fec;
+inline constexpr uintptr_t AskCopilotRequest_ctor = 0xc367ef0;
+inline constexpr uintptr_t AskCopilotRequest_dtor = 0xc367f6c;
 // std::string::operator=(std::string& dest, const std::string& source)
-inline constexpr uintptr_t StdString_assign = 0x1057326;
+inline constexpr uintptr_t StdString_assign = 0x10745d4;
 // std::optional<std::string>::operator=(optional&, const std::string&)
-inline constexpr uintptr_t OptionalString_assignString = 0x1131d28;
+inline constexpr uintptr_t OptionalString_assignString = 0x115fa7a;
 // std::optional<std::string>::operator=(optional&, const char (&)[1])
-inline constexpr uintptr_t OptionalString_assignEmpty = 0x626edce;
+inline constexpr uintptr_t OptionalString_assignEmpty = 0x627a80e;
 inline constexpr uintptr_t
-    IframelessPromptDispatcher_DispatchAskCopilotToDocument = 0x945b5e0;
+    IframelessPromptDispatcher_DispatchAskCopilotToDocument = 0x9464f60;
 // static content::WebContentsImpl::GetAllWebContents(out): hidden return pointer
 // in rcx. What it fills is not a begin/end vector: its first word points at the
 // WebContents pointers and its second is their count. The panel is the one whose
 // URL is edge://discover-chat-v2/ (the "iframeless" panel has no host manager:
 // CopilotSidePanelController::GetHostManagerForBrowser answers null for it).
-inline constexpr uintptr_t WebContentsImpl_GetAllWebContents = 0x2809836;
+inline constexpr uintptr_t WebContentsImpl_GetAllWebContents = 0x28249d6;
 // views::Textfield::GetText(this, std::u16string_view* out): fills `out`.
-inline constexpr uintptr_t Textfield_GetText = 0xffcca6;
+inline constexpr uintptr_t Textfield_GetText = 0x102aa76;
 // The bar's options (the "..." button): an inline FindOptionsControlView, a
 // column of FindInPageOptionToggleViews (Match case, Whole word, Match
 // diacritics), each a title label and an EdgeToggleButton. See
 // docs/re/find-bar.md.
 // void EdgeMaybeAddFindOptionsView(this = FindBarView, bool): builds the options
 // view the first time the bar needs it.
-inline constexpr uintptr_t FindBarView_EdgeMaybeAddFindOptionsView = 0xa50244e;
+inline constexpr uintptr_t FindBarView_EdgeMaybeAddFindOptionsView = 0xa50a6de;
 // void EdgeToggleFindOptions(this = FindBarView, ...): shows or hides the view.
-inline constexpr uintptr_t FindBarView_EdgeToggleFindOptions = 0xa5021ac;
+inline constexpr uintptr_t FindBarView_EdgeToggleFindOptions = 0xa50a43c;
 // void PreferredSizeChanged(this = FindBarView): the bar re-measures itself.
-inline constexpr uintptr_t FindBarView_PreferredSizeChanged = 0xa5016e0;
+inline constexpr uintptr_t FindBarView_PreferredSizeChanged = 0xa509970;
 // void AddFindInPageOptionChildView(this = FindOptionsControlView, int id, int
 // width, FindBarHost*): builds toggle `id` at the end of the column (one per
 // id; Edge builds 0..2 and its title text for any other id is empty).
 inline constexpr uintptr_t FindOptionsControlView_AddFindInPageOptionChildView =
-    0xca6c186;
+    0xca72546;
 // void OnButtonToggled(this = FindInPageOptionToggleView): the toggle button's
 // click callback; it flips Edge's own state for the id and re-runs the search.
 inline constexpr uintptr_t FindInPageOptionToggleView_OnButtonToggled =
-    0xca6ccb0;
+    0xca73070;
 // void EdgeOnActiveWebContentsChanged(this = FindInPageOptionToggleView): run
 // for each switch when the bar is shown again (and on a tab change); it sets the
 // switch from edge::GetFindInPageOptionToggleValue(the tab's find helper, id),
 // which is false for any id but Edge's own, with no OnButtonToggled callback.
 inline constexpr uintptr_t
-    FindInPageOptionToggleView_EdgeOnActiveWebContentsChanged = 0xca6d290;
+    FindInPageOptionToggleView_EdgeOnActiveWebContentsChanged = 0xca73650;
 // bool views::EdgeToggleButton::GetIsOn(this) and void SetIsOn(this, bool).
-inline constexpr uintptr_t EdgeToggleButton_GetIsOn = 0xb369ad6;
-inline constexpr uintptr_t EdgeToggleButton_SetIsOn = 0xb369b04;
+inline constexpr uintptr_t EdgeToggleButton_GetIsOn = 0xb371da6;
+inline constexpr uintptr_t EdgeToggleButton_SetIsOn = 0xb371dd4;
 // void views::View::SetEnabled(this, bool).
-inline constexpr uintptr_t View_SetEnabled = 0x105e976;
+inline constexpr uintptr_t View_SetEnabled = 0x108d336;
 // void views::Label::SetText(this, const std::u16string_view*).
-inline constexpr uintptr_t Label_SetText = 0x10df6b0;
+inline constexpr uintptr_t Label_SetText = 0x110a570;
 // views::Label::Label(this, const std::u16string_view* text, int text_context,
 // int text_style, gfx::DirectionalityMode (5th, on the stack)): the overload
 // FindBarMatchCountLabel's constructor calls (context 5, its own style, mode 0).
-inline constexpr uintptr_t Label_ctor = 0x2784ce0;
+inline constexpr uintptr_t Label_ctor = 0x27a12c0;
 // The vtable a plain views::Label has at +0 once constructed (read live off one
 // Label_ctor built; the PDB names several Label vftables); a subclass such as
 // FindBarMatchCountLabel has its own, so this names a bare Label.
-inline constexpr uintptr_t Label_vftable = 0x11907398;
+inline constexpr uintptr_t Label_vftable = 0x1190fbc0;
 // void views::Label::SetEnabledColor(this, ui::ColorVariant): the variant is 8
 // bytes passed by value (a colour or a colour id, its index byte at +4); it
 // lands in LABEL_requested_enabled_color.
-inline constexpr uintptr_t Label_SetEnabledColor = 0x10033f0;
+inline constexpr uintptr_t Label_SetEnabledColor = 0x1031190;
 // void views::Label::SetFontList(this, const gfx::FontList&) and
 // const gfx::FontList& views::Textfield::GetFontList(this) (its RenderText's).
-inline constexpr uintptr_t Label_SetFontList = 0x2d98f00;
-inline constexpr uintptr_t Textfield_GetFontList = 0x10342a0;
+inline constexpr uintptr_t Label_SetFontList = 0x2dcd2a0;
+inline constexpr uintptr_t Textfield_GetFontList = 0x1062f80;
 
 // --- live tab hover preview (docs/re/live-preview.md) ---
 // A hovered tab's card already shows a frame from Edge's own continuous tab
@@ -964,19 +964,19 @@ inline constexpr uintptr_t Textfield_GetFontList = 0x10342a0;
 // end-of-capture-session call (-> BackgroundThumbnailVideoCapturer::Stop). Not
 // per-frame, idempotent; suppressing it keeps the already-running capturer going.
 inline constexpr uintptr_t ThumbnailTabHelper_TabStateTracker_StopCapture =
-    0x2bab7a0;
+    0x2bd91a0;
 // void TabHoverCardThumbnailObserver::Observe(this, ThumbnailImage*): a hover
 // card's thumbnail subscription begins (once per hover / tab retarget) — the
 // moment a preview is on screen and frames are wanted.
-inline constexpr uintptr_t TabHoverCardThumbnailObserver_Observe = 0x8fc3044;
+inline constexpr uintptr_t TabHoverCardThumbnailObserver_Observe = 0x8fcd1c4;
 // void TabHoverCardController::OnCardClosing(this): the hover card's definitive
 // teardown (once per close).
-inline constexpr uintptr_t TabHoverCardController_OnCardClosing = 0xa7997d0;
+inline constexpr uintptr_t TabHoverCardController_OnCardClosing = 0xa7a1dc0;
 // bool base::i18n::IsRTL(): Edge's UI runs right to left (its locale, or the
 // --force-ui-direction switch). A bare `jmp` to ICUIsRTL, which asks
 // GetForcedTextDirection and then the default ICU locale; Views mirrors every
 // tab by it.
-inline constexpr uintptr_t base_i18n_IsRTL = 0xfe2760;
+inline constexpr uintptr_t base_i18n_IsRTL = 0x1010580;
 }  // namespace rva
 
 // --- struct field offsets ---
@@ -1027,7 +1027,7 @@ inline constexpr int THEMECOLOR_frame = 0x02;
 inline constexpr int THEMECOLOR_tab_text = 0x12;  // the active tab's text
 inline constexpr int THEMECOLOR_toolbar = 0x17;
 // Edge's vertical-tab strip colour ids. Edge has no manifest key for them:
-// BrowserThemePack::EdgeSetVTabAndRelatedColor (rva 0x8838842) DERIVES all of
+// BrowserThemePack::EdgeSetVTabAndRelatedColor (rva 0x88426b2) DERIVES all of
 // them from the toolbar colour (it reads THEMECOLOR_toolbar/0x17, then stores a
 // contiguous run 0x23-0x2c) and GetColor reads them back when the colour mixer
 // builds the vertical-tab views' ColorProvider. That is why a theme can tint the
@@ -1051,7 +1051,7 @@ inline constexpr int VTABCOLOR_selected_foreground_inactive = 0x2c;
 // one of four from a [state][window focus] table at rva 0x12888228; a vertical
 // tab always uses the active-state pair, so every title shares it.
 // The active horizontal tab's fill, for a focused and an unfocused window:
-// EdgeTabStyle::GetTabBackgroundColor (rva 0x287b0b0) reads 0xaca + 2 * !focused
+// EdgeTabStyle::GetTabBackgroundColor (rva 0x28afe40) reads 0xaca + 2 * !focused
 // for the active tab (an inactive tab reads 0xacd / 0xace). A vertical tab
 // reads the theme pack's VTABCOLOR ids instead.
 inline constexpr int UICOLOR_active_tab_background_focused = 0xaca;
@@ -1059,7 +1059,7 @@ inline constexpr int UICOLOR_active_tab_background_unfocused = 0xacc;
 inline constexpr int UICOLOR_tab_foreground_first = 0xadb;
 inline constexpr int UICOLOR_tab_foreground_last = 0xade;
 // The audio/alert icon of the ACTIVE tab: tabs::GetAlertIndicatorColor (rva
-// 0x2a5b84a) indexes [alert kind][active][window focus] tables (rva 0x1288c4a0,
+// 0x2a8fcda) indexes [alert kind][active][window focus] tables (rva 0x1288c4a0,
 // 0x1288c4e0); these are their active-tab entries. Seen live (155): a playing
 // tab's speaker was the last one.
 inline constexpr int UICOLOR_active_tab_alert[] = {
@@ -1141,7 +1141,7 @@ inline constexpr uintptr_t STYLEVIEWS_tab = 0x10;
 inline constexpr uintptr_t EDGETAB_view_offset = 0x18;
 // EdgeTab + 0x548: the tab's layout controller. Its virtual at LAYOUT_mode_slot
 // returns the tab layout mode; EdgeTabStyleViews::UseVerticalStyle (rva
-// 0x11667e0) calls the tab vertical for modes LAYOUT_vertical_first through
+// 0x1194660) calls the tab vertical for modes LAYOUT_vertical_first through
 // LAYOUT_vertical_first + LAYOUT_vertical_count - 1.
 inline constexpr uintptr_t EDGETAB_layout_controller = 0x548;
 inline constexpr size_t LAYOUT_mode_slot = 7;
@@ -1302,7 +1302,7 @@ inline constexpr uintptr_t SLOTCONTROLLER_vtbl_GetSelectionModel = 0x178;
 inline constexpr uintptr_t SLOTCONTROLLER_vtbl_MaybeStartDrag = 0x220;
 // bool IsActiveTab(this, const Tab* view): the strip's one active tab. The
 // controller is the tab object's EDGETAB_layout_controller. Tab::IsActive
-// (0x1055940) asks TabStrip::GetTabsInSplit (0x11651e0) for a split tab, which
+// (0x1084820) asks TabStrip::GetTabsInSplit (0x1193040) for a split tab, which
 // returns the tab and ONE neighbour of the same split (the previous, else the
 // next, through GetAdjacentTab at vtable +0x240), and calls the tab active if
 // either is: in a grown split a sliding pair lit up.

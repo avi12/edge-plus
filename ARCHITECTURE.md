@@ -271,7 +271,7 @@ Every hook is an address in one exact `msedge.dll`. So support is decided for
 the whole build, not per feature:
 
 - `offsets.h` pins the build the DLL was reversed against (currently
-  156.0.4314.50).
+  156.0.4314.58).
 - `verify.h` refuses to hook any other build.
 - The panel's `EdgeSupport` pauses DLL-backed features on any other build. The
   user's choice is kept, and the features return by themselves once Edge+ is
