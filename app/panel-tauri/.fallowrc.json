@@ -8,6 +8,8 @@
     "ui/main.ts",
     "ui/window/worker.ts",
     "ui/dev/fixture.ts",
+    "ui/dev/dev-server.ts",
+    "ui/dev/relay.ts",
     "ui/dev/window-modules.ts",
     "ui/dev/hot-window.ts",
     "eslint.config.js"
