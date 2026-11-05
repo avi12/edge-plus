@@ -1,3 +1,5 @@
+/// <reference types="winui-svelte/css/stylesheet" />
+
 declare module "*.svelte" {
   import type { Component } from "svelte";
 

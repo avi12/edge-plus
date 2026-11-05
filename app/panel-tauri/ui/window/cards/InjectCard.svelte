@@ -1,11 +1,11 @@
 <script lang="ts">
-  import AccentButton from "./AccentButton.svelte";
+  import "../style/accent-button.css";
   import CardDescription from "./CardDescription.svelte";
   import CardFrame from "./CardFrame.svelte";
   import CardTitle from "./CardTitle.svelte";
-  import { GLYPHS } from "./glyphs.ts";
   import type { InjectOffer } from "#src/protocol.g.ts";
   import { runAndReport, usePanel } from "#src/window/host/panel.svelte.ts";
+  import { Button } from "winui-svelte/components";
 
   interface Props {
     offer: Exclude<InjectOffer, "hidden">;
@@ -31,7 +31,7 @@
   }
 </script>
 
-<CardFrame glyph={isReady ? GLYPHS.injectReady : GLYPHS.injected}>
+<CardFrame glyph={isReady ? "Play" : "CheckMark"}>
   <CardTitle>
     {#if isReady}
       Edge is open without Edge+
@@ -47,6 +47,6 @@
     {/if}
   </CardDescription>
   {#snippet end()}
-    <AccentButton automationId="inject" isEnabled={canPress} onclick={inject}>Inject into Edge</AccentButton>
+    <Button class="accent-button" automationId="inject" isEnabled={canPress} onclick={inject}>Inject into Edge</Button>
   {/snippet}
 </CardFrame>

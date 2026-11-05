@@ -1,4 +1,11 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync
+} from "node:fs";
 import path from "node:path";
 import { buildApp } from "winui-svelte/vite";
 import { z } from "zod";

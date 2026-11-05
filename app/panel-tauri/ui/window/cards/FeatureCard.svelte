@@ -1,19 +1,19 @@
 <script lang="ts">
   import CardFrame from "./CardFrame.svelte";
-  import { CARD_GLYPHS } from "./glyphs.ts";
   import type { CardHold, CardView } from "#src/protocol.g.ts";
   import { runAndReport, usePanel } from "#src/window/host/panel.svelte.ts";
   import { edgeLead, featureTitle } from "#src/window/wording/shared-wording.ts";
   import type { Snippet } from "svelte";
-  import { ToggleSwitch } from "winui-svelte/components";
+  import { type GlyphInput, ToggleSwitch } from "winui-svelte/components";
 
   interface Props {
     card: CardView;
+    glyph: GlyphInput;
     children: Snippet;
     body?: Snippet | undefined;
   }
 
-  const { card, children, body }: Props = $props();
+  const { card, glyph, children, body }: Props = $props();
   const panel = usePanel();
 
   const note = $derived(card.hold === null ? "" : holdNote(card.hold));
@@ -48,7 +48,7 @@
   }
 </script>
 
-<CardFrame {body} glyph={CARD_GLYPHS[card.key]} {note}>
+<CardFrame {body} {glyph} {note}>
   {@render children()}
   {#snippet end(label)}
     <ToggleSwitch

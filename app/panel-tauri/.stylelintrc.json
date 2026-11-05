@@ -33,6 +33,7 @@
     "max-nesting-depth": [99, {}],
     "custom-property-empty-line-before": "never",
     "plugin/no-unsupported-browser-features": null,
+    "@stylistic/indentation": [2, { "baseIndentLevel": 1 }],
     "@stylistic/linebreaks": null,
     "no-unknown-animations": null,
     "plugin/no-low-performance-animation-properties": null,

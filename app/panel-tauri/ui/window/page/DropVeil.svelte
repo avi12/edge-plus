@@ -21,13 +21,13 @@
   .veil {
     margin: 12px;
     background: var(--solid-background-fill-color-base);
-    opacity: 0;
+    opacity: 0%;
     pointer-events: none;
     transition: opacity 120ms;
   }
 
   .veil.shown {
-    opacity: 1;
+    opacity: 100%;
   }
 
   .veil-hint {

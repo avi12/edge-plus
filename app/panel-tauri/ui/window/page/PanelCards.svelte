@@ -33,14 +33,14 @@
   {/snippet}
   <PanelSection>
     <SectionHeader>Tabs and windows</SectionHeader>
-    <FeatureCard card={cardOf("nativeSplit")}>
+    <FeatureCard card={cardOf("nativeSplit")} glyph="GridView">
       <CardTitle>{featureTitles.nativeSplit}</CardTitle>
       <CardDescription>
         Grows Edge's own split past two panes: add panes on any side, drag the dividers, move with
         Shift+Alt+arrow. Live, no restart. Open Edge first.
       </CardDescription>
     </FeatureCard>
-    <FeatureCard card={cardOf("livePreview")}>
+    <FeatureCard card={cardOf("livePreview")} glyph="View">
       <CardTitle>{featureTitles.livePreview}</CardTitle>
       <CardDescription>
         Hover a tab and its thumbnail plays live instead of a frozen snapshot, by keeping Edge's own tab
@@ -50,7 +50,7 @@
   </PanelSection>
   <PanelSection>
     <SectionHeader>Look and themes</SectionHeader>
-    <FeatureCard card={cardOf("theming")}>
+    <FeatureCard card={cardOf("theming")} glyph="Color">
       <CardTitle>{featureTitles.theming}</CardTitle>
       <CardDescription>
         Use one theme when Windows is light and another when it is dark, switched live. Add themes from the
@@ -60,21 +60,21 @@
         <ThemingBody isOn={cardOf("theming").isOn} theming={view.theming} />
       {/snippet}
     </FeatureCard>
-    <FeatureCard card={cardOf("tabShape")}>
+    <FeatureCard card={cardOf("tabShape")} glyph="Page">
       <CardTitle>{featureTitles.tabShape}</CardTitle>
       <CardDescription>
         Gives every tab, vertical and horizontal, a straight leading edge and a cut trailing corner, with
         the selected tab filled in the theme's neon. Works with Theming on. Live, no restart.
       </CardDescription>
     </FeatureCard>
-    <FeatureCard card={cardOf("webUiFollowsTheme")}>
+    <FeatureCard card={cardOf("webUiFollowsTheme")} glyph="Brightness">
       <CardTitle>{featureTitles.webUiFollowsTheme}</CardTitle>
       <CardDescription>
         Makes edge://settings and edge://extensions light or dark to match your Edge theme, not Windows.
         Only those two pages change; websites are untouched. Live, no restart. Open Edge first.
       </CardDescription>
     </FeatureCard>
-    <FeatureCard card={cardOf("readingTheme")}>
+    <FeatureCard card={cardOf("readingTheme")} glyph="ReadingMode">
       <CardTitle>{featureTitles.readingTheme}</CardTitle>
       <CardDescription>
         Reading mode uses one page theme while Windows is light and another while it is dark, switched as
@@ -85,7 +85,7 @@
   </PanelSection>
   <PanelSection>
     <SectionHeader>Browsing</SectionHeader>
-    <FeatureCard card={cardOf("enhancedFind")}>
+    <FeatureCard card={cardOf("enhancedFind")} glyph="Search">
       <CardTitle>{featureTitles.enhancedFind}</CardTitle>
       <CardDescription>
         Adds RegExp (with its flags) and Ask Copilot to the options of Edge's Ctrl+F bar. RegExp highlights
@@ -93,7 +93,7 @@
         Open Edge first.
       </CardDescription>
     </FeatureCard>
-    <FeatureCard card={cardOf("protocolHandlers")}>
+    <FeatureCard card={cardOf("protocolHandlers")} glyph="Link">
       <CardTitle>{featureTitles.protocolHandlers}</CardTitle>
       <CardDescription>
         Like Chrome: when a site such as Gmail offers to open email or calendar links, closing the bubble
@@ -101,7 +101,7 @@
         no restart.
       </CardDescription>
     </FeatureCard>
-    <FeatureCard card={cardOf("quietDevMode")}>
+    <FeatureCard card={cardOf("quietDevMode")} glyph="Warning">
       <CardTitle>{featureTitles.quietDevMode}</CardTitle>
       <CardDescription>
         Stops Edge asking to turn off developer-mode extensions when it starts. Takes effect from Edge's
@@ -111,7 +111,7 @@
   </PanelSection>
   <PanelSection>
     <SectionHeader>Edge+ itself</SectionHeader>
-    <FeatureCard card={cardOf("startWithWindows")}>
+    <FeatureCard card={cardOf("startWithWindows")} glyph="PowerButton">
       <CardTitle>Start Edge+ when Windows starts</CardTitle>
       <CardDescription>
         Runs Edge+ in the background, with no window, from when you sign in to Windows: your settings apply
@@ -122,7 +122,7 @@
       {#snippet childrenTransitions()}
         <AddDeleteThemeTransition />
       {/snippet}
-      <FeatureCard card={cardOf("autoInject")}>
+      <FeatureCard card={cardOf("autoInject")} glyph="LightningBolt">
         <CardTitle>Inject automatically</CardTitle>
         <CardDescription>
           Puts Edge+ into Edge each time Edge starts. Off, Edge starts without it and Edge+ offers an
@@ -133,7 +133,7 @@
         <InjectCard offer={view.inject} />
       {/if}
     </StackPanel>
-    <FeatureCard card={cardOf("autoUpdate")}>
+    <FeatureCard card={cardOf("autoUpdate")} glyph="Sync">
       <CardTitle>Check for updates</CardTitle>
       <CardDescription>
         Looks for a new Edge+ release on GitHub and offers to restart into it. Off, Edge+ never contacts

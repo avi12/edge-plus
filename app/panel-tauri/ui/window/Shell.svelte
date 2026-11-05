@@ -92,12 +92,12 @@
     align-self: center;
     margin-left: 12px;
     color: var(--text-fill-color-secondary);
-    opacity: 0;
+    opacity: 0%;
     transition: opacity 120ms;
     -winui-based-on: CaptionTextBlockStyle;
   }
 
   .title-status.shown {
-    opacity: 1;
+    opacity: 100%;
   }
 </style>

@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { ThemeBadge, ThemeRow } from "#src/protocol.g.ts";
   import CardTitle from "#src/window/cards/CardTitle.svelte";
-  import { GLYPHS } from "#src/window/cards/glyphs.ts";
   import {
     Border,
     Button,
@@ -28,7 +27,7 @@
 </script>
 
 <Grid class="theme-row" automationName={theme.name}>
-  <FontIcon class="theme-row-icon" class:concealed={!isOwn} glyph={GLYPHS.grip} />
+  <FontIcon class="theme-row-icon" class:concealed={!isOwn} glyph="GripperBarHorizontal" />
   <Border class="theme-row-name">
     <CardTitle>{theme.name}</CardTitle>
   </Border>
@@ -46,7 +45,7 @@
     isEnabled={isOwn}
     onclick={() => onremove?.()}
   >
-    <FontIcon class="theme-row-icon" glyph={GLYPHS.remove} />
+    <FontIcon class="theme-row-icon" glyph="Cancel" />
   </Button>
 </Grid>
 

@@ -1,9 +1,9 @@
 <script lang="ts">
+  import "../style/accent-button.css";
   import EdgeThemeList from "./EdgeThemeList.svelte";
   import OwnThemeList from "./OwnThemeList.svelte";
   import ThemePicker from "./ThemePicker.svelte";
   import type { Action, ColorMode, ThemeOption, ThemingView } from "#src/protocol.g.ts";
-  import AccentButton from "#src/window/cards/AccentButton.svelte";
   import { usePanel } from "#src/window/host/panel.svelte.ts";
   import {
     Button,
@@ -107,7 +107,7 @@
         placeholderText="Paste a Chrome Web Store or Edge Add-ons link"
         bind:text={storeLink}
       />
-      <AccentButton class="store-add-button" {@attach formButton({ kind: ButtonKind.SUBMIT })} automationId="store-add" isEnabled={!isBusy}>Add</AccentButton>
+      <Button class="accent-button store-add-button" {@attach formButton({ kind: ButtonKind.SUBMIT })} automationId="store-add" isEnabled={!isBusy}>Add</Button>
     </Grid>
   </Form>
   <StackPanel class="local-add">
@@ -143,7 +143,7 @@
   }
 
   .dimmed {
-    opacity: 0.5;
+    opacity: 50%;
   }
 
   .store-add {

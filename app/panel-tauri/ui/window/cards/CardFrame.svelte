@@ -6,6 +6,7 @@
   import {
     Border,
     FontIcon,
+    type GlyphInput,
     Grid,
     StackPanel,
     TextBlock
@@ -13,7 +14,7 @@
   import { Visibility } from "winui-svelte/enums";
 
   interface Props {
-    glyph: number;
+    glyph: GlyphInput;
     note?: string;
     children: Snippet;
     end: Snippet<[CardLabel]>;
@@ -28,7 +29,7 @@
 
 <Border class="card">
   <Grid class="card-grid">
-    <FontIcon class="card-icon" {glyph} />
+    <FontIcon class="card-icon" {glyph}/>
     <StackPanel class="card-words">
       {@render children()}
       <TextBlock class="note" visibility={hasNote ? Visibility.Visible : Visibility.Collapsed}>{note}</TextBlock>
