@@ -5,7 +5,6 @@
 use std::collections::HashSet;
 use std::os::windows::io::AsRawHandle;
 use std::path::PathBuf;
-use std::time::Duration;
 
 use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, MAX_PATH, TRUE};
 use windows_sys::Win32::System::Diagnostics::ToolHelp::{
@@ -13,8 +12,7 @@ use windows_sys::Win32::System::Diagnostics::ToolHelp::{
     TH32CS_SNAPMODULE32,
 };
 use windows_sys::Win32::System::Threading::{
-    OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE,
-    QueryFullProcessImageNameW, WaitForSingleObject,
+    OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetWindowTextLengthW, GetWindowThreadProcessId, IsWindowVisible,
@@ -24,8 +22,6 @@ use crate::kernel::handle;
 use crate::kernel::wide::from_wide;
 
 const EDGE_IMAGE_NAME: &str = "msedge.exe";
-// u32::MAX is INFINITE to WaitForSingleObject; a longer timeout stops just short.
-const LONGEST_WAIT_MILLISECONDS: u32 = u32::MAX - 1;
 
 /// The pids of Edge's browser processes, or empty when Edge is not running.
 #[must_use]
@@ -95,22 +91,6 @@ pub fn module_base(pid: u32, module: &str) -> Option<usize> {
     find_module(pid, module).map(|entry| entry.modBaseAddr as usize)
 }
 
-/// Returns at once when the process is already gone.
-pub fn wait_for_exit(pid: u32, timeout: Duration) {
-    // SAFETY: OpenProcess takes plain values; a null result is handled below.
-    let process = handle::from_nullable(unsafe { OpenProcess(PROCESS_SYNCHRONIZE, 0, pid) });
-    let Some(process) = process else {
-        return;
-    };
-    let milliseconds = u32::try_from(timeout.as_millis())
-        .unwrap_or(u32::MAX)
-        .min(LONGEST_WAIT_MILLISECONDS);
-    // SAFETY: the process handle is open, with SYNCHRONIZE, until dropped below.
-    unsafe {
-        WaitForSingleObject(process.as_raw_handle(), milliseconds);
-    }
-}
-
 fn find_module(pid: u32, module: &str) -> Option<MODULEENTRY32W> {
     // SAFETY: CreateToolhelp32Snapshot takes plain values; an invalid handle
     // is handled below.
@@ -165,8 +145,6 @@ fn image_path(pid: u32) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use std::process::Command;
-    use std::time::Instant;
 
     use super::*;
 
@@ -186,26 +164,5 @@ mod tests {
             "{path:?}"
         );
         assert!(module_base(pid, "no-such-module.dll").is_none());
-    }
-
-    #[test]
-    fn waits_for_a_finished_child() {
-        let mut child = Command::new("cmd")
-            .args(["/c", "exit"])
-            .spawn()
-            .expect("cmd starts");
-        let pid = child.id();
-        child.wait().expect("cmd ends");
-        let started = Instant::now();
-        wait_for_exit(pid, Duration::from_secs(30));
-        assert!(started.elapsed() < Duration::from_secs(5));
-    }
-
-    #[test]
-    fn returns_at_once_for_a_missing_pid() {
-        let started = Instant::now();
-        // Pids are multiples of four, so this one never exists.
-        wait_for_exit(u32::MAX - 2, Duration::from_secs(30));
-        assert!(started.elapsed() < Duration::from_secs(5));
     }
 }

@@ -1,24 +1,23 @@
 //! Asks the repository's update manifest (`update_feed`) for a newer release at
 //! start and then every six hours, and downloads it in the background so the
-//! window can offer a restart at once. Only a published exe replaces itself: a
+//! window can offer a restart at once. Only the installed package updates: a
 //! build run from a checkout is never touched. Off (`Settings::auto_update`),
 //! Edge+ never contacts GitHub.
 
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, SystemTime};
 
 use crate::platform::actions::panel_log;
-use crate::platform::identity::{product, switches};
+use crate::platform::identity::product;
 use crate::platform::paths;
 use crate::platform::service::poll_thread::PollThread;
 use crate::platform::settings::Settings;
 use crate::setup::update_feed::{self, UpdateAsset, Version};
-use crate::setup::{msi_install, update_install};
+use crate::setup::{package_install, update_digest};
 
 /// A newer release whose file is downloaded and checked, waiting for the user
 /// to restart into it.
@@ -26,8 +25,6 @@ use crate::setup::{msi_install, update_install};
 pub struct ReadyUpdate {
     pub version: String,
     pub file: PathBuf,
-    /// The MSI, for a copy the MSI installed; else the portable exe.
-    pub is_installer: bool,
     /// The manifest's digest of `file`, checked again before it is used, since
     /// the download may have been altered since.
     pub sha256: String,
@@ -44,10 +41,7 @@ const REQUEST_TIMEOUT: Duration = Duration::from_mins(10);
 const USER_AGENT_PRODUCT: &str = "EdgePlus";
 const DOWNLOAD_PREFIX: &str = "EdgePlus-";
 const DOWNLOAD_SUFFIX: &str = ".part";
-const EXE_EXTENSION: &str = ".exe";
-const INSTALLER_EXTENSION: &str = ".msi";
-/// cargo's output folder inside the crate, unless `CARGO_TARGET_DIR` moved it.
-const CARGO_TARGET_FOLDER: &str = "target";
+const PACKAGE_EXTENSION: &str = ".msix";
 const DOWNLOAD_CHUNK_BYTES: usize = 64 * 1024;
 
 pub struct UpdateWatch {
@@ -178,28 +172,12 @@ impl Watcher {
         if !is_new {
             return Ok(());
         }
-        // A release without an MSI is not offered to a copy the MSI installed.
-        let is_installer = msi_install::is_installed_at(&std::env::current_exe()?);
-        let asset = if is_installer {
-            offer.installer.as_ref()
-        } else {
-            Some(&offer.exe)
-        };
-        let Some(asset) = asset else {
-            return Ok(());
-        };
-        let extension = if is_installer {
-            INSTALLER_EXTENSION
-        } else {
-            EXE_EXTENSION
-        };
-        let file_name = format!("{DOWNLOAD_PREFIX}{}{extension}", offer.version);
-        let file = self.download(&agent, asset, &file_name)?;
+        let file_name = format!("{DOWNLOAD_PREFIX}{}{PACKAGE_EXTENSION}", offer.version);
+        let file = self.download(&agent, &offer.package, &file_name)?;
         let ready = ReadyUpdate {
             version: offer.version.to_string(),
             file,
-            is_installer,
-            sha256: asset.sha256.clone(),
+            sha256: offer.package.sha256.clone(),
         };
         *self.pending.lock().unwrap_or_else(PoisonError::into_inner) = Some(Pending {
             version: offer.version,
@@ -221,7 +199,7 @@ impl Watcher {
         fs::create_dir_all(&folder)?;
         let target = folder.join(file_name);
         let is_already_downloaded =
-            target.is_file() && update_install::is_digest_of(&target, &asset.sha256)?;
+            target.is_file() && update_digest::is_digest_of(&target, &asset.sha256)?;
         if is_already_downloaded {
             return Ok(target);
         }
@@ -232,7 +210,7 @@ impl Watcher {
             let mut destination = File::create(&partial)?;
             self.copy_unless_cancelled(&mut source, &mut destination)?;
         }
-        if !update_install::is_digest_of(&partial, &asset.sha256)? {
+        if !update_digest::is_digest_of(&partial, &asset.sha256)? {
             let _ = fs::remove_file(&partial);
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -283,91 +261,27 @@ fn delete_other_downloads(folder: &Path, keep: &str) -> io::Result<()> {
 }
 
 fn is_wanted() -> bool {
-    Settings::load().auto_update && is_published_exe()
+    Settings::load().auto_update && package_install::is_packaged()
 }
 
-/// A build from a checkout runs from cargo's output folder in that checkout
-/// (`cargo run`, `tauri dev`, a local release build); a published exe was
-/// copied out of it into a release and runs from anywhere else. The C#
-/// panel told them apart by the host assembly a checkout build has beside it;
-/// a Rust exe has no such file, so the folder it runs from decides. Both paths
-/// are canonical, so case and `..` cannot hide one inside the other.
-fn is_published_exe() -> bool {
-    let Ok(executable) = std::env::current_exe().and_then(fs::canonicalize) else {
-        return false;
-    };
-    !checkout_target_folders()
-        .iter()
-        .filter_map(|folder| fs::canonicalize(folder).ok())
-        .any(|folder| executable.starts_with(folder))
-}
-
-/// Where cargo put this build's exe when it was built from the checkout.
-fn checkout_target_folders() -> Vec<PathBuf> {
-    let mut folders = vec![Path::new(env!("CARGO_MANIFEST_DIR")).join(CARGO_TARGET_FOLDER)];
-    if let Some(moved) = option_env!("CARGO_TARGET_DIR") {
-        folders.push(PathBuf::from(moved));
-    }
-    folders
-}
-
-/// Puts the pending update in place and starts it (the portable exe), or hands
-/// the MSI to a hidden PowerShell that runs it once this process exits; the
-/// caller then ends this process. The new exe swaps its own DLL into Edge, so
-/// no Edge restart; the MSI's update starts the exe again itself.
+/// Hands the package to a hidden PowerShell that installs it once this process
+/// exits and starts the new app; the caller then ends this process.
 pub fn restart_into(update: &ReadyUpdate) -> io::Result<()> {
-    let running = std::env::current_exe()?;
-    if update.is_installer {
-        return run_installer_after_exit(update, &running);
-    }
-    update_install::install(&update.file, &running, &update.sha256, SystemTime::now())?;
-    Command::new(&running)
-        .args([switches::RESTARTED_FROM, &std::process::id().to_string()])
-        .spawn()?;
-    Ok(())
-}
-
-/// Checked again here, since the download may have been altered since.
-fn run_installer_after_exit(update: &ReadyUpdate, running: &Path) -> io::Result<()> {
-    if !update_install::is_digest_of(&update.file, &update.sha256)? {
+    // Checked again here, since the download may have been altered since.
+    if !update_digest::is_digest_of(&update.file, &update.sha256)? {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            "the downloaded installer does not match its digest",
+            "the downloaded package does not match its digest",
         ));
     }
-    let arguments = msi_install::installer_arguments(
-        &update.file,
-        has_shortcut(&common_desktop()),
-        has_shortcut(&common_programs()),
-    );
-    let script = msi_install::update_script(std::process::id(), &arguments, running);
-    let is_started = edge_native::start_detached(&msi_install::hidden_powershell(&script));
+    let Some(app_user_model_id) = package_install::app_user_model_id() else {
+        return Err(io::Error::other("this copy is not the installed package"));
+    };
+    let script =
+        package_install::update_script(std::process::id(), &update.file, &app_user_model_id);
+    let is_started = edge_native::start_detached(&package_install::hidden_powershell(&script));
     if !is_started {
         return Err(io::Error::other("the installer could not be started"));
     }
     Ok(())
-}
-
-fn has_shortcut(folder: &Path) -> bool {
-    msi_install::shortcut_file(folder, product::NAME).is_file()
-}
-
-/// The all-users desktop (.NET's `CommonDesktopDirectory`) the installer's
-/// shortcut goes on, at its default place: edge-native has no known-folder
-/// lookup.
-fn common_desktop() -> PathBuf {
-    environment_folder("PUBLIC").join("Desktop")
-}
-
-/// The all-users Start menu programs (`CommonPrograms`), at its default place.
-fn common_programs() -> PathBuf {
-    environment_folder("ProgramData")
-        .join("Microsoft")
-        .join("Windows")
-        .join("Start Menu")
-        .join("Programs")
-}
-
-fn environment_folder(variable: &str) -> PathBuf {
-    std::env::var_os(variable).map_or_else(PathBuf::new, PathBuf::from)
 }

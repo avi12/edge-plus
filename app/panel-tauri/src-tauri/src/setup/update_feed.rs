@@ -1,10 +1,12 @@
 //! Reads the update manifest the repository hosts (docs/updates.json, written
 //! by tools/Write-UpdateManifest.ps1 once a release's files are up): the latest
-//! version, where its exe and its MSI are, and each one's SHA-256. It is the
+//! version, where its MSIX package is, and the package's SHA-256. It is the
 //! same arrangement as a browser extension's update URL: the app polls a small
 //! file and nothing is offered unless the file names a newer version. A file
 //! without a digest is never offered, since a download that cannot be checked
-//! is never installed in place of the running exe.
+//! is never installed. The package sits under its own `msix` key, so a copy
+//! that predates packaging, which reads a top-level `url` as an exe, offers
+//! itself nothing.
 
 use std::cmp::Ordering;
 use std::fmt;
@@ -20,9 +22,9 @@ pub const URL_VARIABLE: &str = "EDGEPLUS_UPDATE_FEED";
 
 const SHA256_HEX_LENGTH: usize = 64;
 const VERSION_PROPERTY: &str = "version";
+const MSIX_PROPERTY: &str = "msix";
 const URL_PROPERTY: &str = "url";
 const SHA256_PROPERTY: &str = "sha256";
-const INSTALLER_PROPERTY: &str = "installer";
 const HTTPS_SCHEME: &str = "https";
 const HTTP_SCHEME: &str = "http";
 const LOCALHOST: &str = "localhost";
@@ -35,13 +37,11 @@ pub struct UpdateAsset {
     pub sha256: String,
 }
 
-/// A release newer than the running one: its portable exe, and its MSI for a
-/// copy the MSI installed (None when the manifest names none).
+/// A release newer than the running one, as its MSIX package.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UpdateOffer {
     pub version: Version,
-    pub exe: UpdateAsset,
-    pub installer: Option<UpdateAsset>,
+    pub package: UpdateAsset,
 }
 
 /// Compares and parses as .NET's System.Version, which the earlier panel used:
@@ -118,16 +118,11 @@ pub fn parse(json: &str, current: Version) -> Option<UpdateOffer> {
 
 fn offer(manifest: &Value, current: Version) -> Option<UpdateOffer> {
     let version = Version::parse(text(manifest, VERSION_PROPERTY))?;
-    let exe = asset(manifest)?;
+    let package = manifest.get(MSIX_PROPERTY).and_then(asset)?;
     if version <= current {
         return None;
     }
-    let installer = manifest.get(INSTALLER_PROPERTY).and_then(asset);
-    Some(UpdateOffer {
-        version,
-        exe,
-        installer,
-    })
+    Some(UpdateOffer { version, package })
 }
 
 /// The `url` and `sha256` of a file, or None unless both are sound.
@@ -176,8 +171,7 @@ fn text<'value>(element: &'value Value, name: &str) -> &'value str {
 mod tests {
     use super::*;
 
-    const EXE_URL: &str = "https://example.com/e.exe";
-    const MSI_URL: &str = "https://example.com/e-setup.msi";
+    const PACKAGE_URL: &str = "https://example.com/e.msix";
 
     fn running() -> Version {
         Version::parse("0.0.1").expect("parses")
@@ -188,7 +182,7 @@ mod tests {
     }
 
     fn manifest(version: &str, url: &str, digest: &str) -> String {
-        format!(r#"{{"version":"{version}","url":"{url}","sha256":"{digest}"}}"#)
+        format!(r#"{{"version":"{version}","msix":{{"url":"{url}","sha256":"{digest}"}}}}"#)
     }
 
     fn offers(json: &str) -> bool {
@@ -198,7 +192,7 @@ mod tests {
     #[test]
     fn offers_a_newer_release() {
         let release =
-            "https://github.com/avi12/edge-plus/releases/download/v0.0.2/EdgePlus-0.0.2.exe";
+            "https://github.com/avi12/edge-plus/releases/download/v0.0.2/EdgePlus-0.0.2.msix";
         let offer = parse(&manifest("0.0.2", release, &digest('a')), running())
             .expect("a newer version is offered");
         assert_eq!(
@@ -206,21 +200,21 @@ mod tests {
             Some(offer.version),
             "with its version"
         );
-        assert_eq!(release, offer.exe.download, "and where to fetch it");
-        assert_eq!(digest('A'), offer.exe.sha256, "and its digest, upper case");
-        assert!(
-            offer.installer.is_none(),
-            "a manifest naming no installer offers none"
+        assert_eq!(release, offer.package.download, "and where to fetch it");
+        assert_eq!(
+            digest('A'),
+            offer.package.sha256,
+            "and its digest, upper case"
         );
 
         assert!(
-            offers(&manifest("0.1", EXE_URL, &digest('a'))),
+            offers(&manifest("0.1", PACKAGE_URL, &digest('a'))),
             "a two-part version is a version too"
         );
         assert!(
             offers(&manifest(
                 "0.0.2",
-                "http://localhost:8080/e.exe",
+                "http://localhost:8080/e.msix",
                 &digest('a')
             )),
             "a stand-in server on this machine is trusted over http"
@@ -228,7 +222,7 @@ mod tests {
         assert!(
             offers(&manifest(
                 "0.0.2",
-                "http://127.0.0.1:8080/e.exe",
+                "http://127.0.0.1:8080/e.msix",
                 &digest('a')
             )),
             "so is the loopback address"
@@ -239,27 +233,27 @@ mod tests {
     fn offers_nothing_otherwise() {
         let checks = [
             (
-                manifest("0.0.1", EXE_URL, &digest('a')),
+                manifest("0.0.1", PACKAGE_URL, &digest('a')),
                 "the version already running is not an update",
             ),
             (
-                manifest("0.0.0", EXE_URL, &digest('a')),
+                manifest("0.0.0", PACKAGE_URL, &digest('a')),
                 "an older one is not either",
             ),
             (
-                manifest("0.0.2", EXE_URL, ""),
+                manifest("0.0.2", PACKAGE_URL, ""),
                 "without a digest nothing is offered",
             ),
             (
-                manifest("0.0.2", EXE_URL, &"a".repeat(63)),
+                manifest("0.0.2", PACKAGE_URL, &"a".repeat(63)),
                 "a digest of the wrong length is refused",
             ),
             (
-                manifest("0.0.2", EXE_URL, &digest('z')),
+                manifest("0.0.2", PACKAGE_URL, &digest('z')),
                 "and one that is not hex",
             ),
             (
-                manifest("0.0.2", "http://example.com/e.exe", &digest('a')),
+                manifest("0.0.2", "http://example.com/e.msix", &digest('a')),
                 "a plain http download from elsewhere is refused",
             ),
             (
@@ -267,8 +261,15 @@ mod tests {
                 "a url that is not one is refused",
             ),
             (
-                manifest("soon", EXE_URL, &digest('a')),
+                manifest("soon", PACKAGE_URL, &digest('a')),
                 "a version that is not one is refused",
+            ),
+            (
+                format!(
+                    r#"{{"version":"0.0.2","url":"{PACKAGE_URL}","sha256":"{}"}}"#,
+                    digest('a')
+                ),
+                "a top-level exe, as a release before packaging named it, is not a package",
             ),
             ("{}".to_owned(), "an empty manifest offers nothing"),
             ("[1,2]".to_owned(), "a manifest of the wrong shape neither"),
@@ -278,38 +279,6 @@ mod tests {
         for (json, why) in checks {
             assert!(!offers(&json), "{why}");
         }
-    }
-
-    #[test]
-    fn offers_the_installer_beside_the_exe() {
-        let exe_digest = digest('a');
-        let with_installer = format!(
-            r#"{{"version":"0.0.2","url":"{EXE_URL}","sha256":"{exe_digest}","installer":{{"url":"{MSI_URL}","sha256":"{}"}}}}"#,
-            digest('b')
-        );
-        let offer = parse(&with_installer, running()).expect("offered");
-        let installer = offer
-            .installer
-            .expect("the installer is offered beside the exe");
-        assert_eq!(MSI_URL, installer.download, "with where to fetch it");
-        assert_eq!(digest('B'), installer.sha256, "and its own digest");
-
-        let bad_installer = format!(
-            r#"{{"version":"0.0.2","url":"{EXE_URL}","sha256":"{exe_digest}","installer":{{"url":"{MSI_URL}"}}}}"#
-        );
-        let without_digest = parse(&bad_installer, running());
-        assert!(
-            without_digest.is_some_and(|offer| offer.installer.is_none()),
-            "an installer without a digest is dropped, the exe still offered"
-        );
-
-        let only_installer = format!(
-            r#"{{"version":"0.0.2","installer":{{"url":"{MSI_URL}","sha256":"{exe_digest}"}}}}"#
-        );
-        assert!(
-            !offers(&only_installer),
-            "a release with no exe is not offered"
-        );
     }
 
     #[test]

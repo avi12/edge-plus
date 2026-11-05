@@ -67,7 +67,6 @@ pub fn build(state: &PanelState, offer: InjectOffer, update: Option<&ReadyUpdate
         inject: offer,
         update: update.map(|ready| UpdateView {
             version: ready.version.clone(),
-            is_installer: ready.is_installer,
         }),
         footer: FooterView {
             author: product::AUTHOR.to_owned(),

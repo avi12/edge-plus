@@ -6,7 +6,7 @@
 //! In a dev run the window's modules hot reload inside the one window process
 //! (ui/main.ts serves them through a Vite dev server), so the core never
 //! restarts the window for a source edit. Under `pnpm dev:real` the "window"
-//! this starts is a relay (window_kit's EDGEPLUS_WINDOW_COMMAND) to a window
+//! this starts is a relay (`window_kit`'s `EDGEPLUS_WINDOW_COMMAND`) to a window
 //! the dev server keeps up, so a rebuilt core finds the window still open.
 
 use std::io::{BufRead, BufReader, Write};

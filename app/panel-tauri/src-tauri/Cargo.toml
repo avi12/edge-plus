@@ -11,7 +11,7 @@ license = "Apache-2.0"
 # The core is the workspace root. `edge-native` is a member crate that holds
 # every Win32 and WinRT call, so this crate keeps `unsafe_code = "forbid"`.
 [workspace]
-members = ["edge-native"]
+members = ["edge-native", "launcher"]
 resolver = "3"
 
 [[bin]]

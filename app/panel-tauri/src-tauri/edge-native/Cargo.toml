@@ -14,6 +14,7 @@ features = [
   "Win32_Security",
   "Win32_Security_Cryptography",
   "Win32_Storage_FileSystem",
+  "Win32_Storage_Packaging_Appx",
   "Win32_System_Diagnostics_Debug",
   "Win32_System_Diagnostics_ToolHelp",
   "Win32_System_LibraryLoader",
@@ -30,6 +31,7 @@ features = [
 [dependencies.windows]
 version = "0.61"
 features = [
+  "ApplicationModel",
   "Data_Xml_Dom",
   "Foundation",
   "Management_Deployment",

@@ -14,12 +14,6 @@
   const { update }: Props = $props();
   const panel = usePanel();
 
-  const instruction = $derived(
-    update.isInstaller
-      ? "Restart Edge+ to finish updating, and allow the installer when Windows asks."
-      : "Restart Edge+ to finish updating."
-  );
-
   let isRestarting = $state(false);
   const buttonLabel = $derived(isRestarting ? "Restarting" : "Restart to update");
 
@@ -36,7 +30,7 @@
 
 <CardFrame glyph="UpdateRestore">
   <CardTitle>Edge+ {update.version} is ready</CardTitle>
-  <CardDescription>{instruction} Edge keeps running, and your splits and themes stay as they are.</CardDescription>
+  <CardDescription>Restart Edge+ to finish updating. Edge keeps running, and your splits and themes stay as they are.</CardDescription>
   {#snippet end()}
     <Button class="accent-button" automationId="restart-to-update" isEnabled={!isRestarting} onclick={restart}>{buttonLabel}</Button>
   {/snippet}

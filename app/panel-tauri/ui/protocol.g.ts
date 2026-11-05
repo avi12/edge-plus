@@ -23,11 +23,7 @@ export type CardView = { key: SwitchKey, isOn: boolean, isLocked: boolean, hold:
 
 export type InjectOffer = "hidden" | "ready" | "injected";
 
-export type UpdateView = { version: string, 
-/**
- * The MSI installs it, which Windows asks to allow.
- */
-isInstaller: boolean, };
+export type UpdateView = { version: string, };
 
 export type FooterView = { author: string, authorUri: string, version: string, };
 

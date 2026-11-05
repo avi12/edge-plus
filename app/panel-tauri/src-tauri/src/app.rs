@@ -19,7 +19,7 @@ use crate::edge::legacy::{legacy_cleanup, legacy_install};
 use crate::platform::actions::panel_log;
 use crate::platform::identity::{app_identity, switches};
 use crate::platform::service::background_service;
-use crate::setup::{start_with_windows, startup_entry, update_install};
+use crate::setup::{package_install, start_with_windows, startup_entry};
 use crate::ui::window_host;
 
 /// Long enough for start-up's work to settle before the working set is trimmed.
@@ -68,24 +68,32 @@ pub fn run(is_boot_launch: bool) {
 fn start_background() {
     legacy_install::run();
     legacy_cleanup::run();
-    if let Ok(executable) = std::env::current_exe() {
-        // What an update swapped out, now that nothing is running it.
-        update_install::delete_leftovers(&executable);
-        match startup_entry::migrate_to(&executable) {
-            Ok(true) => panel_log::write(&format!(
-                "start at sign-in moved from an earlier panel to {}",
-                executable.display()
-            )),
-            Ok(false) => {}
-            Err(error) => panel_log::write_error(
-                "start at sign-in could not be moved from an earlier panel",
-                &error,
-            ),
-        }
-    }
+    move_startup_entry();
     payload::unpack();
     app_identity::register();
     background_service::start(|event| window_host::on_service_event(&event));
+}
+
+/// A packaged copy starts at sign-in through its package's startup task, so
+/// only another copy takes over an earlier panel's Run entry.
+fn move_startup_entry() {
+    if package_install::is_packaged() {
+        return;
+    }
+    let Ok(executable) = std::env::current_exe() else {
+        return;
+    };
+    match startup_entry::migrate_to(&executable) {
+        Ok(true) => panel_log::write(&format!(
+            "start at sign-in moved from an earlier panel to {}",
+            executable.display()
+        )),
+        Ok(false) => {}
+        Err(error) => panel_log::write_error(
+            "start at sign-in could not be moved from an earlier panel",
+            &error,
+        ),
+    }
 }
 
 /// While Edge+ starts with Windows, the process outlives its window as the

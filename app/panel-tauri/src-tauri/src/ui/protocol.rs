@@ -111,8 +111,6 @@ pub struct CardView {
 #[cfg_attr(test, derive(TS))]
 pub struct UpdateView {
     pub version: String,
-    /// The MSI installs it, which Windows asks to allow.
-    pub is_installer: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
