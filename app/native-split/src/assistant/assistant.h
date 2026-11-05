@@ -1,9 +1,7 @@
-// assistant.h — keep the chevron beside Edge's toolbar chat button, whose
-// dropdown carries the chat menu. Independent of the split, so turning the
-// split off does not take the chevron away.
+// assistant.h — the name of the assistant Enhanced Find asks, and the removal
+// of the chevron an earlier Edge+ added beside Edge's toolbar chat button.
 #pragma once
 #include <vector>
-#include "MinHook.h"
 #include "assistant/chat_menu.h"
 #include "assistant/chat_target.h"
 #include "edge/edge.h"
@@ -12,16 +10,6 @@ namespace edgeplus::assistant {
 
 inline const char* Name() {
   return chat_target::kCopilotTarget.name;
-}
-
-// A personal profile in Edge's Copilot Mode gets the chat button without its
-// chevron: Edge answers "no" here when the toolbar is built. Takes effect for
-// toolbars built after the DLL loads; EnsureChevron rebuilds the open ones.
-using DropdownEnabled_t = bool(__fastcall*)(bool);
-inline constinit DropdownEnabled_t o_dropdown_enabled = nullptr;
-
-inline bool __fastcall h_dropdown_enabled(bool /*isChecked*/) {
-  return true;
 }
 
 inline void CollectButtons(void* view, std::vector<void*>* buttons) {
@@ -34,58 +22,31 @@ inline void CollectButtons(void* view, std::vector<void*>* buttons) {
   }
 }
 
-inline void EnsureChevron(void* mcv) {
+// Hides a chevron left by an Edge+ that forced it on, so a window opened
+// before this build loses it without a restart.
+inline void RemoveChevron(void* mcv) {
+  if (!mcv) {
+    return;
+  }
   std::vector<void*> buttons;
   CollectButtons(edge::ViewRoot(mcv), &buttons);
   for (void* button : buttons) {
+    // Rebuilding adds a new button to the tree; the old one stays only while
+    // its chevron is still beside it, so a second pass finds nothing to do.
     void* dropdown = chat_menu::DropdownBeside(button);
     if (dropdown) {
-      edge::SetViewVisible(dropdown, true);
-    } else {
+      edge::SetViewVisible(dropdown, false);
+      // The pill keeps the flat right edge it had beside the chevron; Edge
+      // builds it rounded when it builds it alone.
       void* toolbar = edge::ToolbarOfChatButton(button);
       const bool isRebuilt = toolbar && edge::RebuildChatButton(toolbar);
-      Log("[assistant] chat button rebuilt with chevron: %d",
+      Log("[assistant] chat button rebuilt without chevron: %d",
           static_cast<int>(isRebuilt));
     }
-    // The toolbar is not above the page in the view tree: its own layout is
-    // told, so the chevron gets its room.
     for (void* view = button; view; view = edge::ViewParent(view)) {
       edge::InvalidateLayout(view);
     }
   }
-}
-
-inline bool EnableAll() {
-  const MH_STATUS status = MH_EnableHook(
-      edge::At(edge155::rva::Copilot_IsConsumerLabelButtonWithDropdownEnabled));
-  return status == MH_OK || status == MH_ERROR_ENABLED;
-}
-
-inline bool Install() {
-  const bool isHooked =
-      MH_CreateHook(
-          edge::At(
-              edge155::rva::Copilot_IsConsumerLabelButtonWithDropdownEnabled),
-          reinterpret_cast<void*>(h_dropdown_enabled),
-          reinterpret_cast<void**>(&o_dropdown_enabled)) == MH_OK;
-  if (!isHooked) {
-    Log("[err] assistant hooks failed");
-    return false;
-  }
-  const bool isEnabled = EnableAll();
-  Log("[ok] assistant hooks installed (%d)", static_cast<int>(isEnabled));
-  return isEnabled;
-}
-
-inline void Apply(void* mcv) {
-  if (!mcv) {
-    return;
-  }
-  EnsureChevron(mcv);
-  for (void* view = mcv; view; view = edge::ViewParent(view)) {
-    edge::InvalidateLayout(view);
-  }
-  edge::LayoutImmediately(edge::ViewRoot(mcv));
 }
 
 }  // namespace edgeplus::assistant

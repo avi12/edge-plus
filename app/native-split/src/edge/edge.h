@@ -1535,17 +1535,6 @@ inline U16View U16StringView(const void* string) {
                  bytes[edge155::off::U16STRING_short_size]};
 }
 
-// Whether `view` is Edge's toolbar chat button (EdgeCopilotToolbarLabelButton).
-inline bool IsCopilotButton(void* view) {
-  const uintptr_t vtable = VtableRva(view);
-  for (const uintptr_t candidate : edge155::rva::CopilotButton_vftables) {
-    if (vtable == candidate) {
-      return true;
-    }
-  }
-  return false;
-}
-
 inline bool IsReadable(const void* address, size_t size) {
   MEMORY_BASIC_INFORMATION info{};
   const bool isQueried = VirtualQuery(address, &info, sizeof(info)) != 0;
@@ -1592,6 +1581,17 @@ inline bool RebuildChatButton(void* toolbar) {
     ViewRemoveChild(oldParent, oldButton);
   }
   return isRebuilt;
+}
+
+// Whether `view` is Edge's toolbar chat button (EdgeCopilotToolbarLabelButton).
+inline bool IsCopilotButton(void* view) {
+  const uintptr_t vtable = VtableRva(view);
+  for (const uintptr_t candidate : edge155::rva::CopilotButton_vftables) {
+    if (vtable == candidate) {
+      return true;
+    }
+  }
+  return false;
 }
 
 // Whether `view` is the chevron beside the chat pill

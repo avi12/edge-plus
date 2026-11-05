@@ -22,7 +22,6 @@
 #include "chrome/pane/drag.h"
 #include "chrome/pane/grip.h"
 #include "layout/state.h"
-#include "assistant/assistant.h"
 #include "find/find.h"
 #include "theme/theme_follow.h"
 #include "chrome/tabs/live_preview.h"
@@ -400,23 +399,22 @@ inline void __fastcall h_on_theme_built(void* themeService, const void* themeId,
 // BrowserThemePack::GetColor(this, id, SkColor* out): a theme extension's colour
 // for `id`, false when the theme left it unset. Edge derives the whole vertical-
 // tab strip from the toolbar colour (offsets.h VTABCOLOR_*), so a theme cannot
-// give the selected vertical tab a colour of its own; theming fills it with the
-// neon cyan accent instead. Reads go through o_getcolor, never the hook, so it
-// cannot recurse. The colour mixer reads this id when DoSetTheme (theme.h)
-// rebuilds the vertical-tab ColorProvider, so applying the theme repaints the
-// rail at once. Rides theming, not the split (control.h).
-inline constexpr uint32_t kNeonRail = 0xff070a12;
-inline constexpr uint32_t kNeonIdleText = 0xff8fa7bd;
-// The full cyan behind either label tone: a dark label reads on it (11.6:1), and
-// behind a light label the selected tab's title and icons are inked
-// (h_getuicolor). A paler cyan behind dark text all but vanished on a light
-// concrete rail (about 1.1:1).
-inline constexpr uint32_t kVTabSelectedFill = 0xff00e5ff;
+// give the selected tab a colour of its own; theming makes it the theme's label
+// colour (tab_text) as a chip, so the theme alone picks every colour. Reads go
+// through o_getcolor, never the hook, so it cannot recurse. The colour mixer
+// reads this id when DoSetTheme (theme.h) rebuilds the vertical-tab
+// ColorProvider, so applying the theme repaints the rail at once. Rides
+// theming, not the split (control.h).
 // Enough to read as quieter, not enough to vanish on a pale rail.
 inline constexpr uint32_t kVTabInactiveRailPercent = 30;
 inline constexpr uint32_t kHoverFillPercent = 18;
-// A light label (the neon theme) means the selected tab's bright fill needs ink.
-inline constinit bool g_isLabelLight = false;
+// The chip's text: white on a dark fill, black on a light one.
+inline constexpr uint32_t kLightInk = 0xffffffff;
+inline constexpr uint32_t kDarkInk = 0xff000000;
+// Set from the theme each time Edge rebuilds the colours.
+inline constinit bool g_isSelectedChipSet = false;
+inline constinit uint32_t g_selectedFill = 0;
+inline constinit uint32_t g_selectedInk = 0;
 // The selected and the hovered tab both read the selected-fill id; only the
 // caller tells them apart. Edge paints a hovered tab as the active one, at the
 // hover's opacity, on a layer over its inactive fill (EdgeTabStyleViews::PaintTab),
@@ -460,8 +458,7 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
         o_getcolor(pack, edge155::off::THEMECOLOR_tab_text, &textColor);
     if (isTextSet) {
       const bool isTextDark = theme_tone::IsDark(textColor);
-      g_isLabelLight = !isTextDark;
-      const uint32_t fill = kVTabSelectedFill;
+      const uint32_t fill = textColor;
       // An unfocused window dims into the rail, as Edge does its own colours.
       uint32_t inactiveRail = 0;
       const bool isInactive = !focus::IsEdgeForeground();
@@ -475,30 +472,16 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
               : fill;
       // A hover is only a tint of the fill over the chrome ground, as Edge's own
       // themes keep it.
-      uint32_t ground = kNeonRail;
+      uint32_t ground = 0;
       const bool isGroundRead =
-          isTextDark &&
           o_getcolor(pack, edge155::off::THEMECOLOR_toolbar, &ground);
-      const bool isHoveredTab =
-          IsReadForHover() && (!isTextDark || isGroundRead);
+      g_isSelectedChipSet = true;
+      g_selectedFill = fill;
+      g_selectedInk = isTextDark ? kLightInk : kDarkInk;
+      const bool isHoveredTab = IsReadForHover() && isGroundRead;
       *out = isHoveredTab
                  ? theme_tone::Blend(ground, selectedFill, kHoverFillPercent)
                  : selectedFill;
-      return true;
-    }
-    // Behind a light label (the neon theme) the chrome goes near-black (the
-    // toolbar colour is the rail's too, and Edge derives the idle tab fills from
-    // it) and every label a dim steel; the selected tab's own title and icons
-    // are inked (h_getuicolor), so the label colour need not read on its fill.
-    const bool isNeonRecoloured = colorId == edge155::off::THEMECOLOR_toolbar ||
-                                  colorId == edge155::off::THEMECOLOR_tab_text;
-    const bool isNeonTheme =
-        isNeonRecoloured &&
-        o_getcolor(pack, edge155::off::THEMECOLOR_tab_text, &textColor) &&
-        !theme_tone::IsDark(textColor);
-    if (isNeonTheme) {
-      const bool isTabText = colorId == edge155::off::THEMECOLOR_tab_text;
-      *out = isTabText ? kNeonIdleText : kNeonRail;
       return true;
     }
   }
@@ -511,7 +494,6 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
 // (h_update_foreground) computes the active tab's colours; that is the pass that
 // recolours the tab, so ink and fill switch together. GetColor is browser-wide
 // and hot, so the cheap tests go first.
-inline constexpr uint32_t kSelectedTabInk = 0xff04121a;
 inline constinit void* g_foregroundTab = nullptr;
 inline constinit bool g_isForegroundTabActive = false;
 inline bool IsActiveTabAlert(int colorId) {
@@ -528,18 +510,18 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
   // A horizontal active tab takes the vertical one's fill; an unfocused window
   // dims it toward the fill Edge would have used.
   const bool isActiveTabFill =
-      theme::g_isActive &&
+      theme::g_isActive && g_isSelectedChipSet &&
       (colorId == edge155::off::UICOLOR_active_tab_background_focused ||
        colorId == edge155::off::UICOLOR_active_tab_background_unfocused);
   if (isActiveTabFill) {
     const bool isFocused =
         colorId == edge155::off::UICOLOR_active_tab_background_focused;
-    return isFocused ? kVTabSelectedFill
-                     : theme_tone::Blend(kVTabSelectedFill,
+    return isFocused ? g_selectedFill
+                     : theme_tone::Blend(g_selectedFill,
                                          o_getuicolor(provider, colorId),
                                          kVTabInactiveRailPercent);
   }
-  const bool isInkable = theme::g_isActive && g_isLabelLight;
+  const bool isInkable = theme::g_isActive && g_isSelectedChipSet;
   if (!isInkable) {
     return o_getuicolor(provider, colorId);
   }
@@ -549,7 +531,7 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
   const bool isActiveTabTitle = isTabForeground && g_isForegroundTabActive;
   const bool isInkedOnFill = isActiveTabTitle || IsActiveTabAlert(colorId);
   if (isInkedOnFill) {
-    return kSelectedTabInk;
+    return g_selectedInk;
   }
   return o_getuicolor(provider, colorId);
 }
@@ -790,7 +772,6 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   Install(edge155::rva::Tab_IsActive,
           reinterpret_cast<void*>(tabrows::h_is_active), &tabrows::o_is_active,
           "Tab::IsActive (detach preview)");
-  assistant::Install();
   find::Install();
   theme_follow::Install();
   live_preview::Install();

@@ -4,6 +4,7 @@
 #pragma once
 #include <windows.h>
 #include <cstring>
+#include "assistant/assistant.h"
 #include "MinHook.h"
 #include "core/channel.h"
 #include "core/config.h"
@@ -29,7 +30,6 @@
 #include "theme/theme_follow.h"
 #include "chrome/tabs/live_preview.h"
 #include "theme/reading_mode.h"
-#include "assistant/assistant.h"
 #include "find/find.h"
 
 namespace edgeplus::control {
@@ -320,7 +320,6 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     MH_EnableHook(edge::At(edge155::rva::SkPath_lineTo));
     MH_EnableHook(edge::At(edge155::rva::Canvas_DrawRoundRect));
     protocol_handlers::EnableHooks();
-    assistant::EnableAll();
     find::EnableAll();
     theme_follow::EnableAll();
     live_preview::EnableAll();
@@ -382,7 +381,7 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
                 reinterpret_cast<LPARAM>(&liftedCount));
     Log("[handlers] lifted %zu blocked link handler(s)", liftedCount);
   }
-  assistant::Apply(edge::McvForWindow(hwnd));
+  assistant::RemoveChevron(edge::McvForWindow(hwnd));
   const bool isFindActive = wire.enhancedFindActive != 0;
   find::Apply(isFindActive);
 }
