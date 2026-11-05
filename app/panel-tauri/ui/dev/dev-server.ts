@@ -1,30 +1,26 @@
 import { type BuildResult, type CoreProcess, createCoreRunner } from "./core-runner.ts";
-import type * as FakeHostModule from "./fake-host.ts";
 import { createWindowSupervisor, pipeNameOf, servePipe, spawnWindowProcess } from "./window-supervisor.ts";
-import { CoreMessageType } from "#src/protocol.g.ts";
 import { execFileSync, spawn } from "node:child_process";
 import { copyFileSync, mkdirSync, rmSync, watch } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline";
-import { pathToFileURL } from "node:url";
 
 // The panel's dev server: the window stays up and the side that drives it
 // reloads under it, so an edit shows without a restart.
 //
-//   pnpm dev        a fake core inside this process. Nothing on the machine is
-//                   touched: it sends ui/dev/fixture-view.json and answers
-//                   every Action with success. Saving fixture-view.json or
-//                   fake-host.ts starts the fake core's session again over the
-//                   same link; saving a window .svelte or .ts hot reloads in
-//                   the one window (ui/main.ts's Vite server).
-//   pnpm dev:real   the real Rust core, built and started by this process.
+//   pnpm dev        the real Rust core, built and started by this process, in a
+//                   sandbox: its data folder is .verify/dev-data (not yours) and
+//                   Edge is the installed folder read for its version only, so
+//                   it never injects into or changes the Edge you use. It still
+//                   writes the start-up entry if you switch that on.
+//   pnpm dev:live   the same core on the machine itself.
 //
-// WARNING, pnpm dev:real: the real core runs. At start it injects the split
-// DLL into EVERY Edge browser process on the pinned build, and it changes the
-// settings, the start-up entry and Edge's themes like the installed panel.
-// Never run it against an Edge you are using. It refuses to start while any
-// edgeplus.exe is running (the single-instance guard would hand its start-up
-// to that one), naming the pid.
+// WARNING, pnpm dev:live: at start it injects the split DLL into EVERY Edge
+// browser process on the pinned build, and it changes the settings, the
+// start-up entry and Edge's themes like the installed panel. Never run it
+// against an Edge you are using. Both refuse to start while any edgeplus.exe
+// is running (the single-instance guard would hand its start-up to that one),
+// naming the pid.
 //
 // How the window outlives the core: this process owns the window's process
 // (window-supervisor.ts) and serves a named pipe. The real core is started
@@ -37,25 +33,22 @@ import { pathToFileURL } from "node:url";
 // the built exe under .verify/, so cargo can write the next build while it
 // runs.
 //
-// Press Enter to open the window again after closing it (pnpm dev), or to
-// build and start the core again after it ended (pnpm dev:real).
+// Press Enter to build and start the core again after it ended.
 
-const REAL_FLAG = "--real";
-const IS_REAL = process.argv.includes(REAL_FLAG);
-const IS_BACKGROUND = process.env["EDGEPLUS_WINDOW_BACKGROUND"] === "1";
+const LIVE_FLAG = "--live";
+const IS_LIVE = process.argv.includes(LIVE_FLAG);
 const APP_ROOT = path.join(import.meta.dirname, "..", "..");
 const CORE_ROOT = path.join(APP_ROOT, "src-tauri");
 const WINDOW_ENTRY = path.join(APP_ROOT, "ui", "main.ts");
 const RELAY_ENTRY = path.join(import.meta.dirname, "relay.ts");
 const NODE_FLAGS = ["--disable-warning=ExperimentalWarning"];
-const FAKE_HOST_MODULE = path.join(import.meta.dirname, "fake-host.ts");
-const FAKE_HOST_WATCHED_FILES = ["fixture-view.json", "fake-host.ts"];
 const BUILT_CORE = path.join(CORE_ROOT, "target", "debug", "edgeplus.exe");
 const CORE_COPIES_ROOT = path.join(APP_ROOT, ".verify", "dev-core");
+const SANDBOX_DATA = path.join(APP_ROOT, ".verify", "dev-data");
+const EDGE_APP_PATHS_KEY = "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe";
 const CORE_PROCESS_NAME = "edgeplus.exe";
 const CORE_SOURCE_FOLDERS = [path.join(CORE_ROOT, "src"), path.join(CORE_ROOT, "edge-native")];
 const CORE_SOURCE_PATTERN = /\.(rs|toml)$/;
-const FAKE_HOST_DEBOUNCE_MILLISECONDS = 150;
 const CORE_DEBOUNCE_MILLISECONDS = 400;
 const CORE_ENVIRONMENT_VARIABLE = "EDGEPLUS_WINDOW_COMMAND";
 
@@ -98,49 +91,6 @@ function onEnter(handler: () => void) {
   createInterface({ input: process.stdin }).on("line", handler);
 }
 
-function startFake() {
-  let host: ReturnType<typeof FakeHostModule.createFakeHost>;
-  let placeWindow: (typeof FakeHostModule)["OFF_SCREEN_BOUNDS"] | undefined;
-  const link = {
-    send: (line: string) => host.receive(line),
-    close: () => log("window closed; press Enter to open it again")
-  };
-  let connection = supervisor.connect(link);
-
-  async function startSession() {
-    try {
-      const module: typeof FakeHostModule = await import(`${pathToFileURL(FAKE_HOST_MODULE).href}?reload=${Date.now()}`);
-      host = module.createFakeHost();
-      placeWindow = module.OFF_SCREEN_BOUNDS;
-    } catch (error) {
-      log(`the fake core did not start: ${error instanceof Error ? error.stack : String(error)}`);
-      return;
-    }
-
-    host.attach(line => connection.write(line));
-
-    const shouldPlaceWindow = IS_BACKGROUND && placeWindow !== undefined;
-    if (shouldPlaceWindow) {
-      host.request(CoreMessageType.place, placeWindow);
-    }
-
-    host.pushView();
-    log("fake core: session started");
-  }
-
-  watchFolder({
-    folder: import.meta.dirname,
-    isRelevant: file => FAKE_HOST_WATCHED_FILES.includes(path.basename(file)),
-    delay: FAKE_HOST_DEBOUNCE_MILLISECONDS,
-    onChange: () => startSession().catch(logFailure)
-  });
-  onEnter(() => {
-    connection = supervisor.connect(link);
-    startSession().catch(logFailure);
-  });
-  return startSession();
-}
-
 function findRunningCore() {
   const listing = execFileSync("tasklist", ["/FI", `IMAGENAME eq ${CORE_PROCESS_NAME}`, "/FO", "CSV", "/NH"], { encoding: "utf8" });
   const match = /^"edgeplus\.exe","(\d+)"/imu.exec(listing);
@@ -166,6 +116,25 @@ function buildCore() {
   });
 }
 
+/** Where the sandboxed core keeps its data, and the Edge folder it reads a version from. */
+function sandboxEnvironment() {
+  mkdirSync(SANDBOX_DATA, { recursive: true });
+  return {
+    LOCALAPPDATA: SANDBOX_DATA,
+    EDGEPLUS_SIMULATE_EDGE_DIR: installedEdgeFolder()
+  };
+}
+
+function installedEdgeFolder() {
+  const listing = execFileSync("reg", ["query", EDGE_APP_PATHS_KEY, "/ve"], { encoding: "utf8" });
+  const match = /REG_SZs+(.+.exe)s*$/imu.exec(listing);
+  if (match === null) {
+    throw new Error("Edge is not installed: the sandboxed core reads its version from the install folder");
+  }
+
+  return path.dirname(match[1].trim());
+}
+
 function startCore(pipeName: string): CoreProcess {
   const folder = path.join(CORE_COPIES_ROOT, String(Date.now()));
   mkdirSync(folder, { recursive: true });
@@ -175,6 +144,7 @@ function startCore(pipeName: string): CoreProcess {
     stdio: ["ignore", "pipe", "pipe"],
     env: {
       ...process.env,
+      ...(IS_LIVE ? {} : sandboxEnvironment()),
       [CORE_ENVIRONMENT_VARIABLE]: JSON.stringify([process.execPath, ...NODE_FLAGS, RELAY_ENTRY, pipeName])
     },
     windowsHide: true
@@ -202,8 +172,8 @@ function startCore(pipeName: string): CoreProcess {
   };
 }
 
-async function startReal() {
-  log("REAL core: it injects into every Edge on the pinned build and changes real settings. Ctrl+C to stop.");
+async function startCoreServer() {
+  log(IS_LIVE ? "LIVE core: it injects into every Edge on the pinned build and changes real settings. Ctrl+C to stop." : "sandboxed core: your Edge and settings are untouched. Ctrl+C to stop.");
   const pipeName = pipeNameOf(process.pid);
   await servePipe({
     supervisor,
@@ -229,19 +199,15 @@ async function startReal() {
   return runner;
 }
 
-let runningCore: Awaited<ReturnType<typeof startReal>> | null = null;
+let runningCore: Awaited<ReturnType<typeof startCoreServer>> | null = null;
 try {
-  if (IS_REAL) {
-    runningCore = await startReal();
-  } else {
-    await startFake();
-  }
+  runningCore = await startCoreServer();
 } catch (error) {
   log(error instanceof Error ? error.message : String(error));
   process.exit(1);
 }
 
-log(IS_REAL ? "ready; the window hot reloads, Rust saves rebuild the core" : "ready; the window hot reloads, fixture-view.json restarts the fake core's session");
+log("ready; the window hot reloads, Rust saves rebuild the core");
 process.once("SIGINT", () => {
   Promise.resolve(runningCore?.stop()).finally(() => {
     supervisor.stop();

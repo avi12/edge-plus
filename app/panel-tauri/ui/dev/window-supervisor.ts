@@ -5,9 +5,8 @@ import { createInterface } from "node:readline";
 // Keeps the window's process up across the core. The core owns the window in
 // production (its stdin closing ends it); in development the core restarts
 // on every Rust change and the window must not, so this holds the window's
-// stdin open itself and lends the link to whichever core is connected: the
-// fake host in this process, or the real core through a named pipe and the
-// relay (relay.ts). A core that leaves does not end the window, it keeps
+// stdin open itself and lends the link to whichever core is connected,
+// through a named pipe and the relay (relay.ts). A core that leaves does not end the window, it keeps
 // showing its last View until the next core connects and sends a fresh one.
 // The window is started lazily, by the first core to connect, and again by
 // the next one after the user closed it.

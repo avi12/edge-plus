@@ -155,7 +155,7 @@ The panel (Rust, Node 24 with pnpm, Windows App SDK 2.2; in `app/panel-tauri`):
 
 ```powershell
 pnpm app       # the full panel from source (it injects into Edge)
-pnpm window    # the window alone on a saved view, no core and no Edge
+pnpm dev       # the real core in a sandbox, the window hot reloading (your Edge is untouched)
 pnpm test      # node --test for the window, cargo test for the core
 pnpm build     # the window kit, then the release exe that embeds it
 pwsh ..\..\tools\lint.ps1    # the C++ gate and the panel's own linters
