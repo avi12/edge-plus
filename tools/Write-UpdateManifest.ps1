@@ -5,49 +5,41 @@
 
 .DESCRIPTION
   Names the version in app\panel-tauri\src-tauri\Cargo.toml, where that
-  release's exe and MSI are (the assets EdgePlus-<version>.exe and
-  EdgePlus-<version>-setup.msi on the GitHub release) and each one's SHA-256,
-  which an installed copy checks its download against: a portable copy fetches
-  the exe, a copy the MSI installed fetches the MSI. tools\Release.ps1 runs it
-  after both are attached to the release and pushes the result to main: until
-  then installed copies see no update, so the manifest never points at a file
-  that is not there yet.
+  release's MSIX is (the asset EdgePlus-<version>.msix on the GitHub release)
+  and its SHA-256, which an installed copy checks its download against.
+  tools\Release.ps1 runs it after the package is attached to the release and
+  pushes the result to main: until then installed copies see no update, so the
+  manifest never points at a file that is not there yet. The package sits under
+  its own `msix` key: a copy that predates packaging reads a top-level `url` as
+  an exe, so it must find none.
 
-.PARAMETER Exe
-  The exe attached to the release. Its file version must match the version in
-  Cargo.toml, so a stale build cannot be published as a new release.
-
-.PARAMETER Installer
-  The MSI attached to the release, built from that exe.
+.PARAMETER Package
+  The MSIX attached to the release. Its manifest version must match the version
+  in Cargo.toml, so a stale build cannot be published as a new release.
 
 .EXAMPLE
-  pwsh tools\Write-UpdateManifest.ps1 -Exe EdgePlus-0.0.2.exe -Installer EdgePlus-0.0.2-setup.msi
+  pwsh tools\Write-UpdateManifest.ps1 -Package EdgePlus-0.2.0.msix
 #>
 param(
     [Parameter(Mandatory)]
-    [string] $Exe,
-    [Parameter(Mandatory)]
-    [string] $Installer
+    [string] $Package
 )
 
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'EdgePlus.Build.psm1') -Force
 
 $version = Get-ProductVersion
-$exePath = (Resolve-Path $Exe).Path
-$builtVersion = (Get-Item $exePath).VersionInfo.ProductVersion
-if ($builtVersion -ne $version) {
-    throw "$exePath is version $builtVersion, but Cargo.toml says $version. Build the release first."
+$packagePath = (Resolve-Path $Package).Path
+$asset = Get-ReleaseAsset $version
+if ((Split-Path $packagePath -Leaf) -ne $asset.Package) {
+    throw "$packagePath is not $($asset.Package), the package of Cargo.toml's version $version."
 }
 
-$asset = Get-ReleaseAsset $version
 $manifest = [ordered]@{
-    version   = $version
-    url       = "$($asset.Url)/$($asset.Exe)"
-    sha256    = (Get-FileHash $exePath -Algorithm SHA256).Hash
-    installer = [ordered]@{
-        url    = "$($asset.Url)/$($asset.Installer)"
-        sha256 = (Get-FileHash (Resolve-Path $Installer).Path -Algorithm SHA256).Hash
+    version = $version
+    msix    = [ordered]@{
+        url    = "$($asset.Url)/$($asset.Package)"
+        sha256 = (Get-FileHash $packagePath -Algorithm SHA256).Hash
     }
 }
 $target = Join-Path (Get-RepoRoot) 'docs\updates.json'

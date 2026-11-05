@@ -8,8 +8,8 @@ Live feature switches for Microsoft Edge (see `README.md`):
 - `app/panel-tauri/` — the panel that toggles each feature and injects the DLL:
   a Rust core (every Win32 call in its `edge-native` crate) and a WinUI 3
   window drawn from TypeScript
-- `app/installer/` — the MSI (WiX 5 through its NuGet SDK) that installs the
-  published exe under Program Files
+- `app/package/` — the MSIX manifest; `tools/Build-Msix.ps1` packs and signs
+  the published exe with it
 
 These rules are `avi/youtube-time-manager`'s, carried to C++ the way
 `avi/any-stt` carries them, and overridden only where C++ has a stronger
@@ -161,7 +161,7 @@ side and must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h
   `platform/` (paths, settings, the actions the window calls), `dll/` (the
   config wire, its events, the embedded DLL, `dll_sync`), `edge/` (the pinned
   build, the Edge watcher, the dev-mode waiter, legacy carry-over), `themes/`,
-  `setup/` (start at sign-in, updates, the MSI hand-off) and `ui/` (the View the
+  `setup/` (start at sign-in, updates, the MSIX hand-off) and `ui/` (the View the
   window renders, the sentences the core says itself in `wording.rs`, the
   window's process).
 - **`edge-native`** (`src-tauri/edge-native/`) is the **only** crate with
@@ -207,72 +207,7 @@ side and must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h
   rules apply.
 - **Build, test, run** (in `app/panel-tauri`): `pnpm restore` once, `pnpm
   build` (the kit, then the release exe), `pnpm test` (`node --test` and `cargo
-  test`), `pnpm app` (the full panel from source), `pnpm window` (the window
-  alone on `ui/dev/fixture-view.json`, with no core: it never touches Edge, so
-  it is the way to work on the UI). `pnpm dev` keeps that window up for good
-  (`ui/dev/dev-server.ts`): a saved `.svelte`/`.ts` hot reloads in place and a
-  saved `fixture-view.json` or `fake-host.ts` restarts the fake core's session
-  over the same link. `pnpm dev:real` does the same for the real Rust core
-  (it **injects into every Edge on the pinned build**; it refuses to start
-  while an `edgeplus.exe` runs): a saved `.rs` rebuilds, a good build swaps the
-  core it started, a failed one keeps the old core and prints the error, and
-  the window never closes (the core is told to start `ui/dev/relay.ts` as its
-  window through `EDGEPLUS_WINDOW_COMMAND`).
-- **Never run the full panel against Avi's Edge** unless asked: at start it
-  injects the DLL into every Edge browser process on the pinned build,
-  replacing a loaded DLL that differs from the one it carries. To compare it
-  with the C# panel, run both in Windows Sandbox (Smart App Control blocks
-  unsigned exes there until it is turned off inside the Sandbox) and capture
-  each window with `PrintWindow`.
-
-# Linting
-
-- The C++ DLL and the panel: `pwsh tools/lint.ps1` (`-Fix` applies
-  clang-format, clang-tidy's fixes and the panel's fixers). The gate is
-  clang-format (`.clang-format`), clang-tidy (`.clang-tidy`, correctness as
-  errors), a restricted-syntax pass, the `shared.g.rs` freshness check, the
-  panel's `pnpm lint:verify` (oxlint, ESLint, clippy at `-D warnings`, rustfmt,
-  `tsc`, svelte-check, the fallow audit and winui-svelte's `check:editor`,
-  which fails on anything VS Code's Svelte language server would underline or
-  show as `any`) and the window protocol's freshness. Every `.svelte` file
-  must be in a tsconfig's `include`: the language server parses one that is
-  not with its own Svelte 4.
-  `pwsh tools/lint.ps1 -InstallHook` gates every commit on its staged C++.
-
-# Native split: build and test
-
-- Build: `app/native-split/build.cmd`. Unit tests: `app/native-split/test/run.cmd`
-  (every `*_test.cpp`).
-- Test only against a throwaway Edge launched with its own `--user-data-dir`
-  marker, and select it **only by that marker** — never by process name, start
-  time or "the oldest msedge" (Avi's real Edge is running). Kill it the same way.
-- Iterate by hot-reload — signal `Local\edgeplus-split-unload`, rebuild, re-inject
-  into the same pid — not by relaunching Edge.
-- Inject timestamped copies (`edgeplus-split-<ticks>.dll`, a loaded DLL can't be
-  overwritten) from `out/`, never from temp/scratchpad. Each new hash triggers a
-  Defender cloud scan; `out/` is the one folder Avi excluded from Defender.
-- Capture the test window with `PrintWindow`, never the screen.
-- The DLL's control channel (`edgeplus.addpane`, codes in `src/split/control.h`) drives
-  every pane action from a script, so changes can be verified without clicks.
-
-# Commits
-
-Every commit is one self-contained logical change with a message saying what and
-why; land large work as a sequence of them.
-
-# Releases
-
-**Every GitHub release carries both the portable `EdgePlus-<version>.exe` and
-the installable `EdgePlus-<version>-setup.msi`**, the MSI built from that same
-exe, as `avi/pade` does. Cut one only when asked, with
-`pwsh tools\Release.ps1 -Version <x.y.z> -NotesFile <file>` (`docs/RELEASING.md`):
-it bumps the core's `Cargo.toml`, builds the window kit and the exe, builds the MSI
-(`tools\Build-Installer.ps1`), commits, tags, pushes, creates the release with
-both files and then pushes `docs/updates.json` naming both. The notes file holds
-the changelog highlights for users — plain sentences, no file names. Never ship
-a release without its MSI: a copy the MSI installed is offered only releases
-whose manifest names one. A release made some other way gets its MSI added with
-`tools\Build-Installer.ps1 -Exe <its exe>` and `gh release upload`.`pnpm dev` (the real Rust core in a
+  test`), `pnpm app` (the full panel from source), and `pnpm dev` (the real Rust core in a
   sandbox, with the window kept up for good: `ui/dev/dev-server.ts`). The
   sandbox gives the core its own data folder (`LOCALAPPDATA` under `.verify/`)
   and reads Edge's version from the install folder
@@ -329,14 +264,14 @@ why; land large work as a sequence of them.
 
 # Releases
 
-**Every GitHub release carries both the portable `EdgePlus-<version>.exe` and
-the installable `EdgePlus-<version>-setup.msi`**, the MSI built from that same
-exe, as `avi/pade` does. Cut one only when asked, with
+**Edge+ is installed from its MSIX**, `EdgePlus-<version>.msix`: it needs the
+package's identity for its startup task and its own updates, and it is the only
+download a release carries besides `EdgePlus.cer`, the certificate the package
+is signed with, which a user trusts once. Cut a release only when asked, with
 `pwsh tools\Release.ps1 -Version <x.y.z> -NotesFile <file>` (`docs/RELEASING.md`):
-it bumps the core's `Cargo.toml`, builds the window kit and the exe, builds the MSI
-(`tools\Build-Installer.ps1`), commits, tags, pushes, creates the release with
-both files and then pushes `docs/updates.json` naming both. The notes file holds
-the changelog highlights for users — plain sentences, no file names. Never ship
-a release without its MSI: a copy the MSI installed is offered only releases
-whose manifest names one. A release made some other way gets its MSI added with
-`tools\Build-Installer.ps1 -Exe <its exe>` and `gh release upload`.
+it bumps the core's `Cargo.toml`, builds the window kit and the exe, packs and
+signs the MSIX (`tools\Build-Msix.ps1`), commits, tags, pushes, creates the
+release with the package and the certificate and then pushes `docs/updates.json`
+naming the package. The notes file holds the changelog highlights for users -
+plain sentences, no file names. A copy run from a checkout or a bare exe never
+updates itself.

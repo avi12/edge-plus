@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
-  Cut an Edge+ release: the portable exe and the MSI on GitHub, and the update
-  manifest every installed copy polls (docs\updates.json).
+  Cut an Edge+ release: the signed MSIX on GitHub, and the update manifest
+  every installed copy polls (docs\updates.json).
 
 .DESCRIPTION
   In order:
@@ -10,11 +10,12 @@
     2. build the window kit and the release exe that embeds it (rebuilding the
        embedded split DLL if its sources are newer) and copy the exe to
        out\release\EdgePlus-<version>.exe;
-    3. build the MSI from that exe (tools\Build-Installer.ps1);
+    3. pack that exe as the signed MSIX (tools\Build-Msix.ps1), with the
+       certificate a user trusts once to install it;
     4. commit `chore(release): <version>`, tag v<version> and push both;
-    5. create the GitHub release with the exe and the MSI attached, its notes
-       the highlights plus a link to every commit since the previous tag;
-    6. write the manifest from both files (tools\Write-UpdateManifest.ps1) and
+    5. create the GitHub release with the MSIX and the certificate attached, its
+       notes the highlights plus a link to every commit since the previous tag;
+    6. write the manifest from the package (tools\Write-UpdateManifest.ps1) and
        push it - last, so an installed copy never sees a release whose files
        are not uploaded yet.
 
@@ -68,7 +69,8 @@ New-Item -ItemType Directory -Force $releaseFolder | Out-Null
 $exe = Join-Path $releaseFolder $asset.Exe
 Copy-Item $built $exe -Force
 
-$installer = & (Join-Path $PSScriptRoot 'Build-Installer.ps1') -Exe $exe
+$package = & (Join-Path $PSScriptRoot 'Build-Msix.ps1') -Exe $exe
+$certificate = Join-Path $releaseFolder $asset.Certificate
 
 Write-Step "Committing and tagging $($asset.Tag)"
 Invoke-Checked 'git add' { git -C $repo add $manifest $lockfile }
@@ -81,12 +83,12 @@ $notes = Join-Path $releaseFolder "notes-$Version.md"
 $allChanges = "https://github.com/$($asset.Repository)/compare/$previousTag...$($asset.Tag)"
 Set-Content $notes "$highlights`n`n**All changes:** $allChanges`n" -Encoding utf8NoBOM
 Invoke-Checked 'gh release create' {
-    gh release create $asset.Tag $exe $installer --repo $asset.Repository `
+    gh release create $asset.Tag $package $certificate --repo $asset.Repository `
         --title "Edge+ $Version" --notes-file $notes
 }
 
 Write-Step 'Publishing the update manifest'
-& (Join-Path $PSScriptRoot 'Write-UpdateManifest.ps1') -Exe $exe -Installer $installer
+& (Join-Path $PSScriptRoot 'Write-UpdateManifest.ps1') -Package $package
 Invoke-Checked 'git add' { git -C $repo add docs/updates.json }
 Invoke-Checked 'git commit' {
     git -C $repo commit -m "chore(release): update manifest for $Version"

@@ -80,11 +80,10 @@ hiding the developer-mode prompt, which only edits Edge's `Preferences`.
 ### Edge+ itself
 
 - **Updates itself** — checks this repository for a newer release at start and
-  every six hours, downloads it in the background and checks it, then offers
-  **Restart to update** in the window. Edge keeps running through it. A copy
-  installed with the MSI updates through the new release's MSI. The
-  "Check for updates" switch turns it off, and with it every connection Edge+
-  makes (`docs/RELEASING.md`).
+  every six hours, downloads its package in the background and checks it, then
+  offers **Restart to update** in the window. Edge keeps running through it.
+  The "Check for updates" switch turns it off, and with it every connection
+  Edge+ makes (`docs/RELEASING.md`).
 
 Removed for now: the Gemini integration (Gemini in a side panel from the
 toolbar chat button, with tab sharing). Copilot is the only assistant. The code
@@ -99,7 +98,7 @@ app/
                  Win32) and a WinUI 3 window drawn from TypeScript, with one
                  switch per feature, in titled sections
   native-split/  the C++ DLL the panel injects into Edge's browser process
-  installer/     the MSI that installs the panel's exe
+  package/       the MSIX manifest the panel is packaged with
 ```
 
 [ARCHITECTURE.md](ARCHITECTURE.md) has the full picture: the components, how a
@@ -121,10 +120,17 @@ standalone tabs first, so nothing Edge can't render on its own is left behind.
 
 ## Setup
 
-Every [release](https://github.com/avi12/edge-plus/releases) has two downloads:
-`EdgePlus-<version>-setup.msi` installs Edge+ under Program Files with desktop
-and Start menu shortcuts, and `EdgePlus-<version>.exe` runs from wherever it is
-saved. To build it yourself:
+Edge+ is installed from its package. Every
+[release](https://github.com/avi12/edge-plus/releases) has `EdgePlus-<version>.msix`
+and `EdgePlus.cer`, the certificate it is signed with. Trust the certificate
+once, from an administrator PowerShell, then open the package:
+
+```powershell
+Import-Certificate -FilePath EdgePlus.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+Add-AppxPackage EdgePlus-<version>.msix
+```
+
+To build it yourself:
 
 ```powershell
 cd app\panel-tauri

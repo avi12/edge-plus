@@ -104,15 +104,17 @@ function Build-ReleaseExe {
     return Join-Path $panel 'src-tauri\target\release\edgeplus.exe'
 }
 
-# A release's files on GitHub, as the release attaches them and the update
-# manifest names them.
+# A release's files on GitHub, as the release attaches them (the package and the
+# certificate that makes Windows accept it) and the update manifest names them.
+# The exe is only the build the package carries.
 function Get-ReleaseAsset([string] $version) {
     $repository = 'avi12/edge-plus'
     return [pscustomobject]@{
         Repository = $repository
         Tag        = "v$version"
         Exe        = "EdgePlus-$version.exe"
-        Installer  = "EdgePlus-$version-setup.msi"
+        Package    = "EdgePlus-$version.msix"
+        Certificate = "EdgePlus.cer"
         Url        = "https://github.com/$repository/releases/download/v$version"
     }
 }

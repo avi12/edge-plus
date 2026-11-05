@@ -1,17 +1,15 @@
 # Releasing an update
 
-Edge+ ships two ways, both attached to every GitHub release:
+Edge+ is installed from one file, **`EdgePlus-<version>.msix`**, attached to every
+GitHub release beside **`EdgePlus.cer`**. The package gives Edge+ the identity
+it needs: a startup task for start at sign-in, and a clean install, update and
+uninstall through Windows. It is signed with the `CN=avi12` code-signing
+certificate, which Windows does not trust on its own, so a user trusts
+`EdgePlus.cer` once (see the README) before the package installs.
 
-- **a portable exe**, `EdgePlus-<version>.exe`, that runs from wherever it is
-  saved;
-- **an MSI installer**, `EdgePlus-<version>-setup.msi`, that installs the same
-  exe under `Program Files\Edge+` (`app/installer/`). Its Shortcuts page has two
-  checkboxes, both on by default: a desktop shortcut and a Start menu shortcut.
-  A silent install turns one off with `DESKTOPSHORTCUT=""` or
-  `STARTMENUSHORTCUT=""`.
-
-Either way Edge+ keeps its settings and its DLL in `%LOCALAPPDATA%\EdgePlus`, so
-moving between the two keeps everything.
+Edge+ keeps its settings and its DLL in `%LOCALAPPDATA%\EdgePlus`, at that real
+path (the manifest turns the package's write virtualization off, so Edge can
+find the DLL there).
 
 ## Cutting a release
 
@@ -28,20 +26,20 @@ With the work committed:
 `tools/Release.ps1` then:
 
 1. sets the version in `app/panel-tauri/src-tauri/Cargo.toml`, the only place
-   it is written: the exe, the MSI and the panel's footer read it from there;
+   it is written: the exe, the package and the panel's footer read it from
+   there;
 2. builds the window kit and the release exe that embeds it (`pnpm build` in
    `app/panel-tauri`, after `pnpm install` and `pnpm restore`) and copies it to
-   `out\release\EdgePlus-<version>.exe`;
-3. builds the MSI from that exe (`tools\Build-Installer.ps1`, WiX 5 through its
-   NuGet SDK, so nothing to install), so the MSI carries the same bytes. WiX's
-   ICE checks are skipped: they run on VBScript, which Windows no longer
-   installs by default;
+   `outelease\EdgePlus-<version>.exe`;
+3. packs that exe as the MSIX (`tools\Build-Msix.ps1`): the exe, the startup
+   launcher, logos drawn from `icons\icon.ico` and `app/package/AppxManifest.xml`
+   stamped with the version, signed with the `CN=avi12` certificate from the
+   current user's store; it also exports the certificate as `EdgePlus.cer`;
 4. commits `chore(release): <version>`, tags `v<version>` and pushes both;
-5. creates the GitHub release with the exe and the MSI, appending a link to
-   every commit since the previous tag;
-6. writes `docs/updates.json` (`tools\Write-UpdateManifest.ps1`) from both
-   files' SHA-256 (the exe at the top level, the MSI under `installer`) and
-   pushes it.
+5. creates the GitHub release with the MSIX and the certificate, appending a
+   link to every commit since the previous tag;
+6. writes `docs/updates.json` (`tools\Write-UpdateManifest.ps1`) from the
+   package's SHA-256, under its `msix` key, and pushes it.
 
 The manifest goes last: installed copies see a release only once it is on
 `main`, so it never points at a file that is not uploaded yet.
@@ -61,25 +59,21 @@ supports.
 Installed copies check for a release the way a browser extension checks its
 update URL: they read `docs/updates.json` from `main` (served by
 `raw.githubusercontent.com`) at start and every six hours. When it names a newer
-version, the file is downloaded in the background and checked against the
-manifest's SHA-256, and the window offers **Restart to update**.
+version, the package is downloaded in the background and checked against the
+manifest's SHA-256, and the window offers **Restart to update**. Restarting
+closes Edge+, and a hidden PowerShell waits for it to exit, installs the
+package over the old one (`Add-AppxPackage`) and starts Edge+ again. The new
+exe swaps its own DLL into Edge, so Edge itself does not restart.
 
-- **A portable copy** downloads the exe. Restarting swaps it in place, starts
-  the new one, and the new one swaps its own DLL into Edge, so Edge itself does
-  not restart.
-- **A copy the MSI installed** (the folder it records under
-  `HKLM\Software\EdgePlus`) cannot swap its own exe under Program Files, so it
-  downloads the release's MSI instead. Restarting closes Edge+, and a hidden
-  PowerShell waits for it to exit, runs the MSI with `msiexec /passive` (Windows
-  asks to allow it) and starts Edge+ again. It passes along which shortcuts
-  exist, so an update never brings back one the user removed. A release without
-  an MSI is not offered to such a copy.
-- Only a published exe updates itself. A build run from a checkout never does.
-- A portable copy that cannot write where it is saved (a protected folder) says
-  so and points to the releases page.
+- Only the installed package updates itself. A build run from a checkout, or a
+  bare exe, never does.
+- The manifest names the package under `msix`, never as a top-level `url`: a
+  copy from before packaging (0.1.0 and earlier) reads that as an exe, so it
+  finds nothing to install and has to be replaced by installing the package
+  once.
 - The **Check for updates** switch turns the check off, and with it every
   connection Edge+ makes.
-- A copy from before this existed (0.0.1) has to be replaced by hand once.
 
 To try it without a release, point `EDGEPLUS_UPDATE_FEED` at a manifest on this
-machine (a `http://localhost` address is accepted) and run a published exe.
+machine (a `http://localhost` address is accepted) and run the installed
+package.
