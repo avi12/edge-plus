@@ -50,8 +50,8 @@ Import-Module (Join-Path $PSScriptRoot 'EdgePlus.Build.psm1') -Force
 [string] $current = Get-ProductVersion
 [string] $highlights = (Get-Content (Resolve-Path $NotesFile) -Raw).Trim()
 
-[bool] $isTreeClean = -not (git -C $repo status --porcelain --untracked-files=no)
-if (-not $isTreeClean) {
+[bool] $hasUncommittedChanges = [bool](git -C $repo status --porcelain --untracked-files=no)
+if ($hasUncommittedChanges) {
     throw 'Commit or stash your changes first: a release is built from what is committed.'
 }
 [bool] $isNewer = [version]$Version -gt [version]$current
@@ -66,13 +66,13 @@ Set-ProductVersion $Version
 
 Write-Step 'Building the exe'
 [string] $built = Build-ReleaseExe
-[string] $releaseFolder = Join-Path $repo 'out\release'
+[string] $releaseFolder = Get-ReleaseFolder
 New-Item -ItemType Directory -Force $releaseFolder | Out-Null
 [string] $exe = Join-Path $releaseFolder $asset.Exe
 Copy-Item $built $exe -Force
 
 [string] $package = & (Join-Path $PSScriptRoot 'Build-Msix.ps1') -Exe $exe
-[string] $certificate = Join-Path $releaseFolder $asset.Certificate
+[string] $certificate = Join-Path (Split-Path $package -Parent) $asset.Certificate
 
 Write-Step "Committing and tagging $($asset.Tag)"
 Invoke-Checked 'git add' { git -C $repo add $manifest $lockfile }

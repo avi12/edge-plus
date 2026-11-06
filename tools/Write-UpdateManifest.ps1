@@ -30,20 +30,44 @@ param(
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'EdgePlus.Build.psm1') -Force
 
+class MsixEntry {
+    [string] $url
+    [string] $sha256
+}
+
+class UpdateManifest {
+    [string] $version
+    [MsixEntry] $msix
+}
+
+function New-UpdateManifest {
+    [OutputType([UpdateManifest])]
+    param(
+        [Parameter(Mandatory)]
+        [string] $version,
+        [Parameter(Mandatory)]
+        [ReleaseAsset] $asset,
+        [Parameter(Mandatory)]
+        [string] $packagePath
+    )
+    return [UpdateManifest]@{
+        version = $version
+        msix    = [MsixEntry]@{
+            url    = "$($asset.Url)/$($asset.Package)"
+            sha256 = (Get-FileHash $packagePath -Algorithm SHA256).Hash
+        }
+    }
+}
+
 [string] $version = Get-ProductVersion
 [string] $packagePath = (Resolve-Path $Package).Path
 [ReleaseAsset] $asset = Get-ReleaseAsset $version
-if ((Split-Path $packagePath -Leaf) -ne $asset.Package) {
+[bool] $isExpectedPackage = (Split-Path $packagePath -Leaf) -eq $asset.Package
+if (-not $isExpectedPackage) {
     throw "$packagePath is not $($asset.Package), the package of Cargo.toml's version $version."
 }
 
-$manifest = [ordered]@{
-    version = $version
-    msix    = [ordered]@{
-        url    = "$($asset.Url)/$($asset.Package)"
-        sha256 = (Get-FileHash $packagePath -Algorithm SHA256).Hash
-    }
-}
+[UpdateManifest] $manifest = New-UpdateManifest $version $asset $packagePath
 [string] $target = Join-Path (Get-RepoRoot) 'docs\updates.json'
 ($manifest | ConvertTo-Json) + "`n" | Set-Content $target -Encoding utf8NoBOM -NoNewline
 Write-Host "wrote $target"
