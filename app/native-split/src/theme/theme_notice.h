@@ -22,8 +22,7 @@ struct Assigned {
 [[nodiscard]] constexpr bool IsAssigned(const Assigned& assigned,
                                         std::string_view themeId) noexcept {
   const bool isNamed = !themeId.empty();
-  return isNamed &&
-         (themeId == assigned.lightId || themeId == assigned.darkId);
+  return isNamed && (themeId == assigned.lightId || themeId == assigned.darkId);
 }
 
 // True when the bubble for `themeId` must not show: Edge+ applies that theme
