@@ -45,7 +45,7 @@ const NODE_FLAGS = ["--disable-warning=ExperimentalWarning"];
 const BUILT_CORE = path.join(CORE_ROOT, "target", "debug", "edgeplus.exe");
 const CORE_COPIES_ROOT = path.join(APP_ROOT, ".verify", "dev-core");
 const SANDBOX_DATA = path.join(APP_ROOT, ".verify", "dev-data");
-const EDGE_APP_PATHS_KEY = "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe";
+const EDGE_APP_PATHS_KEY = String.raw`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe`;
 const CORE_PROCESS_NAME = "edgeplus.exe";
 const CORE_SOURCE_FOLDERS = [path.join(CORE_ROOT, "src"), path.join(CORE_ROOT, "edge-native")];
 const CORE_SOURCE_PATTERN = /\.(rs|toml)$/;

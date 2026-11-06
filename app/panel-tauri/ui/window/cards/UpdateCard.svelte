@@ -30,7 +30,9 @@
 
 <CardFrame glyph="UpdateRestore">
   <CardTitle>Edge+ {update.version} is ready</CardTitle>
-  <CardDescription>Restart Edge+ to finish updating. Edge keeps running, and your splits and themes stay as they are.</CardDescription>
+  <CardDescription>
+    Restart Edge+ to finish updating. Edge keeps running, and your splits and themes stay as they are.
+  </CardDescription>
   {#snippet end()}
     <Button class="accent-button" automationId="restart-to-update" isEnabled={!isRestarting} onclick={restart}>{buttonLabel}</Button>
   {/snippet}

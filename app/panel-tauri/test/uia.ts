@@ -71,7 +71,7 @@ function run({ pid, action, id = "", value = "", item = "" }: UiaRequest) {
   return output === "" ? [] : JSON.parse(output);
 }
 
-function asList(value: unknown) {
+function asList<Item>(value: Item | Item[]) {
   return Array.isArray(value) ? value : [value];
 }
 

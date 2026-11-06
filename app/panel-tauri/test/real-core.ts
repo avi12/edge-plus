@@ -1,5 +1,5 @@
-import { exists } from "./uia.ts";
 import { ownProcessTree } from "./process-tree.ts";
+import { exists } from "./uia.ts";
 import { type ChildProcess, execFileSync, spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -70,6 +70,7 @@ export async function startRealCore({ theme = "system" }: { theme?: string } = {
   let windowPid: number | undefined;
   while (windowPid === undefined && Date.now() < deadline) {
     windowPid = findWindowPid(pid);
+
     if (windowPid === undefined) {
       await sleep(POLL_MILLISECONDS);
     }
