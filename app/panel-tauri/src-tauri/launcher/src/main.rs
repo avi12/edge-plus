@@ -5,8 +5,8 @@
 use std::path::PathBuf;
 use std::process::{Command, ExitCode};
 
-/// The core's `switches::BACKGROUND`; the core's tests check the two agree.
-const BACKGROUND_SWITCH: &str = "--background";
+include!("../../src/platform/identity/background_switch.rs");
+
 const CORE_EXE: &str = "edgeplus.exe";
 
 fn core_beside_launcher() -> Option<PathBuf> {
@@ -18,7 +18,7 @@ fn main() -> ExitCode {
     let Some(core) = core_beside_launcher() else {
         return ExitCode::FAILURE;
     };
-    match Command::new(core).arg(BACKGROUND_SWITCH).spawn() {
+    match Command::new(core).arg(BACKGROUND).spawn() {
         Ok(_) => ExitCode::SUCCESS,
         Err(_) => ExitCode::FAILURE,
     }

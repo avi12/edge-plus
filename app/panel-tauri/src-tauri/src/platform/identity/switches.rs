@@ -1,7 +1,6 @@
 //! The exe's command-line switches.
 
-/// A boot launch from the startup entry or task: no window.
-pub const BACKGROUND: &str = "--background";
+include!("background_switch.rs");
 
 /// Re-run headless as the dev-mode waiter (`dev_mode_prompt`).
 pub const DEV_MODE_WAITER: &str = "--quiet-dev-mode-after-exit";
@@ -27,14 +26,5 @@ mod tests {
         let command_line = line(&["edgeplus.exe", BACKGROUND]);
         assert!(is_present(&command_line, BACKGROUND));
         assert!(!is_present(&command_line, DEV_MODE_WAITER));
-    }
-
-    #[test]
-    fn the_package_launcher_passes_the_background_switch() {
-        let launcher = include_str!("../../../launcher/src/main.rs");
-        assert!(
-            launcher.contains(&format!("\"{BACKGROUND}\"")),
-            "the launcher starts the core with {BACKGROUND}"
-        );
     }
 }
