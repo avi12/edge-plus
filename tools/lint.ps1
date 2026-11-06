@@ -19,9 +19,20 @@ param(
     [switch]$InstallHook
 )
 
+# A legal construct that is not how this codebase is written.
+class RestrictedSyntaxRule {
+    [string] $Pattern
+    [string] $Message
+
+    RestrictedSyntaxRule([string] $pattern, [string] $message) {
+        $this.Pattern = $pattern
+        $this.Message = $message
+    }
+}
+
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'EdgePlus.Build.psm1') -Force
-$root = Get-RepoRoot
+[string] $root = Get-RepoRoot
 
 if ($InstallHook) {
     git -C $root config core.hooksPath .githooks
@@ -30,23 +41,24 @@ if ($InstallHook) {
 }
 
 # external\ (MinHook) is vendored and stays close to upstream, so it is not linted.
-$nativeRoot = 'app/native-split'
+[string] $nativeRoot = 'app/native-split'
 function Select-Sources {
-    param([string[]]$Paths)
-    $Paths | Where-Object { $_ -match "^$nativeRoot/(src|test)/.*\.(cpp|h)$" }
+    [OutputType([string[]])]
+    param([string[]] $Paths)
+    return @($Paths | Where-Object { $_ -match "^$nativeRoot/(src|test)/.*\.(cpp|h)$" })
 }
 
-if ($Staged) {
-    $files = Select-Sources (git -C $root diff --cached --name-only --diff-filter=ACMR)
+[string[]] $files = if ($Staged) {
+    Select-Sources (git -C $root diff --cached --name-only --diff-filter=ACMR)
 } else {
-    $files = Select-Sources (git -C $root ls-files '*.cpp' '*.h')
+    Select-Sources (git -C $root ls-files '*.cpp' '*.h')
 }
-$full = @($files | ForEach-Object { Join-Path $root $_ })
-$hasCppInScope = $full.Count -gt 0
+[string[]] $full = @($files | ForEach-Object { Join-Path $root $_ })
+[bool] $hasCppInScope = $full.Count -gt 0
 
-$formatOk = $true
-$tidyOk = $true
-$syntaxOk = $true
+[bool] $formatOk = $true
+[bool] $tidyOk = $true
+[bool] $syntaxOk = $true
 if (-not $hasCppInScope) {
     Write-Host "[lint] no C++ in scope"
 }
@@ -62,52 +74,50 @@ if ($hasCppInScope) {
     # Headers are analysed through the units that include them (HeaderFilterRegex
     # decides what is reported), so a staged header alone still needs every unit.
     # clang-cl reads the MSVC build's own flags from edgeplus-split.buildscript.
-    $units = @(Select-Sources (git -C $root ls-files '*.cpp') |
+    [string[]] $units = @(Select-Sources (git -C $root ls-files '*.cpp') |
         ForEach-Object { Join-Path $root $_ })
-    $vcvars = Get-VcVarsPath
+    [string] $vcvars = Get-VcVarsPath
 
-    $nativeDir = Join-Path $root ($nativeRoot -replace '/', '\')
-    $standard = Get-BuildSetting 'project:edgeplus-split' 'std'
-    $defines = (Get-BuildSetting 'project:edgeplus-split' 'defines') -split ',' |
+    [string] $nativeDir = Join-Path $root ($nativeRoot -replace '/', '\')
+    [string] $standard = Get-BuildSetting 'project:edgeplus-split' 'std'
+    [string[]] $defines = (Get-BuildSetting 'project:edgeplus-split' 'defines') -split ',' |
         ForEach-Object { '/D' + $_.Trim() }
-    $includes = (Get-BuildSetting 'project:edgeplus-split' 'includes') -split ',' |
+    [string[]] $includes = (Get-BuildSetting 'project:edgeplus-split' 'includes') -split ',' |
         ForEach-Object { '/I"' + (Join-Path $nativeDir ($_.Trim() -replace '/', '\')) + '"' }
-    $clangArgs = "--driver-mode=cl /EHsc /std:c++$standard " + (($defines + $includes) -join ' ')
-    $tidyFlags = if ($Fix) { '--fix --fix-errors' } else { '' }
+    [string] $clangArgs = "--driver-mode=cl /EHsc /std:c++$standard " + (($defines + $includes) -join ' ')
+    [string] $tidyFlags = if ($Fix) { '--fix --fix-errors' } else { '' }
 
     Write-Host "[lint] clang-tidy ($($units.Count) translation units)"
     foreach ($unit in $units) {
-        $cmd = "call `"$vcvars`" >nul 2>&1 && clang-tidy --quiet $tidyFlags `"$unit`" -- $clangArgs"
-        $out = cmd /c $cmd 2>&1
+        [string] $cmd = "call `"$vcvars`" >nul 2>&1 && clang-tidy --quiet $tidyFlags `"$unit`" -- $clangArgs"
+        [object[]] $out = @(cmd /c $cmd 2>&1)
         if ($LASTEXITCODE -ne 0) {
             $tidyOk = $false
             $out | ForEach-Object { Write-Host $_ }
         }
     }
 
-    # Legal constructs that are not how this codebase is written. No fixer on
-    # purpose: each is the author's judgement.
-    $restrictedSyntax = @(
-        @{
-            Pattern = 'for\s*\(\s*;\s*;\s*\)'
-            Message = 'Use `while (true)` for an infinite loop. `for (;;)` reads as a for loop someone forgot to finish writing.'
-        }
-        @{
-            # A g_ global or an o_ hook original, declared without constinit.
-            Pattern = '^inline\s+(?!constexpr\b|constinit\b)[\w:<>, ]+[*&]?\s+[go]_\w+\s*(\[[^\]]*\])?\s*(=|\{|;)'
-            Message = 'Declare a mutable global `inline constinit`: a dynamic initializer would run in DllMain under the loader lock, in an order the linker picks.'
-        }
+    # No fixer on purpose: each is the author's judgement.
+    [RestrictedSyntaxRule[]] $restrictedSyntax = @(
+        [RestrictedSyntaxRule]::new(
+            'for\s*\(\s*;\s*;\s*\)',
+            'Use `while (true)` for an infinite loop. `for (;;)` reads as a for loop someone forgot to finish writing.')
+        # A g_ global or an o_ hook original, declared without constinit.
+        [RestrictedSyntaxRule]::new(
+            '^inline\s+(?!constexpr\b|constinit\b)[\w:<>, ]+[*&]?\s+[go]_\w+\s*(\[[^\]]*\])?\s*(=|\{|;)',
+            'Declare a mutable global `inline constinit`: a dynamic initializer would run in DllMain under the loader lock, in an order the linker picks.')
     )
 
     Write-Host "[lint] restricted syntax ($($restrictedSyntax.Count) rules)"
     foreach ($path in $full) {
-        $lineNumber = 0
+        [int] $lineNumber = 0
         foreach ($line in [System.IO.File]::ReadAllLines($path)) {
             $lineNumber++
             # A rule names a construct, not a mention of one, so comments go first.
-            $code = $line -replace '//.*$', ''
+            [string] $code = $line -replace '//.*$', ''
             foreach ($rule in $restrictedSyntax) {
-                if ($code -match $rule.Pattern) {
+                [bool] $isRestricted = $code -match $rule.Pattern
+                if ($isRestricted) {
                     $syntaxOk = $false
                     Write-Host "${path}:${lineNumber}: $($rule.Message)"
                 }
@@ -118,7 +128,7 @@ if ($hasCppInScope) {
 
 # A checked-in shared.g.rs that disagrees with the @share markers means a C++
 # value moved and the commit carries a stale generated file.
-$sharedOk = $true
+[bool] $sharedOk = $true
 if (-not $Staged) {
     & pwsh -NoProfile -File (Join-Path $PSScriptRoot 'Export-SharedConstants.ps1') -Check
     $sharedOk = $LASTEXITCODE -eq 0
@@ -128,27 +138,28 @@ if (-not $Staged) {
 # fallow audit (its package.json), and the window's protocol, which `cargo
 # test` writes from protocol.rs, still matching what is committed. Skipped
 # under -Staged: these run on the project, not a file list.
-$panelOk = $true
+[bool] $panelOk = $true
 if (-not $Staged) {
-    $panel = Join-Path $root 'app\panel-tauri'
-    $script = if ($Fix) { 'lint' } else { 'lint:verify' }
+    [string] $panel = Join-Path $root 'app\panel-tauri'
+    [string] $script = if ($Fix) { 'lint' } else { 'lint:verify' }
 
     Write-Host "[lint] panel (pnpm $script)"
     & pnpm --dir $panel $script
     $panelOk = $LASTEXITCODE -eq 0
 
-    $protocol = Join-Path $panel 'ui\protocol.g.ts'
-    $before = (Get-FileHash $protocol).Hash
+    [string] $protocol = Join-Path $panel 'ui\protocol.g.ts'
+    [string] $before = (Get-FileHash $protocol).Hash
     Write-Host '[lint] window protocol (cargo test export_the_window_types)'
     & cargo test --manifest-path (Join-Path $panel 'src-tauri\Cargo.toml') --quiet export_the_window_types | Out-Null
-    $isProtocolCurrent = $LASTEXITCODE -eq 0 -and (Get-FileHash $protocol).Hash -eq $before
+    [bool] $isProtocolCurrent = $LASTEXITCODE -eq 0 -and (Get-FileHash $protocol).Hash -eq $before
     if (-not $isProtocolCurrent) {
         Write-Host '[lint] ui/protocol.g.ts was out of date with protocol.rs; it is rewritten now, commit it.'
         $panelOk = $false
     }
 }
 
-if ($formatOk -and $tidyOk -and $syntaxOk -and $sharedOk -and $panelOk) {
+[bool] $isClean = $formatOk -and $tidyOk -and $syntaxOk -and $sharedOk -and $panelOk
+if ($isClean) {
     Write-Host "[lint] clean"
     exit 0
 }

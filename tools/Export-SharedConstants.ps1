@@ -27,61 +27,118 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
-$sourceRoot = Join-Path $repoRoot 'app\native-split\src'
-$rustOutputPath = Join-Path $repoRoot 'app\panel-tauri\src-tauri\src\platform\shared.g.rs'
-$rustOutputName = 'app/panel-tauri/src-tauri/src/platform/shared.g.rs'
+# What the Rust constant's type is.
+enum SharedValueKind {
+    String
+    Integer
+}
 
-$markerPattern = '//\s*@share\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*$'
-$stringPattern = 'L?"(?<value>(?:[^"\\]|\\.)*)"'
-$integerPattern = '=\s*(?<value>-?\d+)\s*;'
+# The value found for a marker, already spelled as Rust source.
+class SharedValue {
+    [SharedValueKind] $Kind
+    [string] $RustLiteral
+
+    SharedValue([SharedValueKind] $kind, [string] $rustLiteral) {
+        $this.Kind = $kind
+        $this.RustLiteral = $rustLiteral
+    }
+}
+
+class SharedConstant {
+    [SharedValue] $Value
+    [string] $Origin
+
+    SharedConstant([SharedValue] $value, [string] $origin) {
+        $this.Value = $value
+        $this.Origin = $origin
+    }
+}
+
+# One generated file: where it goes, what it must say, and what it came from.
+class GeneratedOutput {
+    [string] $Path
+    [string] $Name
+    [string] $Text
+    [string] $From
+
+    GeneratedOutput([string] $path, [string] $name, [string] $text, [string] $from) {
+        $this.Path = $path
+        $this.Name = $name
+        $this.Text = $text
+        $this.From = $from
+    }
+}
+
+[string] $repoRoot = Split-Path -Parent $PSScriptRoot
+[string] $sourceRoot = Join-Path $repoRoot 'app\native-split\src'
+[string] $rustOutputPath = Join-Path $repoRoot 'app\panel-tauri\src-tauri\src\platform\shared.g.rs'
+[string] $rustOutputName = 'app/panel-tauri/src-tauri/src/platform/shared.g.rs'
+
+[string] $markerPattern = '//\s*@share\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*$'
+[string] $stringPattern = 'L?"(?<value>(?:[^"\\]|\\.)*)"'
+[string] $integerPattern = '=\s*(?<value>-?\d+)\s*;'
 
 # Only the escapes these values actually use.
-function ConvertFrom-CppEscapes([string]$text) {
-    $text -replace '\\\\', "`u{1}" -replace '\\"', '"' -replace "`u{1}", '\'
+function ConvertFrom-CppEscapes {
+    [OutputType([string])]
+    param([string] $text)
+    return $text -replace '\\\\', "`u{1}" -replace '\\"', '"' -replace "`u{1}", '\'
 }
 
-function ConvertTo-StringLiteral([string]$text) {
-    '"' + ($text -replace '\\', '\\' -replace '"', '\"') + '"'
+function ConvertTo-StringLiteral {
+    [OutputType([string])]
+    param([string] $text)
+    return '"' + ($text -replace '\\', '\\' -replace '"', '\"') + '"'
 }
 
-function Read-Value([string]$code) {
-    $asString = [regex]::Match($code, $stringPattern)
+function Get-RustType {
+    [OutputType([string])]
+    param([SharedValueKind] $kind)
+    if ($kind -eq [SharedValueKind]::String) {
+        return '&str'
+    }
+    return 'u32'
+}
+
+function Read-Value {
+    [OutputType([SharedValue])]
+    param([string] $code)
+    [Text.RegularExpressions.Match] $asString = [regex]::Match($code, $stringPattern)
     if ($asString.Success) {
-        $text = ''
+        [string] $text = ''
         foreach ($piece in [regex]::Matches($code, $stringPattern)) {
             $text += ConvertFrom-CppEscapes $piece.Groups['value'].Value
         }
-        return [pscustomobject]@{ Type = 'string'; Value = ConvertTo-StringLiteral $text }
+        return [SharedValue]::new([SharedValueKind]::String, (ConvertTo-StringLiteral $text))
     }
-    $asInteger = [regex]::Match($code, $integerPattern)
+    [Text.RegularExpressions.Match] $asInteger = [regex]::Match($code, $integerPattern)
     if ($asInteger.Success) {
-        return [pscustomobject]@{ Type = 'int'; Value = $asInteger.Groups['value'].Value }
+        return [SharedValue]::new([SharedValueKind]::Integer, $asInteger.Groups['value'].Value)
     }
     return $null
 }
 
-$constants = [ordered]@{}
-$files = Get-ChildItem -Path $sourceRoot -Recurse -Include '*.h', '*.cpp' | Sort-Object FullName
+[Collections.Specialized.OrderedDictionary] $constants = [ordered]@{}
+[IO.FileInfo[]] $files = @(Get-ChildItem -Path $sourceRoot -Recurse -Include '*.h', '*.cpp' | Sort-Object FullName)
 foreach ($file in $files) {
-    $relative = [IO.Path]::GetRelativePath($repoRoot, $file.FullName).Replace('\', '/')
-    $lines = @(Get-Content -LiteralPath $file.FullName)
-    $lineNumber = 0
+    [string] $relative = [IO.Path]::GetRelativePath($repoRoot, $file.FullName).Replace('\', '/')
+    [string[]] $lines = @(Get-Content -LiteralPath $file.FullName)
+    [int] $lineNumber = 0
     foreach ($line in $lines) {
         $lineNumber++
-        $marker = [regex]::Match($line, $markerPattern)
+        [Text.RegularExpressions.Match] $marker = [regex]::Match($line, $markerPattern)
         if (-not $marker.Success) {
             continue
         }
-        $name = $marker.Groups['name'].Value
+        [string] $name = $marker.Groups['name'].Value
         if ($constants.Contains($name)) {
             throw "@share $name is claimed twice: $($constants[$name].Origin) and ${relative}:$lineNumber"
         }
-        $value = Read-Value $line.Substring(0, $marker.Index)
-        $origin = "${relative}:$lineNumber"
+        [SharedValue] $value = Read-Value $line.Substring(0, $marker.Index)
+        [string] $origin = "${relative}:$lineNumber"
         if (-not $value) {
             # The statement under the marker may span several lines.
-            $statement = ''
+            [string] $statement = ''
             for ($index = $lineNumber; $index -lt $lines.Count; $index++) {
                 $statement += ' ' + ($lines[$index] -replace '//.*$', '')
                 if ($lines[$index] -match ';\s*(//.*)?$') {
@@ -94,11 +151,7 @@ foreach ($file in $files) {
         if (-not $value) {
             throw "@share $name at ${relative}:$lineNumber has no string or integer value"
         }
-        $constants[$name] = [pscustomobject]@{
-            Type   = $value.Type
-            Value  = $value.Value
-            Origin = $origin
-        }
+        $constants[$name] = [SharedConstant]::new($value, $origin)
     }
 }
 
@@ -107,28 +160,30 @@ if ($constants.Count -eq 0) {
 }
 
 # SCREAMING_SNAKE_CASE constants; the escaped literal is a Rust string as is.
-$rustTypes = @{ string = '&str'; int = 'u32' }
-$rustLines = [Collections.Generic.List[string]]::new()
+[Collections.Generic.List[string]] $rustLines = [Collections.Generic.List[string]]::new()
 $rustLines.Add('// Generated by tools\Export-SharedConstants.ps1 from the @share markers in the')
 $rustLines.Add('// native split''s C++ sources. Do not edit: the next build overwrites it, and')
 $rustLines.Add('// tools\lint.ps1 fails if a committed copy disagrees with the headers.')
 $rustLines.Add('//')
 $rustLines.Add('// Every value here is one the DLL also reads. Change it there.')
 foreach ($name in $constants.Keys) {
-    $constant = $constants[$name]
-    $rustName = ($name -creplace '(?<=[a-z0-9])(?=[A-Z])', '_').ToUpperInvariant()
+    [SharedConstant] $constant = $constants[$name]
+    [string] $rustName = ($name -creplace '(?<=[a-z0-9])(?=[A-Z])', '_').ToUpperInvariant()
+    [string] $rustType = Get-RustType $constant.Value.Kind
     $rustLines.Add('')
     $rustLines.Add("// $($constant.Origin)")
-    $rustLines.Add("pub const ${rustName}: $($rustTypes[$constant.Type]) = $($constant.Value);")
+    $rustLines.Add("pub const ${rustName}: $rustType = $($constant.Value.RustLiteral);")
 }
-$rustGenerated = ($rustLines -join "`n") + "`n"
+[string] $rustGenerated = ($rustLines -join "`n") + "`n"
 
-$outputs = @(
-    [pscustomobject]@{ Path = $rustOutputPath; Name = $rustOutputName; Text = $rustGenerated; From = "$($constants.Count) @share markers" }
+[GeneratedOutput[]] $outputs = @(
+    [GeneratedOutput]::new($rustOutputPath, $rustOutputName, $rustGenerated, "$($constants.Count) @share markers")
 )
 
 # Git may check the file out with CRLF line ends; only the text counts.
-function Read-Normalized([string]$path) {
+function Read-Normalized {
+    [OutputType([string])]
+    param([string] $path)
     if (-not (Test-Path -LiteralPath $path)) {
         return ''
     }
@@ -136,9 +191,9 @@ function Read-Normalized([string]$path) {
 }
 
 if ($Check) {
-    $isCurrent = $true
+    [bool] $isCurrent = $true
     foreach ($output in $outputs) {
-        $current = Read-Normalized $output.Path
+        [string] $current = Read-Normalized $output.Path
         if ($current -ne $output.Text) {
             Write-Host "[shared] $($output.Name) is out of date with the C++ headers." -ForegroundColor Red
             $isCurrent = $false
@@ -155,7 +210,7 @@ if ($Check) {
 
 # Only when it changed, so every build does not recompile the panel.
 foreach ($output in $outputs) {
-    $current = Read-Normalized $output.Path
+    [string] $current = Read-Normalized $output.Path
     if ($current -ne $output.Text) {
         [IO.File]::WriteAllText($output.Path, $output.Text)
     }

@@ -3,7 +3,7 @@
 # the pid we started (never by title or name), keep it off screen, capture it
 # with PrintWindow (never the screen), and end only that pid.
 
-$packageRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+[string] $packageRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 if (-not ('ExampleWin' -as [type])) {
 Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition @'
@@ -102,9 +102,22 @@ public static class ExampleWin {
 '@
 }
 
+# An example we started: its process, and the line read in flight (a report
+# can arrive between two polls, so the pending read outlives one call).
+class Example {
+  [System.Diagnostics.Process] $Process
+  [System.Threading.Tasks.Task[string]] $Read
+
+  Example([System.Diagnostics.Process] $process) {
+    $this.Process = $process
+    $this.Read = $null
+  }
+}
+
 function Start-Example {
+  [OutputType([Example])]
   param([Parameter(Mandatory)][string]$Entry, [string[]]$Flags = @())
-  $info = New-Object System.Diagnostics.ProcessStartInfo 'node'
+  [System.Diagnostics.ProcessStartInfo] $info = New-Object System.Diagnostics.ProcessStartInfo 'node'
   $info.WorkingDirectory = $packageRoot
   $info.Arguments = (@(
     '--disable-warning=ExperimentalWarning', '--enable-source-maps',
@@ -113,35 +126,43 @@ function Start-Example {
   $info.CreateNoWindow = $true
   $info.RedirectStandardInput = $true
   $info.RedirectStandardOutput = $true
-  $process = [System.Diagnostics.Process]::Start($info)
-  [pscustomobject]@{ Process = $process; Read = $null }
+  [System.Diagnostics.Process] $process = [System.Diagnostics.Process]::Start($info)
+  return [Example]::new($process)
 }
 
 function Send-Command {
-  param($Example, [hashtable]$Command)
+  [OutputType([void])]
+  param([Example]$Example, [hashtable]$Command)
   # Bytes, not WriteLine: Windows PowerShell's writer would put a BOM first.
-  $json = $Command | ConvertTo-Json -Compress
-  $bytes = [System.Text.Encoding]::UTF8.GetBytes($json + "`n")
-  $stream = $Example.Process.StandardInput.BaseStream
+  [string] $json = $Command | ConvertTo-Json -Compress
+  [byte[]] $bytes = [System.Text.Encoding]::UTF8.GetBytes($json + "`n")
+  [System.IO.Stream] $stream = $Example.Process.StandardInput.BaseStream
   $stream.Write($bytes, 0, $bytes.Length)
   $stream.Flush()
 }
 
 # The next report of `$Kind` (reports of other kinds are skipped).
 function Read-Report {
-  param($Example, [string]$Kind, [int]$Seconds = 90)
-  $deadline = [DateTime]::UtcNow.AddSeconds($Seconds)
+  [OutputType([pscustomobject])]
+  param([Example]$Example, [string]$Kind, [int]$Seconds = 90)
+  [DateTime] $deadline = [DateTime]::UtcNow.AddSeconds($Seconds)
   while ([DateTime]::UtcNow -lt $deadline) {
     if ($null -eq $Example.Read) {
       $Example.Read = $Example.Process.StandardOutput.ReadLineAsync()
     }
     if ($Example.Read.Wait(200)) {
-      $line = $Example.Read.Result
+      # Read as an object: a [string] variable would turn the end of the stream (null) into ''.
+      [object] $line = $Example.Read.Result
       $Example.Read = $null
-      if ($null -eq $line) { throw 'the example ended' }
-      if ($line.StartsWith('{')) {
-        $report = $line | ConvertFrom-Json
-        if ($report.kind -eq $Kind) { return $report }
+      if ($null -eq $line) {
+        throw 'the example ended'
+      }
+      [bool] $isJsonReport = ([string]$line).StartsWith('{')
+      if ($isJsonReport) {
+        [pscustomobject] $report = ([string]$line) | ConvertFrom-Json
+        if ($report.kind -eq $Kind) {
+          return $report
+        }
       }
     }
   }
@@ -149,25 +170,30 @@ function Read-Report {
 }
 
 function Ask {
-  param($Example, [hashtable]$Command, [string]$Kind)
+  [OutputType([pscustomobject])]
+  param([Example]$Example, [hashtable]$Command, [string]$Kind)
   Send-Command $Example $Command
-  Read-Report $Example $Kind
+  return Read-Report $Example $Kind
 }
 
 function Wait-Window {
-  param($Example)
-  $hwnd = [IntPtr]::Zero
+  [OutputType([IntPtr])]
+  param([Example]$Example)
+  [IntPtr] $hwnd = [IntPtr]::Zero
   for ($i = 0; $i -lt 120 -and $hwnd -eq [IntPtr]::Zero; $i++) {
     Start-Sleep -Milliseconds 500
     $hwnd = [ExampleWin]::Find([uint32]$Example.Process.Id)
   }
-  if ($hwnd -eq [IntPtr]::Zero) { throw 'no window' }
+  if ($hwnd -eq [IntPtr]::Zero) {
+    throw 'no window'
+  }
   [ExampleWin]::Hide($hwnd)
-  $hwnd
+  return $hwnd
 }
 
 function Stop-Example {
-  param($Example)
+  [OutputType([void])]
+  param([Example]$Example)
   if (-not $Example.Process.HasExited) {
     Stop-Process -Id $Example.Process.Id -Force -ErrorAction SilentlyContinue
   }

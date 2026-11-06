@@ -63,37 +63,39 @@ public static class OwnDesktop {
 }
 '@
 
-$genericAll = 0x10000000
-$createNoWindow = 0x08000000
-$name = "winui-svelte-$PID"
-$desktop = [OwnDesktop]::CreateDesktopW($name, [IntPtr]::Zero, [IntPtr]::Zero,
+[uint32] $genericAll = 0x10000000
+[uint32] $createNoWindow = 0x08000000
+[string] $name = "winui-svelte-$PID"
+[IntPtr] $desktop = [OwnDesktop]::CreateDesktopW($name, [IntPtr]::Zero, [IntPtr]::Zero,
   0, $genericAll, [IntPtr]::Zero)
-if ($desktop -eq [IntPtr]::Zero) {
-  $code = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+[bool] $isDesktopMissing = $desktop -eq [IntPtr]::Zero
+if ($isDesktopMissing) {
+  [int] $code = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
   throw "CreateDesktop failed with $code"
 }
 
 try {
-  $startup = New-Object OwnDesktop+StartupInfo
+  [OwnDesktop+StartupInfo] $startup = New-Object OwnDesktop+StartupInfo
   $startup.Size = [Runtime.InteropServices.Marshal]::SizeOf($startup)
   $startup.Desktop = "winsta0\$name"
-  $started = New-Object OwnDesktop+ProcessInformation
+  [OwnDesktop+ProcessInformation] $started = New-Object OwnDesktop+ProcessInformation
   # PowerShell turns $null into '' for a string argument; the application
   # name must be a real null so the command line names the program.
-  $isStarted = [OwnDesktop]::CreateProcessW([NullString]::Value, $CommandLine,
+  [bool] $isStarted = [OwnDesktop]::CreateProcessW([NullString]::Value, $CommandLine,
     [IntPtr]::Zero, [IntPtr]::Zero, $false, $createNoWindow, [IntPtr]::Zero,
     $WorkingDirectory, [ref]$startup, [ref]$started)
   if (-not $isStarted) {
-    $code = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+    [int] $code = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
     throw "CreateProcess failed with $code"
   }
 
   [void][OwnDesktop]::WaitForSingleObject($started.Process, [uint32]::MaxValue)
-  $exitCode = 0
+  [uint32] $exitCode = 0
   [void][OwnDesktop]::GetExitCodeProcess($started.Process, [ref]$exitCode)
   [void][OwnDesktop]::CloseHandle($started.Process)
   [void][OwnDesktop]::CloseHandle($started.Thread)
-  exit $exitCode
+  # The exit code's bits as the signed value `exit` takes (a crash code is above Int32.MaxValue).
+  exit [BitConverter]::ToInt32([BitConverter]::GetBytes($exitCode), 0)
 } finally {
   [void][OwnDesktop]::CloseDesktop($desktop)
 }

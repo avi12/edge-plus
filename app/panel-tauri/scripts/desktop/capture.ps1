@@ -11,6 +11,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\window-tools.ps1"
 
-$hwnd = [ExampleWin]::Find([uint32]$ProcessId)
-if ($hwnd -eq [IntPtr]::Zero) { throw 'no window' }
+[IntPtr] $hwnd = [ExampleWin]::Find([uint32]$ProcessId)
+[bool] $hasWindow = $hwnd -ne [IntPtr]::Zero
+if (-not $hasWindow) {
+  throw 'no window'
+}
 [ExampleWin]::Save($hwnd, $Path)

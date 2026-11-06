@@ -11,9 +11,9 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$node = (Get-Command node).Source
-$script = Join-Path ([IO.Path]::GetTempPath()) "edgeplus-desktop-$PID.cmd"
+[string] $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+[string] $node = (Get-Command node).Source
+[string] $script = Join-Path ([IO.Path]::GetTempPath()) "edgeplus-desktop-$PID.cmd"
 Set-Content -LiteralPath $script -Encoding ascii -Value @(
   '@echo off',
   "`"$node`" --disable-warning=ExperimentalWarning $Arguments > `"$Log`" 2>&1"
@@ -22,7 +22,7 @@ try {
   & powershell.exe -NoProfile -ExecutionPolicy Bypass `
     -File "$PSScriptRoot\run-on-desktop.ps1" `
     -CommandLine "cmd.exe /c `"$script`"" -WorkingDirectory $root
-  $code = $LASTEXITCODE
+  [int] $code = $LASTEXITCODE
   Get-Content -LiteralPath $Log -ErrorAction SilentlyContinue | Select-Object -Last 60
   exit $code
 } finally {
