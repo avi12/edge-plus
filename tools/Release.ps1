@@ -31,6 +31,8 @@
 .EXAMPLE
   pwsh tools\Release.ps1 -Version 0.0.2 -NotesFile $env:TEMP\notes-0.0.2.md
 #>
+using module .\EdgePlus.Build.psm1
+
 param(
     [Parameter(Mandatory)]
     [ValidatePattern('^\d+\.\d+\.\d+$')]
@@ -42,35 +44,35 @@ param(
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'EdgePlus.Build.psm1') -Force
 
-$repo = Get-RepoRoot
-$manifest = Get-CargoManifestPath
-$lockfile = Join-Path (Split-Path $manifest -Parent) 'Cargo.lock'
-$current = Get-ProductVersion
-$highlights = (Get-Content (Resolve-Path $NotesFile) -Raw).Trim()
+[string] $repo = Get-RepoRoot
+[string] $manifest = Get-CargoManifestPath
+[string] $lockfile = Join-Path (Split-Path $manifest -Parent) 'Cargo.lock'
+[string] $current = Get-ProductVersion
+[string] $highlights = (Get-Content (Resolve-Path $NotesFile) -Raw).Trim()
 
-$isTreeClean = -not (git -C $repo status --porcelain --untracked-files=no)
+[bool] $isTreeClean = -not (git -C $repo status --porcelain --untracked-files=no)
 if (-not $isTreeClean) {
     throw 'Commit or stash your changes first: a release is built from what is committed.'
 }
-$isNewer = [version]$Version -gt [version]$current
+[bool] $isNewer = [version]$Version -gt [version]$current
 if (-not $isNewer) {
     throw "$Version must be newer than the current $current."
 }
-$previousTag = git -C $repo describe --tags --abbrev=0
-$asset = Get-ReleaseAsset $Version
+[string] $previousTag = git -C $repo describe --tags --abbrev=0
+[ReleaseAsset] $asset = Get-ReleaseAsset $Version
 
 Write-Step "Setting the version to $Version"
 Set-ProductVersion $Version
 
 Write-Step 'Building the exe'
-$built = Build-ReleaseExe
-$releaseFolder = Join-Path $repo 'out\release'
+[string] $built = Build-ReleaseExe
+[string] $releaseFolder = Join-Path $repo 'out\release'
 New-Item -ItemType Directory -Force $releaseFolder | Out-Null
-$exe = Join-Path $releaseFolder $asset.Exe
+[string] $exe = Join-Path $releaseFolder $asset.Exe
 Copy-Item $built $exe -Force
 
-$package = & (Join-Path $PSScriptRoot 'Build-Msix.ps1') -Exe $exe
-$certificate = Join-Path $releaseFolder $asset.Certificate
+[string] $package = & (Join-Path $PSScriptRoot 'Build-Msix.ps1') -Exe $exe
+[string] $certificate = Join-Path $releaseFolder $asset.Certificate
 
 Write-Step "Committing and tagging $($asset.Tag)"
 Invoke-Checked 'git add' { git -C $repo add $manifest $lockfile }
@@ -79,8 +81,8 @@ Invoke-Checked 'git tag' { git -C $repo tag $asset.Tag }
 Invoke-Checked 'git push' { git -C $repo push origin main $asset.Tag }
 
 Write-Step 'Creating the GitHub release'
-$notes = Join-Path $releaseFolder "notes-$Version.md"
-$allChanges = "https://github.com/$($asset.Repository)/compare/$previousTag...$($asset.Tag)"
+[string] $notes = Join-Path $releaseFolder "notes-$Version.md"
+[string] $allChanges = "https://github.com/$($asset.Repository)/compare/$previousTag...$($asset.Tag)"
 Set-Content $notes "$highlights`n`n**All changes:** $allChanges`n" -Encoding utf8NoBOM
 Invoke-Checked 'gh release create' {
     gh release create $asset.Tag $package $certificate --repo $asset.Repository `

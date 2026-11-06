@@ -20,6 +20,8 @@
 .EXAMPLE
   pwsh tools\Write-UpdateManifest.ps1 -Package EdgePlus-0.2.0.msix
 #>
+using module .\EdgePlus.Build.psm1
+
 param(
     [Parameter(Mandatory)]
     [string] $Package
@@ -28,9 +30,9 @@ param(
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'EdgePlus.Build.psm1') -Force
 
-$version = Get-ProductVersion
-$packagePath = (Resolve-Path $Package).Path
-$asset = Get-ReleaseAsset $version
+[string] $version = Get-ProductVersion
+[string] $packagePath = (Resolve-Path $Package).Path
+[ReleaseAsset] $asset = Get-ReleaseAsset $version
 if ((Split-Path $packagePath -Leaf) -ne $asset.Package) {
     throw "$packagePath is not $($asset.Package), the package of Cargo.toml's version $version."
 }
@@ -42,7 +44,7 @@ $manifest = [ordered]@{
         sha256 = (Get-FileHash $packagePath -Algorithm SHA256).Hash
     }
 }
-$target = Join-Path (Get-RepoRoot) 'docs\updates.json'
+[string] $target = Join-Path (Get-RepoRoot) 'docs\updates.json'
 ($manifest | ConvertTo-Json) + "`n" | Set-Content $target -Encoding utf8NoBOM -NoNewline
 Write-Host "wrote $target"
 Get-Content $target

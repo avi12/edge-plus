@@ -17,6 +17,8 @@
 .EXAMPLE
   pwsh tools\Build-Msix.ps1 -Exe out\release\edgeplus.exe
 #>
+using module .\EdgePlus.Build.psm1
+
 param(
     [Parameter(Mandatory)]
     [string] $Exe
@@ -26,14 +28,14 @@ $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'EdgePlus.Build.psm1') -Force
 Add-Type -AssemblyName System.Drawing
 
-$repo = Get-RepoRoot
-$version = Get-ProductVersion
-$exePath = (Resolve-Path $Exe).Path
+[string] $repo = Get-RepoRoot
+[string] $version = Get-ProductVersion
+[string] $exePath = (Resolve-Path $Exe).Path
 $built = (Get-Item $exePath).VersionInfo
 if ($built.ProductVersion -ne $version) {
     throw "$exePath is version $($built.ProductVersion), but Cargo.toml says $version."
 }
-$asset = Get-ReleaseAsset $version
+[ReleaseAsset] $asset = Get-ReleaseAsset $version
 
 # Logos: the manifest names each file, the sizes are the ones the shell asks for.
 $logos = [ordered]@{
@@ -42,24 +44,24 @@ $logos = [ordered]@{
     'Square150x150Logo.png' = 150
 }
 
-$tauri = Join-Path $repo 'app\panel-tauri\src-tauri'
+[string] $tauri = Join-Path $repo 'app\panel-tauri\src-tauri'
 Write-Step 'Building the startup launcher'
 Invoke-Checked 'cargo build (launcher)' {
     cargo build --release --manifest-path (Join-Path $tauri 'Cargo.toml') -p edgeplus-launcher | Out-Host
 }
-$launcher = Join-Path $tauri 'target\release\edgeplus-launcher.exe'
+[string] $launcher = Join-Path $tauri 'target\release\edgeplus-launcher.exe'
 
-$staging = Join-Path $repo 'out\msix'
+[string] $staging = Join-Path $repo 'out\msix'
 Remove-Item -Recurse -Force $staging -ErrorAction SilentlyContinue
-$layout = Join-Path $staging 'layout'
-$assets = Join-Path $layout 'assets'
+[string] $layout = Join-Path $staging 'layout'
+[string] $assets = Join-Path $layout 'assets'
 New-Item -ItemType Directory -Force $assets | Out-Null
 Copy-Item $exePath (Join-Path $layout 'edgeplus.exe')
 Copy-Item $launcher $layout
 
 Write-Step 'Drawing the logos'
-$icon = New-Object System.Drawing.Icon (Join-Path $tauri 'icons\icon.ico'), 256, 256
-$source = $icon.ToBitmap()
+[System.Drawing.Icon] $icon = New-Object System.Drawing.Icon (Join-Path $tauri 'icons\icon.ico'), 256, 256
+[System.Drawing.Bitmap] $source = $icon.ToBitmap()
 foreach ($name in $logos.Keys) {
     $size = $logos[$name]
     $bitmap = New-Object System.Drawing.Bitmap $size, $size
@@ -73,12 +75,12 @@ foreach ($name in $logos.Keys) {
 $source.Dispose()
 $icon.Dispose()
 
-$manifestPath = Join-Path $layout 'AppxManifest.xml'
+[string] $manifestPath = Join-Path $layout 'AppxManifest.xml'
 Copy-Item (Join-Path $repo 'app\package\AppxManifest.xml') $manifestPath
 $document = [xml](Get-Content $manifestPath -Raw)
 $document.Package.Identity.Version = "$version.0"
 $document.Save($manifestPath)
-$publisher = $document.Package.Identity.Publisher
+[string] $publisher = $document.Package.Identity.Publisher
 
 $certificate = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert |
     Where-Object { $_.Subject -eq $publisher -and $_.NotAfter -gt (Get-Date) } |
@@ -90,17 +92,17 @@ if (-not $certificate) {
 $sdk = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.*\x64" -Directory |
     Sort-Object { [version]$_.Parent.Name } -Descending |
     Select-Object -First 1
-$makeappx = Join-Path $sdk.FullName 'makeappx.exe'
-$signtool = Join-Path $sdk.FullName 'signtool.exe'
+[string] $makeappx = Join-Path $sdk.FullName 'makeappx.exe'
+[string] $signtool = Join-Path $sdk.FullName 'signtool.exe'
 
-$package = Join-Path (Split-Path $exePath -Parent) $asset.Package
+[string] $package = Join-Path (Split-Path $exePath -Parent) $asset.Package
 Write-Step "Packing and signing $($asset.Package)"
 Invoke-Checked 'makeappx pack' { & $makeappx pack /d $layout /p $package /o | Out-Host }
 Invoke-Checked 'signtool sign' {
     & $signtool sign /fd SHA256 /sha1 $certificate.Thumbprint /tr http://timestamp.digicert.com /td SHA256 $package | Out-Host
 }
 
-$certificateFile = Join-Path (Split-Path $exePath -Parent) $asset.Certificate
+[string] $certificateFile = Join-Path (Split-Path $exePath -Parent) $asset.Certificate
 Export-Certificate -Cert $certificate -FilePath $certificateFile | Out-Null
 Remove-Item -Recurse -Force $staging
 

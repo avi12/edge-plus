@@ -2,6 +2,15 @@
 
 Set-StrictMode -Version Latest
 
+class ReleaseAsset {
+    [string] $Repository
+    [string] $Tag
+    [string] $Exe
+    [string] $Package
+    [string] $Certificate
+    [string] $Url
+}
+
 function Get-RepoRoot {
     return Split-Path -Parent $PSScriptRoot
 }
@@ -107,9 +116,11 @@ function Build-ReleaseExe {
 # A release's files on GitHub, as the release attaches them (the package and the
 # certificate that makes Windows accept it) and the update manifest names them.
 # The exe is only the build the package carries.
-function Get-ReleaseAsset([string] $version) {
+function Get-ReleaseAsset {
+    [OutputType([ReleaseAsset])]
+    param([string] $version)
     $repository = 'avi12/edge-plus'
-    return [pscustomobject]@{
+    return [ReleaseAsset]@{
         Repository = $repository
         Tag        = "v$version"
         Exe        = "EdgePlus-$version.exe"
