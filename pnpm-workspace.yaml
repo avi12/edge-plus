@@ -5,3 +5,5 @@ allowBuilds:
   "@microsoft/winappcli": false
   # Installs its platform binary, which bundling the window needs (as in avi/pade).
   esbuild: true
+minimumReleaseAgeExclude:
+  - winui-svelte@0.0.4
