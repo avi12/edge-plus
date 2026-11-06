@@ -61,6 +61,7 @@
 <style>
   .page {
     gap: 4px;
-    padding: 4px 16px 16px;
+    padding: 16px;
+    padding-top: 4px;
   }
 </style>

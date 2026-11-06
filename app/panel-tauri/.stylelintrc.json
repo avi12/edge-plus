@@ -5,6 +5,7 @@
   "rules": {
     "plugin/stylelint-no-indistinguishable-colors": null,
     "color-format/format": null,
+    "alpha-value-notation": "number",
     "prettier/prettier": null,
     "matterialize/stylelint-require-units": null,
     "at-rule-descriptor-value-no-unknown": null,
