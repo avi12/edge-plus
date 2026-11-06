@@ -1,9 +1,7 @@
 {
-  "version": "0.1.0",
-  "url": "https://github.com/avi12/edge-plus/releases/download/v0.1.0/EdgePlus-0.1.0.exe",
-  "sha256": "A41131DEEF9CFA9F11FFCF71FB74B4EC1751969A1334D6A639D8582BDB74EF09",
-  "installer": {
-    "url": "https://github.com/avi12/edge-plus/releases/download/v0.1.0/EdgePlus-0.1.0-setup.msi",
-    "sha256": "6D2618A64B861985157152F7D454977A8C3EDFA17BFA232A457F93391833A7BD"
+  "version": "0.2.0",
+  "msix": {
+    "url": "https://github.com/avi12/edge-plus/releases/download/v0.2.0/EdgePlus-0.2.0.msix",
+    "sha256": "0FA283723E6C5BEF4349AD09A7D653D4D494948F03B38EFC754C6FB0A4CD7B90"
   }
 }
