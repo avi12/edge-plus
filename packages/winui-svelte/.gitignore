@@ -1,6 +1,0 @@
-.winapp
-node_modules
-# pnpm build: the published output, and the license files it copies in.
-dist
-LICENSE
-NOTICE
