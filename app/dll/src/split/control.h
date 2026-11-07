@@ -320,6 +320,9 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     MH_EnableHook(edge::At(edge155::rva::SkPath_arcTo));
     MH_EnableHook(edge::At(edge155::rva::SkPath_addRRect));
     MH_EnableHook(edge::At(edge155::rva::SkPath_lineTo));
+    MH_EnableHook(edge::At(edge155::rva::SkRRect_setRectXY));
+    MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_IsLeftSplitTab));
+    MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_IsRightSplitTab));
     MH_EnableHook(edge::At(edge155::rva::Canvas_DrawRoundRect));
     // Its tab frames (tab_frame.h).
     MH_EnableHook(
