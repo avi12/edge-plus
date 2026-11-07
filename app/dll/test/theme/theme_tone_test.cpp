@@ -56,6 +56,20 @@ void RunChecks() {
         "zero keeps the colour, a hundred takes the other");
   Check(Blend(0x8000ff00, kBlack, 50) == 0xff007f00,
         "the blend is opaque and per channel");
+
+  const double blackOnWhite = ContrastRatio(kBlack, kWhite);
+  Check(blackOnWhite > 20.99 && blackOnWhite < 21.01,
+        "black on white is the full 21:1");
+  Check(ContrastRatio(kNavy, kNavy) == 1.0, "a colour on itself is 1:1");
+  Check(ContrastRatio(kBlack, kWhite) == ContrastRatio(kWhite, kBlack),
+        "the ratio does not depend on the order");
+  // The Cyberpunk UX kit's measurements: its red reads 5.36:1 under black ink,
+  // and its #007979 teal falls short as text on black.
+  const double kitRedUnderBlack = ContrastRatio(0xfff72944, kBlack);
+  Check(kitRedUnderBlack > 5.3 && kitRedUnderBlack < 5.4,
+        "the kit's red under black ink measures as the kit does");
+  Check(ContrastRatio(0xff007979, kBlack) < kReadableContrast,
+        "the kit's teal is too dim for text on black");
 }
 
 }  // namespace
