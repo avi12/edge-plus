@@ -2,7 +2,7 @@
 > host, the share strip and picker, the chat-button reskin and the "Browser
 > assistant" choice in the panel) was taken out of Edge+ on 2026-10-19.
 > Copilot is the only assistant. The code lives in git history: the last
-> commit that still has it is `4ee5113`, so `git show 4ee5113:app/native-split/src/gemini.h`
+> commit that still has it is `4ee5113`, so `git show 4ee5113:app/dll/src/gemini.h`
 > (and `glic.h`, `share.h`, `glic_host_script.h`, ...) reads it. The reverse
 > engineering below is kept because section 12 (why the chat button's chevron
 > needs `IsConsumerCopilotLabelButtonWithDropdownEnabled` answered "yes") still
@@ -13,7 +13,7 @@
 Targets: Chromium source at tag `155.0.8059.85` (the Chrome build installed
 beside Edge), `chrome.dll` 155.0.8059.85, and `msedge.dll` 155.0.4283.45. All
 Edge addresses are **RVAs**; any the DLL uses live only in
-`app/native-split/src/edge/offsets.h`.
+`app/dll/src/edge/offsets.h`.
 
 The question: can Edge's chat button open Gemini, with the page context and
 multi-tab sharing Gemini gets in Chrome?
@@ -292,7 +292,7 @@ Google serves it. Section 7 records what was implemented first.
 The implementation is the design above, built into the existing injected DLL
 (no new process) and driven by the panel's config file.
 
-- **DLL** (`app/native-split/`): `assistant.h` hooks the chat-action's
+- **DLL** (`app/dll/`): `assistant.h` hooks the chat-action's
   `GetNormalStateImage` / `GetPressedStateImage` (`0x2a93360` / `0x3407240`),
   `GetButtonTooltipText` (`0x3407230`), `GetAccessibleName` (`0xdac0660`) and
   `OnClick` (`0xdac0670`), plus the button's `UpdateLabelFromController`

@@ -1,7 +1,7 @@
 # The pane bar's ⋯ menu — Edge's items and the "Add pane" d-pad row
 
 Target: `msedge.dll` 155.0.4283.45. All addresses are **RVAs**; their one home
-in code is `app/native-split/src/edge/offsets.h`.
+in code is `app/dll/src/edge/offsets.h`.
 
 The ⋯ button in a pane's hover bar opens `SplitWindowControlMenu`, not the
 toolbar's `SplitTabMenuModel` (`split-menu.md`). We append one row to it:

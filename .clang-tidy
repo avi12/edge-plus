@@ -1,4 +1,4 @@
-# Static analysis for the native split's C++ (app/native-split/src and test).
+# Static analysis for the native split's C++ (app/dll/src and test).
 #
 # Ported from avi/any-stt's .clang-tidy, which mirrors avi/youtube-time-manager:
 # .clang-format owns layout (their @stylistic/eslint half) and this file owns
@@ -159,7 +159,7 @@ Checks: >
 
 # Only our own headers; never report inside the Windows SDK or external/
 # (MinHook, vendored).
-HeaderFilterRegex: 'native-split[/\\](src|test)[/\\].*\.h$'
+HeaderFilterRegex: 'dll[/\\](src|test)[/\\].*\.h$'
 # Everything is an error EXCEPT cognitive-complexity: that mirrors fallow's
 # maxCognitive:30, and it is report-only — it names the next decomposition
 # targets without failing the gate.

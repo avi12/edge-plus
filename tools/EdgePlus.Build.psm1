@@ -30,7 +30,7 @@ function Get-ReleaseFolder {
 function Get-BuildScriptPath {
     [OutputType([string])]
     param()
-    return Join-Path (Get-RepoRoot) 'app\native-split\edgeplus-split.buildscript'
+    return Join-Path (Get-RepoRoot) 'app\dll\edgeplus-split.buildscript'
 }
 
 # A tool that needs a compiler flag reads it from the buildscript instead of

@@ -2,7 +2,7 @@
 
 Live feature switches for Microsoft Edge (see `README.md`):
 
-- `app/native-split/` — C++20 DLL injected into Edge's browser process that grows
+- `app/dll/` — C++20 DLL injected into Edge's browser process that grows
   Edge's native split view to N panes; pinned to one `msedge.dll` build
   (`src/edge/offsets.h`), reverse-engineered in `docs/re/`
 - `app/panel-tauri/` — the panel that toggles each feature and injects the DLL:
@@ -77,7 +77,7 @@ for C++, rustfmt and clippy for the core, oxlint's `curly` for the window). Rule
 - An Edge ABI value (an RVA, a struct offset, a vtable slot) is not a magic
   number to extract elsewhere: its one home is `src/edge/offsets.h`.
 
-# C++ (`app/native-split/`)
+# C++ (`app/dll/`)
 
 ## Naming
 
@@ -154,7 +154,7 @@ name (`FixEdge`) over and holds the old names it has to match (that folder,
 left are what `edge/legacy/legacy_cleanup.rs` and `setup/startup_entry.rs`
 match from the extension and earlier panels. A value the panel and the DLL both
 need (event names, the config wire layout, data-folder paths) has one home per
-side and must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h}`).
+side and must match the DLL's (`app/dll/src/{config.h,dllmain.cpp,log.h}`).
 
 - **The core** (`src-tauri/src/`, Rust): process, single instance, settings,
   Edge watching, themes, injection and updates, one module per concern —
@@ -197,7 +197,7 @@ side and must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h
   (`build.rs`): a stale one, carried silently, once replaced Edge's current DLL
   at panel start.
 - **Shared values** come from the DLL's sources: `// @share Name` markers in
-  `app/native-split/src` become `src-tauri/src/platform/shared.g.rs`
+  `app/dll/src` become `src-tauri/src/platform/shared.g.rs`
   (`tools/Export-SharedConstants.ps1`; the lint gate checks it). Put a marker on
   its own line above the declaration it exports.
 - **Naming**: Rust's own (`snake_case` functions and locals, `PascalCase`
@@ -243,7 +243,7 @@ side and must match the DLL's (`app/native-split/src/{config.h,dllmain.cpp,log.h
 
 # Native split: build and test
 
-- Build: `app/native-split/build.cmd`. Unit tests: `app/native-split/test/run.cmd`
+- Build: `app/dll/build.cmd`. Unit tests: `app/dll/test/run.cmd`
   (every `*_test.cpp`).
 - Test only against a throwaway Edge launched with its own `--user-data-dir`
   marker, and select it **only by that marker** — never by process name, start

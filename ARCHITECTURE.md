@@ -58,8 +58,8 @@ the panel can tell whether it is running without tracking any process.*
 | Core | `app/panel-tauri/src-tauri/src/` | Rust | Process, single instance, every feature, the settings, Edge watching, themes, injection, updates; the View the window renders. |
 | Native calls | `app/panel-tauri/src-tauri/edge-native/` | Rust | Every Win32 / WinRT call the core makes; the only `unsafe`. |
 | Window | `app/panel-tauri/ui/` | TypeScript / WinUI 3 | A Node process the core starts: draws the View, sends back Actions, one JSON line each way. |
-| Split DLL | `app/native-split/` | C++20 | Runs inside Edge. Hooks, control window, hotkeys, tab drags. |
-| Injector | `edge-native/src/process/inject.rs`, `app/native-split/src/inject.cpp` | Rust / C++ | The panel's injector; `inject.exe` is a development harness. |
+| Split DLL | `app/dll/` | C++20 | Runs inside Edge. Hooks, control window, hotkeys, tab drags. |
+| Injector | `edge-native/src/process/inject.rs`, `app/dll/src/inject.cpp` | Rust / C++ | The panel's injector; `inject.exe` is a development harness. |
 | Reverse-engineering notes | `docs/re/` | Markdown | How each Edge hook was found and why it is safe. |
 
 ## Life of a change
@@ -244,7 +244,7 @@ and splits without clicks.
 Edge's split view only ever holds two panes. The DLL grows it past two:
 
 1. **The tree.** `pane_tree.h` keeps each split's layout as a tree of row and
-   column nodes with weights. It is pure, so `app/native-split/test/` can test
+   column nodes with weights. It is pure, so `app/dll/test/` can test
    it without Edge.
 2. **Edge's data.** The split's member tabs are the source of truth Edge uses
    to feed panes. `split_data.h` changes them through Edge's own
@@ -300,18 +300,18 @@ with the tools in `docs/re/`.
 |---|---|
 | What a switch does at startup | `app/panel-tauri/src-tauri/src/dll/dll_sync.rs` |
 | How the panel finds Edge's build | `app/panel-tauri/src-tauri/src/edge/edge_watch.rs` |
-| How the DLL starts and stops | `app/native-split/src/dllmain.cpp` |
-| The config the panel writes | `app/native-split/src/core/config.h`, `src-tauri/src/dll/config_wire.rs` |
-| Which Edge functions are hooked | `app/native-split/src/edge/hooks.h` |
-| How a split changes | `app/native-split/src/split/split_ops.h` |
-| How a tab is dragged into a split | `app/native-split/src/chrome/tabs/tabdrag.h` |
+| How the DLL starts and stops | `app/dll/src/dllmain.cpp` |
+| The config the panel writes | `app/dll/src/core/config.h`, `src-tauri/src/dll/config_wire.rs` |
+| Which Edge functions are hooked | `app/dll/src/edge/hooks.h` |
+| How a split changes | `app/dll/src/split/split_ops.h` |
+| How a tab is dragged into a split | `app/dll/src/chrome/tabs/tabdrag.h` |
 | How an Edge function was found | `docs/re/` |
 
 ## Building and testing
 
 ```powershell
-app\native-split\build.cmd              # the DLL (MSVC) -> build\edgeplus-split.dll
-app\native-split\test\run.cmd           # the DLL's pure-logic tests
+app\dll\build.cmd              # the DLL (MSVC) -> build\edgeplus-split.dll
+app\dll\test\run.cmd           # the DLL's pure-logic tests
 pnpm --dir app\panel-tauri build        # the panel, with the DLL and window kit embedded
 pnpm --dir app\panel-tauri test         # the panel's tests (window and core)
 pwsh tools\lint.ps1                     # clang-format, clang-tidy, the panel's linters

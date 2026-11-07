@@ -1,6 +1,6 @@
 // Builds the Tauri app and embeds the split DLL.
 //
-// The DLL is rebuilt (app/native-split/build.cmd) whenever any of its sources
+// The DLL is rebuilt (app/dll/build.cmd) whenever any of its sources
 // is newer than it, not only when it is missing: a stale one, carried silently,
 // once replaced Edge's current DLL at panel start. The fresh DLL is copied into
 // OUT_DIR, where dll/payload.rs embeds it.
@@ -26,15 +26,15 @@ fn main() {
     tauri_build::build();
 
     let manifest = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
-    let native_split = manifest.join("..").join("..").join("native-split");
-    let dll = native_split.join("build").join(DLL_NAME);
-    let sources = split_sources(&native_split);
+    let dll_folder = manifest.join("..").join("..").join("dll");
+    let dll = dll_folder.join("build").join(DLL_NAME);
+    let sources = split_sources(&dll_folder);
     for source in &sources {
         println!("cargo:rerun-if-changed={}", source.display());
     }
     println!(
         "cargo:rerun-if-changed={}",
-        native_split.join("src").display()
+        dll_folder.join("src").display()
     );
 
     let is_stale = modified(&dll).is_none_or(|built| {
@@ -47,15 +47,15 @@ fn main() {
         // NoDefaultCurrentDirectoryInExePath is set.
         let status = Command::new("cmd")
             .arg("/c")
-            .arg(native_split.join("build.cmd"))
-            .current_dir(&native_split)
+            .arg(dll_folder.join("build.cmd"))
+            .current_dir(&dll_folder)
             .status()
-            .expect("run app/native-split/build.cmd");
-        assert!(status.success(), "app/native-split/build.cmd failed");
+            .expect("run app/dll/build.cmd");
+        assert!(status.success(), "app/dll/build.cmd failed");
     }
     assert!(
         dll.exists(),
-        "edgeplus carries {DLL_NAME} inside itself and cannot find it at {}. Build it first: app\\native-split\\build.cmd",
+        "edgeplus carries {DLL_NAME} inside itself and cannot find it at {}. Build it first: app\\dll\\build.cmd",
         dll.display()
     );
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR"));
@@ -117,12 +117,12 @@ fn collect_all(folder: &Path, files: &mut Vec<PathBuf>) {
     }
 }
 
-fn split_sources(native_split: &Path) -> Vec<PathBuf> {
+fn split_sources(dll_folder: &Path) -> Vec<PathBuf> {
     let mut sources: Vec<PathBuf> = BUILD_FILES
         .iter()
-        .map(|name| native_split.join(name))
+        .map(|name| dll_folder.join(name))
         .collect();
-    collect(&native_split.join("src"), &mut sources);
+    collect(&dll_folder.join("src"), &mut sources);
     sources
 }
 

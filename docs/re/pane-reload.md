@@ -1,7 +1,7 @@
 # Reloading one pane of a grown split
 
 Target: `msedge.dll` 156.0.4314.42. All addresses are **RVAs**; their one home in
-code is `app/native-split/src/edge/offsets.h`.
+code is `app/dll/src/edge/offsets.h`.
 
 The toolbar's reload button, F5 and Ctrl+R all end in
 `chrome::Reload` / `ReloadBypassingCache` (`0xa2b47c3`, `0xa2b4b59`), thin

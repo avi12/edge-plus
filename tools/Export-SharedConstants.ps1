@@ -70,7 +70,7 @@ class GeneratedOutput {
 }
 
 [string] $repoRoot = Split-Path -Parent $PSScriptRoot
-[string] $sourceRoot = Join-Path $repoRoot 'app\native-split\src'
+[string] $sourceRoot = Join-Path $repoRoot 'app\dll\src'
 [string] $rustOutputPath = Join-Path $repoRoot 'app\panel-tauri\src-tauri\src\platform\shared.g.rs'
 [string] $rustOutputName = 'app/panel-tauri/src-tauri/src/platform/shared.g.rs'
 
@@ -156,7 +156,7 @@ foreach ($file in $files) {
 }
 
 if ($constants.Count -eq 0) {
-    throw 'No @share markers found under app\native-split\src. The generator would empty shared.g.rs.'
+    throw 'No @share markers found under app\dll\src. The generator would empty shared.g.rs.'
 }
 
 # SCREAMING_SNAKE_CASE constants; the escaped literal is a Rust string as is.

@@ -22,7 +22,7 @@ words the user reads are one source per side: `find_text::kRegExpName`
 Evidence: **[run]** observed in a throwaway Edge (own `--user-data-dir` marker
 `edgeplus-askg-live`, `--inprivate --disable-sync --disable-extensions`, the bar
 and the page captured with `PrintWindow`, keys posted to the throwaway's own
-windows); **[unit]** a host unit test under `app/native-split/test/`; **[infer]**
+windows); **[unit]** a host unit test under `app/dll/test/`; **[infer]**
 reasoned from disassembly, not run.
 
 ## Parts

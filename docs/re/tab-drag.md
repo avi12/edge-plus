@@ -1,7 +1,7 @@
 # Drag a tab into a split
 
 Target: `msedge.dll` 155.0.4283.45. All addresses are **RVAs**; their one home
-in code is `app/native-split/src/edge/offsets.h`.
+in code is `app/dll/src/edge/offsets.h`.
 
 **What the user does:**
 

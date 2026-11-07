@@ -166,13 +166,13 @@ void Hook(Delegate* self, int cmd, int flags) {
         SplitTabId id; GetSplitTabId(model, &id);             // 0xa265776
         SplitTabData* data = TabStripModel__GetSplitData(tab_strip, id); // 0xa2677a4
         Direction d = (cmd==0x6ac)?Up:(cmd==0x6ad)?Down:(cmd==0x6ae)?Left:Right;
-        InsertPane(tab_strip, data, d);   // repo native-split entry point
+        InsertPane(tab_strip, data, d);   // repo split entry point
         return;
     }
     orig(self, cmd, flags);
 }
 ```
-- `InsertPane` is the repo's N-pane insertion routine (the `native-split` work). The in-DLL primitives it can build on are `TabStripModel::AddToNewSplit` `0xa273926`, `AddToSplitImpl` `0xa273e30`, `UpdateSplitLayout` `0xa2727ba` (takes a layout/orientation arg in `r8d`), and `InsertDetachedSplitTabAt` `0xa26a76e`. Direction ↔ orientation follows the existing location enum used by `GetIconForCommandId`/`split_tabs::GetLastActiveTabLocation` (`0xa23d7fe`): {0 left, 1 right, 2 top/up, 3 bottom/down}.
+- `InsertPane` is the repo's N-pane insertion routine (the split work). The in-DLL primitives it can build on are `TabStripModel::AddToNewSplit` `0xa273926`, `AddToSplitImpl` `0xa273e30`, `UpdateSplitLayout` `0xa2727ba` (takes a layout/orientation arg in `r8d`), and `InsertDetachedSplitTabAt` `0xa26a76e`. Direction ↔ orientation follows the existing location enum used by `GetIconForCommandId`/`split_tabs::GetLastActiveTabLocation` (`0xa23d7fe`): {0 left, 1 right, 2 top/up, 3 bottom/down}.
 - Keep the `[model+0x5c]/+0x60` optional in mind: when the menu was opened from a per-tab context menu it targets that specific tab; `GetSplitTabId` already handles both cases, so reuse it rather than re-deriving the active tab.
 
 ### Not required

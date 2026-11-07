@@ -13,7 +13,7 @@ and cut at the corner.*
 
 - Windows 10 version 2004 (build 19041) or later, 64-bit.
 - Microsoft Edge (Stable, 64-bit) 156.0.4314.58, the one build the DLL is
-  pinned to (`app/native-split/src/edge/offsets.h`). On any other build every
+  pinned to (`app/dll/src/edge/offsets.h`). On any other build every
   feature that calls into `msedge.dll` pauses itself and Edge is left
   untouched; see *Setup*.
 - Run the panel as the same Windows user that runs Edge.
@@ -21,7 +21,7 @@ and cut at the corner.*
 ## Features
 
 Everything below runs inside Edge from one DLL the panel injects — no
-extension (`app/native-split`, reverse-engineered in `docs/re/`) — except
+extension (`app/dll`, reverse-engineered in `docs/re/`) — except
 hiding the developer-mode prompt, which only edits Edge's `Preferences`.
 
 ### Split view
@@ -52,7 +52,7 @@ hiding the developer-mode prompt, which only edits Edge's `Preferences`.
   trailing bottom corner (in a split, only the focused pane's tab), the
   selected tab is filled in the theme's neon, and a horizontal tab loses its
   flared feet. Edge's own outline is reshaped, so nothing is painted over the
-  tab (`app/native-split/src/chrome/tabs/tab_shape.h`).
+  tab (`app/dll/src/chrome/tabs/tab_shape.h`).
 - **Settings and extensions pages follow the theme** — `edge://settings` and
   `edge://extensions` take their light or dark from Windows or Edge's
   Appearance setting, never from the theme, so a dark theme on a light Windows
@@ -97,7 +97,7 @@ app/
   panel-tauri/   the panel: a Rust core (its edge-native crate holds all its
                  Win32) and a WinUI 3 window drawn from TypeScript, with one
                  switch per feature, in titled sections
-  native-split/  the C++ DLL the panel injects into Edge's browser process
+  dll/           the C++ DLL the panel injects into Edge's browser process
   package/       the MSIX manifest the panel is packaged with
 ```
 
@@ -144,7 +144,7 @@ SDK runtime its window needs, for the current user.
 
 ![The Edge+ panel](https://github.com/user-attachments/assets/428c98e9-b675-4023-a4cb-77e4c2faa34b)
 
-The split DLL is pinned to one `msedge.dll` build (`app/native-split/src/edge/offsets.h`);
+The split DLL is pinned to one `msedge.dll` build (`app/dll/src/edge/offsets.h`);
 on any other build it refuses to hook and the split simply does nothing, so it is
 always safe to leave on. The panel reads that build from `offsets.h` at compile
 time and compares it with the `msedge.dll` each Edge browser process actually
@@ -170,8 +170,8 @@ pwsh ..\..\tools\lint.ps1    # the C++ gate and the panel's own linters
 The native split DLL:
 
 ```powershell
-app\native-split\build.cmd       # -> build\edgeplus-split.dll and inject.exe
-app\native-split\test\run.cmd    # the pure-logic unit tests
+app\dll\build.cmd       # -> build\edgeplus-split.dll and inject.exe
+app\dll\test\run.cmd    # the pure-logic unit tests
 pwsh tools\lint.ps1              # clang-format/-tidy for the C++
 ```
 

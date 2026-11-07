@@ -2,7 +2,7 @@
 
 How a pane of the N-pane native split is dragged to a new position: the
 open-source approaches it copies, the rules adopted, and the Edge internals the
-DLL uses. Code: `app/native-split/src/` — `pane_tree.h` (tree edits), `dock.h`
+DLL uses. Code: `app/dll/src/` — `pane_tree.h` (tree edits), `dock.h`
 (drop zones), `grip.h` (the grip button), `drag.h` (the session), `overlay.h`
 (the preview).
 

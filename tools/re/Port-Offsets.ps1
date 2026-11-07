@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Port app/native-split/src/edge/offsets.h from one msedge.dll build to the next.
+  Port app/dll/src/edge/offsets.h from one msedge.dll build to the next.
 
 .DESCRIPTION
   Needs only the two public PDBs (Export-Symbols.ps1 turns each into a
@@ -41,7 +41,7 @@
   pwsh tools\re\Port-Offsets.ps1 -OldPdb old\msedge.dll.pdb -NewPdb new\msedge.dll.pdb -NewDll "...\msedge.dll" -Table docs\re\port-4314.md
 #>
 param(
-    [string] $Offsets = (Join-Path $PSScriptRoot '..\..\app\native-split\src\edge\offsets.h'),
+    [string] $Offsets = (Join-Path $PSScriptRoot '..\..\app\dll\src\edge\offsets.h'),
     [Parameter(Mandatory)]
     [string] $OldPdb,
     [Parameter(Mandatory)]

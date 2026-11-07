@@ -41,7 +41,7 @@ if ($InstallHook) {
 }
 
 # external\ (MinHook) is vendored and stays close to upstream, so it is not linted.
-[string] $nativeRoot = 'app/native-split'
+[string] $nativeRoot = 'app/dll'
 function Select-Sources {
     [OutputType([string[]])]
     param([string[]] $Paths)
