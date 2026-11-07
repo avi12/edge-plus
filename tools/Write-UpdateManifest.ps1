@@ -4,7 +4,7 @@
   out whether a newer release exists.
 
 .DESCRIPTION
-  Names the version in app\panel-tauri\src-tauri\Cargo.toml, where that
+  Names the version in app\panel\src-tauri\Cargo.toml, where that
   release's MSIX is (the asset EdgePlus-<version>.msix on the GitHub release)
   and its SHA-256, which an installed copy checks its download against.
   tools\Release.ps1 runs it after the package is attached to the release and

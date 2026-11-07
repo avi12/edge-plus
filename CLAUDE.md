@@ -5,7 +5,7 @@ Live feature switches for Microsoft Edge (see `README.md`):
 - `app/dll/` — C++20 DLL injected into Edge's browser process that grows
   Edge's native split view to N panes; pinned to one `msedge.dll` build
   (`src/edge/offsets.h`), reverse-engineered in `docs/re/`
-- `app/panel-tauri/` — the panel that toggles each feature and injects the DLL:
+- `app/panel/` — the panel that toggles each feature and injects the DLL:
   a Rust core (every Win32 call in its `edge-native` crate) and a WinUI 3
   window drawn from TypeScript
 - `app/package/` — the MSIX manifest; `tools/Build-Msix.ps1` packs and signs
@@ -142,7 +142,7 @@ what it is, an Edge quirk being worked around, a required ordering or lifetime,
 a dead end recorded so nobody retries it. Delete comments that restate the code,
 and above all any comment that no longer matches it.
 
-# The panel (`app/panel-tauri/`)
+# The panel (`app/panel/`)
 
 A Rust core and a WinUI 3 window drawn from TypeScript, ported from the WinUI /
 C# panel (in git history before it was removed) and **pixel-identical to it**:
@@ -205,7 +205,7 @@ side and must match the DLL's (`app/dll/src/{config.h,dllmain.cpp,log.h}`).
   `is`/`has`/`can`/`should` booleans and full words everywhere (clippy's
   `min-ident-chars` and oxlint's `id-length` enforce it). The `if` and enum
   rules apply.
-- **Build, test, run** (in `app/panel-tauri`): `pnpm restore` once, `pnpm
+- **Build, test, run** (in `app/panel`): `pnpm restore` once, `pnpm
   build` (the kit, then the release exe), `pnpm test` (`node --test` and `cargo
   test`), `pnpm app` (the full panel from source), and `pnpm dev` (the real Rust core in a
   sandbox, with the window kept up for good: `ui/dev/dev-server.ts`). The

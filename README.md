@@ -94,7 +94,7 @@ is in git history at `4ee5113`; the notes are in
 
 ```
 app/
-  panel-tauri/   the panel: a Rust core (its edge-native crate holds all its
+  panel/         the panel: a Rust core (its edge-native crate holds all its
                  Win32) and a WinUI 3 window drawn from TypeScript, with one
                  switch per feature, in titled sections
   dll/           the C++ DLL the panel injects into Edge's browser process
@@ -133,7 +133,7 @@ Add-AppxPackage EdgePlus-<version>.msix
 To build it yourself:
 
 ```powershell
-cd app\panel-tauri
+cd app\panel
 pnpm install; pnpm restore    # once: the Windows App SDK and the window's bindings
 pnpm build                    # -> src-tauri\target\release\edgeplus.exe
 ```
@@ -157,7 +157,7 @@ user's choices so they apply again on a supported build, says so on each card
 
 ## Develop
 
-The panel (Rust, Node 24 with pnpm, Windows App SDK 2.2; in `app/panel-tauri`):
+The panel (Rust, Node 24 with pnpm, Windows App SDK 2.2; in `app/panel`):
 
 ```powershell
 pnpm app       # the full panel from source (it injects into Edge)

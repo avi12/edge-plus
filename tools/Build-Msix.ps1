@@ -172,7 +172,7 @@ function New-SignedPackage {
 Assert-ExeVersion $exePath $version
 [ReleaseAsset] $asset = Get-ReleaseAsset $version
 
-[string] $tauriFolder = Join-Path $repo 'app\panel-tauri\src-tauri'
+[string] $tauriFolder = Join-Path $repo 'app\panel\src-tauri'
 [string] $launcherPath = Build-Launcher $tauriFolder
 
 [string] $stagingFolder = Join-Path $repo 'out\msix'

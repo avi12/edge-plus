@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Generates app\panel-tauri\src-tauri\src\platform\shared.g.rs from the @share
+  Generates app\panel\src-tauri\src\platform\shared.g.rs from the @share
   markers in the native split's C++ sources.
 
 .DESCRIPTION
@@ -71,8 +71,8 @@ class GeneratedOutput {
 
 [string] $repoRoot = Split-Path -Parent $PSScriptRoot
 [string] $sourceRoot = Join-Path $repoRoot 'app\dll\src'
-[string] $rustOutputPath = Join-Path $repoRoot 'app\panel-tauri\src-tauri\src\platform\shared.g.rs'
-[string] $rustOutputName = 'app/panel-tauri/src-tauri/src/platform/shared.g.rs'
+[string] $rustOutputPath = Join-Path $repoRoot 'app\panel\src-tauri\src\platform\shared.g.rs'
+[string] $rustOutputName = 'app/panel/src-tauri/src/platform/shared.g.rs'
 
 [string] $markerPattern = '//\s*@share\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*$'
 [string] $stringPattern = 'L?"(?<value>(?:[^"\\]|\\.)*)"'

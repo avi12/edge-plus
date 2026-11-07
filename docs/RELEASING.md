@@ -25,11 +25,11 @@ With the work committed:
 
 `tools/Release.ps1` then:
 
-1. sets the version in `app/panel-tauri/src-tauri/Cargo.toml`, the only place
+1. sets the version in `app/panel/src-tauri/Cargo.toml`, the only place
    it is written: the exe, the package and the panel's footer read it from
    there;
 2. builds the window kit and the release exe that embeds it (`pnpm build` in
-   `app/panel-tauri`, after `pnpm install` and `pnpm restore`) and copies it to
+   `app/panel`, after `pnpm install` and `pnpm restore`) and copies it to
    `outelease\EdgePlus-<version>.exe`;
 3. packs that exe as the MSIX (`tools\Build-Msix.ps1`): the exe, the startup
    launcher, logos drawn from `icons\icon.ico` and `app/package/AppxManifest.xml`

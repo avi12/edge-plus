@@ -3,7 +3,7 @@
 # Keep the numbers in step with the SVG, which is the design source.
 Add-Type -AssemblyName System.Drawing
 
-[string] $icons = Join-Path $PSScriptRoot '..\app\panel-tauri\src-tauri\icons'
+[string] $icons = Join-Path $PSScriptRoot '..\app\panel\src-tauri\icons'
 [int[]] $sizes = 16, 24, 32, 48, 64, 256
 [double] $viewBoxSize = 120.0
 [int] $iconDirectoryHeaderBytes = 6

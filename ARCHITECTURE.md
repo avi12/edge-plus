@@ -55,9 +55,9 @@ the panel can tell whether it is running without tracking any process.*
 
 | Part | Where | Language | Role |
 |---|---|---|---|
-| Core | `app/panel-tauri/src-tauri/src/` | Rust | Process, single instance, every feature, the settings, Edge watching, themes, injection, updates; the View the window renders. |
-| Native calls | `app/panel-tauri/src-tauri/edge-native/` | Rust | Every Win32 / WinRT call the core makes; the only `unsafe`. |
-| Window | `app/panel-tauri/ui/` | TypeScript / WinUI 3 | A Node process the core starts: draws the View, sends back Actions, one JSON line each way. |
+| Core | `app/panel/src-tauri/src/` | Rust | Process, single instance, every feature, the settings, Edge watching, themes, injection, updates; the View the window renders. |
+| Native calls | `app/panel/src-tauri/edge-native/` | Rust | Every Win32 / WinRT call the core makes; the only `unsafe`. |
+| Window | `app/panel/ui/` | TypeScript / WinUI 3 | A Node process the core starts: draws the View, sends back Actions, one JSON line each way. |
 | Split DLL | `app/dll/` | C++20 | Runs inside Edge. Hooks, control window, hotkeys, tab drags. |
 | Injector | `edge-native/src/process/inject.rs`, `app/dll/src/inject.cpp` | Rust / C++ | The panel's injector; `inject.exe` is a development harness. |
 | Reverse-engineering notes | `docs/re/` | Markdown | How each Edge hook was found and why it is safe. |
@@ -298,8 +298,8 @@ with the tools in `docs/re/`.
 
 | To understand | Read |
 |---|---|
-| What a switch does at startup | `app/panel-tauri/src-tauri/src/dll/dll_sync.rs` |
-| How the panel finds Edge's build | `app/panel-tauri/src-tauri/src/edge/edge_watch.rs` |
+| What a switch does at startup | `app/panel/src-tauri/src/dll/dll_sync.rs` |
+| How the panel finds Edge's build | `app/panel/src-tauri/src/edge/edge_watch.rs` |
 | How the DLL starts and stops | `app/dll/src/dllmain.cpp` |
 | The config the panel writes | `app/dll/src/core/config.h`, `src-tauri/src/dll/config_wire.rs` |
 | Which Edge functions are hooked | `app/dll/src/edge/hooks.h` |
@@ -312,8 +312,8 @@ with the tools in `docs/re/`.
 ```powershell
 app\dll\build.cmd              # the DLL (MSVC) -> build\edgeplus-split.dll
 app\dll\test\run.cmd           # the DLL's pure-logic tests
-pnpm --dir app\panel-tauri build        # the panel, with the DLL and window kit embedded
-pnpm --dir app\panel-tauri test         # the panel's tests (window and core)
+pnpm --dir app\panel build        # the panel, with the DLL and window kit embedded
+pnpm --dir app\panel test         # the panel's tests (window and core)
 pwsh tools\lint.ps1                     # clang-format, clang-tidy, the panel's linters
 ```
 

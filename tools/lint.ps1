@@ -140,7 +140,7 @@ if (-not $Staged) {
 # under -Staged: these run on the project, not a file list.
 [bool] $panelOk = $true
 if (-not $Staged) {
-    [string] $panel = Join-Path $root 'app\panel-tauri'
+    [string] $panel = Join-Path $root 'app\panel'
     [string] $script = if ($Fix) { 'lint' } else { 'lint:verify' }
 
     Write-Host "[lint] panel (pnpm $script)"

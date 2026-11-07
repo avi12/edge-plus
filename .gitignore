@@ -9,7 +9,6 @@ app/*/obj/
 # Claude Code agent worktrees
 .claude/worktrees/
 __pycache__/
-/app/panel/
 /extension/
 node_modules/
 dist/

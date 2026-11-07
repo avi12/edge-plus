@@ -6,7 +6,7 @@
 .DESCRIPTION
   In order:
 
-    1. set the version in app\panel-tauri\src-tauri\Cargo.toml, its one home;
+    1. set the version in app\panel\src-tauri\Cargo.toml, its one home;
     2. build the window kit and the release exe that embeds it (rebuilding the
        embedded split DLL if its sources are newer) and copy the exe to
        out\release\EdgePlus-<version>.exe;

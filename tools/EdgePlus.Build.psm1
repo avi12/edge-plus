@@ -137,7 +137,7 @@ function Write-Step {
 function Get-CargoManifestPath {
     [OutputType([string])]
     param()
-    return Join-Path (Get-RepoRoot) 'app\panel-tauri\src-tauri\Cargo.toml'
+    return Join-Path (Get-RepoRoot) 'app\panel\src-tauri\Cargo.toml'
 }
 
 # The [package] table's version, the first `version = "..."` in the file.
@@ -186,7 +186,7 @@ function Assert-ExeVersion {
 function Build-ReleaseExe {
     [OutputType([string])]
     param()
-    [string] $panel = Join-Path (Get-RepoRoot) 'app\panel-tauri'
+    [string] $panel = Join-Path (Get-RepoRoot) 'app\panel'
     # Their output goes to the console: left in the pipeline, a line such as
     # pnpm's "Scope: all 3 workspace projects" was returned along with the path.
     Invoke-Checked 'pnpm install' { pnpm --dir $panel install --frozen-lockfile } | Out-Host
