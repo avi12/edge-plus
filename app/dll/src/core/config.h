@@ -30,7 +30,9 @@ struct Wire {
   uint32_t enhancedFindActive;
   uint32_t webUiFollowsThemeActive;
   uint32_t livePreviewActive;
-  uint32_t tabShapeActive;      // with theming on
+  // With theming on. Was the cut-corner tabs' switch, which the skin replaced
+  // in the same place, so a file written before carries over.
+  uint32_t cyberpunkSkinActive;
   uint32_t readingThemeActive;  // its two themes are kept by reading_mode.h
 };
 // ConfigWire.cs writes exactly this many bytes, so the struct must stay packed.
@@ -51,7 +53,8 @@ inline constexpr DWORD kBeforeWebUiWireSize =
     offsetof(Wire, webUiFollowsThemeActive);
 inline constexpr DWORD kBeforeLivePreviewWireSize =
     offsetof(Wire, livePreviewActive);
-inline constexpr DWORD kBeforeTabShapeWireSize = offsetof(Wire, tabShapeActive);
+inline constexpr DWORD kBeforeCyberpunkSkinWireSize =
+    offsetof(Wire, cyberpunkSkinActive);
 inline constexpr DWORD kBeforeReadingThemeWireSize =
     offsetof(Wire, readingThemeActive);
 
@@ -90,9 +93,9 @@ inline constexpr char kLocalAppDataVariable[] = "LOCALAPPDATA";
   const bool isKnownSize =
       isRead &&
       (read == sizeof(Wire) || read == kBeforeReadingThemeWireSize ||
-       read == kBeforeTabShapeWireSize || read == kBeforeLivePreviewWireSize ||
-       read == kBeforeWebUiWireSize || read == kBeforeFindWireSize ||
-       read == kLegacyWireSize);
+       read == kBeforeCyberpunkSkinWireSize ||
+       read == kBeforeLivePreviewWireSize || read == kBeforeWebUiWireSize ||
+       read == kBeforeFindWireSize || read == kLegacyWireSize);
   return isKnownSize;
 }
 

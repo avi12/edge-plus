@@ -179,11 +179,13 @@ inline BOOL CALLBACK RepaintWindowTabs(HWND hwnd, LPARAM /*unused*/) {
   return TRUE;
 }
 
-inline void ApplyTabShape(bool isOn) {
-  if (tab_shape::g_isSquared == isOn) {
+// Off is Edge's own look: its tab outline, and its selected tab's colours
+// (hooks.h h_getcolor), which the theme's re-apply rebuilds.
+inline void ApplyCyberpunkSkin(bool isOn) {
+  if (tab_shape::g_isCyberpunkSkinOn == isOn) {
     return;
   }
-  tab_shape::g_isSquared = isOn;
+  tab_shape::g_isCyberpunkSkinOn = isOn;
   EnumWindows(RepaintWindowTabs, 0);
 }
 
@@ -232,7 +234,7 @@ inline void Teardown(HWND hwnd) {
   drag::Cancel();
   tabdrag::Cancel();
   overlay::Remove();
-  ApplyTabShape(false);
+  ApplyCyberpunkSkin(false);
   grip::RemoveAll();
   dividers::RemoveAll();
   anim::Remove();
@@ -313,7 +315,7 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     MH_EnableHook(edge::At(edge155::rva::BrowserThemePack_GetColor));
     MH_EnableHook(edge::At(edge155::rva::ColorProvider_GetColor));
     MH_EnableHook(edge::At(edge155::rva::EdgeTab_UpdateForegroundColors));
-    // The cut-corner tab outline: its own switch, not the split's.
+    // The Cyberpunk skin's tab outline: its own switch, not the split's.
     MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_GetPath));
     MH_EnableHook(edge::At(edge155::rva::SkPath_arcTo));
     MH_EnableHook(edge::At(edge155::rva::SkPath_addRRect));
@@ -357,10 +359,13 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
       RegisterHotKeys(hwnd);
     }
   }
+  // The skin has its own switch, and needs theming: its colours are read with
+  // the theme's (hooks.h h_getcolor). It is set first, so the theme's re-apply
+  // below rebuilds the tab colours with the skin on or off.
+  const bool isSkinOn =
+      wire.themingActive != 0 && wire.cyberpunkSkinActive != 0;
+  ApplyCyberpunkSkin(isSkinOn);
   theme::ApplyConfig(hwnd, wire);
-  // The tab outline has its own switch, and needs theming: it is the theme that
-  // gives the tab the fill the cut corners are cut from.
-  ApplyTabShape(theme::g_isActive && wire.tabShapeActive != 0);
   const bool isFollowChanged = theme_follow::ApplyConfig(wire);
   if (isFollowChanged) {
     RefreshThemeColors();
@@ -511,8 +516,8 @@ inline void RunCommand(HWND hwnd, WPARAM wparam, LPARAM lparam) {
     case Command::kDumpTabRows:
       tabrows::Dump(edge::McvForWindow(hwnd));
       return;
-    case Command::kForceTabShape:
-      ApplyTabShape(true);
+    case Command::kForceCyberpunkSkin:
+      ApplyCyberpunkSkin(true);
       return;
     case Command::kEndPreviewDetach:
       tabrows::SetDetachPreview(tabrows::kNoDetachPreview);

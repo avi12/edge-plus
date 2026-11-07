@@ -8,6 +8,7 @@
 #include "edge/edge.h"
 #include "theme/focus.h"
 #include "theme/theme_tone.h"
+#include "theme/cyberpunk_skin.h"
 #include "theme/theme_notice.h"
 #include "theme/theme.h"
 #include "split/panes.h"
@@ -399,18 +400,16 @@ inline void __fastcall h_on_theme_built(void* themeService, const void* themeId,
 // BrowserThemePack::GetColor(this, id, SkColor* out): a theme extension's colour
 // for `id`, false when the theme left it unset. Edge derives the whole vertical-
 // tab strip from the toolbar colour (offsets.h VTABCOLOR_*), so a theme cannot
-// give the selected tab a colour of its own; theming makes it the theme's label
-// colour (tab_text) as a chip, so the theme alone picks every colour. Reads go
-// through o_getcolor, never the hook, so it cannot recurse. The colour mixer
-// reads this id when DoSetTheme (theme.h) rebuilds the vertical-tab
-// ColorProvider, so applying the theme repaints the rail at once. Rides
-// theming, not the split (control.h).
+// give the selected tab a colour of its own; the Cyberpunk skin makes it the
+// skin's red plate (SelectedChipOf), and with the skin off every colour is
+// Edge's. Reads go through o_getcolor, never the hook, so it cannot recurse.
+// The colour mixer reads this id when DoSetTheme (theme.h) rebuilds the
+// vertical-tab ColorProvider, so applying the theme repaints the rail at once;
+// control.h re-applies it when the skin is switched. Rides the skin, which
+// needs theming, not the split (control.h).
 // Enough to read as quieter, not enough to vanish on a pale rail.
 inline constexpr uint32_t kVTabInactiveRailPercent = 30;
 inline constexpr uint32_t kHoverFillPercent = 18;
-// The chip's text: white on a dark fill, black on a light one.
-inline constexpr uint32_t kLightInk = 0xffffffff;
-inline constexpr uint32_t kDarkInk = 0xff000000;
 // Set from the theme each time Edge rebuilds the colours.
 inline constinit bool g_isSelectedChipSet = false;
 inline constinit uint32_t g_selectedFill = 0;
@@ -447,18 +446,27 @@ inline bool IsReadForHover() {
 }
 using GetColor_t = bool(__fastcall*)(void*, int, uint32_t*);
 inline constinit GetColor_t o_getcolor = nullptr;
+
+// The selected tab's fill and ink: the skin's red plate in the theme's tone.
+inline cyberpunk_skin::TabColors SelectedChipOf(void* pack) {
+  uint32_t toolbar = 0;
+  uint32_t frame = 0;
+  const bool isToolbarSet =
+      o_getcolor(pack, edge155::off::THEMECOLOR_toolbar, &toolbar);
+  const bool isFrameSet =
+      o_getcolor(pack, edge155::off::THEMECOLOR_frame, &frame);
+  return cyberpunk_skin::SelectedTabFor(
+      theme_tone::ToneOf({isToolbarSet, toolbar}, {isFrameSet, frame}));
+}
+
 inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
-  if (theme::g_isActive) {
+  if (tab_shape::g_isCyberpunkSkinOn) {
     const bool isSelectedTabBackground =
         colorId == edge155::off::VTABCOLOR_selected_background ||
         colorId == edge155::off::VTABCOLOR_selected_background_inactive;
-    uint32_t textColor = 0;
-    const bool isTextSet =
-        isSelectedTabBackground &&
-        o_getcolor(pack, edge155::off::THEMECOLOR_tab_text, &textColor);
-    if (isTextSet) {
-      const bool isTextDark = theme_tone::IsDark(textColor);
-      const uint32_t fill = textColor;
+    if (isSelectedTabBackground) {
+      const cyberpunk_skin::TabColors chip = SelectedChipOf(pack);
+      const uint32_t fill = chip.fill;
       // An unfocused window dims into the rail, as Edge does its own colours.
       uint32_t inactiveRail = 0;
       const bool isInactive = !focus::IsEdgeForeground();
@@ -477,7 +485,7 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
           o_getcolor(pack, edge155::off::THEMECOLOR_toolbar, &ground);
       g_isSelectedChipSet = true;
       g_selectedFill = fill;
-      g_selectedInk = isTextDark ? kLightInk : kDarkInk;
+      g_selectedInk = chip.ink;
       const bool isHoveredTab = IsReadForHover() && isGroundRead;
       *out = isHoveredTab
                  ? theme_tone::Blend(ground, selectedFill, kHoverFillPercent)
@@ -510,7 +518,7 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
   // A horizontal active tab takes the vertical one's fill; an unfocused window
   // dims it toward the fill Edge would have used.
   const bool isActiveTabFill =
-      theme::g_isActive && g_isSelectedChipSet &&
+      tab_shape::g_isCyberpunkSkinOn && g_isSelectedChipSet &&
       (colorId == edge155::off::UICOLOR_active_tab_background_focused ||
        colorId == edge155::off::UICOLOR_active_tab_background_unfocused);
   if (isActiveTabFill) {
@@ -521,7 +529,7 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
                                          o_getuicolor(provider, colorId),
                                          kVTabInactiveRailPercent);
   }
-  const bool isInkable = theme::g_isActive && g_isSelectedChipSet;
+  const bool isInkable = tab_shape::g_isCyberpunkSkinOn && g_isSelectedChipSet;
   if (!isInkable) {
     return o_getuicolor(provider, colorId);
   }

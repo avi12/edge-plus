@@ -21,7 +21,9 @@
 
 namespace edgeplus::tab_shape {
 
-inline constinit bool g_isSquared = false;
+// The Cyberpunk skin's switch: this outline, and the red selected tab
+// (cyberpunk_skin.h) that hooks.h fills it with.
+inline constinit bool g_isCyberpunkSkinOn = false;
 
 // The tab GetPath is outlining right now, so the Skia calls it makes can be told
 // from every other.
@@ -68,7 +70,8 @@ inline void* __fastcall h_get_path(void* styleViews, void* outPath,
       caller ==
           edge::At(
               edge155::rva::EdgeTabStrip_UpdateDropShadow_activeTabPath_return);
-  g_outlinedTab = g_isSquared ? edge::TabViewOfStyleViews(styleViews) : nullptr;
+  g_outlinedTab =
+      g_isCyberpunkSkinOn ? edge::TabViewOfStyleViews(styleViews) : nullptr;
   g_isTrailingCut = !g_outlinedTab || IsTrailingCutFor(g_outlinedTab);
   void* result = o_get_path(styleViews, outPath, pathType, scale, isUnscaled);
   g_outlinedTab = nullptr;
@@ -300,7 +303,7 @@ inline constinit DrawRoundRect_t o_draw_round_rect = nullptr;
 inline void __fastcall h_draw_round_rect(void* canvas, const Rect* rect,
                                          int radius, const void* flags) {
   const bool isSplitGroupFill =
-      g_isSquared &&
+      g_isCyberpunkSkinOn &&
       _ReturnAddress() ==
           edge::At(edge155::rva::SplitTabView_OnPaint_DrawRoundRect_return);
   o_draw_round_rect(canvas, rect, radius, flags);
