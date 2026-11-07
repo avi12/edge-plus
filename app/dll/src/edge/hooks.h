@@ -543,6 +543,11 @@ inline bool IsActiveTabAlert(int colorId) {
 using GetUiColor_t = uint32_t(__fastcall*)(void*, int);
 inline constinit GetUiColor_t o_getuicolor = nullptr;
 inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
+  // First, always: a provider generates its colours on its first read, and
+  // that is when the mixer reads the theme pack (h_getcolor), so only then do
+  // the skin's colours belong to the current theme. Read before it, a fresh
+  // theme's tabs kept the previous theme's (or Edge's) titles.
+  const uint32_t edgeColor = o_getuicolor(provider, colorId);
   // A horizontal active tab takes the vertical one's fill; an unfocused window
   // dims it toward the fill Edge would have used.
   const bool isActiveTabFill =
@@ -553,13 +558,12 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
     const bool isFocused =
         colorId == edge155::off::UICOLOR_active_tab_background_focused;
     return isFocused ? g_selectedFill
-                     : theme_tone::Blend(g_selectedFill,
-                                         o_getuicolor(provider, colorId),
+                     : theme_tone::Blend(g_selectedFill, edgeColor,
                                          kVTabInactiveRailPercent);
   }
   const bool isInkable = tab_shape::g_isCyberpunkSkinOn && g_isSelectedChipSet;
   if (!isInkable) {
-    return o_getuicolor(provider, colorId);
+    return edgeColor;
   }
   const bool isTabForeground =
       colorId >= edge155::off::UICOLOR_tab_foreground_first &&
@@ -574,7 +578,7 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
   if (isIdleTabTitle) {
     return g_idleLabel.color;
   }
-  return o_getuicolor(provider, colorId);
+  return edgeColor;
 }
 
 using UpdateForeground_t = void(__fastcall*)(void*);
