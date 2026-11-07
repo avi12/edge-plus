@@ -1,7 +1,14 @@
-// tab_edge.h — the geometry behind tab_shape.h's tab outline: a straight
-// leading edge (the right one when Edge's UI runs right to left), which tabs
-// keep the trailing cut, and the strip that squares a split group's fill.
+// tab_edge.h — the geometry behind tab_shape.h's tab outline: the Cyberpunk
+// kit's plate, square with its top trailing and bottom leading corners cut at
+// 45 degrees (top right and bottom left, mirrored when Edge's UI runs right to
+// left), which tabs are cut, and the strip that squares a split group's fill.
 // Pure.
+//
+//   +-----------\        leading on the left
+//   |            \
+//   |            |
+//    \           |
+//     \----------+
 #pragma once
 #include <cstddef>
 #include "edge/geom.h"
@@ -35,42 +42,43 @@ struct CornerRadii {
   CornerRadius corners[kCornerCount];
 };
 
-// The cut marks a tab of its own, and in a split the focused pane's tab only:
+// The cuts mark a tab of its own, and in a split the focused pane's tab only:
 // the split's other members stay square, however many there are.
-[[nodiscard]] constexpr bool IsTrailingCornerCut(bool isSplitMember,
-                                                 bool isFocusedPane) noexcept {
+[[nodiscard]] constexpr bool IsPlateCut(bool isSplitMember,
+                                        bool isFocusedPane) noexcept {
   return !isSplitMember || isFocusedPane;
 }
 
-// The trailing bottom corner keeps the radius (tab_shape.h turns it into a cut)
-// only when it is cut.
+// The two corners a plate is cut at: the top one on the side a tab trails to
+// and the bottom one on its leading side.
+[[nodiscard]] constexpr Corner TrailingTopCorner(Side leading) noexcept {
+  return leading == Side::kLeft ? Corner::kUpperRight : Corner::kUpperLeft;
+}
+
+[[nodiscard]] constexpr Corner LeadingBottomCorner(Side leading) noexcept {
+  return leading == Side::kLeft ? Corner::kLowerLeft : Corner::kLowerRight;
+}
+
+// The two cut corners keep the radius (tab_shape.h turns them into cuts) only
+// when the plate is cut; the other two are square.
 [[nodiscard]] constexpr CornerRadii RadiiFor(Side leading, float radius,
-                                             bool isTrailingCut) noexcept {
+                                             bool isCut) noexcept {
   const CornerRadius round{radius, radius};
-  const CornerRadius square{};
-  const CornerRadius trailingBottom = isTrailingCut ? round : square;
-  const bool isLeadingOnLeft = leading == Side::kLeft;
+  const CornerRadius cutCorner = isCut ? round : CornerRadius{};
   CornerRadii radii;
-  radii.corners[static_cast<size_t>(Corner::kLowerLeft)] =
-      isLeadingOnLeft ? square : trailingBottom;
-  radii.corners[static_cast<size_t>(Corner::kLowerRight)] =
-      isLeadingOnLeft ? trailingBottom : square;
+  radii.corners[static_cast<size_t>(TrailingTopCorner(leading))] = cutCorner;
+  radii.corners[static_cast<size_t>(LeadingBottomCorner(leading))] = cutCorner;
   return radii;
 }
 
-// The bottom corner on the side a tab trails to.
-[[nodiscard]] constexpr Corner TrailingBottomCorner(Side leading) noexcept {
-  return leading == Side::kLeft ? Corner::kLowerRight : Corner::kLowerLeft;
-}
+inline constexpr size_t kCutOutlinePointCount = 7;
 
-inline constexpr size_t kCutOutlinePointCount = 6;
-
-// A vertical tab's outline with its trailing bottom corner cut: a polygon
-// through these points in order, the last one the first again. `leg` is how far
-// the cut reaches along each side. Mirrored for a right-to-left UI by `leading`
+// A vertical tab's plate: a polygon through these points in order, the last one
+// the first again. `leg` is how far each cut reaches along both of its sides; a
+// leg of 0 leaves a rectangle. Mirrored for a right-to-left UI by `leading`
 // alone. (A horizontal tab is not mirrored here: Edge draws its outline left to
-// right and flips the canvas under a right-to-left UI, so the cut that
-// tab_shape.h puts on the outline's right shows on the left.)
+// right and flips the canvas under a right-to-left UI, so the cuts that
+// tab_shape.h puts on the outline show mirrored.)
 struct CutOutline {
   PointF points[kCutOutlinePointCount];
 };
@@ -82,12 +90,14 @@ struct CutOutline {
   const bool isLeadingOnLeft = leading == Side::kLeft;
   const float leadingX = isLeadingOnLeft ? left : right;
   const float trailingX = isLeadingOnLeft ? right : left;
-  const float cutX = isLeadingOnLeft ? trailingX - leg : trailingX + leg;
+  // From either side, toward the tab's middle.
+  const float inward = isLeadingOnLeft ? leg : -leg;
   return CutOutline{{{leadingX, top},
-                     {trailingX, top},
-                     {trailingX, bottom - leg},
-                     {cutX, bottom},
-                     {leadingX, bottom},
+                     {trailingX - inward, top},
+                     {trailingX, top + leg},
+                     {trailingX, bottom},
+                     {leadingX + inward, bottom},
+                     {leadingX, bottom - leg},
                      {leadingX, top}}};
 }
 
