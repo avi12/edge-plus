@@ -326,6 +326,8 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
         edge::At(edge155::rva::EdgeTabStyleViews_PaintBackgroundStroke));
     MH_EnableHook(edge::At(edge155::rva::TabStrip_GetStrokeThickness));
     MH_EnableHook(edge::At(edge155::rva::EdgeTab_IsActive));
+    // Its title font (tab_font.h).
+    MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_PaintTab));
     protocol_handlers::EnableHooks();
     find::EnableAll();
     theme_follow::EnableAll();

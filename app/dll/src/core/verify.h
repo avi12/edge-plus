@@ -169,6 +169,8 @@ inline constexpr uint8_t kStockIndexCap = 2;
       // The Cyberpunk skin's tab frames (tab_frame.h).
       edge155::rva::EdgeTabStyleViews_PaintBackgroundStroke,
       edge155::rva::TabStrip_GetStrokeThickness,
+      // Its title font (tab_font.h).
+      edge155::rva::EdgeTabStyleViews_PaintTab,
   };
   for (const uintptr_t rva : sites) {
     if (!LooksLikeCode(rva)) {

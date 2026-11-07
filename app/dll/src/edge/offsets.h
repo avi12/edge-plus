@@ -728,6 +728,18 @@ inline constexpr uintptr_t EdgeTab_IsActive = 0x1084810;
 // ColorProvider* views::View::GetColorProvider(this): through the view's
 // widget; null for a view in none.
 inline constexpr uintptr_t View_GetColorProvider = 0x1030e30;
+// void EdgeTabStyleViews::PaintTab(this, gfx::Canvas*): every tab's paint, the
+// vertical list's rows included (Tab::OnPaint).
+inline constexpr uintptr_t EdgeTabStyleViews_PaintTab = 0x27d88f0;
+// gfx::Font::Font(this, const std::string& name, int pixelSize): a
+// scoped_refptr<PlatformFont> (PlatformFont::CreateFromNameAndSize).
+inline constexpr uintptr_t Font_ctor_name_size = 0x26aa68c;
+// gfx::FontList::FontList(this, const gfx::Font&) and (this, const FontList&):
+// a FontList is one scoped_refptr<FontListImpl>; both take a reference.
+inline constexpr uintptr_t FontList_ctor_font = 0x2b3b05e;
+inline constexpr uintptr_t FontList_copy_ctor = 0x1016482;
+// int gfx::FontList::GetFontSize(this): the primary font's pixel size.
+inline constexpr uintptr_t FontList_GetFontSize = 0x104b740;
 // The OS light/dark signal does NOT come through Edge. ui::NativeThemeObserver
 // is a base::CheckedObserver (the observer list uses CheckedObserverAdapter), so
 // a hand-rolled observer object would have to fake a weak-ptr factory. Instead
@@ -1468,6 +1480,16 @@ inline constexpr uintptr_t FINDBARLABEL_set_text_vtable_offset = 0x3a8;
 // GetTextStyle are bare reads of these), which pick its font and colour id.
 inline constexpr uintptr_t LABEL_text_context = 0x388;
 inline constexpr uintptr_t LABEL_text_style = 0x38c;
+// views::Label: its full_text_ (std::unique_ptr<gfx::RenderText>), and the
+// RenderText's FontList, as Label::SetFontList and Label::EdgeUpdateFontList
+// (rva 0x27a5c00) read them; and the SetFontList(const FontList&) virtual,
+// which EdgeTab::EdgeTab calls on the tab's title.
+inline constexpr uintptr_t LABEL_render_text = 0x398;
+inline constexpr uintptr_t RENDERTEXT_font_list = 0x48;
+inline constexpr uintptr_t LABEL_vtbl_SetFontList = 0x398;
+// A Tab's title_ (a TabTitle, a views::Label), as Tab::Tab stores it and
+// Tab::UpdateForegroundColors inks it.
+inline constexpr uintptr_t TAB_title = 0x950;
 // DomDistillerContextKeyedService: its DomDistillerService base, and that
 // service's DistilledPagePrefs* (ChromeDomDistillerClient::GetDistilledPagePrefs
 // does exactly this: +8, then the field at +0x20).

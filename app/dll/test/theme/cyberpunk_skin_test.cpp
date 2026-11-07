@@ -39,6 +39,13 @@ void RunFrameChecks() {
   Check(kFrameThicknessDip == 2, "the frame is the kit's 2px stroke");
 }
 
+// --- Title font ---
+void RunTitleFontChecks() {
+  Check(TitleFontFamilyFor(true) == "Share Tech Mono",
+        "the kit's mono when it is installed");
+  Check(TitleFontFamilyFor(false) == "Consolas", "Consolas when it is not");
+}
+
 void RunChecks() {
   const TabColors dark = SelectedTabFor(Tone::kDark);
   const TabColors light = SelectedTabFor(Tone::kLight);
@@ -52,6 +59,7 @@ void RunChecks() {
   Check(IsDark(dark.ink) && !IsDark(light.ink),
         "the ink contrasts the way the tab's own ink rule reads it");
   RunFrameChecks();
+  RunTitleFontChecks();
 }
 
 }  // namespace

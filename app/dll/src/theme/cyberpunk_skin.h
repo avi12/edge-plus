@@ -4,6 +4,7 @@
 // (the kit measured both at 5.4:1 and 5.9:1). The plate's cut corner is
 // tab_shape.h's; the skin's switch is tab_shape::g_isCyberpunkSkinOn. Pure.
 #pragma once
+#include <string_view>
 #include "theme/theme_tone.h"
 
 namespace edgeplus::cyberpunk_skin {
@@ -42,6 +43,17 @@ inline constexpr int kFrameThicknessDip = 2;
 
 [[nodiscard]] constexpr TabFrames FramesFor(theme_tone::Tone tone) noexcept {
   return tone == theme_tone::Tone::kLight ? kLightTabFrames : kDarkTabFrames;
+}
+
+// --- Title font (chrome/tabs/tab_font.h) ---
+// The kit's mono, Share Tech Mono, when Windows has it installed; else
+// Consolas, the monospace every Windows ships.
+inline constexpr std::string_view kTitleFontFamily = "Share Tech Mono";
+inline constexpr std::string_view kTitleFontFallback = "Consolas";
+
+[[nodiscard]] constexpr std::string_view TitleFontFamilyFor(
+    bool isKitFontInstalled) noexcept {
+  return isKitFontInstalled ? kTitleFontFamily : kTitleFontFallback;
 }
 
 // The tone a selected tab's fill was chosen for: SelectedTabFor's inverse, so
