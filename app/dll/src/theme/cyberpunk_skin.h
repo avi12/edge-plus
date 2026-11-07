@@ -26,4 +26,30 @@ inline constexpr TabColors kLightSelectedTab{0xffc8102e, 0xffffffff};
                                           : kDarkSelectedTab;
 }
 
+// --- Frames (chrome/tabs/tab_frame.h) ---
+// The kit carries structure with 2px strokes: the selected tab is framed in
+// the frame colour (red in dark, ink in light) and every other tab in the idle
+// line colour (the kit's "Lines" teal in dark, its "off" slate in light).
+struct TabFrames {
+  Argb selected = 0;
+  Argb idle = 0;
+};
+
+inline constexpr TabFrames kDarkTabFrames{0xfff72944, 0xff007979};
+inline constexpr TabFrames kLightTabFrames{0xff06182b, 0xff547a99};
+// In DIPs, so it scales with the display as Edge's own tab stroke does.
+inline constexpr int kFrameThicknessDip = 2;
+
+[[nodiscard]] constexpr TabFrames FramesFor(theme_tone::Tone tone) noexcept {
+  return tone == theme_tone::Tone::kLight ? kLightTabFrames : kDarkTabFrames;
+}
+
+// The tone a selected tab's fill was chosen for: SelectedTabFor's inverse, so
+// the frames follow the tone the fill already settled on.
+[[nodiscard]] constexpr theme_tone::Tone ToneOfSelectedFill(
+    Argb fill) noexcept {
+  return fill == kLightSelectedTab.fill ? theme_tone::Tone::kLight
+                                        : theme_tone::Tone::kDark;
+}
+
 }  // namespace edgeplus::cyberpunk_skin

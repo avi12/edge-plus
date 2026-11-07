@@ -9,6 +9,7 @@
 #include <cstring>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -2222,12 +2223,32 @@ inline bool IsChatPageFrame(void* frame) {
 
 // --- a tab's outline (EdgeTabStyleViews::GetPath) ------------------------------
 
+// The EdgeTab (its Tab base) a style serves.
+inline void* TabObjectOfStyleViews(void* styleViews) {
+  return Field<void*>(styleViews, edge155::off::STYLEVIEWS_tab);
+}
+
 inline void* TabViewOfStyleViews(void* styleViews) {
-  void* tab = Field<void*>(styleViews, edge155::off::STYLEVIEWS_tab);
+  void* tab = TabObjectOfStyleViews(styleViews);
   if (!tab) {
     return nullptr;
   }
   return static_cast<uint8_t*>(tab) + edge155::off::EDGETAB_view_offset;
+}
+
+// A view's colour, as its widget's ColorProvider resolves `colorId`; nullopt
+// for a view in no widget. Goes through ColorProvider::GetColor's entry, so
+// hooks.h's h_getuicolor answers for the ids it recolours.
+inline std::optional<uint32_t> ViewColor(void* view, int colorId) {
+  using ProviderFn = const void*(__fastcall*)(void*);
+  const void* const provider = reinterpret_cast<ProviderFn>(
+      At(edge155::rva::View_GetColorProvider))(view);
+  if (!provider) {
+    return std::nullopt;
+  }
+  using ColorFn = uint32_t(__fastcall*)(const void*, int);
+  return reinterpret_cast<ColorFn>(At(edge155::rva::ColorProvider_GetColor))(
+      provider, colorId);
 }
 
 inline bool IsEdgeTabView(void* view) {

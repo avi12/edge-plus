@@ -708,6 +708,26 @@ inline constexpr uintptr_t
 // true); this is that call's return address.
 inline constexpr uintptr_t EdgeTabStyleViews_PaintTab_hover_layer_return =
     0x4755b02;
+// void EdgeTabStyleViews::PaintBackgroundStroke(this, gfx::Canvas*, SkColor):
+// PaintTabBackground calls it after the fill with ColorProvider::GetColor(
+// 0xb12, 0xb13 when the widget is not active). It returns at once unless the
+// tab is active (tab vtable +0x28, EdgeTab_IsActive) and the tab's controller
+// gives a stroke thickness (controller vtable +0x280, TabStrip_GetStrokeThickness);
+// else it strokes GetPath(kBorder = 1) with that colour, kStroke_Style, at the
+// thickness times the canvas scale (its cold part, 0x475647c). Every tab passes
+// through it, vertical rows included (docs/re/cyberpunk-skin.md).
+inline constexpr uintptr_t EdgeTabStyleViews_PaintBackgroundStroke = 0x27d8ffa;
+// int TabStrip::GetStrokeThickness(this): BrowserView::ShouldDrawTabStrokes,
+// which is false whenever the vertical tab strip shows. EdgeTabStrip's
+// TabSlotController vtable (0x11741b10) keeps TabStrip's at +0x280.
+inline constexpr uintptr_t TabStrip_GetStrokeThickness = 0x26edbc0;
+// bool EdgeTab::IsActive(this): false for a closing tab (+0x930), else
+// Tab_IsActive; the slot +0x28 of EdgeTab's vtable at +0 (0x1177a720). 15
+// bytes: `cmp byte [rcx+930h],0` (7), `je Tab_IsActive`, `xor eax,eax; ret`.
+inline constexpr uintptr_t EdgeTab_IsActive = 0x1084810;
+// ColorProvider* views::View::GetColorProvider(this): through the view's
+// widget; null for a view in none.
+inline constexpr uintptr_t View_GetColorProvider = 0x1030e30;
 // The OS light/dark signal does NOT come through Edge. ui::NativeThemeObserver
 // is a base::CheckedObserver (the observer list uses CheckedObserverAdapter), so
 // a hand-rolled observer object would have to fake a weak-ptr factory. Instead

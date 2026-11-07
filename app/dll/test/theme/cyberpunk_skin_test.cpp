@@ -20,6 +20,25 @@ void Check(bool ok, const char* what) {
   }
 }
 
+// --- Frames ---
+void RunFrameChecks() {
+  const TabFrames dark = FramesFor(Tone::kDark);
+  const TabFrames light = FramesFor(Tone::kLight);
+  Check(dark.selected == 0xfff72944 && dark.idle == 0xff007979,
+        "a dark theme frames the selected tab red and the others teal");
+  Check(light.selected == 0xff06182b && light.idle == 0xff547a99,
+        "a light theme frames the selected tab in ink and the others slate");
+  Check(FramesFor(Tone::kUnknown).selected == dark.selected,
+        "a theme of no tone is framed as dark");
+  Check(ToneOfSelectedFill(SelectedTabFor(Tone::kLight).fill) == Tone::kLight,
+        "the light fill reads back as light");
+  Check(ToneOfSelectedFill(SelectedTabFor(Tone::kDark).fill) == Tone::kDark,
+        "the dark fill reads back as dark");
+  Check(ToneOfSelectedFill(0xff123456) == Tone::kDark,
+        "a fill the skin did not choose reads as dark, the skin's default");
+  Check(kFrameThicknessDip == 2, "the frame is the kit's 2px stroke");
+}
+
 void RunChecks() {
   const TabColors dark = SelectedTabFor(Tone::kDark);
   const TabColors light = SelectedTabFor(Tone::kLight);
@@ -32,6 +51,7 @@ void RunChecks() {
         "a theme of no tone is taken as dark");
   Check(IsDark(dark.ink) && !IsDark(light.ink),
         "the ink contrasts the way the tab's own ink rule reads it");
+  RunFrameChecks();
 }
 
 }  // namespace
