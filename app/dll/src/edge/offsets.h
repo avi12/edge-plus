@@ -1023,29 +1023,33 @@ inline constexpr uintptr_t THEMESERVICE_use_default_this = 0x10;
 // manifest-key -> id map is a {const char* key; int id} array in msedge.dll.
 // Edge keeps a SEPARATE *tints* table with its own enum (frame is 0x1c there),
 // so a tint id handed to GetColor always misses — do not cross the two.
+// The manifest keys are named after each id (the table, read from 156.0.4314.58,
+// is in docs/re/theme-colour-ids.md).
 inline constexpr int THEMECOLOR_frame = 0x02;
-inline constexpr int THEMECOLOR_tab_text = 0x12;  // the active tab's text
+// Every vertical tab's title, not just the active one's (seen live).
+inline constexpr int THEMECOLOR_tab_text = 0x12;
+inline constexpr int THEMECOLOR_tab_background_text = 0x13;
+inline constexpr int THEMECOLOR_tab_background_text_inactive = 0x15;
 inline constexpr int THEMECOLOR_toolbar = 0x17;
-// Edge's vertical-tab strip colour ids. Edge has no manifest key for them:
-// BrowserThemePack::EdgeSetVTabAndRelatedColor (rva 0x88426b2) DERIVES all of
-// them from the toolbar colour (it reads THEMECOLOR_toolbar/0x17, then stores a
-// contiguous run 0x23-0x2c) and GetColor reads them back when the colour mixer
-// builds the vertical-tab views' ColorProvider. That is why a theme can tint the
-// rail (it follows the toolbar) but cannot give the SELECTED tab its own colour -
-// every one is just a shade of the toolbar. The ten ids pair as active-window /
-// inactive-window; the DLL overrides only the selected tab so it adopts the
-// theme's own accent (docs/re/theming.md, hooks.h h_getcolor). Verified from the
-// store sequence in EdgeSetVTabAndRelatedColor.
-inline constexpr int VTABCOLOR_background = 0x23;  // rail bg
-inline constexpr int VTABCOLOR_background_inactive =
-    0x24;  // rail, unfocused window
-inline constexpr int VTABCOLOR_background_alt =
-    0x27;  // idle fill (+0x28 inact.)
-inline constexpr int VTABCOLOR_selected_background = 0x25;  // selected tab bg
-inline constexpr int VTABCOLOR_selected_background_inactive = 0x26;
-inline constexpr int VTABCOLOR_foreground = 0x29;  // idle text (+0x2a inactive)
-inline constexpr int VTABCOLOR_selected_foreground = 0x2b;  // selected text
-inline constexpr int VTABCOLOR_selected_foreground_inactive = 0x2c;
+// Edge's vertical-tab strip colour ids. They have manifest keys (vertical_frame,
+// vertical_active_tab, ...), but a theme cannot set them: for a theme extension
+// ThemeService::SetBrowserPackForUnifiedThemeExtension marks the pack
+// (EdgeSetAdjustThemePackForVT) and CreateToolbarImageAndColors then has
+// BrowserThemePack::EdgeSetVTabAndRelatedColor (rva 0x88426b2) overwrite the
+// whole run 0x23-0x2c from the toolbar colour: the rail and the idle fill are
+// the toolbar itself, the selected fill a white wash over it, the texts black or
+// white by its darkness. A theme's own vertical_* keys are ignored (seen live).
+// GetColor reads them back when the colour mixer builds the vertical-tab views'
+// ColorProvider. The ids pair as a normal / an incognito profile, so an
+// unfocused window is not dimmed by Edge at all. The DLL overrides only the
+// selected tab, so it can carry the skin's plate (hooks.h h_getcolor).
+inline constexpr int VTABCOLOR_background = 0x23;  // the rail
+inline constexpr int VTABCOLOR_background_incognito = 0x24;
+inline constexpr int VTABCOLOR_selected_background = 0x25;  // selected tab
+inline constexpr int VTABCOLOR_selected_background_incognito = 0x26;
+inline constexpr int VTABCOLOR_idle_background = 0x27;      // (+1 incognito)
+inline constexpr int VTABCOLOR_tab_text = 0x29;             // (+1 incognito)
+inline constexpr int VTABCOLOR_tab_background_text = 0x2b;  // (+1 incognito)
 // Native ui::ColorIds (ColorProvider's id space, distinct from the pack ids
 // above). A tab's title and close colour: TabStyle::GetTabForegroundColor picks
 // one of four from a [state][window focus] table at rva 0x12888228; a vertical
