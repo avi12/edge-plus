@@ -35,9 +35,9 @@ pub const CARDS: [CardSlot; 12] = [
     feature(Feature::NativeSplit),
     feature(Feature::LivePreview),
     feature(Feature::Theming),
-    // The cut corners are cut from the theme's tab fill (tab_shape.h).
+    // The skin's tab colours are read with the theme's (cyberpunk_skin.h).
     CardSlot::Feature {
-        feature: Feature::TabShape,
+        feature: Feature::CyberpunkSkin,
         needs: Some(Feature::Theming),
     },
     feature(Feature::WebUiFollowsTheme),

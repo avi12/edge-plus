@@ -60,11 +60,12 @@
         <ThemingBody isOn={cardOf("theming").isOn} theming={view.theming} />
       {/snippet}
     </FeatureCard>
-    <FeatureCard card={cardOf("tabShape")} glyph="Page">
-      <CardTitle>{featureTitles.tabShape}</CardTitle>
+    <FeatureCard card={cardOf("cyberpunkSkin")} glyph="Page">
+      <CardTitle>{featureTitles.cyberpunkSkin}</CardTitle>
       <CardDescription>
-        Gives every tab, vertical and horizontal, a straight leading edge and a cut trailing corner, with
-        the selected tab filled in the theme's neon. Works with Theming on. Live, no restart.
+        Dresses every tab, vertical and horizontal, as a Cyberpunk HUD plate: a straight leading edge, a
+        cut trailing corner, and the selected tab in solid red with dark or light ink to match the theme.
+        Off, tabs look like Edge's own. Works with Theming on. Live, no restart.
       </CardDescription>
     </FeatureCard>
     <FeatureCard card={cardOf("webUiFollowsTheme")} glyph="Brightness">

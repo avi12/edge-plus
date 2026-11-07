@@ -7,13 +7,13 @@
 // app/dll/src/core/config.h:15
 pub const WIRE_ID_CAPACITY: u32 = 64;
 
-// app/dll/src/core/config.h:40
+// app/dll/src/core/config.h:42
 pub const WIRE_FIELD_COUNT: u32 = 11;
 
-// app/dll/src/core/config.h:42
+// app/dll/src/core/config.h:44
 pub const WIRE_ID_COUNT: u32 = 2;
 
-// app/dll/src/core/config.h:61
+// app/dll/src/core/config.h:64
 pub const CONFIG_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-config.bin";
 
 // app/dll/src/dllmain.cpp:20

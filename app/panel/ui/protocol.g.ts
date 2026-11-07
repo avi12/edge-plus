@@ -3,7 +3,7 @@
 
 import type { ProtocolWithReturn } from "winui-svelte/messaging";
 
-export type Feature = "nativeSplit" | "theming" | "quietDevMode" | "protocolHandlers" | "enhancedFind" | "webUiFollowsTheme" | "livePreview" | "tabShape" | "readingTheme";
+export type Feature = "nativeSplit" | "theming" | "quietDevMode" | "protocolHandlers" | "enhancedFind" | "webUiFollowsTheme" | "livePreview" | "cyberpunkSkin" | "readingTheme";
 
 export type ThemeBadge = "store" | "local" | "inUse" | "installedInEdge";
 
@@ -13,7 +13,7 @@ export type ThemeOption = { id: string, name: string, };
 
 export type ThemingView = { options: Array<ThemeOption>, light: string, dark: string, own: Array<ThemeRow>, edge: Array<ThemeRow>, };
 
-export type SwitchKey = "nativeSplit" | "theming" | "quietDevMode" | "protocolHandlers" | "enhancedFind" | "webUiFollowsTheme" | "livePreview" | "tabShape" | "readingTheme" | "startWithWindows" | "autoInject" | "autoUpdate";
+export type SwitchKey = "nativeSplit" | "theming" | "quietDevMode" | "protocolHandlers" | "enhancedFind" | "webUiFollowsTheme" | "livePreview" | "cyberpunkSkin" | "readingTheme" | "startWithWindows" | "autoInject" | "autoUpdate";
 
 export type EdgeBuild = { version: string, isUpdated: boolean, };
 

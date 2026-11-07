@@ -40,8 +40,8 @@ pub enum Feature {
     WebUiFollowsTheme,
     /// `live_preview.h`
     LivePreview,
-    /// `tab_shape.h`
-    TabShape,
+    /// `cyberpunk_skin.h` and `tab_shape.h`
+    CyberpunkSkin,
     /// `reading_mode.h`; the two themes are picked in reading mode itself and
     /// kept by the DLL.
     ReadingTheme,
@@ -56,7 +56,7 @@ impl Feature {
         Self::EnhancedFind,
         Self::WebUiFollowsTheme,
         Self::LivePreview,
-        Self::TabShape,
+        Self::CyberpunkSkin,
         Self::ReadingTheme,
     ];
 }
@@ -94,9 +94,10 @@ pub struct Features {
     pub web_ui_follows_theme: bool,
     pub live_preview: bool,
     /// On by default: it was part of the theming until it got a switch of its
-    /// own. Saved under its old name so a saved choice carries over.
+    /// own. Saved under its oldest name (the cut-corner tabs' switch, which the
+    /// skin replaced) so a saved choice carries over.
     #[serde(rename = "tabSpine")]
-    pub tab_shape: bool,
+    pub cyberpunk_skin: bool,
     pub reading_theme: bool,
 }
 
@@ -110,7 +111,7 @@ impl Default for Features {
             enhanced_find: false,
             web_ui_follows_theme: false,
             live_preview: false,
-            tab_shape: true,
+            cyberpunk_skin: true,
             reading_theme: false,
         }
     }
@@ -137,7 +138,7 @@ impl Features {
             Feature::EnhancedFind => self.enhanced_find,
             Feature::WebUiFollowsTheme => self.web_ui_follows_theme,
             Feature::LivePreview => self.live_preview,
-            Feature::TabShape => self.tab_shape,
+            Feature::CyberpunkSkin => self.cyberpunk_skin,
             Feature::ReadingTheme => self.reading_theme,
         }
     }
@@ -151,7 +152,7 @@ impl Features {
             Feature::EnhancedFind => &mut self.enhanced_find,
             Feature::WebUiFollowsTheme => &mut self.web_ui_follows_theme,
             Feature::LivePreview => &mut self.live_preview,
-            Feature::TabShape => &mut self.tab_shape,
+            Feature::CyberpunkSkin => &mut self.cyberpunk_skin,
             Feature::ReadingTheme => &mut self.reading_theme,
         };
         *switch = is_on;
@@ -349,10 +350,10 @@ mod tests {
     }
 
     #[test]
-    fn defaults_are_split_and_tab_shape_on_the_rest_off() {
+    fn defaults_are_split_and_cyberpunk_skin_on_the_rest_off() {
         let settings = Settings::default();
         for feature in Feature::ALL {
-            let is_expected_on = matches!(feature, Feature::NativeSplit | Feature::TabShape);
+            let is_expected_on = matches!(feature, Feature::NativeSplit | Feature::CyberpunkSkin);
             assert_eq!(
                 is_expected_on,
                 settings.features.is_on(feature),

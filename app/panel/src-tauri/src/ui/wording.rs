@@ -185,11 +185,11 @@ mod tests {
             )
         );
         assert_eq!(
-            "Edge is on version 154.0.1.0. Paused until Edge+ supports this version: Cut-corner \
-             tabs.",
+            "Edge is on version 154.0.1.0. Paused until Edge+ supports this version: Cyberpunk \
+             skin.",
             describe_paused(
                 &EdgeBuild::of(FileVersion::new(154, 0, 1, 0), SUPPORTED),
-                &[Feature::TabShape]
+                &[Feature::CyberpunkSkin]
             )
         );
         assert_eq!("", describe_paused(&EdgeBuild::of(UPDATED, SUPPORTED), &[]));

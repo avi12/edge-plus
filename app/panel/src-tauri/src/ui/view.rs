@@ -36,7 +36,7 @@ pub fn switch_key(slot: CardSlot) -> SwitchKey {
             Feature::EnhancedFind => SwitchKey::EnhancedFind,
             Feature::WebUiFollowsTheme => SwitchKey::WebUiFollowsTheme,
             Feature::LivePreview => SwitchKey::LivePreview,
-            Feature::TabShape => SwitchKey::TabShape,
+            Feature::CyberpunkSkin => SwitchKey::CyberpunkSkin,
             Feature::ReadingTheme => SwitchKey::ReadingTheme,
         },
         CardSlot::Own(OwnCard::StartWithWindows) => SwitchKey::StartWithWindows,
@@ -214,7 +214,7 @@ mod tests {
     fn a_held_card_says_why() {
         let mut choice = Features::none();
         choice.native_split = true;
-        choice.tab_shape = true;
+        choice.cyberpunk_skin = true;
         let updated = build(&state(choice, Some(UPDATED)), InjectOffer::Hidden, None);
         let edge = EdgeBuild {
             version: "156.0.1.0".to_owned(),
@@ -230,7 +230,7 @@ mod tests {
         );
         assert_eq!(None, hold_of(&updated, SwitchKey::QuietDevMode));
         assert_eq!(
-            vec![Feature::NativeSplit, Feature::TabShape],
+            vec![Feature::NativeSplit, Feature::CyberpunkSkin],
             updated.paused
         );
 
@@ -240,14 +240,14 @@ mod tests {
             Some(CardHold::Needs {
                 feature: Feature::Theming
             }),
-            hold_of(&supported, SwitchKey::TabShape)
+            hold_of(&supported, SwitchKey::CyberpunkSkin)
         );
-        let tab_shape = supported
+        let cyberpunk_skin = supported
             .cards
             .iter()
-            .find(|card| card.key == SwitchKey::TabShape)
-            .expect("a tab shape card");
-        assert!(tab_shape.is_on && tab_shape.is_locked);
+            .find(|card| card.key == SwitchKey::CyberpunkSkin)
+            .expect("a Cyberpunk skin card");
+        assert!(cyberpunk_skin.is_on && cyberpunk_skin.is_locked);
     }
 
     #[test]

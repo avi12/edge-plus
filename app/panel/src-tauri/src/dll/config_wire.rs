@@ -20,7 +20,7 @@ pub struct DllConfig {
     pub is_enhanced_find_active: bool,
     pub is_web_ui_follows_theme_active: bool,
     pub is_live_preview_active: bool,
-    pub is_tab_shape_active: bool,
+    pub is_cyberpunk_skin_active: bool,
     pub is_reading_theme_active: bool,
 }
 
@@ -38,7 +38,7 @@ impl DllConfig {
             is_enhanced_find_active: features.enhanced_find,
             is_web_ui_follows_theme_active: features.web_ui_follows_theme,
             is_live_preview_active: features.live_preview,
-            is_tab_shape_active: features.tab_shape,
+            is_cyberpunk_skin_active: features.cyberpunk_skin,
             is_reading_theme_active: features.reading_theme,
         }
     }
@@ -58,8 +58,8 @@ pub const RESERVED_OFFSET: usize = DARK_ID_OFFSET + ID_CAPACITY;
 pub const ENHANCED_FIND_ACTIVE_OFFSET: usize = RESERVED_OFFSET + FIELD_BYTES;
 pub const WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET: usize = ENHANCED_FIND_ACTIVE_OFFSET + FIELD_BYTES;
 pub const LIVE_PREVIEW_ACTIVE_OFFSET: usize = WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET + FIELD_BYTES;
-pub const TAB_SHAPE_ACTIVE_OFFSET: usize = LIVE_PREVIEW_ACTIVE_OFFSET + FIELD_BYTES;
-pub const READING_THEME_ACTIVE_OFFSET: usize = TAB_SHAPE_ACTIVE_OFFSET + FIELD_BYTES;
+pub const CYBERPUNK_SKIN_ACTIVE_OFFSET: usize = LIVE_PREVIEW_ACTIVE_OFFSET + FIELD_BYTES;
+pub const READING_THEME_ACTIVE_OFFSET: usize = CYBERPUNK_SKIN_ACTIVE_OFFSET + FIELD_BYTES;
 pub const SIZE: usize = READING_THEME_ACTIVE_OFFSET + FIELD_BYTES;
 
 /// What config.h asserts at compile time, from its own counts.
@@ -111,8 +111,8 @@ pub fn encode(config: &DllConfig) -> [u8; SIZE] {
     );
     write_flag(
         &mut wire,
-        TAB_SHAPE_ACTIVE_OFFSET,
-        config.is_tab_shape_active,
+        CYBERPUNK_SKIN_ACTIVE_OFFSET,
+        config.is_cyberpunk_skin_active,
     );
     write_flag(
         &mut wire,
@@ -164,7 +164,7 @@ mod tests {
             is_enhanced_find_active: is_on,
             is_web_ui_follows_theme_active: is_on,
             is_live_preview_active: is_on,
-            is_tab_shape_active: is_on,
+            is_cyberpunk_skin_active: is_on,
             is_reading_theme_active: is_on,
         }
     }
@@ -181,8 +181,11 @@ mod tests {
     #[test]
     fn every_field_lands_at_its_offset() {
         let wire = encode(&config("abc", true));
-        assert_eq!(164, TAB_SHAPE_ACTIVE_OFFSET, "the tab shape at 164");
-        assert_eq!(1, u32_at(&wire, 164), "tab shape on");
+        assert_eq!(
+            164, CYBERPUNK_SKIN_ACTIVE_OFFSET,
+            "the Cyberpunk skin at 164"
+        );
+        assert_eq!(1, u32_at(&wire, 164), "the Cyberpunk skin on");
         assert_eq!(
             168, READING_THEME_ACTIVE_OFFSET,
             "the reading theme switch at 168"

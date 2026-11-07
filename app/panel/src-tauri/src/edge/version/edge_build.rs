@@ -38,7 +38,7 @@ pub fn depends_on_pinned_build(feature: Feature) -> bool {
         | Feature::EnhancedFind
         | Feature::WebUiFollowsTheme
         | Feature::LivePreview
-        | Feature::TabShape
+        | Feature::CyberpunkSkin
         | Feature::ReadingTheme => true,
         Feature::QuietDevMode => false,
     }
@@ -68,7 +68,7 @@ mod tests {
         Feature::EnhancedFind,
         Feature::WebUiFollowsTheme,
         Feature::LivePreview,
-        Feature::TabShape,
+        Feature::CyberpunkSkin,
         Feature::ReadingTheme,
     ];
 

@@ -62,7 +62,7 @@ pub enum SwitchKey {
     EnhancedFind,
     WebUiFollowsTheme,
     LivePreview,
-    TabShape,
+    CyberpunkSkin,
     ReadingTheme,
     StartWithWindows,
     AutoInject,
