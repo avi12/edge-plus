@@ -171,6 +171,8 @@ inline constexpr uint8_t kStockIndexCap = 2;
       edge155::rva::TabStrip_GetStrokeThickness,
       // Its title font (tab_font.h).
       edge155::rva::EdgeTabStyleViews_PaintTab,
+      // Its omnibox frame (omnibox_frame.h).
+      edge155::rva::LocationBarView_EdgeCreateRoundRectBackground,
   };
   for (const uintptr_t rva : sites) {
     if (!LooksLikeCode(rva)) {

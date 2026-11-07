@@ -2251,6 +2251,11 @@ inline std::optional<uint32_t> ViewColor(void* view, int colorId) {
       provider, colorId);
 }
 
+// The views::View a LocationBarView is, for its colours.
+inline void* ViewOfLocationBar(void* locationBar) {
+  return static_cast<uint8_t*>(locationBar) + edge155::off::LOCATIONBAR_view;
+}
+
 // --- a tab title's font (tab_font.h) -------------------------------------------
 
 // A gfx::FontList, and a gfx::Font: each is one scoped_refptr, so two holding

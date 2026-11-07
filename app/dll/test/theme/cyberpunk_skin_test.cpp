@@ -37,6 +37,9 @@ void RunFrameChecks() {
   Check(ToneOfSelectedFill(0xff123456) == Tone::kDark,
         "a fill the skin did not choose reads as dark, the skin's default");
   Check(kFrameThicknessDip == 2, "the frame is the kit's 2px stroke");
+  Check(FieldFrameFor(Tone::kDark) == 0xff007979 &&
+            FieldFrameFor(Tone::kLight) == 0xff547a99,
+        "a text field is framed in the idle line colour");
 }
 
 // --- Title font ---

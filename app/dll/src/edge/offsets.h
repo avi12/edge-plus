@@ -740,6 +740,20 @@ inline constexpr uintptr_t FontList_ctor_font = 0x2b3b05e;
 inline constexpr uintptr_t FontList_copy_ctor = 0x1016482;
 // int gfx::FontList::GetFontSize(this): the primary font's pixel size.
 inline constexpr uintptr_t FontList_GetFontSize = 0x104b740;
+// unique_ptr<views::Background>* LocationBarView::EdgeCreateRoundRectBackground(
+// this, out, SkColor background, SkColor stroke, SkBlendMode (3, src-over),
+// bool antialias, bool shouldBorderScale): Chromium's
+// CreateRoundRectBackground. A stroke of 0 makes a solid round rect
+// (Painter::CreateSolidRoundRectPainter); any other a 1px border in it
+// (CreateRoundRectWith1PxBorderPainter). LocationBarView::RefreshBackground
+// (rva 0x2840812) passes the omnibox's stroke: 0 unless the
+// kOmniboxLocationBarStrokeAndHoverRefresh feature is on (then ui ids 0xbc5 ->
+// 0xbc6 with the hover). Its call returns to the _return address; the other
+// caller is the omnibox popup's TopBackgroundView::OnThemeChanged.
+inline constexpr uintptr_t LocationBarView_EdgeCreateRoundRectBackground =
+    0x2840e8a;
+inline constexpr uintptr_t LocationBarView_RefreshBackground_background_return =
+    0x28409b6;
 // The OS light/dark signal does NOT come through Edge. ui::NativeThemeObserver
 // is a base::CheckedObserver (the observer list uses CheckedObserverAdapter), so
 // a hand-rolled observer object would have to fake a weak-ptr factory. Instead
@@ -1490,6 +1504,9 @@ inline constexpr uintptr_t LABEL_vtbl_SetFontList = 0x398;
 // A Tab's title_ (a TabTitle, a views::Label), as Tab::Tab stores it and
 // Tab::UpdateForegroundColors inks it.
 inline constexpr uintptr_t TAB_title = 0x950;
+// LocationBarView: its views::View base, which RefreshBackground hands
+// View::GetColorProvider and View::GetNativeTheme.
+inline constexpr uintptr_t LOCATIONBAR_view = 0x100;
 // DomDistillerContextKeyedService: its DomDistillerService base, and that
 // service's DistilledPagePrefs* (ChromeDomDistillerClient::GetDistilledPagePrefs
 // does exactly this: +8, then the field at +0x20).

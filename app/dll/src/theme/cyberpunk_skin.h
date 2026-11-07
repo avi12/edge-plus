@@ -45,6 +45,12 @@ inline constexpr int kFrameThicknessDip = 2;
   return tone == theme_tone::Tone::kLight ? kLightTabFrames : kDarkTabFrames;
 }
 
+// --- Field frame (chrome/toolbar/omnibox_frame.h) ---
+// A text field's frame is the kit's idle line, the same as an idle tab's.
+[[nodiscard]] constexpr Argb FieldFrameFor(theme_tone::Tone tone) noexcept {
+  return FramesFor(tone).idle;
+}
+
 // --- Title font (chrome/tabs/tab_font.h) ---
 // The kit's mono, Share Tech Mono, when Windows has it installed; else
 // Consolas, the monospace every Windows ships.

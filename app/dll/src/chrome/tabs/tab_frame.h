@@ -28,10 +28,11 @@ inline constexpr int kIdleStrokeWidthFactor = 2;
 inline constinit bool g_shouldAnswerActiveOnce = false;
 
 // The tone the skin chose the selected tab's fill for, read back off that fill
-// (hooks.h h_getuicolor answers the active tab's background with it).
-inline theme_tone::Tone ToneOfTab(void* tabView) {
+// (hooks.h h_getuicolor answers the active tab's background with it) through
+// any view of the window.
+inline theme_tone::Tone SkinToneOf(void* view) {
   const std::optional<uint32_t> selectedFill = edge::ViewColor(
-      tabView, edge155::off::UICOLOR_active_tab_background_focused);
+      view, edge155::off::UICOLOR_active_tab_background_focused);
   if (!selectedFill) {
     return theme_tone::Tone::kUnknown;
   }
@@ -52,7 +53,7 @@ inline void __fastcall h_paint_background_stroke(void* styleViews, void* canvas,
   void* const tabView = edge::TabViewOfStyleViews(styleViews);
   const bool isSelected = edge::IsTabObjectActive(tab);
   const cyberpunk_skin::TabFrames frames =
-      cyberpunk_skin::FramesFor(ToneOfTab(tabView));
+      cyberpunk_skin::FramesFor(SkinToneOf(tabView));
   const bool isClippedIdleRow = !isSelected && edge::IsVerticalTabView(tabView);
   g_frameThickness = isClippedIdleRow ? cyberpunk_skin::kFrameThicknessDip *
                                             kIdleStrokeWidthFactor
