@@ -708,6 +708,52 @@ inline constexpr uintptr_t
 // true); this is that call's return address.
 inline constexpr uintptr_t EdgeTabStyleViews_PaintTab_hover_layer_return =
     0x4755b02;
+// void EdgeTabStyleViews::PaintBackgroundStroke(this, gfx::Canvas*, SkColor):
+// PaintTabBackground calls it after the fill with ColorProvider::GetColor(
+// 0xb12, 0xb13 when the widget is not active). It returns at once unless the
+// tab is active (tab vtable +0x28, EdgeTab_IsActive) and the tab's controller
+// gives a stroke thickness (controller vtable +0x280, TabStrip_GetStrokeThickness);
+// else it strokes GetPath(kBorder = 1) with that colour, kStroke_Style, at the
+// thickness times the canvas scale (its cold part, 0x475647c). Every tab passes
+// through it, vertical rows included (docs/re/cyberpunk-skin.md).
+inline constexpr uintptr_t EdgeTabStyleViews_PaintBackgroundStroke = 0x27d8ffa;
+// int TabStrip::GetStrokeThickness(this): BrowserView::ShouldDrawTabStrokes,
+// which is false whenever the vertical tab strip shows. EdgeTabStrip's
+// TabSlotController vtable (0x11741b10) keeps TabStrip's at +0x280.
+inline constexpr uintptr_t TabStrip_GetStrokeThickness = 0x26edbc0;
+// bool EdgeTab::IsActive(this): false for a closing tab (+0x930), else
+// Tab_IsActive; the slot +0x28 of EdgeTab's vtable at +0 (0x1177a720). 15
+// bytes: `cmp byte [rcx+930h],0` (7), `je Tab_IsActive`, `xor eax,eax; ret`.
+inline constexpr uintptr_t EdgeTab_IsActive = 0x1084810;
+// ColorProvider* views::View::GetColorProvider(this): through the view's
+// widget; null for a view in none.
+inline constexpr uintptr_t View_GetColorProvider = 0x1030e30;
+// void EdgeTabStyleViews::PaintTab(this, gfx::Canvas*): every tab's paint, the
+// vertical list's rows included (Tab::OnPaint).
+inline constexpr uintptr_t EdgeTabStyleViews_PaintTab = 0x27d88f0;
+// gfx::Font::Font(this, const std::string& name, int pixelSize): a
+// scoped_refptr<PlatformFont> (PlatformFont::CreateFromNameAndSize).
+inline constexpr uintptr_t Font_ctor_name_size = 0x26aa68c;
+// gfx::FontList::FontList(this, const gfx::Font&) and (this, const FontList&):
+// a FontList is one scoped_refptr<FontListImpl>; both take a reference.
+inline constexpr uintptr_t FontList_ctor_font = 0x2b3b05e;
+inline constexpr uintptr_t FontList_copy_ctor = 0x1016482;
+// int gfx::FontList::GetFontSize(this): the primary font's pixel size.
+inline constexpr uintptr_t FontList_GetFontSize = 0x104b740;
+// unique_ptr<views::Background>* LocationBarView::EdgeCreateRoundRectBackground(
+// this, out, SkColor background, SkColor stroke, SkBlendMode (3, src-over),
+// bool antialias, bool shouldBorderScale): Chromium's
+// CreateRoundRectBackground. A stroke of 0 makes a solid round rect
+// (Painter::CreateSolidRoundRectPainter); any other a 1px border in it
+// (CreateRoundRectWith1PxBorderPainter). LocationBarView::RefreshBackground
+// (rva 0x2840812) passes the omnibox's stroke: 0 unless the
+// kOmniboxLocationBarStrokeAndHoverRefresh feature is on (then ui ids 0xbc5 ->
+// 0xbc6 with the hover). Its call returns to the _return address; the other
+// caller is the omnibox popup's TopBackgroundView::OnThemeChanged.
+inline constexpr uintptr_t LocationBarView_EdgeCreateRoundRectBackground =
+    0x2840e8a;
+inline constexpr uintptr_t LocationBarView_RefreshBackground_background_return =
+    0x28409b6;
 // The OS light/dark signal does NOT come through Edge. ui::NativeThemeObserver
 // is a base::CheckedObserver (the observer list uses CheckedObserverAdapter), so
 // a hand-rolled observer object would have to fake a weak-ptr factory. Instead
@@ -1452,6 +1498,19 @@ inline constexpr uintptr_t FINDBARLABEL_set_text_vtable_offset = 0x3a8;
 // GetTextStyle are bare reads of these), which pick its font and colour id.
 inline constexpr uintptr_t LABEL_text_context = 0x388;
 inline constexpr uintptr_t LABEL_text_style = 0x38c;
+// views::Label: its full_text_ (std::unique_ptr<gfx::RenderText>), and the
+// RenderText's FontList, as Label::SetFontList and Label::EdgeUpdateFontList
+// (rva 0x27a5c00) read them; and the SetFontList(const FontList&) virtual,
+// which EdgeTab::EdgeTab calls on the tab's title.
+inline constexpr uintptr_t LABEL_render_text = 0x398;
+inline constexpr uintptr_t RENDERTEXT_font_list = 0x48;
+inline constexpr uintptr_t LABEL_vtbl_SetFontList = 0x398;
+// A Tab's title_ (a TabTitle, a views::Label), as Tab::Tab stores it and
+// Tab::UpdateForegroundColors inks it.
+inline constexpr uintptr_t TAB_title = 0x950;
+// LocationBarView: its views::View base, which RefreshBackground hands
+// View::GetColorProvider and View::GetNativeTheme.
+inline constexpr uintptr_t LOCATIONBAR_view = 0x100;
 // DomDistillerContextKeyedService: its DomDistillerService base, and that
 // service's DistilledPagePrefs* (ChromeDomDistillerClient::GetDistilledPagePrefs
 // does exactly this: +8, then the field at +0x20).

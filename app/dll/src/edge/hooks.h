@@ -20,6 +20,9 @@
 #include "chrome/pane/dividers.h"
 #include "chrome/tabs/tabrows.h"
 #include "chrome/tabs/tab_shape.h"
+#include "chrome/tabs/tab_frame.h"
+#include "chrome/tabs/tab_font.h"
+#include "chrome/toolbar/omnibox_frame.h"
 #include "chrome/pane/drag.h"
 #include "chrome/pane/grip.h"
 #include "layout/state.h"
@@ -714,6 +717,24 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
           reinterpret_cast<void*>(tab_shape::h_is_right_split_tab),
           &tab_shape::o_is_right_split_tab,
           "EdgeTabStyleViews::IsRightSplitTab (drop shadow)");
+  Install(edge155::rva::EdgeTabStyleViews_PaintBackgroundStroke,
+          reinterpret_cast<void*>(tab_frame::h_paint_background_stroke),
+          &tab_frame::o_paint_background_stroke,
+          "EdgeTabStyleViews::PaintBackgroundStroke (tab frame)");
+  Install(edge155::rva::TabStrip_GetStrokeThickness,
+          reinterpret_cast<void*>(tab_frame::h_get_stroke_thickness),
+          &tab_frame::o_get_stroke_thickness,
+          "TabStrip::GetStrokeThickness (tab frame)");
+  Install(edge155::rva::EdgeTab_IsActive,
+          reinterpret_cast<void*>(tab_frame::h_is_active),
+          &tab_frame::o_is_active, "EdgeTab::IsActive (idle tab frame)");
+  Install(edge155::rva::EdgeTabStyleViews_PaintTab,
+          reinterpret_cast<void*>(tab_font::h_paint_tab),
+          &tab_font::o_paint_tab, "EdgeTabStyleViews::PaintTab (title font)");
+  Install(edge155::rva::LocationBarView_EdgeCreateRoundRectBackground,
+          reinterpret_cast<void*>(omnibox_frame::h_create_background),
+          &omnibox_frame::o_create_background,
+          "LocationBarView::EdgeCreateRoundRectBackground (omnibox frame)");
   Install(edge155::rva::TabDragController_ContinueDragging,
           reinterpret_cast<void*>(tabdrag::h_continue_dragging),
           &tabdrag::o_continue_dragging, "TabDragController::ContinueDragging");

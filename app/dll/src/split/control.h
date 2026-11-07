@@ -321,6 +321,16 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     MH_EnableHook(edge::At(edge155::rva::SkPath_addRRect));
     MH_EnableHook(edge::At(edge155::rva::SkPath_lineTo));
     MH_EnableHook(edge::At(edge155::rva::Canvas_DrawRoundRect));
+    // Its tab frames (tab_frame.h).
+    MH_EnableHook(
+        edge::At(edge155::rva::EdgeTabStyleViews_PaintBackgroundStroke));
+    MH_EnableHook(edge::At(edge155::rva::TabStrip_GetStrokeThickness));
+    MH_EnableHook(edge::At(edge155::rva::EdgeTab_IsActive));
+    // Its title font (tab_font.h).
+    MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_PaintTab));
+    // Its omnibox frame (omnibox_frame.h).
+    MH_EnableHook(
+        edge::At(edge155::rva::LocationBarView_EdgeCreateRoundRectBackground));
     protocol_handlers::EnableHooks();
     find::EnableAll();
     theme_follow::EnableAll();

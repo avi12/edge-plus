@@ -9,6 +9,7 @@
 #include <cstring>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -2222,12 +2223,118 @@ inline bool IsChatPageFrame(void* frame) {
 
 // --- a tab's outline (EdgeTabStyleViews::GetPath) ------------------------------
 
+// The EdgeTab (its Tab base) a style serves.
+inline void* TabObjectOfStyleViews(void* styleViews) {
+  return Field<void*>(styleViews, edge155::off::STYLEVIEWS_tab);
+}
+
 inline void* TabViewOfStyleViews(void* styleViews) {
-  void* tab = Field<void*>(styleViews, edge155::off::STYLEVIEWS_tab);
+  void* tab = TabObjectOfStyleViews(styleViews);
   if (!tab) {
     return nullptr;
   }
   return static_cast<uint8_t*>(tab) + edge155::off::EDGETAB_view_offset;
+}
+
+// A view's colour, as its widget's ColorProvider resolves `colorId`; nullopt
+// for a view in no widget. Goes through ColorProvider::GetColor's entry, so
+// hooks.h's h_getuicolor answers for the ids it recolours.
+inline std::optional<uint32_t> ViewColor(void* view, int colorId) {
+  using ProviderFn = const void*(__fastcall*)(void*);
+  const void* const provider = reinterpret_cast<ProviderFn>(
+      At(edge155::rva::View_GetColorProvider))(view);
+  if (!provider) {
+    return std::nullopt;
+  }
+  using ColorFn = uint32_t(__fastcall*)(const void*, int);
+  return reinterpret_cast<ColorFn>(At(edge155::rva::ColorProvider_GetColor))(
+      provider, colorId);
+}
+
+// The views::View a LocationBarView is, for its colours.
+inline void* ViewOfLocationBar(void* locationBar) {
+  return static_cast<uint8_t*>(locationBar) + edge155::off::LOCATIONBAR_view;
+}
+
+// --- a tab title's font (tab_font.h) -------------------------------------------
+
+// A gfx::FontList, and a gfx::Font: each is one scoped_refptr, so two holding
+// the same impl are the same font.
+struct FontHandle {
+  const void* impl = nullptr;
+};
+static_assert(sizeof(FontHandle) == 8, "a FontList is one scoped_refptr");
+
+// A libc++ std::string short enough for its inline buffer: the chars, then the
+// size in the last byte with its top bit (the long flag) clear, the layout
+// TabTitle::TabTitle reads a u16string's in. It owns no heap, so it needs no
+// destructor.
+struct ShortString {
+  static constexpr size_t kCapacity = 22;
+  char chars[kCapacity + 1] = {};
+  uint8_t size = 0;
+};
+static_assert(sizeof(ShortString) == 24, "a libc++ std::string is 24 bytes");
+
+[[nodiscard]] inline std::optional<ShortString> MakeShortString(
+    std::string_view text) {
+  if (text.size() > ShortString::kCapacity) {
+    return std::nullopt;
+  }
+  ShortString shortString;
+  memcpy(shortString.chars, text.data(), text.size());
+  shortString.size = static_cast<uint8_t>(text.size());
+  return shortString;
+}
+
+inline void* TabTitleLabel(void* tabObject) {
+  return Field<void*>(tabObject, edge155::off::TAB_title);
+}
+
+// The font a label draws its text in (its RenderText's); null before it has
+// a RenderText.
+inline const FontHandle* LabelFontList(void* label) {
+  void* const renderText = Field<void*>(label, edge155::off::LABEL_render_text);
+  if (!renderText) {
+    return nullptr;
+  }
+  return &Field<FontHandle>(renderText, edge155::off::RENDERTEXT_font_list);
+}
+
+inline int FontListPixelSize(const FontHandle& fontList) {
+  using Fn = int(__fastcall*)(const FontHandle*);
+  return reinterpret_cast<Fn>(At(edge155::rva::FontList_GetFontSize))(
+      &fontList);
+}
+
+// A reference of our own to `fontList`, kept until the process ends.
+inline FontHandle CopyFontList(const FontHandle& fontList) {
+  FontHandle copy;
+  using Fn = void*(__fastcall*)(FontHandle*, const FontHandle*);
+  reinterpret_cast<Fn>(At(edge155::rva::FontList_copy_ctor))(&copy, &fontList);
+  return copy;
+}
+
+// A font list of the one family at `pixelSize`, kept until the process ends
+// (the Font it is made from too: a few bytes). A family Windows lacks comes
+// back as its default font.
+inline FontHandle MakeFontList(const ShortString& family, int pixelSize) {
+  FontHandle font;
+  using FontFn = void*(__fastcall*)(FontHandle*, const ShortString*, int);
+  reinterpret_cast<FontFn>(At(edge155::rva::Font_ctor_name_size))(
+      &font, &family, pixelSize);
+  FontHandle fontList;
+  using ListFn = void*(__fastcall*)(FontHandle*, const FontHandle*);
+  reinterpret_cast<ListFn>(At(edge155::rva::FontList_ctor_font))(&fontList,
+                                                                 &font);
+  return fontList;
+}
+
+// Through the label's own virtual, as EdgeTab::EdgeTab sets the title's font.
+inline void LabelSetFontList(void* label, const FontHandle& fontList) {
+  using Fn = void(__fastcall*)(void*, const FontHandle*);
+  reinterpret_cast<Fn>(VirtualFunction(
+      label, edge155::off::LABEL_vtbl_SetFontList))(label, &fontList);
 }
 
 inline bool IsEdgeTabView(void* view) {

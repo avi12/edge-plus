@@ -24,6 +24,35 @@ void Check(bool ok, const char* what) {
   }
 }
 
+// --- Frames ---
+void RunFrameChecks() {
+  const TabFrames dark = FramesFor(Tone::kDark);
+  const TabFrames light = FramesFor(Tone::kLight);
+  Check(dark.selected == 0xfff72944 && dark.idle == 0xff007979,
+        "a dark theme frames the selected tab red and the others teal");
+  Check(light.selected == 0xff06182b && light.idle == 0xff547a99,
+        "a light theme frames the selected tab in ink and the others slate");
+  Check(FramesFor(Tone::kUnknown).selected == dark.selected,
+        "a theme of no tone is framed as dark");
+  Check(ToneOfSelectedFill(SelectedTabFor(Tone::kLight).fill) == Tone::kLight,
+        "the light fill reads back as light");
+  Check(ToneOfSelectedFill(SelectedTabFor(Tone::kDark).fill) == Tone::kDark,
+        "the dark fill reads back as dark");
+  Check(ToneOfSelectedFill(0xff123456) == Tone::kDark,
+        "a fill the skin did not choose reads as dark, the skin's default");
+  Check(kFrameThicknessDip == 2, "the frame is the kit's 2px stroke");
+  Check(FieldFrameFor(Tone::kDark) == 0xff007979 &&
+            FieldFrameFor(Tone::kLight) == 0xff547a99,
+        "a text field is framed in the idle line colour");
+}
+
+// --- Title font ---
+void RunTitleFontChecks() {
+  Check(TitleFontFamilyFor(true) == "Share Tech Mono",
+        "the kit's mono when it is installed");
+  Check(TitleFontFamilyFor(false) == "Consolas", "Consolas when it is not");
+}
+
 void RunChecks() {
   const TabColors dark = SelectedTabFor(Tone::kDark);
   const TabColors light = SelectedTabFor(Tone::kLight);
@@ -68,6 +97,9 @@ void RunChecks() {
             ContrastRatio(HoverFillFor(Tone::kLight, kLightRail, kLightIdleInk),
                           kLightIdleInk) >= kReadableContrast,
         "an idle title still reads on its hover");
+
+  RunFrameChecks();
+  RunTitleFontChecks();
 }
 
 }  // namespace

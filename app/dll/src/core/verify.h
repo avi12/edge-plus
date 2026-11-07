@@ -166,6 +166,13 @@ inline constexpr uint8_t kStockIndexCap = 2;
       edge155::rva::MultiContentsView_dtor,
       edge155::rva::EdgeTabDragContextImpl_CalculateBoundsForDraggedViews,
       edge155::rva::EdgeTabStyleViews_IsRightSplitTab,
+      // The Cyberpunk skin's tab frames (tab_frame.h).
+      edge155::rva::EdgeTabStyleViews_PaintBackgroundStroke,
+      edge155::rva::TabStrip_GetStrokeThickness,
+      // Its title font (tab_font.h).
+      edge155::rva::EdgeTabStyleViews_PaintTab,
+      // Its omnibox frame (omnibox_frame.h).
+      edge155::rva::LocationBarView_EdgeCreateRoundRectBackground,
   };
   for (const uintptr_t rva : sites) {
     if (!LooksLikeCode(rva)) {
@@ -177,6 +184,14 @@ inline constexpr uint8_t kStockIndexCap = 2;
   if (!PatchSitesHoldTheirInstructions()) {
     Log("[verify] a patch site does not hold the instruction it was reversed "
         "from");
+    return false;
+  }
+  // EdgeTab::IsActive is too short for a prologue: its whole head is checked
+  // instead, `cmp byte ptr [rcx+930h], 0` then `je rel32` (offsets.h).
+  constexpr uint8_t kEdgeTabIsActiveHead[] = {0x80, 0xb9, 0x30, 0x09, 0x00,
+                                              0x00, 0x00, 0x0f, 0x84};
+  if (!BytesAre(edge155::rva::EdgeTab_IsActive, kEdgeTabIsActiveHead)) {
+    Log("[verify] EdgeTab::IsActive is not the code it was reversed from");
     return false;
   }
   // The link-handler bubble's Done slot is written while that feature is on;

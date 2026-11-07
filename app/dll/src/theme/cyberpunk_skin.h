@@ -14,6 +14,7 @@
 // - A hovered tab: a wash of the idle-title colour over the rail, the kit's
 //   hover, never the selected red (HoverFillFor).
 #pragma once
+#include <string_view>
 #include "theme/theme_tone.h"
 
 namespace edgeplus::cyberpunk_skin {
@@ -61,6 +62,49 @@ inline constexpr uint32_t kLightHoverPercent = 8;
 [[nodiscard]] constexpr Argb HoverFillFor(Tone tone, Argb rail,
                                           Argb label) noexcept {
   return theme_tone::Blend(rail, label, HoverPercentFor(tone));
+}
+
+// --- Frames (chrome/tabs/tab_frame.h) ---
+// The kit carries structure with 2px strokes: the selected tab is framed in
+// the frame colour (red in dark, ink in light) and every other tab in the idle
+// line colour (the kit's "Lines" teal in dark, its "off" slate in light).
+struct TabFrames {
+  Argb selected = 0;
+  Argb idle = 0;
+};
+
+inline constexpr TabFrames kDarkTabFrames{0xfff72944, 0xff007979};
+inline constexpr TabFrames kLightTabFrames{0xff06182b, 0xff547a99};
+// In DIPs, so it scales with the display as Edge's own tab stroke does.
+inline constexpr int kFrameThicknessDip = 2;
+
+[[nodiscard]] constexpr TabFrames FramesFor(theme_tone::Tone tone) noexcept {
+  return tone == theme_tone::Tone::kLight ? kLightTabFrames : kDarkTabFrames;
+}
+
+// --- Field frame (chrome/toolbar/omnibox_frame.h) ---
+// A text field's frame is the kit's idle line, the same as an idle tab's.
+[[nodiscard]] constexpr Argb FieldFrameFor(theme_tone::Tone tone) noexcept {
+  return FramesFor(tone).idle;
+}
+
+// --- Title font (chrome/tabs/tab_font.h) ---
+// The kit's mono, Share Tech Mono, when Windows has it installed; else
+// Consolas, the monospace every Windows ships.
+inline constexpr std::string_view kTitleFontFamily = "Share Tech Mono";
+inline constexpr std::string_view kTitleFontFallback = "Consolas";
+
+[[nodiscard]] constexpr std::string_view TitleFontFamilyFor(
+    bool isKitFontInstalled) noexcept {
+  return isKitFontInstalled ? kTitleFontFamily : kTitleFontFallback;
+}
+
+// The tone a selected tab's fill was chosen for: SelectedTabFor's inverse, so
+// the frames follow the tone the fill already settled on.
+[[nodiscard]] constexpr theme_tone::Tone ToneOfSelectedFill(
+    Argb fill) noexcept {
+  return fill == kLightSelectedTab.fill ? theme_tone::Tone::kLight
+                                        : theme_tone::Tone::kDark;
 }
 
 }  // namespace edgeplus::cyberpunk_skin
