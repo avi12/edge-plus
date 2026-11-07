@@ -1,7 +1,10 @@
 // theme_tone.h — is an Edge theme dark or light? A theme extension says nothing
 // about it, so the tone is read off its colors: the toolbar first (the largest
-// surface a theme always colors), else the frame. Pure.
+// surface a theme always colors), else the frame. Also how two of its colours
+// blend and whether text in one reads on the other. Pure.
 #pragma once
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 
 namespace edgeplus::theme_tone {
@@ -48,6 +51,41 @@ inline constexpr uint32_t kPercentScale = 100;
            << shift;
   };
   return 0xff000000u | mix(kRedShift) | mix(kGreenShift) | mix(kBlueShift);
+}
+
+// WCAG 2's contrast ratio, 1 (none) to 21 (black on white); text below
+// kReadableContrast fails its AA minimum.
+inline constexpr double kReadableContrast = 4.5;
+inline constexpr double kChannelUnit = 255.0;
+inline constexpr double kLinearBelow = 0.04045;
+inline constexpr double kLinearSlope = 12.92;
+inline constexpr double kGammaOffset = 0.055;
+inline constexpr double kGammaScale = 1.055;
+inline constexpr double kGamma = 2.4;
+inline constexpr double kRedLuminance = 0.2126;
+inline constexpr double kGreenLuminance = 0.7152;
+inline constexpr double kBlueLuminance = 0.0722;
+inline constexpr double kFlare = 0.05;
+
+[[nodiscard]] inline double RelativeLuminance(Argb color) noexcept {
+  const auto linear = [&](int shift) {
+    const double channel =
+        static_cast<double>((color >> shift) & kChannelMask) / kChannelUnit;
+    return channel <= kLinearBelow
+               ? channel / kLinearSlope
+               : std::pow((channel + kGammaOffset) / kGammaScale, kGamma);
+  };
+  return kRedLuminance * linear(kRedShift) +
+         kGreenLuminance * linear(kGreenShift) +
+         kBlueLuminance * linear(kBlueShift);
+}
+
+[[nodiscard]] inline double ContrastRatio(Argb first, Argb second) noexcept {
+  const double firstLuminance = RelativeLuminance(first);
+  const double secondLuminance = RelativeLuminance(second);
+  const double lighter = std::max(firstLuminance, secondLuminance);
+  const double darker = std::min(firstLuminance, secondLuminance);
+  return (lighter + kFlare) / (darker + kFlare);
 }
 
 enum class Tone {
