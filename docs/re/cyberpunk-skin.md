@@ -61,33 +61,33 @@ returns false whenever `BrowserView::ShouldDrawVerticalTabStrip`. Every row of
 the vertical list still goes through `PaintTabBackground` and so through
 `PaintBackgroundStroke` (its other branch only picks the overline colour).
 
-So three value-only hooks:
+So two value-only hooks frame the selected tab, the only one the kit's tab
+control (`controls.css` `.c-tabs`) frames:
 
-- `PaintBackgroundStroke`: with the skin on, swap the colour argument for the
-  frame colour and set the width for the length of the call.
+- `PaintBackgroundStroke`: with the skin on, for the active tab, swap the
+  colour argument for the accent and set the width for the length of the call.
 - `TabStrip::GetStrokeThickness`: that width while a frame is stroked, Edge's
   answer otherwise (so nothing else that asks changes).
-- `EdgeTab::IsActive` (`0x1084810`, 15 bytes: `cmp byte [rcx+930h],0`,
-  `je Tab::IsActive`, `xor eax,eax; ret`): for an idle tab, answered yes once,
-  for `PaintBackgroundStroke`'s first question only. `GetPath` asks again and
-  hears the truth, so the idle outline keeps the idle tab's shape. Its head is
-  checked byte for byte in `verify.h` (no prologue for `LooksLikeCode`).
 
-The stroke goes along `GetPath`'s border, which `tab_shape.h` already cuts, so
-the frame follows the cut corner with no extra work.
+Framing the idle tabs too (an earlier cut of the skin) took a third:
+`EdgeTab::IsActive` (`0x1084810`, 15 bytes: `cmp byte [rcx+930h],0`,
+`je Tab::IsActive`, `xor eax,eax; ret`), answered yes once for an idle tab, for
+`PaintBackgroundStroke`'s first question only; `GetPath` asks again and hears
+the truth. An idle row's border runs along its bounds, which clip the stroke's
+outer half, so it needed twice the width.
 
-The tone (red or ink) is read back off the selected tab's fill: the view's
-`ColorProvider` answers `UICOLOR_active_tab_background_focused` (0xaca) through
-`hooks.h`'s `h_getuicolor` with the skin's fill, and
-`cyberpunk_skin::ToneOfSelectedFill` inverts `SelectedTabFor`.
+The stroke goes along `GetPath`'s border, which `tab_shape.h` already squares,
+so the frame follows the outline with no extra work.
+
+The tone (dark or light) is `skin_tone.h`'s: the theme pack's, recorded when
+`hooks.h` reads its colours, else Windows' light or dark (Edge's own theme has
+no pack).
 
 **Runtime finding: an idle vertical row clips half its stroke.** Measured at
 5 DIP: the selected row's border path is inset (all five pixels inside, on
 every side); an idle row's runs along the row's bounds (the outer half
-clipped, on every side). Horizontal tabs are not clipped. So an idle vertical
-row is stroked at twice the width (`kIdleStrokeWidthFactor`), which leaves the
-kit's 2px inside. A horizontal selected tab's border is open at the bottom, as
-Edge draws it.
+clipped, on every side). Horizontal tabs are not clipped. A horizontal
+selected tab's border is open at the bottom, as Edge draws it.
 
 **The 0xc19 / 0xc1a ids** (`kColorEdgeVTabOutlineSelected*` in an old build):
 no `mov edx, 0C19h` exists in this image, and the one `mov edx, 0C1Ah` is in

@@ -1,17 +1,15 @@
-// tab_frame.h — the Cyberpunk skin's 2px tab frames: the selected tab framed in
-// the kit's frame colour, every other tab in its idle line colour
-// (cyberpunk_skin::FramesFor). Nothing here paints: Edge already strokes the
-// active tab's outline in EdgeTabStyleViews::PaintBackgroundStroke, with its own
-// path (GetPath's border, which tab_shape.h cuts like the fill) and its own
-// paint flags, but only while the strip asks for strokes, which a vertical strip
-// never does. These hooks hand that stroke a thickness, a colour, and, for an
-// idle tab, the one "is active" answer that lets it run. UI thread only.
+// tab_frame.h — the Cyberpunk skin's 2px frame on the selected tab, in the
+// kit's accent (cyberpunk_skin::SelectedTabFor); the kit's tab control leaves
+// the other tabs unframed. Nothing here paints: Edge already strokes the active
+// tab's outline in EdgeTabStyleViews::PaintBackgroundStroke, with its own path
+// (GetPath's border, which tab_shape.h squares like the fill) and its own paint
+// flags, but only while the strip asks for strokes, which a vertical strip
+// never does. These hooks hand that stroke a thickness and a colour. UI thread
+// only.
 #pragma once
-#include <optional>
 #include "edge/edge.h"
 #include "theme/cyberpunk_skin.h"
-#include "theme/theme.h"
-#include "theme/theme_tone.h"
+#include "theme/skin_tone.h"
 #include "chrome/tabs/tab_shape.h"
 
 namespace edgeplus::tab_frame {
@@ -19,27 +17,6 @@ namespace edgeplus::tab_frame {
 // The stroke width h_get_stroke_thickness hands out, set only for the length
 // of one PaintBackgroundStroke the skin frames; 0 the rest of the time.
 inline constinit int g_frameThickness = 0;
-// A selected row of the vertical list has its border path inset, so its whole
-// stroke shows; an idle row's runs along the row's bounds, which clip the outer
-// half away (seen at runtime, docs/re/cyberpunk-skin.md). Twice the width
-// leaves the same frame inside. A horizontal tab's stroke is never clipped.
-inline constexpr int kIdleStrokeWidthFactor = 2;
-// Set just before an idle tab's PaintBackgroundStroke: its first question,
-// whether the tab is active, is answered yes once (h_is_active), so it strokes.
-inline constinit bool g_shouldAnswerActiveOnce = false;
-
-// The tone the skin chose the selected tab's fill for, read back off that fill
-// (hooks.h h_getuicolor answers the active tab's background with it) through
-// any view of the window; Windows' light or dark when no theme pack gave the
-// skin a fill to choose.
-inline theme_tone::Tone SkinToneOf(void* view) {
-  const std::optional<uint32_t> selectedFill = edge::ViewColor(
-      view, edge155::off::UICOLOR_active_tab_background_focused);
-  const theme_tone::Tone fillTone =
-      selectedFill ? cyberpunk_skin::ToneOfSelectedFill(*selectedFill)
-                   : theme_tone::Tone::kUnknown;
-  return cyberpunk_skin::SkinToneFor(fillTone, theme::IsOsDarkMode());
-}
 
 using PaintBackgroundStroke_t = void(__fastcall*)(void*, void*, uint32_t);
 inline constinit PaintBackgroundStroke_t o_paint_background_stroke = nullptr;
@@ -47,25 +24,16 @@ inline constinit PaintBackgroundStroke_t o_paint_background_stroke = nullptr;
 inline void __fastcall h_paint_background_stroke(void* styleViews, void* canvas,
                                                  uint32_t strokeColor) {
   void* const tab = edge::TabObjectOfStyleViews(styleViews);
-  const bool isFramed = tab_shape::g_isCyberpunkSkinOn && tab;
+  const bool isFramed =
+      tab_shape::g_isCyberpunkSkinOn && tab && edge::IsTabObjectActive(tab);
   if (!isFramed) {
     o_paint_background_stroke(styleViews, canvas, strokeColor);
     return;
   }
-  void* const tabView = edge::TabViewOfStyleViews(styleViews);
-  const bool isSelected = edge::IsTabObjectActive(tab);
-  const cyberpunk_skin::TabFrames frames =
-      cyberpunk_skin::FramesFor(SkinToneOf(tabView));
-  const bool isClippedIdleRow = !isSelected && edge::IsVerticalTabView(tabView);
-  g_frameThickness = isClippedIdleRow ? cyberpunk_skin::kFrameThicknessDip *
-                                            kIdleStrokeWidthFactor
-                                      : cyberpunk_skin::kFrameThicknessDip;
-  g_shouldAnswerActiveOnce = !isSelected;
-  o_paint_background_stroke(styleViews, canvas,
-                            isSelected ? frames.selected : frames.idle);
-  // Cleared whatever the stroke asked: a flag left set would answer some later,
-  // unrelated question.
-  g_shouldAnswerActiveOnce = false;
+  g_frameThickness = cyberpunk_skin::kFrameThicknessDip;
+  o_paint_background_stroke(
+      styleViews, canvas,
+      cyberpunk_skin::SelectedTabFor(skin_tone::Current()).frame);
   g_frameThickness = 0;
 }
 
@@ -80,20 +48,6 @@ inline int __fastcall h_get_stroke_thickness(void* controller) {
     return g_frameThickness;
   }
   return o_get_stroke_thickness(controller);
-}
-
-// bool EdgeTab::IsActive(this): PaintBackgroundStroke's gate. Answered yes once
-// for an idle tab being framed; its GetPath, which also asks, then hears the
-// truth, so the idle outline keeps an idle tab's shape.
-using IsActive_t = bool(__fastcall*)(void*);
-inline constinit IsActive_t o_is_active = nullptr;
-
-inline bool __fastcall h_is_active(void* tab) {
-  if (g_shouldAnswerActiveOnce) {
-    g_shouldAnswerActiveOnce = false;
-    return true;
-  }
-  return o_is_active(tab);
 }
 
 }  // namespace edgeplus::tab_frame

@@ -1,20 +1,16 @@
-// tab_shape.h — the tab's outline: the Cyberpunk kit's plate, square with 45
-// degree cuts on its top trailing and bottom leading corners (tab_edge.h has the
-// sketch); a horizontal tab loses its flared feet. Edge outlines a tab (fill, hover, press) in
-// EdgeTabStyleViews::GetPath, as one rounded rectangle for a vertical tab and
-// four arcs for a horizontal one; changing the outline shapes the tab in
-// whatever colour Edge paints it, so nothing is painted over the fill except a
-// split group's (SplitTabView::OnPaint). The same outline, through GetPath,
-// is what the horizontal strip's drop shadow follows. In a right-to-left UI the
-// whole outline mirrors: a vertical tab's by tab_edge::LeadingSide, a horizontal
-// one's by Edge, which draws it left to right on a flipped canvas. UI thread
-// only.
+// tab_shape.h — the tab's outline under the Cyberpunk skin: a plain rectangle,
+// the Cyberpunk kit's tab control (controls.css .c-tabs); a horizontal tab
+// loses its flared feet. Edge outlines a tab (fill, hover, press, the selected
+// tab's frame) in EdgeTabStyleViews::GetPath, as one rounded rectangle for a
+// vertical tab and four arcs for a horizontal one; squaring the outline shapes
+// the tab in whatever colour Edge paints it, so nothing is painted over the
+// fill except a split group's (SplitTabView::OnPaint). The same outline,
+// through GetPath, is what the horizontal strip's drop shadow follows. UI
+// thread only.
 #pragma once
 #include <windows.h>
 #include <intrin.h>
-#include <bit>
 #include <utility>
-#include <vector>
 #include "edge/edge.h"
 #include "edge/geom.h"
 #include "layout/state.h"
@@ -22,22 +18,13 @@
 
 namespace edgeplus::tab_shape {
 
-// The Cyberpunk skin's switch: this outline, and the red selected tab
-// (cyberpunk_skin.h) that hooks.h fills it with.
+// The Cyberpunk skin's switch: this outline, and the selected tab's frame and
+// colours (cyberpunk_skin.h).
 inline constinit bool g_isCyberpunkSkinOn = false;
 
 // The tab GetPath is outlining right now, so the Skia calls it makes can be told
 // from every other.
 inline constinit void* g_outlinedTab = nullptr;
-// Whether that tab's plate is cut (tab_edge::IsPlateCut); square when not. Every
-// way GetPath outlines it follows this.
-inline constinit bool g_isPlateCut = true;
-
-inline bool IsPlateCutFor(void* tabView) {
-  void* tabObject = edge::TabObjectOfView(tabView);
-  return tab_edge::IsPlateCut(edge::IsTabObjectInSplit(tabObject),
-                              edge::IsTheActiveTabObject(tabObject));
-}
 
 using GetPath_t = void*(__fastcall*)(void*, void*, int, float, const int*);
 inline constinit GetPath_t o_get_path = nullptr;
@@ -73,7 +60,6 @@ inline void* __fastcall h_get_path(void* styleViews, void* outPath,
               edge155::rva::EdgeTabStrip_UpdateDropShadow_activeTabPath_return);
   g_outlinedTab =
       g_isCyberpunkSkinOn ? edge::TabViewOfStyleViews(styleViews) : nullptr;
-  g_isPlateCut = !g_outlinedTab || IsPlateCutFor(g_outlinedTab);
   void* result = o_get_path(styleViews, outPath, pathType, scale, isUnscaled);
   g_outlinedTab = nullptr;
   g_isOutliningShadow = false;
@@ -84,7 +70,7 @@ inline void* __fastcall h_get_path(void* styleViews, void* outPath,
 // outlines a tab as its split's first member (no trailing arc, a square right
 // side) or a later one (no leading foot). Neither while it outlines the
 // shadowed tab; and while we shape the outline no tab takes the first member's
-// square-sided branch, since g_isPlateCut squares or cuts every member.
+// square-sided branch, since every member comes out square anyway.
 using IsSplitSide_t = bool(__fastcall*)(void*);
 inline constinit IsSplitSide_t o_is_left_split_tab = nullptr;
 inline constinit IsSplitSide_t o_is_right_split_tab = nullptr;
@@ -107,8 +93,8 @@ inline bool __fastcall h_is_right_split_tab(void* tabObject) {
 using SetRectXY_t = void(__fastcall*)(void*, const void*, float, float);
 inline constinit SetRectXY_t o_set_rect_xy = nullptr;
 
-// SkRRect::setRectXY, for the one call that builds a vertical tab's outline: the
-// radius is Edge's, the corners are ours.
+// SkRRect::setRectXY, for the one call that builds a vertical tab's outline:
+// the bounds are Edge's, every corner square.
 inline void __fastcall h_set_rect_xy(void* roundedRect, const void* skRect,
                                      float radiusX, float radiusY) {
   const bool isTabOutline =
@@ -119,9 +105,7 @@ inline void __fastcall h_set_rect_xy(void* roundedRect, const void* skRect,
     o_set_rect_xy(roundedRect, skRect, radiusX, radiusY);
     return;
   }
-  const tab_edge::Side leading = tab_edge::LeadingSide(edge::IsUiRightToLeft());
-  edge::SetRoundedRectRadii(roundedRect, skRect,
-                            tab_edge::RadiiFor(leading, radiusX, g_isPlateCut));
+  edge::SetRoundedRectRadii(roundedRect, skRect, tab_edge::CornerRadii{});
 }
 
 using ArcTo_t = void*(__fastcall*)(void*, uint64_t, float, int, uint8_t,
@@ -159,39 +143,13 @@ inline OutlineArc ArcOfCaller(const void* caller) {
   return OutlineArc::kNone;
 }
 
-// How far each cut reaches past its corner's radius, as a share of it: enough
-// to read as a chamfer, short of the favicon and the close button.
-inline constexpr float kCutRatio = 0.75f;
-// How far a cut reaches along each of its sides, on a horizontal tab (arcs plus
-// h_line_to) and a vertical one (h_add_rrect) alike.
-inline float ChamferLeg(float radius) {
-  return radius * (1 + kCutRatio);
-}
-
-using LineTo_t = void*(__fastcall*)(void*, uint64_t);
-inline constinit LineTo_t o_line_to = nullptr;
-
-// Set by the top-left arc, for the top edge after it.
-inline constinit float g_cornerRadius = 0;
-// Set by the top edge (h_line_to): how far back from the corner it stopped, so
-// the top-right arc ends the same distance down the trailing side and the cut
-// between them is at 45 degrees.
-inline constinit float g_topCutLeg = 0;
-
-// SkPath::arcTo, for the calls in GetPath that round a tab's outline (both of a
-// horizontal tab's, and a vertical tab's pathTypes 0 and 1). With no radius an
-// arc is a straight line to its end, so every corner comes out square: the
-// flared feet end level with the tab's bottom and the bottom-right corner meets
-// the side. The plate's two cuts are where a cut plate leaves it:
-// - the bottom leading cut: the left foot first runs along the bottom past the
-//   side, then rises at 45 degrees to the side;
-// - the top trailing cut: the top edge stops short of the corner (h_line_to) and
-//   the top-right arc drops to the side from there.
-// Every point is relative to where Edge's own arc ends, so the same moves fit a
-// horizontal tab's flared foot and a vertical tab's rounded corner. A
-// right-to-left UI needs nothing more: GetPath builds the same outline left to
-// right whatever the direction (the same calls from the same addresses) and Edge
-// flips the canvas it paints on, so the cuts show mirrored.
+// SkPath::arcTo, for the calls in GetPath that round a horizontal tab's
+// outline. With no radius an arc is a straight line to its end, so moving each
+// end to its corner squares it: the flared feet end level with the tab's bottom
+// and every corner meets both its sides. Every point is relative to where
+// Edge's own arc ends. A right-to-left UI needs nothing more: GetPath builds
+// the same outline left to right whatever the direction and Edge flips the
+// canvas it paints on.
 inline void* __fastcall h_arc_to(void* path, uint64_t radii, float rotation,
                                  int arcSize, uint8_t direction, uint64_t end) {
   const OutlineArc corner =
@@ -206,20 +164,14 @@ inline void* __fastcall h_arc_to(void* path, uint64_t radii, float rotation,
     case OutlineArc::kLeftFoot:
       // The arc ends on the left side, one radius above the bottom.
       target.y += radius.y;
-      if (g_isPlateCut) {
-        const float leg = ChamferLeg(radius.x);
-        o_line_to(path, PackPoint(PointF{target.x + leg, target.y}));
-        target.y -= leg;
-      }
       break;
     case OutlineArc::kTopLeft:
-      g_cornerRadius = radius.x;
+      // The arc ends on the top, one radius in from the left side.
       target.x -= radius.x;
       break;
     case OutlineArc::kTopRight:
-      // The arc ends on the right side, one radius below the top, and the top
-      // edge stopped g_topCutLeg short of the corner.
-      target.y += g_topCutLeg - radius.y;
+      // The arc ends on the right side, one radius below the top.
+      target.y -= radius.y;
       break;
     case OutlineArc::kRightFoot:
       // The foot flares one radius out past the right side.
@@ -234,69 +186,6 @@ inline void* __fastcall h_arc_to(void* path, uint64_t radii, float rotation,
   }
   return o_arc_to(path, PackPoint(PointF{}), rotation, arcSize, direction,
                   PackPoint(target));
-}
-
-// SkPath::lineTo, for the call in GetPath that draws the top edge: it runs on to
-// the top-right corner instead of stopping where its arc would start, or to a
-// cut's length short of it on a cut plate.
-inline void* __fastcall h_line_to(void* path, uint64_t point) {
-  const bool isTopEdge =
-      g_outlinedTab &&
-      _ReturnAddress() ==
-          edge::At(edge155::rva::EdgeTabStyleViews_GetPath_topEdge_return);
-  if (!isTopEdge) {
-    return o_line_to(path, point);
-  }
-  g_topCutLeg = g_isPlateCut ? ChamferLeg(g_cornerRadius) : 0;
-  PointF target = UnpackPoint(point);
-  target.x += g_cornerRadius - g_topCutLeg;
-  return o_line_to(path, PackPoint(target));
-}
-
-// SkPath::addRRect(this, const SkRRect&, direction, startIndex).
-using AddRRect_t = void*(__fastcall*)(void*, const void*, int, unsigned);
-inline constinit AddRRect_t o_add_rrect = nullptr;
-using MoveTo_t = void*(__fastcall*)(void*, uint64_t);
-
-// An SkRRect's layout: its rect (left, top, right, bottom), then each corner's
-// radii in Skia's order (tab_edge::Corner).
-inline constexpr uintptr_t kRRectLeft = 0x0;
-inline constexpr uintptr_t kRRectTop = 0x4;
-inline constexpr uintptr_t kRRectRight = 0x8;
-inline constexpr uintptr_t kRRectBottom = 0xc;
-inline constexpr uintptr_t kRRectRadii = 0x10;
-
-// The vertical tab's rounded rectangle becomes the plate with the same bounds,
-// cut at the two corners h_set_rect_xy left round. An uncut plate has no radius
-// there, so stays a rectangle.
-inline void* __fastcall h_add_rrect(void* path, const void* roundedRect,
-                                    int direction, unsigned startIndex) {
-  const bool isTabOutline =
-      g_outlinedTab &&
-      _ReturnAddress() ==
-          edge::At(edge155::rva::EdgeTabStyleViews_GetPath_addRRect_return);
-  if (!isTabOutline) {
-    return o_add_rrect(path, roundedRect, direction, startIndex);
-  }
-  const float left = edge::Field<float>(roundedRect, kRRectLeft);
-  const float top = edge::Field<float>(roundedRect, kRRectTop);
-  const float right = edge::Field<float>(roundedRect, kRRectRight);
-  const float bottom = edge::Field<float>(roundedRect, kRRectBottom);
-  const tab_edge::Side leading = tab_edge::LeadingSide(edge::IsUiRightToLeft());
-  const tab_edge::Corner trailingTop = tab_edge::TrailingTopCorner(leading);
-  const float radius = edge::Field<float>(
-      roundedRect,
-      kRRectRadii + static_cast<uintptr_t>(trailingTop) * sizeof(PointF));
-  const tab_edge::CutOutline outline = tab_edge::CutOutlineOf(
-      left, top, right, bottom, ChamferLeg(radius), leading);
-  const auto moveTo =
-      reinterpret_cast<MoveTo_t>(edge::At(edge155::rva::SkPath_moveTo));
-  moveTo(path, PackPoint(outline.points[0]));
-  void* result = path;
-  for (size_t i = 1; i < tab_edge::kCutOutlinePointCount; i++) {
-    result = o_line_to(path, PackPoint(outline.points[i]));
-  }
-  return result;
 }
 
 using DrawRoundRect_t = void(__fastcall*)(void*, const Rect*, int, const void*);

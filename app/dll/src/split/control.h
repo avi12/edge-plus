@@ -318,8 +318,6 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     // The Cyberpunk skin's tab outline: its own switch, not the split's.
     MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_GetPath));
     MH_EnableHook(edge::At(edge155::rva::SkPath_arcTo));
-    MH_EnableHook(edge::At(edge155::rva::SkPath_addRRect));
-    MH_EnableHook(edge::At(edge155::rva::SkPath_lineTo));
     MH_EnableHook(edge::At(edge155::rva::SkRRect_setRectXY));
     MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_IsLeftSplitTab));
     MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_IsRightSplitTab));
@@ -328,7 +326,6 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     MH_EnableHook(
         edge::At(edge155::rva::EdgeTabStyleViews_PaintBackgroundStroke));
     MH_EnableHook(edge::At(edge155::rva::TabStrip_GetStrokeThickness));
-    MH_EnableHook(edge::At(edge155::rva::EdgeTab_IsActive));
     // Its title font (tab_font.h).
     MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_PaintTab));
     // Its omnibox frame (omnibox_frame.h).

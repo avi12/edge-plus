@@ -1,5 +1,5 @@
 // omnibox_frame.h — the Cyberpunk skin frames the omnibox in the kit's idle
-// line colour (cyberpunk_skin::FieldFrameFor), the way the kit frames a text
+// line colour (cyberpunk_skin::IdleLineFor), the way the kit frames a text
 // field. Nothing here paints: LocationBarView::RefreshBackground builds the
 // omnibox's background with EdgeCreateRoundRectBackground, which already draws
 // a 1px border in it when handed a stroke colour (only Edge's
@@ -10,8 +10,8 @@
 #include <intrin.h>
 #include "edge/edge.h"
 #include "theme/cyberpunk_skin.h"
+#include "theme/skin_tone.h"
 #include "chrome/tabs/tab_shape.h"
-#include "chrome/tabs/tab_frame.h"
 
 namespace edgeplus::omnibox_frame {
 
@@ -31,8 +31,7 @@ inline void* __fastcall h_create_background(void* locationBar, void* out,
           edge::At(edge155::rva::
                        LocationBarView_RefreshBackground_background_return);
   if (isOmniboxBackground) {
-    stroke = cyberpunk_skin::FieldFrameFor(
-        tab_frame::SkinToneOf(edge::ViewOfLocationBar(locationBar)));
+    stroke = cyberpunk_skin::IdleLineFor(skin_tone::Current());
   }
   return o_create_background(locationBar, out, background, stroke, blendMode,
                              isAntialiased, shouldBorderScale);

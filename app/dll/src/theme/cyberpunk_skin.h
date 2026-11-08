@@ -1,18 +1,19 @@
-// cyberpunk_skin.h — the Cyberpunk skin's vertical tabs, from the Cyberpunk UX
-// kit, for what a theme cannot say itself: Edge derives every vertical-tab
-// colour from the theme's toolbar and paints every tab title in the theme's
-// tab_text (offsets.h VTABCOLOR_*). The rail, toolbar and frame are the
-// theme's. The plate's cut corner is tab_shape.h's; the skin's switch is
+// cyberpunk_skin.h — the Cyberpunk skin's tabs, from the Cyberpunk UX kit's
+// tab control (controls.css .c-tabs): plain rectangles in a mono row, the
+// selected one boxed in the kit's accent with its "on" colour for text, the
+// others bare in their idle colour. What a theme cannot say itself: Edge
+// derives every vertical-tab colour from the theme's toolbar and paints every
+// tab title in the theme's tab_text (offsets.h VTABCOLOR_*). The rail, toolbar
+// and frame are the theme's; the square outline is tab_shape.h's; the switch is
 // tab_shape::g_isCyberpunkSkinOn. Pure.
 //
-// - The selected tab: a red plate (the kit's tab fill) with ink that stays
-//   readable on it, pure black on the dark theme's red and white on the light
-//   theme's deeper red (the kit measured both at 5.4:1 and 5.9:1).
-// - Idle titles: the kit's rule is idle dim, current bright, so they take the
-//   theme's tab_background_text, as Edge's horizontal idle tabs do, while it
-//   reads on the rail (IdleLabelFor).
+// - The selected tab: no fill of its own (the rail shows through), a 2px frame
+//   in the accent (red in dark, the deeper red in light) and its title in the
+//   "on" colour (cyan in dark; ink in light, where cyan never carries text).
+// - Idle tabs: no frame, titled in the theme's tab_background_text, as Edge's
+//   horizontal idle tabs are, while it reads on the rail (IdleLabelFor).
 // - A hovered tab: a wash of the idle-title colour over the rail, the kit's
-//   hover, never the selected red (HoverFillFor).
+//   hover, never the accent (HoverFillFor).
 #pragma once
 #include <string_view>
 #include "theme/theme_tone.h"
@@ -23,13 +24,21 @@ using theme_tone::Argb;
 using theme_tone::OptionalColor;
 using theme_tone::Tone;
 
-struct TabColors {
-  Argb fill = 0;
+struct SelectedTab {
+  Argb frame = 0;
   Argb ink = 0;
 };
 
-inline constexpr TabColors kDarkSelectedTab{0xfff72944, 0xff000000};
-inline constexpr TabColors kLightSelectedTab{0xffc8102e, 0xffffffff};
+inline constexpr SelectedTab kDarkSelectedTab{0xfff72944, 0xff56feff};
+inline constexpr SelectedTab kLightSelectedTab{0xffc8102e, 0xff06182b};
+
+// The kit's idle line, its "Lines" teal in dark and its "off" slate in light:
+// what frames a text field.
+inline constexpr Argb kDarkIdleLine = 0xff007979;
+inline constexpr Argb kLightIdleLine = 0xff547a99;
+
+// In DIPs, so it scales with the display as Edge's own tab stroke does.
+inline constexpr int kFrameThicknessDip = 2;
 
 // The kit's hover is its secondary teal #007979 at 22% over black in dark, and
 // its ink at 8% in light. The wash here is of the theme's idle-title colour:
@@ -51,8 +60,12 @@ inline constexpr uint32_t kLightHoverPercent = 8;
 }
 
 // A tone left unknown is taken as dark: the kit's neon register.
-[[nodiscard]] constexpr TabColors SelectedTabFor(Tone tone) noexcept {
+[[nodiscard]] constexpr SelectedTab SelectedTabFor(Tone tone) noexcept {
   return tone == Tone::kLight ? kLightSelectedTab : kDarkSelectedTab;
+}
+
+[[nodiscard]] constexpr Argb IdleLineFor(Tone tone) noexcept {
+  return tone == Tone::kLight ? kLightIdleLine : kDarkIdleLine;
 }
 
 [[nodiscard]] constexpr uint32_t HoverPercentFor(Tone tone) noexcept {
@@ -74,30 +87,6 @@ inline constexpr uint32_t kLightHoverPercent = 8;
   return theme_tone::Blend(rail, label, HoverPercentFor(tone));
 }
 
-// --- Frames (chrome/tabs/tab_frame.h) ---
-// The kit carries structure with 2px strokes: the selected tab is framed in
-// the frame colour (red in dark, ink in light) and every other tab in the idle
-// line colour (the kit's "Lines" teal in dark, its "off" slate in light).
-struct TabFrames {
-  Argb selected = 0;
-  Argb idle = 0;
-};
-
-inline constexpr TabFrames kDarkTabFrames{0xfff72944, 0xff007979};
-inline constexpr TabFrames kLightTabFrames{0xff06182b, 0xff547a99};
-// In DIPs, so it scales with the display as Edge's own tab stroke does.
-inline constexpr int kFrameThicknessDip = 2;
-
-[[nodiscard]] constexpr TabFrames FramesFor(theme_tone::Tone tone) noexcept {
-  return tone == theme_tone::Tone::kLight ? kLightTabFrames : kDarkTabFrames;
-}
-
-// --- Field frame (chrome/toolbar/omnibox_frame.h) ---
-// A text field's frame is the kit's idle line, the same as an idle tab's.
-[[nodiscard]] constexpr Argb FieldFrameFor(theme_tone::Tone tone) noexcept {
-  return FramesFor(tone).idle;
-}
-
 // --- Title font (chrome/tabs/tab_font.h) ---
 // The kit's mono, Share Tech Mono, when Windows has it installed; else
 // Consolas, the monospace every Windows ships.
@@ -107,20 +96,6 @@ inline constexpr std::string_view kTitleFontFallback = "Consolas";
 [[nodiscard]] constexpr std::string_view TitleFontFamilyFor(
     bool isKitFontInstalled) noexcept {
   return isKitFontInstalled ? kTitleFontFamily : kTitleFontFallback;
-}
-
-// The tone a selected tab's fill was chosen for: SelectedTabFor's inverse, so
-// the frames follow the tone the fill already settled on. Unknown for a fill
-// the skin did not choose (no theme pack coloured the tab).
-[[nodiscard]] constexpr theme_tone::Tone ToneOfSelectedFill(
-    Argb fill) noexcept {
-  if (fill == kLightSelectedTab.fill) {
-    return theme_tone::Tone::kLight;
-  }
-  if (fill == kDarkSelectedTab.fill) {
-    return theme_tone::Tone::kDark;
-  }
-  return theme_tone::Tone::kUnknown;
 }
 
 }  // namespace edgeplus::cyberpunk_skin
