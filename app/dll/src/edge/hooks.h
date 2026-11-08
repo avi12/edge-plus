@@ -573,9 +573,16 @@ inline void __fastcall h_update_foreground(void* tab) {
   g_isForegroundTabActive = wasOuterActive;
 }
 
+// A hook belongs to the feature it serves (tools/re/New-SignatureTable.ps1
+// reads the tag, so the hooked entry stands that feature down when it is
+// missing); a feature this build stood down gets none of its hooks.
 template <class T>
-inline bool Install(uintptr_t rva, void* detour, T** original,
-                    const char* name) {
+inline bool Install(edge155::signatures::Feature feature, uintptr_t rva,
+                    void* detour, T** original, const char* name) {
+  if (!availability::IsAvailable(feature)) {
+    Log("[skip] hook %s: its feature stood down in this Edge build", name);
+    return false;
+  }
   const bool isPlaced = edge::At(rva) != nullptr;
   if (!isPlaced) {
     Log("[skip] hook %s: no place in this Edge build", name);
@@ -594,192 +601,210 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
 }
 
 [[nodiscard]] inline bool InstallAll() {
+  using edge155::signatures::Feature;
   const bool isInitialized = MH_Initialize() == MH_OK;
   if (!isInitialized) {
     Log("[err] MH_Initialize failed");
     return false;
   }
-  Install(edge155::rva::MultiContentsView_SetWebContentsAtIndex,
+  Install(Feature::kSplit,
+          edge155::rva::MultiContentsView_SetWebContentsAtIndex,
           reinterpret_cast<void*>(h_setwc), &o_setwc, "SetWebContentsAtIndex");
-  Install(edge155::rva::MultiContentsView_CalculateProposedLayout,
+  Install(Feature::kSplit,
+          edge155::rva::MultiContentsView_CalculateProposedLayout,
           reinterpret_cast<void*>(h_calc), &o_calc, "CalculateProposedLayout");
-  Install(edge155::rva::SplitTabs_LogSplitViewCreatedUKM,
+  Install(Feature::kSplit, edge155::rva::SplitTabs_LogSplitViewCreatedUKM,
           reinterpret_cast<void*>(h_split_created_ukm), &o_split_created_ukm,
           "split_tabs::LogSplitViewCreatedUKM");
-  Install(edge155::rva::SplitTabs_LogSplitViewUpdatedUKM,
+  Install(Feature::kSplit, edge155::rva::SplitTabs_LogSplitViewUpdatedUKM,
           reinterpret_cast<void*>(h_split_updated_ukm), &o_split_updated_ukm,
           "split_tabs::LogSplitViewUpdatedUKM");
-  Install(edge155::rva::MultiContentsView_GetFocusableViewsMapFor,
+  Install(Feature::kSplit,
+          edge155::rva::MultiContentsView_GetFocusableViewsMapFor,
           reinterpret_cast<void*>(h_focus_map), &o_focus_map,
           "MultiContentsView::GetFocusableViewsMapFor");
-  Install(edge155::rva::chrome_ReloadInternal,
+  Install(Feature::kSplit, edge155::rva::chrome_ReloadInternal,
           reinterpret_cast<void*>(h_reload_internal), &o_reload_internal,
           "chrome::ReloadInternal");
-  Install(edge155::rva::MultiContentsView_SetActiveIndex,
+  Install(Feature::kSplit, edge155::rva::MultiContentsView_SetActiveIndex,
           reinterpret_cast<void*>(h_set_active), &o_set_active,
           "SetActiveIndex");
-  Install(edge155::rva::MultiContentsView_dtor,
+  Install(Feature::kSplit, edge155::rva::MultiContentsView_dtor,
           reinterpret_cast<void*>(h_mcv_dtor), &o_mcv_dtor,
           "MultiContentsView::~MultiContentsView");
-  Install(edge155::rva::MultiContentsView_CloseSplitView,
+  Install(Feature::kSplit, edge155::rva::MultiContentsView_CloseSplitView,
           reinterpret_cast<void*>(h_close_split_view), &o_close_split_view,
           "MultiContentsView::CloseSplitView");
-  Install(edge155::rva::ResizeArea2D_OnMousePressed,
+  Install(Feature::kSplit, edge155::rva::ResizeArea2D_OnMousePressed,
           reinterpret_cast<void*>(h_divider_pressed), &o_divider_pressed,
           "EdgeTwoDimensionalResizeArea::OnMousePressed");
-  Install(edge155::rva::ResizeArea2D_OnMouseDragged,
+  Install(Feature::kSplit, edge155::rva::ResizeArea2D_OnMouseDragged,
           reinterpret_cast<void*>(h_divider_dragged), &o_divider_dragged,
           "EdgeTwoDimensionalResizeArea::OnMouseDragged");
-  Install(edge155::rva::ResizeArea2D_OnMouseReleased,
+  Install(Feature::kSplit, edge155::rva::ResizeArea2D_OnMouseReleased,
           reinterpret_cast<void*>(h_divider_released), &o_divider_released,
           "EdgeTwoDimensionalResizeArea::OnMouseReleased");
-  Install(edge155::rva::ResizeArea2D_OnMouseCaptureLost,
+  Install(Feature::kSplit, edge155::rva::ResizeArea2D_OnMouseCaptureLost,
           reinterpret_cast<void*>(h_divider_capture_lost),
           &o_divider_capture_lost,
           "EdgeTwoDimensionalResizeArea::OnMouseCaptureLost");
-  Install(edge155::rva::SplitWindowControlMenu_BuildMenuModel,
+  Install(Feature::kSplit, edge155::rva::SplitWindowControlMenu_BuildMenuModel,
           reinterpret_cast<void*>(menu::h_build), &menu::o_build,
           "SplitWindowControlMenu::BuildMenuModel");
   Install(
+      Feature::kSplit,
       edge155::rva::BrowserWebContentsDelegate_ShouldOverrideNewWindowCreation,
       reinterpret_cast<void*>(links::h_should_override),
       &links::o_should_override,
       "BrowserWebContentsDelegate::ShouldOverrideNewWindowCreation");
-  Install(edge155::rva::BrowserWebContentsDelegate_AddNewContents,
-          reinterpret_cast<void*>(links::h_add_new_contents),
-          &links::o_add_new_contents,
-          "BrowserWebContentsDelegate::AddNewContents");
-  Install(edge155::rva::SplitWindowControllerV2_UpdateLinkedModeState,
+  Install(
+      Feature::kSplit, edge155::rva::BrowserWebContentsDelegate_AddNewContents,
+      reinterpret_cast<void*>(links::h_add_new_contents),
+      &links::o_add_new_contents, "BrowserWebContentsDelegate::AddNewContents");
+  Install(Feature::kSplit,
+          edge155::rva::SplitWindowControllerV2_UpdateLinkedModeState,
           reinterpret_cast<void*>(links::h_update_linked_mode),
           &links::o_update_linked_mode,
           "SplitWindowControllerImplV2::UpdateLinkedModeState");
-  Install(edge155::rva::SplitWindowLinkModeThrottle_MaybeCreate,
-          reinterpret_cast<void*>(links::h_link_throttle),
-          &links::o_link_throttle,
-          "SplitWindowLinkModeNavigationThrottle::MaybeCreateThrottleFor");
-  Install(edge155::rva::SplitWindowControllerV2_OpenTabInCurrentSplitWindow,
+  Install(
+      Feature::kSplit, edge155::rva::SplitWindowLinkModeThrottle_MaybeCreate,
+      reinterpret_cast<void*>(links::h_link_throttle), &links::o_link_throttle,
+      "SplitWindowLinkModeNavigationThrottle::MaybeCreateThrottleFor");
+  Install(Feature::kSplit,
+          edge155::rva::SplitWindowControllerV2_OpenTabInCurrentSplitWindow,
           reinterpret_cast<void*>(offer::h_open_tab), &offer::o_open_tab,
           "SplitWindowControllerImplV2::OpenTabInCurrentSplitWindow");
-  Install(edge155::rva::SplitWindowStartingUIHandler_GetTabs,
+  Install(Feature::kSplit, edge155::rva::SplitWindowStartingUIHandler_GetTabs,
           reinterpret_cast<void*>(offer::h_get_tabs), &offer::o_get_tabs,
           "SplitWindowStartingUIHandler::GetTabs");
-  Install(edge155::rva::SplitWindowController_IsSplitWindowWebContents,
+  Install(Feature::kSplit,
+          edge155::rva::SplitWindowController_IsSplitWindowWebContents,
           reinterpret_cast<void*>(offer::h_is_split_contents),
           &offer::o_is_split_contents,
           "SplitWindowController::IsSplitWindowWebContents");
-  Install(edge155::rva::StartingPageLeftSplitTask_RunOnce,
+  Install(Feature::kSplit, edge155::rva::StartingPageLeftSplitTask_RunOnce,
           reinterpret_cast<void*>(offer::h_page_left_split),
           &offer::o_page_left_split,
           "OnSplitTabRemoved's starting page task (RunOnce)");
-  Install(edge155::rva::SplitWindowStartingUIHandler_CloseSplitWindow,
+  Install(Feature::kSplit,
+          edge155::rva::SplitWindowStartingUIHandler_CloseSplitWindow,
           reinterpret_cast<void*>(offer::h_close_page), &offer::o_close_page,
           "SplitWindowStartingUIHandler::CloseSplitWindow");
-  Install(edge155::rva::EdgeTabStyleViews_GetPath,
+  Install(Feature::kCyberpunkSkin, edge155::rva::EdgeTabStyleViews_GetPath,
           reinterpret_cast<void*>(tab_shape::h_get_path),
           &tab_shape::o_get_path, "EdgeTabStyleViews::GetPath");
-  Install(edge155::rva::SkPath_arcTo,
+  Install(Feature::kCyberpunkSkin, edge155::rva::SkPath_arcTo,
           reinterpret_cast<void*>(tab_shape::h_arc_to), &tab_shape::o_arc_to,
           "SkPath::arcTo");
-  Install(edge155::rva::EdgeTabStyleViews_IsLeftSplitTab,
+  Install(Feature::kCyberpunkSkin,
+          edge155::rva::EdgeTabStyleViews_IsLeftSplitTab,
           reinterpret_cast<void*>(tab_shape::h_is_left_split_tab),
           &tab_shape::o_is_left_split_tab, "EdgeTabStyleViews::IsLeftSplitTab");
-  Install(edge155::rva::SkRRect_setRectXY,
+  Install(Feature::kCyberpunkSkin, edge155::rva::SkRRect_setRectXY,
           reinterpret_cast<void*>(tab_shape::h_set_rect_xy),
           &tab_shape::o_set_rect_xy, "SkRRect::setRectXY");
-  Install(edge155::rva::Canvas_DrawRoundRect,
+  Install(Feature::kCyberpunkSkin, edge155::rva::Canvas_DrawRoundRect,
           reinterpret_cast<void*>(tab_shape::h_draw_round_rect),
           &tab_shape::o_draw_round_rect, "gfx::Canvas::DrawRoundRect");
-  Install(edge155::rva::EdgeTabStyleViews_IsRightSplitTab,
+  Install(Feature::kCyberpunkSkin,
+          edge155::rva::EdgeTabStyleViews_IsRightSplitTab,
           reinterpret_cast<void*>(tab_shape::h_is_right_split_tab),
           &tab_shape::o_is_right_split_tab,
           "EdgeTabStyleViews::IsRightSplitTab (drop shadow)");
-  Install(edge155::rva::EdgeTabStyleViews_PaintBackgroundStroke,
+  Install(Feature::kCyberpunkSkin,
+          edge155::rva::EdgeTabStyleViews_PaintBackgroundStroke,
           reinterpret_cast<void*>(tab_frame::h_paint_background_stroke),
           &tab_frame::o_paint_background_stroke,
           "EdgeTabStyleViews::PaintBackgroundStroke (tab frame)");
-  Install(edge155::rva::TabStrip_GetStrokeThickness,
+  Install(Feature::kCyberpunkSkin, edge155::rva::TabStrip_GetStrokeThickness,
           reinterpret_cast<void*>(tab_frame::h_get_stroke_thickness),
           &tab_frame::o_get_stroke_thickness,
           "TabStrip::GetStrokeThickness (tab frame)");
-  Install(edge155::rva::EdgeTabStyleViews_PaintTab,
+  Install(Feature::kCyberpunkSkin, edge155::rva::EdgeTabStyleViews_PaintTab,
           reinterpret_cast<void*>(tab_font::h_paint_tab),
           &tab_font::o_paint_tab, "EdgeTabStyleViews::PaintTab (title font)");
-  Install(edge155::rva::LocationBarView_EdgeCreateRoundRectBackground,
+  Install(Feature::kCyberpunkSkin,
+          edge155::rva::LocationBarView_EdgeCreateRoundRectBackground,
           reinterpret_cast<void*>(omnibox_frame::h_create_background),
           &omnibox_frame::o_create_background,
           "LocationBarView::EdgeCreateRoundRectBackground (omnibox frame)");
-  Install(edge155::rva::TabDragController_ContinueDragging,
+  Install(Feature::kSplit, edge155::rva::TabDragController_ContinueDragging,
           reinterpret_cast<void*>(tabdrag::h_continue_dragging),
           &tabdrag::o_continue_dragging, "TabDragController::ContinueDragging");
-  Install(edge155::rva::TabDragController_EndDrag,
+  Install(Feature::kSplit, edge155::rva::TabDragController_EndDrag,
           reinterpret_cast<void*>(tabdrag::h_end_drag), &tabdrag::o_end_drag,
           "TabDragController::EndDrag");
-  Install(edge155::rva::EventTracker_OnEvent,
+  Install(Feature::kSplit, edge155::rva::EventTracker_OnEvent,
           reinterpret_cast<void*>(tabdrag::h_tracker_event),
           &tabdrag::o_tracker_event, "EventTracker::OnEvent");
-  Install(edge155::rva::MenuItemView_CalculateProposedLayout,
+  Install(Feature::kSplit, edge155::rva::MenuItemView_CalculateProposedLayout,
           reinterpret_cast<void*>(menu::h_row_layout), &menu::o_row_layout,
           "MenuItemView::CalculateProposedLayout");
-  Install(edge155::rva::SplitWindowControlMenu_PopulateMenu,
+  Install(Feature::kSplit, edge155::rva::SplitWindowControlMenu_PopulateMenu,
           reinterpret_cast<void*>(menu::h_populate), &menu::o_populate,
           "SplitWindowControlMenu::PopulateMenu");
-  Install(edge155::rva::SplitWindowControlMenu_ShouldExecuteWithoutClosing,
+  Install(Feature::kSplit,
+          edge155::rva::SplitWindowControlMenu_ShouldExecuteWithoutClosing,
           reinterpret_cast<void*>(menu::h_should_execute),
           &menu::o_should_execute,
           "SplitWindowControlMenu::ShouldExecuteCommandWithoutClosingMenu");
-  Install(edge155::rva::SplitWindowControlMenu_ExecuteCommand,
+  Install(Feature::kSplit, edge155::rva::SplitWindowControlMenu_ExecuteCommand,
           reinterpret_cast<void*>(menu::h_control_exec), &menu::o_control_exec,
           "SplitWindowControlMenu::ExecuteCommand");
-  Install(edge155::rva::ControlButtons_ToggleContextMenu,
+  Install(Feature::kSplit, edge155::rva::ControlButtons_ToggleContextMenu,
           reinterpret_cast<void*>(menu::h_toggle), &menu::o_toggle,
           "ControlButtons::ToggleContextMenu");
-  Install(edge155::rva::ControlButtons_HandleButtonClick,
+  Install(Feature::kSplit, edge155::rva::ControlButtons_HandleButtonClick,
           reinterpret_cast<void*>(h_button_click), &o_button_click,
           "ControlButtons::HandleButtonClick");
-  Install(edge155::rva::Button_OnMousePressed,
+  Install(Feature::kSplit, edge155::rva::Button_OnMousePressed,
           reinterpret_cast<void*>(h_pressed), &o_pressed,
           "Button::OnMousePressed");
-  Install(edge155::rva::Button_OnMouseDragged,
+  Install(Feature::kSplit, edge155::rva::Button_OnMouseDragged,
           reinterpret_cast<void*>(h_dragged), &o_dragged,
           "Button::OnMouseDragged");
-  Install(edge155::rva::Button_OnMouseReleased,
+  Install(Feature::kSplit, edge155::rva::Button_OnMouseReleased,
           reinterpret_cast<void*>(h_released), &o_released,
           "Button::OnMouseReleased");
-  Install(edge155::rva::Button_OnMouseCaptureLost,
+  Install(Feature::kSplit, edge155::rva::Button_OnMouseCaptureLost,
           reinterpret_cast<void*>(h_capture_lost), &o_capture_lost,
           "Button::OnMouseCaptureLost");
-  Install(edge155::rva::SplitWindowController_DoAction,
+  Install(Feature::kSplit, edge155::rva::SplitWindowController_DoAction,
           reinterpret_cast<void*>(collapse::h_do_action),
           &collapse::o_do_action, "DoActionToSplitWindow");
-  Install(edge155::rva::SplitTabMenuModel_ctor,
+  Install(Feature::kSplit, edge155::rva::SplitTabMenuModel_ctor,
           reinterpret_cast<void*>(menu::h_ctor), &menu::o_ctor,
           "SplitTabMenuModel::ctor");
-  Install(edge155::rva::SplitTabMenuModel_ExecuteCommand,
+  Install(Feature::kSplit, edge155::rva::SplitTabMenuModel_ExecuteCommand,
           reinterpret_cast<void*>(menu::h_exec), &menu::o_exec,
           "SplitTabMenuModel::ExecuteCommand");
-  Install(edge155::rva::WebUISplitTabsControl_HandleContextMenu,
+  Install(Feature::kSplit,
+          edge155::rva::WebUISplitTabsControl_HandleContextMenu,
           reinterpret_cast<void*>(menu::h_handle_ctx), &menu::o_handle_ctx,
           "WebUISplitTabsControl::HandleContextMenu");
-  Install(edge155::rva::ThemeService_RemoveUnusedThemes,
+  Install(Feature::kTheming, edge155::rva::ThemeService_RemoveUnusedThemes,
           reinterpret_cast<void*>(h_remove_unused_themes),
           &o_remove_unused_themes, "ThemeService::RemoveUnusedThemes");
-  Install(edge155::rva::ThemeService_OnThemeBuiltFromExtension,
+  Install(Feature::kTheming,
+          edge155::rva::ThemeService_OnThemeBuiltFromExtension,
           reinterpret_cast<void*>(h_on_theme_built), &o_on_theme_built,
           "ThemeService::OnThemeBuiltFromExtension (no bubble for Edge+)");
-  Install(edge155::rva::BrowserThemePack_GetColor,
+  Install(Feature::kTheming, edge155::rva::BrowserThemePack_GetColor,
           reinterpret_cast<void*>(h_getcolor), &o_getcolor,
           "BrowserThemePack::GetColor (vertical-tab recolour)");
-  Install(edge155::rva::ColorProvider_GetColor,
+  Install(Feature::kCyberpunkSkin, edge155::rva::ColorProvider_GetColor,
           reinterpret_cast<void*>(h_getuicolor), &o_getuicolor,
           "ui::ColorProvider::GetColor (selected-tab ink)");
-  Install(edge155::rva::EdgeTab_UpdateForegroundColors,
+  Install(Feature::kTheming, edge155::rva::EdgeTab_UpdateForegroundColors,
           reinterpret_cast<void*>(h_update_foreground), &o_update_foreground,
           "EdgeTab::UpdateForegroundColors (selected-tab ink)");
-  Install(edge155::rva::ContentSettingRPHBubbleModel_CommitChanges,
+  Install(Feature::kProtocolHandlers,
+          edge155::rva::ContentSettingRPHBubbleModel_CommitChanges,
           reinterpret_cast<void*>(protocol_handlers::h_commit_changes),
           &protocol_handlers::o_commit_changes,
           "ContentSettingRPHBubbleModel::CommitChanges");
   Install(
+      Feature::kProtocolHandlers,
       edge155::rva::RegisterProtocolHandlerPermissionRequest_PermissionDecided,
       reinterpret_cast<void*>(protocol_handlers::h_permission_decided),
       &protocol_handlers::o_permission_decided,
@@ -787,8 +812,7 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   // Safety patches on Edge's 2-pane CHECKs. Never restored on unload: they point
   // at nothing of ours, and a split still grown past two when this DLL unloads
   // would otherwise hit a CHECK as soon as Edge touches pane 3+.
-  const bool isSplitAvailable =
-      availability::IsAvailable(edge155::signatures::Feature::kSplit);
+  const bool isSplitAvailable = availability::IsAvailable(Feature::kSplit);
   if (isSplitAvailable) {
     const uint8_t previousGuard = edge::PatchByte(
         edge155::rva::SetWebContentsAtIndex_guard_imm, kLiftedIndexCap);
@@ -804,20 +828,21 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
     Log("[patch] SetActiveIndex index check NOPed (was 0x%02x 0x%02x)",
         previousBytes[0], previousBytes[1]);
   }
-  Install(edge155::rva::TabStripLayoutHelper_CalculateIdealBounds,
+  Install(Feature::kSplit,
+          edge155::rva::TabStripLayoutHelper_CalculateIdealBounds,
           reinterpret_cast<void*>(tabrows::h_calculate_ideal_bounds),
           &tabrows::o_calculate_ideal_bounds,
           "TabStripLayoutHelper::CalculateIdealBounds");
-  Install(edge155::rva::EdgeTabDragContextImpl_CalculateBoundsForDraggedViews,
+  Install(Feature::kSplit,
+          edge155::rva::EdgeTabDragContextImpl_CalculateBoundsForDraggedViews,
           reinterpret_cast<void*>(tabrows::h_dragged_bounds),
           &tabrows::o_dragged_bounds,
           "EdgeTabDragContextImpl::CalculateBoundsForDraggedViews");
-  Install(edge155::rva::Tab_IsActive,
+  Install(Feature::kSplit, edge155::rva::Tab_IsActive,
           reinterpret_cast<void*>(tabrows::h_is_active), &tabrows::o_is_active,
           "Tab::IsActive (detach preview)");
   // A feature with an address this Edge build could not place stays out
   // entirely (resolve.h); the hooks above skip theirs one by one.
-  using edge155::signatures::Feature;
   if (availability::IsAvailable(Feature::kEnhancedFind)) {
     find::Install();
   }

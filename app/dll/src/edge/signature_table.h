@@ -62,13 +62,36 @@ struct Probe {
 
 inline constexpr size_t kProbesPerEntry = 4;
 
-// Fields are ordered widest first (no padding), which is the order a table row is
-// written in.
+// The code an entry stands on, fingerprinted whole when the table was signed:
+// the function itself, the function a site sits in, or the function that
+// refers to a datum. On another line of Edge a probe hit says where the code
+// is; only an unchanged body says the code still does what it was reversed
+// for (the same struct offsets, slots and ids in its instructions), so a
+// feature runs there only while every body it stands on is unchanged.
+struct Body {
+  uint64_t hash;  // FNV-1a over the body, each masked field taken as zero
+  const uint32_t* maskOffsets;  // the 4-byte fields a rebuild moves (rel32
+                                // branch targets, RIP displacements)
+  uint32_t maskCount;
+  uint32_t size;    // 0: no body (the entry cannot be checked this way)
+  uint32_t offset;  // from the body's start to the entry's anchor (the
+                    // entry itself; for data, the function that refers to it)
+  bool isListed;    // the body is a function of the exception table, so its
+                    // size there must match too
+};
+
+[[nodiscard]] constexpr bool HasBody(const Body& body) noexcept {
+  return body.size != 0;
+}
+
+// Fields are ordered widest first, which is the order a table row is written
+// in.
 struct Entry {
   uintptr_t pinnedRva;        // the key: the value offsets.h gives the name
   const char* targetPattern;  // callee: how the code it reaches opens
   const char* name;
   std::array<Probe, kProbesPerEntry> probes;
+  Body body;
   uint32_t functionSize;   // of the function the probes find (0 for a site)
   uint32_t operandOffset;  // data, callee, inside: bytes from that function's
                            // start to the displacement that addresses the entry

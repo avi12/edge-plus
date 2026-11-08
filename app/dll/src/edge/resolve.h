@@ -19,6 +19,7 @@
 #include "core/handles.h"
 #include "core/log.h"
 #include "edge/availability.h"
+#include "edge/body.h"
 #include "edge/build_relation.h"
 #include "edge/resolution.h"
 #include "edge/signature.h"
@@ -42,7 +43,6 @@ struct Image {
 };
 
 inline constexpr char kTextSectionName[] = ".text";
-inline constexpr size_t kLoggedUnresolvedLimit = 60;
 
 [[nodiscard]] inline std::optional<Image> ReadImage(uintptr_t base) {
   const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
@@ -260,10 +260,40 @@ enum class RunMode {
               // anywhere but where offsets.h says they are
 };
 
+// Whether the body of a placed entry, read from the code being searched, is
+// the code it was signed from.
+[[nodiscard]] inline bool IsBodyUnchanged(const Image& image,
+                                          std::span<const uint8_t> text,
+                                          const signatures::Body& body,
+                                          uintptr_t anchor) {
+  const bool hasBody = signatures::HasBody(body);
+  const bool isAnchorPastOffset = anchor >= body.offset;
+  if (!hasBody || !isAnchorPastOffset) {
+    return false;
+  }
+  const uintptr_t start = anchor - body.offset;
+  const bool isInCode = start >= image.textRva &&
+                        start - image.textRva + body.size <= text.size();
+  if (!isInCode) {
+    return false;
+  }
+  const bool isSizeAsListed =
+      !body.isListed || FunctionSizeAt(image, start) == body.size;
+  if (!isSizeAsListed) {
+    return false;
+  }
+  return body::IsUnchanged(body,
+                           text.subspan(start - image.textRva, body.size));
+}
+
+// Where the entry is in this build; `anchor` is where its body's anchor is
+// (signature_table.h's Body: the entry itself, or for data the function that
+// refers to it).
 [[nodiscard]] inline std::optional<uintptr_t> PlaceEntry(
     const Image& image, const signatures::Entry& entry,
     const std::vector<std::vector<uintptr_t>>& hitsPerProbe,
-    edge_build::Relation relation, resolution::Status* status) {
+    edge_build::Relation relation, resolution::Status* status,
+    uintptr_t* anchor) {
   const bool isSite = entry.kind == signatures::EntryKind::kSite;
   const auto isPlausible = [&](uintptr_t rva) {
     if (isSite) {
@@ -280,7 +310,8 @@ enum class RunMode {
   }
   const bool isInside = entry.kind == signatures::EntryKind::kInside;
   if (isInside) {
-    return verdict.rva + entry.operandOffset;
+    *anchor = verdict.rva + entry.operandOffset;
+    return *anchor;
   }
   const bool isCallee = entry.kind == signatures::EntryKind::kCallee;
   if (isCallee) {
@@ -288,10 +319,13 @@ enum class RunMode {
         CallTargetAt(image, verdict.rva + entry.operandOffset, entry);
     if (!callee) {
       *status = resolution::Status::kRejected;
+      return std::nullopt;
     }
+    *anchor = *callee;
     return callee;
   }
   const bool isData = entry.kind == signatures::EntryKind::kData;
+  *anchor = verdict.rva;
   if (!isData) {
     return verdict.rva;
   }
@@ -346,7 +380,6 @@ enum class RunMode {
   uint16_t unresolvedFeatures = 0;
   std::vector<std::pair<uintptr_t, uintptr_t>> placed;
   std::vector<uint16_t> placedFeatures;
-  size_t logged = 0;
   for (size_t index = 0; index < std::size(signatures::kEntries); index++) {
     const signatures::Entry& entry = signatures::kEntries[index];
     std::vector<std::vector<uintptr_t>> hitsPerProbe(
@@ -361,8 +394,16 @@ enum class RunMode {
       }
     }
     resolution::Status status = resolution::Status::kUnsigned;
-    const std::optional<uintptr_t> rva =
-        PlaceEntry(*image, entry, hitsPerProbe, relation, &status);
+    uintptr_t anchor = 0;
+    std::optional<uintptr_t> rva =
+        PlaceEntry(*image, entry, hitsPerProbe, relation, &status, &anchor);
+    const bool isUnverified =
+        rva && resolution::NeedsUnchangedBody(relation) &&
+        !IsBodyUnchanged(*image, code.Text(), entry.body, anchor);
+    if (isUnverified) {
+      status = resolution::Status::kChanged;
+      rva.reset();
+    }
     if (rva) {
       placed.emplace_back(entry.pinnedRva, *rva);
       placedFeatures.push_back(entry.features);
@@ -377,13 +418,11 @@ enum class RunMode {
     }
     unresolvedFeatures =
         static_cast<uint16_t>(unresolvedFeatures | entry.features);
-    const bool shouldLog = logged < kLoggedUnresolvedLimit;
-    if (shouldLog) {
-      Log("[resolve] %s (rva 0x%llx): not placed (status %d)", entry.name,
-          static_cast<unsigned long long>(entry.pinnedRva),
-          static_cast<int>(status));
-      logged++;
-    }
+    // Every one is logged: the list is what a port has to look at, feature by
+    // feature.
+    Log("[resolve] %s (rva 0x%llx, features 0x%02x): %s", entry.name,
+        static_cast<unsigned long long>(entry.pinnedRva), entry.features,
+        resolution::DescribeStatus(status));
   }
 
   outcome.availableFeatures =

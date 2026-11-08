@@ -82,6 +82,126 @@ class FeatureRule {
     }
 )
 
+# The DLL's source files that belong to one feature (paths under app/dll/src,
+# a folder ending in /). Usage adds to the banner rules above, never takes away:
+# an entry a feature's code reaches (directly, or through edge.h's helpers)
+# carries that feature, so the feature stands down when the entry is missing.
+# Files not listed (edge.h, hooks.h, control.h, core/) are shared.
+[FeatureRule[]] $script:FileFeatures = @(
+    [FeatureRule]@{ Match = 'split/'; Features = @('Split') }
+    [FeatureRule]@{ Match = 'layout/'; Features = @('Split') }
+    [FeatureRule]@{ Match = 'chrome/pane/'; Features = @('Split') }
+    [FeatureRule]@{ Match = 'chrome/tabs/tabdrag.h'; Features = @('Split') }
+    [FeatureRule]@{ Match = 'chrome/tabs/tabrows.h'; Features = @('Split') }
+    [FeatureRule]@{ Match = 'chrome/tabs/tab_views.h'; Features = @('Split') }
+    [FeatureRule]@{ Match = 'chrome/tabs/tab_shape.h'; Features = @('CyberpunkSkin') }
+    [FeatureRule]@{ Match = 'chrome/tabs/tab_frame.h'; Features = @('CyberpunkSkin') }
+    [FeatureRule]@{ Match = 'chrome/tabs/tab_font.h'; Features = @('CyberpunkSkin') }
+    [FeatureRule]@{ Match = 'chrome/toolbar/'; Features = @('CyberpunkSkin') }
+    [FeatureRule]@{ Match = 'chrome/tabs/live_preview.h'; Features = @('LivePreview') }
+    [FeatureRule]@{ Match = 'theme/cyberpunk_skin.h'; Features = @('CyberpunkSkin') }
+    [FeatureRule]@{ Match = 'theme/skin_tone.h'; Features = @('CyberpunkSkin') }
+    [FeatureRule]@{ Match = 'theme/theme.h'; Features = @('Theming') }
+    [FeatureRule]@{ Match = 'theme/theme_notice.h'; Features = @('Theming') }
+    [FeatureRule]@{ Match = 'theme/protocol_handlers.h'; Features = @('ProtocolHandlers') }
+    [FeatureRule]@{ Match = 'theme/theme_follow.h'; Features = @('WebUiFollowsTheme') }
+    [FeatureRule]@{ Match = 'theme/followed_pages.h'; Features = @('WebUiFollowsTheme') }
+    [FeatureRule]@{ Match = 'theme/reading_'; Features = @('ReadingTheme') }
+    [FeatureRule]@{ Match = 'find/'; Features = @('EnhancedFind') }
+    [FeatureRule]@{ Match = 'assistant/'; Features = @('EnhancedFind') }
+)
+[string] $script:RvaUsePattern = 'rva::(\w+)'
+[string] $script:CallPattern = '\b([A-Z]\w+)\('
+# hooks.h's `Install(Feature::kX, edge155::rva::Name, reinterpret_cast<void*>(detour)`.
+[string] $script:TaggedInstallPattern = '(?s)Install\(\s*Feature::k(\w+),\s*edge155::rva::(\w+),\s*reinterpret_cast<void\*>\(\s*(?:\w+::)*(\w+)\)'
+# A top-level `inline` function of a binding header, up to its closing brace at
+# the start of a line.
+[string] $script:TopLevelFunctionPattern = '(?ms)^(?:template\s*<[^>]*>\s*)?(?:\[\[nodiscard\]\]\s*)?inline\s+[^;{]*?\b(\w+)\s*\([^;{]*?\)\s*(?:const\s*)?(?:noexcept\s*)?\{.*?^\}'
+
+# {entry base name: feature bits} of what each feature's own code reaches.
+function Get-UsageFeatures {
+    [OutputType([hashtable])]
+    param([string] $SourceRoot, [System.Collections.Specialized.OrderedDictionary] $Bits)
+    $root = (Resolve-Path $SourceRoot).Path
+    $files = Get-ChildItem $root -Recurse -Include '*.h', '*.cpp' |
+        Where-Object { $_.Name -notin 'offsets.h', 'signatures.g.h' }
+    # edge.h's helpers: name -> (entries it names, helpers it calls).
+    $helperEntries = @{}
+    $helperCalls = @{}
+    $bindingText = Read-SourceText (Join-Path $root 'edge\edge.h')
+    foreach ($function in [regex]::Matches($bindingText, $script:TopLevelFunctionPattern)) {
+        $name = $function.Groups[1].Value
+        $body = $function.Value
+        $helperEntries[$name] = @([regex]::Matches($body, $script:RvaUsePattern) | ForEach-Object { $_.Groups[1].Value })
+        $helperCalls[$name] = @([regex]::Matches($body, $script:CallPattern) | ForEach-Object { $_.Groups[1].Value } |
+            Where-Object { $_ -ne $name } | Select-Object -Unique)
+    }
+    $usage = @{}
+    # Reach every entry `text` names, directly or through edge.h's helpers.
+    $addReach = {
+        param([string] $Text, [int] $FeatureBits)
+        $reached = [Collections.Generic.HashSet[string]]::new()
+        foreach ($use in [regex]::Matches($Text, $script:RvaUsePattern)) {
+            [void]$reached.Add($use.Groups[1].Value)
+        }
+        $pending = [Collections.Generic.Queue[string]]::new()
+        $visited = [Collections.Generic.HashSet[string]]::new()
+        foreach ($call in [regex]::Matches($Text, $script:CallPattern)) {
+            $pending.Enqueue($call.Groups[1].Value)
+        }
+        while ($pending.Count -gt 0) {
+            $helper = $pending.Dequeue()
+            $isNewHelper = $helperEntries.ContainsKey($helper) -and $visited.Add($helper)
+            if (-not $isNewHelper) {
+                continue
+            }
+            foreach ($entry in $helperEntries[$helper]) {
+                [void]$reached.Add($entry)
+            }
+            foreach ($callee in $helperCalls[$helper]) {
+                $pending.Enqueue($callee)
+            }
+        }
+        foreach ($entry in $reached) {
+            $usage[$entry] = [int]$usage[$entry] -bor $FeatureBits
+        }
+    }
+    # hooks.h tags each Install with its feature: the hooked entry, and what the
+    # detour (when hooks.h defines it) reaches, belong to that feature.
+    $hooksText = Read-SourceText (Join-Path $root 'edge\hooks.h')
+    $detours = @{}
+    foreach ($function in [regex]::Matches($hooksText, $script:TopLevelFunctionPattern)) {
+        $detours[$function.Groups[1].Value] = $function.Value
+    }
+    foreach ($install in [regex]::Matches($hooksText, $script:TaggedInstallPattern)) {
+        $featureBits = [int]$Bits[$install.Groups[1].Value]
+        $usage[$install.Groups[2].Value] = [int]$usage[$install.Groups[2].Value] -bor $featureBits
+        $detour = $install.Groups[3].Value
+        if ($detours.ContainsKey($detour)) {
+            & $addReach $detours[$detour] $featureBits
+        }
+    }
+    foreach ($file in $files) {
+        $relative = $file.FullName.Substring($root.Length + 1).Replace('\', '/')
+        [string[]] $features = $null
+        foreach ($rule in $script:FileFeatures) {
+            if ($relative.StartsWith($rule.Match, [StringComparison]::Ordinal)) {
+                $features = $rule.Features
+                break
+            }
+        }
+        if (-not $features) {
+            continue
+        }
+        [int] $featureBits = 0
+        foreach ($feature in $features) {
+            $featureBits = $featureBits -bor $Bits[$feature]
+        }
+        & $addReach (Read-SourceText $file.FullName) $featureBits
+    }
+    return $usage
+}
+
 # The byte work, compiled once against the Iced decoder.
 function Initialize-Signatures {
     [OutputType([void])]
@@ -318,10 +438,57 @@ function Get-TargetPattern {
 }
 
 class Host {
+    [uint32] $Start
     [int] $OperandOffset
     [int] $OperandExtra
     [object[]] $Probes      # EdgePlus.Re.PlacedProbe
     [uint32] $Size
+}
+
+# The code an entry stands on, fingerprinted whole: on another line of Edge a
+# feature runs only while every entry's body is the code it was reversed from
+# (signature_table.h's Body).
+class Body {
+    [uint64] $Hash
+    [int[]] $MaskOffsets
+    [uint32] $Size
+    [uint32] $Offset        # from the body's start to the entry's own anchor
+    [bool] $IsListed        # the body is a function of the exception table
+}
+
+# The fingerprint of the Size bytes at Start; $null when there are none.
+function Get-Body {
+    [OutputType([Body])]
+    param(
+        [EdgePlus.Re.PeImage] $Image,
+        [uint32] $Start,
+        [uint32] $Size,
+        [uint32] $Offset,
+        [bool] $IsListed
+    )
+    if ($Size -eq 0) {
+        return $null
+    }
+    $code = $Image.Read($Start, [int]$Size)
+    $mask = [EdgePlus.Re.SignatureDecoder]::BodyMaskOffsets($code)
+    return [Body]@{
+        Hash        = [EdgePlus.Re.SignatureDecoder]::BodyHash($code, $mask)
+        MaskOffsets = [int[]]$mask.ToArray()
+        Size        = $Size
+        Offset      = $Offset
+        IsListed    = $IsListed
+    }
+}
+
+# The body of the exception-table function holding Rva, $Offset from its start.
+function Get-ContainingBody {
+    [OutputType([Body])]
+    param([EdgePlus.Re.PeImage] $Image, [uint32] $Rva)
+    $start = $Image.FunctionStart($Rva)
+    if ($null -eq $start) {
+        return $null
+    }
+    return Get-Body $Image $start ($Image.FunctionEnd($Rva) - $start) ($Rva - $start) $true
 }
 
 # A function that refers to the data at Rva and has a signature, or $null.
@@ -347,6 +514,7 @@ function Find-DataHost {
         $probes = Get-Probes $Image $Scanner $functionStart $script:DefaultMaximumLength
         if ($probes.Count -gt 0) {
             return [Host]@{
+                Start         = $functionStart
                 OperandOffset = $reference.DisplacementRva - $functionStart
                 OperandExtra  = $reference.Extra
                 Probes        = $probes
@@ -383,6 +551,7 @@ function Find-CalleeHost {
         $probes = Get-Probes $Image $Scanner $hostStart $script:DefaultMaximumLength
         if ($probes.Count -gt 0) {
             return [Host]@{
+                Start         = $hostStart
                 OperandOffset = $displacementRva - $hostStart
                 OperandExtra  = 0
                 Probes        = $probes
@@ -417,7 +586,9 @@ function Format-Entry {
         [string] $Name,
         [uint32] $TargetSize = 0,
         [string] $TargetPattern = '',
-        [int] $DataDelta = 0
+        [int] $DataDelta = 0,
+        [Body] $Body = $null,
+        [string] $BodyMaskName = ''
     )
     $rendered = [Collections.Generic.List[string]]::new()
     foreach ($probe in @($Probes)) {
@@ -428,9 +599,34 @@ function Format-Entry {
     while ($rendered.Count -lt $script:ProbesPerEntry) {
         $rendered.Add((Format-Probe $null))
     }
-    return '    {{0x{0:x}, "{1}", "{2}", {{{{{3}}}}}, {4}, {5}, {6}, {7}, 0x{8:x2}, EntryKind::{9}, {10}}},' -f
-        $Rva, $TargetPattern, $Name, ($rendered -join ', '), $Size, $OperandOffset, $TargetSize, $DataDelta,
-        $Features, $Kind, $OperandExtra
+    return '    {{0x{0:x}, "{1}", "{2}", {{{{{3}}}}}, {4}, {5}, {6}, {7}, {8}, 0x{9:x2}, EntryKind::{10}, {11}}},' -f
+        $Rva, $TargetPattern, $Name, ($rendered -join ', '), (Format-Body $Body $BodyMaskName), $Size,
+        $OperandOffset, $TargetSize, $DataDelta, $Features, $Kind, $OperandExtra
+}
+
+# A row's Body: {hash, mask, mask count, size, offset, is listed}.
+function Format-Body {
+    [OutputType([string])]
+    param([Body] $Body, [string] $MaskName)
+    if ($null -eq $Body) {
+        return '{0, nullptr, 0, 0, 0, false}'
+    }
+    $hasMask = $Body.MaskOffsets.Count -gt 0
+    $mask = if ($hasMask) { $MaskName } else { 'nullptr' }
+    $listed = if ($Body.IsListed) { 'true' } else { 'false' }
+    return '{{0x{0:x16}ULL, {1}, {2}, {3}, {4}, {5}}}' -f $Body.Hash, $mask, $Body.MaskOffsets.Count, $Body.Size,
+        $Body.Offset, $listed
+}
+
+# The array a row's Body points its mask at.
+function Format-BodyMask {
+    [OutputType([string])]
+    param([Body] $Body, [string] $MaskName)
+    $hasMask = $null -ne $Body -and $Body.MaskOffsets.Count -gt 0
+    if (-not $hasMask) {
+        return $null
+    }
+    return 'inline constexpr uint32_t {0}[] = {{{1}}};' -f $MaskName, ($Body.MaskOffsets -join ', ')
 }
 
 # Whether the table lists exactly the entries (name and value) offsets.h has: a
@@ -459,5 +655,6 @@ function Test-SignatureTable {
 
 Export-ModuleMember -Function Initialize-Signatures, Read-SourceText, Get-FeatureBits, Get-OffsetEntries,
     Get-EntryFeatures, Get-EntryKind, Find-Signature, Find-SecondWindow, Get-Probes, Get-TargetPattern,
-    Find-DataHost, Find-CalleeHost, Format-Entry, Test-SignatureTable
+    Find-DataHost, Find-CalleeHost, Format-Entry, Test-SignatureTable, Get-Body, Get-ContainingBody,
+    Format-BodyMask, Get-UsageFeatures
 Export-ModuleMember -Variable NeighbourReach, NeighbourStep, DefaultMaximumLength, SiteMaximumLength

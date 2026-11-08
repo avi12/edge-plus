@@ -354,6 +354,44 @@ namespace EdgePlus.Re {
       return new MaskedSignature(pattern.ToArray(), mask.ToArray());
     }
 
+    // Where in a whole function's `code` the bytes a rebuild moves sit (the strict
+    // mask: rel32 branch targets and RIP-relative displacements), as the offset of
+    // each 4-byte field. Decoding stops at the first byte that is not an
+    // instruction; what follows stays literal, on both sides of the comparison.
+    public static List<int> BodyMaskOffsets(byte[] code) {
+      var offsets = new List<int>();
+      foreach (Decoded decoded in Decode(code, code.Length)) {
+        int start = (int)decoded.Instruction.IP;
+        foreach (KeyValuePair<int, int> range in Wildcards(decoded, SignatureLevel.RelocationAware)) {
+          bool isWithinCode = start + range.Key + range.Value <= code.Length;
+          if (isWithinCode) {
+            offsets.Add(start + range.Key);
+          }
+        }
+      }
+      return offsets;
+    }
+
+    const ulong FnvOffsetBasis = 14695981039346656037UL;
+    const ulong FnvPrime = 1099511628211UL;
+
+    // FNV-1a over `code` with the bytes at each mask offset (4 each) taken as
+    // zero: the fingerprint resolve.h computes the same way over the running build.
+    public static ulong BodyHash(byte[] code, List<int> maskOffsets) {
+      var masked = (byte[])code.Clone();
+      foreach (int offset in maskOffsets) {
+        for (int index = 0; index < DisplacementSize; index++) {
+          masked[offset + index] = 0;
+        }
+      }
+      ulong hash = FnvOffsetBasis;
+      foreach (byte value in masked) {
+        hash ^= value;
+        hash *= FnvPrime;
+      }
+      return hash;
+    }
+
     // The offset of the first instruction of `code` that starts at or after
     // `wanted`; -1 when the code runs out (or stops decoding) before one does.
     public static int InstructionAtOrAfter(byte[] code, int wanted) {

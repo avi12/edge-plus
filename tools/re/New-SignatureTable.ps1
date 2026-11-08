@@ -59,6 +59,8 @@ Import-Module (Join-Path $PSScriptRoot 'EdgePlus.Signatures.psm1') -Force
 [string] $signatureTableHeader = Join-Path $PSScriptRoot '..\..\app\dll\src\edge\signature_table.h'
 [string] $versionPattern = 'inline constexpr int kVersion(Major|Minor|Build|Revision)\s*=\s*(\d+);'
 [string] $tableNamespace = 'edgeplus::edge155::signatures'
+# How far a leaf thunk's body is read for its opening (it ends at its jump).
+[int] $ThunkBodyLimit = 32
 
 if ($Check) {
     $isFresh = Test-SignatureTable $Offsets $Out
@@ -88,6 +90,7 @@ if (-not $Version) {
 
 Initialize-Signatures
 $bits = Get-FeatureBits $signatureTableHeader
+$usage = Get-UsageFeatures (Split-Path (Split-Path $Offsets)) $bits
 $image = [EdgePlus.Re.PeImage]::new((Resolve-Path $Dll).Path)
 $scanner = [EdgePlus.Re.SignatureScanner]::new($image)
 $keyText = if ($KeyOffsets) { Read-SourceText $KeyOffsets } else { $sourceText }
@@ -123,6 +126,7 @@ $references = [EdgePlus.Re.CodeReferences]::RipReferences($image, $dataTargets)
 $callSites = [EdgePlus.Re.CodeReferences]::CallReferences($image, $codeTargets)
 
 $lines = [Collections.Generic.List[string]]::new()
+$maskLines = [Collections.Generic.List[string]]::new()
 $totals = [ordered]@{ Function = 0; Site = 0; Data = 0 }
 $signed = [ordered]@{ Function = 0; Site = 0; Data = 0 }
 $rowKinds = [ordered]@{ kFunction = 0; kCallee = 0; kSite = 0; kInside = 0; kData = 0 }
@@ -131,50 +135,62 @@ foreach ($entry in $entries) {
     $name = $entry.Name
     $rva = $entry.Rva
     $kind = $kinds[$name]
-    $features = Get-EntryFeatures $name $entry.Section $bits
+    $features = (Get-EntryFeatures $name $entry.Section $bits) -bor [int]$usage[($name -replace '\[\d+\]$', '')]
     $pinned = $keys[$name]
     $totals["$kind"]++
     [string] $row = $null
     [string] $rowKind = $null
+    # The code the entry stands on, fingerprinted whole (signature_table.h's Body):
+    # the function itself, the function a site sits in, or the function that
+    # refers to a datum.
+    $maskName = "kBodyMask$($lines.Count)"
+    $body = $null
     switch ($kind) {
         'Function' {
             $probes = Get-Probes $image $scanner $rva $DefaultMaximumLength
             [uint32] $size = $image.FunctionEnd($rva) - $rva
+            $body = Get-Body $image $rva $size 0 $true
             if ($probes.Count -gt 0) {
                 $signed.Function++
                 $rowKind = 'kFunction'
-                $row = Format-Entry $pinned $rowKind $features $size 0 0 $probes $name
+                $row = Format-Entry $pinned $rowKind $features $size 0 0 $probes $name -Body $body -BodyMaskName $maskName
                 break
             }
             $calleeHost = Find-CalleeHost $image $scanner $callSites $rva
             if ($null -eq $calleeHost) {
                 $rowKind = 'kFunction'
-                $row = Format-Entry $pinned $rowKind $features $size 0 0 @() $name
+                $row = Format-Entry $pinned $rowKind $features $size 0 0 @() $name -Body $body -BodyMaskName $maskName
                 break
             }
             $signed.Function++
             $byCaller++
             $rowKind = 'kCallee'
             $row = Format-Entry $pinned $rowKind $features $calleeHost.Size $calleeHost.OperandOffset 0 $calleeHost.Probes $name `
-                -TargetSize $size -TargetPattern (Get-TargetPattern $image $rva)
+                -TargetSize $size -TargetPattern (Get-TargetPattern $image $rva) -Body $body -BodyMaskName $maskName
         }
         'Site' {
+            $body = Get-ContainingBody $image $rva
             $probes = @((Get-Probes $image $scanner $rva $SiteMaximumLength) | Where-Object { $_.Offset -eq 0 })
             if ($probes.Count -gt 0) {
                 $signed.Site++
                 $rowKind = 'kSite'
-                $row = Format-Entry $pinned $rowKind $features 0 0 0 $probes $name
+                $row = Format-Entry $pinned $rowKind $features 0 0 0 $probes $name -Body $body -BodyMaskName $maskName
                 break
             }
             # A leaf thunk has no unwind entry, so it reads as a site; it can still be
-            # the target of a call.
+            # the target of a call. Its body is its opening, up to its jump.
             $calleeHost = Find-CalleeHost $image $scanner $callSites $rva
             if ($null -ne $calleeHost) {
                 $signed.Site++
                 $byCaller++
                 $rowKind = 'kCallee'
+                $opening = $image.Read($rva, $ThunkBodyLimit + [EdgePlus.Re.SignatureDecoder]::InstructionSlack)
+                $thunkLength = [EdgePlus.Re.SignatureDecoder]::OpeningLength($opening, $ThunkBodyLimit)
+                if ($null -eq $body) {
+                    $body = Get-Body $image $rva $thunkLength 0 $false
+                }
                 $row = Format-Entry $pinned $rowKind $features $calleeHost.Size $calleeHost.OperandOffset 0 $calleeHost.Probes $name `
-                    -TargetSize 0 -TargetPattern (Get-TargetPattern $image $rva)
+                    -TargetSize 0 -TargetPattern (Get-TargetPattern $image $rva) -Body $body -BodyMaskName $maskName
                 break
             }
             # Cold code and return addresses: a fixed distance into the function that
@@ -187,11 +203,12 @@ foreach ($entry in $entries) {
             if ($inside.Count -gt 0) {
                 $signed.Site++
                 $rowKind = 'kInside'
-                $row = Format-Entry $pinned $rowKind $features ($image.FunctionEnd($rva) - $functionStart) ($rva - $functionStart) 0 $inside $name
+                $row = Format-Entry $pinned $rowKind $features ($image.FunctionEnd($rva) - $functionStart) ($rva - $functionStart) 0 $inside $name `
+                    -Body $body -BodyMaskName $maskName
                 break
             }
             $rowKind = 'kSite'
-            $row = Format-Entry $pinned $rowKind $features 0 0 0 @() $name
+            $row = Format-Entry $pinned $rowKind $features 0 0 0 @() $name -Body $body -BodyMaskName $maskName
         }
         'Data' {
             $dataHost = $null
@@ -209,12 +226,17 @@ foreach ($entry in $entries) {
                 break
             }
             $signed.Data++
+            $body = Get-Body $image $dataHost.Start $dataHost.Size 0 $true
             $row = Format-Entry $pinned $rowKind $features $dataHost.Size $dataHost.OperandOffset $dataHost.OperandExtra $dataHost.Probes $name `
-                -DataDelta $delta
+                -DataDelta $delta -Body $body -BodyMaskName $maskName
         }
     }
     $rowKinds[$rowKind]++
     $lines.Add($row)
+    $maskLine = Format-BodyMask $body $maskName
+    if ($null -ne $maskLine) {
+        $maskLines.Add($maskLine)
+    }
 }
 $counts = foreach ($kind in $totals.Keys) {
     '{0} {1}/{2}' -f $kind.ToLowerInvariant(), $signed[$kind], $totals[$kind]
@@ -229,6 +251,9 @@ $text = [Text.StringBuilder]::new()
 [void]$text.Append("// clang-format off`n")
 [void]$text.Append("namespace $tableNamespace {`n`n")
 [void]$text.Append("inline constexpr char kSignedBuild[] = `"$Version`";`n`n")
+[void]$text.Append("// Where each body's moving 4-byte fields sit (signature_table.h's Body).`n")
+[void]$text.Append(($maskLines -join "`n"))
+[void]$text.Append("`n`n")
 [void]$text.Append("inline constexpr Entry kEntries[] = {`n")
 [void]$text.Append(($lines -join "`n"))
 [void]$text.Append("`n};`n`n}  // namespace $tableNamespace`n")
