@@ -15,7 +15,9 @@
 #include <string_view>
 #include <vector>
 #include <utility>
+#include "MinHook.h"
 #include "edge/offsets.h"
+#include "edge/translation.h"
 #include "edge/geom.h"
 #include "core/log.h"
 #include "chrome/tabs/tab_edge.h"
@@ -31,14 +33,40 @@ inline bool Bind(HMODULE module) {
   return g_base != 0;
 }
 
-inline void* At(uintptr_t rva) {
-  return reinterpret_cast<void*>(g_base + rva);
+// Where offsets.h's `rva` is in the running msedge.dll (translation.h): itself on
+// the pinned build, else wherever its signature found it. kUnresolved when it was
+// not found or its feature stood down.
+inline uintptr_t Rva(uintptr_t pinnedRva) {
+  return translation::Translate(pinnedRva);
+}
+
+// The address of an entry of offsets.h; null when it has no place in this build.
+inline void* At(uintptr_t pinnedRva) {
+  const uintptr_t rva = Rva(pinnedRva);
+  const bool isResolved = rva != translation::kUnresolved;
+  return isResolved ? reinterpret_cast<void*>(g_base + rva) : nullptr;
+}
+
+// MH_EnableHook / MH_DisableHook for one entry of offsets.h. Never pass them
+// At()'s answer directly: null is MinHook's MH_ALL_HOOKS, so an entry this
+// build could not place would switch every hook instead of none.
+inline MH_STATUS EnableHookAt(uintptr_t pinnedRva) {
+  void* target = At(pinnedRva);
+  return target ? MH_EnableHook(target) : MH_ERROR_NOT_CREATED;
+}
+
+inline MH_STATUS DisableHookAt(uintptr_t pinnedRva) {
+  void* target = At(pinnedRva);
+  return target ? MH_DisableHook(target) : MH_ERROR_NOT_CREATED;
 }
 
 // Overwrite one code byte — used to lift the index<2 guard. Returns the byte
 // that was there (for the log).
 inline uint8_t PatchByte(uintptr_t rva, uint8_t value) {
   void* address = At(rva);
+  if (!address) {
+    return 0;
+  }
   DWORD oldProtection = 0;
   const uint8_t previousByte = *reinterpret_cast<uint8_t*>(address);
   if (VirtualProtect(address, 1, PAGE_EXECUTE_READWRITE, &oldProtection)) {
@@ -58,6 +86,9 @@ inline constexpr uint8_t kLiftedIndexCap = 0xff;
 // split survives.
 inline void PatchNop(uintptr_t rva, size_t byteCount, uint8_t* savedBytes) {
   void* address = At(rva);
+  if (!address) {
+    return;
+  }
   DWORD oldProtection = 0;
   auto* code = reinterpret_cast<uint8_t*>(address);
   if (VirtualProtect(address, byteCount, PAGE_EXECUTE_READWRITE,
@@ -1424,26 +1455,38 @@ inline void ReloadPage(void* webContents,
 }
 
 // --- web protocol handlers -------------------------------------------------------
-// The handler bubble model's OnDoneButtonClicked vtable slot, as an RVA.
-inline constexpr uintptr_t kRphDoneSlotRva =
-    edge155::rva::ContentSettingRPHBubbleModel_vftable +
-    edge155::off::BubbleModel_OnDoneButtonClicked_slot;
+// The handler bubble model's OnDoneButtonClicked vtable slot; null when the
+// vtable has no place in this build.
+inline void** RphDoneSlotAddress() {
+  void* vtable = At(edge155::rva::ContentSettingRPHBubbleModel_vftable);
+  if (!vtable) {
+    return nullptr;
+  }
+  return reinterpret_cast<void**>(
+      static_cast<uint8_t*>(vtable) +
+      edge155::off::BubbleModel_OnDoneButtonClicked_slot);
+}
 
 inline void* RphDoneSlot() {
-  return *reinterpret_cast<void**>(At(kRphDoneSlotRva));
+  void* const* slot = RphDoneSlotAddress();
+  return slot ? *slot : nullptr;
 }
 
 // Whether the Done slot still holds Edge's own empty virtual (the build check
 // for the slot, before we ever write it).
 inline bool RphDoneSlotIsStock() {
-  return RphDoneSlot() ==
-         At(edge155::rva::ContentSettingBubbleModel_EmptyVirtual);
+  const void* const emptyVirtual =
+      At(edge155::rva::ContentSettingBubbleModel_EmptyVirtual);
+  return emptyVirtual && RphDoneSlot() == emptyVirtual;
 }
 
 // Point the handler bubble's Done slot at `function` (the vtable lives in
 // read-only data, so the page is made writable for the one pointer).
 inline void SetRphDoneSlot(void* function) {
-  void* address = At(kRphDoneSlotRva);
+  void** address = RphDoneSlotAddress();
+  if (!address) {
+    return;
+  }
   DWORD oldProtection = 0;
   if (VirtualProtect(address, sizeof(void*), PAGE_READWRITE, &oldProtection)) {
     *reinterpret_cast<void**>(address) = function;
@@ -1588,7 +1631,7 @@ inline bool RebuildChatButton(void* toolbar) {
 inline bool IsCopilotButton(void* view) {
   const uintptr_t vtable = VtableRva(view);
   for (const uintptr_t candidate : edge155::rva::CopilotButton_vftables) {
-    if (vtable == candidate) {
+    if (vtable == Rva(candidate)) {
       return true;
     }
   }
@@ -1601,7 +1644,7 @@ inline bool IsCopilotDropdownButton(void* view) {
   const uintptr_t vtable = VtableRva(view);
   for (const uintptr_t candidate :
        edge155::rva::CopilotDropdownButton_vftables) {
-    if (vtable == candidate) {
+    if (vtable == Rva(candidate)) {
       return true;
     }
   }
@@ -1965,7 +2008,7 @@ inline void LabelUseTextfieldFont(void* label, void* textfield) {
 }
 
 inline bool IsPlainLabel(void* view) {
-  return VtableRva(view) == edge155::rva::Label_vftable;
+  return VtableRva(view) == Rva(edge155::rva::Label_vftable);
 }
 
 inline void LabelSetText(void* label, U16View text) {
@@ -2338,7 +2381,7 @@ inline void LabelSetFontList(void* label, const FontHandle& fontList) {
 }
 
 inline bool IsEdgeTabView(void* view) {
-  return VtableRva(view) == edge155::rva::EdgeTab_vftable;
+  return VtableRva(view) == Rva(edge155::rva::EdgeTab_vftable);
 }
 
 // The EdgeTab (its Tab base, the `this` of Tab and EdgeTab methods) whose view

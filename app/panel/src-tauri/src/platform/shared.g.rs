@@ -16,10 +16,10 @@ pub const WIRE_ID_COUNT: u32 = 2;
 // app/dll/src/core/config.h:64
 pub const CONFIG_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-config.bin";
 
-// app/dll/src/dllmain.cpp:20
+// app/dll/src/dllmain.cpp:24
 pub const UNLOAD_EVENT: &str = "Local\\edgeplus-split-unload";
 
-// app/dll/src/dllmain.cpp:23
+// app/dll/src/dllmain.cpp:27
 pub const CONFIG_EVENT: &str = "Local\\edgeplus-config-changed";
 
 // app/dll/src/edge/offsets.h:15

@@ -117,11 +117,9 @@ inline void SetActive(bool isActive) {
 // The two detours are not split hooks: control.h re-enables them after it
 // disables the split's.
 inline void EnableHooks() {
-  MH_EnableHook(
-      edge::At(edge155::rva::ContentSettingRPHBubbleModel_CommitChanges));
-  MH_EnableHook(
-      edge::At(edge155::rva::
-                   RegisterProtocolHandlerPermissionRequest_PermissionDecided));
+  edge::EnableHookAt(edge155::rva::ContentSettingRPHBubbleModel_CommitChanges);
+  edge::EnableHookAt(
+      edge155::rva::RegisterProtocolHandlerPermissionRequest_PermissionDecided);
 }
 
 // Whether this config turns the feature on: control.h then lifts every

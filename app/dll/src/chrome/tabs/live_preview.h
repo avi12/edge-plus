@@ -47,7 +47,7 @@ inline void __fastcall h_on_card_closing(void* controller) {
 }
 
 inline bool EnableSite(uintptr_t site) {
-  const MH_STATUS status = MH_EnableHook(edge::At(site));
+  const MH_STATUS status = edge::EnableHookAt(site);
   return status == MH_OK || status == MH_ERROR_ENABLED;
 }
 

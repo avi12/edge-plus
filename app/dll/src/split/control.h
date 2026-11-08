@@ -8,6 +8,7 @@
 #include "MinHook.h"
 #include "core/channel.h"
 #include "core/config.h"
+#include "edge/availability.h"
 #include "edge/edge.h"
 #include "layout/geometry.h"
 #include "split/split_ops.h"
@@ -309,28 +310,26 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     // MH_ALL_HOOKS also turned off the hooks that are not the split's: theming's
     // (the theme garbage-collector suppressor keeps both assigned themes
     // installed for live switching) and those of features with their own switch.
-    MH_EnableHook(edge::At(edge155::rva::ThemeService_RemoveUnusedThemes));
-    MH_EnableHook(
-        edge::At(edge155::rva::ThemeService_OnThemeBuiltFromExtension));
-    MH_EnableHook(edge::At(edge155::rva::BrowserThemePack_GetColor));
-    MH_EnableHook(edge::At(edge155::rva::ColorProvider_GetColor));
-    MH_EnableHook(edge::At(edge155::rva::EdgeTab_UpdateForegroundColors));
+    edge::EnableHookAt(edge155::rva::ThemeService_RemoveUnusedThemes);
+    edge::EnableHookAt(edge155::rva::ThemeService_OnThemeBuiltFromExtension);
+    edge::EnableHookAt(edge155::rva::BrowserThemePack_GetColor);
+    edge::EnableHookAt(edge155::rva::ColorProvider_GetColor);
+    edge::EnableHookAt(edge155::rva::EdgeTab_UpdateForegroundColors);
     // The Cyberpunk skin's tab outline: its own switch, not the split's.
-    MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_GetPath));
-    MH_EnableHook(edge::At(edge155::rva::SkPath_arcTo));
-    MH_EnableHook(edge::At(edge155::rva::SkRRect_setRectXY));
-    MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_IsLeftSplitTab));
-    MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_IsRightSplitTab));
-    MH_EnableHook(edge::At(edge155::rva::Canvas_DrawRoundRect));
+    edge::EnableHookAt(edge155::rva::EdgeTabStyleViews_GetPath);
+    edge::EnableHookAt(edge155::rva::SkPath_arcTo);
+    edge::EnableHookAt(edge155::rva::SkRRect_setRectXY);
+    edge::EnableHookAt(edge155::rva::EdgeTabStyleViews_IsLeftSplitTab);
+    edge::EnableHookAt(edge155::rva::EdgeTabStyleViews_IsRightSplitTab);
+    edge::EnableHookAt(edge155::rva::Canvas_DrawRoundRect);
     // Its tab frames (tab_frame.h).
-    MH_EnableHook(
-        edge::At(edge155::rva::EdgeTabStyleViews_PaintBackgroundStroke));
-    MH_EnableHook(edge::At(edge155::rva::TabStrip_GetStrokeThickness));
+    edge::EnableHookAt(edge155::rva::EdgeTabStyleViews_PaintBackgroundStroke);
+    edge::EnableHookAt(edge155::rva::TabStrip_GetStrokeThickness);
     // Its title font (tab_font.h).
-    MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_PaintTab));
+    edge::EnableHookAt(edge155::rva::EdgeTabStyleViews_PaintTab);
     // Its omnibox frame (omnibox_frame.h).
-    MH_EnableHook(
-        edge::At(edge155::rva::LocationBarView_EdgeCreateRoundRectBackground));
+    edge::EnableHookAt(
+        edge155::rva::LocationBarView_EdgeCreateRoundRectBackground);
     protocol_handlers::EnableHooks();
     find::EnableAll();
     theme_follow::EnableAll();
@@ -406,6 +405,16 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
 inline constinit config::Wire g_pendingConfig = {};
 inline constinit bool g_hasPendingConfig = false;
 
+// The panel's choice from disk, minus every feature this Edge build cannot run
+// (availability.h).
+inline bool LoadPendingConfig() {
+  const bool isLoaded = config::LoadFromFile(&g_pendingConfig);
+  if (isLoaded) {
+    availability::Mask(&g_pendingConfig);
+  }
+  return isLoaded;
+}
+
 // Runs on dllmain's waiter thread. Posting to our own subclassed window means the
 // app never has to guess which window we hooked.
 inline bool AdoptBrowserWindow(HWND excluded);
@@ -417,7 +426,7 @@ inline void OnConfigChanged() {
   if (isWithoutWindow) {
     AdoptBrowserWindow(nullptr);
   }
-  g_hasPendingConfig = config::LoadFromFile(&g_pendingConfig);
+  g_hasPendingConfig = LoadPendingConfig();
   if (g_hasPendingConfig) {
     channel::Post(CodeOf(Command::kApplyConfig));
   }
@@ -715,7 +724,7 @@ inline bool AdoptBrowserWindow(HWND excluded) {
   // Theming shares this DLL and its UI-thread window but is config-driven. Read
   // the panel's current choice from disk now (so a DLL injected into an open
   // Edge doesn't race the panel's WM_COPYDATA), and apply it on the UI thread.
-  g_hasPendingConfig = config::LoadFromFile(&g_pendingConfig);
+  g_hasPendingConfig = LoadPendingConfig();
   if (g_hasPendingConfig) {
     channel::Post(CodeOf(Command::kApplyConfig));
   }

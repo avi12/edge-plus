@@ -5,6 +5,7 @@
 #include <cstring>
 #include <utility>
 #include "MinHook.h"
+#include "edge/availability.h"
 #include "edge/edge.h"
 #include "theme/focus.h"
 #include "theme/theme_tone.h"
@@ -575,10 +576,15 @@ inline void __fastcall h_update_foreground(void* tab) {
 template <class T>
 inline bool Install(uintptr_t rva, void* detour, T** original,
                     const char* name) {
+  const bool isPlaced = edge::At(rva) != nullptr;
+  if (!isPlaced) {
+    Log("[skip] hook %s: no place in this Edge build", name);
+    return false;
+  }
   const bool isHooked =
       MH_CreateHook(edge::At(rva), detour,
                     reinterpret_cast<void**>(original)) == MH_OK &&
-      MH_EnableHook(edge::At(rva)) == MH_OK;
+      edge::EnableHookAt(rva) == MH_OK;
   if (!isHooked) {
     Log("[err] hook %s failed", name);
     return false;
@@ -781,19 +787,23 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   // Safety patches on Edge's 2-pane CHECKs. Never restored on unload: they point
   // at nothing of ours, and a split still grown past two when this DLL unloads
   // would otherwise hit a CHECK as soon as Edge touches pane 3+.
-  const uint8_t previousGuard = edge::PatchByte(
-      edge155::rva::SetWebContentsAtIndex_guard_imm, kLiftedIndexCap);
-  Log("[patch] SetWebContentsAtIndex guard %u -> 0x%x", previousGuard,
-      kLiftedIndexCap);
-  uint8_t previousBytes[kCheckJumpLength] = {};
-  edge::PatchNop(edge155::rva::SplitA11yLabel_paneidx_jne, kCheckJumpLength,
-                 previousBytes);
-  Log("[patch] a11y pane-index check NOPed (was 0x%02x 0x%02x)",
-      previousBytes[0], previousBytes[1]);
-  edge::PatchNop(edge155::rva::SetActiveIndex_index_jae, kCheckJumpLength,
-                 previousBytes);
-  Log("[patch] SetActiveIndex index check NOPed (was 0x%02x 0x%02x)",
-      previousBytes[0], previousBytes[1]);
+  const bool isSplitAvailable =
+      availability::IsAvailable(edge155::signatures::Feature::kSplit);
+  if (isSplitAvailable) {
+    const uint8_t previousGuard = edge::PatchByte(
+        edge155::rva::SetWebContentsAtIndex_guard_imm, kLiftedIndexCap);
+    Log("[patch] SetWebContentsAtIndex guard %u -> 0x%x", previousGuard,
+        kLiftedIndexCap);
+    uint8_t previousBytes[kCheckJumpLength] = {};
+    edge::PatchNop(edge155::rva::SplitA11yLabel_paneidx_jne, kCheckJumpLength,
+                   previousBytes);
+    Log("[patch] a11y pane-index check NOPed (was 0x%02x 0x%02x)",
+        previousBytes[0], previousBytes[1]);
+    edge::PatchNop(edge155::rva::SetActiveIndex_index_jae, kCheckJumpLength,
+                   previousBytes);
+    Log("[patch] SetActiveIndex index check NOPed (was 0x%02x 0x%02x)",
+        previousBytes[0], previousBytes[1]);
+  }
   Install(edge155::rva::TabStripLayoutHelper_CalculateIdealBounds,
           reinterpret_cast<void*>(tabrows::h_calculate_ideal_bounds),
           &tabrows::o_calculate_ideal_bounds,
@@ -805,9 +815,18 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   Install(edge155::rva::Tab_IsActive,
           reinterpret_cast<void*>(tabrows::h_is_active), &tabrows::o_is_active,
           "Tab::IsActive (detach preview)");
-  find::Install();
-  theme_follow::Install();
-  live_preview::Install();
+  // A feature with an address this Edge build could not place stays out
+  // entirely (resolve.h); the hooks above skip theirs one by one.
+  using edge155::signatures::Feature;
+  if (availability::IsAvailable(Feature::kEnhancedFind)) {
+    find::Install();
+  }
+  if (availability::IsAvailable(Feature::kWebUiFollowsTheme)) {
+    theme_follow::Install();
+  }
+  if (availability::IsAvailable(Feature::kLivePreview)) {
+    live_preview::Install();
+  }
   control::Install();
   return true;
 }
