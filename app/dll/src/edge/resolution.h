@@ -50,6 +50,16 @@ inline constexpr uint32_t kPercent = 100;
          expected * kSizeTolerancePercent / kPercent + kSizeSlackBytes;
 }
 
+// Whether a build of another line (another major.minor.build) may run features on
+// the strength of signatures alone. Signatures find the code; they cannot say
+// whether the structs that code reads kept their layout, and across lines they
+// did not always: of the 210 field offsets, ids and sizes offsets.h shares between
+// 155.0.4283.62 and 156.0.4314.50, nine moved (BrowserView's two fields, a
+// collection's count, four colour ids...), while between 156.0.4314.42 and .50
+// none of 233 did. Off until the layouts have anchors of their own to verify
+// (docs/future-proofing.md); a patch of the pinned line needs no such trust.
+inline constexpr bool kTrustLayoutsAcrossLines = false;
+
 // What one window may decide alone.
 [[nodiscard]] constexpr bool IsWeakAcceptable(
     signatures::EntryKind kind, edge_build::Relation relation) noexcept {
