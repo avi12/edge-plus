@@ -349,7 +349,7 @@ inline BOOL CALLBACK LiftWindowHandlerBlocks(HWND hwnd, LPARAM lparam) {
   return TRUE;
 }
 
-inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
+inline void ApplySplitConfig(HWND hwnd, const config::Wire& wire) {
   const bool wasSplitActive = g_splitActive;
   g_splitActive = wire.splitActive != 0;
   const bool isTurningSplitOff = wasSplitActive && !g_splitActive;
@@ -368,18 +368,9 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
       RegisterHotKeys(hwnd);
     }
   }
-  // The skin has its own switch, and needs theming: its colours are read with
-  // the theme's (hooks.h h_getcolor). It is set first, so the theme's re-apply
-  // below rebuilds the tab colours with the skin on or off.
-  const bool isSkinOn =
-      wire.themingActive != 0 && wire.cyberpunkSkinActive != 0;
-  ApplyCyberpunkSkin(isSkinOn);
-  theme::ApplyConfig(hwnd, wire);
-  const bool isFollowChanged = theme_follow::ApplyConfig(wire);
-  if (isFollowChanged) {
-    RefreshThemeColors();
-  }
-  live_preview::ApplyConfig(wire);
+}
+
+inline void ApplyReadingConfig(HWND hwnd, const config::Wire& wire) {
   const bool wasReadingActive = reading_mode::g_isActive;
   const bool isReadingTurningOn = reading_mode::ApplyConfig(wire);
   if (isReadingTurningOn) {
@@ -388,6 +379,9 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
   } else if (wasReadingActive && !reading_mode::g_isActive) {
     reading_mode::Stop(hwnd);
   }
+}
+
+inline void ApplyHandlersConfig(const config::Wire& wire) {
   const bool isTurningHandlersOn = protocol_handlers::ApplyConfig(wire);
   if (isTurningHandlersOn) {
     size_t liftedCount = 0;
@@ -395,9 +389,50 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
                 reinterpret_cast<LPARAM>(&liftedCount));
     Log("[handlers] lifted %zu blocked link handler(s)", liftedCount);
   }
-  assistant::RemoveChevron(edge::McvForWindow(hwnd));
-  const bool isFindActive = wire.enhancedFindActive != 0;
-  find::Apply(isFindActive);
+}
+
+// A feature this Edge build stood down (availability.h) is never applied, not
+// even as "off": it was never on in this process, so there is nothing to undo,
+// and undoing would call into code it could not place.
+inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
+  using edge155::signatures::Feature;
+  if (availability::IsAvailable(Feature::kSplit)) {
+    ApplySplitConfig(hwnd, wire);
+  }
+  const bool isSkinAvailable =
+      availability::IsAvailable(Feature::kCyberpunkSkin) &&
+      availability::IsAvailable(Feature::kTheming);
+  if (isSkinAvailable) {
+    // The skin has its own switch, and needs theming: its colours are read
+    // with the theme's (hooks.h h_getcolor). It is set first, so the theme's
+    // re-apply below rebuilds the tab colours with the skin on or off.
+    const bool isSkinOn =
+        wire.themingActive != 0 && wire.cyberpunkSkinActive != 0;
+    ApplyCyberpunkSkin(isSkinOn);
+  }
+  if (availability::IsAvailable(Feature::kTheming)) {
+    theme::ApplyConfig(hwnd, wire);
+  }
+  if (availability::IsAvailable(Feature::kWebUiFollowsTheme)) {
+    const bool isFollowChanged = theme_follow::ApplyConfig(wire);
+    if (isFollowChanged) {
+      RefreshThemeColors();
+    }
+  }
+  if (availability::IsAvailable(Feature::kLivePreview)) {
+    live_preview::ApplyConfig(wire);
+  }
+  if (availability::IsAvailable(Feature::kReadingTheme)) {
+    ApplyReadingConfig(hwnd, wire);
+  }
+  if (availability::IsAvailable(Feature::kProtocolHandlers)) {
+    ApplyHandlersConfig(wire);
+  }
+  if (availability::IsAvailable(Feature::kEnhancedFind)) {
+    assistant::RemoveChevron(edge::McvForWindow(hwnd));
+    const bool isFindActive = wire.enhancedFindActive != 0;
+    find::Apply(isFindActive);
+  }
 }
 
 // Applied through a posted kApplyConfig: ApplyConfig touches Edge views, so it
