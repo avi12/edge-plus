@@ -9,17 +9,26 @@
 
 namespace edgeplus::edge155::signatures {
 
-// The panel's switches, as bits: the one home of the numbers. The generator
-// reads them from here. An entry lists every feature that calls it, so a
-// feature whose entries do not all resolve turns off by itself and the others
-// keep working.
+// The panel's switches, as bits: the one home of the numbers. The panel reads
+// them through @share (which sees only `= <integer>;`) and the generator reads
+// them from here. An entry lists every feature that calls it, so a feature
+// whose entries do not all resolve turns off by itself and the others keep
+// working.
+// @share FeatureBitSplit
 inline constexpr uint16_t kFeatureBitSplit = 1;
+// @share FeatureBitTheming
 inline constexpr uint16_t kFeatureBitTheming = 2;
+// @share FeatureBitProtocolHandlers
 inline constexpr uint16_t kFeatureBitProtocolHandlers = 4;
+// @share FeatureBitEnhancedFind
 inline constexpr uint16_t kFeatureBitEnhancedFind = 8;
+// @share FeatureBitWebUiFollowsTheme
 inline constexpr uint16_t kFeatureBitWebUiFollowsTheme = 16;
+// @share FeatureBitLivePreview
 inline constexpr uint16_t kFeatureBitLivePreview = 32;
+// @share FeatureBitCyberpunkSkin
 inline constexpr uint16_t kFeatureBitCyberpunkSkin = 64;
+// @share FeatureBitReadingTheme
 inline constexpr uint16_t kFeatureBitReadingTheme = 128;
 inline constexpr uint16_t kEveryFeature = 255;
 

@@ -175,6 +175,7 @@ fn theming(state: &PanelState) -> ThemingView {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::edge::version::edge_support::Support;
     use crate::platform::settings::{Features, Theming};
 
     const SUPPORTED: FileVersion = FileVersion::new(155, 0, 4283, 45);
@@ -193,6 +194,11 @@ mod tests {
             is_auto_update: true,
             edge_build: edge,
             supported_edge_build: SUPPORTED,
+            support: if edge == Some(UPDATED) {
+                Support::Refused
+            } else {
+                Support::Full
+            },
         }
     }
 

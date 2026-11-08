@@ -37,6 +37,7 @@ pub fn next(previous: InjectOffer, state: &PanelState) -> InjectOffer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::edge::version::edge_support::Support;
     use crate::edge::version::file_version::FileVersion;
     use crate::platform::settings::{Features, Theming};
 
@@ -61,6 +62,7 @@ mod tests {
             is_auto_update: true,
             edge_build: Some(SUPPORTED),
             supported_edge_build: SUPPORTED,
+            support: Support::Full,
         }
     }
 

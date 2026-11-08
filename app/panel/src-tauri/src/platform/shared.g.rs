@@ -16,6 +16,21 @@ pub const WIRE_ID_COUNT: u32 = 2;
 // app/dll/src/core/config.h:64
 pub const CONFIG_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-config.bin";
 
+// app/dll/src/core/status.h:21
+pub const STATUS_MODE_PINNED: u32 = 0;
+
+// app/dll/src/core/status.h:23
+pub const STATUS_MODE_RESOLVED: u32 = 1;
+
+// app/dll/src/core/status.h:25
+pub const STATUS_MODE_REFUSED: u32 = 2;
+
+// app/dll/src/core/status.h:45
+pub const STATUS_FIELD_COUNT: u32 = 8;
+
+// app/dll/src/core/status.h:50
+pub const STATUS_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-status.bin";
+
 // app/dll/src/dllmain.cpp:24
 pub const UNLOAD_EVENT: &str = "Local\\edgeplus-split-unload";
 
@@ -36,3 +51,27 @@ pub const EDGE_VERSION_BUILD: u32 = 4314;
 
 // app/dll/src/edge/offsets.h:23
 pub const EDGE_VERSION_REVISION: u32 = 58;
+
+// app/dll/src/edge/signature_table.h:18
+pub const FEATURE_BIT_SPLIT: u32 = 1;
+
+// app/dll/src/edge/signature_table.h:20
+pub const FEATURE_BIT_THEMING: u32 = 2;
+
+// app/dll/src/edge/signature_table.h:22
+pub const FEATURE_BIT_PROTOCOL_HANDLERS: u32 = 4;
+
+// app/dll/src/edge/signature_table.h:24
+pub const FEATURE_BIT_ENHANCED_FIND: u32 = 8;
+
+// app/dll/src/edge/signature_table.h:26
+pub const FEATURE_BIT_WEB_UI_FOLLOWS_THEME: u32 = 16;
+
+// app/dll/src/edge/signature_table.h:28
+pub const FEATURE_BIT_LIVE_PREVIEW: u32 = 32;
+
+// app/dll/src/edge/signature_table.h:30
+pub const FEATURE_BIT_CYBERPUNK_SKIN: u32 = 64;
+
+// app/dll/src/edge/signature_table.h:32
+pub const FEATURE_BIT_READING_THEME: u32 = 128;

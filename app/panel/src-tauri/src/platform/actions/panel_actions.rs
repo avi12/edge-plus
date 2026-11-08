@@ -5,7 +5,7 @@
 use std::path::Path;
 
 use crate::dll::{dll_channel, dll_sync};
-use crate::edge::version::edge_build;
+use crate::edge::version::{edge_build, edge_support};
 use crate::edge::{dev_mode_prompt, edge_watch};
 use crate::platform::actions::action_error::{ActionError, ActionResult};
 use crate::platform::service::background_service;
@@ -125,6 +125,7 @@ fn arm_dev_mode_waiter() {
 }
 
 fn read(settings: &Settings) -> PanelState {
+    let edge_build = edge_watch::current_build();
     PanelState {
         features: settings.features,
         theming: settings.theming.clone(),
@@ -135,7 +136,8 @@ fn read(settings: &Settings) -> PanelState {
         is_split_wanted: dll_sync::is_wanted(settings),
         is_auto_inject: settings.auto_inject,
         is_auto_update: settings.auto_update,
-        edge_build: edge_watch::current_build(),
+        edge_build,
         supported_edge_build: edge_build::pinned(),
+        support: edge_support::support_now(edge_build),
     }
 }
