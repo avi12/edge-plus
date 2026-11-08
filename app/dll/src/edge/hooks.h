@@ -470,9 +470,10 @@ struct SkinColors {
 
 inline SkinColors SkinColorsOf(void* pack, bool isFocused) {
   SkinColors colors;
-  colors.tone =
+  colors.tone = cyberpunk_skin::SkinToneFor(
       theme_tone::ToneOf(ThemeColorOf(pack, edge155::off::THEMECOLOR_toolbar),
-                         ThemeColorOf(pack, edge155::off::THEMECOLOR_frame));
+                         ThemeColorOf(pack, edge155::off::THEMECOLOR_frame)),
+      theme::IsOsDarkMode());
   colors.chip = cyberpunk_skin::SelectedTabFor(colors.tone);
   colors.rail = ThemeColorOf(pack, edge155::off::VTABCOLOR_background);
   colors.activeLabel = ThemeColorOf(pack, edge155::off::THEMECOLOR_tab_text);
@@ -551,10 +552,12 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
   // the skin's colours belong to the current theme. Read before it, a fresh
   // theme's tabs kept the previous theme's (or Edge's) titles.
   const uint32_t edgeColor = o_getuicolor(provider, colorId);
+  const bool isChipCurrent =
+      g_isSelectedChipSet && !theme::g_isDefaultThemeApplied;
   // A horizontal active tab takes the vertical one's fill; an unfocused window
   // dims it toward the fill Edge would have used.
   const bool isActiveTabFill =
-      tab_shape::g_isCyberpunkSkinOn && g_isSelectedChipSet &&
+      tab_shape::g_isCyberpunkSkinOn && isChipCurrent &&
       (colorId == edge155::off::UICOLOR_active_tab_background_focused ||
        colorId == edge155::off::UICOLOR_active_tab_background_unfocused);
   if (isActiveTabFill) {
@@ -564,7 +567,7 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
                      : theme_tone::Blend(g_selectedFill, edgeColor,
                                          kVTabInactiveRailPercent);
   }
-  const bool isInkable = tab_shape::g_isCyberpunkSkinOn && g_isSelectedChipSet;
+  const bool isInkable = tab_shape::g_isCyberpunkSkinOn && isChipCurrent;
   if (!isInkable) {
     return edgeColor;
   }

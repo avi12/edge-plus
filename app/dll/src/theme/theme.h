@@ -34,6 +34,9 @@ struct ThemeId {
 inline constinit ThemeId g_lightTheme;
 inline constinit ThemeId g_darkTheme;
 inline constinit bool g_isActive = false;
+// Edge's own theme has no theme pack, so nothing re-reads the colours the
+// Cyberpunk skin chose from the last one (hooks.h): they are stale while set.
+inline constinit bool g_isDefaultThemeApplied = false;
 
 // AppsUseLightTheme absent means light.
 inline bool IsOsDarkMode() {
@@ -93,6 +96,7 @@ inline void Apply(void* hwnd, bool isDark) {
     return;
   }
   const ThemeId& wanted = isDark ? g_darkTheme : g_lightTheme;
+  g_isDefaultThemeApplied = wanted.IsEmpty();
   if (wanted.IsEmpty()) {
     edge::ThemeUseDefault(themeService);
     ScheduleRepaint(hwnd);
@@ -155,6 +159,7 @@ inline void ApplyConfig(void* hwnd, const config::Wire& wire) {
     return;
   }
   Log("[theme] disabled; reverting to default theme");
+  g_isDefaultThemeApplied = true;
   void* themeService = edge::ThemeServiceForWindow(hwnd);
   if (themeService) {
     edge::ThemeUseDefault(themeService);

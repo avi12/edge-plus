@@ -39,8 +39,18 @@ inline constexpr TabColors kLightSelectedTab{0xffc8102e, 0xffffffff};
 inline constexpr uint32_t kDarkHoverPercent = 16;
 inline constexpr uint32_t kLightHoverPercent = 8;
 
-// A theme that colours neither its toolbar nor its frame is taken as dark: the
-// kit's neon register.
+// The skin's tone: the theme's own, else Windows' light or dark (a default
+// theme, or one that colours neither its toolbar nor its frame), so the skin
+// flips with the system either way.
+[[nodiscard]] constexpr Tone SkinToneFor(Tone themeTone,
+                                         bool isSystemDark) noexcept {
+  if (themeTone != Tone::kUnknown) {
+    return themeTone;
+  }
+  return isSystemDark ? Tone::kDark : Tone::kLight;
+}
+
+// A tone left unknown is taken as dark: the kit's neon register.
 [[nodiscard]] constexpr TabColors SelectedTabFor(Tone tone) noexcept {
   return tone == Tone::kLight ? kLightSelectedTab : kDarkSelectedTab;
 }
@@ -100,11 +110,17 @@ inline constexpr std::string_view kTitleFontFallback = "Consolas";
 }
 
 // The tone a selected tab's fill was chosen for: SelectedTabFor's inverse, so
-// the frames follow the tone the fill already settled on.
+// the frames follow the tone the fill already settled on. Unknown for a fill
+// the skin did not choose (no theme pack coloured the tab).
 [[nodiscard]] constexpr theme_tone::Tone ToneOfSelectedFill(
     Argb fill) noexcept {
-  return fill == kLightSelectedTab.fill ? theme_tone::Tone::kLight
-                                        : theme_tone::Tone::kDark;
+  if (fill == kLightSelectedTab.fill) {
+    return theme_tone::Tone::kLight;
+  }
+  if (fill == kDarkSelectedTab.fill) {
+    return theme_tone::Tone::kDark;
+  }
+  return theme_tone::Tone::kUnknown;
 }
 
 }  // namespace edgeplus::cyberpunk_skin

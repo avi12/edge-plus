@@ -38,8 +38,14 @@ void RunFrameChecks() {
         "the light fill reads back as light");
   Check(ToneOfSelectedFill(SelectedTabFor(Tone::kDark).fill) == Tone::kDark,
         "the dark fill reads back as dark");
-  Check(ToneOfSelectedFill(0xff123456) == Tone::kDark,
-        "a fill the skin did not choose reads as dark, the skin's default");
+  Check(ToneOfSelectedFill(0xff123456) == Tone::kUnknown,
+        "a fill the skin did not choose has no tone of its own");
+  Check(SkinToneFor(Tone::kUnknown, true) == Tone::kDark &&
+            SkinToneFor(Tone::kUnknown, false) == Tone::kLight,
+        "with no theme tone the skin follows Windows' light or dark");
+  Check(SkinToneFor(Tone::kLight, true) == Tone::kLight &&
+            SkinToneFor(Tone::kDark, false) == Tone::kDark,
+        "a theme's own tone wins over Windows'");
   Check(kFrameThicknessDip == 2, "the frame is the kit's 2px stroke");
   Check(FieldFrameFor(Tone::kDark) == 0xff007979 &&
             FieldFrameFor(Tone::kLight) == 0xff547a99,

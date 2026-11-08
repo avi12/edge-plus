@@ -10,6 +10,7 @@
 #include <optional>
 #include "edge/edge.h"
 #include "theme/cyberpunk_skin.h"
+#include "theme/theme.h"
 #include "theme/theme_tone.h"
 #include "chrome/tabs/tab_shape.h"
 
@@ -29,14 +30,15 @@ inline constinit bool g_shouldAnswerActiveOnce = false;
 
 // The tone the skin chose the selected tab's fill for, read back off that fill
 // (hooks.h h_getuicolor answers the active tab's background with it) through
-// any view of the window.
+// any view of the window; Windows' light or dark when no theme pack gave the
+// skin a fill to choose.
 inline theme_tone::Tone SkinToneOf(void* view) {
   const std::optional<uint32_t> selectedFill = edge::ViewColor(
       view, edge155::off::UICOLOR_active_tab_background_focused);
-  if (!selectedFill) {
-    return theme_tone::Tone::kUnknown;
-  }
-  return cyberpunk_skin::ToneOfSelectedFill(*selectedFill);
+  const theme_tone::Tone fillTone =
+      selectedFill ? cyberpunk_skin::ToneOfSelectedFill(*selectedFill)
+                   : theme_tone::Tone::kUnknown;
+  return cyberpunk_skin::SkinToneFor(fillTone, theme::IsOsDarkMode());
 }
 
 using PaintBackgroundStroke_t = void(__fastcall*)(void*, void*, uint32_t);
