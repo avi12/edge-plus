@@ -4,8 +4,11 @@
 // Edge draws the hover preview from a continuous capturer and the card already
 // repaints every frame it receives; it looks static only because Edge stops the
 // capturer after the first good frame. While a hover card is open we suppress
-// that one stop.
+// that one stop: the StopCapture call, and since 157 also the copies of it the
+// driver carries inline, which reach the capturer's Stop directly.
 #pragma once
+#include <intrin.h>
+#include <cstring>
 #include "MinHook.h"
 #include "core/config.h"
 #include "edge/edge.h"
@@ -27,6 +30,43 @@ inline void __fastcall h_stop_capture(void* tracker) {
     return;
   }
   o_stop_capture(tracker);
+}
+
+// Whether a call to the capturer's Stop comes from one of the driver's inlined
+// copies of StopCapture, with the rest of that copy still after it.
+[[nodiscard]] inline bool IsInlinedStopCapture(uintptr_t returnAddress) {
+  const uintptr_t sites[] = {
+      edge155::rva::ThumbnailCaptureDriver_UpdateCaptureState_stop_return,
+      edge155::rva::ThumbnailCaptureDriver_UpdateCaptureState_coldStop_return,
+      edge155::rva::ThumbnailCaptureDriver_UpdateCaptureState_coldStop2_return,
+      edge155::rva::ThumbnailCaptureDriver_OnCooldownEnded_stop_return,
+  };
+  for (const uintptr_t site : sites) {
+    const void* const address = edge::At(site);
+    const bool isSite =
+        address && reinterpret_cast<uintptr_t>(address) == returnAddress;
+    if (isSite) {
+      return std::memcmp(address, edge155::off::INLINEDSTOP_tail,
+                         sizeof(edge155::off::INLINEDSTOP_tail)) == 0;
+    }
+  }
+  return false;
+}
+
+// BackgroundThumbnailVideoCapturer::Stop. A held stop from an inlined copy
+// returns past the rest of that copy, so the copy is skipped whole, as the
+// StopCapture hook skips the function.
+using CapturerStop_t = void(__fastcall*)(void*);
+inline constinit CapturerStop_t o_capturer_stop = nullptr;
+inline void __fastcall h_capturer_stop(void* capturer) {
+  auto* const returnSlot = static_cast<uintptr_t*>(_AddressOfReturnAddress());
+  const bool isHoldingForPreview =
+      g_isActive && g_isCardOpen && IsInlinedStopCapture(*returnSlot);
+  if (isHoldingForPreview) {
+    *returnSlot += edge155::off::INLINEDSTOP_tail_size;
+    return;
+  }
+  o_capturer_stop(capturer);
 }
 
 // TabHoverCardThumbnailObserver::Observe: a preview is on screen.
@@ -54,6 +94,7 @@ inline bool EnableSite(uintptr_t site) {
 inline bool EnableAll() {
   return EnableSite(
              edge155::rva::ThumbnailTabHelper_TabStateTracker_StopCapture) &&
+         EnableSite(edge155::rva::BackgroundThumbnailVideoCapturer_Stop) &&
          EnableSite(edge155::rva::TabHoverCardThumbnailObserver_Observe) &&
          EnableSite(edge155::rva::TabHoverCardController_OnCardClosing);
 }
@@ -65,6 +106,10 @@ inline bool Install() {
               edge155::rva::ThumbnailTabHelper_TabStateTracker_StopCapture),
           reinterpret_cast<void*>(h_stop_capture),
           reinterpret_cast<void**>(&o_stop_capture)) == MH_OK &&
+      MH_CreateHook(
+          edge::At(edge155::rva::BackgroundThumbnailVideoCapturer_Stop),
+          reinterpret_cast<void*>(h_capturer_stop),
+          reinterpret_cast<void**>(&o_capturer_stop)) == MH_OK &&
       MH_CreateHook(
           edge::At(edge155::rva::TabHoverCardThumbnailObserver_Observe),
           reinterpret_cast<void*>(h_observe),
