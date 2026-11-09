@@ -37,20 +37,20 @@ pub const UNLOAD_EVENT: &str = "Local\\edgeplus-split-unload";
 // app/dll/src/dllmain.cpp:27
 pub const CONFIG_EVENT: &str = "Local\\edgeplus-config-changed";
 
-// app/dll/src/edge/offsets.h:15
+// app/dll/src/edge/offsets.h:16
 pub const EDGE_MODULE: &str = "msedge.dll";
 
-// app/dll/src/edge/offsets.h:17
-pub const EDGE_VERSION_MAJOR: u32 = 156;
+// app/dll/src/edge/offsets.h:18
+pub const EDGE_VERSION_MAJOR: u32 = 157;
 
-// app/dll/src/edge/offsets.h:19
+// app/dll/src/edge/offsets.h:20
 pub const EDGE_VERSION_MINOR: u32 = 0;
 
-// app/dll/src/edge/offsets.h:21
-pub const EDGE_VERSION_BUILD: u32 = 4314;
+// app/dll/src/edge/offsets.h:22
+pub const EDGE_VERSION_BUILD: u32 = 4341;
 
-// app/dll/src/edge/offsets.h:23
-pub const EDGE_VERSION_REVISION: u32 = 58;
+// app/dll/src/edge/offsets.h:24
+pub const EDGE_VERSION_REVISION: u32 = 42;
 
 // app/dll/src/edge/signature_table.h:18
 pub const FEATURE_BIT_SPLIT: u32 = 1;
