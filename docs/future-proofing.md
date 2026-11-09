@@ -70,14 +70,13 @@ generator adds up (it never takes one away):
 Shared code that still reaches an entry of a stood-down feature calls a stub
 (`edge::Callable`) that logs once and returns zero, never a null pointer.
 
-## Edge 157.0.4341.42 (no public PDB yet), measured in a throwaway Edge
+## Edge 157.0.4341.42: the first line it met
 
-116 of 295 entries unchanged, 146 found but changed (WebContentsImpl's
-accessors among them, so its layout moved), 31 not found, 2 ambiguous. Every
-feature stands down: correct for a line whose layouts moved. The fewest
-blockers, the first to port: live preview 2, link handlers 3, WebUI follows
-theme 4, reading theme 5, theming 6, the Cyberpunk skin 29, find 68, split 93.
-The DLL's log lists every one with its features and why.
+Before the port, on 157 (no public PDB yet): 116 of 295 entries unchanged, 114
+found but changed, 33 not found or ambiguous. Every feature stood down,
+correctly: `views::View` had shrunk by 8 bytes, which moved most fields the
+DLL reads. The DLL's log listed every entry with its features, why, and where
+it was found, which became the port's work list (`docs/re/port-4341-42.md`).
 
 ## The manual fix
 
@@ -93,4 +92,8 @@ pinned build is trusted as it is; the old one becomes "another build".
 - A function whose body is unchanged but whose callers now pass something
   else.
 - A function's cold part (a separate exception-table entry) that changed.
+- Two functions whose bodies differ only in a call target: the mask hides the
+  difference. Across lines an entry is therefore never placed by its rank
+  among identical copies (157 reordered UTF8ToUTF16's and UTF16ToUTF8's
+  wrappers); a copy must be told apart by a second window or not at all.
 - The pinned patch line is trusted on signatures alone, as measured.
