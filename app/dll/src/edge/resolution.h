@@ -89,6 +89,15 @@ inline constexpr uint32_t kPercent = 100;
   return isPatchLine || isSite || isBodyChecked;
 }
 
+// Whether an opening that matched several times may still name one copy by its
+// rank in address order. Only in the pinned patch line: across lines the linker
+// reorders identical copies (157 swapped base::UTF8ToUTF16's wrapper with
+// UTF16ToUTF8's, which differ only in the call the body check masks).
+[[nodiscard]] constexpr bool TrustsOrdinals(
+    edge_build::Relation relation) noexcept {
+  return relation != edge_build::Relation::kOtherBuild;
+}
+
 // Whether a placed entry is used only once its body is found unchanged: on
 // another line, never in the pinned patch line.
 [[nodiscard]] constexpr bool NeedsUnchangedBody(
@@ -138,6 +147,11 @@ inline constexpr uint32_t kPercent = 100;
     if (isFirstWindow) {
       const bool hasExpectedCount = hits.size() == probe.total;
       if (!hasExpectedCount) {
+        continue;
+      }
+      const bool isOrdinalPick = probe.total > 1;
+      const bool isUntrustedPick = isOrdinalPick && !TrustsOrdinals(relation);
+      if (isUntrustedPick) {
         continue;
       }
       const uintptr_t candidate = hits[probe.ordinal];

@@ -119,6 +119,9 @@ void CopiesAreToldApartByOrdinal() {
   Check(Decide(second, two, Relation::kSamePatchLine, Anywhere).status ==
             Status::kMissing,
         "a different number of copies than when signed refuses");
+  Check(Decide(second, three, Relation::kOtherBuild, Anywhere).status ==
+            Status::kMissing,
+        "across lines a copy's rank names nothing: the linker reorders them");
 }
 
 void ASecondWindowRescuesAmbiguousOpening() {
