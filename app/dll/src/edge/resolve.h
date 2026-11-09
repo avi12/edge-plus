@@ -251,7 +251,7 @@ struct Outcome {
   uint16_t availableFeatures = 0;
   size_t resolvedEntries = 0;
   size_t totalEntries = 0;
-  size_t misplacedEntries = 0;  // self-test only: found elsewhere than pinned
+  size_t misplacedEntries = 0;  // found elsewhere than pinned
 };
 
 enum class RunMode {
@@ -400,14 +400,19 @@ enum class RunMode {
     const bool isUnverified =
         rva && resolution::NeedsUnchangedBody(relation) &&
         !IsBodyUnchanged(*image, code.Text(), entry.body, anchor);
+    // Where a changed entry now sits is where a port starts reading.
+    uintptr_t changedRva = 0;
     if (isUnverified) {
       status = resolution::Status::kChanged;
+      changedRva = *rva;
       rva.reset();
     }
     if (rva) {
       placed.emplace_back(entry.pinnedRva, *rva);
       placedFeatures.push_back(entry.features);
-      const bool isMisplaced = !isApplying && *rva != entry.pinnedRva;
+      // Logged on every run: on another build it is the new address a port
+      // writes into offsets.h.
+      const bool isMisplaced = *rva != entry.pinnedRva;
       if (isMisplaced) {
         outcome.misplacedEntries++;
         Log("[resolve] %s: found at 0x%llx, offsets.h says 0x%llx", entry.name,
@@ -420,9 +425,10 @@ enum class RunMode {
         static_cast<uint16_t>(unresolvedFeatures | entry.features);
     // Every one is logged: the list is what a port has to look at, feature by
     // feature.
-    Log("[resolve] %s (rva 0x%llx, features 0x%02x): %s", entry.name,
+    Log("[resolve] %s (rva 0x%llx, features 0x%02x): %s at 0x%llx", entry.name,
         static_cast<unsigned long long>(entry.pinnedRva), entry.features,
-        resolution::DescribeStatus(status));
+        resolution::DescribeStatus(status),
+        static_cast<unsigned long long>(changedRva));
   }
 
   outcome.availableFeatures =
