@@ -144,7 +144,7 @@ Open the panel, open Edge, and flip the switches. There is no extension to load
 and nothing to pre-install: on first start the panel installs the Windows App
 SDK runtime its window needs, for the current user.
 
-![The Edge+ panel](https://github.com/user-attachments/assets/428c98e9-b675-4023-a4cb-77e4c2faa34b)
+![The Edge+ panel](https://github.com/user-attachments/assets/fb3112b4-a4bd-40ba-8222-f91e51852097)
 
 The split DLL is pinned to one `msedge.dll` build (`app/dll/src/edge/offsets.h`);
 on any other build it refuses to hook and the split simply does nothing, so it is
