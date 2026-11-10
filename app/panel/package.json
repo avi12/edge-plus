@@ -37,7 +37,7 @@
     "@microsoft/dynwinrt": "0.1.0-preview.23",
     "@winapp/bindings": "link:.winapp/bindings",
     "svelte": "5.56.7",
-    "winui-svelte": "file:C:/Users/Avi/AppData/Local/Temp/claude/a932193e388350e9/cabd0bad-9e4f-435f-bd9d-0e439d05c430/scratchpad/winui-svelte-main.tgz",
+    "winui-svelte": "0.0.8",
     "zod": "^4.6.7"
   },
   "devDependencies": {

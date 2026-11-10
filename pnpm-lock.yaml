@@ -20,8 +20,8 @@ importers:
         specifier: 5.56.7
         version: 5.56.7(@typescript-eslint/types@8.72.0)
       winui-svelte:
-        specifier: file:C:/Users/Avi/AppData/Local/Temp/claude/a932193e388350e9/cabd0bad-9e4f-435f-bd9d-0e439d05c430/scratchpad/winui-svelte-main.tgz
-        version: file:../../../Users/Avi/AppData/Local/Temp/claude/a932193e388350e9/cabd0bad-9e4f-435f-bd9d-0e439d05c430/scratchpad/winui-svelte-main.tgz(stylelint@17.16.0(supports-color@10.2.2)(typescript@6.0.3))(svelte@5.56.7(@typescript-eslint/types@8.72.0))(vite@8.3.4(@types/node@24.19.2)(esbuild@0.25.12))
+        specifier: 0.0.8
+        version: 0.0.8(stylelint@17.16.0(supports-color@10.2.2)(typescript@6.0.3))(svelte@5.56.7(@typescript-eslint/types@8.72.0))(vite@8.3.4(@types/node@24.19.2)(esbuild@0.25.12))
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -49,7 +49,7 @@ importers:
         version: 2.0.0(eslint@10.13.0(supports-color@10.2.2))
       eslint-plugin-perfectionist:
         specifier: ^5.12.1
-        version: 5.13.0(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
+        version: 5.13.0(eslint@10.13.0(supports-color@10.2.2))(typescript@6.0.3)
       eslint-plugin-svelte:
         specifier: ^3.23.1
         version: 3.23.1(eslint@10.13.0(supports-color@10.2.2))(svelte@5.56.7(@typescript-eslint/types@8.72.0))
@@ -2156,9 +2156,8 @@ packages:
     engines: {node: '>= 8'}
     hasBin: true
 
-  winui-svelte@file:../../../Users/Avi/AppData/Local/Temp/claude/a932193e388350e9/cabd0bad-9e4f-435f-bd9d-0e439d05c430/scratchpad/winui-svelte-main.tgz:
-    resolution: {integrity: sha512-7wqAsNLSqfH3mdiVwPoBq8kEQSYzR8pKgpPta+qmVBYnknlgOQ9MkkqGgq9NUFS7Oj+PTLjxlgyqdnL1Ubp8TQ==, tarball: file:../../../Users/Avi/AppData/Local/Temp/claude/a932193e388350e9/cabd0bad-9e4f-435f-bd9d-0e439d05c430/scratchpad/winui-svelte-main.tgz}
-    version: 0.0.5
+  winui-svelte@0.0.8:
+    resolution: {integrity: sha512-/aW9/bH60wwEG5rg6UWJL3S/7iVQ+QZRq6ogeRnXm0gBjMm6klHqsljJ7CBzwx8yDVX4Pw9RyxF1C1ykMpZGIQ==}
     engines: {node: '>=24'}
     cpu: [x64, arm64]
     os: [win32]
@@ -2662,7 +2661,7 @@ snapshots:
       '@typescript-eslint/parser': 8.72.0(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
       '@typescript-eslint/scope-manager': 8.72.0
       '@typescript-eslint/type-utils': 8.72.0(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
-      '@typescript-eslint/utils': 8.72.0(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
+      '@typescript-eslint/utils': 8.72.0(eslint@10.13.0(supports-color@10.2.2))(typescript@6.0.3)
       '@typescript-eslint/visitor-keys': 8.72.0
       eslint: 10.13.0(supports-color@10.2.2)
       ignore: 7.0.14
@@ -2676,7 +2675,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/scope-manager': 8.72.0
       '@typescript-eslint/types': 8.72.0
-      '@typescript-eslint/typescript-estree': 8.72.0(supports-color@10.2.2)(typescript@6.0.3)
+      '@typescript-eslint/typescript-estree': 8.72.0(typescript@6.0.3)
       '@typescript-eslint/visitor-keys': 8.72.0
       debug: 4.4.3(supports-color@10.2.2)
       eslint: 10.13.0(supports-color@10.2.2)
@@ -2684,7 +2683,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/project-service@8.72.0(supports-color@10.2.2)(typescript@6.0.3)':
+  '@typescript-eslint/project-service@8.72.0(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/tsconfig-utils': 8.72.0(typescript@6.0.3)
       '@typescript-eslint/types': 8.72.0
@@ -2705,8 +2704,8 @@ snapshots:
   '@typescript-eslint/type-utils@8.72.0(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/types': 8.72.0
-      '@typescript-eslint/typescript-estree': 8.72.0(supports-color@10.2.2)(typescript@6.0.3)
-      '@typescript-eslint/utils': 8.72.0(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
+      '@typescript-eslint/typescript-estree': 8.72.0(typescript@6.0.3)
+      '@typescript-eslint/utils': 8.72.0(eslint@10.13.0(supports-color@10.2.2))(typescript@6.0.3)
       debug: 4.4.3(supports-color@10.2.2)
       eslint: 10.13.0(supports-color@10.2.2)
       ts-api-utils: 2.5.0(typescript@6.0.3)
@@ -2716,9 +2715,9 @@ snapshots:
 
   '@typescript-eslint/types@8.72.0': {}
 
-  '@typescript-eslint/typescript-estree@8.72.0(supports-color@10.2.2)(typescript@6.0.3)':
+  '@typescript-eslint/typescript-estree@8.72.0(typescript@6.0.3)':
     dependencies:
-      '@typescript-eslint/project-service': 8.72.0(supports-color@10.2.2)(typescript@6.0.3)
+      '@typescript-eslint/project-service': 8.72.0(typescript@6.0.3)
       '@typescript-eslint/tsconfig-utils': 8.72.0(typescript@6.0.3)
       '@typescript-eslint/types': 8.72.0
       '@typescript-eslint/visitor-keys': 8.72.0
@@ -2731,12 +2730,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/utils@8.72.0(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)':
+  '@typescript-eslint/utils@8.72.0(eslint@10.13.0(supports-color@10.2.2))(typescript@6.0.3)':
     dependencies:
       '@eslint-community/eslint-utils': 4.10.1(eslint@10.13.0(supports-color@10.2.2))
       '@typescript-eslint/scope-manager': 8.72.0
       '@typescript-eslint/types': 8.72.0
-      '@typescript-eslint/typescript-estree': 8.72.0(supports-color@10.2.2)(typescript@6.0.3)
+      '@typescript-eslint/typescript-estree': 8.72.0(typescript@6.0.3)
       eslint: 10.13.0(supports-color@10.2.2)
       typescript: 6.0.3
     transitivePeerDependencies:
@@ -3019,10 +3018,10 @@ snapshots:
     dependencies:
       eslint: 10.13.0(supports-color@10.2.2)
 
-  eslint-plugin-perfectionist@5.13.0(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3):
+  eslint-plugin-perfectionist@5.13.0(eslint@10.13.0(supports-color@10.2.2))(typescript@6.0.3):
     dependencies:
       '@typescript-eslint/types': 8.72.0
-      '@typescript-eslint/utils': 8.72.0(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
+      '@typescript-eslint/utils': 8.72.0(eslint@10.13.0(supports-color@10.2.2))(typescript@6.0.3)
       natural-orderby: 5.0.0
     optionalDependencies:
       eslint: 10.13.0(supports-color@10.2.2)
@@ -3779,7 +3778,7 @@ snapshots:
       stylelint-config-standard: 40.0.0(stylelint@17.16.0(supports-color@10.2.2)(typescript@6.0.3))
       stylelint-declaration-block-no-ignored-properties: 3.0.0(stylelint@17.16.0(supports-color@10.2.2)(typescript@6.0.3))
       stylelint-high-performance-animation: 2.0.0(stylelint@17.16.0(supports-color@10.2.2)(typescript@6.0.3))
-      stylelint-no-browser-hacks: 2.0.3(supports-color@10.2.2)(typescript@6.0.3)
+      stylelint-no-browser-hacks: 2.0.3(typescript@6.0.3)
       stylelint-no-indistinguishable-colors: 2.3.1(stylelint@17.16.0(supports-color@10.2.2)(typescript@6.0.3))
       stylelint-no-nested-media: 0.1.0
       stylelint-no-unsupported-browser-features: 8.1.2(stylelint@17.16.0(supports-color@10.2.2)(typescript@6.0.3))
@@ -3812,7 +3811,7 @@ snapshots:
       postcss-value-parser: 4.2.0
       stylelint: 17.16.0(supports-color@10.2.2)(typescript@6.0.3)
 
-  stylelint-no-browser-hacks@2.0.3(supports-color@10.2.2)(typescript@6.0.3):
+  stylelint-no-browser-hacks@2.0.3(typescript@6.0.3):
     dependencies:
       postcss: 8.5.31
       stylehacks: 8.0.4(postcss@8.5.31)
@@ -4063,8 +4062,8 @@ snapshots:
     dependencies:
       '@typescript-eslint/eslint-plugin': 8.72.0(@typescript-eslint/parser@8.72.0(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
       '@typescript-eslint/parser': 8.72.0(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
-      '@typescript-eslint/typescript-estree': 8.72.0(supports-color@10.2.2)(typescript@6.0.3)
-      '@typescript-eslint/utils': 8.72.0(eslint@10.13.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
+      '@typescript-eslint/typescript-estree': 8.72.0(typescript@6.0.3)
+      '@typescript-eslint/utils': 8.72.0(eslint@10.13.0(supports-color@10.2.2))(typescript@6.0.3)
       eslint: 10.13.0(supports-color@10.2.2)
       typescript: 6.0.3
     transitivePeerDependencies:
@@ -4110,7 +4109,7 @@ snapshots:
     dependencies:
       isexe: 2.0.0
 
-  winui-svelte@file:../../../Users/Avi/AppData/Local/Temp/claude/a932193e388350e9/cabd0bad-9e4f-435f-bd9d-0e439d05c430/scratchpad/winui-svelte-main.tgz(stylelint@17.16.0(supports-color@10.2.2)(typescript@6.0.3))(svelte@5.56.7(@typescript-eslint/types@8.72.0))(vite@8.3.4(@types/node@24.19.2)(esbuild@0.25.12)):
+  winui-svelte@0.0.8(stylelint@17.16.0(supports-color@10.2.2)(typescript@6.0.3))(svelte@5.56.7(@typescript-eslint/types@8.72.0))(vite@8.3.4(@types/node@24.19.2)(esbuild@0.25.12)):
     dependencies:
       '@microsoft/dynwinrt': 0.1.0-preview.23
       svelte: 5.56.7(@typescript-eslint/types@8.72.0)
