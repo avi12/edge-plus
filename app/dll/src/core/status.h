@@ -8,9 +8,7 @@
 #include <windows.h>
 #include <cstddef>
 #include <cstdint>
-#include <string>
-#include "core/config.h"
-#include "core/handles.h"
+#include "core/atomic_file.h"
 
 namespace edgeplus::status {
 
@@ -48,32 +46,11 @@ static_assert(sizeof(Wire) == kFieldCount * sizeof(uint32_t),
 
 // @share StatusFileRelativePath
 inline constexpr char kFileRelativePath[] = "\\EdgePlus\\edgeplus-status.bin";
-inline constexpr char kTemporarySuffix[] = ".tmp";
 
-// Written whole, then moved over the old file, so the panel never reads half of
-// one. Best effort: a status that cannot be written leaves the panel on the
-// version check alone.
+// Best effort: a status that cannot be written leaves the panel on the version
+// check alone.
 inline void Write(const Wire& wire) {
-  const std::string path = config::LocalAppDataPath(kFileRelativePath);
-  if (path.empty()) {
-    return;
-  }
-  const std::string temporaryPath = path + kTemporarySuffix;
-  {
-    const handles::UniqueHandle file{
-        CreateFileA(temporaryPath.c_str(), GENERIC_WRITE, 0, nullptr,
-                    CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr)};
-    if (!file) {
-      return;
-    }
-    DWORD written = 0;
-    const bool isWritten =
-        WriteFile(file.Get(), &wire, sizeof(Wire), &written, nullptr) != FALSE;
-    if (!isWritten) {
-      return;
-    }
-  }
-  MoveFileExA(temporaryPath.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING);
+  atomic_file::WriteUnderLocalAppData(kFileRelativePath, &wire, sizeof(Wire));
 }
 
 }  // namespace edgeplus::status

@@ -11,7 +11,9 @@
 #include "theme/theme_tone.h"
 #include "theme/cyberpunk_skin.h"
 #include "theme/skin_tone.h"
+#include "theme/theme_hold.h"
 #include "theme/theme_notice.h"
+#include "core/wear_report.h"
 #include "theme/theme.h"
 #include "split/panes.h"
 #include "layout/geometry.h"
@@ -394,12 +396,45 @@ inline void __fastcall h_on_theme_built(void* themeService, const void* themeId,
       std::string_view(theme::g_lightTheme.value, theme::g_lightTheme.length),
       std::string_view(theme::g_darkTheme.value, theme::g_darkTheme.length),
       theme::g_isActive};
+  const bool isKeptOff = theme_hold::ShouldKeepOff(
+      std::string_view(theme::g_heldTheme.value, theme::g_heldTheme.length),
+      idText, theme::g_ownSwitch.IsSettling(GetTickCount64()));
+  if (isKeptOff) {
+    // Not handed on, so the theme Edge just installed is never swapped in. Edge
+    // has already recorded it as the current one, so what the mode wants is put
+    // back (the apply runs on the UI thread, from the channel).
+    Log("[theme] kept %s installed but off (added without Shift)",
+        idText.c_str());
+    channel::Post(channel::CodeOf(channel::Command::kApplyTheme));
+    return;
+  }
   const bool isSuppressedNow =
       theme_notice::ShouldSuppress(assigned, idText, isSuppressed);
   const bool isSuppressedByUs = isSuppressedNow && !isSuppressed;
   Log("[theme] built %s: bubble %s", idText.c_str(),
       isSuppressedByUs ? "suppressed (Edge+ theme)" : "left to Edge");
   o_on_theme_built(themeService, themeId, pack, isSuppressedNow);
+  theme::g_ownSwitch.Built(idText);
+  wear_report::Report(idText, theme_wear::CauseOfTheme(assigned, idText));
+}
+
+// ThemeService::UseDefaultTheme(this at its +0x10 base, ...): every return to
+// Edge's default theme, Edge's own "Restore default" included, ends here. The
+// second register is passed through untouched (its meaning is not needed).
+// Reported with who caused it (theme_wear.h), so the panel can follow the
+// user's choice; the skin's colours from the last theme pack go stale either way.
+using UseDefaultTheme_t = void(__fastcall*)(void*, uintptr_t);
+inline constinit UseDefaultTheme_t o_use_default_theme = nullptr;
+inline void __fastcall h_use_default_theme(void* themeServiceBase,
+                                           uintptr_t argument) {
+  o_use_default_theme(themeServiceBase, argument);
+  theme::g_isDefaultThemeApplied = true;
+  const theme_wear::Cause cause = theme_wear::CauseOfDefault(
+      theme::g_isUsingDefaultOurselves,
+      theme::g_ownSwitch.IsSettling(GetTickCount64()));
+  Log("[theme] default theme worn (%s)",
+      cause == theme_wear::Cause::kUser ? "the user's choice" : "Edge+");
+  wear_report::Report({}, cause);
 }
 
 // BrowserThemePack::GetColor(this, id, SkColor* out): a theme extension's colour
@@ -789,6 +824,9 @@ inline bool Install(edge155::signatures::Feature feature, uintptr_t rva,
           edge155::rva::ThemeService_OnThemeBuiltFromExtension,
           reinterpret_cast<void*>(h_on_theme_built), &o_on_theme_built,
           "ThemeService::OnThemeBuiltFromExtension (no bubble for Edge+)");
+  Install(Feature::kTheming, edge155::rva::ThemeService_UseDefaultTheme,
+          reinterpret_cast<void*>(h_use_default_theme), &o_use_default_theme,
+          "ThemeService::UseDefaultTheme (the user's return to default)");
   Install(Feature::kTheming, edge155::rva::BrowserThemePack_GetColor,
           reinterpret_cast<void*>(h_getcolor), &o_getcolor,
           "BrowserThemePack::GetColor (vertical-tab recolour)");

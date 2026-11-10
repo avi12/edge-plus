@@ -312,6 +312,7 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     // installed for live switching) and those of features with their own switch.
     edge::EnableHookAt(edge155::rva::ThemeService_RemoveUnusedThemes);
     edge::EnableHookAt(edge155::rva::ThemeService_OnThemeBuiltFromExtension);
+    edge::EnableHookAt(edge155::rva::ThemeService_UseDefaultTheme);
     edge::EnableHookAt(edge155::rva::BrowserThemePack_GetColor);
     edge::EnableHookAt(edge155::rva::ColorProvider_GetColor);
     edge::EnableHookAt(edge155::rva::EdgeTab_UpdateForegroundColors);
