@@ -29,6 +29,10 @@ enum class Command : WPARAM {
   kLinkPane = 721,            // a pane's link opened a tab: make it a pane
   kCloseOfferPane = 722,      // a grown split's tab offer was dismissed
   kDumpTabRows = 900,         // log the split rows of the vertical tab list
+  kDumpColours = 904,         // log the colour provider's answer per id
+  kForceSkinTone = 905,       // lParam 1 light, 2 dark, 0 the theme's or
+                              // Windows' (a script's stand-in for either)
+  kTraceColours = 906,        // lParam 1 counts colour reads, 0 logs them
   kForceCyberpunkSkin = 908,  // the Cyberpunk skin without theming (a script's
                               // stand-in for the theme and its switch)
   kEndPreviewDetach = 909,    // end the preview below

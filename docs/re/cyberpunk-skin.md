@@ -21,6 +21,64 @@ All of it rides `tab_shape::g_isCyberpunkSkinOn`; off is Edge's own look. The
 colours are `cyberpunk_skin.h`'s (`FramesFor`, `FieldFrameFor`,
 `TitleFontFamilyFor`), tested in `test/theme/cyberpunk_skin_test.cpp`.
 
+## 0. The rest of the browser: colour roles by name (157.0.4341.42)
+
+Beyond the tabs, the skin takes over ~230 of Edge's colours (menus, bubbles,
+dialogs, fields, buttons, checkboxes, switches, links, the toolbar's icons, the
+omnibox, tooltips, the focus ring) and gives each the kit's role for it
+(`theme/cyberpunk_palette.h`, the kit's `controls.css` / `primitives.css`
+tokens: ink and cyan write, teal draws idle lines, red marks, amber labels; in
+light ink writes and cyan only fills; nothing floating is a cyan fill). The
+ids are Edge's own `ui::ColorId`s, answered in the `ColorProvider::GetColor`
+hook (`hooks.h h_getuicolor`) by an array read.
+
+**Ids are found by name, at run time.** msedge.dll keeps the name of every
+colour id in tables of 16-byte entries `{const char* name, uint64 id + 1}`
+(Chromium's stringised `kColor...` list plus Edge's `kColorEdge...`; 3,816
+names in 157, in three runs, sorted by id). `chrome/colours/colour_ids.h` scans
+the image's read-only pages for entries whose pointer reaches a `kColor` string
+and whose second word is id-shaped, then places `colour_roles.h`'s names. No id
+is written into the DLL, so an Edge update needs no new number; a name an
+update drops is logged (`[colours] this Edge has no ...`). The scan reads only
+pages `VirtualQuery` reports committed and readable, and bounds every pointer
+by subtraction: a pointer test that wraps at the top of the address space
+crashed Edge's browser process while this was written.
+
+Chromium's own `ui/color/color_id.h` (tag 157.0.8103.77) lines up with Edge's
+ids only up to Edge's first insertions (`kColorMenuBackground` is 369 there,
+370 in Edge), so Edge's table, not Chromium's header, is the source.
+
+**Live repaint.** Views read a colour when their theme changes, so turning the
+skin on repaints nothing by itself. The panel's switch is followed by the theme
+re-apply, which notifies every view; a script's switch (`kForceCyberpunkSkin`)
+asks the default theme again to the same effect (`control.h NotifyColoursChanged`).
+
+**Tools** (channel codes, a script's): `kDumpColours` (904) logs the provider's
+answer for every id; `kTraceColours` (906, lParam 1 then 0) logs which ids the
+UI read, by name; `kForceSkinTone` (905, lParam 1 light, 2 dark) stands in for
+the theme's tone.
+
+**Left out on purpose:** the tab strip's ids (section 1 owns them), the frame,
+the toolbar's and omnibox's fills when a theme sets them, and every
+`kColorWeb...` id (a web page's own form controls and scrollbars).
+
+**Verified** in a throwaway Edge on a desktop of its own (so the dev panel's
+injector, which only enumerates the input desktop, never loads its DLL beside
+the test one), Edge's Appearance set to light, then dark
+(`browser.theme.color_scheme2` 1 / 2 in the profile's Preferences): the app
+menu, the toolbar icons, the omnibox frame and the focus ring, in both tones,
+captured with PrintWindow.
+
+**Not done, and why:**
+
+| Kit element | Status |
+|---|---|
+| Near-sharp / chamfered corners on the omnibox, menus, buttons, bubbles | not done: a corner radius is a layout metric, and its function has no symbol on 157 (no PDB) |
+| Notched switch, chevron radio, segmented slider shapes | colours only: those are views Edge draws itself |
+| Mono and sans fonts beyond the tab titles | not done: a font is set per view, as section 2 does for tab titles |
+| Edge's own WebUI pages (edge://settings, new tab) | their colours come from the same provider, so the roles apply where a page reads a mapped id; not checked page by page |
+| Glow, scan sweep, LED | no counterpart in native views |
+
 ## 1. Tab frames: Edge's own stroke, handed a width and a colour
 
 No new painting. Edge already strokes the **active** tab:

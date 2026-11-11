@@ -10,6 +10,9 @@
 #include "theme/focus.h"
 #include "theme/theme_tone.h"
 #include "theme/cyberpunk_skin.h"
+#include "theme/cyberpunk_palette.h"
+#include "chrome/colours/colour_ids.h"
+#include "chrome/colours/colour_dump.h"
 #include "theme/skin_tone.h"
 #include "theme/theme_hold.h"
 #include "theme/theme_notice.h"
@@ -575,6 +578,9 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
   // the skin's colours belong to the current theme. Read before it, a fresh
   // theme's tabs kept the previous theme's (or Edge's) titles.
   const uint32_t edgeColor = o_getuicolor(provider, colorId);
+  if (colour_dump::g_isTracing) {
+    colour_dump::Count(colorId);
+  }
   if (!tab_shape::g_isCyberpunkSkinOn) {
     return edgeColor;
   }
@@ -585,6 +591,13 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
   const bool isSelectedTabInk = isActiveTabTitle || IsActiveTabAlert(colorId);
   if (isSelectedTabInk) {
     return cyberpunk_skin::SelectedTabFor(skin_tone::Current()).ink;
+  }
+  // The browser's own colours, as the kit names them (colour_roles.h): by id
+  // lookup, so the common case costs one array read.
+  const cyberpunk_palette::Role role = colour_ids::RoleOf(colorId);
+  const bool isSkinColour = role != cyberpunk_palette::Role::kNone;
+  if (isSkinColour) {
+    return cyberpunk_palette::ColourOf(role, skin_tone::Current());
   }
   // Edge's own theme has no pack, so the last pack's idle colour is stale.
   const bool isIdleTabTitle = isTabForeground && g_foregroundTab &&

@@ -24,6 +24,9 @@
 #include "chrome/pane/overlay.h"
 #include "theme/protocol_handlers.h"
 #include "chrome/tabs/tabdrag.h"
+#include "chrome/colours/colour_dump.h"
+#include "chrome/colours/colour_ids.h"
+#include "theme/skin_tone.h"
 #include "chrome/tabs/tab_shape.h"
 #include "chrome/tabs/tabrows.h"
 #include "chrome/tabs/tab_views.h"
@@ -187,7 +190,42 @@ inline void ApplyCyberpunkSkin(bool isOn) {
     return;
   }
   tab_shape::g_isCyberpunkSkinOn = isOn;
+  if (isOn) {
+    colour_ids::Resolve();
+  }
   EnumWindows(RepaintWindowTabs, 0);
+  // Every view reads its colours again, as after a theme change.
+  const bool hasWindow = channel::g_window != nullptr;
+  if (hasWindow) {
+    theme::ScheduleRepaint(channel::g_window);
+  }
+}
+
+// What a theme change does for every open view: each reads its colours again.
+// A script's switches have no theme apply behind them (the panel's do), so they
+// ask the default theme again, which notifies the same way.
+inline void NotifyColoursChanged(HWND hwnd) {
+  void* themeService = edge::ThemeServiceForWindow(hwnd);
+  if (themeService) {
+    theme::UseDefaultOurselves(themeService);
+  }
+}
+
+// A script's stand-in for the theme's tone: lParam 1 light, 2 dark, else none.
+inline void ForceSkinTone(HWND hwnd, LPARAM lparam) {
+  using theme_tone::Tone;
+  skin_tone::g_forcedTone = Tone::kUnknown;
+  switch (static_cast<skin_tone::ForcedTone>(lparam)) {
+    case skin_tone::ForcedTone::kLight:
+      skin_tone::g_forcedTone = Tone::kLight;
+      break;
+    case skin_tone::ForcedTone::kDark:
+      skin_tone::g_forcedTone = Tone::kDark;
+      break;
+    case skin_tone::ForcedTone::kNone:
+      break;
+  }
+  NotifyColoursChanged(hwnd);
 }
 
 inline BOOL CALLBACK ApplyWindowReadingTheme(HWND hwnd, LPARAM /*unused*/) {
@@ -571,8 +609,18 @@ inline void RunCommand(HWND hwnd, WPARAM wparam, LPARAM lparam) {
     case Command::kDumpTabRows:
       tabrows::Dump(edge::McvForWindow(hwnd));
       return;
+    case Command::kDumpColours:
+      colour_dump::Dump(edge::McvForWindow(hwnd));
+      return;
+    case Command::kTraceColours:
+      colour_dump::Trace(lparam != 0);
+      return;
+    case Command::kForceSkinTone:
+      ForceSkinTone(hwnd, lparam);
+      return;
     case Command::kForceCyberpunkSkin:
       ApplyCyberpunkSkin(true);
+      NotifyColoursChanged(hwnd);
       return;
     case Command::kEndPreviewDetach:
       tabrows::SetDetachPreview(tabrows::kNoDetachPreview);
