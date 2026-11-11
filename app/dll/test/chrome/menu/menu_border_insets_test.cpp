@@ -39,21 +39,23 @@ void RunChecks() {
   const int siteInfoBubbleArrow = 0;
   const int webCaptureToolbarArrow = 10;
   const int menuArrow = 16;
-  Check(!WantsTopLine(OpenMenu::kNone, toolbarBubbleArrow),
-        "a bubble hung below a toolbar button keeps no top line");
-  Check(!WantsTopLine(OpenMenu::kNone, siteInfoBubbleArrow),
-        "a bubble hung below the site-info icon keeps no top line");
-  Check(
-      !WantsTopLine(OpenMenu::kNone, static_cast<int>(BubbleArrow::kTopCenter)),
-      "a bubble hung below its anchor's centre keeps no top line");
-  Check(WantsTopLine(OpenMenu::kNone, webCaptureToolbarArrow),
-        "a floating bubble gets its top line");
-  Check(WantsTopLine(OpenMenu::kContext, menuArrow),
-        "a context menu gets its top line");
-  Check(!WantsTopLine(OpenMenu::kHangingFromButton, menuArrow),
-        "a menu hung from a button keeps no top line");
-  Check(!WantsTopLine(OpenMenu::kHangingFromButton, webCaptureToolbarArrow),
-        "an open menu decides over the arrow");
+  struct Case {
+    int arrow;
+    bool isHungFromAnchor;
+    const char* what;
+  };
+  const Case cases[] = {
+      {toolbarBubbleArrow, true, "a bubble hung below a toolbar button"},
+      {siteInfoBubbleArrow, true, "a bubble hung below the site-info icon"},
+      {static_cast<int>(BubbleArrow::kTopCenter), true,
+       "a bubble hung below its anchor's centre"},
+      {webCaptureToolbarArrow, false, "a floating bubble"},
+      {menuArrow, false, "a menu: top-level, submenu or context"},
+  };
+  for (const Case& each : cases) {
+    Check(IsHangingBelowAnchor(each.arrow) == each.isHungFromAnchor, each.what);
+    Check(WantsTopLine(each.arrow) != each.isHungFromAnchor, each.what);
+  }
 }
 
 }  // namespace

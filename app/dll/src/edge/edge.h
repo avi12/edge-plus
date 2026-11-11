@@ -1016,21 +1016,6 @@ inline const void* ActiveMenu() {
   return Callable<ActiveFn>(edge155::rva::MenuController_GetActiveInstance)();
 }
 
-// Whether the open menu is a context menu (a right-click menu that floats where
-// it was asked for) rather than one that hangs from a button.
-inline bool IsContextMenuOpen() {
-  const void* controller = ActiveMenu();
-  if (!controller) {
-    return false;
-  }
-  return Field<bool>(controller, edge155::off::MENU_context_menu);
-}
-
-// Whether any menu is open.
-inline bool IsMenuOpen() {
-  return ActiveMenu() != nullptr;
-}
-
 // The views::BubbleBorder::Arrow of a bubble's border.
 inline int BubbleBorderArrow(const void* border) {
   return Field<int>(border, edge155::off::BUBBLEBORDER_arrow);

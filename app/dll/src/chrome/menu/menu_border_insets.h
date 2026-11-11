@@ -21,18 +21,11 @@ struct Insets {
 // The border line's own thickness: the room the top must give it.
 inline constexpr int kBorderThickness = 1;
 
-// The menu Edge has open, if any.
-enum class OpenMenu {
-  kNone,
-  kContext,
-  kHangingFromButton,
-};
-
 // views::BubbleBorder::Arrow, read from the border at +0x10: the values of a
 // bubble that hangs below its anchor, with the anchor against the bubble's top
 // edge. Measured: the profile, favorites and add-favorite bubbles are 1, the
 // site-info bubble is 0; the web-capture toolbar, which floats, is 10, and a
-// menu's border is 16 whatever hangs it.
+// menu's border is 16 whatever hangs it (and whether it is a submenu).
 enum class BubbleArrow : int {
   kTopLeft = 0,
   kTopRight = 1,
@@ -45,15 +38,11 @@ constexpr bool IsHangingBelowAnchor(int arrow) {
          arrow == static_cast<int>(BubbleArrow::kTopCenter);
 }
 
-// Whether the border is to carry its line on the top edge as on the others.
-// The top meets the toolbar for a menu hung from a button and for a bubble
-// hung from its anchor, which keep none. A menu's own kind decides while one is
-// open (its border does not say), a bubble's arrow decides otherwise.
-constexpr bool WantsTopLine(OpenMenu openMenu, int arrow) {
-  const bool isMenuOpen = openMenu != OpenMenu::kNone;
-  if (isMenuOpen) {
-    return openMenu == OpenMenu::kContext;
-  }
+// The one rule: every border carries its line on the top edge as on the other
+// sides (like a CSS border), except a bubble hung from its anchor, whose top
+// meets the toolbar. Every menu (top-level, submenu, context) has the
+// arrow-less 16, so each gets the line.
+constexpr bool WantsTopLine(int arrow) {
   return !IsHangingBelowAnchor(arrow);
 }
 

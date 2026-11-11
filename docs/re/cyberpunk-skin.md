@@ -285,6 +285,32 @@ flyout `#05080c` (384x678), profile bubble `#05080c` (342x372), site-info bubble
 driven: the Extensions flyout (no extensions in the profile), the Copy / Save /
 Markup pill after a capture, `TOP_CENTER` (8, from Chromium's enum), RTL.
 
+**The rule, final.** One principle, like a CSS border: every border gets the
+1px line on its top edge, except a bubble hung from an anchor directly above it
+(arrow 0, 1 or 8). Menus (top-level, submenu, context) all have the arrow-less
+16, so all get the line; the context-menu gate above (`state_.context_menu`)
+was tried and dropped, and so was a submenu discriminator (the controller's
+`pending_state_` holds a count of open menu levels at `+0xb8`: 0, 1 for the
+root alone, 2 with a submenu; it was readable but a menu's border cannot be
+told from the root's by it, since the root's border is asked for again while
+the submenu is open). `WantsTopLine(arrow)` in `menu_border_insets.h` is the
+whole rule, unit-tested on a table of arrows. This supersedes the
+"context menu only" and "menu open" paragraphs above. Sweep result (skin on,
+dark, top row at the middle column): ⋯ menu and its More tools, Tab groups,
+Extensions and Help and feedback submenus, tab and page context menus, capture
+toolbar and the first-run window `#f72944`; downloads flyout, favorites flyout,
+profile and site-info bubbles `#05080c`. Not driven: an extension popup (no
+extensions in the profile), the bookmarks bar menu (no bookmarks), skin off.
+
+**Sweep.** `tools/Sweep-Popups.ps1` checks the rule on a catalogue of popups
+(⋯ menu and its submenus, tab and page context menus, favorites, profile,
+site-info, downloads, capture toolbar): in a throwaway Edge with the skin forced
+on it opens each, PrintWindows every window of the test pid, and prints name,
+size, top-row colour, expectation and PASS/FAIL; a window the catalogue does not
+name is UNKNOWN. Run it on a desktop of its own when `pnpm dev` is running
+(that injects into every Edge): `pwsh tools\Sweep-Popups.ps1`, `-Only
+overflow_menu` for one row. Captures land in `app/dll/out/shots-re/sweep-*.png`.
+
 ## Runtime verification
 
 Throwaway Edge only: own `--user-data-dir` and LOCALAPPDATA under
