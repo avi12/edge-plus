@@ -237,6 +237,9 @@ inline constexpr Entry kEntries[] = {
     // --- The omnibox: a text field in the kit's frame -----------------------
     {"kColorEdgeLocationBarBackgroundWhiteVariant", Role::kPanel},
     {"kColorEdgeLocationBarHoverBackgroundDarkerVariant", Role::kPanel},
+    {"kColorEdgeLocationBarBackgroundGrayVariant", Role::kPanel},
+    {"kColorEdgeLocationBarHoverBackgroundLighterVariant", Role::kPanel},
+    {"kColorOmniboxResultsBackground", Role::kPanel},
     {"kColorEdgeLocationBarBorder", Role::kOff},
     {"kColorEdgeLocationBarBorderHovered", Role::kOn},
     {"kColorOmniboxText", Role::kForeground},
