@@ -18,6 +18,10 @@ pub enum ThemeBadge {
     Local,
     InUse,
     InstalledInEdge,
+    /// The theme is the one set for Windows light mode.
+    Light,
+    /// The theme is the one set for Windows dark mode.
+    Dark,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -27,6 +31,9 @@ pub struct ThemeRow {
     pub id: String,
     pub name: String,
     pub badges: Vec<ThemeBadge>,
+    /// The store URL or local path a theme was added from; empty for a theme
+    /// that only Edge knows.
+    pub origin: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -46,8 +53,12 @@ pub struct ThemingView {
     pub options: Vec<ThemeOption>,
     pub light: String,
     pub dark: String,
-    pub own: Vec<ThemeRow>,
-    pub edge: Vec<ThemeRow>,
+    /// Edge's default theme, the fixed first row: its id is empty and it has
+    /// no source badge.
+    pub default_theme: ThemeRow,
+    /// Every theme in display order: a panel-owned one has the `local` or
+    /// `store` badge, an Edge-only one `installedInEdge`.
+    pub themes: Vec<ThemeRow>,
 }
 
 /// Which switch a card is: echoed back in `Action::SetSwitch`.
@@ -159,15 +170,26 @@ pub enum Action {
     },
     Inject,
     RestartToUpdate,
+    /// `should_use_now`: the user held Shift, so the theme is also set for the Windows mode on now.
     AddStoreTheme {
         url: String,
+        #[serde(default)]
+        should_use_now: bool,
     },
+    /// As `AddStoreTheme`, for a folder, .zip or .crx.
     AddLocalTheme {
         path: String,
+        #[serde(default)]
+        should_use_now: bool,
     },
     RemoveTheme {
         id: String,
     },
+    /// A theme listed as installed in Edge, not one of the panel's own.
+    RemoveEdgeTheme {
+        id: String,
+    },
+    /// The ids of every theme, own and Edge-only, in the order dragged to.
     ReorderThemes {
         ids: Vec<String>,
     },

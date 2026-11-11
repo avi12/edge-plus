@@ -12,6 +12,9 @@ pub struct PanelState {
     pub theming: Theming,
     /// Themes installed in Edge that the panel did not add.
     pub edge_themes: Vec<InstalledTheme>,
+    /// The id of the theme Edge wears now, whether the panel added it or not;
+    /// empty for Edge's default theme, None when unknown.
+    pub worn_theme: Option<String>,
     pub is_edge_running: bool,
     pub is_start_with_windows: bool,
     pub is_split_loaded: bool,

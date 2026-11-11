@@ -66,6 +66,8 @@ export function startSession(port: MessagePort) {
   });
   void view.ready.then(ready => {
     mountControl({
+      // What is on screen when the window opens is simply there; transitions play for changes.
+      intro: false,
       component: Shell,
       props: {
         view: ready,

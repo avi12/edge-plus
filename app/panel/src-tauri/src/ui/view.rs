@@ -7,6 +7,7 @@ use crate::edge::version::file_version::FileVersion;
 use crate::platform::identity::{app_identity, product};
 use crate::platform::settings::{Feature, ThemeSource};
 use crate::setup::update_watch::ReadyUpdate;
+use crate::themes::theme_order::{self, Listed};
 use crate::ui::inject_offer::InjectOffer;
 use crate::ui::panel_layout::{self, CardSlot, OwnCard};
 use crate::ui::panel_state::PanelState;
@@ -122,53 +123,77 @@ fn build_hold(state: &PanelState, feature: Feature) -> Option<CardHold> {
     }
 }
 
-fn theme_row(id: &str, name: &str, badges: Vec<ThemeBadge>) -> ThemeRow {
+fn theme_row(id: &str, name: &str, badges: Vec<ThemeBadge>, origin: &str) -> ThemeRow {
     ThemeRow {
         id: id.to_owned(),
         name: name.to_owned(),
         badges,
+        origin: origin.to_owned(),
     }
 }
 
+const DEFAULT_THEME_NAME: &str = "Default theme";
+
+/// The Windows modes the theme is set for, then where it came from (Edge's
+/// default theme comes from nowhere), then In use last, so that it comes and
+/// goes without moving the others. The id is empty for the default theme.
+fn badges_of(state: &PanelState, id: &str, source: Option<ThemeBadge>) -> Vec<ThemeBadge> {
+    let mut badges = Vec::new();
+    if state.theming.light == id {
+        badges.push(ThemeBadge::Light);
+    }
+    if state.theming.dark == id {
+        badges.push(ThemeBadge::Dark);
+    }
+    badges.extend(source);
+    if state.worn_theme.as_deref() == Some(id) {
+        badges.push(ThemeBadge::InUse);
+    }
+    badges
+}
+
 fn theming(state: &PanelState) -> ThemingView {
-    let own_options = state.theming.themes.iter().map(|theme| ThemeOption {
-        id: theme.id.clone(),
-        name: theme.name.clone(),
-    });
-    let edge_options = state.edge_themes.iter().map(|theme| ThemeOption {
-        id: theme.id.clone(),
-        name: theme.name.clone(),
-    });
-    let own = state
-        .theming
-        .themes
+    let listed = theme_order::combined(
+        &state.theming.themes,
+        &state.edge_themes,
+        &state.theming.order,
+    );
+    let options = listed
         .iter()
-        .map(|theme| {
-            let badge = match theme.source {
-                ThemeSource::Store => ThemeBadge::Store,
-                ThemeSource::Local => ThemeBadge::Local,
-            };
-            theme_row(&theme.id, &theme.name, vec![badge])
+        .map(|theme| match theme {
+            Listed::Own(own) => ThemeOption {
+                id: own.id.clone(),
+                name: own.name.clone(),
+            },
+            Listed::Edge(edge) => ThemeOption {
+                id: edge.id.clone(),
+                name: edge.name.clone(),
+            },
         })
         .collect();
-    let edge = state
-        .edge_themes
+    let themes = listed
         .iter()
-        .map(|theme| {
-            let badges = if theme.is_active {
-                vec![ThemeBadge::InUse, ThemeBadge::InstalledInEdge]
-            } else {
-                vec![ThemeBadge::InstalledInEdge]
-            };
-            theme_row(&theme.id, &theme.name, badges)
+        .map(|theme| match theme {
+            Listed::Own(own) => {
+                let source = match own.source {
+                    ThemeSource::Store => ThemeBadge::Store,
+                    ThemeSource::Local => ThemeBadge::Local,
+                };
+                let badges = badges_of(state, &own.id, Some(source));
+                theme_row(&own.id, &own.name, badges, &own.origin)
+            }
+            Listed::Edge(edge) => {
+                let badges = badges_of(state, &edge.id, Some(ThemeBadge::InstalledInEdge));
+                theme_row(&edge.id, &edge.name, badges, "")
+            }
         })
         .collect();
     ThemingView {
-        options: own_options.chain(edge_options).collect(),
+        options,
         light: state.theming.light.clone(),
         dark: state.theming.dark.clone(),
-        own,
-        edge,
+        default_theme: theme_row("", DEFAULT_THEME_NAME, badges_of(state, "", None), ""),
+        themes,
     }
 }
 
@@ -186,6 +211,7 @@ mod tests {
             features: choice,
             theming: Theming::default(),
             edge_themes: Vec::new(),
+            worn_theme: None,
             is_edge_running: edge.is_some(),
             is_start_with_windows: false,
             is_split_loaded: false,

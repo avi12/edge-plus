@@ -5,13 +5,28 @@ import type { ProtocolWithReturn } from "winui-svelte/messaging";
 
 export type Feature = "nativeSplit" | "theming" | "quietDevMode" | "protocolHandlers" | "enhancedFind" | "webUiFollowsTheme" | "livePreview" | "cyberpunkSkin" | "readingTheme";
 
-export type ThemeBadge = "store" | "local" | "inUse" | "installedInEdge";
+export type ThemeBadge = "store" | "local" | "inUse" | "installedInEdge" | "light" | "dark";
 
-export type ThemeRow = { id: string, name: string, badges: Array<ThemeBadge>, };
+export type ThemeRow = { id: string, name: string, badges: Array<ThemeBadge>, 
+/**
+ * The store URL or local path a theme was added from; empty for a theme
+ * that only Edge knows.
+ */
+origin: string, };
 
 export type ThemeOption = { id: string, name: string, };
 
-export type ThemingView = { options: Array<ThemeOption>, light: string, dark: string, own: Array<ThemeRow>, edge: Array<ThemeRow>, };
+export type ThemingView = { options: Array<ThemeOption>, light: string, dark: string, 
+/**
+ * Edge's default theme, the fixed first row: its id is empty and it has
+ * no source badge.
+ */
+defaultTheme: ThemeRow, 
+/**
+ * Every theme in display order: a panel-owned one has the `local` or
+ * `store` badge, an Edge-only one `installedInEdge`.
+ */
+themes: Array<ThemeRow>, };
 
 export type SwitchKey = "nativeSplit" | "theming" | "quietDevMode" | "protocolHandlers" | "enhancedFind" | "webUiFollowsTheme" | "livePreview" | "cyberpunkSkin" | "readingTheme" | "startWithWindows" | "autoInject" | "autoUpdate";
 
@@ -48,7 +63,7 @@ paused: Array<Feature>, cards: Array<CardView>, theming: ThemingView, inject: In
 
 export type ColorMode = "light" | "dark";
 
-export type Action = { "kind": "setSwitch", key: SwitchKey, isOn: boolean, } | { "kind": "inject" } | { "kind": "restartToUpdate" } | { "kind": "addStoreTheme", url: string, } | { "kind": "addLocalTheme", path: string, } | { "kind": "removeTheme", id: string, } | { "kind": "reorderThemes", ids: Array<string>, } | { "kind": "moveTheme", id: string, offset: number, } | { "kind": "assignTheme", mode: ColorMode, id: string, };
+export type Action = { "kind": "setSwitch", key: SwitchKey, isOn: boolean, } | { "kind": "inject" } | { "kind": "restartToUpdate" } | { "kind": "addStoreTheme", url: string, shouldUseNow: boolean, } | { "kind": "addLocalTheme", path: string, shouldUseNow: boolean, } | { "kind": "removeTheme", id: string, } | { "kind": "removeEdgeTheme", id: string, } | { "kind": "reorderThemes", ids: Array<string>, } | { "kind": "moveTheme", id: string, offset: number, } | { "kind": "assignTheme", mode: ColorMode, id: string, };
 
 export type Bounds = { x: number, y: number, width: number, height: number, };
 

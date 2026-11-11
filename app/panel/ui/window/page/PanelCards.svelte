@@ -6,6 +6,7 @@
   import CardTitle from "#src/window/cards/CardTitle.svelte";
   import FeatureCard from "#src/window/cards/FeatureCard.svelte";
   import InjectCard from "#src/window/cards/InjectCard.svelte";
+  import ThemeDropArea from "#src/window/theming/ThemeDropArea.svelte";
   import ThemingBody from "#src/window/theming/ThemingBody.svelte";
   import { featureTitles } from "#src/window/wording/shared-wording.ts";
   import { AddDeleteThemeTransition, RepositionThemeTransition, StackPanel } from "winui-svelte/components";
@@ -50,16 +51,18 @@
   </PanelSection>
   <PanelSection>
     <SectionHeader>Look and themes</SectionHeader>
-    <FeatureCard card={cardOf("theming")} glyph="Color">
-      <CardTitle>{featureTitles.theming}</CardTitle>
-      <CardDescription>
-        Use one theme when Windows is light and another when it is dark, switched live. Add themes from the
-        Chrome Web Store, Edge Add-ons or a local file.
-      </CardDescription>
-      {#snippet body()}
-        <ThemingBody isOn={cardOf("theming").isOn} theming={view.theming} />
-      {/snippet}
-    </FeatureCard>
+    <ThemeDropArea>
+      <FeatureCard card={cardOf("theming")} glyph="Color">
+        <CardTitle>{featureTitles.theming}</CardTitle>
+        <CardDescription>
+          Use one theme when Windows is light and another when it is dark, switched live. Add themes from the
+          Chrome Web Store, Edge Add-ons or a local file.
+        </CardDescription>
+        {#snippet body()}
+          <ThemingBody isOn={cardOf("theming").isOn} theming={view.theming} />
+        {/snippet}
+      </FeatureCard>
+    </ThemeDropArea>
     <FeatureCard card={cardOf("cyberpunkSkin")} glyph="Page">
       <CardTitle>{featureTitles.cyberpunkSkin}</CardTitle>
       <CardDescription>

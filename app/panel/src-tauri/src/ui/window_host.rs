@@ -97,10 +97,22 @@ pub fn show() {
 pub fn on_service_event(event: &ServiceEvent) {
     match event {
         ServiceEvent::ToastClicked => show(),
-        ServiceEvent::ThemeRefreshed(refresh) => send(&CoreMessage::Notice(
-            refresh.error.clone().unwrap_or_default(),
-        )),
-        ServiceEvent::BuildChanged | ServiceEvent::BrowsersChanged | ServiceEvent::UpdateReady => {
+        ServiceEvent::ThemeRefreshed(theme) => {
+            send(&CoreMessage::Notice(
+                theme.error.clone().unwrap_or_default(),
+            ));
+            if theme.is_gone {
+                refresh();
+            }
+        }
+        ServiceEvent::EdgeWentDefault(mode) => {
+            send(&CoreMessage::Notice(wording::edge_went_default(*mode)));
+            refresh();
+        }
+        ServiceEvent::BuildChanged
+        | ServiceEvent::BrowsersChanged
+        | ServiceEvent::EdgeThemeChanged
+        | ServiceEvent::UpdateReady => {
             refresh();
         }
     }
@@ -262,9 +274,16 @@ fn perform(action: Action) -> ActionResult<PanelState> {
             None => Err(ActionError::Internal(format!("no card for {key:?}"))),
         },
         Action::Inject => Ok(panel_actions::inject()),
-        Action::AddStoreTheme { url } => panel_actions::add_store_theme(&url),
-        Action::AddLocalTheme { path } => panel_actions::add_local_theme(Path::new(&path)),
+        Action::AddStoreTheme {
+            url,
+            should_use_now,
+        } => panel_actions::add_store_theme(&url, should_use_now),
+        Action::AddLocalTheme {
+            path,
+            should_use_now,
+        } => panel_actions::add_local_theme(Path::new(&path), should_use_now),
         Action::RemoveTheme { id } => panel_actions::remove_theme(&id),
+        Action::RemoveEdgeTheme { id } => panel_actions::remove_edge_theme(&id),
         Action::ReorderThemes { ids } => panel_actions::reorder_themes(&ids),
         Action::MoveTheme { id, offset } => panel_actions::move_theme(&id, offset),
         Action::AssignTheme { mode, id } => panel_actions::assign_theme(mode, &id),

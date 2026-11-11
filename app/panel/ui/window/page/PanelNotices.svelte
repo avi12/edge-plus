@@ -1,9 +1,10 @@
 <script lang="ts">
   import type { View } from "#src/protocol.g.ts";
   import { usePanel } from "#src/window/host/panel.svelte.ts";
+  import { CssVisibility } from "#src/window/style/css-visibility.ts";
   import { pausedNotice } from "#src/window/wording/shared-wording.ts";
   import { InfoBar, TextBlock } from "winui-svelte/components";
-  import { InfoBarSeverity, Visibility } from "winui-svelte/enums";
+  import { InfoBarSeverity } from "winui-svelte/enums";
 
   interface Props {
     view: View;
@@ -15,7 +16,7 @@
   const buildNotice = $derived(pausedNotice(view));
 </script>
 
-<TextBlock class="open-edge-hint" visibility={view.isEdgeRunning ? Visibility.Collapsed : Visibility.Visible}>
+<TextBlock style:visibility={view.isEdgeRunning ? CssVisibility.hidden : CssVisibility.visible} class="open-edge-hint">
   Open Edge to apply changes.
 </TextBlock>
 <InfoBar isClosable={false} isOpen={buildNotice.length > 0} message={buildNotice} severity={InfoBarSeverity.Warning} />
