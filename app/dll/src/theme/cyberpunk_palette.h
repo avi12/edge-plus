@@ -25,20 +25,22 @@ using theme_tone::Tone;
 
 enum class Role : uint8_t {
   kNone = 0,
-  kPanel,              // floating and field surfaces: menus, bubbles, fields
-  kForeground,         // body text
-  kForegroundMuted,    // secondary text, placeholders
-  kOn,                 // icons, values, links, the focus ring: cyan / ink
-  kOff,                // idle strokes, disabled marks, separators
-  kFrame,              // a plate's outline: red in dark, ink in light
-  kOnFill,             // a lit fill (a primary button): cyan in both tones
-  kOnFillWash,         // the faint cyan fill of a switched-on track
-  kInk,                // text on kOnFill
-  kAccent,             // red marks: a checked box, the picked radio
-  kLabel,              // amber field and section labels
-  kHover,              // the wash behind a hovered or selected row
-  kAlertText,          // an error line
-  kAlert,              // an invalid field's frame
+  kPanel,            // floating and field surfaces: menus, bubbles, fields
+  kForeground,       // body text
+  kForegroundMuted,  // secondary text, placeholders
+  kOn,               // icons, values, links, the focus ring: cyan / ink
+  kOff,              // idle strokes, disabled marks, separators
+  kFrame,            // a plate's outline: red in dark, ink in light
+  kOnFill,           // a lit fill (a primary button): cyan in both tones
+  kOnFillWash,       // the faint cyan fill of a switched-on track
+  kInk,              // text on kOnFill
+  kAccent,           // red marks: a checked box, the picked radio
+  kLabel,            // amber field and section labels
+  kHover,            // the wash behind a hovered or selected row
+  kSelection,    // selected text: the hover wash in dark, an ink fill in light
+  kOnSelection,  // text on kSelection
+  kAlertText,    // an error line
+  kAlert,        // an invalid field's frame
   kTooltipBackground,  // near-black (dark) / ink (light)
   kTooltipForeground,  // cyan (dark) / amber (light)
 };
@@ -55,6 +57,8 @@ struct Palette {
   Argb accent;
   Argb label;
   Argb hover;
+  Argb selection;
+  Argb onSelection;
   Argb alertText;
   Argb alert;
   Argb tooltipBackground;
@@ -75,6 +79,8 @@ inline constexpr Palette kDark{
     .accent = 0xfff72944,
     .label = 0xffffd540,
     .hover = 0x38007979,  // #007979 at 22%
+    .selection = 0x38007979,
+    .onSelection = 0xffe2f4fa,
     .alertText = 0xffff7a8a,
     .alert = 0xffff142b,
     .tooltipBackground = 0xeb000000,  // black at 92%
@@ -93,7 +99,9 @@ inline constexpr Palette kLight{
     .ink = 0xff06182b,
     .accent = 0xffc8102e,
     .label = 0xff6e5200,
-    .hover = 0x1406182b,  // ink at 8%
+    .hover = 0x1406182b,      // ink at 8%
+    .selection = 0xff06182b,  // the kit: a state on cyan is an ink fill
+    .onSelection = 0xffedf5fc,
     .alertText = 0xffa3001f,
     .alert = 0xffc4004e,
     .tooltipBackground = 0xff06182b,
@@ -136,6 +144,10 @@ inline constexpr uint32_t kOnWashPercent = 22;
       return palette.label;
     case Role::kHover:
       return palette.hover;
+    case Role::kSelection:
+      return palette.selection;
+    case Role::kOnSelection:
+      return palette.onSelection;
     case Role::kAlertText:
       return palette.alertText;
     case Role::kAlert:
