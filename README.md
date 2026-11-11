@@ -9,10 +9,25 @@ or off, and Edge picks the change up the moment it is made — no restart, ever.
 in two rows, just like the panes, and the focused pane's tab is the one filled
 and cut at the corner.*
 
+## Install
+
+Install Edge+ with the `.msix` file; it is the only supported install. Every
+[release](https://github.com/avi12/edge-plus/releases) has `EdgePlus-<version>.msix`
+and `EdgePlus.cer`, the certificate it is signed with. Download both, trust the
+certificate once from an administrator PowerShell, then install the package:
+
+```powershell
+Import-Certificate -FilePath EdgePlus.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+Add-AppxPackage EdgePlus-<version>.msix
+```
+
+Or double-click the `.msix` after trusting the certificate. Edge+ then updates
+itself.
+
 ## Requirements
 
 - Windows 10 version 2004 (build 19041) or later, 64-bit.
-- Microsoft Edge (Stable, 64-bit) 156.0.4314.58, the one build the DLL is
+- Microsoft Edge (Stable, 64-bit) 157.0.4341.42, the one build the DLL is
   pinned to (`app/dll/src/edge/offsets.h`). On any other build every
   feature that calls into `msedge.dll` pauses itself and Edge is left
   untouched; see *Setup*.
@@ -122,17 +137,8 @@ standalone tabs first, so nothing Edge can't render on its own is left behind.
 
 ## Setup
 
-Edge+ is installed from its package. Every
-[release](https://github.com/avi12/edge-plus/releases) has `EdgePlus-<version>.msix`
-and `EdgePlus.cer`, the certificate it is signed with. Trust the certificate
-once, from an administrator PowerShell, then open the package:
-
-```powershell
-Import-Certificate -FilePath EdgePlus.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-Add-AppxPackage EdgePlus-<version>.msix
-```
-
-To build it yourself:
+Install Edge+ from its `.msix` package; see *Install* above. To build it
+yourself:
 
 ```powershell
 cd app\panel
