@@ -119,11 +119,62 @@ pub fn read_proof(bytes: &[u8]) -> ThemeFileResult<CrxProof> {
     })
 }
 
+const MESSAGE_TOKEN_START: &str = "__MSG_";
+const MESSAGE_TOKEN_END: &str = "__";
+const LOCALES_FOLDER: &str = "_locales";
+const MESSAGES_FILE: &str = "messages.json";
+const MESSAGE_FIELD: &str = "message";
+
 pub fn zip(bytes: &[u8]) -> ThemeFileResult<&[u8]> {
     Ok(&bytes[PREAMBLE_LENGTH + header_length(bytes)?..])
 }
 
 pub fn read_zip_version(zip_bytes: &[u8]) -> ThemeFileResult<String> {
+    read_manifest(zip_bytes)?
+        .get(manifest_keys::VERSION)
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned)
+        .ok_or_else(|| invalid(wording::NO_VERSION_IN_CRX_MANIFEST))
+}
+
+/// The theme's own name; None when the manifest has none. A message token
+/// (`__MSG_name__`) is resolved from the default locale's messages.json.
+#[must_use]
+pub fn read_zip_name(zip_bytes: &[u8]) -> Option<String> {
+    let manifest = read_manifest(zip_bytes).ok()?;
+    let name = manifest.get(manifest_keys::NAME)?.as_str()?.trim();
+    let token_key = name
+        .strip_prefix(MESSAGE_TOKEN_START)
+        .and_then(|rest| rest.strip_suffix(MESSAGE_TOKEN_END));
+    let resolved = match token_key {
+        Some(key) => localized_message(zip_bytes, &manifest, key)?,
+        None => name.to_owned(),
+    };
+    let trimmed = resolved.trim();
+    (!trimmed.is_empty()).then(|| trimmed.to_owned())
+}
+
+/// `key` in the messages.json of the manifest's default locale; keys are not
+/// case sensitive.
+fn localized_message(zip_bytes: &[u8], manifest: &Value, key: &str) -> Option<String> {
+    let locale = manifest.get(manifest_keys::DEFAULT_LOCALE)?.as_str()?;
+    let mut archive = ZipArchive::new(Cursor::new(zip_bytes)).ok()?;
+    let mut messages = String::new();
+    archive
+        .by_name(&format!("{LOCALES_FOLDER}/{locale}/{MESSAGES_FILE}"))
+        .ok()?
+        .read_to_string(&mut messages)
+        .ok()?;
+    let text = messages.strip_prefix('\u{feff}').unwrap_or(&messages);
+    let messages: Value = serde_json::from_str(text).ok()?;
+    let (_, entry) = messages
+        .as_object()?
+        .iter()
+        .find(|(name, _)| name.eq_ignore_ascii_case(key))?;
+    entry.get(MESSAGE_FIELD)?.as_str().map(ToOwned::to_owned)
+}
+
+fn read_manifest(zip_bytes: &[u8]) -> ThemeFileResult<Value> {
     let mut archive =
         ZipArchive::new(Cursor::new(zip_bytes)).map_err(|_| invalid(wording::BAD_CRX_ZIP))?;
     let mut manifest = archive
@@ -134,13 +185,7 @@ pub fn read_zip_version(zip_bytes: &[u8]) -> ThemeFileResult<String> {
         .read_to_string(&mut text)
         .map_err(|_| invalid(wording::BAD_CRX_MANIFEST))?;
     let text = text.strip_prefix('\u{feff}').unwrap_or(&text);
-    let parsed: Value =
-        serde_json::from_str(text).map_err(|_| invalid(wording::BAD_CRX_MANIFEST))?;
-    parsed
-        .get(manifest_keys::VERSION)
-        .and_then(Value::as_str)
-        .map(ToOwned::to_owned)
-        .ok_or_else(|| invalid(wording::NO_VERSION_IN_CRX_MANIFEST))
+    serde_json::from_str(text).map_err(|_| invalid(wording::BAD_CRX_MANIFEST))
 }
 
 fn first(fields: &[Field], number: impl FieldNumber) -> Option<Field> {
@@ -183,5 +228,30 @@ mod tests {
             read(&overlong).is_err(),
             "a header longer than the file is refused"
         );
+    }
+
+    #[test]
+    fn a_name_is_read_plain_or_from_the_default_locale() {
+        use crate::themes::package::theme_manifest::tests::zip_of;
+
+        let plain = zip_of(&[(MANIFEST_NAME, br#"{"name":" Plain "}"#)]);
+        assert_eq!(Some("Plain".to_owned()), read_zip_name(&plain));
+        let localized = zip_of(&[
+            (
+                MANIFEST_NAME,
+                br#"{"name":"__MSG_extName__","default_locale":"en"}"#,
+            ),
+            (
+                "_locales/en/messages.json",
+                br#"{"EXTNAME":{"message":"Phantom Liberty Browser Theme"}}"#,
+            ),
+        ]);
+        assert_eq!(
+            Some("Phantom Liberty Browser Theme".to_owned()),
+            read_zip_name(&localized),
+            "the key matches whatever its case"
+        );
+        let unresolved = zip_of(&[(MANIFEST_NAME, br#"{"name":"__MSG_x__"}"#)]);
+        assert_eq!(None, read_zip_name(&unresolved), "no locale, no name");
     }
 }

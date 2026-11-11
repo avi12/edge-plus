@@ -11,7 +11,7 @@ use crate::platform::actions::action_error::{ActionError, ActionResult};
 use crate::platform::service::background_service;
 use crate::platform::settings::{self, ColorMode, Feature, Settings};
 use crate::setup::{start_with_windows, update_watch};
-use crate::themes::{theme_library, theme_order};
+use crate::themes::{edge_theme_watch, theme_library, theme_order};
 use crate::ui::panel_state::PanelState;
 
 #[must_use]
@@ -72,13 +72,18 @@ pub fn inject() -> PanelState {
     read(&settings)
 }
 
-pub fn add_store_theme(url: &str) -> ActionResult<PanelState> {
-    theme_library::add_store(url)?;
+/// A new theme added with Shift held is set for the Windows mode that is on now.
+fn mode_to_use_now(should_use_now: bool) -> Option<ColorMode> {
+    should_use_now.then(edge_theme_watch::current_mode)
+}
+
+pub fn add_store_theme(url: &str, should_use_now: bool) -> ActionResult<PanelState> {
+    theme_library::add_store(url, mode_to_use_now(should_use_now))?;
     Ok(load())
 }
 
-pub fn add_local_theme(path: &Path) -> ActionResult<PanelState> {
-    theme_library::add_local(path)?;
+pub fn add_local_theme(path: &Path, should_use_now: bool) -> ActionResult<PanelState> {
+    theme_library::add_local(path, mode_to_use_now(should_use_now))?;
     Ok(load())
 }
 
@@ -87,18 +92,23 @@ pub fn remove_theme(id: &str) -> ActionResult<PanelState> {
     Ok(load())
 }
 
+pub fn remove_edge_theme(id: &str) -> ActionResult<PanelState> {
+    theme_library::remove_edge(id)?;
+    Ok(load())
+}
+
 pub fn reorder_themes(ids: &[String]) -> ActionResult<PanelState> {
     theme_library::reorder(ids)?;
     Ok(load())
 }
 
-/// Moves a theme up (negative) or down the list, stopping at either end.
+/// Moves a theme up (negative) or down the combined list, stopping at either end.
 pub fn move_theme(id: &str, offset: i32) -> ActionResult<PanelState> {
-    let ids: Vec<String> = Settings::load()
-        .theming
-        .themes
-        .into_iter()
-        .map(|theme| theme.id)
+    let theming = Settings::load().theming;
+    let edge = theme_library::edge_themes_not_in(&theming);
+    let ids: Vec<String> = theme_order::combined(&theming.themes, &edge, &theming.order)
+        .iter()
+        .map(|theme| theme.id().to_owned())
         .collect();
     theme_library::reorder(&theme_order::moved(&ids, id, offset))?;
     Ok(load())
@@ -130,6 +140,7 @@ fn read(settings: &Settings) -> PanelState {
         features: settings.features,
         theming: settings.theming.clone(),
         edge_themes: theme_library::edge_themes_not_in(&settings.theming),
+        worn_theme: theme_library::worn_theme_id(),
         is_edge_running: !edge_native::browser_pids().is_empty(),
         is_start_with_windows: start_with_windows::is_enabled(),
         is_split_loaded: dll_channel::is_loaded(),

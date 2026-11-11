@@ -1,9 +1,51 @@
-//! The order of settings.json's themes array is the order of the list and of
-//! the light / dark pickers.
+//! One list holds the panel's own themes and the ones only Edge knows, in the
+//! order `Theming.order` gives; it is the order of the list and of the light /
+//! dark pickers.
 
 use std::collections::HashMap;
 
 use crate::platform::settings::ThemeEntry;
+use crate::themes::sources::installed_themes::InstalledTheme;
+
+/// A theme of the combined list.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Listed<'theme> {
+    Own(&'theme ThemeEntry),
+    Edge(&'theme InstalledTheme),
+}
+
+impl Listed<'_> {
+    #[must_use]
+    pub fn id(&self) -> &str {
+        match self {
+            Self::Own(theme) => &theme.id,
+            Self::Edge(theme) => &theme.id,
+        }
+    }
+}
+
+/// Every theme in the order of `order`; one it does not name goes after the
+/// named ones (own themes first in their order, then Edge's in its scan order),
+/// and an id in `order` with no theme is ignored.
+#[must_use]
+pub fn combined<'theme>(
+    own: &'theme [ThemeEntry],
+    edge: &'theme [InstalledTheme],
+    order: &[String],
+) -> Vec<Listed<'theme>> {
+    let mut listed: Vec<Listed<'theme>> = own
+        .iter()
+        .map(Listed::Own)
+        .chain(edge.iter().map(Listed::Edge))
+        .collect();
+    listed.sort_by_key(|theme| {
+        order
+            .iter()
+            .position(|id| id == theme.id())
+            .unwrap_or(usize::MAX)
+    });
+    listed
+}
 
 /// Negative `offset` is up; stops at either end.
 #[must_use]
@@ -69,6 +111,42 @@ mod tests {
             .join(",")
     }
 
+    fn installed(id: &str) -> InstalledTheme {
+        InstalledTheme {
+            id: id.to_owned(),
+            name: id.to_uppercase(),
+        }
+    }
+
+    fn combined_ids(own: &[&str], edge: &[&str], order: &[&str]) -> String {
+        let own: Vec<ThemeEntry> = own.iter().map(|id| entry(id)).collect();
+        let edge: Vec<InstalledTheme> = edge.iter().map(|id| installed(id)).collect();
+        combined(&own, &edge, &ids(order))
+            .iter()
+            .map(Listed::id)
+            .collect::<Vec<_>>()
+            .join(",")
+    }
+
+    #[test]
+    fn combined_mixes_own_and_edge_themes_in_one_order() {
+        assert_eq!(
+            "a,b,x,y",
+            combined_ids(&["a", "b"], &["x", "y"], &[]),
+            "no order: own first, then Edge's"
+        );
+        assert_eq!(
+            "x,a,y,b",
+            combined_ids(&["a", "b"], &["x", "y"], &["x", "a", "y", "b"]),
+            "an order mixes them"
+        );
+        assert_eq!(
+            "y,a,b,x",
+            combined_ids(&["a", "b"], &["x", "y"], &["gone", "y"]),
+            "unnamed ones go last in the default order, gone ids are ignored"
+        );
+    }
+
     #[test]
     fn moved_stops_at_either_end() {
         let order = ids(&["a", "b", "c"]);
@@ -124,6 +202,9 @@ mod tests {
             themes,
             light: "b".to_owned(),
             dark: "c".to_owned(),
+            order: Vec::new(),
+            light_history: Vec::new(),
+            dark_history: Vec::new(),
         };
         theming.reorder(&ids(&["c", "b", "a"]));
         assert_eq!(
@@ -131,6 +212,7 @@ mod tests {
             joined(&theming.themes),
             "Theming reorders its themes"
         );
+        assert_eq!(ids(&["c", "b", "a"]), theming.order, "and keeps the order");
         let keeps_assignments = theming.light == "b" && theming.dark == "c";
         assert!(keeps_assignments, "a reorder keeps the assignments");
         let json = Settings {

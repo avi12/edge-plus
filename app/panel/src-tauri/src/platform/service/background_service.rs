@@ -8,8 +8,9 @@ use std::sync::{Arc, OnceLock};
 use crate::edge::edge_watch::EdgeWatch;
 use crate::edge::version::edge_build::BuildChange;
 use crate::platform::service::paused_toast;
-use crate::platform::settings::Settings;
+use crate::platform::settings::{ColorMode, Settings};
 use crate::setup::update_watch::{ReadyUpdate, UpdateWatch};
+use crate::themes::edge_theme_watch::{EdgeThemeWatch, WearChange};
 use crate::themes::theme_library;
 use crate::themes::theme_watch::{ThemeRefresh, ThemeWatch};
 
@@ -21,6 +22,11 @@ pub enum ServiceEvent {
     /// on) or closed: the window re-reads its state.
     BrowsersChanged,
     ThemeRefreshed(ThemeRefresh),
+    /// The user chose Edge's default theme inside Edge: the slot of the current
+    /// Windows mode now says so.
+    EdgeWentDefault(ColorMode),
+    /// Edge wears another theme: "In use" moves.
+    EdgeThemeChanged,
     /// A newer release is downloaded and checked.
     UpdateReady,
     /// The paused-features toast was clicked: open the window.
@@ -32,6 +38,7 @@ type Listener = Arc<dyn Fn(ServiceEvent) + Send + Sync>;
 struct Service {
     edge: EdgeWatch,
     themes: ThemeWatch,
+    edge_theme: EdgeThemeWatch,
     updates: UpdateWatch,
 }
 
@@ -49,6 +56,7 @@ fn raise(event: ServiceEvent) {
 /// Once per process; `listener` hears every event.
 pub fn start(listener: impl Fn(ServiceEvent) + Send + Sync + 'static) {
     let _ = LISTENER.set(Arc::new(listener));
+    theme_library::sync_local_names();
     theme_library::register_all(&Settings::load().theming);
     SERVICE.get_or_init(|| Service {
         edge: EdgeWatch::start(
@@ -56,6 +64,12 @@ pub fn start(listener: impl Fn(ServiceEvent) + Send + Sync + 'static) {
             || raise(ServiceEvent::BrowsersChanged),
         ),
         themes: ThemeWatch::start(|refresh| raise(ServiceEvent::ThemeRefreshed(refresh))),
+        edge_theme: EdgeThemeWatch::start(|change| {
+            raise(match change {
+                WearChange::WentDefault(mode) => ServiceEvent::EdgeWentDefault(mode),
+                WearChange::Other => ServiceEvent::EdgeThemeChanged,
+            });
+        }),
         updates: UpdateWatch::start(|_ready| raise(ServiceEvent::UpdateReady)),
     });
 }
@@ -89,6 +103,7 @@ pub fn stop() {
     if let Some(service) = SERVICE.get() {
         service.edge.stop();
         service.themes.stop();
+        service.edge_theme.stop();
         service.updates.stop();
     }
 }

@@ -18,16 +18,22 @@ const UPDATE_URL_VALUE: &str = "update_url";
 const PATH_VALUE: &str = "path";
 const VERSION_VALUE: &str = "version";
 
-pub fn install_store(extension_id: &str, store: ThemeStore) -> io::Result<()> {
-    let update_url = match store {
+/// The store's update endpoint, which Edge installs from and which also serves
+/// the theme's package.
+#[must_use]
+pub fn update_url(store: ThemeStore) -> &'static str {
+    match store {
         ThemeStore::Edge => EDGE_STORE_UPDATE_URL,
         ThemeStore::Chrome => CHROME_STORE_UPDATE_URL,
-    };
+    }
+}
+
+pub fn install_store(extension_id: &str, store: ThemeStore) -> io::Result<()> {
     edge_native::write_string(
         Hive::CurrentUser,
         &key_path(extension_id),
         UPDATE_URL_VALUE,
-        update_url,
+        update_url(store),
     )
 }
 
@@ -48,6 +54,17 @@ pub fn uninstall(extension_id: &str) -> io::Result<()> {
         Err(error) if error.kind() == io::ErrorKind::PermissionDenied => Ok(()),
         result => result,
     }
+}
+
+/// Whether Edge installed the extension from this key (location 3 in its
+/// Secure Preferences), so deleting the key uninstalls it. One installed from a
+/// store inside Edge has no key.
+#[must_use]
+pub fn is_registered(extension_id: &str) -> bool {
+    let key = key_path(extension_id);
+    [UPDATE_URL_VALUE, PATH_VALUE]
+        .iter()
+        .any(|value| edge_native::read_string(Hive::CurrentUser, &key, Some(value)).is_some())
 }
 
 fn key_path(extension_id: &str) -> String {

@@ -8,8 +8,9 @@ use windows_sys::Win32::Foundation::{
 };
 use windows_sys::Win32::System::Registry::{
     HKEY, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_SET_VALUE, REG_OPTION_NON_VOLATILE,
-    REG_ROUTINE_FLAGS, REG_SAM_FLAGS, REG_SZ, RRF_RT_REG_BINARY, RRF_RT_REG_SZ, RegCloseKey,
-    RegCreateKeyExW, RegDeleteTreeW, RegDeleteValueW, RegGetValueW, RegOpenKeyExW, RegSetValueExW,
+    REG_ROUTINE_FLAGS, REG_SAM_FLAGS, REG_SZ, RRF_RT_REG_BINARY, RRF_RT_REG_DWORD, RRF_RT_REG_SZ,
+    RegCloseKey, RegCreateKeyExW, RegDeleteTreeW, RegDeleteValueW, RegGetValueW, RegOpenKeyExW,
+    RegSetValueExW,
 };
 
 use crate::kernel::wide::{from_wide, to_wide};
@@ -39,6 +40,14 @@ pub fn read_string(hive: Hive, key: &str, value: Option<&str>) -> Option<String>
     let (pairs, _) = data.as_chunks::<{ size_of::<u16>() }>();
     let units: Vec<u16> = pairs.iter().map(|&pair| u16::from_le_bytes(pair)).collect();
     Some(from_wide(&units).to_string_lossy().into_owned())
+}
+
+/// None when the key or value is missing or not `REG_DWORD`.
+#[must_use]
+pub fn read_dword(hive: Hive, key: &str, value: &str) -> Option<u32> {
+    let data = read_value(hive, key, Some(value), RRF_RT_REG_DWORD)?;
+    let bytes: [u8; size_of::<u32>()] = data.try_into().ok()?;
+    Some(u32::from_le_bytes(bytes))
 }
 
 /// None when the key or value is missing or not `REG_BINARY`.

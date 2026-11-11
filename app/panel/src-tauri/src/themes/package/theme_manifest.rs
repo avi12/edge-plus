@@ -10,6 +10,8 @@ use zip::ZipArchive;
 use zip::result::ZipError;
 use zip::write::{SimpleFileOptions, ZipWriter};
 
+use crate::themes::package::manifest::{Manifest, Version};
+use crate::themes::package::schema::{self, SchemaError};
 use crate::ui::wording;
 
 pub const MANIFEST_NAME: &str = "manifest.json";
@@ -19,23 +21,13 @@ pub mod manifest_keys {
     pub const NAME: &str = "name";
     pub const VERSION: &str = "version";
     pub const THEME: &str = "theme";
-    pub const IMAGES: &str = "images";
-    pub const COLORS: &str = "colors";
-    pub const TINTS: &str = "tints";
     pub const DEFAULT_LOCALE: &str = "default_locale";
 }
 
 const MAX_THEME_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_IMAGE_BYTES: u64 = 16 * 1024 * 1024;
-const MAX_VERSION_PARTS: usize = 4;
 const REVISION_PART: usize = 3;
 const VERSION_SEPARATOR: char = '.';
-const COLOR_CHANNEL_MAX: i64 = 255;
-const RGB_CHANNELS: usize = 3;
-const RGBA_CHANNELS: usize = 4;
-const ALPHA_INDEX: usize = 3;
-const TINT_PARTS: usize = 3;
-const TINT_UNCHANGED: f64 = -1.0;
 const PNG_MAGIC: &[u8] = &[0x89, b'P', b'N', b'G'];
 const JPEG_MAGIC: &[u8] = &[0xff, 0xd8, 0xff];
 const UTF8_BYTE_ORDER_MARK: &[u8] = &[0xef, 0xbb, 0xbf];
@@ -70,17 +62,6 @@ pub fn invalid(message: impl Into<String>) -> ThemeFileError {
     ThemeFileError::Invalid(message.into())
 }
 
-/// Digits only, as a version part or a revision count is written: no sign, no
-/// space.
-#[must_use]
-pub fn parse_digits(text: &str) -> Option<u16> {
-    let is_digits = !text.is_empty() && text.bytes().all(|byte| byte.is_ascii_digit());
-    if !is_digits {
-        return None;
-    }
-    text.parse().ok()
-}
-
 type Archive<'a> = ZipArchive<Cursor<&'a [u8]>>;
 
 /// Rejects what Edge's theme loader would trip over.
@@ -93,36 +74,20 @@ pub fn validate(zip_bytes: &[u8]) -> ThemeFileResult<()> {
         return Err(invalid(wording::THEME_TOO_LARGE));
     }
     let manifest = read_manifest(&mut archive)?;
-    let has_name = manifest
-        .get(manifest_keys::NAME)
-        .is_some_and(Value::is_string);
-    if !has_name {
+    if manifest.name.is_none() {
         return Err(invalid(wording::MANIFEST_HAS_NO_NAME));
     }
-    parse_version(&manifest)?;
-    let Some(theme) = manifest
-        .get(manifest_keys::THEME)
-        .and_then(Value::as_object)
-    else {
+    if manifest.format.is_none() {
+        return Err(invalid(wording::MANIFEST_HAS_NO_MANIFEST_VERSION));
+    }
+    if manifest.version.is_none() {
+        return Err(invalid(wording::MANIFEST_HAS_NO_VERSION));
+    }
+    let Some(theme) = manifest.theme else {
         return Err(invalid(wording::MANIFEST_HAS_NO_THEME));
     };
-    if let Some(images) = theme.get(manifest_keys::IMAGES).and_then(Value::as_object) {
-        for (key, value) in images {
-            let Some(path) = value.as_str() else {
-                return Err(invalid(wording::image_not_a_path(key)));
-            };
-            check_image(&mut archive, key, path)?;
-        }
-    }
-    if let Some(colors) = theme.get(manifest_keys::COLORS).and_then(Value::as_object) {
-        for (key, value) in colors {
-            check_color(key, value)?;
-        }
-    }
-    if let Some(tints) = theme.get(manifest_keys::TINTS).and_then(Value::as_object) {
-        for (key, value) in tints {
-            check_tint(key, value)?;
-        }
+    for (key, path) in theme.images.iter().flatten() {
+        check_image(&mut archive, key, path)?;
     }
     Ok(())
 }
@@ -131,8 +96,10 @@ pub fn validate(zip_bytes: &[u8]) -> ThemeFileResult<()> {
 /// extension with a newer one. The original's first three parts are kept.
 pub fn revise(zip_bytes: &[u8], revision: u16) -> ThemeFileResult<(Vec<u8>, String)> {
     let mut source = open(zip_bytes)?;
-    let mut manifest = read_manifest(&mut source)?;
-    let mut parts = parse_version(&manifest)?;
+    let mut raw = read_manifest_object(&mut source)?;
+    let Some(Version(mut parts)) = read_manifest(&mut source)?.version else {
+        return Err(invalid(wording::MANIFEST_HAS_NO_VERSION));
+    };
     parts.resize(REVISION_PART, 0);
     parts.push(revision);
     let version = parts
@@ -140,7 +107,7 @@ pub fn revise(zip_bytes: &[u8], revision: u16) -> ThemeFileResult<(Vec<u8>, Stri
         .map(u16::to_string)
         .collect::<Vec<_>>()
         .join(&VERSION_SEPARATOR.to_string());
-    manifest.insert(
+    raw.insert(
         manifest_keys::VERSION.to_owned(),
         Value::String(version.clone()),
     );
@@ -157,7 +124,7 @@ pub fn revise(zip_bytes: &[u8], revision: u16) -> ThemeFileResult<(Vec<u8>, Stri
     writer
         .start_file(MANIFEST_NAME, SimpleFileOptions::default())
         .map_err(zip_write_failed)?;
-    writer.write_all(Value::Object(manifest).to_string().as_bytes())?;
+    writer.write_all(Value::Object(raw).to_string().as_bytes())?;
     let finished = writer.finish().map_err(zip_write_failed)?;
     Ok((finished.into_inner(), version))
 }
@@ -192,15 +159,29 @@ fn read_entry(archive: &mut Archive<'_>, name: &str, limit: u64) -> ThemeFileRes
     Ok(bytes)
 }
 
-fn read_manifest(archive: &mut Archive<'_>) -> ThemeFileResult<Map<String, Value>> {
+/// `Manifest.parse(manifest.json)`: what is wrong is worded for the user.
+fn read_manifest(archive: &mut Archive<'_>) -> ThemeFileResult<Manifest> {
+    let bytes = manifest_bytes(archive)?;
+    schema::parse::<Manifest>(&bytes).map_err(|error| match error {
+        SchemaError::Syntax { line } => invalid(wording::manifest_not_json_at(line)),
+        SchemaError::Shape { path, .. } if path == "." => invalid(wording::MANIFEST_NOT_AN_OBJECT),
+        shape @ SchemaError::Shape { .. } => invalid(shape.sentence()),
+    })
+}
+
+/// The manifest as it is written, to be put back with one key changed.
+fn read_manifest_object(archive: &mut Archive<'_>) -> ThemeFileResult<Map<String, Value>> {
+    let bytes = manifest_bytes(archive)?;
+    match serde_json::from_slice::<Value>(&bytes) {
+        Ok(Value::Object(manifest)) => Ok(manifest),
+        _ => Err(invalid(wording::MANIFEST_NOT_AN_OBJECT)),
+    }
+}
+
+fn manifest_bytes(archive: &mut Archive<'_>) -> ThemeFileResult<Vec<u8>> {
     let bytes = read_entry(archive, MANIFEST_NAME, MAX_IMAGE_BYTES)?;
     let text = bytes.strip_prefix(UTF8_BYTE_ORDER_MARK).unwrap_or(&bytes);
-    match serde_json::from_slice::<Value>(text) {
-        Ok(Value::Object(manifest)) => Ok(manifest),
-        Ok(_) => Err(invalid(wording::MANIFEST_NOT_AN_OBJECT)),
-        // The parser's own message is for a developer; its position is kept.
-        Err(error) => Err(invalid(wording::manifest_not_json_at(error.line()))),
-    }
+    Ok(text.to_vec())
 }
 
 fn check_image(archive: &mut Archive<'_>, key: &str, path: &str) -> ThemeFileResult<()> {
@@ -218,69 +199,10 @@ fn check_image(archive: &mut Archive<'_>, key: &str, path: &str) -> ThemeFileRes
     Ok(())
 }
 
-fn check_color(key: &str, value: &Value) -> ThemeFileResult<()> {
-    let Some(channels) = value.as_array() else {
-        return Err(invalid(wording::color_not_a_list(key)));
-    };
-    let is_rgb = channels.len() == RGB_CHANNELS;
-    let is_rgba = channels.len() == RGBA_CHANNELS;
-    if !is_rgb && !is_rgba {
-        return Err(invalid(wording::color_wrong_count(key)));
-    }
-    for (index, channel) in channels.iter().enumerate() {
-        let is_alpha = index == ALPHA_INDEX;
-        // A fraction is not a channel: 255.0 has no integer value here.
-        let is_valid = if is_alpha {
-            channel
-                .as_f64()
-                .is_some_and(|alpha| (0.0..=1.0).contains(&alpha))
-        } else {
-            channel
-                .as_i64()
-                .is_some_and(|byte| (0..=COLOR_CHANNEL_MAX).contains(&byte))
-        };
-        if !is_valid {
-            return Err(invalid(wording::color_out_of_range(key)));
-        }
-    }
-    Ok(())
-}
-
-fn check_tint(key: &str, value: &Value) -> ThemeFileResult<()> {
-    let parts = value.as_array().filter(|parts| parts.len() == TINT_PARTS);
-    let Some(parts) = parts else {
-        return Err(invalid(wording::tint_wrong_count(key)));
-    };
-    let is_valid = parts.iter().all(|part| {
-        part.as_f64().is_some_and(|number| {
-            let is_unchanged = (number - TINT_UNCHANGED).abs() < f64::EPSILON;
-            is_unchanged || (0.0..=1.0).contains(&number)
-        })
-    });
-    if !is_valid {
-        return Err(invalid(wording::tint_out_of_range(key)));
-    }
-    Ok(())
-}
-
-fn parse_version(manifest: &Map<String, Value>) -> ThemeFileResult<Vec<u16>> {
-    let Some(text) = manifest.get(manifest_keys::VERSION).and_then(Value::as_str) else {
-        return Err(invalid(wording::MANIFEST_HAS_NO_VERSION));
-    };
-    let pieces: Vec<&str> = text.split(VERSION_SEPARATOR).collect();
-    if pieces.len() > MAX_VERSION_PARTS {
-        return Err(invalid(wording::not_a_valid_version(text)));
-    }
-    pieces
-        .into_iter()
-        .map(parse_digits)
-        .collect::<Option<Vec<u16>>>()
-        .ok_or_else(|| invalid(wording::not_a_valid_version(text)))
-}
-
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::themes::package::manifest;
 
     /// A ZIP of `entries`, each a name and its bytes.
     pub fn zip_of(entries: &[(&str, &[u8])]) -> Vec<u8> {
@@ -305,38 +227,49 @@ pub mod tests {
     fn broken_themes_are_refused_with_a_reason() {
         let cases = [
             (
-                r#"{"name":"t","version":"1","theme":{"images":{"x":"gone.png"}}}"#,
+                r#"{"name":"t","manifest_version":3,"version":"1","theme":{"images":{"x":"gone.png"}}}"#,
                 "image x (gone.png): gone.png is missing",
             ),
             (
-                r#"{"name":"t","version":"1","theme":{"images":{"x":"manifest.json"}}}"#,
+                r#"{"name":"t","manifest_version":3,"version":"1","theme":{"images":{"x":"manifest.json"}}}"#,
                 "image x (manifest.json) is not a PNG or JPEG",
             ),
             (
-                r#"{"name":"t","version":"1","theme":{"colors":{"frame":[300,0,0]}}}"#,
-                "color frame has a value out of range",
+                r#"{"name":"t","manifest_version":3,"version":"1","theme":{"colors":{"frame":[300,0,0]}}}"#,
+                "theme.colors.frame: has a value out of range",
             ),
             (
-                r#"{"name":"t","version":"1","theme":{"colors":{"frame":[1.5,0,0]}}}"#,
-                "color frame has a value out of range",
+                r#"{"name":"t","manifest_version":3,"version":"1","theme":{"colors":{"frame":[1.5,0,0]}}}"#,
+                "theme.colors.frame: has a value out of range",
             ),
             (
-                r#"{"name":"t","version":"1","theme":{"colors":{"frame":[0,0]}}}"#,
-                "color frame needs 3 or 4 numbers",
+                r#"{"name":"t","manifest_version":3,"version":"1","theme":{"colors":{"frame":[0,0]}}}"#,
+                "theme.colors.frame: needs 3 or 4 numbers",
             ),
             (
-                r#"{"name":"t","version":"1","theme":{"tints":{"b":[2,0,0]}}}"#,
-                "tint b has a value out of range",
+                r#"{"name":"t","manifest_version":3,"version":"1","theme":{"tints":{"b":[2,0,0]}}}"#,
+                "theme.tints.b: has a value out of range",
             ),
             (
-                r#"{"name":"t","version":"1"}"#,
+                r#"{"name":"t","manifest_version":3,"version":"1"}"#,
                 "manifest.json has no \"theme\" section",
             ),
             (
-                r#"{"name":"t","version":"1.x","theme":{}}"#,
-                "\"1.x\" is not a valid version",
+                r#"{"name":"t","manifest_version":3,"version":"1.x","theme":{}}"#,
+                "version: \"1.x\" is not a valid version",
             ),
-            (r#"{"version":"1","theme":{}}"#, "manifest.json has no name"),
+            (
+                r#"{"manifest_version":3,"version":"1","theme":{}}"#,
+                "manifest.json has no name",
+            ),
+            (
+                r#"{"name":"t","version":"1","theme":{}}"#,
+                "manifest.json has no manifest_version",
+            ),
+            (
+                r#"{"name":"t","manifest_version":1,"version":"1","theme":{}}"#,
+                "manifest_version: must be 2 or 3",
+            ),
             // Said plainly, with its line, not as the parser's message.
             (
                 "{\n  \"name\": oops }",
@@ -350,22 +283,25 @@ pub mod tests {
 
     #[test]
     fn a_good_theme_passes_and_versions_are_digits_only() {
-        let manifest = br#"{"name":"t","version":"1","theme":{"colors":{"frame":[1,2,3,0.5]},"tints":{"buttons":[-1,0.5,1]}}}"#;
+        let manifest = br#"{"name":"t","manifest_version":3,"version":"1","theme":{"colors":{"frame":[1,2,3,0.5]},"tints":{"buttons":[-1,0.5,1]}}}"#;
         assert!(validate(&zip_of(&[(MANIFEST_NAME, manifest)])).is_ok());
-        assert_eq!(Some(12), parse_digits("12"));
-        assert_eq!(None, parse_digits("+1"));
-        assert_eq!(None, parse_digits(""));
-        assert_eq!(None, parse_digits("70000"));
+        assert_eq!(Some(12), manifest::digits("12"));
+        assert_eq!(None, manifest::digits("+1"));
+        assert_eq!(None, manifest::digits(""));
+        assert_eq!(None, manifest::digits("70000"));
         assert_eq!(
-            Some("\"1.2.3.4.5\" is not a valid version".to_owned()),
-            refusal(r#"{"name":"t","version":"1.2.3.4.5","theme":{}}"#)
+            Some("version: \"1.2.3.4.5\" is not a valid version".to_owned()),
+            refusal(r#"{"name":"t","manifest_version":3,"version":"1.2.3.4.5","theme":{}}"#)
         );
     }
 
     #[test]
     fn revise_stamps_the_revision_after_three_parts() {
         let zip = zip_of(&[
-            (MANIFEST_NAME, br#"{"name":"z","version":"2","theme":{}}"#),
+            (
+                MANIFEST_NAME,
+                br#"{"name":"z","manifest_version":3,"version":"2","theme":{}}"#,
+            ),
             ("images/a.png", b"png"),
         ]);
         let (revised, version) = revise(&zip, 7).expect("revise");

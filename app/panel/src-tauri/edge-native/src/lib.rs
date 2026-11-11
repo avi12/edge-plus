@@ -42,7 +42,7 @@ pub use process::spawn::start_detached;
 pub use system::package_identity::package_family_name;
 pub use system::packages::install_packages;
 pub use system::registry::{
-    Hive, delete_tree, delete_value, read_binary, read_string, write_string,
+    Hive, delete_tree, delete_value, read_binary, read_dword, read_string, write_string,
 };
 pub use system::rsa::RsaKey;
 pub use system::startup_task::{is_startup_task_enabled, set_startup_task};
