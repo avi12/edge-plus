@@ -82,9 +82,7 @@ pub fn feature_bit(feature: Feature) -> Option<u32> {
 }
 
 fn status_file() -> std::path::PathBuf {
-    let mut path = paths::local_app_data().into_os_string();
-    path.push(shared::STATUS_FILE_RELATIVE_PATH);
-    path.into()
+    paths::under_local_app_data(shared::STATUS_FILE_RELATIVE_PATH)
 }
 
 /// The DLL's last word; None while no DLL has reported on this machine.
