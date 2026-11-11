@@ -83,7 +83,8 @@ Invoke-Checked 'git push' { git -C $repo push origin main $asset.Tag }
 Write-Step 'Creating the GitHub release'
 [string] $notes = Join-Path $releaseFolder "notes-$Version.md"
 [string] $allChanges = "https://github.com/$($asset.Repository)/compare/$previousTag...$($asset.Tag)"
-Set-Content $notes "$highlights`n`n**All changes:** $allChanges`n" -Encoding utf8NoBOM
+[string] $installLine = "**Install:** download ``$($asset.Package)`` below and open it. Trust ``$($asset.Certificate)`` once first."
+Set-Content $notes "$highlights`n`n$installLine`n`n**All changes:** $allChanges`n" -Encoding utf8NoBOM
 Invoke-Checked 'gh release create' {
     gh release create $asset.Tag $package $certificate --repo $asset.Repository `
         --title "Edge+ $Version" --notes-file $notes

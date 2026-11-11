@@ -16,7 +16,8 @@ find the DLL there).
 With the work committed:
 
 1. Write the notes to a file outside the repository: the changelog
-   **highlights**, in plain sentences for users, no file names.
+   **highlights**, in plain sentences for users, no file names. The script
+   adds the line telling users to install with the `.msix`; don't write it.
 2. Run
 
    ```powershell
