@@ -37,7 +37,7 @@ enum class Role : uint8_t {
   kAccent,           // red marks: a checked box, the picked radio
   kLabel,            // amber field and section labels
   kHover,            // the wash behind a hovered or selected row
-  kSelection,    // selected text: the hover wash in dark, an ink fill in light
+  kSelection,    // selected text: the accent red, as the selected tab's frame
   kOnSelection,  // text on kSelection
   kAlertText,    // an error line
   kAlert,        // an invalid field's frame
@@ -78,9 +78,9 @@ inline constexpr Palette kDark{
     .ink = 0xff06182b,
     .accent = 0xfff72944,
     .label = 0xffffd540,
-    .hover = 0x38007979,  // #007979 at 22%
-    .selection = 0x38007979,
-    .onSelection = 0xffe2f4fa,
+    .hover = 0x38007979,        // #007979 at 22%
+    .selection = 0xfff72944,    // the tab frame's red
+    .onSelection = 0xff000000,  // kit: pure black on the red (5.36:1)
     .alertText = 0xffff7a8a,
     .alert = 0xffff142b,
     .tooltipBackground = 0xeb000000,  // black at 92%
@@ -99,9 +99,9 @@ inline constexpr Palette kLight{
     .ink = 0xff06182b,
     .accent = 0xffc8102e,
     .label = 0xff6e5200,
-    .hover = 0x1406182b,      // ink at 8%
-    .selection = 0xff06182b,  // the kit: a state on cyan is an ink fill
-    .onSelection = 0xffedf5fc,
+    .hover = 0x1406182b,        // ink at 8%
+    .selection = 0xffc8102e,    // the tab frame's red
+    .onSelection = 0xffffffff,  // kit: white on the light red (5.88:1)
     .alertText = 0xffa3001f,
     .alert = 0xffc4004e,
     .tooltipBackground = 0xff06182b,
