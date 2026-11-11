@@ -78,9 +78,9 @@ inline constexpr Palette kDark{
     .ink = 0xff06182b,
     .accent = 0xfff72944,
     .label = 0xffffd540,
-    .hover = 0x38007979,        // #007979 at 22%
-    .selection = 0xfff72944,    // the tab frame's red
-    .onSelection = 0xff000000,  // kit: pure black on the red (5.36:1)
+    .hover = 0x38007979,      // #007979 at 22%
+    .selection = 0x47f72944,  // the tab frame's red at 28%: a fill, never text
+    .onSelection = 0xffe2f4fa,  // body text stays on top
     .alertText = 0xffff7a8a,
     .alert = 0xffff142b,
     .tooltipBackground = 0xeb000000,  // black at 92%
@@ -99,9 +99,9 @@ inline constexpr Palette kLight{
     .ink = 0xff06182b,
     .accent = 0xffc8102e,
     .label = 0xff6e5200,
-    .hover = 0x1406182b,        // ink at 8%
-    .selection = 0xffc8102e,    // the tab frame's red
-    .onSelection = 0xffffffff,  // kit: white on the light red (5.88:1)
+    .hover = 0x1406182b,      // ink at 8%
+    .selection = 0x47c8102e,  // the tab frame's red at 28%: a fill, never text
+    .onSelection = 0xff06182b,  // ink stays on top
     .alertText = 0xffa3001f,
     .alert = 0xffc4004e,
     .tooltipBackground = 0xff06182b,
