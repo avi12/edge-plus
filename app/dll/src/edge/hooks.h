@@ -30,6 +30,7 @@
 #include "chrome/tabs/tab_frame.h"
 #include "chrome/tabs/tab_font.h"
 #include "chrome/toolbar/omnibox_frame.h"
+#include "chrome/menu/menu_border.h"
 #include "chrome/pane/drag.h"
 #include "chrome/pane/grip.h"
 #include "layout/state.h"
@@ -776,6 +777,10 @@ inline bool Install(edge155::signatures::Feature feature, uintptr_t rva,
           reinterpret_cast<void*>(omnibox_frame::h_create_background),
           &omnibox_frame::o_create_background,
           "LocationBarView::EdgeCreateRoundRectBackground (omnibox frame)");
+  Install(Feature::kCyberpunkSkin, edge155::rva::BubbleBorder_GetInsets,
+          reinterpret_cast<void*>(menu_border::h_get_insets),
+          &menu_border::o_get_insets,
+          "BubbleBorder::GetInsets (menu border's top edge)");
   Install(Feature::kSplit, edge155::rva::TabDragController_ContinueDragging,
           reinterpret_cast<void*>(tabdrag::h_continue_dragging),
           &tabdrag::o_continue_dragging, "TabDragController::ContinueDragging");

@@ -77,7 +77,7 @@ class FeatureRule {
 # skin's tab outline, tab and omnibox frames and fonts.
 [FeatureRule[]] $script:NameFeatures = @(
     [FeatureRule]@{
-        Match    = '^(EdgeTabStyleViews_|SkPath_|SkRRect_|Canvas_DrawRoundRect|Tab_IsActive|EdgeTab_IsActive|TabStrip_GetStrokeThickness|LocationBarView_|Font_|FontList_|Label_SetFontList)'
+        Match    = '^(EdgeTabStyleViews_|SkPath_|SkRRect_|Canvas_DrawRoundRect|Tab_IsActive|EdgeTab_IsActive|TabStrip_GetStrokeThickness|LocationBarView_|BubbleBorder_|Font_|FontList_|Label_SetFontList)'
         Features = @('CyberpunkSkin')
     }
 )
@@ -98,6 +98,7 @@ class FeatureRule {
     [FeatureRule]@{ Match = 'chrome/tabs/tab_frame.h'; Features = @('CyberpunkSkin') }
     [FeatureRule]@{ Match = 'chrome/tabs/tab_font.h'; Features = @('CyberpunkSkin') }
     [FeatureRule]@{ Match = 'chrome/toolbar/'; Features = @('CyberpunkSkin') }
+    [FeatureRule]@{ Match = 'chrome/menu/'; Features = @('CyberpunkSkin') }
     [FeatureRule]@{ Match = 'chrome/tabs/live_preview.h'; Features = @('LivePreview') }
     [FeatureRule]@{ Match = 'theme/cyberpunk_skin.h'; Features = @('CyberpunkSkin') }
     [FeatureRule]@{ Match = 'theme/skin_tone.h'; Features = @('CyberpunkSkin') }

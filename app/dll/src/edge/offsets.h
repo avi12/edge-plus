@@ -752,6 +752,13 @@ inline constexpr uintptr_t LocationBarView_EdgeCreateRoundRectBackground =
     0x289259a;
 inline constexpr uintptr_t LocationBarView_RefreshBackground_background_return =
     0x28920c6;
+// void* views::BubbleBorder::GetInsets(this, gfx::Insets* out) const: returns
+// `out`, filled {top, left, bottom, right}. Reached through the border's
+// vtable slot 2 (vtable 0x119fbe38, the menu's plain BubbleBorder; two
+// subclasses call this one and adjust its answer). Either the explicit insets
+// at +0x50 (when [+0x60] is set), or the shadow's margins less the 1px line.
+// A menu's top comes out 0. See docs/re/cyberpunk-skin.md, "Menu border".
+inline constexpr uintptr_t BubbleBorder_GetInsets = 0x3322550;
 // The OS light/dark signal does NOT come through Edge. ui::NativeThemeObserver
 // is a base::CheckedObserver (the observer list uses CheckedObserverAdapter), so
 // a hand-rolled observer object would have to fake a weak-ptr factory. Instead

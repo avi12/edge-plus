@@ -1010,11 +1010,19 @@ inline void* MenuItemIconView(void* menuItem) {
   return Field<void*>(menuItem, edge155::off::MENUITEM_icon_view);
 }
 
+// The open menu's MenuController, or null.
+inline const void* ActiveMenu() {
+  using ActiveFn = const void*(__fastcall*)();
+  return Callable<ActiveFn>(edge155::rva::MenuController_GetActiveInstance)();
+}
+
+inline bool IsMenuOpen() {
+  return ActiveMenu() != nullptr;
+}
+
 // Close the open menu, if any, as MenuRunner::Cancel does.
 inline void CancelActiveMenu() {
-  using ActiveFn = const void*(__fastcall*)();
-  const void* controller =
-      Callable<ActiveFn>(edge155::rva::MenuController_GetActiveInstance)();
+  const void* controller = ActiveMenu();
   if (!controller) {
     return;
   }

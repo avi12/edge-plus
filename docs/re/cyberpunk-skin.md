@@ -211,6 +211,40 @@ background is rebuilt only on focus, hover and theme changes, so the skin's
 switch shows on the omnibox at the next of those (switched from the panel,
 the theme re-apply does it).
 
+## Menu border: the red line on the top edge (157.0.4341.42)
+
+A menu's border is `views::BubbleBorder`'s: a 1px line (kColorBubbleBorder,
+`kColorBubbleBorderWithShadow`) painted one pixel inside the insets the border
+reports. Measured on a PrintWindow of the tab context menu (389x508, skin on,
+dark): the line is at x=11 and x=377 (body from x=12), and one row under the
+body at the bottom, but the window's top inset is 0, so the line fell at y=-1
+and was clipped. Skin off, Edge's menu has no line and the same layout.
+
+Found from the colour reads: a trace of the colour provider's return address for
+ids 0xfc and 0x2c5 gave `0x5477d7b` / `0x5477d88`, inside the paint function at
+`0x5477b40` (it reads those ids after drawing the shadow). That function is
+slot 1 of three vtables (`0x119fbe38`, `0x119fbe78`, `0x119fbeb8`); slot 2 is
+`GetInsets`:
+
+- `0x3322550` the base: `[this+0x60]` set returns the explicit insets at
+  `+0x50`; otherwise the shadow margins (helper `0x33225c8`, which calls
+  `0x3322700` for the blur region) less the line's 1px per side, saturating.
+  A menu's shadow margin on top is 1, so the answer is 0.
+- `0xa0aa600` and `0xffb87d0` are subclasses that call it and then adjust.
+
+`menu_border.h` hooks `0x3322550` (value only): with the skin on and a menu open
+(`MenuController::GetActiveInstance` non-null) a top under 1 becomes 1
+(`menu_border_insets.h`); Edge's answer otherwise. MenuController sizes the
+window from the insets, so the window is one row taller and the line is drawn at
+y=0. The menu's anchor shifts up by that row.
+
+**Verified** (throwaway Edge 157.0.4341.42, skin forced on, dark): row 0 at the
+menu's centre is `#f72944` (before: `#05080c`); x=11 and x=377 still `#f72944`,
+x=12 `#05080c`; the bottom line is `#f72944` one row lower (the window grew by
+one row; 508 -> 509 high); skin off is unchanged (508 high, `#242424` body,
+`#000000` edge, row 0 `#242424`). Not driven: other menus than the tab context
+menu, a bubble opened while a menu is open (would get the same row), RTL.
+
 ## Runtime verification
 
 Throwaway Edge only: own `--user-data-dir` and LOCALAPPDATA under
