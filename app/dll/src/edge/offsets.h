@@ -1231,6 +1231,10 @@ inline constexpr int MENU_exit_all = 1;
 // `mov [rcx+68h],r9d`) and mirrored in pending_state_ (+0xa8). Set for a
 // right-click menu, clear for a menu that hangs from a button (the ⋯ menu).
 inline constexpr uintptr_t MENU_context_menu = 0x68;
+// views::BubbleBorder::arrow_ (an int): found by dumping borders of the popups
+// that open from the toolbar, which carry 0 or 1 here, against the web-capture
+// toolbar's 10 and a menu's 16. See docs/re/cyberpunk-skin.md, "Menu border".
+inline constexpr uintptr_t BUBBLEBORDER_arrow = 0x10;
 // Stack room for value types built only to be handed to Edge: ui::ColorVariant
 // (passed on by value as its first 8 bytes), views::SizeBounds (zeroed =
 // unbounded), and ui::ImageModel (an upper bound, with room to spare).

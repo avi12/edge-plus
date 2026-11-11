@@ -1026,6 +1026,16 @@ inline bool IsContextMenuOpen() {
   return Field<bool>(controller, edge155::off::MENU_context_menu);
 }
 
+// Whether any menu is open.
+inline bool IsMenuOpen() {
+  return ActiveMenu() != nullptr;
+}
+
+// The views::BubbleBorder::Arrow of a bubble's border.
+inline int BubbleBorderArrow(const void* border) {
+  return Field<int>(border, edge155::off::BUBBLEBORDER_arrow);
+}
+
 // Close the open menu, if any, as MenuRunner::Cancel does.
 inline void CancelActiveMenu() {
   const void* controller = ActiveMenu();

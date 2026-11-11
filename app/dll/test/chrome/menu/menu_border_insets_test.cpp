@@ -34,6 +34,26 @@ void RunChecks() {
   const Insets negativeTop{-3, 4, 5, 6};
   Check(WithRoomForTopLine(negativeTop) == Insets{1, 4, 5, 6},
         "a negative top is raised to the line's pixel");
+
+  const int toolbarBubbleArrow = 1;
+  const int siteInfoBubbleArrow = 0;
+  const int webCaptureToolbarArrow = 10;
+  const int menuArrow = 16;
+  Check(!WantsTopLine(OpenMenu::kNone, toolbarBubbleArrow),
+        "a bubble hung below a toolbar button keeps no top line");
+  Check(!WantsTopLine(OpenMenu::kNone, siteInfoBubbleArrow),
+        "a bubble hung below the site-info icon keeps no top line");
+  Check(
+      !WantsTopLine(OpenMenu::kNone, static_cast<int>(BubbleArrow::kTopCenter)),
+      "a bubble hung below its anchor's centre keeps no top line");
+  Check(WantsTopLine(OpenMenu::kNone, webCaptureToolbarArrow),
+        "a floating bubble gets its top line");
+  Check(WantsTopLine(OpenMenu::kContext, menuArrow),
+        "a context menu gets its top line");
+  Check(!WantsTopLine(OpenMenu::kHangingFromButton, menuArrow),
+        "a menu hung from a button keeps no top line");
+  Check(!WantsTopLine(OpenMenu::kHangingFromButton, webCaptureToolbarArrow),
+        "an open menu decides over the arrow");
 }
 
 }  // namespace
