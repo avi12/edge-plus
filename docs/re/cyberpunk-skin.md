@@ -251,6 +251,40 @@ favorites flyout stays `#05080c` (384x678); x=11 is `#f72944` on all of them;
 skin off is unchanged (508 high, row 0 `#242424`). Not driven: the Extensions
 flyout (the test profile has no extensions), submenus, RTL.
 
+**The same line on floating bubbles.** The web-capture toolbar (Screenshot, the
+pill with Capture area / Capture screen area / Capture full page, and Copy /
+Save / Markup after a capture) is a plain BubbleBorder too and lost its top line
+the same way (542x70, row 0 `#05080c`). The line should occupy room like a CSS
+border, so the hook gives every border the pixel and keeps Edge's answer only
+where the top meets the toolbar. Two cases, because a menu's border does not
+say what hangs it:
+
+- **A menu is open** (`edge::IsMenuOpen`): the line is wanted for a context
+  menu only (`state_.context_menu` above). Every menu border (overflow, tab
+  menu, page right-click) carries 16 in its arrow, so the arrow cannot tell them
+  apart.
+- **No menu**: the border's **arrow**, an int at `+0x10`
+  (`BUBBLEBORDER_arrow`), decides. Dumping the border of each popup (a hook that
+  logged `+0x08..+0x68` of every `GetInsets` call): profile, favorites and
+  add-favorite bubbles = 1 (`TOP_RIGHT`), site-info = 0 (`TOP_LEFT`), the
+  capture toolbar = 10. These follow Chromium's `BubbleBorder::Arrow` order
+  (`TOP_LEFT`, `TOP_RIGHT`, ..., `TOP_CENTER` = 8, `LEFT_CENTER` = 10). A top
+  arrow (0, 1, 8) means the bubble hangs under its anchor: no line. Anything
+  else floats and gets it. `WantsTopLine` in `menu_border_insets.h` is that
+  decision, unit-tested.
+
+Side effects of the general rule: any other unanchored bubble border outside a
+menu (e.g. the 524x364 first-run window the throwaway profile shows) is one row
+taller, with the line on its top.
+
+**Verified** (throwaway Edge 157.0.4341.42, skin forced on, dark; row 0 at the
+window's middle column): capture toolbar `#f72944` (542x71; before `#05080c`,
+542x70); tab context menu `#f72944`; overflow menu `#05080c` (526x812), favorites
+flyout `#05080c` (384x678), profile bubble `#05080c` (342x372), site-info bubble
+`#05080c` (438x404); skin off, capture toolbar 542x70 with row 0 `#242424`. Not
+driven: the Extensions flyout (no extensions in the profile), the Copy / Save /
+Markup pill after a capture, `TOP_CENTER` (8, from Chromium's enum), RTL.
+
 ## Runtime verification
 
 Throwaway Edge only: own `--user-data-dir` and LOCALAPPDATA under
