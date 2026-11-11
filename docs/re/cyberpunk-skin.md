@@ -232,18 +232,24 @@ slot 1 of three vtables (`0x119fbe38`, `0x119fbe78`, `0x119fbeb8`); slot 2 is
   A menu's shadow margin on top is 1, so the answer is 0.
 - `0xa0aa600` and `0xffb87d0` are subclasses that call it and then adjust.
 
-`menu_border.h` hooks `0x3322550` (value only): with the skin on and a menu open
-(`MenuController::GetActiveInstance` non-null) a top under 1 becomes 1
-(`menu_border_insets.h`); Edge's answer otherwise. MenuController sizes the
-window from the insets, so the window is one row taller and the line is drawn at
-y=0. The menu's anchor shifts up by that row.
+`menu_border.h` hooks `0x3322550` (value only): with the skin on and a
+**context menu** open, a top under 1 becomes 1 (`menu_border_insets.h`); Edge's
+answer otherwise. MenuController sizes the window from the insets, so the window
+is one row taller and the line is drawn at y=0.
 
-**Verified** (throwaway Edge 157.0.4341.42, skin forced on, dark): row 0 at the
-menu's centre is `#f72944` (before: `#05080c`); x=11 and x=377 still `#f72944`,
-x=12 `#05080c`; the bottom line is `#f72944` one row lower (the window grew by
-one row; 508 -> 509 high); skin off is unchanged (508 high, `#242424` body,
-`#000000` edge, row 0 `#242424`). Not driven: other menus than the tab context
-menu, a bubble opened while a menu is open (would get the same row), RTL.
+Only a context menu gets it. A popup that hangs from a toolbar button (the
+overflow menu, a flyout) meets the toolbar on its top edge, where no outline
+belongs. `MenuController`'s `state_.context_menu` (`+0x68`, the `context_menu`
+argument `Run` stores at `0xb606970`: `mov [rcx+68h],r9d`) tells them apart:
+found by diffing controller bytes, it is 1 for the tab menu and the page
+right-click and 0 for the overflow menu (`edge::IsContextMenuOpen`).
+
+**Verified** (throwaway Edge 157.0.4341.42, skin forced on, dark; row 0 at
+x=200): the tab context menu and the page right-click are `#f72944` (before:
+`#05080c`; 508 -> 509 high); the overflow menu stays `#05080c` (812 high) and the
+favorites flyout stays `#05080c` (384x678); x=11 is `#f72944` on all of them;
+skin off is unchanged (508 high, row 0 `#242424`). Not driven: the Extensions
+flyout (the test profile has no extensions), submenus, RTL.
 
 ## Runtime verification
 

@@ -1016,8 +1016,14 @@ inline const void* ActiveMenu() {
   return Callable<ActiveFn>(edge155::rva::MenuController_GetActiveInstance)();
 }
 
-inline bool IsMenuOpen() {
-  return ActiveMenu() != nullptr;
+// Whether the open menu is a context menu (a right-click menu that floats where
+// it was asked for) rather than one that hangs from a button.
+inline bool IsContextMenuOpen() {
+  const void* controller = ActiveMenu();
+  if (!controller) {
+    return false;
+  }
+  return Field<bool>(controller, edge155::off::MENU_context_menu);
 }
 
 // Close the open menu, if any, as MenuRunner::Cancel does.

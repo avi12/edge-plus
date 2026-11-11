@@ -1226,6 +1226,11 @@ inline constexpr size_t FocusableViewsMap_size = 0x18;
 inline constexpr int MENU_icon_color_id = 0x177;
 // views::MenuController::ExitType::kAll: close the whole menu.
 inline constexpr int MENU_exit_all = 1;
+// MenuController::state_.context_menu (a bool): MenuController::Run's
+// `context_menu` argument, stored by its SetInitialState (0xb606970,
+// `mov [rcx+68h],r9d`) and mirrored in pending_state_ (+0xa8). Set for a
+// right-click menu, clear for a menu that hangs from a button (the ⋯ menu).
+inline constexpr uintptr_t MENU_context_menu = 0x68;
 // Stack room for value types built only to be handed to Edge: ui::ColorVariant
 // (passed on by value as its first 8 bytes), views::SizeBounds (zeroed =
 // unbounded), and ui::ImageModel (an upper bound, with room to spare).
