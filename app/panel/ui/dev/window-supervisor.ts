@@ -71,7 +71,9 @@ export function createWindowSupervisor({ spawnWindow, log }: {
     started.stdin?.on("error", () => undefined);
 
     if (started.stdout) {
-      createInterface({ input: started.stdout }).on("line", line => current?.send(line));
+      createInterface({ input: started.stdout })
+        .on("line", line => current?.send(line))
+        .on("error", () => undefined);
     }
 
     started.once("exit", code => {
@@ -115,7 +117,11 @@ export function servePipe({ supervisor, pipeName }: {
       send: line => socket.write(`${line}\n`),
       close: () => socket.end()
     });
-    createInterface({ input: socket }).on("line", line => connection.write(line));
+    // readline re-emits its input's errors on itself, and an error nobody listens to ends the process: a
+    // core that went while the window was still sending is a lost line, not the end of the dev server.
+    createInterface({ input: socket })
+      .on("line", line => connection.write(line))
+      .on("error", () => undefined);
     socket.on("error", () => undefined);
     socket.on("close", () => connection.disconnect());
   });

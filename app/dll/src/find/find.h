@@ -1316,7 +1316,7 @@ inline std::vector<HookSite> HookSites() {
 inline bool EnableAll() {
   bool isEnabled = true;
   for (const HookSite& site : HookSites()) {
-    const MH_STATUS status = MH_EnableHook(edge::At(site.rva));
+    const MH_STATUS status = edge::EnableHookAt(site.rva);
     isEnabled = isEnabled && (status == MH_OK || status == MH_ERROR_ENABLED);
   }
   return isEnabled;

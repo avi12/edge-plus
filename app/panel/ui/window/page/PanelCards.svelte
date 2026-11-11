@@ -6,6 +6,7 @@
   import CardTitle from "#src/window/cards/CardTitle.svelte";
   import FeatureCard from "#src/window/cards/FeatureCard.svelte";
   import InjectCard from "#src/window/cards/InjectCard.svelte";
+  import ThemeDropArea from "#src/window/theming/ThemeDropArea.svelte";
   import ThemingBody from "#src/window/theming/ThemingBody.svelte";
   import { featureTitles } from "#src/window/wording/shared-wording.ts";
   import { AddDeleteThemeTransition, RepositionThemeTransition, StackPanel } from "winui-svelte/components";
@@ -50,21 +51,24 @@
   </PanelSection>
   <PanelSection>
     <SectionHeader>Look and themes</SectionHeader>
-    <FeatureCard card={cardOf("theming")} glyph="Color">
-      <CardTitle>{featureTitles.theming}</CardTitle>
+    <ThemeDropArea>
+      <FeatureCard card={cardOf("theming")} glyph="Color">
+        <CardTitle>{featureTitles.theming}</CardTitle>
+        <CardDescription>
+          Use one theme when Windows is light and another when it is dark, switched live. Add themes from the
+          Chrome Web Store, Edge Add-ons or a local file.
+        </CardDescription>
+        {#snippet body()}
+          <ThemingBody isOn={cardOf("theming").isOn} theming={view.theming} />
+        {/snippet}
+      </FeatureCard>
+    </ThemeDropArea>
+    <FeatureCard card={cardOf("cyberpunkSkin")} glyph="Page">
+      <CardTitle>{featureTitles.cyberpunkSkin}</CardTitle>
       <CardDescription>
-        Use one theme when Windows is light and another when it is dark, switched live. Add themes from the
-        Chrome Web Store, Edge Add-ons or a local file.
-      </CardDescription>
-      {#snippet body()}
-        <ThemingBody isOn={cardOf("theming").isOn} theming={view.theming} />
-      {/snippet}
-    </FeatureCard>
-    <FeatureCard card={cardOf("tabShape")} glyph="Page">
-      <CardTitle>{featureTitles.tabShape}</CardTitle>
-      <CardDescription>
-        Gives every tab, vertical and horizontal, a straight leading edge and a cut trailing corner, with
-        the selected tab filled in the theme's neon. Works with Theming on. Live, no restart.
+        Dresses every tab, vertical and horizontal, as a Cyberpunk HUD plate: a straight leading edge, a
+        cut trailing corner, and the selected tab in solid red with dark or light ink to match the theme.
+        Off, tabs look like Edge's own. Works with Theming on. Live, no restart.
       </CardDescription>
     </FeatureCard>
     <FeatureCard card={cardOf("webUiFollowsTheme")} glyph="Brightness">

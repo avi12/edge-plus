@@ -8,6 +8,7 @@
 #include "MinHook.h"
 #include "core/channel.h"
 #include "core/config.h"
+#include "edge/availability.h"
 #include "edge/edge.h"
 #include "layout/geometry.h"
 #include "split/split_ops.h"
@@ -23,6 +24,9 @@
 #include "chrome/pane/overlay.h"
 #include "theme/protocol_handlers.h"
 #include "chrome/tabs/tabdrag.h"
+#include "chrome/colours/colour_dump.h"
+#include "chrome/colours/colour_ids.h"
+#include "theme/skin_tone.h"
 #include "chrome/tabs/tab_shape.h"
 #include "chrome/tabs/tabrows.h"
 #include "chrome/tabs/tab_views.h"
@@ -179,12 +183,49 @@ inline BOOL CALLBACK RepaintWindowTabs(HWND hwnd, LPARAM /*unused*/) {
   return TRUE;
 }
 
-inline void ApplyTabShape(bool isOn) {
-  if (tab_shape::g_isSquared == isOn) {
+// Off is Edge's own look: its tab outline, and its selected tab's colours
+// (hooks.h h_getcolor), which the theme's re-apply rebuilds.
+inline void ApplyCyberpunkSkin(bool isOn) {
+  if (tab_shape::g_isCyberpunkSkinOn == isOn) {
     return;
   }
-  tab_shape::g_isSquared = isOn;
+  tab_shape::g_isCyberpunkSkinOn = isOn;
+  if (isOn) {
+    colour_ids::Resolve();
+  }
   EnumWindows(RepaintWindowTabs, 0);
+  // Every view reads its colours again, as after a theme change.
+  const bool hasWindow = channel::g_window != nullptr;
+  if (hasWindow) {
+    theme::ScheduleRepaint(channel::g_window);
+  }
+}
+
+// What a theme change does for every open view: each reads its colours again.
+// A script's switches have no theme apply behind them (the panel's do), so they
+// ask the default theme again, which notifies the same way.
+inline void NotifyColoursChanged(HWND hwnd) {
+  void* themeService = edge::ThemeServiceForWindow(hwnd);
+  if (themeService) {
+    theme::UseDefaultOurselves(themeService);
+  }
+}
+
+// A script's stand-in for the theme's tone: lParam 1 light, 2 dark, else none.
+inline void ForceSkinTone(HWND hwnd, LPARAM lparam) {
+  using theme_tone::Tone;
+  skin_tone::g_forcedTone = Tone::kUnknown;
+  switch (static_cast<skin_tone::ForcedTone>(lparam)) {
+    case skin_tone::ForcedTone::kLight:
+      skin_tone::g_forcedTone = Tone::kLight;
+      break;
+    case skin_tone::ForcedTone::kDark:
+      skin_tone::g_forcedTone = Tone::kDark;
+      break;
+    case skin_tone::ForcedTone::kNone:
+      break;
+  }
+  NotifyColoursChanged(hwnd);
 }
 
 inline BOOL CALLBACK ApplyWindowReadingTheme(HWND hwnd, LPARAM /*unused*/) {
@@ -232,7 +273,7 @@ inline void Teardown(HWND hwnd) {
   drag::Cancel();
   tabdrag::Cancel();
   overlay::Remove();
-  ApplyTabShape(false);
+  ApplyCyberpunkSkin(false);
   grip::RemoveAll();
   dividers::RemoveAll();
   anim::Remove();
@@ -307,18 +348,27 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     // MH_ALL_HOOKS also turned off the hooks that are not the split's: theming's
     // (the theme garbage-collector suppressor keeps both assigned themes
     // installed for live switching) and those of features with their own switch.
-    MH_EnableHook(edge::At(edge155::rva::ThemeService_RemoveUnusedThemes));
-    MH_EnableHook(
-        edge::At(edge155::rva::ThemeService_OnThemeBuiltFromExtension));
-    MH_EnableHook(edge::At(edge155::rva::BrowserThemePack_GetColor));
-    MH_EnableHook(edge::At(edge155::rva::ColorProvider_GetColor));
-    MH_EnableHook(edge::At(edge155::rva::EdgeTab_UpdateForegroundColors));
-    // The cut-corner tab outline: its own switch, not the split's.
-    MH_EnableHook(edge::At(edge155::rva::EdgeTabStyleViews_GetPath));
-    MH_EnableHook(edge::At(edge155::rva::SkPath_arcTo));
-    MH_EnableHook(edge::At(edge155::rva::SkPath_addRRect));
-    MH_EnableHook(edge::At(edge155::rva::SkPath_lineTo));
-    MH_EnableHook(edge::At(edge155::rva::Canvas_DrawRoundRect));
+    edge::EnableHookAt(edge155::rva::ThemeService_RemoveUnusedThemes);
+    edge::EnableHookAt(edge155::rva::ThemeService_OnThemeBuiltFromExtension);
+    edge::EnableHookAt(edge155::rva::ThemeService_UseDefaultTheme);
+    edge::EnableHookAt(edge155::rva::BrowserThemePack_GetColor);
+    edge::EnableHookAt(edge155::rva::ColorProvider_GetColor);
+    edge::EnableHookAt(edge155::rva::EdgeTab_UpdateForegroundColors);
+    // The Cyberpunk skin's tab outline: its own switch, not the split's.
+    edge::EnableHookAt(edge155::rva::EdgeTabStyleViews_GetPath);
+    edge::EnableHookAt(edge155::rva::SkPath_arcTo);
+    edge::EnableHookAt(edge155::rva::SkRRect_setRectXY);
+    edge::EnableHookAt(edge155::rva::EdgeTabStyleViews_IsLeftSplitTab);
+    edge::EnableHookAt(edge155::rva::EdgeTabStyleViews_IsRightSplitTab);
+    edge::EnableHookAt(edge155::rva::Canvas_DrawRoundRect);
+    // Its tab frames (tab_frame.h).
+    edge::EnableHookAt(edge155::rva::EdgeTabStyleViews_PaintBackgroundStroke);
+    edge::EnableHookAt(edge155::rva::TabStrip_GetStrokeThickness);
+    // Its title font (tab_font.h).
+    edge::EnableHookAt(edge155::rva::EdgeTabStyleViews_PaintTab);
+    // Its omnibox frame (omnibox_frame.h).
+    edge::EnableHookAt(
+        edge155::rva::LocationBarView_EdgeCreateRoundRectBackground);
     protocol_handlers::EnableHooks();
     find::EnableAll();
     theme_follow::EnableAll();
@@ -338,7 +388,7 @@ inline BOOL CALLBACK LiftWindowHandlerBlocks(HWND hwnd, LPARAM lparam) {
   return TRUE;
 }
 
-inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
+inline void ApplySplitConfig(HWND hwnd, const config::Wire& wire) {
   const bool wasSplitActive = g_splitActive;
   g_splitActive = wire.splitActive != 0;
   const bool isTurningSplitOff = wasSplitActive && !g_splitActive;
@@ -357,15 +407,9 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
       RegisterHotKeys(hwnd);
     }
   }
-  theme::ApplyConfig(hwnd, wire);
-  // The tab outline has its own switch, and needs theming: it is the theme that
-  // gives the tab the fill the cut corners are cut from.
-  ApplyTabShape(theme::g_isActive && wire.tabShapeActive != 0);
-  const bool isFollowChanged = theme_follow::ApplyConfig(wire);
-  if (isFollowChanged) {
-    RefreshThemeColors();
-  }
-  live_preview::ApplyConfig(wire);
+}
+
+inline void ApplyReadingConfig(HWND hwnd, const config::Wire& wire) {
   const bool wasReadingActive = reading_mode::g_isActive;
   const bool isReadingTurningOn = reading_mode::ApplyConfig(wire);
   if (isReadingTurningOn) {
@@ -374,6 +418,9 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
   } else if (wasReadingActive && !reading_mode::g_isActive) {
     reading_mode::Stop(hwnd);
   }
+}
+
+inline void ApplyHandlersConfig(const config::Wire& wire) {
   const bool isTurningHandlersOn = protocol_handlers::ApplyConfig(wire);
   if (isTurningHandlersOn) {
     size_t liftedCount = 0;
@@ -381,15 +428,66 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
                 reinterpret_cast<LPARAM>(&liftedCount));
     Log("[handlers] lifted %zu blocked link handler(s)", liftedCount);
   }
-  assistant::RemoveChevron(edge::McvForWindow(hwnd));
-  const bool isFindActive = wire.enhancedFindActive != 0;
-  find::Apply(isFindActive);
+}
+
+// A feature this Edge build stood down (availability.h) is never applied, not
+// even as "off": it was never on in this process, so there is nothing to undo,
+// and undoing would call into code it could not place.
+inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
+  using edge155::signatures::Feature;
+  if (availability::IsAvailable(Feature::kSplit)) {
+    ApplySplitConfig(hwnd, wire);
+  }
+  const bool isSkinAvailable =
+      availability::IsAvailable(Feature::kCyberpunkSkin) &&
+      availability::IsAvailable(Feature::kTheming);
+  if (isSkinAvailable) {
+    // The skin has its own switch, and needs theming: its colours are read
+    // with the theme's (hooks.h h_getcolor). It is set first, so the theme's
+    // re-apply below rebuilds the tab colours with the skin on or off.
+    const bool isSkinOn =
+        wire.themingActive != 0 && wire.cyberpunkSkinActive != 0;
+    ApplyCyberpunkSkin(isSkinOn);
+  }
+  if (availability::IsAvailable(Feature::kTheming)) {
+    theme::ApplyConfig(hwnd, wire);
+  }
+  if (availability::IsAvailable(Feature::kWebUiFollowsTheme)) {
+    const bool isFollowChanged = theme_follow::ApplyConfig(wire);
+    if (isFollowChanged) {
+      RefreshThemeColors();
+    }
+  }
+  if (availability::IsAvailable(Feature::kLivePreview)) {
+    live_preview::ApplyConfig(wire);
+  }
+  if (availability::IsAvailable(Feature::kReadingTheme)) {
+    ApplyReadingConfig(hwnd, wire);
+  }
+  if (availability::IsAvailable(Feature::kProtocolHandlers)) {
+    ApplyHandlersConfig(wire);
+  }
+  if (availability::IsAvailable(Feature::kEnhancedFind)) {
+    assistant::RemoveChevron(edge::McvForWindow(hwnd));
+    const bool isFindActive = wire.enhancedFindActive != 0;
+    find::Apply(isFindActive);
+  }
 }
 
 // Applied through a posted kApplyConfig: ApplyConfig touches Edge views, so it
 // must not run on the Init thread that does the subclassing.
 inline constinit config::Wire g_pendingConfig = {};
 inline constinit bool g_hasPendingConfig = false;
+
+// The panel's choice from disk, minus every feature this Edge build cannot run
+// (availability.h).
+inline bool LoadPendingConfig() {
+  const bool isLoaded = config::LoadFromFile(&g_pendingConfig);
+  if (isLoaded) {
+    availability::Mask(&g_pendingConfig);
+  }
+  return isLoaded;
+}
 
 // Runs on dllmain's waiter thread. Posting to our own subclassed window means the
 // app never has to guess which window we hooked.
@@ -402,7 +500,7 @@ inline void OnConfigChanged() {
   if (isWithoutWindow) {
     AdoptBrowserWindow(nullptr);
   }
-  g_hasPendingConfig = config::LoadFromFile(&g_pendingConfig);
+  g_hasPendingConfig = LoadPendingConfig();
   if (g_hasPendingConfig) {
     channel::Post(CodeOf(Command::kApplyConfig));
   }
@@ -511,8 +609,18 @@ inline void RunCommand(HWND hwnd, WPARAM wparam, LPARAM lparam) {
     case Command::kDumpTabRows:
       tabrows::Dump(edge::McvForWindow(hwnd));
       return;
-    case Command::kForceTabShape:
-      ApplyTabShape(true);
+    case Command::kDumpColours:
+      colour_dump::Dump(edge::McvForWindow(hwnd));
+      return;
+    case Command::kTraceColours:
+      colour_dump::Trace(lparam != 0);
+      return;
+    case Command::kForceSkinTone:
+      ForceSkinTone(hwnd, lparam);
+      return;
+    case Command::kForceCyberpunkSkin:
+      ApplyCyberpunkSkin(true);
+      NotifyColoursChanged(hwnd);
       return;
     case Command::kEndPreviewDetach:
       tabrows::SetDetachPreview(tabrows::kNoDetachPreview);
@@ -700,7 +808,7 @@ inline bool AdoptBrowserWindow(HWND excluded) {
   // Theming shares this DLL and its UI-thread window but is config-driven. Read
   // the panel's current choice from disk now (so a DLL injected into an open
   // Edge doesn't race the panel's WM_COPYDATA), and apply it on the UI thread.
-  g_hasPendingConfig = config::LoadFromFile(&g_pendingConfig);
+  g_hasPendingConfig = LoadPendingConfig();
   if (g_hasPendingConfig) {
     channel::Post(CodeOf(Command::kApplyConfig));
   }

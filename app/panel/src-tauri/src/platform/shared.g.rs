@@ -7,32 +7,83 @@
 // app/dll/src/core/config.h:15
 pub const WIRE_ID_CAPACITY: u32 = 64;
 
-// app/dll/src/core/config.h:40
-pub const WIRE_FIELD_COUNT: u32 = 11;
+// app/dll/src/core/config.h:46
+pub const WIRE_FIELD_COUNT: u32 = 12;
 
-// app/dll/src/core/config.h:42
-pub const WIRE_ID_COUNT: u32 = 2;
+// app/dll/src/core/config.h:48
+pub const WIRE_ID_COUNT: u32 = 3;
 
-// app/dll/src/core/config.h:61
+// app/dll/src/core/config.h:69
 pub const CONFIG_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-config.bin";
 
-// app/dll/src/dllmain.cpp:20
+// app/dll/src/core/status.h:19
+pub const STATUS_MODE_PINNED: u32 = 0;
+
+// app/dll/src/core/status.h:21
+pub const STATUS_MODE_RESOLVED: u32 = 1;
+
+// app/dll/src/core/status.h:23
+pub const STATUS_MODE_REFUSED: u32 = 2;
+
+// app/dll/src/core/status.h:43
+pub const STATUS_FIELD_COUNT: u32 = 8;
+
+// app/dll/src/core/status.h:48
+pub const STATUS_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-status.bin";
+
+// app/dll/src/core/wear_report.h:25
+pub const WEAR_FIELD_COUNT: u32 = 3;
+
+// app/dll/src/core/wear_report.h:31
+pub const WEAR_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-wear.bin";
+
+// app/dll/src/dllmain.cpp:24
 pub const UNLOAD_EVENT: &str = "Local\\edgeplus-split-unload";
 
-// app/dll/src/dllmain.cpp:23
+// app/dll/src/dllmain.cpp:27
 pub const CONFIG_EVENT: &str = "Local\\edgeplus-config-changed";
 
-// app/dll/src/edge/offsets.h:15
+// app/dll/src/edge/offsets.h:16
 pub const EDGE_MODULE: &str = "msedge.dll";
 
-// app/dll/src/edge/offsets.h:17
-pub const EDGE_VERSION_MAJOR: u32 = 156;
+// app/dll/src/edge/offsets.h:18
+pub const EDGE_VERSION_MAJOR: u32 = 157;
 
-// app/dll/src/edge/offsets.h:19
+// app/dll/src/edge/offsets.h:20
 pub const EDGE_VERSION_MINOR: u32 = 0;
 
-// app/dll/src/edge/offsets.h:21
-pub const EDGE_VERSION_BUILD: u32 = 4314;
+// app/dll/src/edge/offsets.h:22
+pub const EDGE_VERSION_BUILD: u32 = 4341;
 
-// app/dll/src/edge/offsets.h:23
-pub const EDGE_VERSION_REVISION: u32 = 58;
+// app/dll/src/edge/offsets.h:24
+pub const EDGE_VERSION_REVISION: u32 = 42;
+
+// app/dll/src/edge/signature_table.h:18
+pub const FEATURE_BIT_SPLIT: u32 = 1;
+
+// app/dll/src/edge/signature_table.h:20
+pub const FEATURE_BIT_THEMING: u32 = 2;
+
+// app/dll/src/edge/signature_table.h:22
+pub const FEATURE_BIT_PROTOCOL_HANDLERS: u32 = 4;
+
+// app/dll/src/edge/signature_table.h:24
+pub const FEATURE_BIT_ENHANCED_FIND: u32 = 8;
+
+// app/dll/src/edge/signature_table.h:26
+pub const FEATURE_BIT_WEB_UI_FOLLOWS_THEME: u32 = 16;
+
+// app/dll/src/edge/signature_table.h:28
+pub const FEATURE_BIT_LIVE_PREVIEW: u32 = 32;
+
+// app/dll/src/edge/signature_table.h:30
+pub const FEATURE_BIT_CYBERPUNK_SKIN: u32 = 64;
+
+// app/dll/src/edge/signature_table.h:32
+pub const FEATURE_BIT_READING_THEME: u32 = 128;
+
+// app/dll/src/theme/theme_wear.h:22
+pub const WEAR_CAUSE_EDGE_PLUS: u32 = 0;
+
+// app/dll/src/theme/theme_wear.h:24
+pub const WEAR_CAUSE_USER: u32 = 1;

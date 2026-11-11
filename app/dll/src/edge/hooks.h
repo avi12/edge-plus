@@ -5,10 +5,18 @@
 #include <cstring>
 #include <utility>
 #include "MinHook.h"
+#include "edge/availability.h"
 #include "edge/edge.h"
 #include "theme/focus.h"
 #include "theme/theme_tone.h"
+#include "theme/cyberpunk_skin.h"
+#include "theme/cyberpunk_palette.h"
+#include "chrome/colours/colour_ids.h"
+#include "chrome/colours/colour_dump.h"
+#include "theme/skin_tone.h"
+#include "theme/theme_hold.h"
 #include "theme/theme_notice.h"
+#include "core/wear_report.h"
 #include "theme/theme.h"
 #include "split/panes.h"
 #include "layout/geometry.h"
@@ -19,6 +27,9 @@
 #include "chrome/pane/dividers.h"
 #include "chrome/tabs/tabrows.h"
 #include "chrome/tabs/tab_shape.h"
+#include "chrome/tabs/tab_frame.h"
+#include "chrome/tabs/tab_font.h"
+#include "chrome/toolbar/omnibox_frame.h"
 #include "chrome/pane/drag.h"
 #include "chrome/pane/grip.h"
 #include "layout/state.h"
@@ -388,33 +399,61 @@ inline void __fastcall h_on_theme_built(void* themeService, const void* themeId,
       std::string_view(theme::g_lightTheme.value, theme::g_lightTheme.length),
       std::string_view(theme::g_darkTheme.value, theme::g_darkTheme.length),
       theme::g_isActive};
+  const bool isKeptOff = theme_hold::ShouldKeepOff(
+      std::string_view(theme::g_heldTheme.value, theme::g_heldTheme.length),
+      idText, theme::g_ownSwitch.IsSettling(GetTickCount64()));
+  if (isKeptOff) {
+    // Not handed on, so the theme Edge just installed is never swapped in. Edge
+    // has already recorded it as the current one, so what the mode wants is put
+    // back (the apply runs on the UI thread, from the channel).
+    Log("[theme] kept %s installed but off (added without Shift)",
+        idText.c_str());
+    channel::Post(channel::CodeOf(channel::Command::kApplyTheme));
+    return;
+  }
   const bool isSuppressedNow =
       theme_notice::ShouldSuppress(assigned, idText, isSuppressed);
   const bool isSuppressedByUs = isSuppressedNow && !isSuppressed;
   Log("[theme] built %s: bubble %s", idText.c_str(),
       isSuppressedByUs ? "suppressed (Edge+ theme)" : "left to Edge");
   o_on_theme_built(themeService, themeId, pack, isSuppressedNow);
+  theme::g_ownSwitch.Built(idText);
+  wear_report::Report(idText, theme_wear::CauseOfTheme(assigned, idText));
+}
+
+// ThemeService::UseDefaultTheme(this at its +0x10 base, ...): every return to
+// Edge's default theme, Edge's own "Restore default" included, ends here. The
+// second register is passed through untouched (its meaning is not needed).
+// Reported with who caused it (theme_wear.h), so the panel can follow the
+// user's choice; the skin's colours from the last theme pack go stale either way.
+using UseDefaultTheme_t = void(__fastcall*)(void*, uintptr_t);
+inline constinit UseDefaultTheme_t o_use_default_theme = nullptr;
+inline void __fastcall h_use_default_theme(void* themeServiceBase,
+                                           uintptr_t argument) {
+  o_use_default_theme(themeServiceBase, argument);
+  theme::g_isDefaultThemeApplied = true;
+  const theme_wear::Cause cause = theme_wear::CauseOfDefault(
+      theme::g_isUsingDefaultOurselves,
+      theme::g_ownSwitch.IsSettling(GetTickCount64()));
+  Log("[theme] default theme worn (%s)",
+      cause == theme_wear::Cause::kUser ? "the user's choice" : "Edge+");
+  wear_report::Report({}, cause);
 }
 
 // BrowserThemePack::GetColor(this, id, SkColor* out): a theme extension's colour
 // for `id`, false when the theme left it unset. Edge derives the whole vertical-
 // tab strip from the toolbar colour (offsets.h VTABCOLOR_*), so a theme cannot
-// give the selected tab a colour of its own; theming makes it the theme's label
-// colour (tab_text) as a chip, so the theme alone picks every colour. Reads go
-// through o_getcolor, never the hook, so it cannot recurse. The colour mixer
-// reads this id when DoSetTheme (theme.h) rebuilds the vertical-tab
-// ColorProvider, so applying the theme repaints the rail at once. Rides
-// theming, not the split (control.h).
-// Enough to read as quieter, not enough to vanish on a pale rail.
-inline constexpr uint32_t kVTabInactiveRailPercent = 30;
-inline constexpr uint32_t kHoverFillPercent = 18;
-// The chip's text: white on a dark fill, black on a light one.
-inline constexpr uint32_t kLightInk = 0xffffffff;
-inline constexpr uint32_t kDarkInk = 0xff000000;
+// give the selected tab a colour of its own; the Cyberpunk skin gives it none,
+// so the rail shows through its frame (tab_frame.h), and picks the idle titles'
+// and the hover's colours from the theme's own (SkinColorsOf). With the skin
+// off every colour is Edge's. Reads go through o_getcolor, never the hook, so
+// it cannot recurse.
+// The colour mixer reads this id when DoSetTheme (theme.h) rebuilds the
+// vertical-tab ColorProvider, so applying the theme repaints the rail at once;
+// control.h re-applies it when the skin is switched. Rides the skin, which
+// needs theming, not the split (control.h).
 // Set from the theme each time Edge rebuilds the colours.
-inline constinit bool g_isSelectedChipSet = false;
-inline constinit uint32_t g_selectedFill = 0;
-inline constinit uint32_t g_selectedInk = 0;
+inline constinit theme_tone::OptionalColor g_idleLabel{};
 // The selected and the hovered tab both read the selected-fill id; only the
 // caller tells them apart. Edge paints a hovered tab as the active one, at the
 // hover's opacity, on a layer over its inactive fill (EdgeTabStyleViews::PaintTab),
@@ -447,41 +486,67 @@ inline bool IsReadForHover() {
 }
 using GetColor_t = bool(__fastcall*)(void*, int, uint32_t*);
 inline constinit GetColor_t o_getcolor = nullptr;
+
+inline theme_tone::OptionalColor ThemeColorOf(void* pack, int colorId) {
+  theme_tone::OptionalColor color;
+  color.isSet = o_getcolor(pack, colorId, &color.color);
+  return color;
+}
+
+// The skin's colours for the theme in `pack`: its tone, its rail, and the idle
+// titles in the theme's tab_background_text (Edge titles every vertical tab in
+// tab_text, so a theme cannot dim the idle ones itself).
+struct SkinColors {
+  theme_tone::Tone themeTone = theme_tone::Tone::kUnknown;
+  theme_tone::OptionalColor rail;
+  theme_tone::OptionalColor idleLabel;
+  theme_tone::OptionalColor activeLabel;
+};
+
+inline SkinColors SkinColorsOf(void* pack, bool isFocused) {
+  SkinColors colors;
+  colors.themeTone =
+      theme_tone::ToneOf(ThemeColorOf(pack, edge155::off::THEMECOLOR_toolbar),
+                         ThemeColorOf(pack, edge155::off::THEMECOLOR_frame));
+  colors.rail = ThemeColorOf(pack, edge155::off::VTABCOLOR_background);
+  colors.activeLabel = ThemeColorOf(pack, edge155::off::THEMECOLOR_tab_text);
+  // An unfocused window's own idle colour when the theme names one.
+  const theme_tone::OptionalColor unfocusedIdleText =
+      ThemeColorOf(pack, edge155::off::THEMECOLOR_tab_background_text_inactive);
+  const bool isUnfocusedIdleTextUsed = !isFocused && unfocusedIdleText.isSet;
+  const theme_tone::OptionalColor idleText =
+      isUnfocusedIdleTextUsed
+          ? unfocusedIdleText
+          : ThemeColorOf(pack, edge155::off::THEMECOLOR_tab_background_text);
+  if (colors.rail.isSet) {
+    colors.idleLabel =
+        cyberpunk_skin::IdleLabelFor(idleText, colors.rail.color);
+  }
+  return colors;
+}
+
 inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
-  if (theme::g_isActive) {
+  if (tab_shape::g_isCyberpunkSkinOn) {
     const bool isSelectedTabBackground =
         colorId == edge155::off::VTABCOLOR_selected_background ||
-        colorId == edge155::off::VTABCOLOR_selected_background_inactive;
-    uint32_t textColor = 0;
-    const bool isTextSet =
-        isSelectedTabBackground &&
-        o_getcolor(pack, edge155::off::THEMECOLOR_tab_text, &textColor);
-    if (isTextSet) {
-      const bool isTextDark = theme_tone::IsDark(textColor);
-      const uint32_t fill = textColor;
-      // An unfocused window dims into the rail, as Edge does its own colours.
-      uint32_t inactiveRail = 0;
-      const bool isInactive = !focus::IsEdgeForeground();
-      const bool isDimmed =
-          isInactive &&
-          o_getcolor(pack, edge155::off::VTABCOLOR_background_inactive,
-                     &inactiveRail);
-      const uint32_t selectedFill =
-          isDimmed
-              ? theme_tone::Blend(fill, inactiveRail, kVTabInactiveRailPercent)
-              : fill;
-      // A hover is only a tint of the fill over the chrome ground, as Edge's own
-      // themes keep it.
-      uint32_t ground = 0;
-      const bool isGroundRead =
-          o_getcolor(pack, edge155::off::THEMECOLOR_toolbar, &ground);
-      g_isSelectedChipSet = true;
-      g_selectedFill = fill;
-      g_selectedInk = isTextDark ? kLightInk : kDarkInk;
-      const bool isHoveredTab = IsReadForHover() && isGroundRead;
-      *out = isHoveredTab
-                 ? theme_tone::Blend(ground, selectedFill, kHoverFillPercent)
-                 : selectedFill;
+        colorId == edge155::off::VTABCOLOR_selected_background_incognito;
+    if (isSelectedTabBackground) {
+      const SkinColors colors = SkinColorsOf(pack, focus::IsEdgeForeground());
+      skin_tone::g_themeTone = colors.themeTone;
+      g_idleLabel = colors.idleLabel;
+      // A theme with no rail colour leaves Edge's fill.
+      if (!colors.rail.isSet) {
+        return o_getcolor(pack, colorId, out);
+      }
+      // A hover is a wash of the idle titles' colour over the rail, never the
+      // accent; any other read is the selected tab, which has no fill.
+      const theme_tone::OptionalColor hoverLabel =
+          colors.idleLabel.isSet ? colors.idleLabel : colors.activeLabel;
+      const bool isHoveredTab = IsReadForHover() && hoverLabel.isSet;
+      *out = isHoveredTab ? cyberpunk_skin::HoverFillFor(skin_tone::Current(),
+                                                         colors.rail.color,
+                                                         hoverLabel.color)
+                          : colors.rail.color;
       return true;
     }
   }
@@ -489,11 +554,12 @@ inline bool __fastcall h_getcolor(void* pack, int colorId, uint32_t* out) {
 }
 
 // ui::ColorProvider::GetColor: the selected tab's title, close and audio icon in
-// ink on its bright fill. Every vertical tab's title shares one colour id, so
+// the kit's "on" colour. Every vertical tab's title shares one colour id, so
 // the title id is inked only while EdgeTab::UpdateForegroundColors
 // (h_update_foreground) computes the active tab's colours; that is the pass that
-// recolours the tab, so ink and fill switch together. GetColor is browser-wide
-// and hot, so the cheap tests go first.
+// recolours the tab, so ink and fill switch together. The same pass for an idle
+// tab titles it in the skin's idle colour (g_idleLabel). GetColor is
+// browser-wide and hot, so the cheap tests go first.
 inline constinit void* g_foregroundTab = nullptr;
 inline constinit bool g_isForegroundTabActive = false;
 inline bool IsActiveTabAlert(int colorId) {
@@ -507,33 +573,40 @@ inline bool IsActiveTabAlert(int colorId) {
 using GetUiColor_t = uint32_t(__fastcall*)(void*, int);
 inline constinit GetUiColor_t o_getuicolor = nullptr;
 inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
-  // A horizontal active tab takes the vertical one's fill; an unfocused window
-  // dims it toward the fill Edge would have used.
-  const bool isActiveTabFill =
-      theme::g_isActive && g_isSelectedChipSet &&
-      (colorId == edge155::off::UICOLOR_active_tab_background_focused ||
-       colorId == edge155::off::UICOLOR_active_tab_background_unfocused);
-  if (isActiveTabFill) {
-    const bool isFocused =
-        colorId == edge155::off::UICOLOR_active_tab_background_focused;
-    return isFocused ? g_selectedFill
-                     : theme_tone::Blend(g_selectedFill,
-                                         o_getuicolor(provider, colorId),
-                                         kVTabInactiveRailPercent);
+  // First, always: a provider generates its colours on its first read, and
+  // that is when the mixer reads the theme pack (h_getcolor), so only then do
+  // the skin's colours belong to the current theme. Read before it, a fresh
+  // theme's tabs kept the previous theme's (or Edge's) titles.
+  const uint32_t edgeColor = o_getuicolor(provider, colorId);
+  if (colour_dump::g_isTracing) {
+    colour_dump::Count(colorId);
   }
-  const bool isInkable = theme::g_isActive && g_isSelectedChipSet;
-  if (!isInkable) {
-    return o_getuicolor(provider, colorId);
+  if (!tab_shape::g_isCyberpunkSkinOn) {
+    return edgeColor;
   }
   const bool isTabForeground =
       colorId >= edge155::off::UICOLOR_tab_foreground_first &&
       colorId <= edge155::off::UICOLOR_tab_foreground_last;
   const bool isActiveTabTitle = isTabForeground && g_isForegroundTabActive;
-  const bool isInkedOnFill = isActiveTabTitle || IsActiveTabAlert(colorId);
-  if (isInkedOnFill) {
-    return g_selectedInk;
+  const bool isSelectedTabInk = isActiveTabTitle || IsActiveTabAlert(colorId);
+  if (isSelectedTabInk) {
+    return cyberpunk_skin::SelectedTabFor(skin_tone::Current()).ink;
   }
-  return o_getuicolor(provider, colorId);
+  // The browser's own colours, as the kit names them (colour_roles.h): by id
+  // lookup, so the common case costs one array read.
+  const cyberpunk_palette::Role role = colour_ids::RoleOf(colorId);
+  const bool isSkinColour = role != cyberpunk_palette::Role::kNone;
+  if (isSkinColour) {
+    return cyberpunk_palette::ColourOf(role, skin_tone::Current());
+  }
+  // Edge's own theme has no pack, so the last pack's idle colour is stale.
+  const bool isIdleTabTitle = isTabForeground && g_foregroundTab &&
+                              !g_isForegroundTabActive && g_idleLabel.isSet &&
+                              !theme::g_isDefaultThemeApplied;
+  if (isIdleTabTitle) {
+    return g_idleLabel.color;
+  }
+  return edgeColor;
 }
 
 using UpdateForeground_t = void(__fastcall*)(void*);
@@ -548,13 +621,25 @@ inline void __fastcall h_update_foreground(void* tab) {
   g_isForegroundTabActive = wasOuterActive;
 }
 
+// A hook belongs to the feature it serves (tools/re/New-SignatureTable.ps1
+// reads the tag, so the hooked entry stands that feature down when it is
+// missing); a feature this build stood down gets none of its hooks.
 template <class T>
-inline bool Install(uintptr_t rva, void* detour, T** original,
-                    const char* name) {
+inline bool Install(edge155::signatures::Feature feature, uintptr_t rva,
+                    void* detour, T** original, const char* name) {
+  if (!availability::IsAvailable(feature)) {
+    Log("[skip] hook %s: its feature stood down in this Edge build", name);
+    return false;
+  }
+  const bool isPlaced = edge::At(rva) != nullptr;
+  if (!isPlaced) {
+    Log("[skip] hook %s: no place in this Edge build", name);
+    return false;
+  }
   const bool isHooked =
       MH_CreateHook(edge::At(rva), detour,
                     reinterpret_cast<void**>(original)) == MH_OK &&
-      MH_EnableHook(edge::At(rva)) == MH_OK;
+      edge::EnableHookAt(rva) == MH_OK;
   if (!isHooked) {
     Log("[err] hook %s failed", name);
     return false;
@@ -564,183 +649,213 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
 }
 
 [[nodiscard]] inline bool InstallAll() {
+  using edge155::signatures::Feature;
   const bool isInitialized = MH_Initialize() == MH_OK;
   if (!isInitialized) {
     Log("[err] MH_Initialize failed");
     return false;
   }
-  Install(edge155::rva::MultiContentsView_SetWebContentsAtIndex,
+  Install(Feature::kSplit,
+          edge155::rva::MultiContentsView_SetWebContentsAtIndex,
           reinterpret_cast<void*>(h_setwc), &o_setwc, "SetWebContentsAtIndex");
-  Install(edge155::rva::MultiContentsView_CalculateProposedLayout,
+  Install(Feature::kSplit,
+          edge155::rva::MultiContentsView_CalculateProposedLayout,
           reinterpret_cast<void*>(h_calc), &o_calc, "CalculateProposedLayout");
-  Install(edge155::rva::SplitTabs_LogSplitViewCreatedUKM,
+  Install(Feature::kSplit, edge155::rva::SplitTabs_LogSplitViewCreatedUKM,
           reinterpret_cast<void*>(h_split_created_ukm), &o_split_created_ukm,
           "split_tabs::LogSplitViewCreatedUKM");
-  Install(edge155::rva::SplitTabs_LogSplitViewUpdatedUKM,
+  Install(Feature::kSplit, edge155::rva::SplitTabs_LogSplitViewUpdatedUKM,
           reinterpret_cast<void*>(h_split_updated_ukm), &o_split_updated_ukm,
           "split_tabs::LogSplitViewUpdatedUKM");
-  Install(edge155::rva::MultiContentsView_GetFocusableViewsMapFor,
+  Install(Feature::kSplit,
+          edge155::rva::MultiContentsView_GetFocusableViewsMapFor,
           reinterpret_cast<void*>(h_focus_map), &o_focus_map,
           "MultiContentsView::GetFocusableViewsMapFor");
-  Install(edge155::rva::chrome_ReloadInternal,
+  Install(Feature::kSplit, edge155::rva::chrome_ReloadInternal,
           reinterpret_cast<void*>(h_reload_internal), &o_reload_internal,
           "chrome::ReloadInternal");
-  Install(edge155::rva::MultiContentsView_SetActiveIndex,
+  Install(Feature::kSplit, edge155::rva::MultiContentsView_SetActiveIndex,
           reinterpret_cast<void*>(h_set_active), &o_set_active,
           "SetActiveIndex");
-  Install(edge155::rva::MultiContentsView_dtor,
+  Install(Feature::kSplit, edge155::rva::MultiContentsView_dtor,
           reinterpret_cast<void*>(h_mcv_dtor), &o_mcv_dtor,
           "MultiContentsView::~MultiContentsView");
-  Install(edge155::rva::MultiContentsView_CloseSplitView,
+  Install(Feature::kSplit, edge155::rva::MultiContentsView_CloseSplitView,
           reinterpret_cast<void*>(h_close_split_view), &o_close_split_view,
           "MultiContentsView::CloseSplitView");
-  Install(edge155::rva::ResizeArea2D_OnMousePressed,
+  Install(Feature::kSplit, edge155::rva::ResizeArea2D_OnMousePressed,
           reinterpret_cast<void*>(h_divider_pressed), &o_divider_pressed,
           "EdgeTwoDimensionalResizeArea::OnMousePressed");
-  Install(edge155::rva::ResizeArea2D_OnMouseDragged,
+  Install(Feature::kSplit, edge155::rva::ResizeArea2D_OnMouseDragged,
           reinterpret_cast<void*>(h_divider_dragged), &o_divider_dragged,
           "EdgeTwoDimensionalResizeArea::OnMouseDragged");
-  Install(edge155::rva::ResizeArea2D_OnMouseReleased,
+  Install(Feature::kSplit, edge155::rva::ResizeArea2D_OnMouseReleased,
           reinterpret_cast<void*>(h_divider_released), &o_divider_released,
           "EdgeTwoDimensionalResizeArea::OnMouseReleased");
-  Install(edge155::rva::ResizeArea2D_OnMouseCaptureLost,
+  Install(Feature::kSplit, edge155::rva::ResizeArea2D_OnMouseCaptureLost,
           reinterpret_cast<void*>(h_divider_capture_lost),
           &o_divider_capture_lost,
           "EdgeTwoDimensionalResizeArea::OnMouseCaptureLost");
-  Install(edge155::rva::SplitWindowControlMenu_BuildMenuModel,
+  Install(Feature::kSplit, edge155::rva::SplitWindowControlMenu_BuildMenuModel,
           reinterpret_cast<void*>(menu::h_build), &menu::o_build,
           "SplitWindowControlMenu::BuildMenuModel");
   Install(
+      Feature::kSplit,
       edge155::rva::BrowserWebContentsDelegate_ShouldOverrideNewWindowCreation,
       reinterpret_cast<void*>(links::h_should_override),
       &links::o_should_override,
       "BrowserWebContentsDelegate::ShouldOverrideNewWindowCreation");
-  Install(edge155::rva::BrowserWebContentsDelegate_AddNewContents,
-          reinterpret_cast<void*>(links::h_add_new_contents),
-          &links::o_add_new_contents,
-          "BrowserWebContentsDelegate::AddNewContents");
-  Install(edge155::rva::SplitWindowControllerV2_UpdateLinkedModeState,
+  Install(
+      Feature::kSplit, edge155::rva::BrowserWebContentsDelegate_AddNewContents,
+      reinterpret_cast<void*>(links::h_add_new_contents),
+      &links::o_add_new_contents, "BrowserWebContentsDelegate::AddNewContents");
+  Install(Feature::kSplit,
+          edge155::rva::SplitWindowControllerV2_UpdateLinkedModeState,
           reinterpret_cast<void*>(links::h_update_linked_mode),
           &links::o_update_linked_mode,
           "SplitWindowControllerImplV2::UpdateLinkedModeState");
-  Install(edge155::rva::SplitWindowLinkModeThrottle_MaybeCreate,
-          reinterpret_cast<void*>(links::h_link_throttle),
-          &links::o_link_throttle,
-          "SplitWindowLinkModeNavigationThrottle::MaybeCreateThrottleFor");
-  Install(edge155::rva::SplitWindowControllerV2_OpenTabInCurrentSplitWindow,
+  Install(
+      Feature::kSplit, edge155::rva::SplitWindowLinkModeThrottle_MaybeCreate,
+      reinterpret_cast<void*>(links::h_link_throttle), &links::o_link_throttle,
+      "SplitWindowLinkModeNavigationThrottle::MaybeCreateThrottleFor");
+  Install(Feature::kSplit,
+          edge155::rva::SplitWindowControllerV2_OpenTabInCurrentSplitWindow,
           reinterpret_cast<void*>(offer::h_open_tab), &offer::o_open_tab,
           "SplitWindowControllerImplV2::OpenTabInCurrentSplitWindow");
-  Install(edge155::rva::SplitWindowStartingUIHandler_GetTabs,
+  Install(Feature::kSplit, edge155::rva::SplitWindowStartingUIHandler_GetTabs,
           reinterpret_cast<void*>(offer::h_get_tabs), &offer::o_get_tabs,
           "SplitWindowStartingUIHandler::GetTabs");
-  Install(edge155::rva::SplitWindowController_IsSplitWindowWebContents,
+  Install(Feature::kSplit,
+          edge155::rva::SplitWindowController_IsSplitWindowWebContents,
           reinterpret_cast<void*>(offer::h_is_split_contents),
           &offer::o_is_split_contents,
           "SplitWindowController::IsSplitWindowWebContents");
-  Install(edge155::rva::StartingPageLeftSplitTask_RunOnce,
+  Install(Feature::kSplit, edge155::rva::StartingPageLeftSplitTask_RunOnce,
           reinterpret_cast<void*>(offer::h_page_left_split),
           &offer::o_page_left_split,
           "OnSplitTabRemoved's starting page task (RunOnce)");
-  Install(edge155::rva::SplitWindowStartingUIHandler_CloseSplitWindow,
+  Install(Feature::kSplit,
+          edge155::rva::SplitWindowStartingUIHandler_CloseSplitWindow,
           reinterpret_cast<void*>(offer::h_close_page), &offer::o_close_page,
           "SplitWindowStartingUIHandler::CloseSplitWindow");
-  Install(edge155::rva::EdgeTabStyleViews_GetPath,
+  Install(Feature::kCyberpunkSkin, edge155::rva::EdgeTabStyleViews_GetPath,
           reinterpret_cast<void*>(tab_shape::h_get_path),
           &tab_shape::o_get_path, "EdgeTabStyleViews::GetPath");
-  Install(edge155::rva::SkPath_arcTo,
+  Install(Feature::kCyberpunkSkin, edge155::rva::SkPath_arcTo,
           reinterpret_cast<void*>(tab_shape::h_arc_to), &tab_shape::o_arc_to,
           "SkPath::arcTo");
-  Install(edge155::rva::SkPath_addRRect,
-          reinterpret_cast<void*>(tab_shape::h_add_rrect),
-          &tab_shape::o_add_rrect, "SkPath::addRRect (vertical tab outline)");
-  Install(edge155::rva::SkPath_lineTo,
-          reinterpret_cast<void*>(tab_shape::h_line_to), &tab_shape::o_line_to,
-          "SkPath::lineTo");
-  Install(edge155::rva::EdgeTabStyleViews_IsLeftSplitTab,
+  Install(Feature::kCyberpunkSkin,
+          edge155::rva::EdgeTabStyleViews_IsLeftSplitTab,
           reinterpret_cast<void*>(tab_shape::h_is_left_split_tab),
           &tab_shape::o_is_left_split_tab, "EdgeTabStyleViews::IsLeftSplitTab");
-  Install(edge155::rva::SkRRect_setRectXY,
+  Install(Feature::kCyberpunkSkin, edge155::rva::SkRRect_setRectXY,
           reinterpret_cast<void*>(tab_shape::h_set_rect_xy),
           &tab_shape::o_set_rect_xy, "SkRRect::setRectXY");
-  Install(edge155::rva::Canvas_DrawRoundRect,
+  Install(Feature::kCyberpunkSkin, edge155::rva::Canvas_DrawRoundRect,
           reinterpret_cast<void*>(tab_shape::h_draw_round_rect),
           &tab_shape::o_draw_round_rect, "gfx::Canvas::DrawRoundRect");
-  Install(edge155::rva::EdgeTabStyleViews_IsRightSplitTab,
+  Install(Feature::kCyberpunkSkin,
+          edge155::rva::EdgeTabStyleViews_IsRightSplitTab,
           reinterpret_cast<void*>(tab_shape::h_is_right_split_tab),
           &tab_shape::o_is_right_split_tab,
           "EdgeTabStyleViews::IsRightSplitTab (drop shadow)");
-  Install(edge155::rva::TabDragController_ContinueDragging,
+  Install(Feature::kCyberpunkSkin,
+          edge155::rva::EdgeTabStyleViews_PaintBackgroundStroke,
+          reinterpret_cast<void*>(tab_frame::h_paint_background_stroke),
+          &tab_frame::o_paint_background_stroke,
+          "EdgeTabStyleViews::PaintBackgroundStroke (tab frame)");
+  Install(Feature::kCyberpunkSkin, edge155::rva::TabStrip_GetStrokeThickness,
+          reinterpret_cast<void*>(tab_frame::h_get_stroke_thickness),
+          &tab_frame::o_get_stroke_thickness,
+          "TabStrip::GetStrokeThickness (tab frame)");
+  Install(Feature::kCyberpunkSkin, edge155::rva::EdgeTabStyleViews_PaintTab,
+          reinterpret_cast<void*>(tab_font::h_paint_tab),
+          &tab_font::o_paint_tab, "EdgeTabStyleViews::PaintTab (title font)");
+  Install(Feature::kCyberpunkSkin,
+          edge155::rva::LocationBarView_EdgeCreateRoundRectBackground,
+          reinterpret_cast<void*>(omnibox_frame::h_create_background),
+          &omnibox_frame::o_create_background,
+          "LocationBarView::EdgeCreateRoundRectBackground (omnibox frame)");
+  Install(Feature::kSplit, edge155::rva::TabDragController_ContinueDragging,
           reinterpret_cast<void*>(tabdrag::h_continue_dragging),
           &tabdrag::o_continue_dragging, "TabDragController::ContinueDragging");
-  Install(edge155::rva::TabDragController_EndDrag,
+  Install(Feature::kSplit, edge155::rva::TabDragController_EndDrag,
           reinterpret_cast<void*>(tabdrag::h_end_drag), &tabdrag::o_end_drag,
           "TabDragController::EndDrag");
-  Install(edge155::rva::EventTracker_OnEvent,
+  Install(Feature::kSplit, edge155::rva::EventTracker_OnEvent,
           reinterpret_cast<void*>(tabdrag::h_tracker_event),
           &tabdrag::o_tracker_event, "EventTracker::OnEvent");
-  Install(edge155::rva::MenuItemView_CalculateProposedLayout,
+  Install(Feature::kSplit, edge155::rva::MenuItemView_CalculateProposedLayout,
           reinterpret_cast<void*>(menu::h_row_layout), &menu::o_row_layout,
           "MenuItemView::CalculateProposedLayout");
-  Install(edge155::rva::SplitWindowControlMenu_PopulateMenu,
+  Install(Feature::kSplit, edge155::rva::SplitWindowControlMenu_PopulateMenu,
           reinterpret_cast<void*>(menu::h_populate), &menu::o_populate,
           "SplitWindowControlMenu::PopulateMenu");
-  Install(edge155::rva::SplitWindowControlMenu_ShouldExecuteWithoutClosing,
+  Install(Feature::kSplit,
+          edge155::rva::SplitWindowControlMenu_ShouldExecuteWithoutClosing,
           reinterpret_cast<void*>(menu::h_should_execute),
           &menu::o_should_execute,
           "SplitWindowControlMenu::ShouldExecuteCommandWithoutClosingMenu");
-  Install(edge155::rva::SplitWindowControlMenu_ExecuteCommand,
+  Install(Feature::kSplit, edge155::rva::SplitWindowControlMenu_ExecuteCommand,
           reinterpret_cast<void*>(menu::h_control_exec), &menu::o_control_exec,
           "SplitWindowControlMenu::ExecuteCommand");
-  Install(edge155::rva::ControlButtons_ToggleContextMenu,
+  Install(Feature::kSplit, edge155::rva::ControlButtons_ToggleContextMenu,
           reinterpret_cast<void*>(menu::h_toggle), &menu::o_toggle,
           "ControlButtons::ToggleContextMenu");
-  Install(edge155::rva::ControlButtons_HandleButtonClick,
+  Install(Feature::kSplit, edge155::rva::ControlButtons_HandleButtonClick,
           reinterpret_cast<void*>(h_button_click), &o_button_click,
           "ControlButtons::HandleButtonClick");
-  Install(edge155::rva::Button_OnMousePressed,
+  Install(Feature::kSplit, edge155::rva::Button_OnMousePressed,
           reinterpret_cast<void*>(h_pressed), &o_pressed,
           "Button::OnMousePressed");
-  Install(edge155::rva::Button_OnMouseDragged,
+  Install(Feature::kSplit, edge155::rva::Button_OnMouseDragged,
           reinterpret_cast<void*>(h_dragged), &o_dragged,
           "Button::OnMouseDragged");
-  Install(edge155::rva::Button_OnMouseReleased,
+  Install(Feature::kSplit, edge155::rva::Button_OnMouseReleased,
           reinterpret_cast<void*>(h_released), &o_released,
           "Button::OnMouseReleased");
-  Install(edge155::rva::Button_OnMouseCaptureLost,
+  Install(Feature::kSplit, edge155::rva::Button_OnMouseCaptureLost,
           reinterpret_cast<void*>(h_capture_lost), &o_capture_lost,
           "Button::OnMouseCaptureLost");
-  Install(edge155::rva::SplitWindowController_DoAction,
+  Install(Feature::kSplit, edge155::rva::SplitWindowController_DoAction,
           reinterpret_cast<void*>(collapse::h_do_action),
           &collapse::o_do_action, "DoActionToSplitWindow");
-  Install(edge155::rva::SplitTabMenuModel_ctor,
+  Install(Feature::kSplit, edge155::rva::SplitTabMenuModel_ctor,
           reinterpret_cast<void*>(menu::h_ctor), &menu::o_ctor,
           "SplitTabMenuModel::ctor");
-  Install(edge155::rva::SplitTabMenuModel_ExecuteCommand,
+  Install(Feature::kSplit, edge155::rva::SplitTabMenuModel_ExecuteCommand,
           reinterpret_cast<void*>(menu::h_exec), &menu::o_exec,
           "SplitTabMenuModel::ExecuteCommand");
-  Install(edge155::rva::WebUISplitTabsControl_HandleContextMenu,
+  Install(Feature::kSplit,
+          edge155::rva::WebUISplitTabsControl_HandleContextMenu,
           reinterpret_cast<void*>(menu::h_handle_ctx), &menu::o_handle_ctx,
           "WebUISplitTabsControl::HandleContextMenu");
-  Install(edge155::rva::ThemeService_RemoveUnusedThemes,
+  Install(Feature::kTheming, edge155::rva::ThemeService_RemoveUnusedThemes,
           reinterpret_cast<void*>(h_remove_unused_themes),
           &o_remove_unused_themes, "ThemeService::RemoveUnusedThemes");
-  Install(edge155::rva::ThemeService_OnThemeBuiltFromExtension,
+  Install(Feature::kTheming,
+          edge155::rva::ThemeService_OnThemeBuiltFromExtension,
           reinterpret_cast<void*>(h_on_theme_built), &o_on_theme_built,
           "ThemeService::OnThemeBuiltFromExtension (no bubble for Edge+)");
-  Install(edge155::rva::BrowserThemePack_GetColor,
+  Install(Feature::kTheming, edge155::rva::ThemeService_UseDefaultTheme,
+          reinterpret_cast<void*>(h_use_default_theme), &o_use_default_theme,
+          "ThemeService::UseDefaultTheme (the user's return to default)");
+  Install(Feature::kTheming, edge155::rva::BrowserThemePack_GetColor,
           reinterpret_cast<void*>(h_getcolor), &o_getcolor,
           "BrowserThemePack::GetColor (vertical-tab recolour)");
-  Install(edge155::rva::ColorProvider_GetColor,
+  Install(Feature::kCyberpunkSkin, edge155::rva::ColorProvider_GetColor,
           reinterpret_cast<void*>(h_getuicolor), &o_getuicolor,
           "ui::ColorProvider::GetColor (selected-tab ink)");
-  Install(edge155::rva::EdgeTab_UpdateForegroundColors,
+  Install(Feature::kTheming, edge155::rva::EdgeTab_UpdateForegroundColors,
           reinterpret_cast<void*>(h_update_foreground), &o_update_foreground,
           "EdgeTab::UpdateForegroundColors (selected-tab ink)");
-  Install(edge155::rva::ContentSettingRPHBubbleModel_CommitChanges,
+  Install(Feature::kProtocolHandlers,
+          edge155::rva::ContentSettingRPHBubbleModel_CommitChanges,
           reinterpret_cast<void*>(protocol_handlers::h_commit_changes),
           &protocol_handlers::o_commit_changes,
           "ContentSettingRPHBubbleModel::CommitChanges");
   Install(
+      Feature::kProtocolHandlers,
       edge155::rva::RegisterProtocolHandlerPermissionRequest_PermissionDecided,
       reinterpret_cast<void*>(protocol_handlers::h_permission_decided),
       &protocol_handlers::o_permission_decided,
@@ -748,33 +863,46 @@ inline bool Install(uintptr_t rva, void* detour, T** original,
   // Safety patches on Edge's 2-pane CHECKs. Never restored on unload: they point
   // at nothing of ours, and a split still grown past two when this DLL unloads
   // would otherwise hit a CHECK as soon as Edge touches pane 3+.
-  const uint8_t previousGuard = edge::PatchByte(
-      edge155::rva::SetWebContentsAtIndex_guard_imm, kLiftedIndexCap);
-  Log("[patch] SetWebContentsAtIndex guard %u -> 0x%x", previousGuard,
-      kLiftedIndexCap);
-  uint8_t previousBytes[kCheckJumpLength] = {};
-  edge::PatchNop(edge155::rva::SplitA11yLabel_paneidx_jne, kCheckJumpLength,
-                 previousBytes);
-  Log("[patch] a11y pane-index check NOPed (was 0x%02x 0x%02x)",
-      previousBytes[0], previousBytes[1]);
-  edge::PatchNop(edge155::rva::SetActiveIndex_index_jae, kCheckJumpLength,
-                 previousBytes);
-  Log("[patch] SetActiveIndex index check NOPed (was 0x%02x 0x%02x)",
-      previousBytes[0], previousBytes[1]);
-  Install(edge155::rva::TabStripLayoutHelper_CalculateIdealBounds,
+  const bool isSplitAvailable = availability::IsAvailable(Feature::kSplit);
+  if (isSplitAvailable) {
+    const uint8_t previousGuard = edge::PatchByte(
+        edge155::rva::SetWebContentsAtIndex_guard_imm, kLiftedIndexCap);
+    Log("[patch] SetWebContentsAtIndex guard %u -> 0x%x", previousGuard,
+        kLiftedIndexCap);
+    uint8_t previousBytes[kCheckJumpLength] = {};
+    edge::PatchNop(edge155::rva::SplitA11yLabel_paneidx_jne, kCheckJumpLength,
+                   previousBytes);
+    Log("[patch] a11y pane-index check NOPed (was 0x%02x 0x%02x)",
+        previousBytes[0], previousBytes[1]);
+    edge::PatchNop(edge155::rva::SetActiveIndex_index_jae, kCheckJumpLength,
+                   previousBytes);
+    Log("[patch] SetActiveIndex index check NOPed (was 0x%02x 0x%02x)",
+        previousBytes[0], previousBytes[1]);
+  }
+  Install(Feature::kSplit,
+          edge155::rva::TabStripLayoutHelper_CalculateIdealBounds,
           reinterpret_cast<void*>(tabrows::h_calculate_ideal_bounds),
           &tabrows::o_calculate_ideal_bounds,
           "TabStripLayoutHelper::CalculateIdealBounds");
-  Install(edge155::rva::EdgeTabDragContextImpl_CalculateBoundsForDraggedViews,
+  Install(Feature::kSplit,
+          edge155::rva::EdgeTabDragContextImpl_CalculateBoundsForDraggedViews,
           reinterpret_cast<void*>(tabrows::h_dragged_bounds),
           &tabrows::o_dragged_bounds,
           "EdgeTabDragContextImpl::CalculateBoundsForDraggedViews");
-  Install(edge155::rva::Tab_IsActive,
+  Install(Feature::kSplit, edge155::rva::Tab_IsActive,
           reinterpret_cast<void*>(tabrows::h_is_active), &tabrows::o_is_active,
           "Tab::IsActive (detach preview)");
-  find::Install();
-  theme_follow::Install();
-  live_preview::Install();
+  // A feature with an address this Edge build could not place stays out
+  // entirely (resolve.h); the hooks above skip theirs one by one.
+  if (availability::IsAvailable(Feature::kEnhancedFind)) {
+    find::Install();
+  }
+  if (availability::IsAvailable(Feature::kWebUiFollowsTheme)) {
+    theme_follow::Install();
+  }
+  if (availability::IsAvailable(Feature::kLivePreview)) {
+    live_preview::Install();
+  }
   control::Install();
   return true;
 }

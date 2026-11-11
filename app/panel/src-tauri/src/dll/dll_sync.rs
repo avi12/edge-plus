@@ -1,17 +1,19 @@
 //! The one place that brings the running Edge in line with the settings. The
-//! DLL only goes into a process on the pinned build and is sent the effective
-//! features (a paused one as off), so on an unsupported build nothing is
-//! injected and a loaded copy unloads. A simulation (`edge_install`) never
-//! touches Edge.
+//! DLL goes into every browser process except one on a build it has already
+//! stood down on, and is sent the effective features (one it cannot run there
+//! as off): it decides for itself, by signature, whether a build it was not
+//! reversed against is safe, and says so (`dll_status`). When it stood down, or
+//! no feature is left, a loaded copy unloads. A simulation (`edge_install`)
+//! never touches Edge.
 
 use std::thread;
 use std::time::Duration;
 
 use crate::dll::config_wire::DllConfig;
-use crate::dll::{dll_channel, payload};
+use crate::dll::{dll_channel, dll_status, payload};
 use crate::edge::edge_watch;
 use crate::edge::legacy::legacy_install;
-use crate::edge::version::{edge_build, edge_install, edge_support};
+use crate::edge::version::{edge_install, edge_support};
 use crate::platform::paths;
 use crate::platform::settings::{self, Features, Settings};
 
@@ -58,10 +60,9 @@ fn apply_to(settings: &Settings, reach: Reach, holders: &[u32]) {
     // After the stale copy is freed: a mapped DLL holds its file open, so the
     // fresh one cannot be written over it until then.
     payload::unpack();
-    let pinned = edge_build::pinned();
     let missing: Vec<u32> = edge_native::pids_missing_module(paths::SPLIT_DLL_NAME)
         .into_iter()
-        .filter(|&pid| edge_watch::build_of(pid) == Some(pinned))
+        .filter(|&pid| edge_support::may_inject(edge_watch::build_of(pid)))
         .filter(|&pid| !legacy_install::is_dll_loaded_in(pid))
         .filter(|pid| reach == Reach::EveryBrowser || holders.contains(pid))
         .collect();
@@ -84,6 +85,9 @@ pub fn sync_on_start() {
     if !is_wanted(&settings) {
         return;
     }
+    // What an earlier DLL said about a build is not this one's word: it may place
+    // what the last could not.
+    let _ = dll_status::forget();
     // Taken before a stale DLL unloads, so its processes get the fresh one.
     let holders = edge_native::pids_with_module(paths::SPLIT_DLL_NAME);
     let is_stale = dll_channel::is_loaded() && !payload::is_unpacked_current();
@@ -105,8 +109,9 @@ pub fn sync_on_start() {
 /// is normally over at the first poll.
 pub fn apply_and_wait_for_load(settings: &Settings) {
     apply_to(settings, Reach::EveryBrowser, &[]);
-    let is_load_expected =
-        !edge_install::is_simulated() && is_wanted(settings) && !pinned_browser_pids().is_empty();
+    let is_load_expected = !edge_install::is_simulated()
+        && is_wanted(settings)
+        && !injectable_browser_pids().is_empty();
     if is_load_expected {
         wait_for_load();
     }
@@ -118,11 +123,10 @@ pub fn is_wanted(settings: &Settings) -> bool {
     effective(settings).needs_dll()
 }
 
-fn pinned_browser_pids() -> Vec<u32> {
-    let pinned = edge_build::pinned();
+fn injectable_browser_pids() -> Vec<u32> {
     edge_native::browser_pids()
         .into_iter()
-        .filter(|&pid| edge_watch::build_of(pid) == Some(pinned))
+        .filter(|&pid| edge_support::may_inject(edge_watch::build_of(pid)))
         .collect()
 }
 
@@ -154,7 +158,6 @@ fn write_config_if_possible(settings: &Settings, effective: &Features) {
 fn effective(settings: &Settings) -> Features {
     edge_support::effective(
         &settings.features,
-        edge_watch::current_build(),
-        edge_build::pinned(),
+        edge_support::support_now(edge_watch::current_build()),
     )
 }

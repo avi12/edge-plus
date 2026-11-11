@@ -167,7 +167,7 @@ is either a switch in the DLL's config wire or something the panel does alone.
 | `EnhancedFind` | DLL | RegExp and Copilot modes in Edge's find bar. |
 | `WebUiFollowsTheme` | DLL | `edge://settings` and `edge://extensions` follow the theme. |
 | `LivePreview` | DLL | Tab preview on hover. |
-| `TabShape` | DLL | Cut-corner tabs. Needs `Theming`. |
+| `CyberpunkSkin` | DLL | Cut-corner tabs, the selected one red. Needs `Theming`. |
 | `ReadingTheme` | DLL | Reading mode follows Windows light and dark. |
 
 ### Themes
@@ -235,7 +235,7 @@ and splits without clicks.
 | Geometry | `geometry.h`, `dividers.h`, `grip.h` | Lays out panes and their dividers and grips. |
 | Tab list | `tabrows.h`, `tab_list.h`, `tab_views.h` | Shows a split's tabs in rows that follow the panes. |
 | Tab drags | `tabdrag.h`, `drag.h` | Drags a tab into a split, Alt drops, and pane drags. |
-| Tab look | `tab_shape.h`, `tab_edge.h`, `theme.h`, `theme_tone.h` | Cut corners and the theme's colours. |
+| Tab look | `tab_shape.h`, `tab_edge.h`, `cyberpunk_skin.h`, `theme_tone.h` | The Cyberpunk skin: cut corners and the red selected tab. |
 | Find, links, handlers | `find.h`, `links.h`, `protocol_handlers.h` | The enhanced find bar, split links, handler prompts. |
 | Repaint and motion | `repaint.h`, `anim.h`, `motion.h` | Forces panes to paint after a move; eases pane changes. |
 

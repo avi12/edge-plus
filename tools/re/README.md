@@ -62,3 +62,27 @@ What the PDB cannot port, and so must be checked by hand each time:
   one does not hold the instruction it was reversed from.
 - **Struct offsets**: the public PDB has no types, so none can be diffed. Equal
   function sizes are the evidence; then run the live test in `docs/re/port-4283-62.md`.
+
+## The signature table: finding `offsets.h` in another build
+
+```bash
+pwsh tools/re/New-SignatureTable.ps1          # -> app/dll/src/edge/signatures.g.h
+pwsh tools/re/New-SignatureTable.ps1 -Check   # exit 1 when the table lists other entries than offsets.h
+```
+
+It signs the pinned build's `msedge.dll` (`kVersion*` of `offsets.h`; `-Dll`, `-Offsets`,
+`-KeyOffsets`, `-Version`, `-Out` override) and writes one row per `rva` entry in the
+shape of `app/dll/src/edge/signature_table.h`, whose `kFeatureBit*` it reads. A signature
+is a function's opening bytes with only what a rebuild moves wildcarded (rel32 branch
+targets and RIP-relative displacements; the tolerant mask also every displacement and
+32/64-bit immediate), grown until nothing else in `.text` matches, never past the
+function's end in `.pdata`. Each entry gets up to four probes (strict and tolerant, the
+opening and a window further in) and is a `kFunction`, `kSite`, `kCallee` (found through
+a caller's `call`), `kInside` (a fixed distance into a signed function) or `kData` (the
+RIP displacement of a signed function that addresses it, or a neighbour `dataDelta`
+away). Which banner or name of `offsets.h` belongs to which feature is
+`EdgePlus.Signatures.psm1`'s; the byte work is `Signatures.cs`, on the Iced decoder.
+About 15 s per run.
+
+`Measure-Signatures.ps1 -Out report.json -Build 'a=<dll>,<offsets.h>', 'b=...'` measures
+how many entries the signatures of each build find correctly in the others.

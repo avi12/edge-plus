@@ -3,7 +3,7 @@
 The repo's lint gate over the DLL's C++ and the panel's Rust and TypeScript; non-zero exit on any finding.
 .DESCRIPTION
 Passes: clang-format, clang-tidy, C++ restricted syntax, shared.g.rs
-freshness, the panel's own gate (oxlint, eslint, clippy, rustfmt, tsc,
+freshness, signatures.g.h listing exactly offsets.h's entries, the panel's own gate (oxlint, eslint, clippy, rustfmt, tsc,
 fallow, winui-svelte's check:editor), and ui/protocol.g.ts freshness.
 .PARAMETER Fix
 Apply clang-format -i, clang-tidy --fix and the panel's fixers, then re-check.
@@ -134,6 +134,15 @@ if (-not $Staged) {
     $sharedOk = $LASTEXITCODE -eq 0
 }
 
+# A signature table that lists other entries than offsets.h leaves an address
+# the DLL cannot place on another Edge build, and the feature that uses it
+# would look available (tools/re/New-SignatureTable.ps1).
+[bool] $signaturesOk = $true
+if (-not $Staged) {
+    & pwsh -NoProfile -File (Join-Path $PSScriptRoot 're\New-SignatureTable.ps1') -Check
+    $signaturesOk = $LASTEXITCODE -eq 0
+}
+
 # The panel: oxlint, eslint, clippy at -D warnings, rustfmt, tsc and the
 # fallow audit (its package.json), and the window's protocol, which `cargo
 # test` writes from protocol.rs, still matching what is committed. Skipped
@@ -158,10 +167,10 @@ if (-not $Staged) {
     }
 }
 
-[bool] $isClean = $formatOk -and $tidyOk -and $syntaxOk -and $sharedOk -and $panelOk
+[bool] $isClean = $formatOk -and $tidyOk -and $syntaxOk -and $sharedOk -and $signaturesOk -and $panelOk
 if ($isClean) {
     Write-Host "[lint] clean"
     exit 0
 }
-Write-Host "[lint] FAILED (format=$formatOk tidy=$tidyOk syntax=$syntaxOk shared=$sharedOk panel=$panelOk)"
+Write-Host "[lint] FAILED (format=$formatOk tidy=$tidyOk syntax=$syntaxOk shared=$sharedOk signatures=$signaturesOk panel=$panelOk)"
 exit 1

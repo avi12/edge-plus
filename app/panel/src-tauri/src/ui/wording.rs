@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 
 use serde::Deserialize;
 
-use crate::platform::settings::Feature;
+use crate::platform::settings::{ColorMode, Feature};
 use crate::ui::protocol::EdgeBuild;
 
 #[derive(Deserialize)]
@@ -36,6 +36,8 @@ const TITLES_PLACEHOLDER: &str = "{titles}";
 
 pub const NOT_A_STORE_LINK: &str =
     "That is not a theme link from the Chrome Web Store or Edge Add-ons.";
+pub const EDGE_THEME_NOT_REMOVABLE: &str =
+    "Edge+ cannot remove this theme because Edge installed it from its own store.";
 pub const ACTION_FAILED: &str = "That did not work. Edge+ wrote the details to its log (panel.log in %LOCALAPPDATA%\\EdgePlus).";
 pub const THEME_FILES_UNREADABLE: &str = "Edge+ could not read or write that theme's files. Check the folder still exists and is not open elsewhere.";
 pub const MANIFEST_NOT_JSON: &str = "manifest.json is not valid JSON";
@@ -48,6 +50,11 @@ pub const NOT_A_ZIP: &str = "not a valid ZIP";
 pub const MANIFEST_NOT_AN_OBJECT: &str = "manifest.json: not an object";
 pub const MANIFEST_HAS_NO_NAME: &str = "manifest.json has no name";
 pub const MANIFEST_HAS_NO_VERSION: &str = "manifest.json has no version";
+pub const COLOR_NEEDS_CHANNELS: &str = "needs 3 or 4 numbers";
+pub const TINT_NEEDS_PARTS: &str = "needs 3 numbers";
+pub const VALUE_OUT_OF_RANGE: &str = "has a value out of range";
+pub const MANIFEST_VERSION_NOT_SUPPORTED: &str = "must be 2 or 3";
+pub const MANIFEST_HAS_NO_MANIFEST_VERSION: &str = "manifest.json has no manifest_version";
 pub const MANIFEST_HAS_NO_THEME: &str = "manifest.json has no \"theme\" section";
 pub const NOT_A_CRX3: &str = "not a CRX3 file";
 pub const TRUNCATED_CRX_HEADER: &str = "truncated CRX header";
@@ -61,8 +68,28 @@ pub const BAD_CRX_MANIFEST: &str = "bad manifest.json";
 pub const NO_VERSION_IN_CRX_MANIFEST: &str = "no version in manifest.json";
 
 #[must_use]
+pub fn theme_files_gone(name: &str) -> String {
+    format!("The files of {name} are gone, so Edge uses its default theme.")
+}
+
+#[must_use]
+pub fn edge_went_default(mode: ColorMode) -> String {
+    let mode_name = match mode {
+        ColorMode::Light => "light",
+        ColorMode::Dark => "dark",
+    };
+    format!(
+        "Edge went back to its default theme, so Edge+ shows the default theme for {mode_name} mode."
+    )
+}
+
 pub fn manifest_not_json_at(line: usize) -> String {
     format!("{MANIFEST_NOT_JSON} (line {line})")
+}
+
+#[must_use]
+pub fn edge_rejected_theme(reason: &str) -> String {
+    format!("Edge refused the theme: {reason}")
 }
 
 #[must_use]
@@ -76,11 +103,6 @@ pub fn entry_too_large(name: &str) -> String {
 }
 
 #[must_use]
-pub fn image_not_a_path(key: &str) -> String {
-    format!("image {key} is not a path")
-}
-
-#[must_use]
 pub fn image_unreadable(key: &str, path: &str, reason: &str) -> String {
     format!("image {key} ({path}): {reason}")
 }
@@ -88,31 +110,6 @@ pub fn image_unreadable(key: &str, path: &str, reason: &str) -> String {
 #[must_use]
 pub fn image_not_png_or_jpeg(key: &str, path: &str) -> String {
     format!("image {key} ({path}) is not a PNG or JPEG")
-}
-
-#[must_use]
-pub fn color_not_a_list(key: &str) -> String {
-    format!("color {key} is not a list")
-}
-
-#[must_use]
-pub fn color_wrong_count(key: &str) -> String {
-    format!("color {key} needs 3 or 4 numbers")
-}
-
-#[must_use]
-pub fn color_out_of_range(key: &str) -> String {
-    format!("color {key} has a value out of range")
-}
-
-#[must_use]
-pub fn tint_wrong_count(key: &str) -> String {
-    format!("tint {key} needs 3 numbers")
-}
-
-#[must_use]
-pub fn tint_out_of_range(key: &str) -> String {
-    format!("tint {key} has a value out of range")
 }
 
 #[must_use]
@@ -185,11 +182,11 @@ mod tests {
             )
         );
         assert_eq!(
-            "Edge is on version 154.0.1.0. Paused until Edge+ supports this version: Cut-corner \
-             tabs.",
+            "Edge is on version 154.0.1.0. Paused until Edge+ supports this version: Cyberpunk \
+             skin.",
             describe_paused(
                 &EdgeBuild::of(FileVersion::new(154, 0, 1, 0), SUPPORTED),
-                &[Feature::TabShape]
+                &[Feature::CyberpunkSkin]
             )
         );
         assert_eq!("", describe_paused(&EdgeBuild::of(UPDATED, SUPPORTED), &[]));

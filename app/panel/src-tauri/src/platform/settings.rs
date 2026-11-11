@@ -40,8 +40,8 @@ pub enum Feature {
     WebUiFollowsTheme,
     /// `live_preview.h`
     LivePreview,
-    /// `tab_shape.h`
-    TabShape,
+    /// `cyberpunk_skin.h` and `tab_shape.h`
+    CyberpunkSkin,
     /// `reading_mode.h`; the two themes are picked in reading mode itself and
     /// kept by the DLL.
     ReadingTheme,
@@ -56,7 +56,7 @@ impl Feature {
         Self::EnhancedFind,
         Self::WebUiFollowsTheme,
         Self::LivePreview,
-        Self::TabShape,
+        Self::CyberpunkSkin,
         Self::ReadingTheme,
     ];
 }
@@ -94,9 +94,10 @@ pub struct Features {
     pub web_ui_follows_theme: bool,
     pub live_preview: bool,
     /// On by default: it was part of the theming until it got a switch of its
-    /// own. Saved under its old name so a saved choice carries over.
+    /// own. Saved under its oldest name (the cut-corner tabs' switch, which the
+    /// skin replaced) so a saved choice carries over.
     #[serde(rename = "tabSpine")]
-    pub tab_shape: bool,
+    pub cyberpunk_skin: bool,
     pub reading_theme: bool,
 }
 
@@ -110,7 +111,7 @@ impl Default for Features {
             enhanced_find: false,
             web_ui_follows_theme: false,
             live_preview: false,
-            tab_shape: true,
+            cyberpunk_skin: true,
             reading_theme: false,
         }
     }
@@ -137,7 +138,7 @@ impl Features {
             Feature::EnhancedFind => self.enhanced_find,
             Feature::WebUiFollowsTheme => self.web_ui_follows_theme,
             Feature::LivePreview => self.live_preview,
-            Feature::TabShape => self.tab_shape,
+            Feature::CyberpunkSkin => self.cyberpunk_skin,
             Feature::ReadingTheme => self.reading_theme,
         }
     }
@@ -151,7 +152,7 @@ impl Features {
             Feature::EnhancedFind => &mut self.enhanced_find,
             Feature::WebUiFollowsTheme => &mut self.web_ui_follows_theme,
             Feature::LivePreview => &mut self.live_preview,
-            Feature::TabShape => &mut self.tab_shape,
+            Feature::CyberpunkSkin => &mut self.cyberpunk_skin,
             Feature::ReadingTheme => &mut self.reading_theme,
         };
         *switch = is_on;
@@ -189,15 +190,64 @@ pub struct Theming {
     pub light: String,
     #[serde(deserialize_with = "null_as_default")]
     pub dark: String,
+    /// The ids of all themes, own and Edge's, in display order (see
+    /// `theme_order::combined`); empty means the default order.
+    #[serde(deserialize_with = "null_as_default")]
+    pub order: Vec<String>,
+    /// The themes each slot wore before its current one, the latest last: what
+    /// a slot goes back to when its theme is removed. Edge's default theme is
+    /// one of them, as an empty id.
+    #[serde(deserialize_with = "null_as_default")]
+    pub light_history: Vec<String>,
+    #[serde(deserialize_with = "null_as_default")]
+    pub dark_history: Vec<String>,
 }
 
+/// How many earlier themes a slot remembers.
+const HISTORY_LIMIT: usize = 8;
+
 impl Theming {
+    /// The slot of `mode` wears `id`, and the one it wore before is remembered.
     pub fn assign(&mut self, mode: ColorMode, id: &str) {
-        let slot = match mode {
+        let previous = self.slot(mode).to_owned();
+        let is_change = previous != id;
+        let history = self.history_mut(mode);
+        history.retain(|earlier| earlier != id);
+        if is_change {
+            history.retain(|earlier| earlier != &previous);
+            history.push(previous);
+            let excess = history.len().saturating_sub(HISTORY_LIMIT);
+            history.drain(..excess);
+        }
+        id.clone_into(self.slot_mut(mode));
+    }
+
+    fn slot_mut(&mut self, mode: ColorMode) -> &mut String {
+        match mode {
             ColorMode::Light => &mut self.light,
             ColorMode::Dark => &mut self.dark,
-        };
-        id.clone_into(slot);
+        }
+    }
+
+    fn history_mut(&mut self, mode: ColorMode) -> &mut Vec<String> {
+        match mode {
+            ColorMode::Light => &mut self.light_history,
+            ColorMode::Dark => &mut self.dark_history,
+        }
+    }
+
+    /// The theme id the slot of `mode` wears; empty is Edge's default theme.
+    #[must_use]
+    pub fn slot(&self, mode: ColorMode) -> &str {
+        match mode {
+            ColorMode::Light => &self.light,
+            ColorMode::Dark => &self.dark,
+        }
+    }
+
+    /// The slot goes back to Edge's default theme; every theme stays listed.
+    pub fn clear_slot(&mut self, mode: ColorMode) {
+        self.assign(mode, "");
     }
 
     pub fn add_or_replace(&mut self, entry: ThemeEntry) {
@@ -209,16 +259,42 @@ impl Theming {
 
     pub fn reorder(&mut self, ids: &[String]) {
         self.themes = theme_order::ordered(&self.themes, ids);
+        self.order = ids.to_vec();
     }
 
-    pub fn remove(&mut self, id: &str) {
+    /// Whether the light or the dark slot wears the theme.
+    pub fn is_assigned(&self, id: &str) -> bool {
+        self.light == id || self.dark == id
+    }
+
+    /// A slot that wore the theme goes back to the theme it wore before, when
+    /// that is still `is_available`, and else to Edge's default theme. The
+    /// theme, and any earlier one no longer available, is forgotten from
+    /// every slot's history.
+    pub fn unassign(&mut self, id: &str, is_available: impl Fn(&str) -> bool) {
+        for mode in [ColorMode::Light, ColorMode::Dark] {
+            let history = self.history_mut(mode);
+            history
+                .retain(|earlier| earlier != id && (earlier.is_empty() || is_available(earlier)));
+            let previous = history.last().cloned();
+            if self.slot(mode) != id {
+                continue;
+            }
+            let back_to = previous.unwrap_or_default();
+            self.history_mut(mode).retain(|earlier| earlier != &back_to);
+            back_to.clone_into(self.slot_mut(mode));
+        }
+    }
+
+    /// A theme only Edge knows is gone: its slots and its place in the order.
+    pub fn forget_edge_theme(&mut self, id: &str, is_available: impl Fn(&str) -> bool) {
+        self.unassign(id, is_available);
+        self.order.retain(|ordered| ordered != id);
+    }
+
+    pub fn remove(&mut self, id: &str, is_available: impl Fn(&str) -> bool) {
         self.themes.retain(|theme| theme.id != id);
-        if self.light == id {
-            self.light.clear();
-        }
-        if self.dark == id {
-            self.dark.clear();
-        }
+        self.forget_edge_theme(id, is_available);
     }
 }
 
@@ -349,10 +425,10 @@ mod tests {
     }
 
     #[test]
-    fn defaults_are_split_and_tab_shape_on_the_rest_off() {
+    fn defaults_are_split_and_cyberpunk_skin_on_the_rest_off() {
         let settings = Settings::default();
         for feature in Feature::ALL {
-            let is_expected_on = matches!(feature, Feature::NativeSplit | Feature::TabShape);
+            let is_expected_on = matches!(feature, Feature::NativeSplit | Feature::CyberpunkSkin);
             assert_eq!(
                 is_expected_on,
                 settings.features.is_on(feature),
@@ -462,9 +538,106 @@ mod tests {
         assert_eq!("A2", theming.themes[0].name);
         theming.assign(ColorMode::Light, "a");
         theming.assign(ColorMode::Dark, "a");
-        theming.remove("a");
+        theming.remove("a", |_| false);
         assert!(theming.light.is_empty() && theming.dark.is_empty());
         assert_eq!(Vec::<ThemeEntry>::new(), theming.themes);
+    }
+
+    #[test]
+    fn clearing_a_slot_keeps_every_theme_and_the_other_slot() {
+        let mut theming = Theming::default();
+        theming.add_or_replace(ThemeEntry {
+            id: "a".into(),
+            name: "A".into(),
+            source: ThemeSource::Local,
+            origin: String::new(),
+        });
+        theming.assign(ColorMode::Light, "a");
+        theming.assign(ColorMode::Dark, "a");
+        theming.clear_slot(ColorMode::Light);
+        assert_eq!("", theming.slot(ColorMode::Light));
+        assert_eq!("a", theming.slot(ColorMode::Dark));
+        assert_eq!(1, theming.themes.len());
+    }
+
+    #[test]
+    fn unassigning_a_theme_keeps_it_and_frees_only_its_slots() {
+        let mut theming = Theming::default();
+        theming.add_or_replace(ThemeEntry {
+            id: "a".into(),
+            name: "A".into(),
+            source: ThemeSource::Local,
+            origin: String::new(),
+        });
+        theming.assign(ColorMode::Light, "a");
+        theming.assign(ColorMode::Dark, "b");
+        assert!(theming.is_assigned("a") && theming.is_assigned("b"));
+        theming.unassign("a", |_| false);
+        assert!(
+            theming.light.is_empty(),
+            "the light slot is the default again"
+        );
+        assert_eq!("b", theming.dark, "another theme's slot stays");
+        assert!(!theming.is_assigned("a"));
+        assert_eq!(1, theming.themes.len(), "the theme stays in the list");
+    }
+
+    #[test]
+    fn a_removed_theme_gives_its_slot_back_to_the_one_before() {
+        let mut theming = Theming::default();
+        theming.assign(ColorMode::Dark, "first");
+        theming.assign(ColorMode::Dark, "second");
+        theming.assign(ColorMode::Dark, "third");
+        theming.unassign("third", |id| id != "second");
+        assert_eq!("first", theming.dark, "the latest one still there");
+        theming.unassign("first", |_| true);
+        assert_eq!("", theming.dark, "nothing earlier is left: the default");
+        assert!(theming.dark_history.is_empty(), "the history is spent");
+    }
+
+    #[test]
+    fn removing_a_theme_set_from_the_default_goes_back_to_the_default() {
+        let mut theming = Theming::default();
+        theming.assign(ColorMode::Dark, "old");
+        theming.assign(ColorMode::Dark, "");
+        theming.assign(ColorMode::Dark, "new");
+        theming.unassign("new", |_| true);
+        assert_eq!("", theming.dark, "the default, not the theme before it");
+    }
+
+    #[test]
+    fn a_removed_theme_is_forgotten_by_the_other_slot_too() {
+        let mut theming = Theming::default();
+        theming.assign(ColorMode::Light, "gone");
+        theming.assign(ColorMode::Light, "kept");
+        theming.assign(ColorMode::Dark, "gone");
+        theming.unassign("gone", |_| true);
+        assert_eq!("kept", theming.light, "a slot that did not wear it stays");
+        assert_eq!(
+            vec![String::new()],
+            theming.light_history,
+            "and forgets it: only the default before it is left"
+        );
+        assert_eq!("", theming.dark);
+    }
+
+    #[test]
+    fn forgetting_an_edge_theme_frees_its_slots_and_its_place_in_the_order() {
+        let mut theming = Theming::default();
+        theming.assign(ColorMode::Light, "a");
+        theming.assign(ColorMode::Dark, "b");
+        theming.reorder(&["b".to_owned(), "a".to_owned(), "c".to_owned()]);
+        theming.forget_edge_theme("a", |_| false);
+        assert!(theming.light.is_empty(), "the slot is the default again");
+        assert_eq!("b", theming.dark, "another theme's slot stays");
+        assert_eq!(vec!["b".to_owned(), "c".to_owned()], theming.order);
+    }
+
+    #[test]
+    fn an_old_file_without_an_order_loads_with_the_default_one() {
+        let theming: Theming = serde_json::from_str(r#"{"edgeOrder":["x"],"order":null}"#)
+            .expect("an old theming section loads");
+        assert_eq!(Theming::default(), theming);
     }
 
     #[test]

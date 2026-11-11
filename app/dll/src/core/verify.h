@@ -3,8 +3,11 @@
 #pragma once
 #include <windows.h>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <vector>
+#include "edge/availability.h"
+#include "edge/build_relation.h"
 #include "edge/edge.h"
 
 #pragma comment(lib, "version.lib")
@@ -14,23 +17,30 @@ namespace edgeplus::verify {
 // VerQueryValueW's sub-block for the VS_FIXEDFILEINFO root.
 inline constexpr wchar_t kFixedFileInfoBlock[] = L"\\";
 
-[[nodiscard]] inline bool BuildMatches() {
+// The build offsets.h is pinned to.
+inline constexpr edge_build::Version kPinnedBuild{
+    edge155::kVersionMajor, edge155::kVersionMinor, edge155::kVersionBuild,
+    edge155::kVersionRevision};
+
+// The file version of the msedge.dll this process loaded; nullopt when it cannot
+// be read.
+[[nodiscard]] inline std::optional<edge_build::Version> RunningBuild() {
   wchar_t path[MAX_PATH];
   HMODULE module = GetModuleHandleW(edge155::kModule);
   const bool hasModulePath =
       module != nullptr && GetModuleFileNameW(module, path, MAX_PATH) != 0;
   if (!hasModulePath) {
-    return false;
+    return std::nullopt;
   }
 
   DWORD ignored = 0;
   const DWORD versionInfoSize = GetFileVersionInfoSizeW(path, &ignored);
   if (!versionInfoSize) {
-    return false;
+    return std::nullopt;
   }
   std::vector<uint8_t> versionInfo(versionInfoSize);
   if (!GetFileVersionInfoW(path, 0, versionInfoSize, versionInfo.data())) {
-    return false;
+    return std::nullopt;
   }
 
   VS_FIXEDFILEINFO* info = nullptr;
@@ -40,18 +50,15 @@ inline constexpr wchar_t kFixedFileInfoBlock[] = L"\\";
                      reinterpret_cast<void**>(&info), &infoLength) &&
       info != nullptr;
   if (!hasFixedInfo) {
-    return false;
+    return std::nullopt;
   }
-  const int major = HIWORD(info->dwFileVersionMS);
-  const int minor = LOWORD(info->dwFileVersionMS);
-  const int build = HIWORD(info->dwFileVersionLS);
-  const int revision = LOWORD(info->dwFileVersionLS);
-  Log("[verify] msedge.dll %d.%d.%d.%d (expected %d.%d.%d.%d)", major, minor,
-      build, revision, edge155::kVersionMajor, edge155::kVersionMinor,
-      edge155::kVersionBuild, edge155::kVersionRevision);
-  return major == edge155::kVersionMajor && minor == edge155::kVersionMinor &&
-         build == edge155::kVersionBuild &&
-         revision == edge155::kVersionRevision;
+  const edge_build::Version running{
+      HIWORD(info->dwFileVersionMS), LOWORD(info->dwFileVersionMS),
+      HIWORD(info->dwFileVersionLS), LOWORD(info->dwFileVersionLS)};
+  Log("[verify] msedge.dll %d.%d.%d.%d (pinned %d.%d.%d.%d)", running.major,
+      running.minor, running.build, running.revision, kPinnedBuild.major,
+      kPinnedBuild.minor, kPinnedBuild.build, kPinnedBuild.revision);
+  return running;
 }
 
 // The x64 bytes the checks below look for.
@@ -83,7 +90,11 @@ inline constexpr uint8_t kStockIndexCap = 2;
 // A plausible x64 prologue byte: a cheap guard against a stale RVA landing on
 // data or padding.
 [[nodiscard]] inline bool LooksLikeCode(uintptr_t rva) {
-  const uint8_t firstByte = *reinterpret_cast<uint8_t*>(edge::At(rva));
+  const void* const address = edge::At(rva);
+  if (!address) {
+    return false;
+  }
+  const uint8_t firstByte = *static_cast<const uint8_t*>(address);
   switch (static_cast<Opcode>(firstByte)) {
     case Opcode::kRexPrefix:
     case Opcode::kRexPrefixB:
@@ -106,6 +117,9 @@ inline constexpr uint8_t kStockIndexCap = 2;
 [[nodiscard]] inline bool BytesAre(uintptr_t rva,
                                    std::span<const uint8_t> expected) {
   const auto* actual = reinterpret_cast<const uint8_t*>(edge::At(rva));
+  if (!actual) {
+    return false;
+  }
   for (size_t i = 0; i < expected.size(); i++) {
     if (actual[i] != expected[i]) {
       return false;
@@ -166,30 +180,43 @@ inline constexpr uint8_t kStockIndexCap = 2;
       edge155::rva::MultiContentsView_dtor,
       edge155::rva::EdgeTabDragContextImpl_CalculateBoundsForDraggedViews,
       edge155::rva::EdgeTabStyleViews_IsRightSplitTab,
+      // The Cyberpunk skin's tab frames (tab_frame.h).
+      edge155::rva::EdgeTabStyleViews_PaintBackgroundStroke,
+      edge155::rva::TabStrip_GetStrokeThickness,
+      // Its title font (tab_font.h).
+      edge155::rva::EdgeTabStyleViews_PaintTab,
+      // Its omnibox frame (omnibox_frame.h).
+      edge155::rva::LocationBarView_EdgeCreateRoundRectBackground,
   };
   for (const uintptr_t rva : sites) {
+    // A site with no place in this build belongs to a feature that stood down
+    // (resolve.h); the pinned build places them all.
+    const bool isPlaced = edge::At(rva) != nullptr;
+    if (!isPlaced) {
+      continue;
+    }
     if (!LooksLikeCode(rva)) {
       Log("[verify] hook site rva=0x%llx does not look like code",
           static_cast<unsigned long long>(rva));
       return false;
     }
   }
-  if (!PatchSitesHoldTheirInstructions()) {
+  const bool isSplitAvailable =
+      availability::IsAvailable(edge155::signatures::Feature::kSplit);
+  if (isSplitAvailable && !PatchSitesHoldTheirInstructions()) {
     Log("[verify] a patch site does not hold the instruction it was reversed "
         "from");
     return false;
   }
   // The link-handler bubble's Done slot is written while that feature is on;
   // it must hold Edge's own empty virtual, or it is not the vtable we read.
-  if (!edge::RphDoneSlotIsStock()) {
+  const bool areHandlersAvailable = availability::IsAvailable(
+      edge155::signatures::Feature::kProtocolHandlers);
+  if (areHandlersAvailable && !edge::RphDoneSlotIsStock()) {
     Log("[verify] handler bubble Done slot is not Edge's empty virtual");
     return false;
   }
   return true;
-}
-
-[[nodiscard]] inline bool Ok() {
-  return BuildMatches() && HookSitesLookSane();
 }
 
 }  // namespace edgeplus::verify

@@ -157,4 +157,4 @@ function Get-Instructions {
     }
 }
 
-Export-ModuleMember -Function Get-EdgeDll, Get-PdbKey, Initialize-Dbghelp, Open-Symbols, Read-MappedImage, Get-Instructions
+Export-ModuleMember -Function Get-EdgeDll, Get-PdbKey, Initialize-Dbghelp, Open-Symbols, Initialize-Iced, Read-MappedImage, Get-Instructions

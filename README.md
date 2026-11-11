@@ -47,12 +47,14 @@ hiding the developer-mode prompt, which only edits Edge's `Preferences`.
   restart. Add themes from a Chrome Web Store / Edge Add-ons link or a local
   `.crx`; Edge's own theming engine paints them (the injected DLL only picks and
   applies the right one).
-- **Cut-corner tabs** — with Theming on, every tab, in the vertical list and in
-  the horizontal strip, gets a straight leading edge and a 45° cut on its
-  trailing bottom corner (in a split, only the focused pane's tab), the
-  selected tab is filled in the theme's neon, and a horizontal tab loses its
-  flared feet. Edge's own outline is reshaped, so nothing is painted over the
-  tab (`app/dll/src/chrome/tabs/tab_shape.h`).
+- **Cyberpunk skin** — with Theming on, every tab, in the vertical list and in
+  the horizontal strip, becomes a Cyberpunk HUD plate: a straight leading edge
+  and a 45° cut on its trailing bottom corner (in a split, only the focused
+  pane's tab), no flared feet, and the selected tab in solid red with ink that
+  reads on it, black on a dark theme and white on a light one's deeper red.
+  Edge's own outline and colours are changed, so nothing is painted over the
+  tab, and turning the skin off gives Edge's own tabs back
+  (`app/dll/src/chrome/tabs/tab_shape.h`, `app/dll/src/theme/cyberpunk_skin.h`).
 - **Settings and extensions pages follow the theme** — `edge://settings` and
   `edge://extensions` take their light or dark from Windows or Edge's
   Appearance setting, never from the theme, so a dark theme on a light Windows
@@ -142,7 +144,7 @@ Open the panel, open Edge, and flip the switches. There is no extension to load
 and nothing to pre-install: on first start the panel installs the Windows App
 SDK runtime its window needs, for the current user.
 
-![The Edge+ panel](https://github.com/user-attachments/assets/428c98e9-b675-4023-a4cb-77e4c2faa34b)
+![The Edge+ panel](https://github.com/user-attachments/assets/fb3112b4-a4bd-40ba-8222-f91e51852097)
 
 The split DLL is pinned to one `msedge.dll` build (`app/dll/src/edge/offsets.h`);
 on any other build it refuses to hook and the split simply does nothing, so it is

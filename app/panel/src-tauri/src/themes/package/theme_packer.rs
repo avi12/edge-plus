@@ -15,6 +15,7 @@ use zip::write::{SimpleFileOptions, ZipWriter};
 
 use crate::themes::package::crx::{self, CrxHeaderField, KeyProofField, SignedDataField};
 use crate::themes::package::extension_id;
+use crate::themes::package::manifest;
 use crate::themes::package::protobuf::length_delimited_field;
 use crate::themes::package::theme_manifest::{self, ThemeFileResult, invalid};
 use crate::ui::wording;
@@ -104,7 +105,7 @@ fn little_endian_length(length: usize) -> ThemeFileResult<[u8; 4]> {
 fn next_revision(key_file: &Path) -> io::Result<u16> {
     let counter_file = key_file.with_extension(REVISION_EXTENSION);
     let previous = if counter_file.exists() {
-        theme_manifest::parse_digits(fs::read_to_string(&counter_file)?.trim()).unwrap_or(0)
+        manifest::digits(fs::read_to_string(&counter_file)?.trim()).unwrap_or(0)
     } else {
         0
     };
@@ -247,7 +248,10 @@ mod tests {
         let zip_path = root.join("theme.zip");
         fs::write(
             &zip_path,
-            zip_of(&[(MANIFEST_NAME, br#"{"name":"z","version":"2","theme":{}}"#)]),
+            zip_of(&[(
+                MANIFEST_NAME,
+                br#"{"name":"z","manifest_version":3,"version":"2","theme":{}}"#,
+            )]),
         )
         .expect("zip");
         let packed = pack(&zip_path, &root.join("keys")).expect("pack");

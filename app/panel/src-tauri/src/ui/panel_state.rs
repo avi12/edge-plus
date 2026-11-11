@@ -1,6 +1,6 @@
 //! Everything the window shows, read fresh after every action.
 
-use crate::edge::version::edge_support::{self, FeatureState};
+use crate::edge::version::edge_support::{self, FeatureState, Support};
 use crate::edge::version::file_version::FileVersion;
 use crate::platform::settings::{Feature, Features, Theming};
 use crate::themes::sources::installed_themes::InstalledTheme;
@@ -12,6 +12,9 @@ pub struct PanelState {
     pub theming: Theming,
     /// Themes installed in Edge that the panel did not add.
     pub edge_themes: Vec<InstalledTheme>,
+    /// The id of the theme Edge wears now, whether the panel added it or not;
+    /// empty for Edge's default theme, None when unknown.
+    pub worn_theme: Option<String>,
     pub is_edge_running: bool,
     pub is_start_with_windows: bool,
     pub is_split_loaded: bool,
@@ -22,17 +25,14 @@ pub struct PanelState {
     /// The running build, else the installed one; None when it cannot be read.
     pub edge_build: Option<FileVersion>,
     pub supported_edge_build: FileVersion,
+    /// What the DLL said about that build (`edge_support::support_now`).
+    pub support: Support,
 }
 
 impl PanelState {
     #[must_use]
     pub fn state_of(&self, feature: Feature) -> FeatureState {
-        edge_support::state_of(
-            &self.features,
-            feature,
-            self.edge_build,
-            self.supported_edge_build,
-        )
+        edge_support::state_of(&self.features, feature, self.support)
     }
 
     /// A paused or unavailable switch is held as it is until a supported build.
@@ -46,6 +46,6 @@ impl PanelState {
 
     #[must_use]
     pub fn paused(&self) -> Vec<Feature> {
-        edge_support::paused(&self.features, self.edge_build, self.supported_edge_build)
+        edge_support::paused(&self.features, self.support)
     }
 }

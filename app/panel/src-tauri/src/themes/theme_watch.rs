@@ -20,11 +20,13 @@ use crate::ui::wording;
 const THREAD_NAME: &str = "Theme watch";
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
 
-/// `error` is None when the edit was applied.
+/// `error` is None when the edit was applied. `is_gone` is for a theme whose
+/// files were deleted: it went off light and dark, and `error` says so.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ThemeRefresh {
     pub id: String,
     pub error: Option<String>,
+    pub is_gone: bool,
 }
 
 pub struct ThemeWatch {
@@ -77,6 +79,10 @@ fn poll(fingerprints: &Mutex<Fingerprints>, on_refreshed: &impl Fn(ThemeRefresh)
     let mut fingerprints = fingerprints.lock().unwrap_or_else(PoisonError::into_inner);
     for theme in local_themes {
         let Some(fingerprint) = fingerprint(Path::new(&theme.origin)) else {
+            let is_worn = is_watching && settings.theming.is_assigned(&theme.id);
+            if is_worn {
+                on_refreshed(unassign_gone(theme));
+            }
             continue;
         };
         let Some(&known) = fingerprints.settled.get(&theme.id) else {
@@ -98,7 +104,28 @@ fn poll(fingerprints: &Mutex<Fingerprints>, on_refreshed: &impl Fn(ThemeRefresh)
         on_refreshed(ThemeRefresh {
             id: theme.id.clone(),
             error: refresh(theme),
+            is_gone: false,
         });
+    }
+}
+
+/// A theme whose folder or file was deleted stops being worn: Edge goes back
+/// to its default theme, and the user is told why.
+fn unassign_gone(theme: &ThemeEntry) -> ThemeRefresh {
+    let error = match theme_library::unassign(&theme.id) {
+        Ok(()) => wording::theme_files_gone(&theme.name),
+        Err(error) => {
+            panel_log::write(&format!(
+                "taking the deleted theme {} off light and dark failed: {error:?}",
+                theme.id
+            ));
+            wording::ACTION_FAILED.to_owned()
+        }
+    };
+    ThemeRefresh {
+        id: theme.id.clone(),
+        error: Some(error),
+        is_gone: true,
     }
 }
 

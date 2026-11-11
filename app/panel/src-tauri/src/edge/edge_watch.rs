@@ -117,12 +117,11 @@ pub fn reconcile() -> io::Result<Option<BuildChange>> {
             dll_sync::apply(&settings);
         }
     }
-    let pinned = edge_build::pinned();
-    let paused = edge_support::paused(&settings.features, Some(build), pinned);
+    let paused = edge_support::paused(&settings.features, edge_support::support_now(Some(build)));
     Ok(Some(BuildChange {
         edge_build: build,
         previous_build: previous,
-        supported_build: pinned,
+        supported_build: edge_build::pinned(),
         paused,
     }))
 }

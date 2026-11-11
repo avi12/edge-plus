@@ -30,16 +30,22 @@ struct Wire {
   uint32_t enhancedFindActive;
   uint32_t webUiFollowsThemeActive;
   uint32_t livePreviewActive;
-  uint32_t tabShapeActive;      // with theming on
+  // With theming on. Was the cut-corner tabs' switch, which the skin replaced
+  // in the same place, so a file written before carries over.
+  uint32_t cyberpunkSkinActive;
   uint32_t readingThemeActive;  // its two themes are kept by reading_mode.h
+  // The theme Edge+ is installing without being asked to wear it: when Edge
+  // would make it the active one, theme_hold.h keeps it installed but off.
+  uint32_t holdLength;  // 0 = none
+  char holdId[kIdCapacity];
 };
 // ConfigWire.cs writes exactly this many bytes, so the struct must stay packed.
 // A panel that still writes the two reading themes after the switch (180 bytes)
 // is read for its first sizeof(Wire) bytes.
 // @share WireFieldCount
-inline constexpr size_t kWireFieldCount = 11;
+inline constexpr size_t kWireFieldCount = 12;
 // @share WireIdCount
-inline constexpr size_t kWireIdCount = 2;
+inline constexpr size_t kWireIdCount = 3;
 static_assert(sizeof(Wire) == kWireFieldCount * sizeof(uint32_t) +
                                   kWireIdCount * size_t{kIdCapacity},
               "Wire must stay packed as ConfigWire.cs writes it");
@@ -51,9 +57,11 @@ inline constexpr DWORD kBeforeWebUiWireSize =
     offsetof(Wire, webUiFollowsThemeActive);
 inline constexpr DWORD kBeforeLivePreviewWireSize =
     offsetof(Wire, livePreviewActive);
-inline constexpr DWORD kBeforeTabShapeWireSize = offsetof(Wire, tabShapeActive);
+inline constexpr DWORD kBeforeCyberpunkSkinWireSize =
+    offsetof(Wire, cyberpunkSkinActive);
 inline constexpr DWORD kBeforeReadingThemeWireSize =
     offsetof(Wire, readingThemeActive);
+inline constexpr DWORD kBeforeHoldWireSize = offsetof(Wire, holdLength);
 
 // A DLL injected into an already-open Edge reads the current state here at
 // load; on a change the panel rewrites it and signals kConfigEvent.
@@ -89,10 +97,11 @@ inline constexpr char kLocalAppDataVariable[] = "LOCALAPPDATA";
   const bool isRead = ReadFile(file.Get(), out, sizeof(Wire), &read, nullptr);
   const bool isKnownSize =
       isRead &&
-      (read == sizeof(Wire) || read == kBeforeReadingThemeWireSize ||
-       read == kBeforeTabShapeWireSize || read == kBeforeLivePreviewWireSize ||
-       read == kBeforeWebUiWireSize || read == kBeforeFindWireSize ||
-       read == kLegacyWireSize);
+      (read == sizeof(Wire) || read == kBeforeHoldWireSize ||
+       read == kBeforeReadingThemeWireSize ||
+       read == kBeforeCyberpunkSkinWireSize ||
+       read == kBeforeLivePreviewWireSize || read == kBeforeWebUiWireSize ||
+       read == kBeforeFindWireSize || read == kLegacyWireSize);
   return isKnownSize;
 }
 

@@ -3,4 +3,5 @@
 
 pub mod external_extensions;
 pub mod installed_themes;
+pub mod store_package;
 pub mod store_url;

@@ -248,7 +248,7 @@ inline void RepaintPreviewTab(void* tab) {
     return;
   }
   using Fn = void(__fastcall*)(void*);
-  reinterpret_cast<Fn>(edge::At(edge155::rva::EdgeTab_UpdateForegroundColors))(
+  edge::Callable<Fn>(edge155::rva::EdgeTab_UpdateForegroundColors)(
       edge::TabObjectOfView(tab));
   edge::SchedulePaint(tab);
 }

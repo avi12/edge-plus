@@ -38,7 +38,7 @@ pub fn depends_on_pinned_build(feature: Feature) -> bool {
         | Feature::EnhancedFind
         | Feature::WebUiFollowsTheme
         | Feature::LivePreview
-        | Feature::TabShape
+        | Feature::CyberpunkSkin
         | Feature::ReadingTheme => true,
         Feature::QuietDevMode => false,
     }
@@ -58,6 +58,7 @@ pub fn judged(builds: &[FileVersion], pinned: FileVersion) -> Option<FileVersion
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dll::dll_status::{DllStatus, Mode};
     use crate::edge::version::edge_support;
     use crate::platform::settings::Features;
 
@@ -68,7 +69,7 @@ mod tests {
         Feature::EnhancedFind,
         Feature::WebUiFollowsTheme,
         Feature::LivePreview,
-        Feature::TabShape,
+        Feature::CyberpunkSkin,
         Feature::ReadingTheme,
     ];
 
@@ -108,19 +109,36 @@ mod tests {
     }
 
     #[test]
-    fn the_pinned_build_blocks_nothing_and_any_other_blocks_the_dll_features() {
+    fn the_pinned_build_blocks_nothing_and_a_build_the_dll_refused_blocks_the_dll_features() {
         let pinned = version("155.0.4283.45");
+        let pinned_support = edge_support::support_of(Some(pinned), pinned, None);
         assert_eq!(
             Vec::<Feature>::new(),
-            edge_support::paused(&all_on(), Some(pinned), pinned)
+            edge_support::paused(&all_on(), pinned_support)
         );
+        for other in ["155.0.4300.2", "154.0.4100.1"] {
+            let report = DllStatus {
+                mode: Mode::Refused,
+                build: version(other),
+                available_features: 0,
+                resolved_entries: 0,
+                total_entries: 0,
+            };
+            let support = edge_support::support_of(Some(version(other)), pinned, Some(&report));
+            assert_eq!(
+                DLL_FEATURES.to_vec(),
+                edge_support::paused(&all_on(), support)
+            );
+        }
+    }
+
+    #[test]
+    fn another_build_blocks_nothing_until_the_dll_reports() {
+        let pinned = version("155.0.4283.45");
+        let support = edge_support::support_of(Some(version("155.0.4300.2")), pinned, None);
         assert_eq!(
-            DLL_FEATURES.to_vec(),
-            edge_support::paused(&all_on(), Some(version("155.0.4300.2")), pinned)
-        );
-        assert_eq!(
-            DLL_FEATURES.to_vec(),
-            edge_support::paused(&all_on(), Some(version("154.0.4100.1")), pinned)
+            Vec::<Feature>::new(),
+            edge_support::paused(&all_on(), support)
         );
     }
 
@@ -129,11 +147,7 @@ mod tests {
         let mut only_theming = Features::none();
         only_theming.theming = true;
         only_theming.quiet_dev_mode = true;
-        let paused = edge_support::paused(
-            &only_theming,
-            Some(version("156.0.1.0")),
-            version("155.0.4283.45"),
-        );
+        let paused = edge_support::paused(&only_theming, edge_support::Support::Refused);
         assert_eq!(vec![Feature::Theming], paused);
     }
 

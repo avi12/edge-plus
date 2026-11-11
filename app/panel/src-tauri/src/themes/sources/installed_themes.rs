@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
-use crate::edge::edge_user_data::{PREFERENCES_FILE, read_json};
+use crate::edge::edge_user_data::read_json;
 use crate::themes::package::extension_id;
 use crate::themes::package::theme_manifest::{MANIFEST_NAME, manifest_keys};
 
@@ -15,7 +15,6 @@ use crate::themes::package::theme_manifest::{MANIFEST_NAME, manifest_keys};
 pub struct InstalledTheme {
     pub id: String,
     pub name: String,
-    pub is_active: bool,
 }
 
 const MESSAGE_PREFIX: &str = "__MSG_";
@@ -82,15 +81,15 @@ pub fn registered_ids(secure_preferences: Option<&Value>) -> Option<HashSet<Stri
     Some(settings.as_object()?.keys().cloned().collect())
 }
 
-/// Each id once, active if it is active in any profile, ordered by name.
+/// Each id once, ordered by name.
 #[must_use]
 pub fn scan(user_data: &Path) -> Vec<InstalledTheme> {
     let mut found: Vec<InstalledTheme> = Vec::new();
     for profile in profile_folders(user_data) {
         for theme in scan_profile(&profile) {
-            match found.iter_mut().find(|existing| existing.id == theme.id) {
-                None => found.push(theme),
-                Some(known) => known.is_active |= theme.is_active,
+            let is_known = found.iter().any(|existing| existing.id == theme.id);
+            if !is_known {
+                found.push(theme);
             }
         }
     }
@@ -136,7 +135,6 @@ fn profile_folders(user_data: &Path) -> Vec<PathBuf> {
 }
 
 fn scan_profile(profile: &Path) -> Vec<InstalledTheme> {
-    let active = active_theme_id(read_json(&profile.join(PREFERENCES_FILE)).as_ref());
     let registered = registered_ids(read_json(&profile.join(SECURE_PREFERENCES_FILE)).as_ref());
     let Some(extensions) = sub_folders(&profile.join(EXTENSIONS_FOLDER)) else {
         return Vec::new();
@@ -156,12 +154,7 @@ fn scan_profile(profile: &Path) -> Vec<InstalledTheme> {
         let Some(name) = name else {
             continue;
         };
-        let is_active = active.as_deref() == Some(id.as_str());
-        themes.push(InstalledTheme {
-            id,
-            name,
-            is_active,
-        });
+        themes.push(InstalledTheme { id, name });
     }
     themes
 }
@@ -285,7 +278,7 @@ mod tests {
 
     // Needs edge_user_data::read_json, which another part of the rewrite fills.
     #[test]
-    fn a_scan_lists_installed_themes_and_marks_the_active_one() {
+    fn a_scan_lists_installed_themes() {
         let root = std::env::temp_dir().join(format!("edgeplus-themes-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         let profile = root.join("Default");
@@ -304,11 +297,6 @@ mod tests {
         let plain = profile.join(EXTENSIONS_FOLDER).join(&other).join("2.0_0");
         fs::create_dir_all(&plain).expect("folder");
         fs::write(plain.join(MANIFEST_NAME), r#"{"name":"Tool"}"#).expect("manifest");
-        fs::write(
-            profile.join(PREFERENCES_FILE),
-            format!(r#"{{"extensions":{{"theme":{{"id":"{id}"}}}}}}"#),
-        )
-        .expect("preferences");
 
         let themes = scan(&root);
         fs::remove_dir_all(&root).expect("clean up");
@@ -317,10 +305,9 @@ mod tests {
             InstalledTheme {
                 id,
                 name: "Night".to_owned(),
-                is_active: true
             },
             themes[0],
-            "named from its locale and marked in use"
+            "named from its locale"
         );
     }
 }

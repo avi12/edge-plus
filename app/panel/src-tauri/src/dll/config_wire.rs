@@ -2,6 +2,7 @@
 //! u32 little-endian as the DLL reads it on x64. The reserved u32 was once the
 //! chosen assistant: written as zero, never read.
 
+use crate::dll::theme_hold;
 use crate::platform::settings::{Features, Settings};
 use crate::platform::shared;
 
@@ -17,10 +18,12 @@ pub struct DllConfig {
     pub is_protocol_handlers_active: bool,
     pub light_id: String,
     pub dark_id: String,
+    /// The theme being installed without being worn (`dll::theme_hold`).
+    pub hold_id: String,
     pub is_enhanced_find_active: bool,
     pub is_web_ui_follows_theme_active: bool,
     pub is_live_preview_active: bool,
-    pub is_tab_shape_active: bool,
+    pub is_cyberpunk_skin_active: bool,
     pub is_reading_theme_active: bool,
 }
 
@@ -35,10 +38,11 @@ impl DllConfig {
             is_protocol_handlers_active: features.protocol_handlers,
             light_id: settings.theming.light.clone(),
             dark_id: settings.theming.dark.clone(),
+            hold_id: theme_hold::held(),
             is_enhanced_find_active: features.enhanced_find,
             is_web_ui_follows_theme_active: features.web_ui_follows_theme,
             is_live_preview_active: features.live_preview,
-            is_tab_shape_active: features.tab_shape,
+            is_cyberpunk_skin_active: features.cyberpunk_skin,
             is_reading_theme_active: features.reading_theme,
         }
     }
@@ -58,9 +62,11 @@ pub const RESERVED_OFFSET: usize = DARK_ID_OFFSET + ID_CAPACITY;
 pub const ENHANCED_FIND_ACTIVE_OFFSET: usize = RESERVED_OFFSET + FIELD_BYTES;
 pub const WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET: usize = ENHANCED_FIND_ACTIVE_OFFSET + FIELD_BYTES;
 pub const LIVE_PREVIEW_ACTIVE_OFFSET: usize = WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET + FIELD_BYTES;
-pub const TAB_SHAPE_ACTIVE_OFFSET: usize = LIVE_PREVIEW_ACTIVE_OFFSET + FIELD_BYTES;
-pub const READING_THEME_ACTIVE_OFFSET: usize = TAB_SHAPE_ACTIVE_OFFSET + FIELD_BYTES;
-pub const SIZE: usize = READING_THEME_ACTIVE_OFFSET + FIELD_BYTES;
+pub const CYBERPUNK_SKIN_ACTIVE_OFFSET: usize = LIVE_PREVIEW_ACTIVE_OFFSET + FIELD_BYTES;
+pub const READING_THEME_ACTIVE_OFFSET: usize = CYBERPUNK_SKIN_ACTIVE_OFFSET + FIELD_BYTES;
+pub const HOLD_LENGTH_OFFSET: usize = READING_THEME_ACTIVE_OFFSET + FIELD_BYTES;
+pub const HOLD_ID_OFFSET: usize = HOLD_LENGTH_OFFSET + FIELD_BYTES;
+pub const SIZE: usize = HOLD_ID_OFFSET + ID_CAPACITY;
 
 /// What config.h asserts at compile time, from its own counts.
 pub const SIZE_CONFIG_H_EXPECTS: usize =
@@ -111,13 +117,19 @@ pub fn encode(config: &DllConfig) -> [u8; SIZE] {
     );
     write_flag(
         &mut wire,
-        TAB_SHAPE_ACTIVE_OFFSET,
-        config.is_tab_shape_active,
+        CYBERPUNK_SKIN_ACTIVE_OFFSET,
+        config.is_cyberpunk_skin_active,
     );
     write_flag(
         &mut wire,
         READING_THEME_ACTIVE_OFFSET,
         config.is_reading_theme_active,
+    );
+    write_id(
+        &mut wire,
+        HOLD_LENGTH_OFFSET,
+        HOLD_ID_OFFSET,
+        &config.hold_id,
     );
     wire
 }
@@ -161,17 +173,18 @@ mod tests {
             is_protocol_handlers_active: is_on,
             light_id: light_id.to_owned(),
             dark_id: String::new(),
+            hold_id: String::new(),
             is_enhanced_find_active: is_on,
             is_web_ui_follows_theme_active: is_on,
             is_live_preview_active: is_on,
-            is_tab_shape_active: is_on,
+            is_cyberpunk_skin_active: is_on,
             is_reading_theme_active: is_on,
         }
     }
 
     #[test]
-    fn the_wire_is_config_hs_172_bytes() {
-        assert_eq!(172, SIZE);
+    fn the_wire_is_config_hs_240_bytes() {
+        assert_eq!(240, SIZE);
         assert_eq!(
             SIZE_CONFIG_H_EXPECTS, SIZE,
             "the layout matches config.h's own counts"
@@ -181,8 +194,11 @@ mod tests {
     #[test]
     fn every_field_lands_at_its_offset() {
         let wire = encode(&config("abc", true));
-        assert_eq!(164, TAB_SHAPE_ACTIVE_OFFSET, "the tab shape at 164");
-        assert_eq!(1, u32_at(&wire, 164), "tab shape on");
+        assert_eq!(
+            164, CYBERPUNK_SKIN_ACTIVE_OFFSET,
+            "the Cyberpunk skin at 164"
+        );
+        assert_eq!(1, u32_at(&wire, 164), "the Cyberpunk skin on");
         assert_eq!(
             168, READING_THEME_ACTIVE_OFFSET,
             "the reading theme switch at 168"
@@ -207,6 +223,17 @@ mod tests {
         assert_eq!(1, u32_at(&wire, 152), "find on");
         assert_eq!(1, u32_at(&wire, 156), "WebUI on");
         assert_eq!(1, u32_at(&wire, 160), "live preview on");
+    }
+
+    #[test]
+    fn the_held_theme_follows_the_reading_theme_switch() {
+        let mut held = config("abc", true);
+        held.hold_id = "held-id".to_owned();
+        let wire = encode(&held);
+        assert_eq!(172, HOLD_LENGTH_OFFSET, "the hold after the reading switch");
+        assert_eq!(7, u32_at(&wire, HOLD_LENGTH_OFFSET));
+        assert_eq!(b"held-id", &wire[HOLD_ID_OFFSET..HOLD_ID_OFFSET + 7]);
+        assert_eq!(0, u32_at(&encode(&config("abc", true)), HOLD_LENGTH_OFFSET));
     }
 
     #[test]

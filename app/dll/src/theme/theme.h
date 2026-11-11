@@ -7,10 +7,12 @@
 #include <windows.h>
 #include <cstddef>
 #include <cstring>
+#include <string_view>
 #include "core/channel.h"
 #include "core/config.h"
 #include "edge/edge.h"
 #include "core/log.h"
+#include "theme/theme_wear.h"
 
 namespace edgeplus::theme {
 
@@ -33,7 +35,22 @@ struct ThemeId {
 
 inline constinit ThemeId g_lightTheme;
 inline constinit ThemeId g_darkTheme;
+// The theme being installed without being worn (theme_hold.h); empty for none.
+inline constinit ThemeId g_heldTheme;
 inline constinit bool g_isActive = false;
+// Edge's own theme has no theme pack, so nothing re-reads the colours the
+// Cyberpunk skin chose from the last one (hooks.h): they are stale while set.
+inline constinit bool g_isDefaultThemeApplied = false;
+// Read by the UseDefaultTheme detour (hooks.h) to tell Edge+'s own returns to
+// the default, and the drops Edge makes during Edge+'s switches, from the user's.
+inline constinit bool g_isUsingDefaultOurselves = false;
+inline constinit theme_wear::OwnSwitch g_ownSwitch;
+
+inline void UseDefaultOurselves(void* themeService) {
+  g_isUsingDefaultOurselves = true;
+  edge::ThemeUseDefault(themeService);
+  g_isUsingDefaultOurselves = false;
+}
 
 // AppsUseLightTheme absent means light.
 inline bool IsOsDarkMode() {
@@ -93,8 +110,9 @@ inline void Apply(void* hwnd, bool isDark) {
     return;
   }
   const ThemeId& wanted = isDark ? g_darkTheme : g_lightTheme;
+  g_isDefaultThemeApplied = wanted.IsEmpty();
   if (wanted.IsEmpty()) {
-    edge::ThemeUseDefault(themeService);
+    UseDefaultOurselves(themeService);
     ScheduleRepaint(hwnd);
     Log("[theme] %s -> default theme", isDark ? "dark" : "light");
     return;
@@ -123,6 +141,8 @@ inline void Apply(void* hwnd, bool isDark) {
   if (isDisabled) {
     edge::EnableDisabledExtension(profile, wanted.value);
   }
+  g_ownSwitch.Started(std::string_view(wanted.value, wanted.length),
+                      GetTickCount64());
   edge::ThemeSetFromExtension(themeService, extension);
   ScheduleRepaint(hwnd);
   Log("[theme] %s -> %.*s applied (was %s)", isDark ? "dark" : "light",
@@ -141,6 +161,7 @@ inline void ApplyForCurrentOsMode(void* hwnd) {
 inline void ApplyConfig(void* hwnd, const config::Wire& wire) {
   g_lightTheme.Set(wire.lightId, wire.lightLength);
   g_darkTheme.Set(wire.darkId, wire.darkLength);
+  g_heldTheme.Set(wire.holdId, wire.holdLength);
   g_installRetries = 0;
   const bool wasActive = g_isActive;
   g_isActive = wire.themingActive != 0;
@@ -155,9 +176,10 @@ inline void ApplyConfig(void* hwnd, const config::Wire& wire) {
     return;
   }
   Log("[theme] disabled; reverting to default theme");
+  g_isDefaultThemeApplied = true;
   void* themeService = edge::ThemeServiceForWindow(hwnd);
   if (themeService) {
-    edge::ThemeUseDefault(themeService);
+    UseDefaultOurselves(themeService);
   }
 }
 

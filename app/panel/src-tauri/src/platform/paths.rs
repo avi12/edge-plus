@@ -25,8 +25,14 @@ pub fn local_app_data() -> PathBuf {
 /// The desired state the DLL reads at load and on every change.
 #[must_use]
 pub fn config_file() -> PathBuf {
+    under_local_app_data(shared::CONFIG_FILE_RELATIVE_PATH)
+}
+
+/// A file the DLL names by its path under `%LOCALAPPDATA%` (a leading `\`).
+#[must_use]
+pub fn under_local_app_data(relative_path: &str) -> PathBuf {
     let mut path = local_app_data().into_os_string();
-    path.push(shared::CONFIG_FILE_RELATIVE_PATH);
+    path.push(relative_path);
     PathBuf::from(path)
 }
 

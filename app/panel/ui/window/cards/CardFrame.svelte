@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { CssVisibility } from "../style/css-visibility.ts";
   import { type CardLabel, provideCardLabel } from "./card-label.ts";
   import type { Snippet } from "svelte";
   import { elementRef } from "winui-svelte";
@@ -11,7 +12,6 @@
     StackPanel,
     TextBlock
   } from "winui-svelte/components";
-  import { Visibility } from "winui-svelte/enums";
 
   interface Props {
     glyph: GlyphInput;
@@ -32,7 +32,10 @@
     <FontIcon class="card-icon" {glyph}/>
     <StackPanel class="card-words">
       {@render children()}
-      <TextBlock class="note" visibility={hasNote ? Visibility.Visible : Visibility.Collapsed}>{note}</TextBlock>
+      <TextBlock
+        style:visibility={hasNote ? CssVisibility.visible : CssVisibility.hidden}
+        class="note"
+      >{note}</TextBlock>
     </StackPanel>
     <Border class="card-end">
       {@render end(label)}

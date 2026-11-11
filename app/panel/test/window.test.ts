@@ -32,7 +32,7 @@ const SWITCH_KEYS = [
   "nativeSplit",
   "livePreview",
   "theming",
-  "tabShape",
+  "cyberpunkSkin",
   "webUiFollowsTheme",
   "readingTheme",
   "enhancedFind",
