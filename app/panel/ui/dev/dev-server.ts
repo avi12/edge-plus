@@ -8,19 +8,19 @@ import { createInterface } from "node:readline";
 // The panel's dev server: the window stays up and the side that drives it
 // reloads under it, so an edit shows without a restart.
 //
-//   pnpm dev        the real Rust core, built and started by this process, in a
-//                   sandbox: its data folder is .verify/dev-data (not yours) and
-//                   Edge is the installed folder read for its version only, so
-//                   it never injects into or changes the Edge you use. It still
-//                   writes the start-up entry if you switch that on.
-//   pnpm dev:live   the same core on the machine itself.
+//   pnpm dev          the real Rust core, built and started by this process, on
+//                     the machine itself.
+//   pnpm dev:sandbox  the same core in a sandbox: its data folder is
+//                     .verify/dev-data (not yours) and Edge is the installed
+//                     folder read for its version only, so it never injects
+//                     into or changes the Edge you use. It still writes the
+//                     start-up entry if you switch that on.
 //
-// WARNING, pnpm dev:live: at start it injects the split DLL into EVERY Edge
-// browser process on the pinned build, and it changes the settings, the
-// start-up entry and Edge's themes like the installed panel. Never run it
-// against an Edge you are using. Both refuse to start while any edgeplus.exe
-// is running (the single-instance guard would hand its start-up to that one),
-// naming the pid.
+// WARNING, pnpm dev: at start it injects the split DLL into EVERY Edge browser
+// process on the pinned build, and it changes the settings, the start-up entry
+// and Edge's themes like the installed panel. Both refuse to start while any
+// edgeplus.exe is running (the single-instance guard would hand its start-up
+// to that one), naming the pid.
 //
 // How the window outlives the core: this process owns the window's process
 // (window-supervisor.ts) and serves a named pipe. The real core is started
@@ -35,8 +35,8 @@ import { createInterface } from "node:readline";
 //
 // Press Enter to build and start the core again after it ended.
 
-const LIVE_FLAG = "--live";
-const IS_LIVE = process.argv.includes(LIVE_FLAG);
+const SANDBOX_FLAG = "--sandbox";
+const IS_LIVE = !process.argv.includes(SANDBOX_FLAG);
 const APP_ROOT = path.join(import.meta.dirname, "..", "..");
 const CORE_ROOT = path.join(APP_ROOT, "src-tauri");
 const WINDOW_ENTRY = path.join(APP_ROOT, "ui", "main.ts");
@@ -127,7 +127,7 @@ function sandboxEnvironment() {
 
 function installedEdgeFolder() {
   const listing = execFileSync("reg", ["query", EDGE_APP_PATHS_KEY, "/ve"], { encoding: "utf8" });
-  const match = /REG_SZs+(.+.exe)s*$/imu.exec(listing);
+  const match = /REG_SZ\s+(.+\.exe)\s*$/imu.exec(listing);
   if (match === null) {
     throw new Error("Edge is not installed: the sandboxed core reads its version from the install folder");
   }

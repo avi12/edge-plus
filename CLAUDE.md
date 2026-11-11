@@ -207,20 +207,20 @@ side and must match the DLL's (`app/dll/src/{config.h,dllmain.cpp,log.h}`).
   rules apply.
 - **Build, test, run** (in `app/panel`): `pnpm restore` once, `pnpm
   build` (the kit, then the release exe), `pnpm test` (`node --test` and `cargo
-  test`), `pnpm app` (the full panel from source), and `pnpm dev` (the real Rust core in a
-  sandbox, with the window kept up for good: `ui/dev/dev-server.ts`). The
-  sandbox gives the core its own data folder (`LOCALAPPDATA` under `.verify/`)
+  test`), `pnpm app` (the full panel from source), and `pnpm dev` (the real Rust core, with the window kept up for good: `ui/dev/dev-server.ts`).
+  `pnpm dev:sandbox` gives the core its own data folder (`LOCALAPPDATA` under `.verify/`)
   and reads Edge's version from the install folder
   (`EDGEPLUS_SIMULATE_EDGE_DIR`), so your Edge and settings stay untouched; a
   saved `.svelte`/`.ts` hot reloads in place, a saved `.rs` rebuilds, a good
   build swaps the core it started, a failed one keeps the old core and prints
   the error, and the window never closes (the core is told to start
   `ui/dev/relay.ts` as its window through `EDGEPLUS_WINDOW_COMMAND`). `pnpm
-  dev:live` is the same on the machine itself (it **injects into every Edge on
-  the pinned build**). Both refuse to start while an `edgeplus.exe` runs. There
+  dev` is live: the core runs on the machine itself and **injects into every
+  Edge on the pinned build**; `pnpm dev:sandbox` is the same in a sandbox. Both refuse to start while an `edgeplus.exe` runs. There
   is no fake core: the window tests (`pnpm test:windows`) and `scripts/capture.ts`
   drive the same sandboxed real core (`test/real-core.ts`; `cargo build` first).
-- **Never run the full panel against Avi's Edge** unless asked: at start it
+- **Never run the full panel against Avi's Edge** unless asked (`pnpm dev` is
+  live because Avi asked for it, so theme changes reach his Edge): at start it
   injects the DLL into every Edge browser process on the pinned build,
   replacing a loaded DLL that differs from the one it carries. To compare it
   with the C# panel, run both in Windows Sandbox (Smart App Control blocks

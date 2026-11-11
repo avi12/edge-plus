@@ -13,7 +13,7 @@
     "bindings": "winapp node generate-bindings",
     "app": "cargo run --manifest-path src-tauri/Cargo.toml",
     "dev": "node --disable-warning=ExperimentalWarning ui/dev/dev-server.ts",
-    "dev:live": "node --disable-warning=ExperimentalWarning ui/dev/dev-server.ts --live",
+    "dev:sandbox": "node --disable-warning=ExperimentalWarning ui/dev/dev-server.ts --sandbox",
     "build:window": "node --disable-warning=ExperimentalWarning scripts/build-window.ts",
     "build": "pnpm build:window && cargo build --release --manifest-path src-tauri/Cargo.toml",
     "check": "tsc --noEmit && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
