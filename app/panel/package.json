@@ -38,7 +38,7 @@
     "@microsoft/dynwinrt": "0.1.0-preview.23",
     "@winapp/bindings": "link:.winapp/bindings",
     "svelte": "5.56.7",
-    "winui-svelte": "^0.0.13",
+    "winui-svelte": "^0.0.15",
     "zod": "^4.6.7"
   },
   "devDependencies": {
