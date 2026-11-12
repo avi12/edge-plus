@@ -11,18 +11,16 @@ and cut at the corner.*
 
 ## Install
 
-Install Edge+ with the `.msix` file; it is the only supported install. Every
-[release](https://github.com/avi12/edge-plus/releases) has `EdgePlus-<version>.msix`
-and `EdgePlus.cer`, the certificate it is signed with. Download both, trust the
-certificate once from an administrator PowerShell, then install the package:
+Download `EdgePlus-Setup.exe` from the latest
+[release](https://github.com/avi12/edge-plus/releases) and open it. It installs
+Edge+ for you alone (no administrator rights, no certificate): the app goes under
+`%LOCALAPPDATA%\EdgePlus`, with a Start menu shortcut and an entry in Windows'
+**Add or remove programs**, and it starts. Edge+ then updates itself.
 
-```powershell
-Import-Certificate -FilePath EdgePlus.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-Add-AppxPackage EdgePlus-<version>.msix
-```
-
-Or double-click the `.msix` after trusting the certificate. Edge+ then updates
-itself.
+To uninstall, use **Add or remove programs** (Settings, Apps, Installed apps),
+or **Uninstall** from the Start menu entry. It removes the shortcut, the
+start-at-sign-in entry and Edge+'s data, and tells the injected DLL to unload
+itself; Edge keeps running, and never needs to be closed.
 
 ## Requirements
 
@@ -97,7 +95,7 @@ hiding the developer-mode prompt, which only edits Edge's `Preferences`.
 ### Edge+ itself
 
 - **Updates itself** — checks this repository for a newer release at start and
-  every six hours, downloads its package in the background and checks it, then
+  every six hours, downloads the new version in the background and checks it, then
   offers **Restart to update** in the window. Edge keeps running through it.
   The "Check for updates" switch turns it off, and with it every connection
   Edge+ makes (`docs/RELEASING.md`).
@@ -115,7 +113,6 @@ app/
                  Win32) and a WinUI 3 window drawn from TypeScript, with one
                  switch per feature, in titled sections
   dll/           the C++ DLL the panel injects into Edge's browser process
-  package/       the MSIX manifest the panel is packaged with
 ```
 
 [ARCHITECTURE.md](ARCHITECTURE.md) has the full picture: the components, how a
@@ -137,7 +134,7 @@ standalone tabs first, so nothing Edge can't render on its own is left behind.
 
 ## Setup
 
-Install Edge+ from its `.msix` package; see *Install* above. To build it
+Install Edge+ with `EdgePlus-Setup.exe`; see *Install* above. To build it
 yourself:
 
 ```powershell
