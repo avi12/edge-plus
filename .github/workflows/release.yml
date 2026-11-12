@@ -1,0 +1,51 @@
+# Builds the panel when a v* tag is pushed (tools/Release.ps1 creates it with
+# the GitHub release) and attaches what installed copies and new users need:
+# EdgePlus-Setup.exe, the zip of the version and releases.json, the feed that
+# `releases/latest/download/` serves.
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - name: The tag names the version in Cargo.toml
+        shell: pwsh
+        run: |
+          Import-Module ./tools/EdgePlus.Build.psm1
+          $version = Get-ProductVersion
+          if ("v$version" -ne $env:GITHUB_REF_NAME) {
+            throw "Tag $env:GITHUB_REF_NAME does not match Cargo.toml's $version."
+          }
+      - name: Build the exe, which embeds the window kit and the pinned DLL
+        shell: pwsh
+        run: |
+          Import-Module ./tools/EdgePlus.Build.psm1
+          Build-ReleaseExe | Out-Host
+          cargo build --release --manifest-path app/panel/src-tauri/Cargo.toml -p edgeplus-launcher
+      - name: Pack the Squirrel-style release
+        run: pnpm --dir app/panel create-release
+      - name: Attach it to the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view $env:GITHUB_REF_NAME --json tagName 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $env:GITHUB_REF_NAME --title "Edge+ $($env:GITHUB_REF_NAME.TrimStart('v'))" --generate-notes
+          }
+          gh release upload $env:GITHUB_REF_NAME out/release/EdgePlus-Setup.exe out/release/EdgePlus-*.zip out/release/releases*.json --clobber

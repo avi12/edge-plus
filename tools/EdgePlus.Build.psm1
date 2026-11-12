@@ -2,22 +2,13 @@
 
 Set-StrictMode -Version Latest
 
-class ReleaseAsset {
-    [string] $Repository
-    [string] $Tag
-    [string] $Exe
-    [string] $Package
-    [string] $Certificate
-    [string] $Url
-}
-
 function Get-RepoRoot {
     [OutputType([string])]
     param()
     return Split-Path -Parent $PSScriptRoot
 }
 
-# Where a release's exe, package and certificate are gathered before they are
+# Where a release's zip, feed and setup exe are gathered before they are
 # uploaded.
 function Get-ReleaseFolder {
     [OutputType([string])]
@@ -165,22 +156,6 @@ function Set-ProductVersion {
     Set-Content $manifest $text -Encoding utf8NoBOM -NoNewline
 }
 
-# A stale build must not be packed or published as the new release.
-function Assert-ExeVersion {
-    [OutputType([void])]
-    param(
-        [Parameter(Mandatory)]
-        [string] $exePath,
-        [Parameter(Mandatory)]
-        [string] $version
-    )
-    [string] $builtVersion = (Get-Item $exePath).VersionInfo.ProductVersion
-    [bool] $isVersionCurrent = $builtVersion -eq $version
-    if (-not $isVersionCurrent) {
-        throw "$exePath is version $builtVersion, but Cargo.toml says $version."
-    }
-}
-
 # The release build: the window kit (pnpm build:window), then the core in
 # release, which embeds it. Returns the exe.
 function Build-ReleaseExe {
@@ -195,26 +170,6 @@ function Build-ReleaseExe {
     return Join-Path $panel 'src-tauri\target\release\edgeplus.exe'
 }
 
-# A release's files on GitHub, as the release attaches them (the package and the
-# certificate that makes Windows accept it) and the update manifest names them.
-# The exe is only the build the package carries.
-function Get-ReleaseAsset {
-    [OutputType([ReleaseAsset])]
-    param(
-        [Parameter(Mandatory)]
-        [string] $version
-    )
-    [string] $repository = 'avi12/edge-plus'
-    return [ReleaseAsset]@{
-        Repository  = $repository
-        Tag         = "v$version"
-        Exe         = "EdgePlus-$version.exe"
-        Package     = "EdgePlus-$version.msix"
-        Certificate = 'EdgePlus.cer'
-        Url         = "https://github.com/$repository/releases/download/v$version"
-    }
-}
-
 Export-ModuleMember -Function Get-RepoRoot, Get-ReleaseFolder, Get-BuildScriptPath, Get-BuildSetting,
     Get-VcVarsPath, Find-SdkTool, Invoke-Checked, Write-Step, Get-CargoManifestPath, Get-ProductVersion,
-    Set-ProductVersion, Assert-ExeVersion, Build-ReleaseExe, Get-ReleaseAsset
+    Set-ProductVersion, Build-ReleaseExe
