@@ -883,12 +883,16 @@ dependencies = [
  "tauri-plugin-single-instance",
  "ts-rs",
  "ureq",
+ "winui-svelte-launcher",
  "zip",
 ]
 
 [[package]]
 name = "edgeplus-launcher"
 version = "0.0.1"
+dependencies = [
+ "winui-svelte-launcher",
+]
 
 [[package]]
 name = "embed-resource"
@@ -4847,6 +4851,11 @@ dependencies = [
  "cfg-if",
  "windows-sys 0.61.2",
 ]
+
+[[package]]
+name = "winui-svelte-launcher"
+version = "0.0.1"
+source = "git+https://github.com/avi12/winui-svelte?rev=9bcd1ca2be103751397dded1d92e41c6a9850eed#9bcd1ca2be103751397dded1d92e41c6a9850eed"
 
 [[package]]
 name = "wit-bindgen"

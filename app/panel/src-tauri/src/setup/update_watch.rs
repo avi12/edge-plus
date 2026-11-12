@@ -1,8 +1,8 @@
-//! Asks the repository's update manifest (`update_feed`) for a newer release at
-//! start and then every six hours, and downloads it in the background so the
-//! window can offer a restart at once. Only the installed package updates: a
-//! build run from a checkout is never touched. Off (`Settings::auto_update`),
-//! Edge+ never contacts GitHub.
+//! Asks the release feed (`update_feed`) for a newer release at start and then
+//! every six hours, and stages it in the background (downloaded, checked and
+//! unpacked into its own `app-x.y.z` folder) so the window can offer a restart
+//! at once. Only an installed copy updates: a build run from a checkout is never
+//! touched. Off (`Settings::auto_update`), Edge+ never contacts GitHub.
 
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
@@ -11,23 +11,25 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, SystemTime};
 
+use winui_svelte_launcher::{
+    APPLY_SWITCH, Launcher, PACKAGES_FOLDER, STAGING_SUFFIX, Version, app_folder,
+    installed_versions,
+};
+
 use crate::platform::actions::panel_log;
 use crate::platform::identity::product;
 use crate::platform::paths;
 use crate::platform::service::poll_thread::PollThread;
 use crate::platform::settings::Settings;
-use crate::setup::update_feed::{self, UpdateAsset, Version};
-use crate::setup::{package_install, update_digest};
+use crate::setup::installation::EdgePlus;
+use crate::setup::update_feed::{self, UpdateOffer};
+use crate::setup::{install_layout, update_digest};
 
-/// A newer release whose file is downloaded and checked, waiting for the user
-/// to restart into it.
+/// A newer release unpacked beside the running one, waiting for the user to
+/// restart into it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ReadyUpdate {
     pub version: String,
-    pub file: PathBuf,
-    /// The manifest's digest of `file`, checked again before it is used, since
-    /// the download may have been altered since.
-    pub sha256: String,
 }
 
 const THREAD_NAME: &str = "Update watch";
@@ -39,9 +41,7 @@ const CHECK_EVERY: Duration = Duration::from_hours(6);
 const RETRY_AFTER: Duration = Duration::from_mins(30);
 const REQUEST_TIMEOUT: Duration = Duration::from_mins(10);
 const USER_AGENT_PRODUCT: &str = "EdgePlus";
-const DOWNLOAD_PREFIX: &str = "EdgePlus-";
 const DOWNLOAD_SUFFIX: &str = ".part";
-const PACKAGE_EXTENSION: &str = ".msix";
 const DOWNLOAD_CHUNK_BYTES: usize = 64 * 1024;
 
 pub struct UpdateWatch {
@@ -147,7 +147,7 @@ impl Watcher {
     }
 
     fn look(&self) -> Result<(), ureq::Error> {
-        let Some(current) = Version::parse(product::VERSION) else {
+        let Ok(current) = Version::parse(product::VERSION) else {
             return Ok(());
         };
         let agent: ureq::Agent = ureq::Agent::config_builder()
@@ -155,12 +155,9 @@ impl Watcher {
             .user_agent(format!("{USER_AGENT_PRODUCT}/{}", product::VERSION))
             .build()
             .into();
-        let manifest = agent
-            .get(update_feed::url())
-            .call()?
-            .body_mut()
-            .read_to_string()?;
-        let Some(offer) = update_feed::parse(&manifest, current) else {
+        let feed_url = update_feed::url();
+        let feed = agent.get(&feed_url).call()?.body_mut().read_to_string()?;
+        let Some(offer) = update_feed::parse(&feed, &feed_url, current) else {
             return Ok(());
         };
         let is_new = self
@@ -172,12 +169,9 @@ impl Watcher {
         if !is_new {
             return Ok(());
         }
-        let file_name = format!("{DOWNLOAD_PREFIX}{}{PACKAGE_EXTENSION}", offer.version);
-        let file = self.download(&agent, &offer.package, &file_name)?;
+        self.stage(&agent, &offer)?;
         let ready = ReadyUpdate {
             version: offer.version.to_string(),
-            file,
-            sha256: offer.package.sha256.clone(),
         };
         *self.pending.lock().unwrap_or_else(PoisonError::into_inner) = Some(Pending {
             version: offer.version,
@@ -187,39 +181,55 @@ impl Watcher {
         Ok(())
     }
 
-    /// Checked against the manifest's digest before it is kept; a download from
-    /// an earlier run that still matches is used as it is.
+    /// Downloaded and checked against the feed's size and digest, unpacked into
+    /// `app-x.y.z.staging` and renamed into place last, so a crash never leaves
+    /// half a version.
+    fn stage(&self, agent: &ureq::Agent, offer: &UpdateOffer) -> Result<(), ureq::Error> {
+        let root = install_layout::root();
+        let destination = app_folder(&root, offer.version);
+        if destination.is_dir() {
+            return Ok(());
+        }
+        let zip = self.download(agent, &root, offer)?;
+        let staging = PathBuf::from(format!("{}{STAGING_SUFFIX}", destination.display()));
+        let _ = fs::remove_dir_all(&staging);
+        fs::create_dir_all(&staging)?;
+        let archive = File::open(&zip)?;
+        zip::ZipArchive::new(archive)
+            .and_then(|mut archive| archive.extract(&staging))
+            .map_err(io::Error::other)?;
+        Launcher::new(EdgePlus, root).promote_staging(offer.version)?;
+        Ok(())
+    }
+
     fn download(
         &self,
         agent: &ureq::Agent,
-        asset: &UpdateAsset,
-        file_name: &str,
+        root: &Path,
+        offer: &UpdateOffer,
     ) -> Result<PathBuf, ureq::Error> {
-        let folder = paths::update_folder();
+        let folder = root.join(PACKAGES_FOLDER);
         fs::create_dir_all(&folder)?;
-        let target = folder.join(file_name);
-        let is_already_downloaded =
-            target.is_file() && update_digest::is_digest_of(&target, &asset.sha256)?;
-        if is_already_downloaded {
-            return Ok(target);
-        }
-        let partial = folder.join(format!("{file_name}{DOWNLOAD_SUFFIX}"));
-        let mut response = agent.get(&asset.download).call()?;
+        let target = folder.join(&offer.file);
+        let partial = folder.join(format!("{}{DOWNLOAD_SUFFIX}", offer.file));
+        let mut response = agent.get(&offer.download).call()?;
         {
             let mut source = response.body_mut().as_reader();
             let mut destination = File::create(&partial)?;
             self.copy_unless_cancelled(&mut source, &mut destination)?;
         }
-        if !update_digest::is_digest_of(&partial, &asset.sha256)? {
+        let is_whole = fs::metadata(&partial)?.len() == offer.size
+            && update_digest::is_digest_of(&partial, &offer.sha256)?;
+        if !is_whole {
             let _ = fs::remove_file(&partial);
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "the downloaded update does not match its digest",
+                "the downloaded update does not match its size or digest",
             )
             .into());
         }
         fs::rename(&partial, &target)?;
-        delete_other_downloads(&folder, file_name)?;
+        delete_other_downloads(&folder, &offer.file)?;
         Ok(target)
     }
 
@@ -261,27 +271,34 @@ fn delete_other_downloads(folder: &Path, keep: &str) -> io::Result<()> {
 }
 
 fn is_wanted() -> bool {
-    Settings::load().auto_update && package_install::is_packaged()
+    Settings::load().auto_update && install_layout::is_installed_run()
 }
 
-/// Hands the package to a hidden PowerShell that installs it once this process
-/// exits and starts the new app; the caller then ends this process.
-pub fn restart_into(update: &ReadyUpdate) -> io::Result<()> {
-    // Checked again here, since the download may have been altered since.
-    if !update_digest::is_digest_of(&update.file, &update.sha256)? {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "the downloaded package does not match its digest",
-        ));
+/// Hands the replacing to the launcher (`--apply`): it waits for this process to
+/// end, asks it to, then starts the newest version, and goes back to the one
+/// before it when that does not start. The caller then ends this process.
+pub fn restart_into(_update: &ReadyUpdate) -> io::Result<()> {
+    let launcher = install_layout::launcher(&install_layout::root());
+    let command = format!(
+        "\"{}\" {APPLY_SWITCH} {}",
+        launcher.display(),
+        std::process::id()
+    );
+    if edge_native::start_detached(&command) {
+        return Ok(());
     }
-    let Some(app_user_model_id) = package_install::app_user_model_id() else {
-        return Err(io::Error::other("this copy is not the installed package"));
-    };
-    let script =
-        package_install::update_script(std::process::id(), &update.file, &app_user_model_id);
-    let is_started = edge_native::start_detached(&package_install::hidden_powershell(&script));
-    if !is_started {
-        return Err(io::Error::other("the installer could not be started"));
+    Err(io::Error::other("the launcher could not be started"))
+}
+
+/// Removes the versions older than the running one and the zips already
+/// unpacked; a folder still in use stays for the next run. The running version
+/// has started, so the one before it is no longer needed for a rollback.
+pub fn prune(running: Version) {
+    let root = install_layout::root();
+    for version in installed_versions(&root) {
+        if version < running {
+            let _ = fs::remove_dir_all(app_folder(&root, version));
+        }
     }
-    Ok(())
+    let _ = fs::remove_dir_all(root.join(PACKAGES_FOLDER));
 }

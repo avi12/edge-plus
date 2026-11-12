@@ -33,6 +33,7 @@ sha2 = "0.10"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 ureq = "3"
 edge-native = { path = "edge-native" }
+winui-svelte-launcher = { git = "https://github.com/avi12/winui-svelte", rev = "9bcd1ca2be103751397dded1d92e41c6a9850eed" }
 
 [dev-dependencies]
 ts-rs = { version = "11", features = ["no-serde-warnings"] }
