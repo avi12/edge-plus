@@ -15,7 +15,7 @@
   ],
   "ignorePatterns": [".winapp/**", "src-tauri/**"],
   // Run by package.json scripts, which dependency scanning can't see through.
-  "ignoreDependencies": ["@microsoft/winappcli", "@microsoft/dynwinrt-codegen", "oxlint-tsgolint", "postcss-html", "stylelint-config-ccb"],
+  "ignoreDependencies": ["@microsoft/winappcli", "@microsoft/dynwinrt-codegen", "postcss-html", "avi12-lint", "eslint-config-avi12", "fallow-config-avi12", "oxlint-config-avi12", "oxlint-plugin-naming", "oxfmt-config-avi12", "stylelint-config-avi12"],
   // As avi/youtube-time-manager: no coverage is fed to fallow, so CRAP is
   // cyclomatic squared plus cyclomatic; the cognitive limit does the work. The
   // local ESLint rules are tooling, not the window.
