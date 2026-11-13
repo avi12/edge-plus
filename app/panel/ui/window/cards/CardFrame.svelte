@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CssVisibility } from "../style/css-visibility.ts";
+  import { CssVisibility } from "#src/window/style/css-visibility.ts";
   import { type CardLabel, provideCardLabel } from "./card-label.ts";
   import type { Snippet } from "svelte";
   import { elementRef } from "winui-svelte";
@@ -33,7 +33,7 @@
     <StackPanel class="card-words">
       {@render children()}
       <TextBlock
-        style:visibility={hasNote ? CssVisibility.visible : CssVisibility.hidden}
+        style:visibility={hasNote ? CssVisibility.VISIBLE : CssVisibility.HIDDEN}
         class="note"
       >{note}</TextBlock>
     </StackPanel>

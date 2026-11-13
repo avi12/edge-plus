@@ -16,7 +16,7 @@
   const buildNotice = $derived(pausedNotice(view));
 </script>
 
-<TextBlock style:visibility={view.isEdgeRunning ? CssVisibility.hidden : CssVisibility.visible} class="open-edge-hint">
+<TextBlock style:visibility={view.isEdgeRunning ? CssVisibility.HIDDEN : CssVisibility.VISIBLE} class="open-edge-hint">
   Open Edge to apply changes.
 </TextBlock>
 <InfoBar isClosable={false} isOpen={buildNotice.length > 0} message={buildNotice} severity={InfoBarSeverity.Warning} />

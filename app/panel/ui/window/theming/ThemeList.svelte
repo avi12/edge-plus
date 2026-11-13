@@ -138,7 +138,7 @@
     theme={defaultTheme}
   />
   <StackPanel
-    style:visibility={hasThemes ? CssVisibility.visible : CssVisibility.hidden}
+    style:visibility={hasThemes ? CssVisibility.VISIBLE : CssVisibility.HIDDEN}
     class="themes"
     automationHelpText="Drag a theme, or press Alt+Up or Alt+Down, to move it in this list."
     automationName="Themes"
