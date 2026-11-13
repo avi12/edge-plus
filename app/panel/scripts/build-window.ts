@@ -1,12 +1,6 @@
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  rmSync
-} from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
+
 import { buildApp } from "winui-svelte/vite";
 import { z } from "zod";
 
@@ -34,7 +28,9 @@ const RUNTIME_PACKAGES = [
 const winmdsLockSchema = z.object({ nuget_cache_dir: z.string() });
 
 function nugetCache() {
-  const lock = winmdsLockSchema.safeParse(JSON.parse(readFileSync(path.join(ROOT, ".winapp", "winmds.lock.json"), "utf8")));
+  const lock = winmdsLockSchema.safeParse(
+    JSON.parse(readFileSync(path.join(ROOT, ".winapp", "winmds.lock.json"), "utf8"))
+  );
   if (!lock.success) {
     throw new Error("Run pnpm restore first: .winapp/winmds.lock.json names no NuGet cache");
   }
@@ -43,7 +39,15 @@ function nugetCache() {
 }
 
 function copyRuntimePackage(name: string) {
-  const from = path.join(nugetCache(), "microsoft.windowsappsdk.runtime", RUNTIME_VERSION, "tools", "MSIX", `win10-${ARCHITECTURE}`, name);
+  const from = path.join(
+    nugetCache(),
+    "microsoft.windowsappsdk.runtime",
+    RUNTIME_VERSION,
+    "tools",
+    "MSIX",
+    `win10-${ARCHITECTURE}`,
+    name
+  );
   if (!existsSync(from)) {
     throw new Error(`The window kit needs ${from}`);
   }

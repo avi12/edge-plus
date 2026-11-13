@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import path from "node:path";
+
 import { z } from "zod";
 
 // What a test does to the window the way a user does, through UI Automation
@@ -42,26 +43,30 @@ interface UiaRequest {
 }
 
 function run({ pid, action, id = "", value = "", item = "" }: UiaRequest) {
-  const result = spawnSync("powershell.exe", [
-    "-NoProfile",
-    "-ExecutionPolicy",
-    "Bypass",
-    "-File",
-    SCRIPT,
-    "-ProcessId",
-    String(pid),
-    "-Action",
-    action,
-    "-Id",
-    id,
-    "-Value",
-    value,
-    "-Item",
-    item
-  ], {
-    encoding: "utf8",
-    timeout: UIA_TIMEOUT_MILLISECONDS
-  });
+  const result = spawnSync(
+    "powershell.exe",
+    [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      SCRIPT,
+      "-ProcessId",
+      String(pid),
+      "-Action",
+      action,
+      "-Id",
+      id,
+      "-Value",
+      value,
+      "-Item",
+      item
+    ],
+    {
+      encoding: "utf8",
+      timeout: UIA_TIMEOUT_MILLISECONDS
+    }
+  );
   const isFailed = result.status !== 0;
   if (isFailed) {
     throw new Error(`uia ${action} ${id} failed: ${result.stderr.trim() || result.stdout.trim()}`);
@@ -81,10 +86,7 @@ export function act(request: UiaRequest) {
 }
 
 /** What a control reports now. */
-export function read({ pid, id }: {
-  pid: number;
-  id: string;
-}) {
+export function read({ pid, id }: { pid: number; id: string }) {
   return act({
     pid,
     id,
@@ -93,15 +95,14 @@ export function read({ pid, id }: {
 }
 
 /** Whether the window holds a control with this AutomationId. */
-export function exists({ pid, id }: {
-  pid: number;
-  id: string;
-}) {
-  return run({
-    pid,
-    id,
-    action: "exists"
-  }) === true;
+export function exists({ pid, id }: { pid: number; id: string }) {
+  return (
+    run({
+      pid,
+      id,
+      action: "exists"
+    }) === true
+  );
 }
 
 /** Every name the window shows, in tree order. */
@@ -129,11 +130,7 @@ export function toggles(pid: number) {
 }
 
 /** The color Windows drew in a control, as RRGGBB: at `across` of its width (the middle by default). */
-export function pixel({ pid, id, across = "0.5" }: {
-  pid: number;
-  id: string;
-  across?: string;
-}) {
+export function pixel({ pid, id, across = "0.5" }: { pid: number; id: string; across?: string }) {
   return pixelSchema.parse(
     run({
       pid,

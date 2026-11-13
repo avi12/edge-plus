@@ -1,10 +1,11 @@
-import { ownProcessTree } from "./process-tree.ts";
-import { exists } from "./uia.ts";
 import { type ChildProcess, execFileSync, spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+
+import { ownProcessTree } from "./process-tree.ts";
+import { exists } from "./uia.ts";
 
 // The real Rust core, built by `cargo build`, in a sandbox: its data folder is
 // a temporary LOCALAPPDATA and Edge is the installed folder read for its
@@ -41,10 +42,12 @@ export interface RealCore {
 
 function findWindowPid(root: number) {
   const candidates = ownProcessTree(root).filter(pid => pid !== root);
-  return candidates.find(pid => exists({
-    pid,
-    id: FIRST_SWITCH
-  }));
+  return candidates.find(pid =>
+    exists({
+      pid,
+      id: FIRST_SWITCH
+    })
+  );
 }
 
 /** Builds nothing: run `cargo build` first. Resolves once the window shows its first switch. */

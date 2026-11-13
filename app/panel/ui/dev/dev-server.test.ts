@@ -1,10 +1,11 @@
-import { type BuildResult, type CoreProcess, createCoreRunner } from "./core-runner.ts";
-import { createWindowSupervisor, pipeNameOf, servePipe, type WindowProcess } from "./window-supervisor.ts";
 import assert from "node:assert/strict";
 import { type ChildProcess, spawn } from "node:child_process";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import { after, describe, it } from "node:test";
+
+import { type BuildResult, type CoreProcess, createCoreRunner } from "./core-runner.ts";
+import { createWindowSupervisor, pipeNameOf, servePipe, type WindowProcess } from "./window-supervisor.ts";
 
 // The dev server's moving parts without a window or a core: a stand-in window
 // that answers every line with its own pid, so a line that survives the pipe
@@ -31,7 +32,9 @@ function nextLine(child: ChildProcess) {
 }
 
 function startRelay(pipeName: string) {
-  return spawn(process.execPath, ["--disable-warning=ExperimentalWarning", RELAY_ENTRY, pipeName], { stdio: ["pipe", "pipe", "inherit"] });
+  return spawn(process.execPath, ["--disable-warning=ExperimentalWarning", RELAY_ENTRY, pipeName], {
+    stdio: ["pipe", "pipe", "inherit"]
+  });
 }
 
 function exitOf(child: ChildProcess) {
@@ -51,7 +54,7 @@ describe("the window supervisor", () => {
       send: line => received.push(line),
       close: () => undefined
     });
-    first.write("{\"id\":1}");
+    first.write('{"id":1}');
     await new Promise(resolve => setTimeout(resolve, 300));
     assert.equal(received.length, 1);
     assert.equal(received[0], `${supervisor.windowPid()}:{"id":1}`);
@@ -117,7 +120,7 @@ describe("the relay over the pipe", () => {
 
   it("passes JSON lines untouched, and the window outlives the core's relay", async () => {
     await server;
-    const line = "{\"id\":7,\"type\":\"view\",\"data\":{\"text\":\"héllo \\\" wörld\",\"n\":[1,2]}}";
+    const line = '{"id":7,"type":"view","data":{"text":"héllo \\" wörld","n":[1,2]}}';
 
     const firstRelay = startRelay(pipeName);
     firstRelay.stdin!.write(`${line}\n`);
@@ -165,10 +168,7 @@ describe("the core runner", () => {
     };
   }
 
-  function runner({ results, running }: {
-    results: BuildResult[];
-    running?: number;
-  }) {
+  function runner({ results, running }: { results: BuildResult[]; running?: number }) {
     const events: string[] = [];
     let started = 0;
     return {
@@ -209,7 +209,10 @@ describe("the core runner", () => {
     });
     await core.begin();
     await core.rebuild();
-    assert.deepEqual(events.filter(event => !event.startsWith("log")), ["build", "start 1", "build", "stop 1", "start 2"]);
+    assert.deepEqual(
+      events.filter(event => !event.startsWith("log")),
+      ["build", "start 1", "build", "stop 1", "start 2"]
+    );
   });
 
   it("keeps the running core when a build fails, and says why", async () => {
@@ -227,7 +230,10 @@ describe("the core runner", () => {
     });
     await core.begin();
     await core.rebuild();
-    assert.equal(events.some(event => event.startsWith("stop")), false);
+    assert.equal(
+      events.some(event => event.startsWith("stop")),
+      false
+    );
     assert.equal(events.at(-1), "log core: the build failed, keeping the running core");
   });
 

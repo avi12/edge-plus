@@ -1,9 +1,10 @@
-import { type BuildResult, type CoreProcess, createCoreRunner } from "./core-runner.ts";
-import { createWindowSupervisor, pipeNameOf, servePipe, spawnWindowProcess } from "./window-supervisor.ts";
 import { execFileSync, spawn } from "node:child_process";
 import { copyFileSync, mkdirSync, rmSync, watch } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline";
+
+import { type BuildResult, type CoreProcess, createCoreRunner } from "./core-runner.ts";
+import { createWindowSupervisor, pipeNameOf, servePipe, spawnWindowProcess } from "./window-supervisor.ts";
 
 // The panel's dev server: the window stays up and the side that drives it
 // reloads under it, so an edit shows without a restart.
@@ -61,7 +62,12 @@ function logFailure(error: Error) {
 }
 
 /** Calls `onChange` once after a burst of saves; `isRelevant` sees each file name. */
-function watchFolder({ folder, isRelevant, delay, onChange }: {
+function watchFolder({
+  folder,
+  isRelevant,
+  delay,
+  onChange
+}: {
   folder: string;
   isRelevant: (file: string) => boolean;
   delay: number;
@@ -78,11 +84,12 @@ function watchFolder({ folder, isRelevant, delay, onChange }: {
 }
 
 const supervisor = createWindowSupervisor({
-  spawnWindow: () => spawnWindowProcess({
-    node: process.execPath,
-    entry: WINDOW_ENTRY,
-    environment: process.env
-  }),
+  spawnWindow: () =>
+    spawnWindowProcess({
+      node: process.execPath,
+      entry: WINDOW_ENTRY,
+      environment: process.env
+    }),
   log: line => log(line)
 });
 
@@ -92,7 +99,9 @@ function onEnter(handler: () => void) {
 }
 
 function findRunningCore() {
-  const listing = execFileSync("tasklist", ["/FI", `IMAGENAME eq ${CORE_PROCESS_NAME}`, "/FO", "CSV", "/NH"], { encoding: "utf8" });
+  const listing = execFileSync("tasklist", ["/FI", `IMAGENAME eq ${CORE_PROCESS_NAME}`, "/FO", "CSV", "/NH"], {
+    encoding: "utf8"
+  });
   const match = /^"edgeplus\.exe","(\d+)"/imu.exec(listing);
   return match === null ? undefined : Number(match[1]);
 }
@@ -109,10 +118,12 @@ function buildCore() {
     });
     build.stdout.on("data", chunk => output.push(String(chunk)));
     build.stderr.on("data", chunk => output.push(String(chunk)));
-    build.on("exit", code => resolve({
-      isOk: code === 0,
-      output: output.join("")
-    }));
+    build.on("exit", code =>
+      resolve({
+        isOk: code === 0,
+        output: output.join("")
+      })
+    );
   });
 }
 
@@ -173,7 +184,11 @@ function startCore(pipeName: string): CoreProcess {
 }
 
 async function startCoreServer() {
-  log(IS_LIVE ? "LIVE core: it injects into every Edge on the pinned build and changes real settings. Ctrl+C to stop." : "sandboxed core: your Edge and settings are untouched. Ctrl+C to stop.");
+  log(
+    IS_LIVE
+      ? "LIVE core: it injects into every Edge on the pinned build and changes real settings. Ctrl+C to stop."
+      : "sandboxed core: your Edge and settings are untouched. Ctrl+C to stop."
+  );
   const pipeName = pipeNameOf(process.pid);
   await servePipe({
     supervisor,

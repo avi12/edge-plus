@@ -102,11 +102,7 @@ export function slotOffset({ heights, index, target }: Pick<DragState, "heights"
 }
 
 /** The ids with the one at `index` moved to `target`. */
-export function movedIds({ ids, index, target }: {
-  ids: readonly string[];
-  index: number;
-  target: number;
-}) {
+export function movedIds({ ids, index, target }: { ids: readonly string[]; index: number; target: number }) {
   const moved = [...ids];
   const [dragged] = moved.splice(index, 1);
   if (dragged !== undefined) {

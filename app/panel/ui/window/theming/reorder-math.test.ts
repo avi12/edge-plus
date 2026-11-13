@@ -1,13 +1,7 @@
-import {
-  clampedOffset,
-  movedIds,
-  offsetBounds,
-  slideOffsets,
-  slotOffset,
-  targetIndex
-} from "./reorder-math.ts";
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
+
+import { clampedOffset, movedIds, offsetBounds, slideOffsets, slotOffset, targetIndex } from "./reorder-math.ts";
 
 const HEIGHTS = [40, 50, 60];
 
@@ -18,21 +12,24 @@ describe("where a dragged row lands", () => {
         heights: HEIGHTS,
         index: 0,
         offset: 0
-      }), 0
+      }),
+      0
     );
     assert.equal(
       targetIndex({
         heights: HEIGHTS,
         index: 0,
         offset: 24
-      }), 0
+      }),
+      0
     );
     assert.equal(
       targetIndex({
         heights: HEIGHTS,
         index: 0,
         offset: 26
-      }), 1
+      }),
+      1
     );
   });
 
@@ -42,14 +39,16 @@ describe("where a dragged row lands", () => {
         heights: HEIGHTS,
         index: 0,
         offset: 500
-      }), 2
+      }),
+      2
     );
     assert.equal(
       targetIndex({
         heights: HEIGHTS,
         index: 2,
         offset: -500
-      }), 0
+      }),
+      0
     );
   });
 
@@ -58,7 +57,8 @@ describe("where a dragged row lands", () => {
       offsetBounds({
         heights: HEIGHTS,
         index: 1
-      }), {
+      }),
+      {
         min: -40,
         max: 60
       }
@@ -68,14 +68,16 @@ describe("where a dragged row lands", () => {
         heights: HEIGHTS,
         index: 1,
         offset: -90
-      }), -40
+      }),
+      -40
     );
     assert.equal(
       clampedOffset({
         heights: HEIGHTS,
         index: 1,
         offset: 90
-      }), 60
+      }),
+      60
     );
   });
 });
@@ -87,7 +89,8 @@ describe("how the other rows slide aside", () => {
         heights: HEIGHTS,
         index: 0,
         target: 2
-      }), [0, -40, -40]
+      }),
+      [0, -40, -40]
     );
   });
 
@@ -97,7 +100,8 @@ describe("how the other rows slide aside", () => {
         heights: HEIGHTS,
         index: 2,
         target: 0
-      }), [60, 60, 0]
+      }),
+      [60, 60, 0]
     );
   });
 
@@ -107,7 +111,8 @@ describe("how the other rows slide aside", () => {
         heights: HEIGHTS,
         index: 1,
         target: 1
-      }), [0, 0, 0]
+      }),
+      [0, 0, 0]
     );
   });
 });
@@ -119,21 +124,24 @@ describe("the slot the dragged row settles in", () => {
         heights: HEIGHTS,
         index: 0,
         target: 2
-      }), 110
+      }),
+      110
     );
     assert.equal(
       slotOffset({
         heights: HEIGHTS,
         index: 2,
         target: 0
-      }), -90
+      }),
+      -90
     );
     assert.equal(
       slotOffset({
         heights: HEIGHTS,
         index: 1,
         target: 1
-      }), 0
+      }),
+      0
     );
   });
 });
@@ -145,14 +153,16 @@ describe("the order that results", () => {
         ids: ["a", "b", "c"],
         index: 0,
         target: 2
-      }), ["b", "c", "a"]
+      }),
+      ["b", "c", "a"]
     );
     assert.deepEqual(
       movedIds({
         ids: ["a", "b", "c"],
         index: 2,
         target: 0
-      }), ["c", "a", "b"]
+      }),
+      ["c", "a", "b"]
     );
   });
 });

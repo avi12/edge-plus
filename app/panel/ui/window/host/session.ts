@@ -1,13 +1,16 @@
-import { VIEW_STATE_NAME, viewAsSnapshot } from "./core-link.ts";
-import { Panel } from "./panel.svelte.ts";
-import type { Action, Bounds, EdgePlusProtocolMap, View } from "#src/protocol.g.ts";
-import { CoreMessageType, UiMessageType } from "#src/protocol.g.ts";
-import Shell from "#src/window/Shell.svelte";
 import type { MessagePort } from "node:worker_threads";
+
 import { mountControl } from "winui-svelte";
 import { WindowTheme } from "winui-svelte/enums";
 import { createHostChannel, createMessagePortTransport, hostState } from "winui-svelte/state";
 import { exitApplication } from "winui-svelte/window";
+
+import type { Action, Bounds, EdgePlusProtocolMap, View } from "#src/protocol.g.ts";
+import { CoreMessageType, UiMessageType } from "#src/protocol.g.ts";
+import Shell from "#src/window/Shell.svelte";
+
+import { VIEW_STATE_NAME, viewAsSnapshot } from "./core-link.ts";
+import { Panel } from "./panel.svelte.ts";
 
 const BACKGROUND_VARIABLE = "EDGEPLUS_WINDOW_BACKGROUND";
 const THEME_VARIABLE = "EDGEPLUS_WINDOW_THEME";

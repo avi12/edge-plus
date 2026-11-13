@@ -39,7 +39,11 @@ export interface WindowSupervisor {
 }
 
 /** Starts the window the way the core would: node on ui/main.ts, stdin and stdout piped. */
-export function spawnWindowProcess({ node, entry, environment }: {
+export function spawnWindowProcess({
+  node,
+  entry,
+  environment
+}: {
   node: string;
   entry: string;
   environment: NodeJS.ProcessEnv;
@@ -51,7 +55,10 @@ export function spawnWindowProcess({ node, entry, environment }: {
   });
 }
 
-export function createWindowSupervisor({ spawnWindow, log }: {
+export function createWindowSupervisor({
+  spawnWindow,
+  log
+}: {
   spawnWindow: () => WindowProcess;
   log: (line: string) => void;
 }): WindowSupervisor {
@@ -108,7 +115,10 @@ export function createWindowSupervisor({ spawnWindow, log }: {
 }
 
 /** Serves the supervisor on a named pipe; each connection is one core. */
-export function servePipe({ supervisor, pipeName }: {
+export function servePipe({
+  supervisor,
+  pipeName
+}: {
   supervisor: WindowSupervisor;
   pipeName: string;
 }): Promise<Server> {

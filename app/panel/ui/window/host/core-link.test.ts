@@ -1,9 +1,12 @@
-import { VIEW_STATE_NAME, viewAsSnapshot } from "./core-link.ts";
-import { CoreMessageType } from "#src/protocol.g.ts";
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
+
 import type { Json, Transport, TransportListener } from "winui-svelte/state/host";
 import { MessageType } from "winui-svelte/state/host";
+
+import { CoreMessageType } from "#src/protocol.g.ts";
+
+import { VIEW_STATE_NAME, viewAsSnapshot } from "./core-link.ts";
 
 function recordingTransport() {
   const sent: object[] = [];

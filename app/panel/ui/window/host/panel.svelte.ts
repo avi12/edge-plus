@@ -1,8 +1,9 @@
-import type { Action } from "#src/protocol.g.ts";
 import { getContext, setContext } from "svelte";
 import type { WindowHandle } from "winui-svelte/components";
 import type { DragEvent } from "winui-svelte/data-transfer";
 import { startTimer } from "winui-svelte/window";
+
+import type { Action } from "#src/protocol.g.ts";
 
 const STATUS_MILLISECONDS = 4000;
 const USED_THEME_WINDOW_MILLISECONDS = 10_000;
@@ -114,9 +115,6 @@ export function usePanel() {
 }
 
 /** Runs an action and shows why the core refused it, if it did. */
-export async function runAndReport({ panel, action }: {
-  panel: Panel;
-  action: Action;
-}) {
+export async function runAndReport({ panel, action }: { panel: Panel; action: Action }) {
   panel.report(await panel.run(action));
 }

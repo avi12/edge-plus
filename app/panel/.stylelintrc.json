@@ -1,1 +1,6 @@
-{ "extends": ["stylelint-config-avi12"] }
+{
+  "extends": ["stylelint-config-avi12"],
+  "rules": {
+    "value-keyword-case": ["lower", { "ignoreProperties": ["-winui-based-on"] }]
+  }
+}

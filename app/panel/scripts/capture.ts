@@ -1,6 +1,7 @@
-import { startRealCore } from "../test/real-core.ts";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
+
+import { startRealCore } from "../test/real-core.ts";
 
 // Opens the real core in a sandbox (test/real-core.ts), saves a PNG of its
 // window and closes it. Run it on a desktop of its own
@@ -21,17 +22,21 @@ if (IS_TARGET_MISSING) {
 const core = await startRealCore();
 try {
   await new Promise(resolve => setTimeout(resolve, SETTLE_MILLISECONDS));
-  const captured = spawnSync("powershell.exe", [
-    "-NoProfile",
-    "-ExecutionPolicy",
-    "Bypass",
-    "-File",
-    CAPTURE_SCRIPT,
-    "-ProcessId",
-    String(core.windowPid),
-    "-Path",
-    path.resolve(TARGET)
-  ], { encoding: "utf8" });
+  const captured = spawnSync(
+    "powershell.exe",
+    [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      CAPTURE_SCRIPT,
+      "-ProcessId",
+      String(core.windowPid),
+      "-Path",
+      path.resolve(TARGET)
+    ],
+    { encoding: "utf8" }
+  );
   process.stdout.write(`${captured.stdout}${captured.stderr}`);
   process.exitCode = captured.status ?? 1;
 } finally {

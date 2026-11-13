@@ -1,10 +1,3 @@
-import {
-  clampedOffset,
-  movedIds,
-  slideOffsets,
-  slotOffset,
-  targetIndex
-} from "./reorder-math.ts";
 import { type ComponentProps, tick } from "svelte";
 import { Spring } from "svelte/motion";
 import { SvelteMap } from "svelte/reactivity";
@@ -13,6 +6,8 @@ import { projectAs, releaseProjected } from "winui-svelte/bindings/lifetime";
 import { PointerRoutedEventArgs } from "winui-svelte/bindings/microsoft/ui/xaml/input/PointerRoutedEventArgs";
 import { UIElement } from "winui-svelte/bindings/microsoft/ui/xaml/UIElement";
 import type { Border } from "winui-svelte/components";
+
+import { clampedOffset, movedIds, slideOffsets, slotOffset, targetIndex } from "./reorder-math.ts";
 
 // Dragging a row of the theme list: the pressed row lifts and
 // follows the pointer, the others slide aside to open the slot it will land
@@ -47,10 +42,7 @@ interface PointerReading {
 
 // The window's content is the frame of reference: a row that moves with the
 // pointer would otherwise move the coordinates too.
-function readPointer({ sender, args }: {
-  sender: PointerSender;
-  args: PointerEventArguments;
-}): PointerReading {
+function readPointer({ sender, args }: { sender: PointerSender; args: PointerEventArguments }): PointerReading {
   const projectedArgs = projectAs(args, PointerRoutedEventArgs);
   const element = projectAs(sender, UIElement);
   const { pointer } = projectedArgs;
@@ -68,19 +60,13 @@ function readPointer({ sender, args }: {
 
 // Capture sends every event of the pointer to the row until it is let go, so
 // the drag goes on when the pointer leaves it.
-function capturePointer({ sender, pointer }: {
-  sender: PointerSender;
-  pointer: PointerToken;
-}) {
+function capturePointer({ sender, pointer }: { sender: PointerSender; pointer: PointerToken }) {
   const element = projectAs(sender, UIElement);
   element.capturePointer(pointer);
   releaseProjected(element);
 }
 
-function releasePointer({ sender, pointer }: {
-  sender: PointerSender;
-  pointer: PointerToken;
-}) {
+function releasePointer({ sender, pointer }: { sender: PointerSender; pointer: PointerToken }) {
   const element = projectAs(sender, UIElement);
   element.releasePointerCapture(pointer);
   releaseProjected(element);
@@ -132,7 +118,10 @@ export class ThemeReorder {
   private readonly orderOf: () => readonly string[];
   private readonly onCommit: (ids: string[]) => void;
 
-  constructor({ orderOf, onCommit }: {
+  constructor({
+    orderOf,
+    onCommit
+  }: {
     /** The ids of the rows from top to bottom, as they stand now. */
     orderOf: () => readonly string[];
     /** The drop landed: the ids in their new order. */
@@ -170,40 +159,40 @@ export class ThemeReorder {
   /** The handlers that make a row draggable. */
   handlers(id: string): DragHandlers {
     return {
-      onpointerpressed: (sender, args) => this.press({
-        sender,
-        reading: readPointer({
+      onpointerpressed: (sender, args) =>
+        this.press({
           sender,
-          args
+          reading: readPointer({
+            sender,
+            args
+          }),
+          id
         }),
-        id
-      }),
-      onpointermoved: (sender, args) => this.move(
-        readPointer({
-          sender,
-          args
-        })
-      ),
-      onpointerreleased: (sender, args) => this.release(
-        readPointer({
-          sender,
-          args
-        })
-      ),
-      onpointercanceled: (sender, args) => this.cancel(
-        readPointer({
-          sender,
-          args
-        })
-      )
+      onpointermoved: (sender, args) =>
+        this.move(
+          readPointer({
+            sender,
+            args
+          })
+        ),
+      onpointerreleased: (sender, args) =>
+        this.release(
+          readPointer({
+            sender,
+            args
+          })
+        ),
+      onpointercanceled: (sender, args) =>
+        this.cancel(
+          readPointer({
+            sender,
+            args
+          })
+        )
     };
   }
 
-  private press({ sender, reading, id }: {
-    sender: PointerSender;
-    reading: PointerReading;
-    id: string;
-  }) {
+  private press({ sender, reading, id }: { sender: PointerSender; reading: PointerReading; id: string }) {
     const isIdle = this.gesture === null && this.draggedId === null;
     const ids = this.orderOf();
     const index = ids.indexOf(id);
@@ -310,11 +299,13 @@ export class ThemeReorder {
       return;
     }
 
-    const settled = gesture.ids.map(id => this.glide({
-      id,
-      to: 0,
-      feel: SLIDE_FEEL
-    }));
+    const settled = gesture.ids.map(id =>
+      this.glide({
+        id,
+        to: 0,
+        feel: SLIDE_FEEL
+      })
+    );
     void Promise.all(settled).then(() => {
       this.draggedId = null;
     });
@@ -372,19 +363,12 @@ export class ThemeReorder {
   }
 
   // The row is put at the offset at once, the way it follows the pointer.
-  private place({ id, offset }: {
-    id: string;
-    offset: number;
-  }) {
+  private place({ id, offset }: { id: string; offset: number }) {
     void this.motions.get(id)?.set(offset, { instant: true });
   }
 
   // The row's spring is pulled to the offset; resolves when it has settled.
-  private glide({ id, to, feel }: {
-    id: string;
-    to: number;
-    feel: typeof SLIDE_FEEL;
-  }) {
+  private glide({ id, to, feel }: { id: string; to: number; feel: typeof SLIDE_FEEL }) {
     const motion = this.motions.get(id);
     if (motion === undefined) {
       return Promise.resolve();

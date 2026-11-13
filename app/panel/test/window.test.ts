@@ -1,16 +1,10 @@
-import { ownProcessTree } from "./process-tree.ts";
-import { type RealCore, startRealCore } from "./real-core.ts";
-import {
-  act,
-  exists,
-  names,
-  pixel,
-  read,
-  toggles
-} from "./uia.ts";
 import { strict as assert } from "node:assert";
 import { after, before, describe, it } from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
+
+import { ownProcessTree } from "./process-tree.ts";
+import { type RealCore, startRealCore } from "./real-core.ts";
+import { act, exists, names, pixel, read, toggles } from "./uia.ts";
 
 // The panel window against the real core, on a desktop of its own
 // (scripts/desktop/on-desktop.ps1) and in a sandbox (real-core.ts): it opens,
@@ -121,12 +115,18 @@ describe("the panel window", () => {
       id,
       action: "toggle"
     });
-    await until("the switch to change")(() => read({
-      pid,
-      id
-    }).toggle !== before);
-    await until("the core to save it")(() => core?.settings().includes("\"nativeSplit\":false") === true
-      || core?.settings().includes("\"nativeSplit\": false") === true);
+    await until("the switch to change")(
+      () =>
+        read({
+          pid,
+          id
+        }).toggle !== before
+    );
+    await until("the core to save it")(
+      () =>
+        core?.settings().includes('"nativeSplit":false') === true ||
+        core?.settings().includes('"nativeSplit": false') === true
+    );
   });
 });
 
@@ -134,10 +134,12 @@ describe("the panel window in each theme", () => {
   async function luminanceIn(theme: string) {
     const core = await startRealCore({ theme });
     try {
-      await until("the theme picker")(() => exists({
-        pid: core.windowPid,
-        id: "picker-light"
-      }));
+      await until("the theme picker")(() =>
+        exists({
+          pid: core.windowPid,
+          id: "picker-light"
+        })
+      );
       await sleep(POLL_MILLISECONDS);
       return luminance(
         pixel({

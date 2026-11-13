@@ -1,7 +1,8 @@
-import { CoreMessageType } from "#src/protocol.g.ts";
 import type { Transport } from "winui-svelte/state/host";
 import { MessageType } from "winui-svelte/state/host";
 import { z } from "zod";
+
+import { CoreMessageType } from "#src/protocol.g.ts";
 
 /** The name the core's `view` request is read as: the channel's state of that name. */
 export const VIEW_STATE_NAME = "view";
@@ -23,26 +24,27 @@ export function viewAsSnapshot(transport: Transport) {
     send(value) {
       transport.send(value);
     },
-    listen: listener => transport.listen({
-      ...listener,
-      message(value) {
-        const request = viewRequestSchema.safeParse(value);
-        if (!request.success) {
-          listener.message(value);
-          return;
-        }
+    listen: listener =>
+      transport.listen({
+        ...listener,
+        message(value) {
+          const request = viewRequestSchema.safeParse(value);
+          if (!request.success) {
+            listener.message(value);
+            return;
+          }
 
-        listener.message({
-          id: request.data.id,
-          type: MessageType.snapshot,
-          data: {
-            name: VIEW_STATE_NAME,
-            value: request.data.data
-          },
-          timestamp: request.data.timestamp
-        });
-      }
-    })
+          listener.message({
+            id: request.data.id,
+            type: MessageType.snapshot,
+            data: {
+              name: VIEW_STATE_NAME,
+              value: request.data.data
+            },
+            timestamp: request.data.timestamp
+          });
+        }
+      })
   };
   return wrapped;
 }

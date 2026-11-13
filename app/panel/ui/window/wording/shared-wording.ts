@@ -1,5 +1,6 @@
-import shared from "./shared-wording.json" with { type: "json" };
 import type { EdgeBuild, Feature, SwitchKey } from "#src/protocol.g.ts";
+
+import shared from "./shared-wording.json" with { type: "json" };
 
 const EDGE_PLACEHOLDER = "{edge}";
 const LEAD_PLACEHOLDER = "{lead}";
@@ -20,10 +21,7 @@ export function edgeLead(edge: EdgeBuild) {
   return template.replace(EDGE_PLACEHOLDER, edge.version);
 }
 
-export function pausedNotice({ edge, paused }: {
-  edge: EdgeBuild | null;
-  paused: Feature[];
-}) {
+export function pausedNotice({ edge, paused }: { edge: EdgeBuild | null; paused: Feature[] }) {
   const hasPausedFeatures = edge !== null && paused.length > 0;
   if (!hasPausedFeatures) {
     return "";

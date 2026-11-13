@@ -28,7 +28,12 @@ export interface CoreRunner {
   stop(): Promise<void>;
 }
 
-export function createCoreRunner({ build, start, findRunning, log }: {
+export function createCoreRunner({
+  build,
+  start,
+  findRunning,
+  log
+}: {
   build: () => Promise<BuildResult>;
   start: () => CoreProcess;
   /** The pid of a core running that this runner did not start, if any. */
@@ -46,13 +51,15 @@ export function createCoreRunner({ build, start, findRunning, log }: {
     const started = start();
     core = started;
     log(`core: started (pid ${started.pid})`);
-    started.exited.then(() => {
-      const isStillCurrent = core === started;
-      if (isStillCurrent) {
-        core = null;
-        log("core: ended; save a Rust file or press Enter to build and start it again");
-      }
-    }).catch(() => undefined);
+    started.exited
+      .then(() => {
+        const isStillCurrent = core === started;
+        if (isStillCurrent) {
+          core = null;
+          log("core: ended; save a Rust file or press Enter to build and start it again");
+        }
+      })
+      .catch(() => undefined);
   }
 
   async function rebuild(): Promise<void> {
