@@ -257,6 +257,28 @@ impl Theming {
         }
     }
 
+    /// `entry` takes the place of the theme `old_id`: its position, its slots,
+    /// its order and its history carry over, so a theme that moved folders is
+    /// the same theme to the panel.
+    pub fn relink(&mut self, old_id: &str, entry: ThemeEntry) {
+        let new_id = entry.id.clone();
+        let rename = |id: &mut String| {
+            if id == old_id {
+                id.clone_from(&new_id);
+            }
+        };
+        self.themes.retain(|theme| theme.id != new_id);
+        match self.themes.iter_mut().find(|theme| theme.id == old_id) {
+            Some(existing) => *existing = entry,
+            None => self.themes.push(entry),
+        }
+        rename(&mut self.light);
+        rename(&mut self.dark);
+        self.order.iter_mut().for_each(rename);
+        self.light_history.iter_mut().for_each(rename);
+        self.dark_history.iter_mut().for_each(rename);
+    }
+
     pub fn reorder(&mut self, ids: &[String]) {
         self.themes = theme_order::ordered(&self.themes, ids);
         self.order = ids.to_vec();
@@ -374,6 +396,27 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_relinked_theme_keeps_its_place_and_slots() {
+        let entry = |id: &str, origin: &str| ThemeEntry {
+            id: id.to_owned(),
+            name: "Dusk".to_owned(),
+            source: ThemeSource::Local,
+            origin: origin.to_owned(),
+        };
+        let mut theming = Theming {
+            themes: vec![entry("old", r"C:\old"), entry("other", r"C:\other")],
+            light: "old".to_owned(),
+            order: vec!["other".to_owned(), "old".to_owned()],
+            ..Theming::default()
+        };
+        theming.relink("old", entry("new", r"C:\new"));
+        assert_eq!("new", theming.themes[0].id, "same position");
+        assert_eq!(r"C:\new", theming.themes[0].origin);
+        assert_eq!("new", theming.light, "the slot follows");
+        assert_eq!(vec!["other", "new"], theming.order, "the order follows");
+    }
 
     #[test]
     fn a_byte_order_mark_is_read_past() {

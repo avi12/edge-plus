@@ -93,18 +93,56 @@ pub fn add_local(path: &Path, assign_to: Option<ColorMode>) -> ActionResult<()> 
         .or(stem)
         .unwrap_or_else(|| local.id.clone());
     let id = local.id.clone();
+    let origin = path.to_string_lossy().into_owned();
+    let mut moved_from = None;
     change(|theming| {
-        theming.add_or_replace(ThemeEntry {
-            id: local.id,
+        // Looked up under the settings gate, so it is the entry that is replaced.
+        moved_from = same_theme_under_another_id(theming, &id, &name, &origin);
+        let entry = ThemeEntry {
+            id: id.clone(),
             name,
             source: ThemeSource::Local,
-            origin: path.to_string_lossy().into_owned(),
-        });
+            origin,
+        };
+        match &moved_from {
+            Some(old_id) => theming.relink(old_id, entry),
+            None => theming.add_or_replace(entry),
+        }
     })?;
+    if let Some(old_id) = moved_from {
+        // The theme is already in place under its new id; a failed clean-up of
+        // the old copy must not fail the add.
+        if let Err(error) = uninstall_once_not_worn(&old_id) {
+            panel_log::write_error("removing the theme's old copy", &error);
+        }
+    }
     if let Some(mode) = assign_to {
         assign_when_worn(id, mode);
     }
     Ok(())
+}
+
+/// A local theme already listed that is this one: from the same folder, or
+/// (the folder moved, which gives it a new id) the same name whose old folder
+/// is gone. It is kept installed and reloaded under the new id, not listed
+/// twice.
+fn same_theme_under_another_id(
+    theming: &Theming,
+    id: &str,
+    name: &str,
+    origin: &str,
+) -> Option<String> {
+    theming
+        .themes
+        .iter()
+        .filter(|theme| theme.source == ThemeSource::Local && theme.id != id)
+        .find(|theme| {
+            let is_same_folder = paths::fold_case(&theme.origin) == paths::fold_case(origin);
+            let is_same_name_from_gone_folder =
+                theme.name == name && !Path::new(&theme.origin).exists();
+            is_same_folder || is_same_name_from_gone_folder
+        })
+        .map(|theme| theme.id.clone())
 }
 
 /// Edge turns on a theme it has just installed. A theme added without Shift is
