@@ -33,6 +33,7 @@ pub struct ReadyUpdate {
 }
 
 const THREAD_NAME: &str = "Update watch";
+const NOT_FOUND: u16 = 404;
 /// How often the loop wakes. It only goes to the network every `CHECK_EVERY`,
 /// but a request for a check (the switch turned on) is seen within a tick.
 const TICK: Duration = Duration::from_mins(1);
@@ -156,7 +157,13 @@ impl Watcher {
             .build()
             .into();
         let feed_url = update_feed::url();
-        let feed = agent.get(&feed_url).call()?.body_mut().read_to_string()?;
+        let response = match agent.get(&feed_url).call() {
+            Ok(response) => response,
+            // The latest release carries no feed (it predates this install flow): nothing to offer.
+            Err(ureq::Error::StatusCode(NOT_FOUND)) => return Ok(()),
+            Err(error) => return Err(error),
+        };
+        let feed = response.into_body().read_to_string()?;
         let Some(offer) = update_feed::parse(&feed, &feed_url, current) else {
             return Ok(());
         };
