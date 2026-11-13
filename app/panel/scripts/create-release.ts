@@ -1,5 +1,6 @@
 import { copyFileSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
+
 import { createRelease, feedFileName } from "winui-svelte/updater";
 
 // Packs the release the installed copies update from: the Squirrel-style zip
@@ -49,8 +50,10 @@ const release = await createRelease({
   name: PRODUCT_NAME,
   version: productVersion(),
   outputDirectory: OUTPUT,
-  ...CHANNEL !== undefined && {
+  ...(CHANNEL !== undefined && {
     channel: CHANNEL
-  }
+  })
 });
-process.stdout.write(`${release.file} (${release.size} bytes, sha256 ${release.sha256}), feed ${feedFileName(CHANNEL)}\n`);
+process.stdout.write(
+  `${release.file} (${release.size} bytes, sha256 ${release.sha256}), feed ${feedFileName(CHANNEL)}\n`
+);
