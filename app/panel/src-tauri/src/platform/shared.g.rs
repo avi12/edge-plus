@@ -56,7 +56,7 @@ pub const EDGE_VERSION_MINOR: u32 = 0;
 pub const EDGE_VERSION_BUILD: u32 = 4341;
 
 // app/dll/src/edge/offsets.h:24
-pub const EDGE_VERSION_REVISION: u32 = 42;
+pub const EDGE_VERSION_REVISION: u32 = 46;
 
 // app/dll/src/edge/signature_table.h:18
 pub const FEATURE_BIT_SPLIT: u32 = 1;
