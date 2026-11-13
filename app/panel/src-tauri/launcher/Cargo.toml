@@ -3,7 +3,7 @@ name = "edgeplus-launcher"
 version = "0.0.1"
 edition = "2024"
 license = "Apache-2.0"
-description = "What the package's startup task runs: Edge+ as a boot launch, since a startup task cannot pass arguments."
+description = "The stable program in the install root: starts the newest app-x.y.z of Edge+ with the arguments it was given."
 
 [[bin]]
 name = "edgeplus-launcher"
@@ -12,3 +12,6 @@ path = "src/main.rs"
 [lints.clippy]
 all = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
+
+[dependencies]
+winui-svelte-launcher = { git = "https://github.com/avi12/winui-svelte", rev = "9bcd1ca2be103751397dded1d92e41c6a9850eed" }

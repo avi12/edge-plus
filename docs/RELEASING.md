@@ -1,15 +1,14 @@
 # Releasing an update
 
-Edge+ is installed from one file, **`EdgePlus-<version>.msix`**, attached to every
-GitHub release beside **`EdgePlus.cer`**. The package gives Edge+ the identity
-it needs: a startup task for start at sign-in, and a clean install, update and
-uninstall through Windows. It is signed with the `CN=avi12` code-signing
-certificate, which Windows does not trust on its own, so a user trusts
-`EdgePlus.cer` once (see the README) before the package installs.
+Edge+ installs per user from one file, **`EdgePlus-Setup.exe`**, attached to
+every GitHub release beside **`EdgePlus-<version>.zip`** and **`releases.json`**.
+There is no installer service, administrator prompt or certificate: opening the
+setup exe copies it to `%LOCALAPPDATA%\EdgePlus\app-<version>`, puts a stable
+`edgeplus-launcher.exe` in the root, adds a Start menu shortcut and an entry in
+Add or remove programs, and starts it. The zip and `releases.json` are what
+installed copies update from (the format of winui-svelte's `createRelease`).
 
-Edge+ keeps its settings and its DLL in `%LOCALAPPDATA%\EdgePlus`, at that real
-path (the manifest turns the package's write virtualization off, so Edge can
-find the DLL there).
+Edge+ keeps its settings and its DLL in the same root, `%LOCALAPPDATA%\EdgePlus`.
 
 ## Cutting a release
 
@@ -17,7 +16,7 @@ With the work committed:
 
 1. Write the notes to a file outside the repository: the changelog
    **highlights**, in plain sentences for users, no file names. The script
-   adds the line telling users to install with the `.msix`; don't write it.
+   adds the line telling users to install with the setup exe; don't write it.
 2. Run
 
    ```powershell
@@ -26,24 +25,26 @@ With the work committed:
 
 `tools/Release.ps1` then:
 
-1. sets the version in `app/panel/src-tauri/Cargo.toml`, the only place
-   it is written: the exe, the package and the panel's footer read it from
-   there;
-2. builds the window kit and the release exe that embeds it (`pnpm build` in
-   `app/panel`, after `pnpm install` and `pnpm restore`) and copies it to
-   `outelease\EdgePlus-<version>.exe`;
-3. packs that exe as the MSIX (`tools\Build-Msix.ps1`): the exe, the startup
-   launcher, logos drawn from `icons\icon.ico` and `app/package/AppxManifest.xml`
-   stamped with the version, signed with the `CN=avi12` certificate from the
-   current user's store; it also exports the certificate as `EdgePlus.cer`;
-4. commits `chore(release): <version>`, tags `v<version>` and pushes both;
-5. creates the GitHub release with the MSIX and the certificate, appending a
-   link to every commit since the previous tag;
-6. writes `docs/updates.json` (`tools\Write-UpdateManifest.ps1`) from the
-   package's SHA-256, under its `msix` key, and pushes it.
+1. sets the version in `app/panel/src-tauri/Cargo.toml`, the only place it is
+   written: the exe, the zip and the panel's footer read it from there;
+2. commits `chore(release): <version>` and pushes `main`;
+3. creates the GitHub release `v<version>` with the notes, appending a link to
+   every commit since the previous tag. Creating it creates the tag.
 
-The manifest goes last: installed copies see a release only once it is on
-`main`, so it never points at a file that is not uploaded yet.
+The tag starts `.github/workflows/release.yml` on GitHub, which:
+
+1. checks the tag names the version in `Cargo.toml`;
+2. builds the window kit and the release exe that embeds it (`Build-ReleaseExe`:
+   `pnpm install`, `pnpm restore` and `pnpm build` in `app/panel`, rebuilding the
+   embedded split DLL if its sources are newer) and the launcher;
+3. packs the release (`pnpm create-release`, `app/panel/scripts/create-release.ts`):
+   `edgeplus.exe` and `edgeplus-launcher.exe` as `EdgePlus-<version>.zip`,
+   added to `releases.json` with its SHA-256 and size, and `EdgePlus-Setup.exe`;
+4. attaches the three files to the release with `gh release upload`.
+
+Installed copies read `releases/latest/download/releases.json`, so they see a
+release once the workflow has attached it; until then the feed is the previous
+release's.
 
 A patch release (`0.0.x`) is the default; a minor bump marks a release with a
 new feature users would notice.
@@ -53,28 +54,38 @@ new feature users would notice.
 When Edge updates, every feature that calls into `msedge.dll` pauses until
 `app/dll/src/edge/offsets.h` is re-pinned to the new build. Ship that
 release as soon as it is ready, and say in its notes which Edge build it
-supports.
+supports. The DLL stays pinned to one build: an update replaces Edge+ and the
+DLL it embeds together, and the new exe swaps the DLL into Edge itself.
 
 ## How installed copies update
 
 Installed copies check for a release the way a browser extension checks its
-update URL: they read `docs/updates.json` from `main` (served by
-`raw.githubusercontent.com`) at start and every six hours. When it names a newer
-version, the package is downloaded in the background and checked against the
-manifest's SHA-256, and the window offers **Restart to update**. Restarting
-closes Edge+, and a hidden PowerShell waits for it to exit, installs the
-package over the old one (`Add-AppxPackage`) and starts Edge+ again. The new
-exe swaps its own DLL into Edge, so Edge itself does not restart.
+update URL: they read `releases.json` from the latest release at start and every
+six hours. When it names a newer version, the zip is downloaded in the
+background, checked against the feed's size and SHA-256, unpacked into
+`app-<version>.staging` and renamed into place last, and the window offers
+**Restart to update**. Restarting closes Edge+ and starts the launcher with
+`--apply`: it waits for Edge+ to end, runs the new version's `--updated` hook,
+starts the newest `app-<version>` and, if that does not start, marks it bad and
+starts the previous one. The new exe refreshes the Add or remove programs entry,
+and removes the older versions once it is running. It swaps its own DLL into
+Edge, so Edge itself does not restart. The launcher is the Rust crate
+`winui-svelte-launcher` (a git dependency of the core and of
+`app/panel/src-tauri/launcher`), pinned by `rev` in both `Cargo.toml` files.
 
-- Only the installed package updates itself. A build run from a checkout, or a
-  bare exe, never does.
-- The manifest names the package under `msix`, never as a top-level `url`: a
-  copy from before packaging (0.1.0 and earlier) reads that as an exe, so it
-  finds nothing to install and has to be replaced by installing the package
-  once.
+- Only an installed copy updates itself. A build run from a checkout never does.
 - The **Check for updates** switch turns the check off, and with it every
   connection Edge+ makes.
 
-To try it without a release, point `EDGEPLUS_UPDATE_FEED` at a manifest on this
-machine (a `http://localhost` address is accepted) and run the installed
-package.
+To try it without a release, point `EDGEPLUS_UPDATE_FEED` at a `releases.json`
+on this machine (a `http://localhost` address is accepted, with the zip beside
+it) and run the installed copy.
+
+## Uninstalling
+
+Add or remove programs runs `edgeplus-launcher.exe --uninstall`, which starts the
+newest exe's uninstall: it removes the start-at-sign-in entry, the programs
+entry, the Start menu shortcut and the toast registration. A hidden PowerShell
+then ends the processes running from the root (Edge+'s own, never Edge's),
+signals the DLL to unload itself from Edge, which keeps running, and deletes the
+root, settings included.

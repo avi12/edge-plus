@@ -18,8 +18,8 @@ Only in `%LOCALAPPDATA%\EdgePlus`:
 - `edgeplus-config.bin` and the app's own DLL: the same choices, in the form the
   DLL reads.
 - `themes\`: the theme files you added, as you added them.
-- `update\`: a newer version of the app, downloaded and waiting for you to
-  restart into it.
+- `app-x.y.z\` and `packages\`: the installed versions of the app, and a newer
+  one downloaded and waiting for you to restart into it.
 - `panel.log` and `split-native.log`: a log of what the app did, kept on your
   device for troubleshooting. They never leave it.
 
@@ -39,7 +39,8 @@ downloads it, as it does any extension. The app only hands Edge the link.
 ## Checking for updates
 
 With the "Check for updates" switch on (it is on by default), the app reads a
-small file from this repository, <https://github.com/avi12/edge-plus>, when it
+small file (`releases.json`) from this repository's latest release,
+<https://github.com/avi12/edge-plus>, when it
 starts and every six hours. If it names a newer version, the app downloads that
 version's file from this repository's releases. These are ordinary web
 requests, so GitHub sees your IP address and a User-Agent naming the app and its

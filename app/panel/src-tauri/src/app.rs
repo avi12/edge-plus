@@ -17,10 +17,12 @@ use tauri::RunEvent;
 use crate::dll::payload;
 use crate::edge::legacy::{legacy_cleanup, legacy_install};
 use crate::platform::actions::panel_log;
+use crate::platform::identity::product;
 use crate::platform::identity::{app_identity, switches};
 use crate::platform::service::background_service;
-use crate::setup::{package_install, start_with_windows, startup_entry};
+use crate::setup::{install_layout, start_with_windows, startup_entry, update_watch};
 use crate::ui::window_host;
+use winui_svelte_launcher::Version;
 
 /// Long enough for start-up's work to settle before the working set is trimmed.
 const TRIM_DELAY: Duration = Duration::from_secs(5);
@@ -74,25 +76,37 @@ fn start_background() {
     background_service::start(|event| window_host::on_service_event(&event));
 }
 
-/// A packaged copy starts at sign-in through its package's startup task, so
-/// only another copy takes over an earlier panel's Run entry.
+/// An installed copy removes the versions it replaced; every copy takes over an earlier panel's Run entry.
 fn move_startup_entry() {
-    if package_install::is_packaged() {
-        return;
-    }
-    let Ok(executable) = std::env::current_exe() else {
+    prune_replaced_versions();
+    let Ok(target) = start_with_windows::entry_target() else {
         return;
     };
-    match startup_entry::migrate_to(&executable) {
+    let moved = if install_layout::is_installed_run() {
+        startup_entry::repoint_to(&target)
+    } else {
+        startup_entry::migrate_to(&target)
+    };
+    match moved {
         Ok(true) => panel_log::write(&format!(
             "start at sign-in moved from an earlier panel to {}",
-            executable.display()
+            target.display()
         )),
         Ok(false) => {}
         Err(error) => panel_log::write_error(
             "start at sign-in could not be moved from an earlier panel",
             &error,
         ),
+    }
+}
+
+/// The running version has started, so the ones it replaced can go.
+fn prune_replaced_versions() {
+    let Ok(running) = Version::parse(product::VERSION) else {
+        return;
+    };
+    if install_layout::is_installed_run() {
+        update_watch::prune(running);
     }
 }
 

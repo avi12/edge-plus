@@ -8,8 +8,8 @@ Live feature switches for Microsoft Edge (see `README.md`):
 - `app/panel/` — the panel that toggles each feature and injects the DLL:
   a Rust core (every Win32 call in its `edge-native` crate) and a WinUI 3
   window drawn from TypeScript
-- `app/package/` — the MSIX manifest; `tools/Build-Msix.ps1` packs and signs
-  the published exe with it
+- `.github/workflows/release.yml` — builds the exe on a `v*` tag and attaches the
+  Squirrel-style release (`EdgePlus-Setup.exe`, the zip, `releases.json`)
 
 These rules are `avi/youtube-time-manager`'s, carried to C++ the way
 `avi/any-stt` carries them, and overridden only where C++ has a stronger
@@ -161,7 +161,7 @@ side and must match the DLL's (`app/dll/src/{config.h,dllmain.cpp,log.h}`).
   `platform/` (paths, settings, the actions the window calls), `dll/` (the
   config wire, its events, the embedded DLL, `dll_sync`), `edge/` (the pinned
   build, the Edge watcher, the dev-mode waiter, legacy carry-over), `themes/`,
-  `setup/` (start at sign-in, updates, the MSIX hand-off) and `ui/` (the View the
+  `setup/` (the install, start at sign-in, updates) and `ui/` (the View the
   window renders, the sentences the core says itself in `wording.rs`, the
   window's process).
 - **`edge-native`** (`src-tauri/edge-native/`) is the **only** crate with
@@ -264,14 +264,14 @@ why; land large work as a sequence of them.
 
 # Releases
 
-**Edge+ is installed from its MSIX**, `EdgePlus-<version>.msix`: it needs the
-package's identity for its startup task and its own updates, and it is the only
-download a release carries besides `EdgePlus.cer`, the certificate the package
-is signed with, which a user trusts once. Cut a release only when asked, with
+**Edge+ is installed per user, Squirrel-style**: `EdgePlus-Setup.exe`, the
+published exe, installs itself when it is opened (an `app-x.y.z` folder and a
+stable launcher under `%LOCALAPPDATA%\EdgePlus`, a Start menu shortcut and an
+Add or remove programs entry), and updates itself from the `releases.json` of the
+latest GitHub release. Cut a release only when asked, with
 `pwsh tools\Release.ps1 -Version <x.y.z> -NotesFile <file>` (`docs/RELEASING.md`):
-it bumps the core's `Cargo.toml`, builds the window kit and the exe, packs and
-signs the MSIX (`tools\Build-Msix.ps1`), commits, tags, pushes, creates the
-release with the package and the certificate and then pushes `docs/updates.json`
-naming the package. The notes file holds the changelog highlights for users -
-plain sentences, no file names. A copy run from a checkout or a bare exe never
-updates itself.
+it bumps the core's `Cargo.toml`, commits, pushes and creates the GitHub release,
+and the tag starts `.github/workflows/release.yml`, which builds and attaches the
+files. The notes file holds the changelog highlights for users - plain
+sentences, no file names. A copy run from a checkout never installs or updates
+itself.

@@ -77,6 +77,21 @@ pub fn migrate_to(executable: &Path) -> io::Result<bool> {
     migrate(&StartupKeys::user(), NAME, executable)
 }
 
+/// Points an existing entry at `executable` (the launcher of an install), even
+/// when it named another copy, keeping Task Manager's flag; true when it moved.
+pub fn repoint_to(executable: &Path) -> io::Result<bool> {
+    let keys = StartupKeys::user();
+    let Some(command) = edge_native::read_string(Hive::CurrentUser, &keys.run, Some(NAME)) else {
+        return Ok(false);
+    };
+    let wanted = run_command(executable);
+    if command == wanted {
+        return Ok(false);
+    }
+    edge_native::write_string(Hive::CurrentUser, &keys.run, NAME, &wanted)?;
+    Ok(true)
+}
+
 /// Keeps Task Manager's on/off flag as the user set it.
 pub fn migrate(keys: &StartupKeys, name: &str, executable: &Path) -> io::Result<bool> {
     let Some(command) = edge_native::read_string(Hive::CurrentUser, &keys.run, Some(name)) else {
