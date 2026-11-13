@@ -5,7 +5,7 @@ import { createInterface } from "node:readline";
 import { after, describe, it } from "node:test";
 
 import { type BuildResult, type CoreProcess, createCoreRunner } from "./core-runner.ts";
-import { createWindowSupervisor, pipeNameOf, servePipe, type WindowProcess } from "./window-supervisor.ts";
+import { createWindowSupervisor, pipeNameOf, servePipe } from "./window-supervisor.ts";
 
 // The dev server's moving parts without a window or a core: a stand-in window
 // that answers every line with its own pid, so a line that survives the pipe
@@ -17,13 +17,21 @@ const STAND_IN_WINDOW = `
     .on("line", line => process.stdout.write(process.pid + ":" + line + "\\n"));
 `;
 
-function spawnStandInWindow(): WindowProcess {
+function spawnStandInWindow() {
   return spawn(process.execPath, ["-e", STAND_IN_WINDOW], { stdio: ["pipe", "pipe", "inherit"] });
+}
+
+function pipeOf<T>(pipe: T | null) {
+  if (pipe === null) {
+    throw new Error("The child was started without that pipe");
+  }
+
+  return pipe;
 }
 
 function nextLine(child: ChildProcess) {
   return new Promise<string>(resolve => {
-    const lines = createInterface({ input: child.stdout! });
+    const lines = createInterface({ input: pipeOf(child.stdout) });
     lines.once("line", line => {
       lines.close();
       resolve(line);
@@ -123,30 +131,30 @@ describe("the relay over the pipe", () => {
     const line = '{"id":7,"type":"view","data":{"text":"héllo \\" wörld","n":[1,2]}}';
 
     const firstRelay = startRelay(pipeName);
-    firstRelay.stdin!.write(`${line}\n`);
+    pipeOf(firstRelay.stdin).write(`${line}\n`);
     const firstAnswer = await nextLine(firstRelay);
     const windowPid = supervisor.windowPid();
     assert.equal(firstAnswer, `${windowPid}:${line}`);
 
     // The core leaves: its stdin closes, its relay ends, the window stays.
     const firstEnded = exitOf(firstRelay);
-    firstRelay.stdin!.end();
+    pipeOf(firstRelay.stdin).end();
     await firstEnded;
     assert.equal(supervisor.windowPid(), windowPid);
 
     // The next core connects to the same window.
     const secondRelay = startRelay(pipeName);
-    secondRelay.stdin!.write("fresh view\n");
+    pipeOf(secondRelay.stdin).write("fresh view\n");
     assert.equal(await nextLine(secondRelay), `${windowPid}:fresh view`);
     const secondEnded = exitOf(secondRelay);
-    secondRelay.stdin!.end();
+    pipeOf(secondRelay.stdin).end();
     await secondEnded;
   });
 
   it("ends the core's relay when the window ends", async () => {
     await server;
     const relay = startRelay(pipeName);
-    relay.stdin!.write("up\n");
+    pipeOf(relay.stdin).write("up\n");
     await nextLine(relay);
     const ended = exitOf(relay);
     supervisor.stop();
@@ -155,7 +163,7 @@ describe("the relay over the pipe", () => {
 });
 
 describe("the core runner", () => {
-  function fakeCore(name: string, events: string[]): CoreProcess {
+  function fakeCore({ name, events }: { name: string; events: string[] }) {
     const { promise: exited, resolve: finish } = Promise.withResolvers<void>();
     return {
       pid: 1,
@@ -165,7 +173,7 @@ describe("the core runner", () => {
         finish();
         return exited;
       }
-    };
+    } satisfies CoreProcess;
   }
 
   function runner({ results, running }: { results: BuildResult[]; running?: number }) {
@@ -186,7 +194,10 @@ describe("the core runner", () => {
         start() {
           started += 1;
           events.push(`start ${started}`);
-          return fakeCore(String(started), events);
+          return fakeCore({
+            name: String(started),
+            events
+          });
         },
         findRunning: () => running,
         log: line => events.push(`log ${line.split("\n")[0]}`)
