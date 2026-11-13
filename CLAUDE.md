@@ -233,12 +233,13 @@ side and must match the DLL's (`app/dll/src/{config.h,dllmain.cpp,log.h}`).
   clang-format, clang-tidy's fixes and the panel's fixers). The gate is
   clang-format (`.clang-format`), clang-tidy (`.clang-tidy`, correctness as
   errors), a restricted-syntax pass, the `shared.g.rs` freshness check, the
-  panel's `pnpm lint:verify` (oxlint, ESLint, clippy at `-D warnings`, rustfmt,
+  panel's `pnpm lint:verify` (`avi12-lint`: oxlint, oxfmt, stylelint and ESLint for the Svelte files, from `avi12/lint-config` v0.4.8; clippy at `-D warnings`, rustfmt,
   `tsc`, svelte-check, the fallow audit and winui-svelte's `check:editor`,
   which fails on anything VS Code's Svelte language server would underline or
   show as `any`) and the window protocol's freshness. Every `.svelte` file
   must be in a tsconfig's `include`: the language server parses one that is
   not with its own Svelte 4.
+  Exemptions live in config with a reason: `app/panel/.oxlintrc.json` turns off `house/positional-parameters` for the two Svelte files whose handlers WinUI and Svelte call positionally and `no-restricted-exports` for `ui/svelte.d.ts` (the `*.svelte` module declaration), allows winapp's `nuget_cache_dir` key, and `.stylelintrc.json` keeps the style names of `-winui-based-on` as WinUI spells them.
   `pwsh tools/lint.ps1 -InstallHook` gates every commit on its staged C++.
 
 # Native split: build and test

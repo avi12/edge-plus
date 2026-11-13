@@ -1,5 +1,23 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "extends": ["./node_modules/oxlint-config-avi12/oxlint.json", "./node_modules/oxlint-plugin-naming/preset.json"],
-  "ignorePatterns": ["node_modules/**", "src-tauri/**", ".winapp/**", "ui/protocol.g.ts"]
+  "rules": {
+    "naming/convention": [
+      "error",
+      {
+        "allowedNames": [{ "reason": "The key winapp writes into its lock file", "names": ["nuget_cache_dir"] }]
+      }
+    ]
+  },
+  "ignorePatterns": ["node_modules/**", "src-tauri/**", ".winapp/**", "ui/protocol.g.ts"],
+  "overrides": [
+    {
+      "files": ["ui/window/theming/ThemingBody.svelte", "ui/window/theming/ThemeRow.svelte"],
+      "rules": { "house/positional-parameters": "off" }
+    },
+    {
+      "files": ["ui/svelte.d.ts"],
+      "rules": { "no-restricted-exports": "off" }
+    }
+  ]
 }
