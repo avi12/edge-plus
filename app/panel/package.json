@@ -8,6 +8,7 @@
     "#src/*.ts": "./ui/*.ts",
     "#src/*.svelte": "./ui/*.svelte",
     "#src/*.json": "./ui/*.json",
+    "#src/*.css": "./ui/*.css",
     "#scripts/*.ts": "./scripts/*.ts",
     "#test/*.ts": "./test/*.ts"
   },
