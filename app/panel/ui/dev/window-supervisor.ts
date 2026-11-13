@@ -47,7 +47,7 @@ export function spawnWindowProcess({
   node: string;
   entry: string;
   environment: NodeJS.ProcessEnv;
-}): WindowProcess {
+}) {
   return spawn(node, ["--disable-warning=ExperimentalWarning", entry], {
     stdio: ["pipe", "pipe", "inherit"],
     env: environment,
@@ -61,7 +61,7 @@ export function createWindowSupervisor({
 }: {
   spawnWindow: () => WindowProcess;
   log: (line: string) => void;
-}): WindowSupervisor {
+}) {
   let windowProcess: WindowProcess | null = null;
   let current: CoreLink | null = null;
 
@@ -111,17 +111,11 @@ export function createWindowSupervisor({
     stop() {
       windowProcess?.kill();
     }
-  };
+  } satisfies WindowSupervisor;
 }
 
 /** Serves the supervisor on a named pipe; each connection is one core. */
-export function servePipe({
-  supervisor,
-  pipeName
-}: {
-  supervisor: WindowSupervisor;
-  pipeName: string;
-}): Promise<Server> {
+export function servePipe({ supervisor, pipeName }: { supervisor: WindowSupervisor; pipeName: string }) {
   const server = createServer(socket => {
     const connection = supervisor.connect({
       send: line => socket.write(`${line}\n`),
@@ -135,7 +129,7 @@ export function servePipe({
     socket.on("error", () => undefined);
     socket.on("close", () => connection.disconnect());
   });
-  return new Promise((resolve, reject) => {
+  return new Promise<Server>((resolve, reject) => {
     server.once("error", reject);
     server.listen(pipeName, () => resolve(server));
   });

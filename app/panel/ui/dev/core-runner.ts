@@ -39,7 +39,7 @@ export function createCoreRunner({
   /** The pid of a core running that this runner did not start, if any. */
   findRunning: () => number | undefined;
   log: (line: string) => void;
-}): CoreRunner {
+}) {
   let core: CoreProcess | null = null;
   let isBuilding = false;
   let isRebuildQueued = false;
@@ -62,7 +62,7 @@ export function createCoreRunner({
       .catch(() => undefined);
   }
 
-  async function rebuild(): Promise<void> {
+  async function rebuild() {
     if (isBuilding) {
       isRebuildQueued = true;
       return;
@@ -105,5 +105,5 @@ export function createCoreRunner({
       core = null;
       await old?.stop();
     }
-  };
+  } satisfies CoreRunner;
 }

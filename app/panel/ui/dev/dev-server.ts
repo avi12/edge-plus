@@ -146,7 +146,7 @@ function installedEdgeFolder() {
   return path.dirname(match[1].trim());
 }
 
-function startCore(pipeName: string): CoreProcess {
+function startCore(pipeName: string) {
   const folder = path.join(CORE_COPIES_ROOT, String(Date.now()));
   mkdirSync(folder, { recursive: true });
   const copy = path.join(folder, CORE_PROCESS_NAME);
@@ -180,7 +180,7 @@ function startCore(pipeName: string): CoreProcess {
       child.kill();
       await exited;
     }
-  };
+  } satisfies CoreProcess;
 }
 
 async function startCoreServer() {

@@ -42,7 +42,7 @@ interface PointerReading {
 
 // The window's content is the frame of reference: a row that moves with the
 // pointer would otherwise move the coordinates too.
-function readPointer({ sender, args }: { sender: PointerSender; args: PointerEventArguments }): PointerReading {
+function readPointer({ sender, args }: { sender: PointerSender; args: PointerEventArguments }) {
   const projectedArgs = projectAs(args, PointerRoutedEventArgs);
   const element = projectAs(sender, UIElement);
   const { pointer } = projectedArgs;
@@ -157,7 +157,7 @@ export class ThemeReorder {
   }
 
   /** The handlers that make a row draggable. */
-  handlers(id: string): DragHandlers {
+  handlers(id: string) {
     return {
       onpointerpressed: (sender, args) =>
         this.press({
@@ -189,7 +189,7 @@ export class ThemeReorder {
             args
           })
         )
-    };
+    } satisfies DragHandlers;
   }
 
   private press({ sender, reading, id }: { sender: PointerSender; reading: PointerReading; id: string }) {
