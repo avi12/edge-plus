@@ -1,5 +1,5 @@
 <script lang="ts">
-  import "../style/accent-button.css";
+  import "#src/window/style/accent-button.css";
   import { type KeyEventArguments, keyEventOf, type KeyHandlerSender } from "./key-arguments.ts";
   import { THEME_FILE_TYPES } from "./theme-files.ts";
   import ThemeList from "./ThemeList.svelte";

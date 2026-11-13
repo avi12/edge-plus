@@ -8,7 +8,8 @@
     "#src/*.ts": "./ui/*.ts",
     "#src/*.svelte": "./ui/*.svelte",
     "#src/*.json": "./ui/*.json",
-    "#scripts/*.ts": "./scripts/*.ts"
+    "#scripts/*.ts": "./scripts/*.ts",
+    "#test/*.ts": "./test/*.ts"
   },
   "scripts": {
     "restore": "winapp restore",

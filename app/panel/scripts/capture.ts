@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 
-import { startRealCore } from "../test/real-core.ts";
+import { startRealCore } from "#test/real-core.ts";
 
 // Opens the real core in a sandbox (test/real-core.ts), saves a PNG of its
 // window and closes it. Run it on a desktop of its own

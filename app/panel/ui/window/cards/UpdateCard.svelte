@@ -1,5 +1,5 @@
 <script lang="ts">
-  import "../style/accent-button.css";
+  import "#src/window/style/accent-button.css";
   import CardDescription from "./CardDescription.svelte";
   import CardFrame from "./CardFrame.svelte";
   import CardTitle from "./CardTitle.svelte";
