@@ -1,7 +1,7 @@
 {
-  "version": "0.3.3",
+  "version": "0.3.4",
   "msix": {
-    "url": "https://github.com/avi12/edge-plus/releases/download/v0.3.3/EdgePlus-0.3.3.msix",
-    "sha256": "79F7EB4F0A4DCBDBABDEEE548B8D6954BC58C83BDFCD2E93D7D101475DD93D77"
+    "url": "https://github.com/avi12/edge-plus/releases/download/v0.3.4/EdgePlus-0.3.4.msix",
+    "sha256": "C47C21A3E468E6FCB43A61E593E3F744253E277DD470A4FA50FA11C37CEC06CD"
   }
 }
