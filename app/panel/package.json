@@ -19,6 +19,7 @@
     "dev": "node --disable-warning=ExperimentalWarning ui/dev/dev-server.ts",
     "dev:sandbox": "node --disable-warning=ExperimentalWarning ui/dev/dev-server.ts --sandbox",
     "build:window": "node --disable-warning=ExperimentalWarning scripts/build-window.ts",
+    "create-release": "node --disable-warning=ExperimentalWarning scripts/create-release.ts",
     "build": "pnpm build:window && cargo build --release --manifest-path src-tauri/Cargo.toml",
     "check": "tsc --noEmit && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "lint:js": "avi12-lint --fix",
@@ -35,7 +36,7 @@
     "@microsoft/dynwinrt": "0.1.0-preview.23",
     "@winapp/bindings": "link:.winapp/bindings",
     "svelte": "5.56.7",
-    "winui-svelte": "0.0.8",
+    "winui-svelte": "^0.0.15",
     "zod": "^4.6.7"
   },
   "devDependencies": {

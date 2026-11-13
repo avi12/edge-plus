@@ -113,25 +113,53 @@ carries the window kit (Node, the bundled scripts, dynwinrt, the Windows App SDK
 runtime) and unpacks it once per kit; the core installs the runtime for the user
 when it is missing.
 
-### Updating itself
+### Installing and updating itself
 
-Installed copies update the way a browser extension does through its update
-URL. The repository hosts a small manifest, `docs/updates.json` (version, the
-URL of that release's MSIX and its SHA-256), written by
-`tools/Release.ps1` once the release's files are attached. `update_watch` reads it
-at start and every six hours (`update_feed` decides whether it names a newer
-version), downloads the package into `update\`, and checks it against the
-digest. The window then shows its update card.
+Edge+ installs per user, Squirrel-style, on the Rust crate `winui-svelte-launcher`
+(the layout `winui-svelte/updater` speaks). The root is `%LOCALAPPDATA%\EdgePlus`,
+which also holds the settings and the DLL; it carries a stable
+`edgeplus-launcher.exe` and one `app-x.y.z` folder per version. The launcher
+(`launcher/src/main.rs`, a few lines over the crate) starts the newest folder's
+`edgeplus.exe` with the arguments it is given, so the Start menu shortcut, the
+Add or remove programs entry and the Run entry never change when an update
+arrives. The published exe (`EdgePlus-Setup.exe`) installs itself when run
+outside the root (`installation::install_here`): it stages and promotes its own
+folder, copies the launcher, runs the `--install` hook and starts the app.
 
-**Restart to update** hands the package to a hidden PowerShell
-(`package_install::update_script`) that waits for the panel to exit, installs
-the package over the old one with `Add-AppxPackage` and starts the app again.
-The new exe then swaps its own DLL into Edge, so Edge does not restart.
+The crate's lifecycle hooks are how the core is told what happened, run as
+`edgeplus.exe <switch> <version>` (`installation::EdgePlus`): `--install` and
+`--updated` register the programs entry, the shortcut and the Run entry,
+`--obsolete` does nothing, and `--uninstall` removes everything (below).
 
-Only the installed package does any of this, and the **Check for updates**
-switch turns it all off. Start at sign-in is the package's startup task
-(`start_with_windows`), which runs `edgeplus-launcher.exe`, a launcher that
-starts the exe as a boot launch because a task cannot pass arguments.
+Updates come from GitHub Releases: each release carries `releases.json` and the
+zip of its version, written by `createRelease` in CI
+(`.github/workflows/release.yml`; `EDGEPLUS_CHANNEL` writes another channel's
+`releases.<channel>.json`), and the feed is the
+`releases/latest/download/releases.json` form. `update_watch` reads it at start
+and every six hours (`update_feed` decides whether it names a newer version),
+downloads the zip into `packages\`, checks its size and SHA-256, unpacks it into
+`app-x.y.z.staging` and has the crate rename it into place last
+(`promote_staging`), so a crash never leaves half a version. The window then
+shows its update card.
+
+**Restart to update** starts `edgeplus-launcher.exe --apply <pid>` and the core
+ends. The launcher waits for that process (asking, then ending it), runs the
+`--updated` and `--obsolete` hooks, starts the newest version, and when that
+fails to start marks it bad and starts the one before it (rollback). Once a
+version has started it removes the older ones. The new exe swaps its own DLL into
+Edge, so Edge does not restart. The DLL stays pinned to one `msedge.dll` build:
+the update only replaces Edge+, and the DLL is unpacked from the new exe as
+before.
+
+Uninstalling (the `--uninstall` hook, run through the launcher from Add or
+remove programs) removes the Run entry, the programs entry, the shortcut and the
+toast registration, then a hidden PowerShell ends the processes that run from the
+root (Edge+'s own, never Edge's), signals the DLL's unload event so it leaves
+Edge, and deletes the root.
+
+Only an installed copy does any of this, and the **Check for updates** switch
+turns the updates off. Start at sign-in is the Run entry (`start_with_windows`),
+which starts the launcher with `--background`.
 
 ### Upgrading from before the rename
 

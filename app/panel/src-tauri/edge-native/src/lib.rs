@@ -22,9 +22,7 @@
 //!     reads and writes.
 //!   * [`system::rsa`] - the CNG RSA keys local themes are signed with.
 //!   * [`system::toast`] - the paused-features toast.
-//!   * [`system::packages`] - installing MSIX packages for the current user.
-//!   * [`system::package_identity`] - the package family name of a packaged run.
-//!   * [`system::startup_task`] - the package's start-at-sign-in task.
+//!   * [`system::packages`] - installing the Windows App SDK's MSIX packages for the current user.
 
 mod kernel;
 mod process;
@@ -39,11 +37,9 @@ pub use process::browsers::{
 pub use process::inject::{free_module, inject_into};
 pub use process::memory::trim_working_set;
 pub use process::spawn::start_detached;
-pub use system::package_identity::package_family_name;
 pub use system::packages::install_packages;
 pub use system::registry::{
     Hive, delete_tree, delete_value, read_binary, read_dword, read_string, write_string,
 };
 pub use system::rsa::RsaKey;
-pub use system::startup_task::{is_startup_task_enabled, set_startup_task};
 pub use system::toast::{register_toast_app, show_toast};

@@ -1,23 +1,21 @@
 <#
 .SYNOPSIS
-  Cut an Edge+ release: the signed MSIX on GitHub, and the update manifest
-  every installed copy polls (docs\updates.json).
+  Cut an Edge+ release: bump the version, push it and create the GitHub
+  release; the workflow builds and attaches the files.
 
 .DESCRIPTION
   In order:
 
     1. set the version in app\panel\src-tauri\Cargo.toml, its one home;
-    2. build the window kit and the release exe that embeds it (rebuilding the
-       embedded split DLL if its sources are newer) and copy the exe to
-       out\release\EdgePlus-<version>.exe;
-    3. pack that exe as the signed MSIX (tools\Build-Msix.ps1), with the
-       certificate a user trusts once to install it;
-    4. commit `chore(release): <version>`, tag v<version> and push both;
-    5. create the GitHub release with the MSIX and the certificate attached, its
-       notes the highlights plus a link to every commit since the previous tag;
-    6. write the manifest from the package (tools\Write-UpdateManifest.ps1) and
-       push it - last, so an installed copy never sees a release whose files
-       are not uploaded yet.
+    2. commit `chore(release): <version>` and push main;
+    3. create the GitHub release v<version> from that commit, its notes the
+       highlights plus a link to every commit since the previous tag.
+
+  Creating the release creates the tag, and the tag starts
+  .github\workflows\release.yml, which builds the exe, packs the Squirrel-style
+  zip and releases.json (winui-svelte's createRelease) and attaches them with
+  EdgePlus-Setup.exe. Installed copies read releases.json from the latest
+  release, so they see the version once the workflow has attached it.
 
   Refuses a dirty tracked tree and a version that is not newer than the current
   one. Needs gh signed in.
@@ -29,7 +27,7 @@
   The changelog highlights, written for users: plain sentences, no file names.
 
 .EXAMPLE
-  pwsh tools\Release.ps1 -Version 0.0.2 -NotesFile $env:TEMP\notes-0.0.2.md
+  pwsh tools\Release.ps1 -Version 0.4.0 -NotesFile $env:TEMP\notes-0.4.0.md
 #>
 using module .\EdgePlus.Build.psm1
 
@@ -49,6 +47,8 @@ Import-Module (Join-Path $PSScriptRoot 'EdgePlus.Build.psm1') -Force
 [string] $lockfile = Join-Path (Split-Path $manifest -Parent) 'Cargo.lock'
 [string] $current = Get-ProductVersion
 [string] $highlights = (Get-Content (Resolve-Path $NotesFile) -Raw).Trim()
+[string] $repository = 'avi12/edge-plus'
+[string] $tag = "v$Version"
 
 [bool] $hasUncommittedChanges = [bool](git -C $repo status --porcelain --untracked-files=no)
 if ($hasUncommittedChanges) {
@@ -59,43 +59,26 @@ if (-not $isNewer) {
     throw "$Version must be newer than the current $current."
 }
 [string] $previousTag = git -C $repo describe --tags --abbrev=0
-[ReleaseAsset] $asset = Get-ReleaseAsset $Version
 
 Write-Step "Setting the version to $Version"
 Set-ProductVersion $Version
+Invoke-Checked 'cargo check' {
+    cargo check --manifest-path $manifest --quiet | Out-Host
+}
 
-Write-Step 'Building the exe'
-[string] $built = Build-ReleaseExe
-[string] $releaseFolder = Get-ReleaseFolder
-New-Item -ItemType Directory -Force $releaseFolder | Out-Null
-[string] $exe = Join-Path $releaseFolder $asset.Exe
-Copy-Item $built $exe -Force
-
-[string] $package = & (Join-Path $PSScriptRoot 'Build-Msix.ps1') -Exe $exe
-[string] $certificate = Join-Path (Split-Path $package -Parent) $asset.Certificate
-
-Write-Step "Committing and tagging $($asset.Tag)"
+Write-Step "Committing $Version"
 Invoke-Checked 'git add' { git -C $repo add $manifest $lockfile }
 Invoke-Checked 'git commit' { git -C $repo commit -m "chore(release): $Version" }
-Invoke-Checked 'git tag' { git -C $repo tag $asset.Tag }
-Invoke-Checked 'git push' { git -C $repo push origin main $asset.Tag }
-
-Write-Step 'Creating the GitHub release'
-[string] $notes = Join-Path $releaseFolder "notes-$Version.md"
-[string] $allChanges = "https://github.com/$($asset.Repository)/compare/$previousTag...$($asset.Tag)"
-[string] $installLine = "**Install:** download ``$($asset.Package)`` below and open it. Trust ``$($asset.Certificate)`` once first."
-Set-Content $notes "$highlights`n`n$installLine`n`n**All changes:** $allChanges`n" -Encoding utf8NoBOM
-Invoke-Checked 'gh release create' {
-    gh release create $asset.Tag $package $certificate --repo $asset.Repository `
-        --title "Edge+ $Version" --notes-file $notes
-}
-
-Write-Step 'Publishing the update manifest'
-& (Join-Path $PSScriptRoot 'Write-UpdateManifest.ps1') -Package $package
-Invoke-Checked 'git add' { git -C $repo add docs/updates.json }
-Invoke-Checked 'git commit' {
-    git -C $repo commit -m "chore(release): update manifest for $Version"
-}
 Invoke-Checked 'git push' { git -C $repo push origin main }
 
-Write-Host "Released $($asset.Tag): https://github.com/$($asset.Repository)/releases/tag/$($asset.Tag)"
+Write-Step "Creating the GitHub release $tag"
+[string] $notes = Join-Path (Get-ReleaseFolder) "notes-$Version.md"
+New-Item -ItemType Directory -Force (Split-Path $notes -Parent) | Out-Null
+[string] $allChanges = "https://github.com/$repository/compare/$previousTag...$tag"
+[string] $installLine = '**Install:** download ``EdgePlus-Setup.exe`` below and open it. It installs Edge+ for you, adds it to Start and to Add or remove programs, and updates itself.'
+Set-Content $notes "$highlights`n`n$installLine`n`n**All changes:** $allChanges`n" -Encoding utf8NoBOM
+Invoke-Checked 'gh release create' {
+    gh release create $tag --repo $repository --target main --title "Edge+ $Version" --notes-file $notes
+}
+
+Write-Host "Released ${tag}: https://github.com/$repository/releases/tag/$tag (the workflow attaches the files)"

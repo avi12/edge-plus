@@ -14,7 +14,6 @@ const THEMES_FOLDER_NAME: &str = "themes";
 const THEME_KEYS_FOLDER_NAME: &str = "keys";
 const TEMPORARY_SUFFIX: &str = ".tmp";
 const PAUSED_TOAST_FILE_NAME: &str = "paused-toast-build.txt";
-const UPDATE_FOLDER_NAME: &str = "update";
 const WINDOW_FOLDER_NAME: &str = "window";
 
 #[must_use]
@@ -60,13 +59,6 @@ pub fn split_dll() -> PathBuf {
 #[must_use]
 pub fn paused_toast_build() -> PathBuf {
     data_root().join(PAUSED_TOAST_FILE_NAME)
-}
-
-/// A new release's exe is downloaded and checked here until the user restarts
-/// into it.
-#[must_use]
-pub fn update_folder() -> PathBuf {
-    data_root().join(UPDATE_FOLDER_NAME)
 }
 
 /// Local theme `.crx` files are copied here to install by path.

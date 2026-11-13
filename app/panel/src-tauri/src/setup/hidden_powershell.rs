@@ -1,39 +1,9 @@
-//! Edge+ as an MSIX package: whether this run is the package's, and how it
-//! updates itself. A package's folder is read-only, so an update is the newer
-//! package installed over it by Windows once the core has exited.
+//! Work that must outlive this process (restarting into an update, a Start menu
+//! shortcut) is handed to a hidden PowerShell, whose script is encoded so no
+//! path in it needs quoting on the command line.
 
-use std::path::Path;
-
-/// The `Application` the manifest (app/package/AppxManifest.xml) declares.
-const APPLICATION_ID: &str = "App";
 const POWERSHELL_COMMAND: &str =
     "powershell.exe -NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand";
-
-/// True when the exe runs from the package, not from a checkout or a copy.
-#[must_use]
-pub fn is_packaged() -> bool {
-    edge_native::package_family_name().is_some()
-}
-
-/// What starts the package's app: its family name and the application's id.
-#[must_use]
-pub fn app_user_model_id() -> Option<String> {
-    edge_native::package_family_name().map(|family| format!("{family}!{APPLICATION_ID}"))
-}
-
-/// Waits for the core to exit, so the package is free to be replaced, installs
-/// the newer one over it, then starts the app again: the new one, or the old
-/// one if the install was declined.
-#[must_use]
-pub fn update_script(core_process_id: u32, package: &Path, app_user_model_id: &str) -> String {
-    format!(
-        "Wait-Process -Id {core_process_id} -ErrorAction SilentlyContinue\n\
-         Add-AppxPackage -Path {} -ForceUpdateFromAnyVersion\n\
-         Start-Process {}\n",
-        quoted(&package.display().to_string()),
-        quoted(&format!(r"shell:AppsFolder\{app_user_model_id}"))
-    )
-}
 
 /// A hidden PowerShell running the script, encoded so no path in it needs
 /// quoting on the command line.
@@ -44,7 +14,8 @@ pub fn hidden_powershell(script: &str) -> String {
 }
 
 /// A PowerShell single-quoted string, where only a quote needs escaping.
-fn quoted(text: &str) -> String {
+#[must_use]
+pub fn quoted(text: &str) -> String {
     format!("'{}'", text.replace('\'', "''"))
 }
 
@@ -104,20 +75,11 @@ mod tests {
     }
 
     #[test]
-    fn waits_then_installs_then_restarts() {
-        let script = update_script(
-            42,
-            Path::new(r"C:\it's\EdgePlus-0.2.0.msix"),
-            "avi12.EdgePlus_abc!App",
-        );
-        assert_eq!(
-            "Wait-Process -Id 42 -ErrorAction SilentlyContinue\n\
-             Add-AppxPackage -Path 'C:\\it''s\\EdgePlus-0.2.0.msix' -ForceUpdateFromAnyVersion\n\
-             Start-Process 'shell:AppsFolder\\avi12.EdgePlus_abc!App'\n",
-            script,
-            "waits for the core, installs the package, then starts the app, quotes escaped"
-        );
-        let command = hidden_powershell(&script);
+    fn carries_the_script_encoded_in_a_hidden_window() {
+        let script = r"Wait-Process -Id 42
+Start-Process 'C:\it''s'
+";
+        let command = hidden_powershell(script);
         let encoded = command.rsplit(' ').next().expect("the encoded script");
         let utf16: Vec<u16> = decode_base64(encoded)
             .chunks(2)
@@ -132,6 +94,7 @@ mod tests {
             command.starts_with("powershell.exe ") && command.contains("-WindowStyle Hidden"),
             "in a hidden window"
         );
+        assert_eq!("'it''s'", quoted("it's"), "a quote is doubled");
     }
 
     #[test]
