@@ -66,9 +66,9 @@
     <FeatureCard card={cardOf("cyberpunkSkin")} glyph="Page">
       <CardTitle>{featureTitles.cyberpunkSkin}</CardTitle>
       <CardDescription>
-        Dresses every tab, vertical and horizontal, as a Cyberpunk HUD plate: a straight leading edge, a
-        cut trailing corner, and the selected tab in solid red with dark or light ink to match the theme.
-        Off, tabs look like Edge's own. Works with Theming on. Live, no restart.
+        Squares every tab, vertical and horizontal, like the Cyberpunk kit's: the selected tab gets a red
+        frame and cyan (dark) or ink (light) text, the others stay bare. Off, tabs look like Edge's own.
+        Works with Theming on. Live, no restart.
       </CardDescription>
     </FeatureCard>
     <FeatureCard card={cardOf("webUiFollowsTheme")} glyph="Brightness">
