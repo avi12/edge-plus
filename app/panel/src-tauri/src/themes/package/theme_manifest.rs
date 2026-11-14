@@ -115,7 +115,7 @@ pub(crate) fn revise(zip_bytes: &[u8], revision: u16) -> ThemeFileResult<(Vec<u8
     let mut writer = ZipWriter::new(Cursor::new(Vec::new()));
     for index in 0..source.len() {
         let entry = source.by_index_raw(index).map_err(not_a_zip)?;
-        let is_manifest = entry.name() == MANIFEST_NAME;
+        let is_manifest = entry.name().is_ok_and(|name| name == MANIFEST_NAME);
         if is_manifest {
             continue;
         }
