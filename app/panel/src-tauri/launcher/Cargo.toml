@@ -2,6 +2,7 @@
 name = "edgeplus-launcher"
 version = "0.0.1"
 edition = "2024"
+publish = false
 license = "Apache-2.0"
 description = "The stable program in the install root: starts the newest app-x.y.z of Edge+ with the arguments it was given."
 
