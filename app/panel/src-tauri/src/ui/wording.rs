@@ -11,7 +11,7 @@ use serde::Deserialize;
 use crate::platform::settings::{ColorMode, Feature};
 use crate::ui::protocol::EdgeBuild;
 
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct SharedWording {
     feature_titles: HashMap<Feature, String>,
@@ -27,7 +27,7 @@ static SHARED: LazyLock<SharedWording> = LazyLock::new(|| {
     serde_json::from_str(include_str!(
         "../../../ui/window/wording/shared-wording.json"
     ))
-    .expect("shared-wording.json is checked by its test")
+    .unwrap_or_default()
 });
 
 const EDGE_PLACEHOLDER: &str = "{edge}";

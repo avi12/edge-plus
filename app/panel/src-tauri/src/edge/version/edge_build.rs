@@ -16,7 +16,7 @@ pub(crate) struct BuildChange {
 }
 
 fn part(value: u32) -> u16 {
-    u16::try_from(value).expect("offsets.h's version parts fit 16 bits")
+    u16::try_from(value).unwrap_or(u16::MAX)
 }
 
 #[must_use]

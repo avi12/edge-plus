@@ -27,7 +27,7 @@ use winui_svelte_launcher::Version;
 /// Long enough for start-up's work to settle before the working set is trimmed.
 const TRIM_DELAY: Duration = Duration::from_secs(5);
 
-pub(crate) fn run(is_boot_launch: bool) {
+pub(crate) fn run(is_boot_launch: bool) -> tauri::Result<()> {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(
             |_app, command_line, _folder| {
@@ -53,8 +53,7 @@ pub(crate) fn run(is_boot_launch: bool) {
             trim_when_settled();
             Ok(())
         })
-        .build(tauri::generate_context!())
-        .expect("the Tauri app builds");
+        .build(tauri::generate_context!())?;
     app.run(|_app, event| {
         // With no webview window, Tauri would end the loop at once.
         if let RunEvent::ExitRequested { api, code, .. } = event
@@ -63,6 +62,7 @@ pub(crate) fn run(is_boot_launch: bool) {
             api.prevent_exit();
         }
     });
+    Ok(())
 }
 
 /// Idempotent. The pre-rename install is out of the way first, then the DLL is

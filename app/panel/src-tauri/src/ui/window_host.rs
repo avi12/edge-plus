@@ -61,8 +61,12 @@ struct Host {
 
 static HOST: OnceLock<Host> = OnceLock::new();
 
-fn host() -> &'static Host {
-    HOST.get().expect("window_host::init runs first")
+fn host() -> Option<&'static Host> {
+    HOST.get()
+}
+
+fn session() -> Option<MutexGuard<'static, Option<Session>>> {
+    host().map(|host| lock(&host.session))
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -81,7 +85,7 @@ pub(crate) fn init(on_last_close: OnLastClose) {
 
 #[must_use]
 pub(crate) fn is_open() -> bool {
-    lock(&host().session).is_some()
+    session().is_some_and(|open| open.is_some())
 }
 
 /// Opens the window, or brings back the one already open.
@@ -142,12 +146,15 @@ fn open(placement: Option<Bounds>, status: Option<String>) {
     else {
         return;
     };
+    let Some(host) = host() else {
+        return;
+    };
     let id = {
-        let mut next_id = lock(&host().next_id);
+        let mut next_id = lock(&host.next_id);
         *next_id += 1;
         *next_id
     };
-    let replaced = lock(&host().session).replace(Session {
+    let replaced = lock(&host.session).replace(Session {
         id,
         stdin,
         offer: InjectOffer::Hidden,
@@ -193,8 +200,11 @@ fn listen(id: u64, stdout: impl std::io::Read, mut child: Child) {
         }
     }
     let _ = child.wait();
+    let Some(host) = host() else {
+        return;
+    };
     let ended = {
-        let mut session = lock(&host().session);
+        let mut session = lock(&host.session);
         let is_current = session.as_ref().is_some_and(|open| open.id == id);
         if is_current { session.take() } else { None }
     };
@@ -203,7 +213,7 @@ fn listen(id: u64, stdout: impl std::io::Read, mut child: Child) {
     };
     background_service::set_window_open(false);
     let should_install_runtime =
-        ended.is_runtime_missing && !host().has_installed_runtime.swap(true, Ordering::SeqCst);
+        ended.is_runtime_missing && !host.has_installed_runtime.swap(true, Ordering::SeqCst);
     if let Some(kit) = ended.kit.filter(|_| should_install_runtime) {
         match window_kit::install_runtime(&kit) {
             Ok(()) => return open(ended.bounds, None),
@@ -212,21 +222,25 @@ fn listen(id: u64, stdout: impl std::io::Read, mut child: Child) {
             }
         }
     }
-    (host().on_last_close)();
+    (host.on_last_close)();
 }
 
 fn handle(id: u64, frame: RequestFrame<UiMessage>) {
     let request = frame.id;
     match frame.message {
         UiMessage::RuntimeMissing => {
-            if let Some(session) = lock(&host().session).as_mut().filter(|open| open.id == id) {
-                session.is_runtime_missing = true;
+            if let Some(mut guard) = session()
+                && let Some(open) = guard.as_mut().filter(|open| open.id == id)
+            {
+                open.is_runtime_missing = true;
             }
         }
         UiMessage::Refresh => refresh(),
         UiMessage::Bounds(bounds) => {
-            if let Some(session) = lock(&host().session).as_mut().filter(|open| open.id == id) {
-                session.bounds = Some(bounds);
+            if let Some(mut guard) = session()
+                && let Some(open) = guard.as_mut().filter(|open| open.id == id)
+            {
+                open.bounds = Some(bounds);
             }
         }
         UiMessage::Action(action) => {
@@ -327,8 +341,10 @@ fn refresh() {
 
 fn send_view(state: &PanelState) {
     let message = {
-        let mut session = lock(&host().session);
-        let Some(open) = session.as_mut() else {
+        let Some(mut guard) = session() else {
+            return;
+        };
+        let Some(open) = guard.as_mut() else {
             return;
         };
         open.offer = inject_offer::next(open.offer, state);
@@ -358,7 +374,9 @@ fn request_frame(message: CoreMessage) -> RequestFrame<CoreMessage> {
 }
 
 fn send_line(frame: &impl serde::Serialize) {
-    if let Some(open) = lock(&host().session).as_mut() {
+    if let Some(mut guard) = session()
+        && let Some(open) = guard.as_mut()
+    {
         write_line(&mut open.stdin, frame);
     }
 }
