@@ -18,7 +18,10 @@ use crate::ui::wording;
 /// stays as it was.
 static SIMULATED_NOTIFIED: Mutex<Option<FileVersion>> = Mutex::new(None);
 
-pub(crate) fn show_once_per_build(change: &BuildChange, on_click: impl Fn() + Send + Sync + 'static) {
+pub(crate) fn show_once_per_build(
+    change: &BuildChange,
+    on_click: impl Fn() + Send + Sync + 'static,
+) {
     let notified_for = notified_for();
     if !edge_support::should_notify(&change.paused, Some(change.edge_build), notified_for) {
         return;
