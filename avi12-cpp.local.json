@@ -1,0 +1,68 @@
+{
+  "sources": {
+    "include": [
+      "^app/dll/(src|test)/"
+    ]
+  },
+  "database": {
+    "buildscript": {
+      "file": "app/dll/edgeplus-split.buildscript",
+      "project": "edgeplus-split",
+      "includeRoot": "app/dll"
+    }
+  },
+  "tidy": {
+    "headerFilterRegex": "dll[/\\\\](src|test)[/\\\\].*\\.h$",
+    "disable": {
+      "cppcoreguidelines-avoid-non-const-global-variables": "the injected DLL keeps its hook originals and state in g_ and o_ globals, named by CLAUDE.md",
+      "cppcoreguidelines-pro-type-reinterpret-cast": "the DLL binds msedge.dll by RVA and reads fields at reversed offsets, so every Edge pointer is a reinterpret_cast",
+      "performance-no-int-to-ptr": "the DLL binds msedge.dll by RVA, so every Edge function is an integer-to-pointer cast",
+      "bugprone-multi-level-implicit-pointer-conversion": "the Edge bindings go through raw offsets and pointer-to-pointer fields",
+      "cert-dcl50-cpp": "Log() is a printf-style variadic on purpose",
+      "modernize-avoid-variadic-functions": "Log() is a printf-style variadic on purpose",
+      "bugprone-unchecked-string-to-number-conversion": "the callers check the parsed value's range themselves"
+    },
+    "options": {
+      "readability-identifier-naming.ConstexprVariableIgnoredRegexp": "^[A-Z][A-Za-z0-9_]*$",
+      "readability-identifier-naming.FunctionIgnoredRegexp": "^(h_.*|wmain)$",
+      "readability-identifier-naming.GlobalVariableIgnoredRegexp": "^o_.*",
+      "readability-identifier-naming.TypeAliasIgnoredRegexp": ".*_t$",
+      "readability-identifier-naming.TypedefIgnoredRegexp": ".*_t$",
+      "readability-identifier-naming.StaticVariablePrefix": "",
+      "readability-function-size.NestingThreshold": "6",
+      "readability-function-size.ParameterThreshold": "8",
+      "readability-function-size.LineThreshold": "270",
+      "readability-function-size.StatementThreshold": "270",
+      "readability-function-cognitive-complexity.Threshold": "35",
+      "bugprone-easily-swappable-parameters.MinimumLength": "4",
+      "readability-magic-numbers.IgnoredIntegerValues": "1;2;3;4;7;8;10;15;16;24;32;64;100;1000;65535;4278190080",
+      "readability-magic-numbers.IgnoredFloatingPointValues": "1.0;100.0;2.0;0.5"
+    },
+    "optionReasons": {
+      "readability-identifier-naming.ConstexprVariableIgnoredRegexp": "offsets.h names each RVA and field offset after the reversed symbol (PascalCase or Class_Method) so it greps against the PDB and docs/re",
+      "readability-identifier-naming.FunctionIgnoredRegexp": "hook detours are h_ on purpose, and wmain is the entry point's own name",
+      "readability-identifier-naming.GlobalVariableIgnoredRegexp": "hook detours are h_ and their originals o_ on purpose",
+      "readability-identifier-naming.TypeAliasIgnoredRegexp": "function-pointer aliases are named after the Edge function they bind, with a _t suffix",
+      "readability-identifier-naming.TypedefIgnoredRegexp": "function-pointer aliases are named after the Edge function they bind, with a _t suffix",
+      "readability-identifier-naming.StaticVariablePrefix": "a function-local static is named like a local; g_ marks the globals and CLAUDE.md has no file-static prefix",
+      "readability-function-size.NestingThreshold": "the hook table, the injected page scripts (raw string literals) and the resolve and split-command sequences are long by design; the Win32 callbacks take the parameters the API defines",
+      "readability-function-size.ParameterThreshold": "the hook table, the injected page scripts (raw string literals) and the resolve and split-command sequences are long by design; the Win32 callbacks take the parameters the API defines",
+      "readability-function-size.LineThreshold": "the hook table, the injected page scripts (raw string literals) and the resolve and split-command sequences are long by design; the Win32 callbacks take the parameters the API defines",
+      "readability-function-size.StatementThreshold": "the hook table, the injected page scripts (raw string literals) and the resolve and split-command sequences are long by design; the Win32 callbacks take the parameters the API defines",
+      "readability-function-cognitive-complexity.Threshold": "Decide and Run are the two decision tables of the resolver and measure 33 and 34",
+      "bugprone-easily-swappable-parameters.MinimumLength": "rect and point helpers take their coordinates as adjacent ints",
+      "readability-magic-numbers.IgnoredIntegerValues": "Edge struct sizes and padding mirror the reversed layouts, and the nibble, channel and decimal-digit masks name themselves",
+      "readability-magic-numbers.IgnoredFloatingPointValues": "halving and doubling a layout weight"
+    },
+    "directories": {
+      "app/dll/test": {
+        "disable": {
+          "readability-magic-numbers": "a test states the numbers it expects",
+          "hicpp-exception-baseclass": "the harness throws its own CheckFailed to stop a case",
+          "google-build-using-namespace": "a test uses the namespace it exercises",
+          "readability-function-size": "a test file lists its cases in one RunChecks function"
+        }
+      }
+    }
+  }
+}

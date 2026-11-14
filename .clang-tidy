@@ -1,211 +1,184 @@
-# Static analysis for the native split's C++ (app/dll/src and test).
-#
-# Ported from avi/any-stt's .clang-tidy, which mirrors avi/youtube-time-manager:
-# .clang-format owns layout (their @stylistic/eslint half) and this file owns
-# logic and correctness (their oxlint half). oxlint runs
-# `categories.correctness: error`; the C++ equivalent is bugprone-* +
-# clang-analyzer-* + cert-* + concurrency-*, as errors.
-#
-# Run:  pwsh tools/lint.ps1  (check)   /   pwsh tools/lint.ps1 -Fix   (apply fixes)
-#
-# ---- their .oxlintrc.json rule by rule, and what answers it here -----------
-#   categories.correctness  -> bugprone-*, cert-*, clang-analyzer-*, concurrency-*
-#   prefer-const            -> misc-const-correctness (values only, as below)
-#   id-length min 3 + list  -> readability-identifier-length + IgnoredNames
-#   no-nested-ternary       -> readability-avoid-nested-conditional-operator
-#   curly: all              -> .clang-format InsertBraces
-#   no-unused-vars          -> misc-unused-*, clang-analyzer-deadcode.DeadStores
-#   no-restricted-globals   -> bugprone-unsafe-functions.CustomFunctions
-#   import/first, dupes     -> readability-duplicate-include
-#   @stylistic/*, max-len   -> .clang-format (Google, ColumnLimit 80)
-#   spaced-comment: always  -> .clang-format SpacesInLineCommentPrefix
-#
-# Deliberately OFF, and why (the same list as any-stt, for the same reasons):
-#   performance-no-int-to-ptr, bugprone-multi-level-implicit-pointer-conversion
-#     — this DLL binds msedge.dll by RVA: every Edge function is an
-#       integer-to-pointer cast and every field read goes through raw offsets.
-#       The rule is right in general and wrong for every binding here.
-#   readability-implicit-bool-conversion, readability-braces-around-statements,
-#   readability-magic-numbers
-#     — braces are clang-format's InsertBraces; the other two would drown the
-#       real findings (offsets.h is nothing but reversed magic numbers).
-#   misc-include-cleaner — Win32 headers have hard ordering dependencies, the
-#       same reason SortIncludes is off in .clang-format.
-#   readability-identifier-naming — offsets.h names each RVA and offset after
-#       the reversed symbol (`Class_Method`, `CLASS_field`) so it greps against
-#       the PDB and docs/re, and the hook pairs are `h_` (detour) / `o_`
-#       (original) on purpose. CLAUDE.md's table stays a review concern.
-#   cert-dcl50-cpp — Log() is a printf-style variadic on purpose.
-#   bugprone-unchecked-string-to-number-conversion, misc-no-recursion
-#       (the layout tree is recursive by nature), the rest as in any-stt.
-#
-# ---- C++ best practices, held once applied ----------------------------------
-# Each practice below was applied to the whole tree, and its check is an error
-# from then on, so a regression fails the gate instead of waiting for review:
-#   no C casts                  -> cppcoreguidelines-pro-type-cstyle-cast,
-#                                  google-readability-casting
-#   nullptr, never NULL or 0    -> modernize-use-nullptr
-#   override on every override  -> modernize-use-override
-#   default member initializers -> modernize-use-default-member-init,
-#                                  cppcoreguidelines-prefer-member-initializer
-#   explicit converting ctors   -> google-explicit-constructor
-#   `using`, `= default/delete` -> modernize-use-using, modernize-use-equals-*
-#   C++ headers, bool literals  -> modernize-deprecated-headers,
-#                                  modernize-use-bool-literals,
-#                                  modernize-redundant-void-arg
-#   no dynamic throw() specs    -> modernize-use-noexcept
-#   virtual dtors, no slicing   -> cppcoreguidelines-virtual-class-destructor,
-#                                  cppcoreguidelines-slicing
-#   const member functions      -> readability-make-member-function-const,
-#                                  readability-non-const-parameter
-#   const is never cast away    -> cppcoreguidelines-pro-type-const-cast
-#     (edge::Field has a const overload for fields we only read)
-#   `const auto*` for const     -> readability-qualified-auto
-#   [[nodiscard]] results       -> modernize-use-nodiscard (const member
-#                                  functions); by hand, every function of the
-#                                  pure headers and every call that reports
-#                                  success (verify, InstallAll, LoadFromFile)
-#   no raw new/delete or malloc -> cppcoreguidelines-owning-memory,
-#                                  cppcoreguidelines-no-malloc,
-#                                  modernize-make-unique
-#     (Win32 handles have owners in handles.h for the same reason; no check
-#     can see a CloseHandle a path forgot, so that one stays a review concern.)
-#   nothing left uninitialised  -> cppcoreguidelines-init-variables,
-#                                  cppcoreguidelines-pro-type-member-init
-#     (and every struct member has a default initializer, the Edge ABI
-#     mirrors too: an initializer is not layout)
-#   the rule of five            -> cppcoreguidelines-special-member-functions
-#   noexcept moves, dtors, swap -> performance-noexcept-* (on, from
-#                                  performance-*); noexcept on the pure,
-#                                  non-allocating helpers is by hand
-#   starts_with / ends_with     -> modernize-use-starts-ends-with
-#   signed vs unsigned compares -> modernize-use-integer-sign-comparison
-#                                  (std::cmp_less and friends)
-#   one declaration a statement -> readability-isolate-declaration
-#   empty(), not size() > 0     -> readability-container-size-empty
-#   no silent narrowing         -> bugprone-narrowing-conversions (on, from
-#                                  bugprone-*: an int that becomes a float, or
-#                                  an unsigned that becomes signed, is cast)
+# Generated by avi12-lint cpp-config from cpp-config-avi12 and avi12-cpp.local.json; do not edit
+# Checks that are off, and why:
+#   misc-include-cleaner: Win32 headers have hard ordering dependencies, so the include set is authored by hand
+#   misc-non-private-member-variables-in-classes: Google style allows public data in a plain struct
+#   misc-no-recursion: recursion over a tree is the clearest form; the cognitive complexity limit still bounds a function
+#   bugprone-reserved-identifier: the Windows SDK and the CRT define reserved names the code must use
+#   cert-dcl37-c: the Windows SDK and the CRT define reserved names the code must use
+#   cert-dcl51-cpp: the Windows SDK and the CRT define reserved names the code must use
+#   cert-err33-c: checking every printf-family result adds noise; the specific unused-return checks stay
+#   performance-enum-size: an enum that mirrors an ABI keeps the width the ABI has
+#   modernize-use-trailing-return-type: Google style writes the return type first
+#   modernize-use-designated-initializers: the Win32 structs initialise by position
+#   misc-use-anonymous-namespace: Google style allows a static function as much as an unnamed namespace, and misc-use-internal-linkage already narrows visibility
+#   modernize-avoid-c-arrays: Win32 and COM calls take a buffer as pointer and length, and a fixed buffer on the stack is the idiom there
+#   modernize-use-auto: Google style prefers the written type unless the type is obvious from the initializer
+#   modernize-raw-string-literal: an escaped literal is as readable and diffs smaller
+#   modernize-macro-to-enum: the macros are Win32 and build values the code does not own
+#   google-runtime-int: the Win32 ABI types (DWORD, LONG, ULONG) are the contract
+#   modernize-return-braced-init-list: a named constructor call reads clearer at a return
+#   modernize-use-ranges: its fixer writes std::ranges::sort(range, , comparator) with an empty argument, which does not compile (LLVM 22.1.7)
+#   cppcoreguidelines-avoid-non-const-global-variables: the injected DLL keeps its hook originals and state in g_ and o_ globals, named by CLAUDE.md
+#   cppcoreguidelines-pro-type-reinterpret-cast: the DLL binds msedge.dll by RVA and reads fields at reversed offsets, so every Edge pointer is a reinterpret_cast
+#   performance-no-int-to-ptr: the DLL binds msedge.dll by RVA, so every Edge function is an integer-to-pointer cast
+#   bugprone-multi-level-implicit-pointer-conversion: the Edge bindings go through raw offsets and pointer-to-pointer fields
+#   cert-dcl50-cpp: Log() is a printf-style variadic on purpose
+#   modernize-avoid-variadic-functions: Log() is a printf-style variadic on purpose
+#   bugprone-unchecked-string-to-number-conversion: the callers check the parsed value's range themselves
+# Options this repo changes, and why:
+#   readability-identifier-naming.ConstexprVariableIgnoredRegexp: offsets.h names each RVA and field offset after the reversed symbol (PascalCase or Class_Method) so it greps against the PDB and docs/re
+#   readability-identifier-naming.FunctionIgnoredRegexp: hook detours are h_ on purpose, and wmain is the entry point's own name
+#   readability-identifier-naming.GlobalVariableIgnoredRegexp: hook detours are h_ and their originals o_ on purpose
+#   readability-identifier-naming.TypeAliasIgnoredRegexp: function-pointer aliases are named after the Edge function they bind, with a _t suffix
+#   readability-identifier-naming.TypedefIgnoredRegexp: function-pointer aliases are named after the Edge function they bind, with a _t suffix
+#   readability-identifier-naming.StaticVariablePrefix: a function-local static is named like a local; g_ marks the globals and CLAUDE.md has no file-static prefix
+#   readability-function-size.NestingThreshold: the hook table, the injected page scripts (raw string literals) and the resolve and split-command sequences are long by design; the Win32 callbacks take the parameters the API defines
+#   readability-function-size.ParameterThreshold: the hook table, the injected page scripts (raw string literals) and the resolve and split-command sequences are long by design; the Win32 callbacks take the parameters the API defines
+#   readability-function-size.LineThreshold: the hook table, the injected page scripts (raw string literals) and the resolve and split-command sequences are long by design; the Win32 callbacks take the parameters the API defines
+#   readability-function-size.StatementThreshold: the hook table, the injected page scripts (raw string literals) and the resolve and split-command sequences are long by design; the Win32 callbacks take the parameters the API defines
+#   readability-function-cognitive-complexity.Threshold: Decide and Run are the two decision tables of the resolver and measure 33 and 34
+#   bugprone-easily-swappable-parameters.MinimumLength: rect and point helpers take their coordinates as adjacent ints
+#   readability-magic-numbers.IgnoredIntegerValues: Edge struct sizes and padding mirror the reversed layouts, and the nibble, channel and decimal-digit masks name themselves
+#   readability-magic-numbers.IgnoredFloatingPointValues: halving and doubling a layout weight
 Checks: >
   -*,
-  cppcoreguidelines-init-variables,
-  cppcoreguidelines-no-malloc,
-  cppcoreguidelines-owning-memory,
-  cppcoreguidelines-pro-type-member-init,
-  cppcoreguidelines-special-member-functions,
-  modernize-make-unique,
-  cppcoreguidelines-pro-type-const-cast,
-  cppcoreguidelines-pro-type-cstyle-cast,
-  cppcoreguidelines-prefer-member-initializer,
-  cppcoreguidelines-slicing,
-  cppcoreguidelines-virtual-class-destructor,
-  google-explicit-constructor,
-  google-readability-casting,
-  modernize-deprecated-headers,
-  modernize-redundant-void-arg,
-  modernize-use-bool-literals,
-  modernize-use-default-member-init,
-  modernize-use-integer-sign-comparison,
-  modernize-use-equals-default,
-  modernize-use-equals-delete,
-  modernize-use-nodiscard,
-  modernize-use-noexcept,
-  modernize-use-nullptr,
-  modernize-use-override,
-  modernize-use-starts-ends-with,
-  modernize-use-using,
-  readability-make-member-function-const,
-  readability-non-const-parameter,
-  readability-container-size-empty,
-  readability-isolate-declaration,
-  readability-qualified-auto,
   bugprone-*,
   cert-*,
   clang-analyzer-*,
   concurrency-*,
+  google-*,
+  hicpp-exception-baseclass,
   misc-*,
+  modernize-*,
   performance-*,
+  cppcoreguidelines-avoid-non-const-global-variables,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-no-malloc,
+  cppcoreguidelines-owning-memory,
+  cppcoreguidelines-prefer-member-initializer,
+  cppcoreguidelines-pro-type-const-cast,
+  cppcoreguidelines-pro-type-cstyle-cast,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-pro-type-reinterpret-cast,
+  cppcoreguidelines-slicing,
+  cppcoreguidelines-special-member-functions,
+  cppcoreguidelines-virtual-class-destructor,
   readability-avoid-nested-conditional-operator,
-  readability-identifier-length,
+  readability-braces-around-statements,
   readability-const-return-type,
+  readability-container-size-empty,
   readability-delete-null-pointer,
   readability-duplicate-include,
+  readability-else-after-return,
+  readability-function-cognitive-complexity,
+  readability-function-size,
+  readability-identifier-length,
+  readability-identifier-naming,
+  readability-implicit-bool-conversion,
   readability-inconsistent-declaration-parameter-name,
+  readability-isolate-declaration,
+  readability-magic-numbers,
+  readability-make-member-function-const,
   readability-misleading-indentation,
   readability-misplaced-array-index,
+  readability-non-const-parameter,
+  readability-qualified-auto,
   readability-redundant-control-flow,
   readability-redundant-declaration,
+  readability-redundant-member-init,
   readability-redundant-preprocessor,
+  readability-redundant-smartptr-get,
   readability-redundant-string-cstr,
   readability-simplify-boolean-expr,
   readability-string-compare,
-  readability-function-cognitive-complexity,
-  -bugprone-easily-swappable-parameters,
-  -bugprone-multi-level-implicit-pointer-conversion,
+  -misc-include-cleaner,
+  -misc-non-private-member-variables-in-classes,
+  -misc-no-recursion,
   -bugprone-reserved-identifier,
-  -bugprone-unchecked-string-to-number-conversion,
   -cert-dcl37-c,
-  -cert-dcl50-cpp,
   -cert-dcl51-cpp,
   -cert-err33-c,
-  -cert-err34-c,
-  -misc-include-cleaner,
-  -misc-no-recursion,
-  -misc-non-private-member-variables-in-classes,
-  -misc-use-anonymous-namespace,
-  -misc-use-internal-linkage,
   -performance-enum-size,
-  -performance-no-int-to-ptr
-
-# Only our own headers; never report inside the Windows SDK or external/
-# (MinHook, vendored).
+  -modernize-use-trailing-return-type,
+  -modernize-use-designated-initializers,
+  -misc-use-anonymous-namespace,
+  -modernize-avoid-c-arrays,
+  -modernize-use-auto,
+  -modernize-raw-string-literal,
+  -modernize-macro-to-enum,
+  -google-runtime-int,
+  -modernize-return-braced-init-list,
+  -modernize-use-ranges,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -performance-no-int-to-ptr,
+  -bugprone-multi-level-implicit-pointer-conversion,
+  -cert-dcl50-cpp,
+  -modernize-avoid-variadic-functions,
+  -bugprone-unchecked-string-to-number-conversion
 HeaderFilterRegex: 'dll[/\\](src|test)[/\\].*\.h$'
-# Everything is an error EXCEPT cognitive-complexity: that mirrors fallow's
-# maxCognitive:30, and it is report-only — it names the next decomposition
-# targets without failing the gate.
-WarningsAsErrors: '*,-readability-function-cognitive-complexity'
+WarningsAsErrors: '*'
 FormatStyle: file
 CheckOptions:
-  readability-function-cognitive-complexity.Threshold: '30'  # == fallow maxCognitive
-
-  # oxlint's `no-restricted-globals` — name a thing, say why, name what to use
-  # instead. Here it is the writes with no destination size: every one of them
-  # is a buffer overrun waiting for a protocol field to grow, and the tree
-  # already writes the bounded form everywhere else. `<n>,<replacement>,<why>`.
-  bugprone-unsafe-functions.CustomFunctions: >-
-    ^::sprintf$,snprintf,it cannot see the size of what it writes into;
-    ^::strcpy$,strcpy_s,it cannot see the size of what it writes into;
-    ^::strcat$,strcat_s,it cannot see the size of what it writes into;
-    ^::wcscpy$,wcscpy_s,it cannot see the size of what it writes into;
-    ^::wcscat$,wcscat_s,it cannot see the size of what it writes into;
-    ^::gets$,fgets,it cannot see the size of what it writes into
-
-  # oxlint's `id-length: [error, {min: 3, exceptions: [...]}]`, in C++. The
-  # minimum is theirs; the exception list is CLAUDE.md's — "established platform
-  # idioms that would read worse spelled out":
-  #   hr hwnd pid tid rc   Win32/COM, and unreadable expanded
-  #   i j                  a bare loop counter (a MEANINGFUL index is named)
-  #   ok to                a success flag, and the `from`/`to` pair
-  #   x y                  a coordinate pair (gfx::Point's own names)
-  # Anything else at one or two characters is a name that was not chosen.
+  readability-function-cognitive-complexity.Threshold: '35'
+  readability-function-size.LineThreshold: '270'
+  readability-function-size.StatementThreshold: '270'
+  readability-function-size.ParameterThreshold: '8'
+  readability-function-size.NestingThreshold: '6'
+  readability-magic-numbers.IgnoredIntegerValues: '1;2;3;4;7;8;10;15;16;24;32;64;100;1000;65535;4278190080'
+  readability-magic-numbers.IgnorePowersOf2IntegerValues: true
+  readability-magic-numbers.IgnoreBitFieldsWidths: true
+  readability-implicit-bool-conversion.AllowPointerConditions: true
+  readability-implicit-bool-conversion.AllowIntegerConditions: true
+  readability-else-after-return.WarnOnConditionVariables: false
+  bugprone-easily-swappable-parameters.MinimumLength: '4'
+  bugprone-unsafe-functions.CustomFunctions: '^::sprintf$,snprintf,it cannot see the size of what it writes into; ^::strcpy$,strcpy_s,it cannot see the size of what it writes into; ^::strcat$,strcat_s,it cannot see the size of what it writes into; ^::wcscpy$,wcscpy_s,it cannot see the size of what it writes into; ^::wcscat$,wcscat_s,it cannot see the size of what it writes into; ^::gets$,fgets,it cannot see the size of what it writes into'
   readability-identifier-length.MinimumVariableNameLength: '3'
   readability-identifier-length.MinimumParameterNameLength: '3'
-  readability-identifier-length.IgnoredVariableNames: '^(hr|hwnd|pid|tid|rc|ok|to|i|j|x|y)$'
-  readability-identifier-length.IgnoredParameterNames: '^(hr|hwnd|pid|tid|rc|ok|to|i|j|x|y)$'
-
-  # oxlint's `prefer-const`. Values only: a `const` reference or pointer is a
-  # different type, not a stricter binding, so the reference/pointer arms would
-  # be changing signatures rather than locking locals down.
-  #
-  # REPORT ONLY — the Transform options are off on purpose. Its fixer writes
-  # EAST const (`DWORD const x`) and this tree is west const throughout, so an
-  # auto-fix would have the linter quietly introduce the second style it exists
-  # to prevent. The finding names the variable; write `const` in front of the
-  # type yourself. clang-format cannot put it back either: a Win32 typedef is
-  # not a token it knows to be a type (see QualifierAlignment there).
-  misc-const-correctness.AnalyzeValues: 'true'
-  misc-const-correctness.AnalyzeReferences: 'false'
-  misc-const-correctness.WarnPointersAsValues: 'false'
-  misc-const-correctness.TransformValues: 'false'
-  misc-const-correctness.TransformReferences: 'false'
-  misc-const-correctness.TransformPointersAsValues: 'false'
+  readability-identifier-length.IgnoredVariableNames: '^(hr|hwnd|pid|tid|rc|ok|to|i|j|x|y|id)$'
+  readability-identifier-length.IgnoredParameterNames: '^(hr|hwnd|pid|tid|rc|ok|to|i|j|x|y|id)$'
+  misc-const-correctness.AnalyzeValues: true
+  misc-const-correctness.AnalyzeReferences: false
+  misc-const-correctness.WarnPointersAsValues: false
+  misc-const-correctness.TransformValues: false
+  misc-const-correctness.TransformReferences: false
+  misc-const-correctness.TransformPointersAsValues: false
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.UnionCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.TypeAliasCase: CamelCase
+  readability-identifier-naming.TypedefCase: CamelCase
+  readability-identifier-naming.TemplateParameterCase: CamelCase
+  readability-identifier-naming.FunctionCase: CamelCase
+  readability-identifier-naming.MethodCase: CamelCase
+  readability-identifier-naming.VariableCase: camelBack
+  readability-identifier-naming.ParameterCase: camelBack
+  readability-identifier-naming.MemberCase: camelBack
+  readability-identifier-naming.GlobalVariableCase: camelBack
+  readability-identifier-naming.GlobalVariablePrefix: g_
+  readability-identifier-naming.ConstexprVariableCase: CamelCase
+  readability-identifier-naming.ConstexprVariablePrefix: k
+  readability-identifier-naming.GlobalConstantCase: CamelCase
+  readability-identifier-naming.GlobalConstantPrefix: k
+  readability-identifier-naming.StaticConstantCase: CamelCase
+  readability-identifier-naming.StaticConstantPrefix: k
+  readability-identifier-naming.ClassConstantCase: CamelCase
+  readability-identifier-naming.ClassConstantPrefix: k
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.EnumConstantPrefix: k
+  readability-identifier-naming.MacroDefinitionCase: UPPER_CASE
+  readability-identifier-naming.StaticVariableCase: camelBack
+  readability-identifier-naming.StaticVariablePrefix: ''
+  readability-identifier-naming.MacroDefinitionIgnoredRegexp: '^[A-Z0-9_]+_H_$'
+  readability-identifier-naming.PrivateMemberCase: camelBack
+  readability-identifier-naming.PrivateMemberSuffix: _
+  readability-identifier-naming.ProtectedMemberCase: camelBack
+  readability-identifier-naming.ProtectedMemberSuffix: _
+  readability-identifier-naming.ConstexprVariableIgnoredRegexp: '^[A-Z][A-Za-z0-9_]*$'
+  readability-identifier-naming.FunctionIgnoredRegexp: '^(h_.*|wmain)$'
+  readability-identifier-naming.GlobalVariableIgnoredRegexp: '^o_.*'
+  readability-identifier-naming.TypeAliasIgnoredRegexp: '.*_t$'
+  readability-identifier-naming.TypedefIgnoredRegexp: '.*_t$'
+  readability-magic-numbers.IgnoredFloatingPointValues: '1.0;100.0;2.0;0.5'
