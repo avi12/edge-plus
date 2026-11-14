@@ -192,7 +192,7 @@ DWORD WINAPI Init(LPVOID) {
 
 }  // namespace
 
-static BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID) {
+BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID) {
   const bool isProcessAttach = reason == DLL_PROCESS_ATTACH;
   if (isProcessAttach) {
     g_self = module;

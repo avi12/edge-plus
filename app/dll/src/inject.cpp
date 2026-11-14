@@ -49,7 +49,7 @@ class RemoteAllocation {
 
 }  // namespace
 
-static int wmain(int argc, wchar_t** argv) {
+int wmain(int argc, wchar_t** argv) {
   const bool hasExpectedArguments = argc == kArgumentCount;
   if (!hasExpectedArguments) {
     wprintf(L"usage: inject.exe <pid> <dll path>\n");

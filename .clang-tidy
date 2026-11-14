@@ -18,6 +18,7 @@
 #   google-runtime-int: the Win32 ABI types (DWORD, LONG, ULONG) are the contract
 #   modernize-return-braced-init-list: a named constructor call reads clearer at a return
 #   modernize-use-ranges: its fixer writes std::ranges::sort(range, , comparator) with an empty argument, which does not compile (LLVM 22.1.7)
+#   misc-use-internal-linkage: its fixer adds static to DllMain and wmain, which the loader and the linker find by name
 #   cppcoreguidelines-avoid-non-const-global-variables: the injected DLL keeps its hook originals and state in g_ and o_ globals, named by CLAUDE.md
 #   cppcoreguidelines-pro-type-reinterpret-cast: the DLL binds msedge.dll by RVA and reads fields at reversed offsets, so every Edge pointer is a reinterpret_cast
 #   performance-no-int-to-ptr: the DLL binds msedge.dll by RVA, so every Edge function is an integer-to-pointer cast
@@ -109,6 +110,7 @@ Checks: >
   -google-runtime-int,
   -modernize-return-braced-init-list,
   -modernize-use-ranges,
+  -misc-use-internal-linkage,
   -cppcoreguidelines-avoid-non-const-global-variables,
   -cppcoreguidelines-pro-type-reinterpret-cast,
   -performance-no-int-to-ptr,
@@ -176,9 +178,9 @@ CheckOptions:
   readability-identifier-naming.PrivateMemberSuffix: _
   readability-identifier-naming.ProtectedMemberCase: camelBack
   readability-identifier-naming.ProtectedMemberSuffix: _
+  readability-identifier-naming.FunctionIgnoredRegexp: '^(h_.*|wmain|DllMain)$'
+  readability-identifier-naming.GlobalVariableIgnoredRegexp: '^(o_.*|__.*)$'
   readability-identifier-naming.ConstexprVariableIgnoredRegexp: '^[A-Z][A-Za-z0-9_]*$'
-  readability-identifier-naming.FunctionIgnoredRegexp: '^(h_.*|wmain)$'
-  readability-identifier-naming.GlobalVariableIgnoredRegexp: '^o_.*'
   readability-identifier-naming.TypeAliasIgnoredRegexp: '.*_t$'
   readability-identifier-naming.TypedefIgnoredRegexp: '.*_t$'
   readability-magic-numbers.IgnoredFloatingPointValues: '1.0;100.0;2.0;0.5'

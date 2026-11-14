@@ -24,8 +24,8 @@
     },
     "options": {
       "readability-identifier-naming.ConstexprVariableIgnoredRegexp": "^[A-Z][A-Za-z0-9_]*$",
-      "readability-identifier-naming.FunctionIgnoredRegexp": "^(h_.*|wmain)$",
-      "readability-identifier-naming.GlobalVariableIgnoredRegexp": "^o_.*",
+      "readability-identifier-naming.FunctionIgnoredRegexp": "^(h_.*|wmain|DllMain)$",
+      "readability-identifier-naming.GlobalVariableIgnoredRegexp": "^(o_.*|__.*)$",
       "readability-identifier-naming.TypeAliasIgnoredRegexp": ".*_t$",
       "readability-identifier-naming.TypedefIgnoredRegexp": ".*_t$",
       "readability-identifier-naming.StaticVariablePrefix": "",
