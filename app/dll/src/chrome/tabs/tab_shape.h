@@ -76,7 +76,7 @@ inline constinit IsSplitSide_t o_is_left_split_tab = nullptr;
 inline constinit IsSplitSide_t o_is_right_split_tab = nullptr;
 
 inline bool __fastcall h_is_left_split_tab(void* tabObject) {
-  const bool isOwnOutline = g_isOutliningShadow || g_outlinedTab;
+  const bool isOwnOutline = g_isOutliningShadow || (g_outlinedTab != nullptr);
   if (isOwnOutline) {
     return false;
   }
@@ -98,7 +98,7 @@ inline constinit SetRectXY_t o_set_rect_xy = nullptr;
 inline void __fastcall h_set_rect_xy(void* roundedRect, const void* skRect,
                                      float radiusX, float radiusY) {
   const bool isTabOutline =
-      g_outlinedTab &&
+      (g_outlinedTab != nullptr) &&
       _ReturnAddress() ==
           edge::At(edge155::rva::EdgeTabStyleViews_GetPath_setRectXY_return);
   if (!isTabOutline) {

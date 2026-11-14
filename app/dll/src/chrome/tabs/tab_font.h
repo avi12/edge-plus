@@ -51,9 +51,9 @@ inline bool IsFamilyInstalled(std::string_view family) {
 
 // Looked up once: a font installed later shows after Edge restarts.
 inline std::string_view MonoFamily() {
-  static const std::string_view family = cyberpunk_skin::TitleFontFamilyFor(
+  static const std::string_view kFamily = cyberpunk_skin::TitleFontFamilyFor(
       IsFamilyInstalled(cyberpunk_skin::kTitleFontFamily));
-  return family;
+  return kFamily;
 }
 
 inline const edge::FontHandle& MonoFontOfSize(int pixelSize) {

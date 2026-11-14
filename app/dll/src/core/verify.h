@@ -46,8 +46,8 @@ inline constexpr edge_build::Version kPinnedBuild{
   VS_FIXEDFILEINFO* info = nullptr;
   UINT infoLength = 0;
   const bool hasFixedInfo =
-      VerQueryValueW(versionInfo.data(), kFixedFileInfoBlock,
-                     reinterpret_cast<void**>(&info), &infoLength) &&
+      (VerQueryValueW(versionInfo.data(), kFixedFileInfoBlock,
+                      reinterpret_cast<void**>(&info), &infoLength) != 0) &&
       info != nullptr;
   if (!hasFixedInfo) {
     return std::nullopt;

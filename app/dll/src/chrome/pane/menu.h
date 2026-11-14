@@ -72,7 +72,7 @@ inline void BuildLabels() {
 }
 
 inline void AddBesideMenuPane(Direction direction) {
-  const bool hasMenuPane = g_menuMcv && g_menuPane != kNoLeaf;
+  const bool hasMenuPane = (g_menuMcv != nullptr) && g_menuPane != kNoLeaf;
   void* mcv = hasMenuPane ? g_menuMcv : g_activeMcv;
   const int pane = hasMenuPane ? g_menuPane : split_ops::ActiveLeaf(mcv);
   ForgetMenuPane();
@@ -236,7 +236,7 @@ inline void* __fastcall h_row_layout(void* layoutDelegate, void* proposedLayout,
                                      const void* sizeBounds) {
   void* result = o_row_layout(layoutDelegate, proposedLayout, sizeBounds);
   void* item = edge::MenuItemOfLayoutDelegate(layoutDelegate);
-  const bool isAddPaneRow = g_addPaneRow && item == g_addPaneRow;
+  const bool isAddPaneRow = (g_addPaneRow != nullptr) && item == g_addPaneRow;
   if (!isAddPaneRow) {
     return result;
   }
@@ -248,7 +248,7 @@ inline void* __fastcall h_row_layout(void* layoutDelegate, void* proposedLayout,
 
 inline int ArrowIndexOf(const void* button) {
   for (size_t i = 0; i < kMenuItemCount; i++) {
-    const bool isThisArrow = button && g_arrows[i] == button;
+    const bool isThisArrow = (button != nullptr) && g_arrows[i] == button;
     if (isThisArrow) {
       return static_cast<int>(i);
     }

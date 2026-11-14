@@ -36,7 +36,7 @@ inline std::map<void*, Node>& PendingTrees() {
 inline std::optional<SplitKey> ShownSplit(void* mcv) {
   void* tsm = mcv ? edge::McvTabStripModel(mcv) : nullptr;
   void* tab = tsm ? edge::ActiveTab(tsm) : nullptr;
-  const bool isSplitShown = tab && edge::TabIsSplit(tab);
+  const bool isSplitShown = (tab != nullptr) && edge::TabIsSplit(tab);
   if (!isSplitShown) {
     return std::nullopt;
   }

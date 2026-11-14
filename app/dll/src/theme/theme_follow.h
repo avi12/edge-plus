@@ -138,7 +138,8 @@ inline int RefreshPages(void* tsm) {
   for (int i = 0; i < tabCount; i++) {
     void* webContents = edge::TabWebContentsAt(tsm, i);
     const bool isFollowedPage =
-        webContents && followed_pages::Follows(edge::VisibleUrl(webContents));
+        (webContents != nullptr) &&
+        followed_pages::Follows(edge::VisibleUrl(webContents));
     if (isFollowedPage) {
       edge::NotifyColorProviderChanged(webContents);
       edge::ReloadPage(webContents);

@@ -25,7 +25,7 @@ inline Axis SplitAxis(void* mcv) {
 // drew in the old first pane's box).
 inline Node LiveTree(void* mcv, int panes) {
   const Node* live = TreeFor(mcv);
-  const bool isLiveForPanes = live && LeafCount(*live) == panes;
+  const bool isLiveForPanes = (live != nullptr) && LeafCount(*live) == panes;
   if (isLiveForPanes) {
     return *live;
   }

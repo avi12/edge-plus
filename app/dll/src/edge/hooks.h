@@ -182,7 +182,8 @@ inline void __fastcall h_reload_internal(void* browser, int32_t disposition,
                                          bool isBypassingCache) {
   void* const tsm = edge::TabStripModelOf(browser);
   void* const activeTab = tsm ? edge::ActiveTab(tsm) : nullptr;
-  const bool isActiveTabInSplit = activeTab && edge::TabIsSplit(activeTab);
+  const bool isActiveTabInSplit =
+      (activeTab != nullptr) && edge::TabIsSplit(activeTab);
   edge::OptionalSplitId splitId = {};
   int paneCount = 0;
   if (isActiveTabInSplit) {
@@ -601,7 +602,7 @@ inline uint32_t __fastcall h_getuicolor(void* provider, int colorId) {
     return cyberpunk_palette::ColourOf(role, skin_tone::Current());
   }
   // Edge's own theme has no pack, so the last pack's idle colour is stale.
-  const bool isIdleTabTitle = isTabForeground && g_foregroundTab &&
+  const bool isIdleTabTitle = isTabForeground && (g_foregroundTab != nullptr) &&
                               !g_isForegroundTabActive && g_idleLabel.isSet &&
                               !theme::g_isDefaultThemeApplied;
   if (isIdleTabTitle) {
@@ -672,7 +673,7 @@ inline bool Install(edge155::signatures::Feature feature, uintptr_t rva,
           edge155::rva::MultiContentsView_GetFocusableViewsMapFor,
           reinterpret_cast<void*>(h_focus_map), &o_focus_map,
           "MultiContentsView::GetFocusableViewsMapFor");
-  Install(Feature::kSplit, edge155::rva::chrome_ReloadInternal,
+  Install(Feature::kSplit, edge155::rva::kChromeReloadInternal,
           reinterpret_cast<void*>(h_reload_internal), &o_reload_internal,
           "chrome::ReloadInternal");
   Install(Feature::kSplit, edge155::rva::MultiContentsView_SetActiveIndex,

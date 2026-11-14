@@ -134,7 +134,8 @@ inline std::map<void*, Session>& Sessions() {
 
 // A closed window destroyed its views.
 inline bool IsLive(void* mcv, const Session& session) {
-  return IsWindow(session.window) && edge::McvForWindow(session.window) == mcv;
+  return (IsWindow(session.window) != 0) &&
+         edge::McvForWindow(session.window) == mcv;
 }
 
 inline void DropStale() {
@@ -156,7 +157,7 @@ inline Session* SessionFor(void* mcv) {
 // A callback can arrive after the bar was closed.
 inline Session* LiveSessionOf(void* mcv, void* view) {
   Session* session = SessionFor(mcv);
-  const bool isSameBar = session && session->findBarView == view;
+  const bool isSameBar = (session != nullptr) && session->findBarView == view;
   return isSameBar ? session : nullptr;
 }
 
@@ -200,7 +201,7 @@ inline void ShowStatus(void* findBarView, const Status& status) {
 // The timer's tick turns the spinner of every busy bar.
 inline void TurnSpinners() {
   for (const auto& [mcv, session] : Sessions()) {
-    const bool isSpinning = session.isBusy && session.findBarView;
+    const bool isSpinning = session.isBusy && (session.findBarView != nullptr);
     if (isSpinning) {
       edge::FindBarSetLabel(session.findBarView, Utf16Of(SpinnerFrame()));
     }
@@ -377,12 +378,13 @@ inline void* NewDecorationLabel(void* findBarView) {
 
 inline Decorations EnsureDecorations(void* findBarView) {
   const Decorations found = FindDecorations(findBarView);
-  const bool isComplete = found.prefix && found.suffix;
+  const bool isComplete =
+      (found.prefix != nullptr) && (found.suffix != nullptr);
   const void* countLabel = edge::FindBarCountLabel(findBarView);
   void* row = nullptr;
   size_t index = 0;
-  const bool canAdd =
-      !isComplete && countLabel && TextfieldPlace(findBarView, &row, &index);
+  const bool canAdd = !isComplete && (countLabel != nullptr) &&
+                      TextfieldPlace(findBarView, &row, &index);
   if (!canAdd) {
     return found;
   }
@@ -443,12 +445,13 @@ inline void SyncTogglesNow(void* findBarView) {
   void* regExp =
       EnsureToggle(findBarView, edge155::off::FINDTOGGLE_id_regexp, &isAdded);
   // Built right after RegExp so they sit under it.
-  const bool isRegExpOn = regExp && edge::FindToggleIsOn(regExp);
+  const bool isRegExpOn = (regExp != nullptr) && edge::FindToggleIsOn(regExp);
   const bool isShowingFlags = g_isEnabled && isRegExpOn;
   bool isFlagVisibilityChanged = false;
   for (const find_flags::FlagInfo& info : find_flags::kFlags) {
     const int flagToggleId = ToggleIdOfFlag(info.flag);
-    const bool isNewToggle = !edge::FindToggle(findBarView, flagToggleId);
+    const bool isNewToggle =
+        edge::FindToggle(findBarView, flagToggleId) == nullptr;
     void* flagToggle = EnsureToggle(findBarView, flagToggleId, &isAdded);
     if (!flagToggle) {
       continue;
@@ -555,8 +558,9 @@ inline void ApplyBarWidth(Session& session, bool isAsking) {
   HWND bar = BarWindowOf(session.window);
   RECT barRect{};
   RECT browserRect{};
-  const bool isMeasured = bar && GetWindowRect(bar, &barRect) &&
-                          GetWindowRect(session.window, &browserRect);
+  const bool isMeasured = (bar != nullptr) &&
+                          (GetWindowRect(bar, &barRect) != 0) &&
+                          (GetWindowRect(session.window, &browserRect) != 0);
   if (!isMeasured) {
     return;
   }
@@ -589,11 +593,12 @@ inline void ApplyBarWidth(Session& session, bool isAsking) {
 
 // A tab that was closed must never be run a script.
 inline bool IsTabAlive(void* mcv, void* contents) {
-  return contents && tab_list::FindTab(mcv, tab_list::TabIdOf(contents));
+  return (contents != nullptr) &&
+         (tab_list::FindTab(mcv, tab_list::TabIdOf(contents)) != nullptr);
 }
 
 inline bool CanSearch(void* contents) {
-  return contents && edge::IsPageLive(contents) &&
+  return (contents != nullptr) && edge::IsPageLive(contents) &&
          find_text::IsSearchableUrl(edge::TabUrl(contents));
 }
 
@@ -613,7 +618,8 @@ inline void ClearTarget(void* mcv, Session& session) {
 inline void OnSearched(void* mcv, void* view, unsigned long long seq,
                        const edge::ScriptResult& result) {
   Session* session = LiveSessionOf(mcv, view);
-  const bool isCurrentSearch = session && session->searchSeq == seq;
+  const bool isCurrentSearch =
+      (session != nullptr) && session->searchSeq == seq;
   if (!isCurrentSearch) {
     return;
   }
@@ -657,7 +663,8 @@ inline void RunSearch(void* mcv, Session& session,
     ShowStatus(session.findBarView, FailedStatus(kCannotSearchMessage));
     return;
   }
-  const bool isOtherTab = session.target && session.target != contents;
+  const bool isOtherTab =
+      (session.target != nullptr) && session.target != contents;
   if (isOtherTab) {
     ClearTarget(mcv, session);
   }
@@ -678,7 +685,8 @@ inline void RunSearch(void* mcv, Session& session,
 inline void OnWentTo(void* mcv, void* view, unsigned long long seq, int index,
                      const edge::ScriptResult& result) {
   Session* session = LiveSessionOf(mcv, view);
-  const bool isCurrentSearch = session && session->searchSeq == seq;
+  const bool isCurrentSearch =
+      (session != nullptr) && session->searchSeq == seq;
   if (!isCurrentSearch) {
     return;
   }
@@ -694,7 +702,7 @@ inline void OnWentTo(void* mcv, void* view, unsigned long long seq, int index,
 }
 
 inline void StepBy(void* mcv, Session& session, find_text::Step step) {
-  const bool hasMatches = session.count > 0 && session.target;
+  const bool hasMatches = session.count > 0 && (session.target != nullptr);
   if (!hasMatches) {
     return;
   }
@@ -715,7 +723,7 @@ inline void EndAsk(Session& session) {
   session.ask = AskRun{};
   assistant_chat::ReleasePanel(edge::McvForWindow(session.window));
   // The timer stops with the ask, so a spinner left up would freeze.
-  const bool isSpinnerLeft = session.isBusy && session.findBarView;
+  const bool isSpinnerLeft = session.isBusy && (session.findBarView != nullptr);
   if (isSpinnerLeft) {
     ShowStatus(session.findBarView, Status{});
   }
@@ -738,7 +746,7 @@ inline void CancelAsk(void* mcv, Session& session) {
 inline void OnHighlighted(void* mcv, void* view, unsigned long long askId,
                           const edge::ScriptResult& result) {
   Session* session = LiveSessionOf(mcv, view);
-  const bool isCurrentAsk = session && session->ask.id == askId;
+  const bool isCurrentAsk = (session != nullptr) && session->ask.id == askId;
   if (!isCurrentAsk) {
     return;
   }
@@ -807,7 +815,7 @@ inline void SendNextChunk(void* mcv, Session& session);
 inline void OnAssistantReply(void* mcv, void* view, unsigned long long askId,
                              const ask_text::Reply& reply) {
   Session* session = LiveSessionOf(mcv, view);
-  const bool isCurrentAsk = session && session->ask.id == askId;
+  const bool isCurrentAsk = (session != nullptr) && session->ask.id == askId;
   if (!isCurrentAsk) {
     return;
   }
@@ -841,7 +849,7 @@ inline void OnAssistantReply(void* mcv, void* view, unsigned long long askId,
 inline void OnAssistantNotice(void* mcv, void* view, unsigned long long askId,
                               assistant_chat::Notice notice) {
   const Session* session = LiveSessionOf(mcv, view);
-  const bool isCurrentAsk = session && session->ask.id == askId;
+  const bool isCurrentAsk = (session != nullptr) && session->ask.id == askId;
   if (!isCurrentAsk) {
     return;
   }
@@ -872,7 +880,7 @@ inline void SendNextChunk(void* mcv, Session& session) {
 inline void OnParagraphsRead(void* mcv, void* view, unsigned long long askId,
                              const edge::ScriptResult& result) {
   Session* session = LiveSessionOf(mcv, view);
-  const bool isCurrentAsk = session && session->ask.id == askId;
+  const bool isCurrentAsk = (session != nullptr) && session->ask.id == askId;
   if (!isCurrentAsk) {
     return;
   }
@@ -903,7 +911,7 @@ inline void StartTimer() {
 inline bool IsAnyAsking() {
   for (const auto& [mcv, session] : Sessions()) {
     const bool isHoldingWidth =
-        session.findBarView && session.widenedBarWidth != 0;
+        (session.findBarView != nullptr) && session.widenedBarWidth != 0;
     if (session.ask.id != 0 || isHoldingWidth) {
       return true;
     }
@@ -972,7 +980,8 @@ inline void Close(void* mcv) {
 // a session tied to the bar's window would be dropped the moment it changes.
 inline bool IsBrowserWindow(HWND candidate) {
   const bool hasTitle = GetWindowTextLengthW(candidate) > 0;
-  return candidate && hasTitle && edge::McvForWindow(candidate);
+  return (candidate != nullptr) && hasTitle &&
+         (edge::McvForWindow(candidate) != nullptr);
 }
 
 inline HWND BrowserWindowInUse() {
@@ -984,7 +993,8 @@ inline HWND BrowserWindowInUse() {
     }
   }
   const bool isSubclassedUsable =
-      channel::g_window && edge::McvForWindow(channel::g_window);
+      (channel::g_window != nullptr) &&
+      (edge::McvForWindow(channel::g_window) != nullptr);
   return isSubclassedUsable ? channel::g_window : nullptr;
 }
 
@@ -1039,7 +1049,8 @@ inline void __fastcall h_find(void* findBarView, const edge::U16View* typed) {
   // A typed (?i) changes the flags the closing slash shows.
   SyncDecorations(findBarView);
   const find_text::Query query = QueryOf(findBarView, TextOf(*typed));
-  const bool isOurs = session && query.mode != find_text::Mode::kText;
+  const bool isOurs =
+      (session != nullptr) && query.mode != find_text::Mode::kText;
   if (!isOurs) {
     if (session) {
       Reset(mcv, *session);
@@ -1067,14 +1078,15 @@ inline bool HandleNext(void* findBarView, bool isReverse) {
   Session* session = SessionOfBar(findBarView, &mcv);
   const std::string typed = TextOf(edge::FindBarText(findBarView));
   const find_text::Query query = QueryOf(findBarView, typed);
-  const bool isOurs = session && query.mode != find_text::Mode::kText;
+  const bool isOurs =
+      (session != nullptr) && query.mode != find_text::Mode::kText;
   if (!isOurs) {
     return false;
   }
   const find_text::Step step =
       isReverse ? find_text::Step::kPrevious : find_text::Step::kNext;
-  const bool isOtherTab =
-      session->target && session->target != tab_list::ActiveContents(mcv);
+  const bool isOtherTab = (session->target != nullptr) &&
+                          session->target != tab_list::ActiveContents(mcv);
   if (isOtherTab) {
     Reset(mcv, *session);
   }
@@ -1203,7 +1215,7 @@ inline void SwitchOffEdgeToggles(void* findBarView) {
                          edge155::off::FINDTOGGLE_id_diacritics};
   for (const int toggleId : edgeIds) {
     void* toggle = edge::FindToggle(findBarView, toggleId);
-    const bool isOn = toggle && edge::FindToggleIsOn(toggle);
+    const bool isOn = (toggle != nullptr) && edge::FindToggleIsOn(toggle);
     if (isOn) {
       edge::FindToggleSetOn(toggle, false);
       o_button_toggled(toggle);
@@ -1340,7 +1352,8 @@ inline bool Install() {
 inline void Tick() {
   DropStale();
   for (auto& [mcv, session] : Sessions()) {
-    const bool isBarOpen = session.findBarView && session.widenedBarWidth != 0;
+    const bool isBarOpen =
+        (session.findBarView != nullptr) && session.widenedBarWidth != 0;
     if (isBarOpen) {
       ApplyBarWidth(session,
                     OptionOf(session.findBarView) == find_text::Option::kAsk);

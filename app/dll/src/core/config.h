@@ -94,7 +94,8 @@ inline constexpr char kLocalAppDataVariable[] = "LOCALAPPDATA";
   }
   *out = Wire{};
   DWORD read = 0;
-  const bool isRead = ReadFile(file.Get(), out, sizeof(Wire), &read, nullptr);
+  const bool isRead =
+      ReadFile(file.Get(), out, sizeof(Wire), &read, nullptr) != 0;
   const bool isKnownSize =
       isRead &&
       (read == sizeof(Wire) || read == kBeforeHoldWireSize ||

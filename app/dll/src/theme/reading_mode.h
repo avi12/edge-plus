@@ -45,8 +45,8 @@ inline constinit reading_themes::Choices g_choices{};
   std::array<uint8_t, reading_themes::kChoicesFileSize> bytes{};
   DWORD read = 0;
   const bool isRead =
-      file && ReadFile(file.Get(), bytes.data(),
-                       static_cast<DWORD>(bytes.size()), &read, nullptr);
+      file && (ReadFile(file.Get(), bytes.data(),
+                        static_cast<DWORD>(bytes.size()), &read, nullptr) != 0);
   return isRead ? reading_themes::ChoicesFromBytes(std::span(bytes).first(read))
                 : reading_themes::Choices{};
 }

@@ -131,7 +131,8 @@ inline void Cancel() {
 // The window's tab list, where a pane's drag goes on as Edge's own tab drag
 // (tabdrag::TakeOverPaneDrag).
 inline bool IsOverTabList(void* context, Point screenPoint) {
-  return context && Contains(edge::ViewBoundsInScreen(context), screenPoint);
+  return (context != nullptr) &&
+         Contains(edge::ViewBoundsInScreen(context), screenPoint);
 }
 
 inline Point RootToScreen(void* mcv, Point point) {

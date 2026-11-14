@@ -23,7 +23,8 @@ inline bool FillPane(void* browserView, void* container, int tabIndex) {
   void* contentsWebView = edge::ContainerWebView(container);
   Log("[feed] tab %d/%d wc=%p container=%p cwv=%p", tabIndex, tabCount,
       webContents, container, contentsWebView);
-  const bool canAttach = webContents && contentsWebView;
+  const bool canAttach =
+      (webContents != nullptr) && (contentsWebView != nullptr);
   if (!canAttach) {
     return false;
   }

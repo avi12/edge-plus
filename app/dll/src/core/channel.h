@@ -105,7 +105,7 @@ static_assert(CodeOf(Command::kGripPressBase) + kShowBarPaneLimit <=
 }
 
 inline void Post(WPARAM code) {
-  const bool isOpen = g_window && g_message != 0;
+  const bool isOpen = (g_window != nullptr) && g_message != 0;
   if (isOpen) {
     PostMessageW(g_window, g_message, code, 0);
   }

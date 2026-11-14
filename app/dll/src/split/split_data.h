@@ -155,7 +155,7 @@ inline bool IsLinkModeOn(void* tsm, void* splitTab) {
   edge::TabGetSplit(splitTab, &split);
   void* splitData =
       split.hasValue ? edge::GetSplitData(tsm, split.token) : nullptr;
-  return splitData &&
+  return (splitData != nullptr) &&
          edge::Field<bool>(splitData, edge155::off::SPLITDATA_link_mode);
 }
 
@@ -166,7 +166,7 @@ inline int MemberCountOf(void* tsm, void* tab) {
 }
 
 inline bool IsFreeTab(void* tab, void* active) {
-  return tab && tab != active && !edge::TabIsSplit(tab);
+  return (tab != nullptr) && tab != active && !edge::TabIsSplit(tab);
 }
 
 // Searches from the strip's tail; -1 when none.
@@ -186,7 +186,8 @@ inline int FindFreeTab(void* tsm, void* root, void* active) {
 inline bool CreateSplit(void* tsm) {
   void* root = tsm ? edge::RootCollection(tsm) : nullptr;
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
-  const bool hasActiveTab = tsm && root && active;
+  const bool hasActiveTab =
+      (tsm != nullptr) && (root != nullptr) && (active != nullptr);
   if (!hasActiveTab) {
     Log("[create] tsm=%p root=%p active=%p", tsm, root, active);
     return false;
@@ -215,8 +216,8 @@ inline bool CreateSplit(void* tsm) {
 inline bool CreateSplitN(void* tsm, int requestedPanes) {
   void* root = tsm ? edge::RootCollection(tsm) : nullptr;
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
-  const bool canCreateSplit =
-      tsm && root && active && !edge::TabIsSplit(active);
+  const bool canCreateSplit = (tsm != nullptr) && (root != nullptr) &&
+                              (active != nullptr) && !edge::TabIsSplit(active);
   if (!canCreateSplit) {
     Log("[createN] bad state tsm=%p root=%p active=%p", tsm, root, active);
     return false;
@@ -311,7 +312,8 @@ inline bool CreateSplitWith(void* tsm, void* newTab, SplitLayout layout,
                             bool isNewTabFirst) {
   void* root = tsm ? edge::RootCollection(tsm) : nullptr;
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
-  const bool canCreateSplit = root && active && !edge::TabIsSplit(active);
+  const bool canCreateSplit =
+      (root != nullptr) && (active != nullptr) && !edge::TabIsSplit(active);
   if (!canCreateSplit) {
     Log("[create] tsm=%p root=%p active=%p", tsm, root, active);
     return false;
@@ -364,7 +366,8 @@ inline bool CreateSplitWith(void* tsm, void* newTab, SplitLayout layout,
 inline bool GrowSplit(void* tsm, void* newTab = nullptr) {
   void* root = tsm ? edge::RootCollection(tsm) : nullptr;
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
-  const bool hasActiveTab = tsm && root && active;
+  const bool hasActiveTab =
+      (tsm != nullptr) && (root != nullptr) && (active != nullptr);
   if (!hasActiveTab) {
     Log("[grow] tsm=%p root=%p active=%p", tsm, root, active);
     return false;
@@ -509,7 +512,8 @@ inline int CloseMember(void* tsm, const void* closingContents,
                        MemberFate fate = MemberFate::kClose) {
   void* root = tsm ? edge::RootCollection(tsm) : nullptr;
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
-  const bool hasActiveTab = tsm && root && active;
+  const bool hasActiveTab =
+      (tsm != nullptr) && (root != nullptr) && (active != nullptr);
   if (!hasActiveTab) {
     return 0;
   }

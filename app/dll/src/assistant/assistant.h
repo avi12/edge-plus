@@ -39,7 +39,8 @@ inline void RemoveChevron(void* mcv) {
       // The pill keeps the flat right edge it had beside the chevron; Edge
       // builds it rounded when it builds it alone.
       void* toolbar = edge::ToolbarOfChatButton(button);
-      const bool isRebuilt = toolbar && edge::RebuildChatButton(toolbar);
+      const bool isRebuilt =
+          (toolbar != nullptr) && edge::RebuildChatButton(toolbar);
       Log("[assistant] chat button rebuilt without chevron: %d",
           static_cast<int>(isRebuilt));
     }

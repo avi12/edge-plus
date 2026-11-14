@@ -81,12 +81,12 @@ inline int DistanceInside(int column, int row, int width, int height,
         std::sqrt(static_cast<float>(cornerX * cornerX + cornerY * cornerY));
     return radius - static_cast<int>(std::lround(fromArcCentre));
   }
-  return std::min(std::min(column, width - 1 - column),
-                  std::min(row, height - 1 - row));
+  return std::min({column, width - 1 - column, row, height - 1 - row});
 }
 
 inline void Paint(const Rect& rect) {
-  const bool canPaint = g_window && rect.width > 0 && rect.height > 0;
+  const bool canPaint =
+      (g_window != nullptr) && rect.width > 0 && rect.height > 0;
   if (!canPaint) {
     return;
   }
@@ -126,7 +126,7 @@ inline void Paint(const Rect& rect) {
       if (isInside) {
         const bool isOnEdge = distanceInside < border;
         const bool isDashGap = g_style == Style::kSwap && isOnEdge &&
-                               dash > 0 && ((column + row) / dash) % 2;
+                               dash > 0 && ((((column + row) / dash) % 2) != 0);
         const bool isOutline = isOnEdge && !isDashGap;
         pixel = isOutline ? edgePixel : fillPixel;
       }
@@ -220,7 +220,7 @@ inline void Show(HWND owner, const Rect& rect, Style style) {
 }
 
 inline void Hide() {
-  const bool isPreviewShown = g_window && g_isShown;
+  const bool isPreviewShown = (g_window != nullptr) && g_isShown;
   if (!isPreviewShown) {
     return;
   }

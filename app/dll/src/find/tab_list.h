@@ -15,7 +15,7 @@ inline void* FindTab(void* mcv, const std::string& tabId) {
   const int count = tsm ? edge::TabCount(tsm) : 0;
   for (int i = 0; i < count; i++) {
     void* contents = edge::TabWebContentsAt(tsm, i);
-    if (contents && TabIdOf(contents) == tabId) {
+    if ((contents != nullptr) && TabIdOf(contents) == tabId) {
       return contents;
     }
   }

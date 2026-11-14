@@ -86,7 +86,7 @@ inline std::map<void*, Chat>& Chats() {
 
 // A closed window destroyed its views.
 inline bool IsLive(void* mcv, const Chat& chat) {
-  return IsWindow(chat.window) && edge::McvForWindow(chat.window) == mcv;
+  return (IsWindow(chat.window) != 0) && edge::McvForWindow(chat.window) == mcv;
 }
 
 inline void DropStale() {
@@ -107,8 +107,9 @@ inline Chat* ChatFor(void* mcv) {
 
 inline Chat* Current(void* mcv, unsigned long long token) {
   Chat* chat = ChatFor(mcv);
-  const bool isAsking = chat && (chat->phase == Phase::kWaitingForPanel ||
-                                 chat->phase == Phase::kWaitingForReply);
+  const bool isAsking =
+      (chat != nullptr) && (chat->phase == Phase::kWaitingForPanel ||
+                            chat->phase == Phase::kWaitingForReply);
   const bool isCurrent = isAsking && chat->token == token;
   return isCurrent ? chat : nullptr;
 }
@@ -196,8 +197,8 @@ inline void ReleasePanel(void* mcv) {
 // go on writing an answer nobody reads.
 inline void Cancel(void* mcv) {
   Chat* chat = ChatFor(mcv);
-  const bool isAsking =
-      chat && chat->phase != Phase::kIdle && chat->phase != Phase::kStopping;
+  const bool isAsking = (chat != nullptr) && chat->phase != Phase::kIdle &&
+                        chat->phase != Phase::kStopping;
   if (!isAsking) {
     return;
   }
@@ -254,8 +255,8 @@ inline void OnArmed(void* mcv, unsigned long long token,
     chat->isSent = true;
   } else if (isHiddenUnsent) {
     void* chatFrame = edge::CopilotChatFrame();
-    chat->isSent =
-        chatFrame && edge::AskChatFrame(chatFrame, chat->prompt, kPanelTitle);
+    chat->isSent = (chatFrame != nullptr) &&
+                   edge::AskChatFrame(chatFrame, chat->prompt, kPanelTitle);
     if (!chat->isSent) {
       Log("[chat] the hidden chat refused the question; opening the panel");
       SendThroughPanel(*chat);
@@ -385,8 +386,9 @@ inline void StepWaitingForReply(void* mcv, Chat& chat, const void* frame,
 inline void OnStopAnswer(void* mcv, unsigned long long token,
                          const edge::ScriptResult& result) {
   Chat* chat = ChatFor(mcv);
-  const bool isStillStopping =
-      chat && chat->phase == Phase::kStopping && chat->token == token;
+  const bool isStillStopping = (chat != nullptr) &&
+                               chat->phase == Phase::kStopping &&
+                               chat->token == token;
   if (!isStillStopping) {
     return;
   }

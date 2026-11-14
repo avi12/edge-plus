@@ -662,7 +662,7 @@ inline constexpr uintptr_t NavigationControllerImpl_Reload = 0x7a61ad0;
 // selected than the active tab's split needs, and a split of three or more has
 // all its members selected, so one pane's reload reloaded them all
 // (docs/re/pane-reload.md).
-inline constexpr uintptr_t chrome_ReloadInternal = 0xa352c98;
+inline constexpr uintptr_t kChromeReloadInternal = 0xa352c98;
 // ColorProvider* WebContentsImpl::GetColorProvider(this): the provider the
 // WebUI's colors.css is generated from (ThemeSource::SendColorsCss reads it
 // through the contents' vtable). It asks the contents' color provider source,
@@ -1043,7 +1043,7 @@ inline constexpr uintptr_t TabHoverCardController_OnCardClosing = 0xa532b00;
 // --force-ui-direction switch). Since 157 this is ICUIsRTL itself (156 had a
 // bare `jmp` to it), which asks GetForcedTextDirection and then the default ICU
 // locale; Views mirrors every tab by it.
-inline constexpr uintptr_t base_i18n_IsRTL = 0x100aa40;
+inline constexpr uintptr_t kBaseI18nIsRtl = 0x100aa40;
 }  // namespace rva
 
 // --- struct field offsets ---

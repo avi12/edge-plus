@@ -24,13 +24,13 @@ constexpr int kUsageExitCode = 2;
 class RemoteAllocation {
  public:
   RemoteAllocation(HANDLE inProcess, SIZE_T byteCount) noexcept
-      : process(inProcess),
-        address(VirtualAllocEx(inProcess, nullptr, byteCount,
-                               MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)) {
+      : process_(inProcess),
+        address_(VirtualAllocEx(inProcess, nullptr, byteCount,
+                                MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)) {
   }
   ~RemoteAllocation() {
-    if (address) {
-      VirtualFreeEx(process, address, 0, MEM_RELEASE);
+    if (address_) {
+      VirtualFreeEx(process_, address_, 0, MEM_RELEASE);
     }
   }
   RemoteAllocation(const RemoteAllocation&) = delete;
@@ -39,17 +39,17 @@ class RemoteAllocation {
   RemoteAllocation& operator=(RemoteAllocation&&) = delete;
 
   [[nodiscard]] void* Address() const noexcept {
-    return address;
+    return address_;
   }
 
  private:
-  HANDLE process = nullptr;
-  void* address = nullptr;
+  HANDLE process_ = nullptr;
+  void* address_ = nullptr;
 };
 
 }  // namespace
 
-int wmain(int argc, wchar_t** argv) {
+static int wmain(int argc, wchar_t** argv) {
   const bool hasExpectedArguments = argc == kArgumentCount;
   if (!hasExpectedArguments) {
     wprintf(L"usage: inject.exe <pid> <dll path>\n");

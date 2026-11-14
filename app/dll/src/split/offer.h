@@ -54,7 +54,7 @@ inline void __fastcall h_open_tab(void* controller, void* chosenContents) {
                                  edge155::off::SPLITCONTROLLER_tab_strip_model);
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;
   const bool isGrownSplitOffer =
-      active && IsInGrownSplit(tsm, active) &&
+      (active != nullptr) && IsInGrownSplit(tsm, active) &&
       edge::IsStartingPage(edge::TabContents(active));
   if (!isGrownSplitOffer) {
     o_open_tab(controller, chosenContents);
@@ -119,7 +119,7 @@ inline constinit IsSplitContents_t o_is_split_contents = nullptr;
 inline bool __fastcall h_is_split_contents(void* webContents) {
   void* tab = g_listing.pageTab ? edge::TabShowing(g_listing.tsm, webContents)
                                 : nullptr;
-  const bool isLeftOut = tab && IsLeftOutOfOffer(g_listing, tab);
+  const bool isLeftOut = (tab != nullptr) && IsLeftOutOfOffer(g_listing, tab);
   return isLeftOut || o_is_split_contents(webContents);
 }
 
@@ -137,7 +137,7 @@ inline void __fastcall h_page_left_split(void* bindState) {
   void* pageTab =
       page ? edge::TabShowing(edge::TsmForWindow(channel::g_window), page)
            : nullptr;
-  const bool isBackInSplit = pageTab && edge::TabIsSplit(pageTab);
+  const bool isBackInSplit = (pageTab != nullptr) && edge::TabIsSplit(pageTab);
   if (isBackInSplit) {
     edge::ClearBoundWeakTarget(bindState);
   }
@@ -157,7 +157,8 @@ inline void __fastcall h_close_page(void* handler) {
   void* tsm = edge::TsmForWindow(channel::g_window);
   void* page = edge::StartingPageOf(handler);
   void* pageTab = page ? edge::TabShowing(tsm, page) : nullptr;
-  const bool isGrownSplitPage = pageTab && IsInGrownSplit(tsm, pageTab);
+  const bool isGrownSplitPage =
+      (pageTab != nullptr) && IsInGrownSplit(tsm, pageTab);
   if (!isGrownSplitPage) {
     o_close_page(handler);
     return;

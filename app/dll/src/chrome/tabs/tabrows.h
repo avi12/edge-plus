@@ -53,14 +53,15 @@ inline bool Overlaps(const Rect& first, const Rect& second) {
 
 inline size_t SplitRunLength(const BoundsList& list, size_t start) {
   void* first = list.TabAt(start);
-  const bool isSplitTab = first && edge::IsTabViewInSplit(first);
+  const bool isSplitTab = (first != nullptr) && edge::IsTabViewInSplit(first);
   if (!isSplitTab) {
     return 1;
   }
   size_t length = 1;
   while (start + length < list.count) {
     void* next = list.TabAt(start + length);
-    const bool isSameSplit = next && edge::IsTabViewInSameSplit(first, next);
+    const bool isSameSplit =
+        (next != nullptr) && edge::IsTabViewInSameSplit(first, next);
     if (!isSameSplit) {
       break;
     }
@@ -86,7 +87,8 @@ inline bool IsPiledUp(const BoundsList& list, size_t start, size_t length) {
 inline tab_grid::TabGrid GridOfSplit(void* tabView, size_t length,
                                      int rowWidth) {
   const Node* tree = TreeOfSplit(edge::TabViewSplitToken(tabView));
-  const bool isTreeOfRun = tree && std::cmp_equal(LeafCount(*tree), length);
+  const bool isTreeOfRun =
+      (tree != nullptr) && std::cmp_equal(LeafCount(*tree), length);
   return isTreeOfRun
              ? tab_grid::GridOfTree(*tree)
              : tab_grid::GridOfFlatSplit(static_cast<int>(length), rowWidth);
@@ -121,7 +123,7 @@ inline void SpreadPiledSplits(void* helper, void* result) {
   const BoundsList list{helper, edge::IdealBoundsRects(result),
                         edge::IdealBoundsCount(result)};
   const bool hasRectPerSlot =
-      list.rects && list.count == edge::TabLayoutSlotCount(helper);
+      (list.rects != nullptr) && list.count == edge::TabLayoutSlotCount(helper);
   if (!hasRectPerSlot) {
     return;
   }
@@ -243,7 +245,7 @@ inline constexpr int kPreviewGapDip = 10;
 // colours are the EdgeTab's, not its view's: passing the view as `this` crashed
 // Edge.
 inline void RepaintPreviewTab(void* tab) {
-  const bool isEdgeTab = tab && edge::IsEdgeTabView(tab);
+  const bool isEdgeTab = (tab != nullptr) && edge::IsEdgeTabView(tab);
   if (!isEdgeTab) {
     return;
   }
@@ -296,7 +298,7 @@ using IsActive_t = bool(__fastcall*)(void*);
 inline constinit IsActive_t o_is_active = nullptr;
 inline bool __fastcall h_is_active(void* tab) {
   const bool isPreviewTab =
-      g_previewTab && tab == edge::TabObjectOfView(g_previewTab);
+      (g_previewTab != nullptr) && tab == edge::TabObjectOfView(g_previewTab);
   if (isPreviewTab) {
     return false;
   }
@@ -442,7 +444,7 @@ inline void ApplyDetachPreview(void* helper, void* result) {
   const BoundsList list{helper, edge::IdealBoundsRects(result),
                         edge::IdealBoundsCount(result)};
   const bool hasRectPerSlot =
-      list.rects && list.count == edge::TabLayoutSlotCount(helper);
+      (list.rects != nullptr) && list.count == edge::TabLayoutSlotCount(helper);
   if (!hasRectPerSlot) {
     return;
   }

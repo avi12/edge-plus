@@ -13,7 +13,7 @@ class Unique {
   using Handle = typename Traits::Handle;
 
   Unique() noexcept = default;
-  explicit Unique(Handle owned) noexcept : handle(owned) {
+  explicit Unique(Handle owned) noexcept : handle_(owned) {
   }
   ~Unique() {
     Reset();
@@ -21,38 +21,38 @@ class Unique {
   Unique(const Unique&) = delete;
   Unique& operator=(const Unique&) = delete;
   Unique(Unique&& other) noexcept
-      : handle(std::exchange(other.handle, Handle{})) {
+      : handle_(std::exchange(other.handle_, Handle{})) {
   }
   Unique& operator=(Unique&& other) noexcept {
     if (this != &other) {
-      Reset(std::exchange(other.handle, Handle{}));
+      Reset(std::exchange(other.handle_, Handle{}));
     }
     return *this;
   }
 
   [[nodiscard]] Handle Get() const noexcept {
-    return handle;
+    return handle_;
   }
   [[nodiscard]] bool IsValid() const noexcept {
-    return Traits::IsValid(handle);
+    return Traits::IsValid(handle_);
   }
   explicit operator bool() const noexcept {
     return IsValid();
   }
 
   Handle Release() noexcept {
-    return std::exchange(handle, Handle{});
+    return std::exchange(handle_, Handle{});
   }
 
   void Reset(Handle replacement = Handle{}) noexcept {
     if (IsValid()) {
-      Traits::Close(handle);
+      Traits::Close(handle_);
     }
-    handle = replacement;
+    handle_ = replacement;
   }
 
  private:
-  Handle handle{};
+  Handle handle_{};
 };
 
 // Win32 spells "no handle" two ways: null from most creators,
@@ -96,11 +96,11 @@ using UniqueMemoryDc = Unique<MemoryDcTraits>;
 class WindowDc {
  public:
   explicit WindowDc(HWND ofWindow) noexcept
-      : window(ofWindow), context(GetDC(ofWindow)) {
+      : window_(ofWindow), context_(GetDC(ofWindow)) {
   }
   ~WindowDc() {
-    if (context) {
-      ReleaseDC(window, context);
+    if (context_) {
+      ReleaseDC(window_, context_);
     }
   }
   WindowDc(const WindowDc&) = delete;
@@ -109,12 +109,12 @@ class WindowDc {
   WindowDc& operator=(WindowDc&&) = delete;
 
   [[nodiscard]] HDC Get() const noexcept {
-    return context;
+    return context_;
   }
 
  private:
-  HWND window = nullptr;
-  HDC context = nullptr;
+  HWND window_ = nullptr;
+  HDC context_ = nullptr;
 };
 
 // Declare the object's owner first, so the displaced object is selected back
@@ -122,10 +122,10 @@ class WindowDc {
 class SelectedObject {
  public:
   SelectedObject(HDC intoContext, HGDIOBJ object) noexcept
-      : context(intoContext), previous(SelectObject(intoContext, object)) {
+      : context_(intoContext), previous_(SelectObject(intoContext, object)) {
   }
   ~SelectedObject() {
-    SelectObject(context, previous);
+    SelectObject(context_, previous_);
   }
   SelectedObject(const SelectedObject&) = delete;
   SelectedObject& operator=(const SelectedObject&) = delete;
@@ -133,16 +133,16 @@ class SelectedObject {
   SelectedObject& operator=(SelectedObject&&) = delete;
 
  private:
-  HDC context = nullptr;
-  HGDIOBJ previous = nullptr;
+  HDC context_ = nullptr;
+  HGDIOBJ previous_ = nullptr;
 };
 
 class OpenedClipboard {
  public:
-  OpenedClipboard() noexcept : isOpen(OpenClipboard(nullptr) != FALSE) {
+  OpenedClipboard() noexcept : isOpen_(OpenClipboard(nullptr) != FALSE) {
   }
   ~OpenedClipboard() {
-    if (isOpen) {
+    if (isOpen_) {
       CloseClipboard();
     }
   }
@@ -152,22 +152,22 @@ class OpenedClipboard {
   OpenedClipboard& operator=(OpenedClipboard&&) = delete;
 
   [[nodiscard]] bool IsOpen() const noexcept {
-    return isOpen;
+    return isOpen_;
   }
 
  private:
-  bool isOpen = false;
+  bool isOpen_ = false;
 };
 
 class GlobalMemoryLock {
  public:
   explicit GlobalMemoryLock(HGLOBAL lockedMemory) noexcept
-      : memory(lockedMemory),
-        data(lockedMemory ? GlobalLock(lockedMemory) : nullptr) {
+      : memory_(lockedMemory),
+        data_(lockedMemory ? GlobalLock(lockedMemory) : nullptr) {
   }
   ~GlobalMemoryLock() {
-    if (data) {
-      GlobalUnlock(memory);
+    if (data_) {
+      GlobalUnlock(memory_);
     }
   }
   GlobalMemoryLock(const GlobalMemoryLock&) = delete;
@@ -176,12 +176,12 @@ class GlobalMemoryLock {
   GlobalMemoryLock& operator=(GlobalMemoryLock&&) = delete;
 
   [[nodiscard]] const void* Data() const noexcept {
-    return data;
+    return data_;
   }
 
  private:
-  HGLOBAL memory = nullptr;
-  void* data = nullptr;
+  HGLOBAL memory_ = nullptr;
+  void* data_ = nullptr;
 };
 
 }  // namespace edgeplus::handles

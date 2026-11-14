@@ -24,8 +24,8 @@ inline constinit PaintBackgroundStroke_t o_paint_background_stroke = nullptr;
 inline void __fastcall h_paint_background_stroke(void* styleViews, void* canvas,
                                                  uint32_t strokeColor) {
   void* const tab = edge::TabObjectOfStyleViews(styleViews);
-  const bool isFramed =
-      tab_shape::g_isCyberpunkSkinOn && tab && edge::IsTabObjectActive(tab);
+  const bool isFramed = tab_shape::g_isCyberpunkSkinOn && (tab != nullptr) &&
+                        edge::IsTabObjectActive(tab);
   if (!isFramed) {
     o_paint_background_stroke(styleViews, canvas, strokeColor);
     return;

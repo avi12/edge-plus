@@ -16,7 +16,7 @@ inline void RepaintTabs(void* view, int depth = 0) {
     edge::SchedulePaint(view);
     void* row = edge::ViewParent(view);
     const bool isSplitRow =
-        row &&
+        (row != nullptr) &&
         edge::VtableRva(row) == edge::Rva(edge155::rva::SplitTabView_vftable);
     if (isSplitRow) {
       edge::SchedulePaint(row);

@@ -28,7 +28,8 @@ inline constexpr edge155::off::ControlMenuCommand kGrownSplitRepeats[] = {
 
 // `mcv` is null when unknown.
 inline bool IsGrownSplit(void* mcv) {
-  return mcv && edge::McvActiveSplitPanes(mcv) > split_data::kMinSplitMembers;
+  return (mcv != nullptr) &&
+         edge::McvActiveSplitPanes(mcv) > split_data::kMinSplitMembers;
 }
 
 inline bool IsLeftOut(int command, bool isGrownSplit) {
@@ -87,13 +88,13 @@ inline bool RunItem(int command, void* mcv, int pane) {
   const bool isCopyOfMenuPane =
       command ==
           static_cast<int>(edge155::off::ControlMenuCommand::kOpenInNewTab) &&
-      mcv && pane != kNoLeaf;
+      (mcv != nullptr) && pane != kNoLeaf;
   if (!isCopyOfMenuPane) {
     return false;
   }
   void* contents = edge::ContainerWebContents(edge::McvContainerAt(mcv, pane));
   void* tsm = edge::McvTabStripModel(mcv);
-  const bool canCopy = contents && tsm;
+  const bool canCopy = (contents != nullptr) && (tsm != nullptr);
   if (!canCopy) {
     return false;
   }

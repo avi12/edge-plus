@@ -496,7 +496,7 @@ inline bool AdoptBrowserWindow(HWND excluded);
 inline void OnConfigChanged() {
   // Every browser window closed with Edge still running (in the background):
   // the next one opened takes the channel, so this apply reaches it.
-  const bool isWithoutWindow = !channel::g_window;
+  const bool isWithoutWindow = channel::g_window == nullptr;
   if (isWithoutWindow) {
     AdoptBrowserWindow(nullptr);
   }
@@ -521,7 +521,8 @@ inline void EnsureGripsByCommand(HWND hwnd) {
   void* mcv = edge::McvForWindow(hwnd);
   // A collapsed split keeps its surplus containers; they get no grips.
   const bool isGrownSplit =
-      mcv && edge::McvActiveSplitPanes(mcv) > split_data::kMinSplitMembers;
+      (mcv != nullptr) &&
+      edge::McvActiveSplitPanes(mcv) > split_data::kMinSplitMembers;
   if (isGrownSplit) {
     grip::EnsureGrips(mcv);
     dividers::Ensure(mcv);
@@ -530,13 +531,15 @@ inline void EnsureGripsByCommand(HWND hwnd) {
 
 inline void ShowBarByCommand(HWND hwnd, int pane) {
   void* mcv = edge::McvForWindow(hwnd);
-  const bool hasPane = mcv && std::cmp_less(pane, edge::McvCount(mcv));
+  const bool hasPane =
+      (mcv != nullptr) && std::cmp_less(pane, edge::McvCount(mcv));
   if (hasPane) {
     void* webContents =
         edge::ContainerWebContents(edge::McvContainerAt(mcv, pane));
     const bool isShown = edge::ShowControlButtonFor(
         edge::BrowserOf(edge::McvBrowserView(mcv)), webContents);
-    Log("[control] show bar pane=%d wc=%p -> %d", pane, webContents, isShown);
+    Log("[control] show bar pane=%d wc=%p -> %d", pane, webContents,
+        static_cast<int>(isShown));
   }
 }
 
@@ -772,7 +775,7 @@ inline BOOL CALLBACK FindBrowserWindow(HWND hwnd, LPARAM excluded) {
     return TRUE;
   }
   const bool isVisibleWithTitle =
-      IsWindowVisible(hwnd) && GetWindowTextLengthW(hwnd) != 0;
+      (IsWindowVisible(hwnd) != 0) && GetWindowTextLengthW(hwnd) != 0;
   if (!isVisibleWithTitle) {
     return TRUE;
   }
@@ -826,7 +829,7 @@ inline void Install() {
 // for it, then restore the original window procedure.
 inline void Remove() {
   HWND hwnd = channel::g_window;
-  const bool isSubclassed = hwnd && g_originalProc;
+  const bool isSubclassed = (hwnd != nullptr) && (g_originalProc != nullptr);
   if (isSubclassed) {
     SendMessageTimeoutW(hwnd, channel::g_message, CodeOf(Command::kTeardown), 0,
                         SMTO_BLOCK, kTeardownTimeoutMs, nullptr);

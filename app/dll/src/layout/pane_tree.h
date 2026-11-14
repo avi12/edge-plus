@@ -837,7 +837,7 @@ inline void CollectSeams(const Node& node, const Rect& bounds, int gap,
 inline bool ResizeSeam(Node& root, const Seam& seam, int delta) {
   Node* split = NodeAt(root, seam.path);
   const bool isSeamOfSplit =
-      split && !split->isLeaf &&
+      (split != nullptr) && !split->isLeaf &&
       static_cast<size_t>(seam.index) + 1 < split->children.size();
   if (!isSeamOfSplit) {
     return false;
@@ -861,7 +861,7 @@ inline bool ResizeSeam(Node& root, const Seam& seam, int delta) {
 
 inline bool EqualizeSplit(Node& root, const std::vector<int>& path) {
   Node* split = NodeAt(root, path);
-  const bool isUnevenSplit = split && !split->isLeaf &&
+  const bool isUnevenSplit = (split != nullptr) && !split->isLeaf &&
                              !split->weights.empty() &&
                              !AllEqual(split->weights);
   if (!isUnevenSplit) {

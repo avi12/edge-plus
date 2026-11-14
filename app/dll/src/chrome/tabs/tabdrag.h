@@ -87,7 +87,8 @@ inline void OnLaidOut(void* mcv) {
   void* tsm = edge::McvTabStripModel(mcv);
   void* tab = tsm ? edge::ActiveTab(tsm) : nullptr;
   void* webContents = tab ? edge::TabContents(tab) : nullptr;
-  const bool isNewPage = webContents && webContents != g_shown.current;
+  const bool isNewPage =
+      (webContents != nullptr) && webContents != g_shown.current;
   if (isNewPage) {
     g_shown = ShownPages{webContents, g_shown.current};
   }
@@ -103,7 +104,7 @@ inline void* PageShownBefore(void* controller) {
 
 inline bool IsSplitPage(void* tsm, void* contents) {
   void* tab = edge::TabShowing(tsm, contents);
-  return tab && edge::TabIsSplit(tab);
+  return (tab != nullptr) && edge::TabIsSplit(tab);
 }
 
 // A script's stand-in for the Alt key (channel kHoldAlt).
@@ -125,13 +126,13 @@ inline bool CanDock(void* controller, void* tsm) {
   }
   void* contents = edge::DraggedContents(controller, 0);
   void* tab = edge::TabShowing(tsm, contents);
-  return tab && !edge::TabIsSplit(tab);
+  return (tab != nullptr) && !edge::TabIsSplit(tab);
 }
 
 // The pane whose drag the strip `context` is running, or null.
 inline PaneOrigin* PaneDraggedBy(const void* context) {
-  const bool isPaneDrag =
-      g_paneOrigin.has_value() && context && g_paneOrigin->context == context;
+  const bool isPaneDrag = g_paneOrigin.has_value() && (context != nullptr) &&
+                          g_paneOrigin->context == context;
   return isPaneDrag ? &g_paneOrigin.value() : nullptr;
 }
 
@@ -191,7 +192,8 @@ inline int SplitUnder(void* context, void* tsm, void* draggedContents,
 // The picked split, or plain tab, at strip `index`.
 inline void ShowTargetAt(int index) {
   const void* tab = edge::TabModelAt(g_session.tsm, index);
-  const bool isHiddenTab = tab && tab != edge::ActiveTab(g_session.tsm);
+  const bool isHiddenTab =
+      (tab != nullptr) && tab != edge::ActiveTab(g_session.tsm);
   if (!isHiddenTab) {
     return;
   }
@@ -233,7 +235,8 @@ inline void* PickPlainTabUnder(void* controller, void* context, void* tsm,
     }
     void* tabView = edge::DragContextTabFor(context, contents);
     const bool isUnderPointer =
-        tabView && Contains(edge::ViewBoundsInScreen(tabView), screenPoint);
+        (tabView != nullptr) &&
+        Contains(edge::ViewBoundsInScreen(tabView), screenPoint);
     if (!isUnderPointer) {
       continue;
     }
@@ -270,7 +273,7 @@ inline void* PickedSplitFor(void* controller, void* tsm,
 inline void* DockTarget(void* tsm) {
   void* contents = g_picked.splitContents;
   const bool isInThisStrip =
-      contents && edge::IndexOfWebContents(tsm, contents) >= 0;
+      (contents != nullptr) && edge::IndexOfWebContents(tsm, contents) >= 0;
   if (!isInThisStrip) {
     return nullptr;
   }
@@ -285,7 +288,8 @@ inline void* DockTarget(void* tsm) {
 inline void PreviewDock(Point screenPoint, bool isOverTargetTab) {
   void* mcv = edge::McvForWindow(channel::g_window);
   const bool isOwnWindowShown =
-      mcv && edge::TsmForWindow(channel::g_window) == g_session.tsm;
+      (mcv != nullptr) &&
+      edge::TsmForWindow(channel::g_window) == g_session.tsm;
   if (!isOwnWindowShown) {
     g_session.plan = {};
     overlay::Hide();
@@ -322,7 +326,8 @@ inline void LeaveDockMode() {
   overlay::Hide();
   const int draggedIndex =
       edge::IndexOfWebContents(g_session.tsm, g_session.draggedContents);
-  const bool hasShownSplit = g_session.splitContents && draggedIndex >= 0;
+  const bool hasShownSplit =
+      (g_session.splitContents != nullptr) && draggedIndex >= 0;
   if (hasShownSplit) {
     edge::ActivateTabAt(g_session.tsm, draggedIndex);
   }
@@ -399,7 +404,8 @@ inline bool TakeOverPaneDrag(void* mcv, int pane, Point rootLocation) {
   void* tsm = edge::McvTabStripModel(mcv);
   void* context = edge::BrowserViewDragContext(edge::McvBrowserView(mcv));
   const int panes = edge::McvActiveSplitPanes(mcv);
-  const bool hasStrip = tsm && context && pane < panes;
+  const bool hasStrip =
+      (tsm != nullptr) && (context != nullptr) && pane < panes;
   if (!hasStrip) {
     return false;
   }
@@ -452,7 +458,7 @@ inline int __fastcall h_continue_dragging(void* controller,
                                           const Point* screenPoint) {
   void* context = edge::DragContext(controller);
   void* tsm = context ? edge::DragContextTabStripModel(context) : nullptr;
-  const bool canDock = tsm && CanDock(controller, tsm);
+  const bool canDock = (tsm != nullptr) && CanDock(controller, tsm);
   if (canDock) {
     PickedSplitFor(controller, tsm, PaneDraggedBy(context));
   }
@@ -467,8 +473,9 @@ inline int __fastcall h_continue_dragging(void* controller,
   }
   const bool isOverTargetTab = tabUnder != nullptr;
   void* splitContents = canDock ? DockTarget(tsm) : nullptr;
-  const bool isOffTabListWithSplit =
-      splitContents && !isOverTabList && IsInDragWindow(context, *screenPoint);
+  const bool isOffTabListWithSplit = (splitContents != nullptr) &&
+                                     !isOverTabList &&
+                                     IsInDragWindow(context, *screenPoint);
   // Alt over the list holds Edge's drag even between targets: its reordering
   // would slide the next tab away from under the pointer.
   const bool isDock =
@@ -505,7 +512,8 @@ inline void __fastcall h_end_drag(void* controller, int reason) {
   PaneOrigin* pane = PaneDraggedBy(edge::DragContext(controller));
   const bool isPaneDrag = pane != nullptr;
   const bool isReleased = reason == edge155::off::TABDRAG_end_complete;
-  const bool hasDockTarget = g_session.isDocking && g_session.splitContents &&
+  const bool hasDockTarget = g_session.isDocking &&
+                             (g_session.splitContents != nullptr) &&
                              g_session.plan.zone != dock::Zone::kNone;
   const bool isDropping = isReleased && hasDockTarget;
   // As before the tab list took the drag over: let go anywhere but on a dock
@@ -565,7 +573,7 @@ inline void ApplyDrop() {
   g_drop.reset();
   const int splitIndex = edge::IndexOfWebContents(drop.tsm, drop.splitContents);
   void* draggedTab = edge::TabShowing(drop.tsm, drop.draggedContents);
-  const bool hasBothTabs = splitIndex >= 0 && draggedTab;
+  const bool hasBothTabs = splitIndex >= 0 && (draggedTab != nullptr);
   if (!hasBothTabs) {
     Log("[tabdrag] drop: a tab went away");
     return;
@@ -589,7 +597,8 @@ inline void* ScriptedTabDragMcv() {
 }
 
 inline void SimulateGripPress(void* mcv, int pane, Point rootLocation) {
-  const bool hasPane = mcv && std::cmp_less(pane, edge::McvCount(mcv));
+  const bool hasPane =
+      (mcv != nullptr) && std::cmp_less(pane, edge::McvCount(mcv));
   if (hasPane) {
     drag::Begin(mcv, pane, rootLocation);
   }

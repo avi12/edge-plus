@@ -141,7 +141,7 @@ inline void Apply(void* mcv, std::vector<LeafRect>& placed, bool shouldSnap) {
   auto flight = Flights().find(mcv);
   const bool hasFlight = flight != Flights().end();
   const bool shouldAnimate =
-      g_isEnabled && !shouldSnap && !LiveSplits().count(mcv);
+      g_isEnabled && !shouldSnap && (LiveSplits().count(mcv) == 0u);
   if (!shouldAnimate) {
     if (hasFlight) {
       Flights().erase(flight);

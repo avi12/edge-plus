@@ -21,7 +21,7 @@ void Check(bool ok, const char* what) {
 }
 
 bool IsFilled(const char* text) {
-  return text && text[0] != '\0';
+  return (text != nullptr) && text[0] != '\0';
 }
 
 bool IsFullyDescribed(const Target& target) {

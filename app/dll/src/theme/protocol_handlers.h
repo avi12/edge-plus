@@ -61,8 +61,8 @@ inline void __fastcall h_permission_decided(void* request,
                                             const void* decision) {
   const edge::PermissionDecision decided =
       edge::ReadPermissionDecision(decision);
-  Log("[handlers] prompt decided has=%d value=%d", decided.hasValue,
-      decided.value);
+  Log("[handlers] prompt decided has=%d value=%d",
+      static_cast<int>(decided.hasValue), decided.value);
   const bool isJustThisTime =
       g_isActive && decided.hasValue &&
       decided.value == static_cast<int32_t>(Decision::kAllowThisTime);

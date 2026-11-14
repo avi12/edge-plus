@@ -330,7 +330,8 @@ inline OptionalSplitId TabSplitId(void* tab) {
 inline bool IsSameSplit(void* tab, void* otherTab) {
   const OptionalSplitId splitId = TabSplitId(tab);
   const OptionalSplitId otherSplitId = TabSplitId(otherTab);
-  const bool isBothInSplits = splitId.hasValue && otherSplitId.hasValue;
+  const bool isBothInSplits =
+      (splitId.hasValue != 0u) && (otherSplitId.hasValue != 0u);
   return isBothInSplits && std::memcmp(splitId.token, otherSplitId.token,
                                        sizeof(splitId.token)) == 0;
 }
@@ -725,7 +726,8 @@ inline void* BoundWeakTarget(void* bindState) {
   void* flag =
       Field<void*>(bindState, edge155::off::BINDSTATE_first_bound_argument);
   const bool isValid =
-      flag && Field<uint8_t>(flag, edge155::off::WEAKFLAG_invalidated) == 0;
+      (flag != nullptr) &&
+      Field<uint8_t>(flag, edge155::off::WEAKFLAG_invalidated) == 0;
   return isValid ? Field<void*>(bindState,
                                 edge155::off::BINDSTATE_first_bound_argument +
                                     sizeof(void*))
@@ -958,11 +960,10 @@ inline void ContainerSetControlButtons(void* container, void** ownedBar) {
 // Build a ControlButtons bar and hand it to `container`, exactly as
 // EnsureControlButtons does for pane 1 (`not_first` = true there).
 inline void GiveControlButtons(void* container, void* browserView,
-                               bool not_first) {
+                               bool notFirst) {
   void* bar = NewView(edge155::off::ControlButtons_size);
   using Ctor = void*(__fastcall*)(void*, void*, bool);
-  Callable<Ctor>(edge155::rva::ControlButtons_ctor)(bar, browserView,
-                                                    not_first);
+  Callable<Ctor>(edge155::rva::ControlButtons_ctor)(bar, browserView, notFirst);
   void* ownedBar = bar;  // stands in for the unique_ptr the callee empties
   ContainerSetControlButtons(container, &ownedBar);
 }
@@ -1210,7 +1211,8 @@ inline int McvActiveSplitPanes(void* mcv) {
     return 1;
   }
   void* activeTab = ActiveTab(tsm);
-  const bool isActiveTabInSplit = activeTab && TabIsSplit(activeTab);
+  const bool isActiveTabInSplit =
+      (activeTab != nullptr) && TabIsSplit(activeTab);
   if (!isActiveTabInSplit) {
     return 1;
   }
@@ -1297,7 +1299,7 @@ inline void SetReadingTheme(void* browserContext, int32_t theme) {
 
 inline bool IsUiRightToLeft() {
   using Fn = bool(__fastcall*)();
-  return Callable<Fn>(edge155::rva::base_i18n_IsRTL)();
+  return Callable<Fn>(edge155::rva::kBaseI18nIsRtl)();
 }
 
 inline void* ThemeServiceForProfile(void* profile) {
@@ -1488,7 +1490,7 @@ inline void* RphDoneSlot() {
 inline bool RphDoneSlotIsStock() {
   const void* const emptyVirtual =
       At(edge155::rva::ContentSettingBubbleModel_EmptyVirtual);
-  return emptyVirtual && RphDoneSlot() == emptyVirtual;
+  return (emptyVirtual != nullptr) && RphDoneSlot() == emptyVirtual;
 }
 
 // Point the handler bubble's Done slot at `function` (the vtable lives in
@@ -1831,7 +1833,7 @@ inline void* PrimaryMainFrame(void* webContents) {
 inline bool IsPageLive(void* webContents) {
   const void* frame = PrimaryMainFrame(webContents);
   using Fn = bool(__fastcall*)(const void*);
-  return frame &&
+  return (frame != nullptr) &&
          Callable<Fn>(edge155::rva::RenderFrameHostImpl_IsRenderFrameLive)(
              frame);
 }
@@ -2048,13 +2050,13 @@ inline U16View FindBarText(void* findBarView) {
 // field holds: the bar rewrites the field when they differ.
 inline void FindBarShowResult(void* findBarView, int matches, int ordinal,
                               U16View findText) {
-  static int s_requestId = 0;
+  static int sRequestId = 0;
   uint8_t details[edge155::off::FINDDETAILS_size] = {};
   // The bar skips a result equal to the one it last showed; ours may follow a
   // status line it knows nothing about, so every result is a new one.
-  s_requestId++;
-  std::memcpy(details + edge155::off::FINDDETAILS_request_id, &s_requestId,
-              sizeof(s_requestId));
+  sRequestId++;
+  std::memcpy(details + edge155::off::FINDDETAILS_request_id, &sRequestId,
+              sizeof(sRequestId));
   std::memcpy(details + edge155::off::FINDDETAILS_matches, &matches,
               sizeof(matches));
   std::memcpy(details + edge155::off::FINDDETAILS_active_ordinal, &ordinal,
@@ -2147,7 +2149,8 @@ inline bool FindToggleIsOn(void* toggle) {
   const void* const button =
       Field<void*>(toggle, edge155::off::FINDTOGGLE_button);
   using Fn = bool(__fastcall*)(const void*);
-  return button && Callable<Fn>(edge155::rva::EdgeToggleButton_GetIsOn)(button);
+  return (button != nullptr) &&
+         Callable<Fn>(edge155::rva::EdgeToggleButton_GetIsOn)(button);
 }
 
 // Move the switch alone: Edge's SetToggleState would also write the id into its

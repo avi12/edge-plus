@@ -34,7 +34,7 @@ inline bool IsNewTabLink(int disposition, bool hasUserGesture,
 inline LinkTarget LinkTargetFor(void* sourceContents) {
   void* tsm = edge::TsmForWindow(channel::g_window);
   void* tab = edge::TabShowing(tsm, sourceContents);
-  const bool isSplitPane = tab && edge::TabIsSplit(tab);
+  const bool isSplitPane = (tab != nullptr) && edge::TabIsSplit(tab);
   if (!isSplitPane) {
     return LinkTarget::kEdge;
   }
@@ -62,7 +62,7 @@ inline bool __fastcall h_should_override(void* delegate, void* source,
                                          void* opener, int disposition,
                                          bool argument5, void* params) {
   const bool isNewTabLink =
-      params && IsForegroundTab(disposition) &&
+      (params != nullptr) && IsForegroundTab(disposition) &&
       edge::Field<bool>(params, edge155::off::NEWWINDOW_opener_suppressed);
   const LinkTarget target =
       isNewTabLink ? LinkTargetFor(source) : LinkTarget::kEdge;
@@ -91,7 +91,7 @@ inline void* __fastcall h_add_new_contents(
     bool* wasBlocked) {
   void* contents = newContents ? *newContents : nullptr;
   const bool isNewTabLink =
-      contents &&
+      (contents != nullptr) &&
       IsNewTabLink(disposition, hasUserGesture, !edge::HasOpener(contents));
   const bool isToNewPane =
       isNewTabLink && LinkTargetFor(source) == LinkTarget::kNewPaneRight;
@@ -136,7 +136,7 @@ inline void OpenLinkPane() {
   void* newTab = edge::TabShowing(tsm, link.newContents);
   const int sourceLeaf =
       mcv ? split_ops::LeafShowing(mcv, link.source) : kNoLeaf;
-  const bool canAddPane = newTab && sourceLeaf != kNoLeaf;
+  const bool canAddPane = (newTab != nullptr) && sourceLeaf != kNoLeaf;
   if (!canAddPane) {
     Log("[links] new-tab link: its pane or tab went away");
     return;

@@ -42,7 +42,7 @@ inline void EnsureGrips(void* mcv) {
   }
   for (int i = 0; i < count; i++) {
     void* bar = edge::ContainerControlButtons(edge::McvContainerAt(mcv, i));
-    const bool shouldAddGrip = bar && !Grips().count(bar);
+    const bool shouldAddGrip = (bar != nullptr) && (Grips().count(bar) == 0u);
     if (!shouldAddGrip) {
       continue;
     }

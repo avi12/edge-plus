@@ -12,7 +12,16 @@
 #include "edge/hooks.h"
 #include "edge/resolve.h"
 
-using namespace edgeplus;
+namespace edge = edgeplus::edge;
+namespace edge155 = edgeplus::edge155;
+namespace edge_build = edgeplus::edge_build;
+namespace resolve = edgeplus::resolve;
+namespace status = edgeplus::status;
+namespace verify = edgeplus::verify;
+namespace handles = edgeplus::handles;
+namespace control = edgeplus::control;
+namespace hooks = edgeplus::hooks;
+using edgeplus::Log;
 
 namespace {
 
@@ -183,7 +192,7 @@ DWORD WINAPI Init(LPVOID) {
 
 }  // namespace
 
-BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID) {
+static BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID) {
   const bool isProcessAttach = reason == DLL_PROCESS_ATTACH;
   if (isProcessAttach) {
     g_self = module;

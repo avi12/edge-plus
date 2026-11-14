@@ -57,7 +57,7 @@ inline void FeedNewPane(void* mcv, int leaf) {
 
 inline bool IsActiveTabSplit(void* tsm) {
   void* active = edge::ActiveTab(tsm);
-  return active && edge::TabIsSplit(active);
+  return (active != nullptr) && edge::TabIsSplit(active);
 }
 
 // Every way a pane is added comes through here.
@@ -164,7 +164,8 @@ inline void AddPane(void* mcv, Direction direction) {
 inline bool FocusNeighbour(void* mcv, Direction direction) {
   void* tsm = mcv ? edge::McvTabStripModel(mcv) : nullptr;
   const int panes = mcv ? edge::McvActiveSplitPanes(mcv) : 0;
-  const bool isSplit = tsm && panes >= split_data::kMinSplitMembers;
+  const bool isSplit =
+      (tsm != nullptr) && panes >= split_data::kMinSplitMembers;
   if (!isSplit) {
     return false;
   }
@@ -231,7 +232,7 @@ inline void SwapActive(void* mcv) {
 inline void SyncPanesToMembers(void* mcv) {
   void* tsm = mcv ? edge::McvTabStripModel(mcv) : nullptr;
   const bool isGrownView =
-      tsm && edge::McvCount(mcv) > split_data::kMinSplitMembers;
+      (tsm != nullptr) && edge::McvCount(mcv) > split_data::kMinSplitMembers;
   if (!isGrownView) {
     return;
   }
@@ -287,8 +288,9 @@ inline bool RemovePaneFromSplit(void* mcv, int pane,
                                 split_data::MemberFate fate) {
   void* tsm = edge::McvTabStripModel(mcv);
   const int memberCount = mcv ? edge::McvActiveSplitPanes(mcv) : 0;
-  const bool isGrownSplit =
-      tsm && memberCount > split_data::kMinSplitMembers && pane < memberCount;
+  const bool isGrownSplit = (tsm != nullptr) &&
+                            memberCount > split_data::kMinSplitMembers &&
+                            pane < memberCount;
   if (!isGrownSplit) {
     return false;
   }

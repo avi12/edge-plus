@@ -43,8 +43,8 @@ inline void __fastcall h_stop_capture(void* tracker) {
   };
   for (const uintptr_t site : sites) {
     const void* const address = edge::At(site);
-    const bool isSite =
-        address && reinterpret_cast<uintptr_t>(address) == returnAddress;
+    const bool isSite = (address != nullptr) &&
+                        reinterpret_cast<uintptr_t>(address) == returnAddress;
     if (isSite) {
       return std::memcmp(address, edge155::off::INLINEDSTOP_tail,
                          sizeof(edge155::off::INLINEDSTOP_tail)) == 0;
