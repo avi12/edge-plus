@@ -34,6 +34,7 @@ const RSA_ENCRYPTION_ALGORITHM: [u8; 15] = [
     0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00,
 ];
 
+/// An RSA key pair held by CNG
 pub struct RsaKey {
     algorithm: BCRYPT_ALG_HANDLE,
     key: BCRYPT_KEY_HANDLE,
@@ -43,6 +44,7 @@ pub struct RsaKey {
 unsafe impl Send for RsaKey {}
 
 impl RsaKey {
+    /// Generates a key pair of `bits` bits
     pub fn generate(bits: u32) -> io::Result<Self> {
         let mut rsa = Self::empty()?;
         // SAFETY: `algorithm` is open and `key` a valid out-pointer; the key is
@@ -57,6 +59,7 @@ impl RsaKey {
         Ok(rsa)
     }
 
+    /// Imports a key pair from a private-key blob
     pub fn import_private_blob(blob: &[u8]) -> io::Result<Self> {
         let mut rsa = Self::empty()?;
         // SAFETY: `algorithm` is open, `blob` is valid for its length, and `key`
@@ -76,6 +79,7 @@ impl RsaKey {
         Ok(rsa)
     }
 
+    /// Exports the key pair as a private-key blob
     pub fn export_private_blob(&self) -> io::Result<Vec<u8>> {
         self.export(BCRYPT_RSAPRIVATE_BLOB)
     }

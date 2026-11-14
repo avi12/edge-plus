@@ -18,13 +18,13 @@ const VARINT_CONTINUES: u8 = 0x80;
 const MAX_VARINT_SHIFT: u32 = 63;
 
 /// A closed set of a message's field numbers (an enum per message).
-pub trait FieldNumber: Copy {
+pub(crate) trait FieldNumber: Copy {
     fn number(self) -> u64;
 }
 
 /// A length-delimited field: its payload is `data[start..start + length]`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Field {
+pub(crate) struct Field {
     pub number: u64,
     pub start: usize,
     pub length: usize,
@@ -32,18 +32,18 @@ pub struct Field {
 
 impl Field {
     #[must_use]
-    pub fn is_number(&self, expected: impl FieldNumber) -> bool {
+    pub(crate) fn is_number(&self, expected: impl FieldNumber) -> bool {
         self.number == expected.number()
     }
 
     #[must_use]
-    pub fn payload<'a>(&self, data: &'a [u8]) -> &'a [u8] {
+    pub(crate) fn payload<'a>(&self, data: &'a [u8]) -> &'a [u8] {
         &data[self.start..self.start + self.length]
     }
 }
 
 /// The value and the offset after it.
-pub fn read_varint(data: &[u8], offset: usize) -> ThemeFileResult<(u64, usize)> {
+pub(crate) fn read_varint(data: &[u8], offset: usize) -> ThemeFileResult<(u64, usize)> {
     let mut value = 0u64;
     let mut shift = 0u32;
     let mut offset = offset;
@@ -64,7 +64,7 @@ pub fn read_varint(data: &[u8], offset: usize) -> ThemeFileResult<(u64, usize)> 
 
 /// Any wire type but length-delimited is refused: nothing a CRX header carries
 /// uses one.
-pub fn read_fields(data: &[u8], start: usize, end: usize) -> ThemeFileResult<Vec<Field>> {
+pub(crate) fn read_fields(data: &[u8], start: usize, end: usize) -> ThemeFileResult<Vec<Field>> {
     let mut fields = Vec::new();
     let mut offset = start;
     while offset < end {
@@ -90,7 +90,7 @@ pub fn read_fields(data: &[u8], start: usize, end: usize) -> ThemeFileResult<Vec
 }
 
 #[must_use]
-pub fn varint(value: u64) -> Vec<u8> {
+pub(crate) fn varint(value: u64) -> Vec<u8> {
     let mut bytes = Vec::new();
     let mut value = value;
     loop {
@@ -105,7 +105,7 @@ pub fn varint(value: u64) -> Vec<u8> {
 }
 
 #[must_use]
-pub fn length_delimited_field(number: impl FieldNumber, payload: &[u8]) -> Vec<u8> {
+pub(crate) fn length_delimited_field(number: impl FieldNumber, payload: &[u8]) -> Vec<u8> {
     let mut field = varint((number.number() << WIRE_TYPE_BITS) | WireType::LengthDelimited as u64);
     field.extend_from_slice(&varint(payload.len() as u64));
     field.extend_from_slice(payload);

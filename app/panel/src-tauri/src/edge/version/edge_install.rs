@@ -13,13 +13,13 @@ use edge_native::Hive;
 
 use crate::edge::version::file_version::FileVersion;
 
-pub const SIMULATED_DIRECTORY_VARIABLE: &str = "EDGEPLUS_SIMULATE_EDGE_DIR";
-pub const LAUNCHER_NAME: &str = "msedge.exe";
+pub(crate) const SIMULATED_DIRECTORY_VARIABLE: &str = "EDGEPLUS_SIMULATE_EDGE_DIR";
+pub(crate) const LAUNCHER_NAME: &str = "msedge.exe";
 /// The key's default value is the launcher's path.
 const APP_PATHS_KEY: &str = r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe";
 
 #[must_use]
-pub fn simulated_directory() -> Option<PathBuf> {
+pub(crate) fn simulated_directory() -> Option<PathBuf> {
     let folder = std::env::var_os(SIMULATED_DIRECTORY_VARIABLE)?;
     let is_blank = folder.to_string_lossy().trim().is_empty();
     if is_blank {
@@ -29,12 +29,12 @@ pub fn simulated_directory() -> Option<PathBuf> {
 }
 
 #[must_use]
-pub fn is_simulated() -> bool {
+pub(crate) fn is_simulated() -> bool {
     simulated_directory().is_some()
 }
 
 #[must_use]
-pub fn application_directory() -> Option<PathBuf> {
+pub(crate) fn application_directory() -> Option<PathBuf> {
     if let Some(simulated) = simulated_directory() {
         return Some(simulated);
     }
@@ -43,7 +43,7 @@ pub fn application_directory() -> Option<PathBuf> {
 }
 
 #[must_use]
-pub fn installed_build(application_directory: Option<&Path>) -> Option<FileVersion> {
+pub(crate) fn installed_build(application_directory: Option<&Path>) -> Option<FileVersion> {
     FileVersion::of(&application_directory?.join(LAUNCHER_NAME))
 }
 

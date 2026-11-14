@@ -22,13 +22,13 @@ fn lock() -> std::sync::MutexGuard<'static, String> {
 
 /// The id held now, empty for none.
 #[must_use]
-pub fn held() -> String {
+pub(crate) fn held() -> String {
     lock().clone()
 }
 
 /// Holds `id` and tells the running Edge, before the install that would make
 /// it active starts; lets go again after `HOLD_DURATION`.
-pub fn hold(id: &str) {
+pub(crate) fn hold(id: &str) {
     id.clone_into(&mut lock());
     push();
     let id = id.to_owned();
@@ -44,7 +44,7 @@ pub fn hold(id: &str) {
 
 /// Lets go of `id` at once, when a theme added without Shift is added again
 /// with it.
-pub fn release(id: &str) {
+pub(crate) fn release(id: &str) {
     let is_held = *lock() == id;
     if is_held {
         lock().clear();

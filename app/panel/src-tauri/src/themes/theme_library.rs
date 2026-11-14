@@ -45,7 +45,7 @@ struct LocalCrx {
 
 /// `assign_to` is the Windows mode the new theme is set for once Edge wears it, when there is one; without
 /// one the theme is installed and left off.
-pub fn add_store(url: &str, assign_to: Option<ColorMode>) -> ActionResult<()> {
+pub(crate) fn add_store(url: &str, assign_to: Option<ColorMode>) -> ActionResult<()> {
     let Some(parsed) = store_url::parse(url) else {
         return Err(ActionError::User(wording::NOT_A_STORE_LINK.to_owned()));
     };
@@ -78,7 +78,7 @@ pub fn add_store(url: &str, assign_to: Option<ColorMode>) -> ActionResult<()> {
 }
 
 /// A folder, .zip or .crx; `assign_to` as for `add_store`.
-pub fn add_local(path: &Path, assign_to: Option<ColorMode>) -> ActionResult<()> {
+pub(crate) fn add_local(path: &Path, assign_to: Option<ColorMode>) -> ActionResult<()> {
     let local = local_theme_crx(path)?;
     let stored = stored_crx(&local.id);
     fs::create_dir_all(paths::themes_root())?;
@@ -211,7 +211,7 @@ fn manifest_name(crx_bytes: &[u8]) -> Option<String> {
 /// A theme shows the name its manifest gives; the folder, file or link slug it
 /// was added under is only the fallback, and themes added before that are
 /// renamed here from their stored copy (local) or Edge's install (store).
-pub fn sync_local_names() {
+pub(crate) fn sync_local_names() {
     let _gate = settings::gate();
     let mut settings = Settings::load();
     let mut is_changed = false;
@@ -239,7 +239,7 @@ pub fn sync_local_names() {
     }
 }
 
-pub fn remove(id: &str) -> ActionResult<()> {
+pub(crate) fn remove(id: &str) -> ActionResult<()> {
     let installed = installed_ids();
     change(|theming| theming.remove(id, |earlier| installed.contains(earlier)))?;
     uninstall_once_not_worn(id)
@@ -251,7 +251,7 @@ const DEFAULT_PROFILE: &str = "Default";
 /// theme, None when unknown. The DLL's report while it is in Edge (exact at
 /// once), else what Edge's Preferences say it will wear.
 #[must_use]
-pub fn worn_theme_id() -> Option<String> {
+pub(crate) fn worn_theme_id() -> Option<String> {
     let reported = dll_channel::is_loaded()
         .then(dll_wear::read)
         .flatten()
@@ -266,23 +266,23 @@ pub fn worn_theme_id() -> Option<String> {
     })
 }
 
-pub fn reorder(ids: &[String]) -> ActionResult<()> {
+pub(crate) fn reorder(ids: &[String]) -> ActionResult<()> {
     change(|theming| theming.reorder(ids))
 }
 
-pub fn assign(mode: ColorMode, id: &str) -> ActionResult<()> {
+pub(crate) fn assign(mode: ColorMode, id: &str) -> ActionResult<()> {
     change(|theming| theming.assign(mode, id))
 }
 
 /// A theme whose files are gone is taken off light and dark, so Edge goes back to its default theme.
-pub fn unassign(id: &str) -> ActionResult<()> {
+pub(crate) fn unassign(id: &str) -> ActionResult<()> {
     let installed = installed_ids();
     change(|theming| theming.unassign(id, |earlier| installed.contains(earlier)))
 }
 
 /// A theme that fails its checks is refused before anything is installed, so
 /// what Edge has is left as it was.
-pub fn refresh_local(id: &str, origin: &str) -> ActionResult<()> {
+pub(crate) fn refresh_local(id: &str, origin: &str) -> ActionResult<()> {
     let local = local_theme_crx(Path::new(origin))?;
     if local.id != id {
         return Err(ActionError::User(wording::IDENTITY_CHANGED.to_owned()));
@@ -304,7 +304,7 @@ pub fn refresh_local(id: &str, origin: &str) -> ActionResult<()> {
 /// Edge reads its external-extensions key when it starts, so a theme whose key
 /// went missing (something cleaned it, or Edge uninstalled it) is written back
 /// from the settings and the stored copy, ahead of the next Edge start.
-pub fn register_all(theming: &Theming) {
+pub(crate) fn register_all(theming: &Theming) {
     for theme in &theming.themes {
         let registered = match theme.source {
             ThemeSource::Store => register_store(theme),
@@ -337,7 +337,7 @@ fn register_local(id: &str) -> std::io::Result<()> {
 /// The panel's own themes are installed in Edge too; each is listed once, so
 /// only the ones the panel does not own are returned, in Edge's scan order.
 #[must_use]
-pub fn edge_themes_not_in(theming: &Theming) -> Vec<InstalledTheme> {
+pub(crate) fn edge_themes_not_in(theming: &Theming) -> Vec<InstalledTheme> {
     installed_themes::scan(&edge_user_data::default_user_data())
         .into_iter()
         .filter(|theme| !theming.themes.iter().any(|own| own.id == theme.id))
@@ -346,7 +346,7 @@ pub fn edge_themes_not_in(theming: &Theming) -> Vec<InstalledTheme> {
 
 /// Only a theme Edge installed from the external-extensions key can be
 /// uninstalled from here; Edge's own settings are never edited.
-pub fn remove_edge(id: &str) -> ActionResult<()> {
+pub(crate) fn remove_edge(id: &str) -> ActionResult<()> {
     if !external_extensions::is_registered(id) {
         return Err(ActionError::User(
             wording::EDGE_THEME_NOT_REMOVABLE.to_owned(),

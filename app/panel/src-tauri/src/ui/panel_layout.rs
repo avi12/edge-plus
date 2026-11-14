@@ -6,7 +6,7 @@ use crate::platform::settings::Feature;
 
 /// Edge+'s own cards: about Edge+ itself, not a feature it adds to Edge.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum OwnCard {
+pub(crate) enum OwnCard {
     StartWithWindows,
     AutoInject,
     AutoUpdate,
@@ -16,7 +16,7 @@ pub enum OwnCard {
 /// feature card that only works while another feature is on names it in
 /// `needs`, and is held, with a short hint, while that one is off.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CardSlot {
+pub(crate) enum CardSlot {
     Feature {
         feature: Feature,
         needs: Option<Feature>,
@@ -31,7 +31,7 @@ const fn feature(feature: Feature) -> CardSlot {
     }
 }
 
-pub const CARDS: [CardSlot; 12] = [
+pub(crate) const CARDS: [CardSlot; 12] = [
     feature(Feature::NativeSplit),
     feature(Feature::LivePreview),
     feature(Feature::Theming),
@@ -50,7 +50,7 @@ pub const CARDS: [CardSlot; 12] = [
     CardSlot::Own(OwnCard::AutoUpdate),
 ];
 
-pub fn all_cards() -> impl Iterator<Item = CardSlot> {
+pub(crate) fn all_cards() -> impl Iterator<Item = CardSlot> {
     CARDS.into_iter()
 }
 

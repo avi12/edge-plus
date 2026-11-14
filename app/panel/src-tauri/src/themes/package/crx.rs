@@ -16,7 +16,7 @@ use crate::themes::package::theme_manifest::{
 use crate::ui::wording;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CrxInfo {
+pub(crate) struct CrxInfo {
     pub id: String,
     pub version: String,
 }
@@ -25,9 +25,9 @@ pub struct CrxInfo {
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     not(test),
-    allow(dead_code, reason = "the packer's tests verify the signature")
+    expect(dead_code, reason = "the packer's tests verify the signature")
 )]
-pub struct CrxProof {
+pub(crate) struct CrxProof {
     pub public_key: Vec<u8>,
     pub signature: Vec<u8>,
     pub signed_header_data: Vec<u8>,
@@ -36,7 +36,7 @@ pub struct CrxProof {
 /// The fields of `CrxFileHeader`, as protobuf field numbers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u64)]
-pub enum CrxHeaderField {
+pub(crate) enum CrxHeaderField {
     RsaProof = 2,
     SignedHeaderData = 10_000,
 }
@@ -44,7 +44,7 @@ pub enum CrxHeaderField {
 /// The fields of `AsymmetricKeyProof`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u64)]
-pub enum KeyProofField {
+pub(crate) enum KeyProofField {
     PublicKey = 1,
     Signature = 2,
 }
@@ -52,7 +52,7 @@ pub enum KeyProofField {
 /// The fields of `SignedData`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u64)]
-pub enum SignedDataField {
+pub(crate) enum SignedDataField {
     CrxId = 1,
 }
 
@@ -74,18 +74,18 @@ impl FieldNumber for SignedDataField {
     }
 }
 
-pub const MAGIC: &[u8; 4] = b"Cr24";
-pub const FORMAT_VERSION: u32 = 3;
+pub(crate) const MAGIC: &[u8; 4] = b"Cr24";
+pub(crate) const FORMAT_VERSION: u32 = 3;
 /// The magic, the format version and the header length, each four bytes.
-pub const PREAMBLE_LENGTH: usize = 12;
+pub(crate) const PREAMBLE_LENGTH: usize = 12;
 /// What every CRX3 signature covers, ahead of the signed header data.
-pub const SIGNED_DATA_PREFIX: &[u8] = b"CRX3 SignedData\0";
+pub(crate) const SIGNED_DATA_PREFIX: &[u8] = b"CRX3 SignedData\0";
 
 const VERSION_OFFSET: usize = 4;
 const HEADER_LENGTH_OFFSET: usize = 8;
 const U32_BYTES: usize = 4;
 
-pub fn read(bytes: &[u8]) -> ThemeFileResult<CrxInfo> {
+pub(crate) fn read(bytes: &[u8]) -> ThemeFileResult<CrxInfo> {
     let proof = read_proof(bytes)?;
     Ok(CrxInfo {
         id: extension_id::from_public_key(&proof.public_key),
@@ -94,7 +94,7 @@ pub fn read(bytes: &[u8]) -> ThemeFileResult<CrxInfo> {
 }
 
 /// Only the first RSA proof is read.
-pub fn read_proof(bytes: &[u8]) -> ThemeFileResult<CrxProof> {
+pub(crate) fn read_proof(bytes: &[u8]) -> ThemeFileResult<CrxProof> {
     let header_end = PREAMBLE_LENGTH + header_length(bytes)?;
     let header = protobuf::read_fields(bytes, PREAMBLE_LENGTH, header_end)?;
     let proof_field = first(&header, CrxHeaderField::RsaProof);
@@ -125,11 +125,11 @@ const LOCALES_FOLDER: &str = "_locales";
 const MESSAGES_FILE: &str = "messages.json";
 const MESSAGE_FIELD: &str = "message";
 
-pub fn zip(bytes: &[u8]) -> ThemeFileResult<&[u8]> {
+pub(crate) fn zip(bytes: &[u8]) -> ThemeFileResult<&[u8]> {
     Ok(&bytes[PREAMBLE_LENGTH + header_length(bytes)?..])
 }
 
-pub fn read_zip_version(zip_bytes: &[u8]) -> ThemeFileResult<String> {
+pub(crate) fn read_zip_version(zip_bytes: &[u8]) -> ThemeFileResult<String> {
     read_manifest(zip_bytes)?
         .get(manifest_keys::VERSION)
         .and_then(Value::as_str)
@@ -140,7 +140,7 @@ pub fn read_zip_version(zip_bytes: &[u8]) -> ThemeFileResult<String> {
 /// The theme's own name; None when the manifest has none. A message token
 /// (`__MSG_name__`) is resolved from the default locale's messages.json.
 #[must_use]
-pub fn read_zip_name(zip_bytes: &[u8]) -> Option<String> {
+pub(crate) fn read_zip_name(zip_bytes: &[u8]) -> Option<String> {
     let manifest = read_manifest(zip_bytes).ok()?;
     let name = manifest.get(manifest_keys::NAME)?.as_str()?.trim();
     let token_key = name

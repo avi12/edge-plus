@@ -15,9 +15,12 @@ use windows_sys::Win32::System::Registry::{
 
 use crate::kernel::wide::{from_wide, to_wide};
 
+/// A registry hive
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Hive {
+    /// The current user's hive
     CurrentUser,
+    /// The machine hive
     LocalMachine,
 }
 

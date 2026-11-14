@@ -31,7 +31,7 @@ const LOG_PREFIX_END: &str = "] ";
 
 /// Edge's refusal of the theme, worded for the user; Ok when Edge accepts it
 /// and when it cannot be asked.
-pub fn check(zip_bytes: &[u8]) -> ThemeFileResult<()> {
+pub(crate) fn check(zip_bytes: &[u8]) -> ThemeFileResult<()> {
     let launcher = edge_install::application_directory()
         .filter(|_| !edge_install::is_simulated())
         .map(|directory| directory.join(edge_install::LAUNCHER_NAME))

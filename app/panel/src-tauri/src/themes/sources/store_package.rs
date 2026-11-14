@@ -18,7 +18,7 @@ const PRODUCT_VERSION: &str = "150.0";
 /// The theme's name from its manifest; None when the store cannot be reached or
 /// has no such package.
 #[must_use]
-pub fn name(id: &str, store: ThemeStore) -> Option<String> {
+pub(crate) fn name(id: &str, store: ThemeStore) -> Option<String> {
     let bytes = download(id, store)?;
     crx::read_zip_name(crx::zip(&bytes).ok()?)
 }

@@ -3,21 +3,21 @@
 
 use sha2::{Digest, Sha256};
 
-pub const LENGTH: usize = 32;
+pub(crate) const LENGTH: usize = 32;
 const HASH_BYTES: usize = LENGTH / 2;
 const ALPHABET: &[u8; 16] = b"abcdefghijklmnop";
 const NIBBLE_BITS: u32 = 4;
 const NIBBLE_MASK: u8 = 0xf;
 
 #[must_use]
-pub fn is_valid(value: &str) -> bool {
+pub(crate) fn is_valid(value: &str) -> bool {
     let first = char::from(ALPHABET[0]);
     let last = char::from(ALPHABET[ALPHABET.len() - 1]);
     value.len() == LENGTH && value.chars().all(|letter| (first..=last).contains(&letter))
 }
 
 #[must_use]
-pub fn from_public_key(public_key: &[u8]) -> String {
+pub(crate) fn from_public_key(public_key: &[u8]) -> String {
     let hash = Sha256::digest(public_key);
     let mut id = String::with_capacity(LENGTH);
     for &byte in &hash[..HASH_BYTES] {

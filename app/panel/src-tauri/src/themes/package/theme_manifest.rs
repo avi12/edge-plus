@@ -14,14 +14,14 @@ use crate::themes::package::manifest::{Manifest, Version};
 use crate::themes::package::schema::{self, SchemaError};
 use crate::ui::wording;
 
-pub const MANIFEST_NAME: &str = "manifest.json";
+pub(crate) const MANIFEST_NAME: &str = "manifest.json";
 
 /// The keys of an extension manifest that a theme is read through.
-pub mod manifest_keys {
-    pub const NAME: &str = "name";
-    pub const VERSION: &str = "version";
-    pub const THEME: &str = "theme";
-    pub const DEFAULT_LOCALE: &str = "default_locale";
+pub(crate) mod manifest_keys {
+    pub(crate) const NAME: &str = "name";
+    pub(crate) const VERSION: &str = "version";
+    pub(crate) const THEME: &str = "theme";
+    pub(crate) const DEFAULT_LOCALE: &str = "default_locale";
 }
 
 const MAX_THEME_BYTES: u64 = 64 * 1024 * 1024;
@@ -34,14 +34,14 @@ const UTF8_BYTE_ORDER_MARK: &[u8] = &[0xef, 0xbb, 0xbf];
 
 /// Why a theme's files could not be used.
 #[derive(Debug)]
-pub enum ThemeFileError {
+pub(crate) enum ThemeFileError {
     /// What is wrong with the theme, worded for the user (wording.rs).
     Invalid(String),
     /// The files could not be read or written; for the log.
     Unreadable(io::Error),
 }
 
-pub type ThemeFileResult<T> = Result<T, ThemeFileError>;
+pub(crate) type ThemeFileResult<T> = Result<T, ThemeFileError>;
 
 impl From<io::Error> for ThemeFileError {
     fn from(error: io::Error) -> Self {
@@ -58,14 +58,14 @@ impl fmt::Display for ThemeFileError {
     }
 }
 
-pub fn invalid(message: impl Into<String>) -> ThemeFileError {
+pub(crate) fn invalid(message: impl Into<String>) -> ThemeFileError {
     ThemeFileError::Invalid(message.into())
 }
 
 type Archive<'a> = ZipArchive<Cursor<&'a [u8]>>;
 
 /// Rejects what Edge's theme loader would trip over.
-pub fn validate(zip_bytes: &[u8]) -> ThemeFileResult<()> {
+pub(crate) fn validate(zip_bytes: &[u8]) -> ThemeFileResult<()> {
     let mut archive = open(zip_bytes)?;
     let total: u64 = (0..archive.len())
         .filter_map(|index| archive.by_index_raw(index).ok().map(|entry| entry.size()))
@@ -94,7 +94,7 @@ pub fn validate(zip_bytes: &[u8]) -> ThemeFileResult<()> {
 
 /// Every re-pack needs a higher version: Edge only replaces an installed
 /// extension with a newer one. The original's first three parts are kept.
-pub fn revise(zip_bytes: &[u8], revision: u16) -> ThemeFileResult<(Vec<u8>, String)> {
+pub(crate) fn revise(zip_bytes: &[u8], revision: u16) -> ThemeFileResult<(Vec<u8>, String)> {
     let mut source = open(zip_bytes)?;
     let mut raw = read_manifest_object(&mut source)?;
     let Some(Version(mut parts)) = read_manifest(&mut source)?.version else {
@@ -200,12 +200,12 @@ fn check_image(archive: &mut Archive<'_>, key: &str, path: &str) -> ThemeFileRes
 }
 
 #[cfg(test)]
-pub mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::themes::package::manifest;
 
     /// A ZIP of `entries`, each a name and its bytes.
-    pub fn zip_of(entries: &[(&str, &[u8])]) -> Vec<u8> {
+    pub(crate) fn zip_of(entries: &[(&str, &[u8])]) -> Vec<u8> {
         let mut writer = ZipWriter::new(Cursor::new(Vec::new()));
         for (name, bytes) in entries {
             writer

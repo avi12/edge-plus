@@ -1,11 +1,11 @@
 //! The core's own plumbing: paths, settings, the log, and the actions the
 //! window asks for.
 
-pub mod actions;
-pub mod identity;
-pub mod paths;
-pub mod service;
-pub mod settings;
+pub(crate) mod actions;
+pub(crate) mod identity;
+pub(crate) mod paths;
+pub(crate) mod service;
+pub(crate) mod settings;
 
 #[path = "shared.g.rs"]
-pub mod shared;
+pub(crate) mod shared;

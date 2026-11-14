@@ -8,7 +8,7 @@ use crate::platform::settings::Feature;
 use crate::platform::shared;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct BuildChange {
+pub(crate) struct BuildChange {
     pub edge_build: FileVersion,
     pub previous_build: Option<FileVersion>,
     pub supported_build: FileVersion,
@@ -20,7 +20,7 @@ fn part(value: u32) -> u16 {
 }
 
 #[must_use]
-pub fn pinned() -> FileVersion {
+pub(crate) fn pinned() -> FileVersion {
     FileVersion::new(
         part(shared::EDGE_VERSION_MAJOR),
         part(shared::EDGE_VERSION_MINOR),
@@ -30,7 +30,7 @@ pub fn pinned() -> FileVersion {
 }
 
 #[must_use]
-pub fn depends_on_pinned_build(feature: Feature) -> bool {
+pub(crate) fn depends_on_pinned_build(feature: Feature) -> bool {
     match feature {
         Feature::NativeSplit
         | Feature::Theming
@@ -47,7 +47,7 @@ pub fn depends_on_pinned_build(feature: Feature) -> bool {
 /// Any process on a build other than the pinned one decides (the DLL must not
 /// go into it); None when none could be read (Edge is not running).
 #[must_use]
-pub fn judged(builds: &[FileVersion], pinned: FileVersion) -> Option<FileVersion> {
+pub(crate) fn judged(builds: &[FileVersion], pinned: FileVersion) -> Option<FileVersion> {
     builds
         .iter()
         .copied()

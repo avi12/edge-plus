@@ -5,85 +5,85 @@
 // Every value here is one the DLL also reads. Change it there.
 
 // app/dll/src/core/config.h:15
-pub const WIRE_ID_CAPACITY: u32 = 64;
+pub(crate) const WIRE_ID_CAPACITY: u32 = 64;
 
 // app/dll/src/core/config.h:46
-pub const WIRE_FIELD_COUNT: u32 = 12;
+pub(crate) const WIRE_FIELD_COUNT: u32 = 12;
 
 // app/dll/src/core/config.h:48
-pub const WIRE_ID_COUNT: u32 = 3;
+pub(crate) const WIRE_ID_COUNT: u32 = 3;
 
 // app/dll/src/core/config.h:69
-pub const CONFIG_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-config.bin";
+pub(crate) const CONFIG_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-config.bin";
 
 // app/dll/src/core/status.h:19
-pub const STATUS_MODE_PINNED: u32 = 0;
+pub(crate) const STATUS_MODE_PINNED: u32 = 0;
 
 // app/dll/src/core/status.h:21
-pub const STATUS_MODE_RESOLVED: u32 = 1;
+pub(crate) const STATUS_MODE_RESOLVED: u32 = 1;
 
 // app/dll/src/core/status.h:23
-pub const STATUS_MODE_REFUSED: u32 = 2;
+pub(crate) const STATUS_MODE_REFUSED: u32 = 2;
 
 // app/dll/src/core/status.h:43
-pub const STATUS_FIELD_COUNT: u32 = 8;
+pub(crate) const STATUS_FIELD_COUNT: u32 = 8;
 
 // app/dll/src/core/status.h:48
-pub const STATUS_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-status.bin";
+pub(crate) const STATUS_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-status.bin";
 
 // app/dll/src/core/wear_report.h:25
-pub const WEAR_FIELD_COUNT: u32 = 3;
+pub(crate) const WEAR_FIELD_COUNT: u32 = 3;
 
 // app/dll/src/core/wear_report.h:31
-pub const WEAR_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-wear.bin";
+pub(crate) const WEAR_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-wear.bin";
 
 // app/dll/src/dllmain.cpp:24
-pub const UNLOAD_EVENT: &str = "Local\\edgeplus-split-unload";
+pub(crate) const UNLOAD_EVENT: &str = "Local\\edgeplus-split-unload";
 
 // app/dll/src/dllmain.cpp:27
-pub const CONFIG_EVENT: &str = "Local\\edgeplus-config-changed";
+pub(crate) const CONFIG_EVENT: &str = "Local\\edgeplus-config-changed";
 
 // app/dll/src/edge/offsets.h:16
-pub const EDGE_MODULE: &str = "msedge.dll";
+pub(crate) const EDGE_MODULE: &str = "msedge.dll";
 
 // app/dll/src/edge/offsets.h:18
-pub const EDGE_VERSION_MAJOR: u32 = 157;
+pub(crate) const EDGE_VERSION_MAJOR: u32 = 157;
 
 // app/dll/src/edge/offsets.h:20
-pub const EDGE_VERSION_MINOR: u32 = 0;
+pub(crate) const EDGE_VERSION_MINOR: u32 = 0;
 
 // app/dll/src/edge/offsets.h:22
-pub const EDGE_VERSION_BUILD: u32 = 4341;
+pub(crate) const EDGE_VERSION_BUILD: u32 = 4341;
 
 // app/dll/src/edge/offsets.h:24
-pub const EDGE_VERSION_REVISION: u32 = 46;
+pub(crate) const EDGE_VERSION_REVISION: u32 = 46;
 
 // app/dll/src/edge/signature_table.h:18
-pub const FEATURE_BIT_SPLIT: u32 = 1;
+pub(crate) const FEATURE_BIT_SPLIT: u32 = 1;
 
 // app/dll/src/edge/signature_table.h:20
-pub const FEATURE_BIT_THEMING: u32 = 2;
+pub(crate) const FEATURE_BIT_THEMING: u32 = 2;
 
 // app/dll/src/edge/signature_table.h:22
-pub const FEATURE_BIT_PROTOCOL_HANDLERS: u32 = 4;
+pub(crate) const FEATURE_BIT_PROTOCOL_HANDLERS: u32 = 4;
 
 // app/dll/src/edge/signature_table.h:24
-pub const FEATURE_BIT_ENHANCED_FIND: u32 = 8;
+pub(crate) const FEATURE_BIT_ENHANCED_FIND: u32 = 8;
 
 // app/dll/src/edge/signature_table.h:26
-pub const FEATURE_BIT_WEB_UI_FOLLOWS_THEME: u32 = 16;
+pub(crate) const FEATURE_BIT_WEB_UI_FOLLOWS_THEME: u32 = 16;
 
 // app/dll/src/edge/signature_table.h:28
-pub const FEATURE_BIT_LIVE_PREVIEW: u32 = 32;
+pub(crate) const FEATURE_BIT_LIVE_PREVIEW: u32 = 32;
 
 // app/dll/src/edge/signature_table.h:30
-pub const FEATURE_BIT_CYBERPUNK_SKIN: u32 = 64;
+pub(crate) const FEATURE_BIT_CYBERPUNK_SKIN: u32 = 64;
 
 // app/dll/src/edge/signature_table.h:32
-pub const FEATURE_BIT_READING_THEME: u32 = 128;
+pub(crate) const FEATURE_BIT_READING_THEME: u32 = 128;
 
 // app/dll/src/theme/theme_wear.h:22
-pub const WEAR_CAUSE_EDGE_PLUS: u32 = 0;
+pub(crate) const WEAR_CAUSE_EDGE_PLUS: u32 = 0;
 
 // app/dll/src/theme/theme_wear.h:24
-pub const WEAR_CAUSE_USER: u32 = 1;
+pub(crate) const WEAR_CAUSE_USER: u32 = 1;

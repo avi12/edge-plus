@@ -1,10 +1,10 @@
 //! How Edge+ itself is set up: the install, start at sign-in, and updates.
 
-pub mod hidden_powershell;
-pub mod install_layout;
-pub mod installation;
-pub mod start_with_windows;
-pub mod startup_entry;
-pub mod update_digest;
-pub mod update_feed;
-pub mod update_watch;
+pub(crate) mod hidden_powershell;
+pub(crate) mod install_layout;
+pub(crate) mod installation;
+pub(crate) mod start_with_windows;
+pub(crate) mod startup_entry;
+pub(crate) mod update_digest;
+pub(crate) mod update_feed;
+pub(crate) mod update_watch;

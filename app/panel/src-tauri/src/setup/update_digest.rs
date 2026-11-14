@@ -8,7 +8,7 @@ use std::path::Path;
 use sha2::{Digest, Sha256};
 
 /// Fails when the file cannot be read.
-pub fn is_digest_of(path: &Path, sha256: &str) -> io::Result<bool> {
+pub(crate) fn is_digest_of(path: &Path, sha256: &str) -> io::Result<bool> {
     let mut file = File::open(path)?;
     let mut hasher = Sha256::new();
     io::copy(&mut file, &mut hasher)?;

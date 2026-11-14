@@ -14,5 +14,5 @@ pub(crate) fn from_wide(buffer: &[u16]) -> OsString {
         .iter()
         .position(|&unit| unit == 0)
         .unwrap_or(buffer.len());
-    OsString::from_wide(&buffer[..end])
+    OsString::from_wide(buffer.get(..end).unwrap_or_default())
 }

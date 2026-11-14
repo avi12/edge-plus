@@ -8,11 +8,11 @@ use crate::platform::shared;
 
 /// A theme id is an extension id, or empty for the default theme.
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[allow(
+#[expect(
     clippy::struct_excessive_bools,
     reason = "each mirrors one flag of the wire"
 )]
-pub struct DllConfig {
+pub(crate) struct DllConfig {
     pub is_split_active: bool,
     pub is_theming_active: bool,
     pub is_protocol_handlers_active: bool,
@@ -31,7 +31,7 @@ impl DllConfig {
     /// `features` as they apply on the current Edge build (a paused feature
     /// off).
     #[must_use]
-    pub fn from_features(settings: &Settings, features: &Features) -> Self {
+    pub(crate) fn from_features(settings: &Settings, features: &Features) -> Self {
         Self {
             is_split_active: features.native_split,
             is_theming_active: features.theming,
@@ -51,25 +51,25 @@ impl DllConfig {
 const FIELD_BYTES: usize = size_of::<u32>();
 const ID_CAPACITY: usize = shared::WIRE_ID_CAPACITY as usize;
 
-pub const SPLIT_ACTIVE_OFFSET: usize = 0;
-pub const THEMING_ACTIVE_OFFSET: usize = SPLIT_ACTIVE_OFFSET + FIELD_BYTES;
-pub const PROTOCOL_HANDLERS_ACTIVE_OFFSET: usize = THEMING_ACTIVE_OFFSET + FIELD_BYTES;
-pub const LIGHT_LENGTH_OFFSET: usize = PROTOCOL_HANDLERS_ACTIVE_OFFSET + FIELD_BYTES;
-pub const DARK_LENGTH_OFFSET: usize = LIGHT_LENGTH_OFFSET + FIELD_BYTES;
-pub const LIGHT_ID_OFFSET: usize = DARK_LENGTH_OFFSET + FIELD_BYTES;
-pub const DARK_ID_OFFSET: usize = LIGHT_ID_OFFSET + ID_CAPACITY;
-pub const RESERVED_OFFSET: usize = DARK_ID_OFFSET + ID_CAPACITY;
-pub const ENHANCED_FIND_ACTIVE_OFFSET: usize = RESERVED_OFFSET + FIELD_BYTES;
-pub const WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET: usize = ENHANCED_FIND_ACTIVE_OFFSET + FIELD_BYTES;
-pub const LIVE_PREVIEW_ACTIVE_OFFSET: usize = WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET + FIELD_BYTES;
-pub const CYBERPUNK_SKIN_ACTIVE_OFFSET: usize = LIVE_PREVIEW_ACTIVE_OFFSET + FIELD_BYTES;
-pub const READING_THEME_ACTIVE_OFFSET: usize = CYBERPUNK_SKIN_ACTIVE_OFFSET + FIELD_BYTES;
-pub const HOLD_LENGTH_OFFSET: usize = READING_THEME_ACTIVE_OFFSET + FIELD_BYTES;
-pub const HOLD_ID_OFFSET: usize = HOLD_LENGTH_OFFSET + FIELD_BYTES;
-pub const SIZE: usize = HOLD_ID_OFFSET + ID_CAPACITY;
+pub(crate) const SPLIT_ACTIVE_OFFSET: usize = 0;
+pub(crate) const THEMING_ACTIVE_OFFSET: usize = SPLIT_ACTIVE_OFFSET + FIELD_BYTES;
+pub(crate) const PROTOCOL_HANDLERS_ACTIVE_OFFSET: usize = THEMING_ACTIVE_OFFSET + FIELD_BYTES;
+pub(crate) const LIGHT_LENGTH_OFFSET: usize = PROTOCOL_HANDLERS_ACTIVE_OFFSET + FIELD_BYTES;
+pub(crate) const DARK_LENGTH_OFFSET: usize = LIGHT_LENGTH_OFFSET + FIELD_BYTES;
+pub(crate) const LIGHT_ID_OFFSET: usize = DARK_LENGTH_OFFSET + FIELD_BYTES;
+pub(crate) const DARK_ID_OFFSET: usize = LIGHT_ID_OFFSET + ID_CAPACITY;
+pub(crate) const RESERVED_OFFSET: usize = DARK_ID_OFFSET + ID_CAPACITY;
+pub(crate) const ENHANCED_FIND_ACTIVE_OFFSET: usize = RESERVED_OFFSET + FIELD_BYTES;
+pub(crate) const WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET: usize = ENHANCED_FIND_ACTIVE_OFFSET + FIELD_BYTES;
+pub(crate) const LIVE_PREVIEW_ACTIVE_OFFSET: usize = WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET + FIELD_BYTES;
+pub(crate) const CYBERPUNK_SKIN_ACTIVE_OFFSET: usize = LIVE_PREVIEW_ACTIVE_OFFSET + FIELD_BYTES;
+pub(crate) const READING_THEME_ACTIVE_OFFSET: usize = CYBERPUNK_SKIN_ACTIVE_OFFSET + FIELD_BYTES;
+pub(crate) const HOLD_LENGTH_OFFSET: usize = READING_THEME_ACTIVE_OFFSET + FIELD_BYTES;
+pub(crate) const HOLD_ID_OFFSET: usize = HOLD_LENGTH_OFFSET + FIELD_BYTES;
+pub(crate) const SIZE: usize = HOLD_ID_OFFSET + ID_CAPACITY;
 
 /// What config.h asserts at compile time, from its own counts.
-pub const SIZE_CONFIG_H_EXPECTS: usize =
+pub(crate) const SIZE_CONFIG_H_EXPECTS: usize =
     shared::WIRE_FIELD_COUNT as usize * FIELD_BYTES + shared::WIRE_ID_COUNT as usize * ID_CAPACITY;
 
 /// A field added on one side only fails the build, not Edge.
@@ -79,7 +79,7 @@ const _: () = assert!(
 );
 
 #[must_use]
-pub fn encode(config: &DllConfig) -> [u8; SIZE] {
+pub(crate) fn encode(config: &DllConfig) -> [u8; SIZE] {
     let mut wire = [0_u8; SIZE];
     write_flag(&mut wire, SPLIT_ACTIVE_OFFSET, config.is_split_active);
     write_flag(&mut wire, THEMING_ACTIVE_OFFSET, config.is_theming_active);

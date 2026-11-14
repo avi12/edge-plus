@@ -8,7 +8,7 @@ use std::path::Path;
 const PART_COUNT: usize = 4;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct FileVersion {
+pub(crate) struct FileVersion {
     pub major: u16,
     pub minor: u16,
     pub build: u16,
@@ -17,7 +17,7 @@ pub struct FileVersion {
 
 impl FileVersion {
     #[must_use]
-    pub const fn new(major: u16, minor: u16, build: u16, revision: u16) -> Self {
+    pub(crate) const fn new(major: u16, minor: u16, build: u16, revision: u16) -> Self {
         Self {
             major,
             minor,
@@ -28,7 +28,7 @@ impl FileVersion {
 
     /// Exactly four dot-separated numbers that each fit a 16-bit part.
     #[must_use]
-    pub fn parse(text: &str) -> Option<Self> {
+    pub(crate) fn parse(text: &str) -> Option<Self> {
         let parts: Vec<&str> = text.trim().split('.').collect();
         if parts.len() != PART_COUNT {
             return None;
@@ -47,7 +47,7 @@ impl FileVersion {
 
     /// None for a missing file or one with no version resource.
     #[must_use]
-    pub fn of(path: &Path) -> Option<Self> {
+    pub(crate) fn of(path: &Path) -> Option<Self> {
         let [major, minor, build, revision] = edge_native::file_version(path)?;
         let version = Self::new(major, minor, build, revision);
         // A binary with no version resource reads as all zeros.

@@ -16,7 +16,7 @@ use crate::themes::theme_watch::{ThemeRefresh, ThemeWatch};
 
 /// What the watchers saw, raised on a watcher's thread.
 #[derive(Clone, Debug)]
-pub enum ServiceEvent {
+pub(crate) enum ServiceEvent {
     BuildChanged,
     /// An Edge browser process started (once it got the DLL, with auto-inject
     /// on) or closed: the window re-reads its state.
@@ -54,7 +54,7 @@ fn raise(event: ServiceEvent) {
 }
 
 /// Once per process; `listener` hears every event.
-pub fn start(listener: impl Fn(ServiceEvent) + Send + Sync + 'static) {
+pub(crate) fn start(listener: impl Fn(ServiceEvent) + Send + Sync + 'static) {
     let _ = LISTENER.set(Arc::new(listener));
     theme_library::sync_local_names();
     theme_library::register_all(&Settings::load().theming);
@@ -81,12 +81,12 @@ fn on_build_changed(change: &BuildChange) {
     raise(ServiceEvent::BuildChanged);
 }
 
-pub fn set_window_open(is_open: bool) {
+pub(crate) fn set_window_open(is_open: bool) {
     IS_WINDOW_OPEN.store(is_open, Ordering::SeqCst);
 }
 
 /// The switch was turned on: look now rather than at the next scheduled check.
-pub fn check_for_update_soon() {
+pub(crate) fn check_for_update_soon() {
     if let Some(service) = SERVICE.get() {
         service.updates.check_soon();
     }
@@ -94,12 +94,12 @@ pub fn check_for_update_soon() {
 
 /// The downloaded release waiting for a restart, if any.
 #[must_use]
-pub fn pending_update() -> Option<ReadyUpdate> {
+pub(crate) fn pending_update() -> Option<ReadyUpdate> {
     SERVICE.get().and_then(|service| service.updates.pending())
 }
 
 /// Stops every watcher before the process ends, so none is cut off mid-write.
-pub fn stop() {
+pub(crate) fn stop() {
     if let Some(service) = SERVICE.get() {
         service.edge.stop();
         service.themes.stop();

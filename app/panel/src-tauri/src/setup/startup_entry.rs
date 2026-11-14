@@ -12,14 +12,14 @@ use crate::platform::paths;
 
 /// Approved holds Task Manager's on/off flag; tests point at a throwaway pair.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct StartupKeys {
+pub(crate) struct StartupKeys {
     pub run: String,
     pub approved: String,
 }
 
 impl StartupKeys {
     #[must_use]
-    pub fn user() -> Self {
+    pub(crate) fn user() -> Self {
         Self {
             run: r"Software\Microsoft\Windows\CurrentVersion\Run".to_owned(),
             approved: r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"
@@ -29,7 +29,7 @@ impl StartupKeys {
 }
 
 /// The earlier panels' name too, so `migrate_to` can take their entry over.
-pub const NAME: &str = "Edge+";
+pub(crate) const NAME: &str = "Edge+";
 /// Set in the first byte when Task Manager turned the entry off (0x02 / 0x06
 /// on, 0x03 / 0x07 off).
 const APPROVED_DISABLED_BIT: u8 = 1;
@@ -39,18 +39,18 @@ const QUOTE: char = '"';
 const SPACE: char = ' ';
 
 #[must_use]
-pub fn run_command(executable: &Path) -> String {
+pub(crate) fn run_command(executable: &Path) -> String {
     format!("\"{}\" {}", executable.display(), switches::BACKGROUND)
 }
 
 #[must_use]
-pub fn is_disabled_flag(approved: Option<&[u8]>) -> bool {
+pub(crate) fn is_disabled_flag(approved: Option<&[u8]>) -> bool {
     let first = approved.and_then(<[u8]>::first);
     first.is_some_and(|&flags| flags & APPROVED_DISABLED_BIT != 0)
 }
 
 #[must_use]
-pub fn is_enabled(keys: &StartupKeys, name: &str) -> bool {
+pub(crate) fn is_enabled(keys: &StartupKeys, name: &str) -> bool {
     let has_run_entry =
         edge_native::read_string(Hive::CurrentUser, &keys.run, Some(name)).is_some();
     if !has_run_entry {
@@ -61,25 +61,25 @@ pub fn is_enabled(keys: &StartupKeys, name: &str) -> bool {
 }
 
 /// Clears any Task Manager "disabled" flag, so the switch really means on.
-pub fn enable(keys: &StartupKeys, name: &str, command: &str) -> io::Result<()> {
+pub(crate) fn enable(keys: &StartupKeys, name: &str, command: &str) -> io::Result<()> {
     edge_native::write_string(Hive::CurrentUser, &keys.run, name, command)?;
     edge_native::delete_value(Hive::CurrentUser, &keys.approved, name)
 }
 
-pub fn disable(keys: &StartupKeys, name: &str) -> io::Result<()> {
+pub(crate) fn disable(keys: &StartupKeys, name: &str) -> io::Result<()> {
     edge_native::delete_value(Hive::CurrentUser, &keys.run, name)?;
     edge_native::delete_value(Hive::CurrentUser, &keys.approved, name)
 }
 
 /// Moves an entry an earlier panel (Tauri or C#) wrote over to
 /// `executable`; true when it moved one.
-pub fn migrate_to(executable: &Path) -> io::Result<bool> {
+pub(crate) fn migrate_to(executable: &Path) -> io::Result<bool> {
     migrate(&StartupKeys::user(), NAME, executable)
 }
 
 /// Points an existing entry at `executable` (the launcher of an install), even
 /// when it named another copy, keeping Task Manager's flag; true when it moved.
-pub fn repoint_to(executable: &Path) -> io::Result<bool> {
+pub(crate) fn repoint_to(executable: &Path) -> io::Result<bool> {
     let keys = StartupKeys::user();
     let Some(command) = edge_native::read_string(Hive::CurrentUser, &keys.run, Some(NAME)) else {
         return Ok(false);
@@ -93,7 +93,7 @@ pub fn repoint_to(executable: &Path) -> io::Result<bool> {
 }
 
 /// Keeps Task Manager's on/off flag as the user set it.
-pub fn migrate(keys: &StartupKeys, name: &str, executable: &Path) -> io::Result<bool> {
+pub(crate) fn migrate(keys: &StartupKeys, name: &str, executable: &Path) -> io::Result<bool> {
     let Some(command) = edge_native::read_string(Hive::CurrentUser, &keys.run, Some(name)) else {
         return Ok(false);
     };
@@ -105,7 +105,7 @@ pub fn migrate(keys: &StartupKeys, name: &str, executable: &Path) -> io::Result<
 }
 
 #[must_use]
-pub fn is_tauri_command(command: &str) -> bool {
+pub(crate) fn is_tauri_command(command: &str) -> bool {
     let Some(launcher) = Path::new(launcher_of(command)).file_name() else {
         return false;
     };

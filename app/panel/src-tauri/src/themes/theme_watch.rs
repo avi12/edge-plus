@@ -23,13 +23,13 @@ const POLL_INTERVAL: Duration = Duration::from_secs(1);
 /// `error` is None when the edit was applied. `is_gone` is for a theme whose
 /// files were deleted: it went off light and dark, and `error` says so.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ThemeRefresh {
+pub(crate) struct ThemeRefresh {
     pub id: String,
     pub error: Option<String>,
     pub is_gone: bool,
 }
 
-pub struct ThemeWatch {
+pub(crate) struct ThemeWatch {
     thread: Mutex<PollThread>,
 }
 
@@ -42,7 +42,7 @@ struct Fingerprints {
 
 impl ThemeWatch {
     /// `on_refreshed` runs on the watch thread.
-    pub fn start(on_refreshed: impl Fn(ThemeRefresh) + Send + Sync + 'static) -> Self {
+    pub(crate) fn start(on_refreshed: impl Fn(ThemeRefresh) + Send + Sync + 'static) -> Self {
         let on_refreshed = Arc::new(on_refreshed);
         let fingerprints = Arc::new(Mutex::new(Fingerprints::default()));
         let poller = {
@@ -60,7 +60,7 @@ impl ThemeWatch {
     }
 
     /// Waits for a poll in progress; later calls do nothing.
-    pub fn stop(&self) {
+    pub(crate) fn stop(&self) {
         self.thread
             .lock()
             .unwrap_or_else(PoisonError::into_inner)

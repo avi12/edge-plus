@@ -12,7 +12,7 @@ use crate::themes::package::extension_id;
 use crate::themes::package::theme_manifest::{MANIFEST_NAME, manifest_keys};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct InstalledTheme {
+pub(crate) struct InstalledTheme {
     pub id: String,
     pub name: String,
 }
@@ -36,7 +36,7 @@ const REGISTERED_PATH: [&str; 2] = ["extensions", "settings"];
 /// None when the manifest is not a theme's. `messages` resolves a
 /// `__MSG_key__` name.
 #[must_use]
-pub fn theme_name(manifest: Option<&Value>, messages: Option<&Value>) -> Option<String> {
+pub(crate) fn theme_name(manifest: Option<&Value>, messages: Option<&Value>) -> Option<String> {
     let manifest = manifest?;
     let is_theme = manifest
         .get(manifest_keys::THEME)
@@ -48,7 +48,7 @@ pub fn theme_name(manifest: Option<&Value>, messages: Option<&Value>) -> Option<
 
 /// Keys match ignoring case, as Chromium does.
 #[must_use]
-pub fn resolve_message(text: &str, messages: Option<&Value>) -> String {
+pub(crate) fn resolve_message(text: &str, messages: Option<&Value>) -> String {
     let key = text
         .strip_prefix(MESSAGE_PREFIX)
         .and_then(|rest| rest.strip_suffix(MESSAGE_SUFFIX));
@@ -65,7 +65,7 @@ pub fn resolve_message(text: &str, messages: Option<&Value>) -> String {
 }
 
 #[must_use]
-pub fn active_theme_id(preferences: Option<&Value>) -> Option<String> {
+pub(crate) fn active_theme_id(preferences: Option<&Value>) -> Option<String> {
     let id = ACTIVE_THEME_PATH
         .iter()
         .try_fold(preferences?, |node, key| node.get(key))?;
@@ -74,7 +74,7 @@ pub fn active_theme_id(preferences: Option<&Value>) -> Option<String> {
 
 /// So a folder left behind by an uninstall is not listed; None when unknown.
 #[must_use]
-pub fn registered_ids(secure_preferences: Option<&Value>) -> Option<HashSet<String>> {
+pub(crate) fn registered_ids(secure_preferences: Option<&Value>) -> Option<HashSet<String>> {
     let settings = REGISTERED_PATH
         .iter()
         .try_fold(secure_preferences?, |node, key| node.get(key))?;
@@ -83,7 +83,7 @@ pub fn registered_ids(secure_preferences: Option<&Value>) -> Option<HashSet<Stri
 
 /// Each id once, ordered by name.
 #[must_use]
-pub fn scan(user_data: &Path) -> Vec<InstalledTheme> {
+pub(crate) fn scan(user_data: &Path) -> Vec<InstalledTheme> {
     let mut found: Vec<InstalledTheme> = Vec::new();
     for profile in profile_folders(user_data) {
         for theme in scan_profile(&profile) {
@@ -99,7 +99,7 @@ pub fn scan(user_data: &Path) -> Vec<InstalledTheme> {
 
 /// `1.10.0_0` sorts after `1.9.0_0`: the dotted numbers, not the text.
 #[must_use]
-pub fn version_key(folder: &Path) -> Vec<i64> {
+pub(crate) fn version_key(folder: &Path) -> Vec<i64> {
     let name = folder
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())

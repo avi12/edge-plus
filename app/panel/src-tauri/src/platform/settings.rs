@@ -20,7 +20,7 @@ static GATE: Mutex<()> = Mutex::new(());
 
 /// Takes the gate; a panic that poisoned it left nothing half-written that the
 /// next load would not read past.
-pub fn gate() -> MutexGuard<'static, ()> {
+pub(crate) fn gate() -> MutexGuard<'static, ()> {
     GATE.lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
@@ -28,7 +28,7 @@ pub fn gate() -> MutexGuard<'static, ()> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
-pub enum Feature {
+pub(crate) enum Feature {
     NativeSplit,
     Theming,
     QuietDevMode,
@@ -48,7 +48,7 @@ pub enum Feature {
 }
 
 impl Feature {
-    pub const ALL: [Self; 9] = [
+    pub(crate) const ALL: [Self; 9] = [
         Self::NativeSplit,
         Self::Theming,
         Self::QuietDevMode,
@@ -63,7 +63,7 @@ impl Feature {
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum ThemeSource {
+pub(crate) enum ThemeSource {
     #[default]
     Store,
     Local,
@@ -72,7 +72,7 @@ pub enum ThemeSource {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
-pub enum ColorMode {
+pub(crate) enum ColorMode {
     Light,
     Dark,
 }
@@ -81,11 +81,11 @@ pub enum ColorMode {
 /// unknown field is ignored.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
-#[allow(
+#[expect(
     clippy::struct_excessive_bools,
     reason = "each is an independent switch"
 )]
-pub struct Features {
+pub(crate) struct Features {
     pub native_split: bool,
     pub theming: bool,
     pub quiet_dev_mode: bool,
@@ -120,7 +120,7 @@ impl Default for Features {
 impl Features {
     /// Every switch off: the starting point for the effective set.
     #[must_use]
-    pub fn none() -> Self {
+    pub(crate) fn none() -> Self {
         let mut features = Self::default();
         for feature in Feature::ALL {
             features.set(feature, false);
@@ -129,7 +129,7 @@ impl Features {
     }
 
     #[must_use]
-    pub fn is_on(&self, feature: Feature) -> bool {
+    pub(crate) fn is_on(&self, feature: Feature) -> bool {
         match feature {
             Feature::NativeSplit => self.native_split,
             Feature::Theming => self.theming,
@@ -143,7 +143,7 @@ impl Features {
         }
     }
 
-    pub fn set(&mut self, feature: Feature, is_on: bool) {
+    pub(crate) fn set(&mut self, feature: Feature, is_on: bool) {
         let switch = match feature {
             Feature::NativeSplit => &mut self.native_split,
             Feature::Theming => &mut self.theming,
@@ -160,7 +160,7 @@ impl Features {
 
     /// `QuietDevMode` is the panel's own, not the DLL's.
     #[must_use]
-    pub fn needs_dll(&self) -> bool {
+    pub(crate) fn needs_dll(&self) -> bool {
         Feature::ALL
             .into_iter()
             .any(|feature| feature != Feature::QuietDevMode && self.is_on(feature))
@@ -168,7 +168,7 @@ impl Features {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ThemeEntry {
+pub(crate) struct ThemeEntry {
     #[serde(default)]
     pub id: String,
     #[serde(default)]
@@ -183,7 +183,7 @@ pub struct ThemeEntry {
 /// An empty light / dark id means Edge's default theme.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
-pub struct Theming {
+pub(crate) struct Theming {
     #[serde(deserialize_with = "null_as_default")]
     pub themes: Vec<ThemeEntry>,
     #[serde(deserialize_with = "null_as_default")]
@@ -208,7 +208,7 @@ const HISTORY_LIMIT: usize = 8;
 
 impl Theming {
     /// The slot of `mode` wears `id`, and the one it wore before is remembered.
-    pub fn assign(&mut self, mode: ColorMode, id: &str) {
+    pub(crate) fn assign(&mut self, mode: ColorMode, id: &str) {
         let previous = self.slot(mode).to_owned();
         let is_change = previous != id;
         let history = self.history_mut(mode);
@@ -238,7 +238,7 @@ impl Theming {
 
     /// The theme id the slot of `mode` wears; empty is Edge's default theme.
     #[must_use]
-    pub fn slot(&self, mode: ColorMode) -> &str {
+    pub(crate) fn slot(&self, mode: ColorMode) -> &str {
         match mode {
             ColorMode::Light => &self.light,
             ColorMode::Dark => &self.dark,
@@ -246,11 +246,11 @@ impl Theming {
     }
 
     /// The slot goes back to Edge's default theme; every theme stays listed.
-    pub fn clear_slot(&mut self, mode: ColorMode) {
+    pub(crate) fn clear_slot(&mut self, mode: ColorMode) {
         self.assign(mode, "");
     }
 
-    pub fn add_or_replace(&mut self, entry: ThemeEntry) {
+    pub(crate) fn add_or_replace(&mut self, entry: ThemeEntry) {
         match self.themes.iter_mut().find(|theme| theme.id == entry.id) {
             Some(existing) => *existing = entry,
             None => self.themes.push(entry),
@@ -260,7 +260,7 @@ impl Theming {
     /// `entry` takes the place of the theme `old_id`: its position, its slots,
     /// its order and its history carry over, so a theme that moved folders is
     /// the same theme to the panel.
-    pub fn relink(&mut self, old_id: &str, entry: ThemeEntry) {
+    pub(crate) fn relink(&mut self, old_id: &str, entry: ThemeEntry) {
         let new_id = entry.id.clone();
         let rename = |id: &mut String| {
             if id == old_id {
@@ -279,13 +279,13 @@ impl Theming {
         self.dark_history.iter_mut().for_each(rename);
     }
 
-    pub fn reorder(&mut self, ids: &[String]) {
+    pub(crate) fn reorder(&mut self, ids: &[String]) {
         self.themes = theme_order::ordered(&self.themes, ids);
         self.order = ids.to_vec();
     }
 
     /// Whether the light or the dark slot wears the theme.
-    pub fn is_assigned(&self, id: &str) -> bool {
+    pub(crate) fn is_assigned(&self, id: &str) -> bool {
         self.light == id || self.dark == id
     }
 
@@ -293,7 +293,7 @@ impl Theming {
     /// that is still `is_available`, and else to Edge's default theme. The
     /// theme, and any earlier one no longer available, is forgotten from
     /// every slot's history.
-    pub fn unassign(&mut self, id: &str, is_available: impl Fn(&str) -> bool) {
+    pub(crate) fn unassign(&mut self, id: &str, is_available: impl Fn(&str) -> bool) {
         for mode in [ColorMode::Light, ColorMode::Dark] {
             let history = self.history_mut(mode);
             history
@@ -309,12 +309,12 @@ impl Theming {
     }
 
     /// A theme only Edge knows is gone: its slots and its place in the order.
-    pub fn forget_edge_theme(&mut self, id: &str, is_available: impl Fn(&str) -> bool) {
+    pub(crate) fn forget_edge_theme(&mut self, id: &str, is_available: impl Fn(&str) -> bool) {
         self.unassign(id, is_available);
         self.order.retain(|ordered| ordered != id);
     }
 
-    pub fn remove(&mut self, id: &str, is_available: impl Fn(&str) -> bool) {
+    pub(crate) fn remove(&mut self, id: &str, is_available: impl Fn(&str) -> bool) {
         self.themes.retain(|theme| theme.id != id);
         self.forget_edge_theme(id, is_available);
     }
@@ -322,7 +322,7 @@ impl Theming {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
-pub struct Settings {
+pub(crate) struct Settings {
     #[serde(deserialize_with = "null_as_default")]
     pub features: Features,
     #[serde(deserialize_with = "null_as_default")]
@@ -360,13 +360,13 @@ where
 
 impl Settings {
     #[must_use]
-    pub fn load() -> Self {
+    pub(crate) fn load() -> Self {
         Self::load_from(&paths::settings())
     }
 
     /// A missing or unreadable file is the defaults.
     #[must_use]
-    pub fn load_from(path: &Path) -> Self {
+    pub(crate) fn load_from(path: &Path) -> Self {
         fs::read_to_string(path).map_or_else(|_| Self::default(), |text| Self::parse(&text))
     }
 
@@ -374,21 +374,21 @@ impl Settings {
     /// C# panel's File.ReadAllText did: a file saved by a Windows editor or
     /// PowerShell 5 starts with one.
     #[must_use]
-    pub fn parse(text: &str) -> Self {
+    pub(crate) fn parse(text: &str) -> Self {
         let text = text.strip_prefix(BYTE_ORDER_MARK).unwrap_or(text);
         serde_json::from_str(text).unwrap_or_default()
     }
 
     #[must_use]
-    pub fn to_json(&self) -> String {
+    pub(crate) fn to_json(&self) -> String {
         serde_json::to_string_pretty(self).unwrap_or_default()
     }
 
-    pub fn save(&self) -> io::Result<()> {
+    pub(crate) fn save(&self) -> io::Result<()> {
         self.save_to(&paths::settings())
     }
 
-    pub fn save_to(&self, path: &Path) -> io::Result<()> {
+    pub(crate) fn save_to(&self, path: &Path) -> io::Result<()> {
         paths::write_atomically(path, self.to_json().as_bytes())
     }
 }

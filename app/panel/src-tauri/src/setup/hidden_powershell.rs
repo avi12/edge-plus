@@ -8,14 +8,14 @@ const POWERSHELL_COMMAND: &str =
 /// A hidden PowerShell running the script, encoded so no path in it needs
 /// quoting on the command line.
 #[must_use]
-pub fn hidden_powershell(script: &str) -> String {
+pub(crate) fn hidden_powershell(script: &str) -> String {
     let utf16: Vec<u8> = script.encode_utf16().flat_map(u16::to_le_bytes).collect();
     format!("{POWERSHELL_COMMAND} {}", base64(&utf16))
 }
 
 /// A PowerShell single-quoted string, where only a quote needs escaping.
 #[must_use]
-pub fn quoted(text: &str) -> String {
+pub(crate) fn quoted(text: &str) -> String {
     format!("'{}'", text.replace('\'', "''"))
 }
 

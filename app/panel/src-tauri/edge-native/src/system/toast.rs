@@ -23,6 +23,7 @@ const ICON_URI_VALUE: &str = "IconUri";
 /// every toast shown is kept for the life of the process (one per Edge build).
 static SHOWN: Mutex<Vec<ToastNotification>> = Mutex::new(Vec::new());
 
+/// Registers `app_id` so its toasts show `display_name` and `icon`
 pub fn register_toast_app(app_id: &str, display_name: &str, icon: &Path) -> io::Result<()> {
     let key = format!(r"{APP_ID_KEY}\{app_id}");
     registry::write_string(Hive::CurrentUser, &key, DISPLAY_NAME_VALUE, display_name)?;

@@ -23,7 +23,7 @@ const TINT_UNCHANGED: f64 = -1.0;
 /// Every field is optional here so that a missing one is worded for the user
 /// by whoever asks for it, not by the parser.
 #[derive(Debug, Deserialize)]
-pub struct Manifest {
+pub(crate) struct Manifest {
     pub name: Option<String>,
     #[serde(rename = "manifest_version")]
     pub format: Option<ManifestVersion>,
@@ -33,7 +33,7 @@ pub struct Manifest {
 
 /// `images` name files in the archive, `colors` and `tints` are Chromium's.
 #[derive(Debug, Deserialize)]
-pub struct Theme {
+pub(crate) struct Theme {
     pub images: Option<BTreeMap<String, String>>,
     #[expect(
         clippy::zero_sized_map_values,
@@ -51,7 +51,7 @@ pub struct Theme {
 
 /// Edge's loader refuses a manifest without `manifest_version` 2 or 3.
 #[derive(Debug)]
-pub struct ManifestVersion;
+pub(crate) struct ManifestVersion;
 
 impl<'de> Deserialize<'de> for ManifestVersion {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
@@ -67,7 +67,7 @@ impl<'de> Deserialize<'de> for ManifestVersion {
 
 /// Up to four numeric parts, `1.2.3.4`.
 #[derive(Debug)]
-pub struct Version(pub Vec<u16>);
+pub(crate) struct Version(pub Vec<u16>);
 
 impl<'de> Deserialize<'de> for Version {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
@@ -88,7 +88,7 @@ impl<'de> Deserialize<'de> for Version {
 /// Digits only, as a version part or a revision count is written: no sign, no
 /// space.
 #[must_use]
-pub fn digits(text: &str) -> Option<u16> {
+pub(crate) fn digits(text: &str) -> Option<u16> {
     let is_digits = !text.is_empty() && text.bytes().all(|byte| byte.is_ascii_digit());
     if !is_digits {
         return None;
@@ -98,7 +98,7 @@ pub fn digits(text: &str) -> Option<u16> {
 
 /// Red, green and blue as 0 to 255, and optionally an alpha as 0 to 1; held only as proof it was checked.
 #[derive(Debug)]
-pub struct Color;
+pub(crate) struct Color;
 
 impl<'de> Deserialize<'de> for Color {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
@@ -130,7 +130,7 @@ impl<'de> Deserialize<'de> for Color {
 
 /// Hue, saturation and lightness shifts, each 0 to 1 or -1 for unchanged; held only as proof it was checked.
 #[derive(Debug)]
-pub struct Tint;
+pub(crate) struct Tint;
 
 impl<'de> Deserialize<'de> for Tint {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {

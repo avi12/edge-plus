@@ -24,7 +24,7 @@ const POLL_INTERVAL: Duration = Duration::from_secs(2);
 type BuildChangedCallback = Box<dyn Fn(BuildChange) + Send + Sync>;
 type BrowsersChangedCallback = Box<dyn Fn() + Send + Sync>;
 
-pub struct EdgeWatch {
+pub(crate) struct EdgeWatch {
     thread: Mutex<Option<PollThread>>,
 }
 
@@ -32,7 +32,7 @@ impl EdgeWatch {
     /// Both callbacks run on the watch thread. `on_browsers_changed` runs
     /// whenever the set of browser processes changes, after a new one has been
     /// brought in line.
-    pub fn start(
+    pub(crate) fn start(
         on_build_changed: impl Fn(BuildChange) + Send + Sync + 'static,
         on_browsers_changed: impl Fn() + Send + Sync + 'static,
     ) -> Self {
@@ -54,7 +54,7 @@ impl EdgeWatch {
     }
 
     /// Waits for a poll in progress; later calls do nothing.
-    pub fn stop(&self) {
+    pub(crate) fn stop(&self) {
         let thread = self
             .thread
             .lock()
@@ -67,13 +67,13 @@ impl EdgeWatch {
 }
 
 #[must_use]
-pub fn build_of(pid: u32) -> Option<FileVersion> {
+pub(crate) fn build_of(pid: u32) -> Option<FileVersion> {
     let path = edge_native::module_path(pid, shared::EDGE_MODULE)?;
     FileVersion::of(&path)
 }
 
 #[must_use]
-pub fn running_build() -> Option<FileVersion> {
+pub(crate) fn running_build() -> Option<FileVersion> {
     let builds: Vec<FileVersion> = edge_native::browser_pids()
         .into_iter()
         .filter_map(build_of)
@@ -84,7 +84,7 @@ pub fn running_build() -> Option<FileVersion> {
 /// The running build, else the installed one Edge will run when it next
 /// starts.
 #[must_use]
-pub fn current_build() -> Option<FileVersion> {
+pub(crate) fn current_build() -> Option<FileVersion> {
     if let Some(simulated) = edge_install::simulated_directory() {
         return edge_install::installed_build(Some(&simulated));
     }
@@ -94,7 +94,7 @@ pub fn current_build() -> Option<FileVersion> {
 
 /// Records a new build and brings the DLL in line with it; None when the build
 /// is unchanged.
-pub fn reconcile() -> io::Result<Option<BuildChange>> {
+pub(crate) fn reconcile() -> io::Result<Option<BuildChange>> {
     let Some(build) = current_build() else {
         return Ok(None);
     };

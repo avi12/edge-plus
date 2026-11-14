@@ -5,13 +5,13 @@ use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-pub struct PollThread {
+pub(crate) struct PollThread {
     stop: Sender<()>,
     thread: Option<JoinHandle<()>>,
 }
 
 impl PollThread {
-    pub fn start(
+    pub(crate) fn start(
         name: &str,
         interval: Duration,
         first: impl FnOnce() + Send + 'static,
@@ -31,7 +31,7 @@ impl PollThread {
     }
 
     /// Waits for a poll in progress (an injection can take seconds).
-    pub fn stop(&mut self) {
+    pub(crate) fn stop(&mut self) {
         let _ = self.stop.send(());
         if let Some(thread) = self.thread.take() {
             let _ = thread.join();

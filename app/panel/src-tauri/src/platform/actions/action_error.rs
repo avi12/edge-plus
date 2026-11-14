@@ -6,14 +6,14 @@ use std::fmt;
 use std::io;
 
 #[derive(Debug)]
-pub enum ActionError {
+pub(crate) enum ActionError {
     /// Worded for the user (wording.rs); shown as it is.
     User(String),
     /// For the log only.
     Internal(String),
 }
 
-pub type ActionResult<T> = Result<T, ActionError>;
+pub(crate) type ActionResult<T> = Result<T, ActionError>;
 
 impl fmt::Display for ActionError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -9,7 +9,7 @@ use crate::platform::actions::panel_log;
 use crate::platform::identity::product;
 use crate::platform::paths;
 
-pub const APP_ID: &str = "Avi.EdgePlus";
+pub(crate) const APP_ID: &str = "Avi.EdgePlus";
 const ICON_FILE_NAME: &str = "edgeplus.ico";
 /// The one copy of the icon; the window loads the file written from it.
 const ICON: &[u8] = include_bytes!("../../../icons/icon.ico");
@@ -17,12 +17,12 @@ const ICON: &[u8] = include_bytes!("../../../icons/icon.ico");
 /// Written by `register`, for Windows (an unpackaged app's toast icon must be
 /// a file) and for the window's title bar.
 #[must_use]
-pub fn icon_path() -> PathBuf {
+pub(crate) fn icon_path() -> PathBuf {
     paths::data_root().join(ICON_FILE_NAME)
 }
 
 /// At start, before any toast or window.
-pub fn register() {
+pub(crate) fn register() {
     let icon = icon_path();
     let registered = fs::create_dir_all(paths::data_root())
         .and_then(|()| fs::write(&icon, ICON))

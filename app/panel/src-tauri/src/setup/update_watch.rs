@@ -28,7 +28,7 @@ use crate::setup::{install_layout, update_digest};
 /// A newer release unpacked beside the running one, waiting for the user to
 /// restart into it.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ReadyUpdate {
+pub(crate) struct ReadyUpdate {
     pub version: String,
 }
 
@@ -45,14 +45,14 @@ const USER_AGENT_PRODUCT: &str = "EdgePlus";
 const DOWNLOAD_SUFFIX: &str = ".part";
 const DOWNLOAD_CHUNK_BYTES: usize = 64 * 1024;
 
-pub struct UpdateWatch {
+pub(crate) struct UpdateWatch {
     watcher: Arc<Watcher>,
     thread: Mutex<Option<PollThread>>,
 }
 
 impl UpdateWatch {
     /// `on_ready` runs on the watch thread.
-    pub fn start(on_ready: impl Fn(ReadyUpdate) + Send + Sync + 'static) -> Self {
+    pub(crate) fn start(on_ready: impl Fn(ReadyUpdate) + Send + Sync + 'static) -> Self {
         let watcher = Arc::new(Watcher {
             on_ready: Box::new(on_ready),
             is_check_requested: AtomicBool::new(false),
@@ -71,7 +71,7 @@ impl UpdateWatch {
     }
 
     /// Cancels a download in progress; later calls do nothing.
-    pub fn stop(&self) {
+    pub(crate) fn stop(&self) {
         self.watcher.is_cancelled.store(true, Ordering::SeqCst);
         let thread = self
             .thread
@@ -84,14 +84,14 @@ impl UpdateWatch {
     }
 
     /// The switch was turned on: look now rather than at the next check.
-    pub fn check_soon(&self) {
+    pub(crate) fn check_soon(&self) {
         self.watcher
             .is_check_requested
             .store(true, Ordering::SeqCst);
     }
 
     #[must_use]
-    pub fn pending(&self) -> Option<ReadyUpdate> {
+    pub(crate) fn pending(&self) -> Option<ReadyUpdate> {
         self.watcher
             .pending
             .lock()
@@ -284,7 +284,7 @@ fn is_wanted() -> bool {
 /// Hands the replacing to the launcher (`--apply`): it waits for this process to
 /// end, asks it to, then starts the newest version, and goes back to the one
 /// before it when that does not start. The caller then ends this process.
-pub fn restart_into(_update: &ReadyUpdate) -> io::Result<()> {
+pub(crate) fn restart_into(_update: &ReadyUpdate) -> io::Result<()> {
     let launcher = install_layout::launcher(&install_layout::root());
     let command = format!(
         "\"{}\" {APPLY_SWITCH} {}",
@@ -300,7 +300,7 @@ pub fn restart_into(_update: &ReadyUpdate) -> io::Result<()> {
 /// Removes the versions older than the running one and the zips already
 /// unpacked; a folder still in use stays for the next run. The running version
 /// has started, so the one before it is no longer needed for a rollback.
-pub fn prune(running: Version) {
+pub(crate) fn prune(running: Version) {
     let root = install_layout::root();
     for version in installed_versions(&root) {
         if version < running {

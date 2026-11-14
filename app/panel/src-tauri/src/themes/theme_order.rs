@@ -9,14 +9,14 @@ use crate::themes::sources::installed_themes::InstalledTheme;
 
 /// A theme of the combined list.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Listed<'theme> {
+pub(crate) enum Listed<'theme> {
     Own(&'theme ThemeEntry),
     Edge(&'theme InstalledTheme),
 }
 
 impl Listed<'_> {
     #[must_use]
-    pub fn id(&self) -> &str {
+    pub(crate) fn id(&self) -> &str {
         match self {
             Self::Own(theme) => &theme.id,
             Self::Edge(theme) => &theme.id,
@@ -28,7 +28,7 @@ impl Listed<'_> {
 /// named ones (own themes first in their order, then Edge's in its scan order),
 /// and an id in `order` with no theme is ignored.
 #[must_use]
-pub fn combined<'theme>(
+pub(crate) fn combined<'theme>(
     own: &'theme [ThemeEntry],
     edge: &'theme [InstalledTheme],
     order: &[String],
@@ -49,7 +49,7 @@ pub fn combined<'theme>(
 
 /// Negative `offset` is up; stops at either end.
 #[must_use]
-pub fn moved(ids: &[String], id: &str, offset: i32) -> Vec<String> {
+pub(crate) fn moved(ids: &[String], id: &str, offset: i32) -> Vec<String> {
     let Some(from) = ids.iter().position(|each| each == id) else {
         return ids.to_vec();
     };
@@ -65,7 +65,7 @@ pub fn moved(ids: &[String], id: &str, offset: i32) -> Vec<String> {
 /// A theme `ids` does not name goes after the named ones (it was added while
 /// the user was dragging); an id with no theme was removed meanwhile.
 #[must_use]
-pub fn ordered(themes: &[ThemeEntry], ids: &[String]) -> Vec<ThemeEntry> {
+pub(crate) fn ordered(themes: &[ThemeEntry], ids: &[String]) -> Vec<ThemeEntry> {
     let mut by_id: HashMap<&str, &ThemeEntry> = HashMap::new();
     for theme in themes {
         by_id.entry(theme.id.as_str()).or_insert(theme);

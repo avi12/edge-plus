@@ -9,25 +9,25 @@ use winui_svelte_launcher::install_root_of;
 
 use crate::platform::paths;
 
-pub const CORE_NAME: &str = "edgeplus.exe";
-pub const LAUNCHER_NAME: &str = "edgeplus-launcher.exe";
+pub(crate) const CORE_NAME: &str = "edgeplus.exe";
+pub(crate) const LAUNCHER_NAME: &str = "edgeplus-launcher.exe";
 
 #[must_use]
-pub fn root() -> PathBuf {
+pub(crate) fn root() -> PathBuf {
     paths::data_root()
 }
 
 /// The stable program in the root that the Start menu, the Add or remove
 /// programs entry and the Run entry start.
 #[must_use]
-pub fn launcher(root: &Path) -> PathBuf {
+pub(crate) fn launcher(root: &Path) -> PathBuf {
     root.join(LAUNCHER_NAME)
 }
 
 /// True when this exe runs from an `app-x.y.z` folder of the root: the one
 /// install that updates itself and can be uninstalled.
 #[must_use]
-pub fn is_installed_run() -> bool {
+pub(crate) fn is_installed_run() -> bool {
     let Ok(executable) = std::env::current_exe() else {
         return false;
     };

@@ -18,7 +18,7 @@ use crate::ui::protocol::{
 
 impl EdgeBuild {
     #[must_use]
-    pub fn of(edge: FileVersion, supported: FileVersion) -> Self {
+    pub(crate) fn of(edge: FileVersion, supported: FileVersion) -> Self {
         Self {
             version: edge.to_string(),
             is_updated: edge > supported,
@@ -27,7 +27,7 @@ impl EdgeBuild {
 }
 
 #[must_use]
-pub fn switch_key(slot: CardSlot) -> SwitchKey {
+pub(crate) fn switch_key(slot: CardSlot) -> SwitchKey {
     match slot {
         CardSlot::Feature { feature, .. } => match feature {
             Feature::NativeSplit => SwitchKey::NativeSplit,
@@ -48,12 +48,12 @@ pub fn switch_key(slot: CardSlot) -> SwitchKey {
 
 /// The card a switch key names.
 #[must_use]
-pub fn slot_of(key: SwitchKey) -> Option<CardSlot> {
+pub(crate) fn slot_of(key: SwitchKey) -> Option<CardSlot> {
     panel_layout::all_cards().find(|&slot| switch_key(slot) == key)
 }
 
 #[must_use]
-pub fn build(state: &PanelState, offer: InjectOffer, update: Option<&ReadyUpdate>) -> View {
+pub(crate) fn build(state: &PanelState, offer: InjectOffer, update: Option<&ReadyUpdate>) -> View {
     View {
         product_name: product::NAME.to_owned(),
         app_user_model_id: app_identity::APP_ID.to_owned(),

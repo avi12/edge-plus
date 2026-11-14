@@ -25,7 +25,7 @@ const APPS_USE_LIGHT_THEME: &str = "AppsUseLightTheme";
 
 /// What changed in what Edge wears.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum WearChange {
+pub(crate) enum WearChange {
     /// The user's own return to the default cleared this mode's slot.
     WentDefault(ColorMode),
     Other,
@@ -34,7 +34,7 @@ pub enum WearChange {
 /// The Windows apps mode, as Edge follows it; light when the value is missing,
 /// as Windows treats it.
 #[must_use]
-pub fn current_mode() -> ColorMode {
+pub(crate) fn current_mode() -> ColorMode {
     let value = edge_native::read_dword(
         edge_native::Hive::CurrentUser,
         PERSONALIZE_KEY,
@@ -52,13 +52,13 @@ fn is_new(wear: &Wear, last_stamp: Option<u32>) -> bool {
     last_stamp != Some(wear.stamp)
 }
 
-pub struct EdgeThemeWatch {
+pub(crate) struct EdgeThemeWatch {
     thread: Mutex<PollThread>,
 }
 
 impl EdgeThemeWatch {
     /// `on_change` runs on the watch thread, after any slot it cleared was saved.
-    pub fn start(on_change: impl Fn(WearChange) + Send + Sync + 'static) -> Self {
+    pub(crate) fn start(on_change: impl Fn(WearChange) + Send + Sync + 'static) -> Self {
         let on_change = Arc::new(on_change);
         let last_stamp = Arc::new(Mutex::new(None));
         let first = {
@@ -75,7 +75,7 @@ impl EdgeThemeWatch {
     }
 
     /// Waits for a poll in progress; later calls do nothing.
-    pub fn stop(&self) {
+    pub(crate) fn stop(&self) {
         self.thread
             .lock()
             .unwrap_or_else(PoisonError::into_inner)

@@ -15,14 +15,14 @@ const FIELDS_BYTES: usize = shared::WEAR_FIELD_COUNT as usize * FIELD_BYTES;
 const WIRE_BYTES: usize = FIELDS_BYTES + shared::WIRE_ID_CAPACITY as usize;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum WearCause {
+pub(crate) enum WearCause {
     EdgePlus,
     /// Inside Edge: its "Restore default", or a theme from a store.
     User,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Wear {
+pub(crate) struct Wear {
     /// Differs between two reports.
     pub stamp: u32,
     pub cause: WearCause,
@@ -34,7 +34,7 @@ impl Wear {
     /// None for a file of the wrong size, a cause this panel does not know or
     /// an id that is not UTF-8.
     #[must_use]
-    pub fn decode(bytes: &[u8]) -> Option<Self> {
+    pub(crate) fn decode(bytes: &[u8]) -> Option<Self> {
         if bytes.len() != WIRE_BYTES {
             return None;
         }
@@ -58,14 +58,14 @@ impl Wear {
     }
 
     #[must_use]
-    pub fn is_users_default(&self) -> bool {
+    pub(crate) fn is_users_default(&self) -> bool {
         self.cause == WearCause::User && self.theme_id.is_empty()
     }
 }
 
 /// The DLL's last report; None while none was written on this machine.
 #[must_use]
-pub fn read() -> Option<Wear> {
+pub(crate) fn read() -> Option<Wear> {
     Wear::decode(&fs::read(paths::under_local_app_data(shared::WEAR_FILE_RELATIVE_PATH)).ok()?)
 }
 

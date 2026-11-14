@@ -15,11 +15,11 @@ use crate::themes::{edge_theme_watch, theme_library, theme_order};
 use crate::ui::panel_state::PanelState;
 
 #[must_use]
-pub fn load() -> PanelState {
+pub(crate) fn load() -> PanelState {
     read(&Settings::load())
 }
 
-pub fn set_feature(feature: Feature, is_on: bool) -> ActionResult<PanelState> {
+pub(crate) fn set_feature(feature: Feature, is_on: bool) -> ActionResult<PanelState> {
     let _gate = settings::gate();
     let mut settings = Settings::load();
     settings.features.set(feature, is_on);
@@ -32,14 +32,14 @@ pub fn set_feature(feature: Feature, is_on: bool) -> ActionResult<PanelState> {
     Ok(read(&settings))
 }
 
-pub fn set_start_with_windows(is_on: bool) -> ActionResult<PanelState> {
+pub(crate) fn set_start_with_windows(is_on: bool) -> ActionResult<PanelState> {
     start_with_windows::set(is_on)?;
     Ok(load())
 }
 
 /// Turning it on also injects into an Edge that is open without the DLL. Like
 /// inject, it returns once the DLL is live, so the state shows the outcome.
-pub fn set_auto_inject(is_on: bool) -> ActionResult<PanelState> {
+pub(crate) fn set_auto_inject(is_on: bool) -> ActionResult<PanelState> {
     let _gate = settings::gate();
     let mut settings = Settings::load();
     settings.auto_inject = is_on;
@@ -52,7 +52,7 @@ pub fn set_auto_inject(is_on: bool) -> ActionResult<PanelState> {
 
 /// Turning it on looks for a newer release at once, so the card can appear
 /// without waiting for the next scheduled check.
-pub fn set_auto_update(is_on: bool) -> ActionResult<PanelState> {
+pub(crate) fn set_auto_update(is_on: bool) -> ActionResult<PanelState> {
     let _gate = settings::gate();
     let mut settings = Settings::load();
     settings.auto_update = is_on;
@@ -65,7 +65,7 @@ pub fn set_auto_update(is_on: bool) -> ActionResult<PanelState> {
 
 /// The Inject button: the DLL into every Edge browser process missing it. The
 /// returned state's `is_split_loaded` is the outcome the button shows.
-pub fn inject() -> PanelState {
+pub(crate) fn inject() -> PanelState {
     let _gate = settings::gate();
     let settings = Settings::load();
     dll_sync::apply_and_wait_for_load(&settings);
@@ -77,33 +77,33 @@ fn mode_to_use_now(should_use_now: bool) -> Option<ColorMode> {
     should_use_now.then(edge_theme_watch::current_mode)
 }
 
-pub fn add_store_theme(url: &str, should_use_now: bool) -> ActionResult<PanelState> {
+pub(crate) fn add_store_theme(url: &str, should_use_now: bool) -> ActionResult<PanelState> {
     theme_library::add_store(url, mode_to_use_now(should_use_now))?;
     Ok(load())
 }
 
-pub fn add_local_theme(path: &Path, should_use_now: bool) -> ActionResult<PanelState> {
+pub(crate) fn add_local_theme(path: &Path, should_use_now: bool) -> ActionResult<PanelState> {
     theme_library::add_local(path, mode_to_use_now(should_use_now))?;
     Ok(load())
 }
 
-pub fn remove_theme(id: &str) -> ActionResult<PanelState> {
+pub(crate) fn remove_theme(id: &str) -> ActionResult<PanelState> {
     theme_library::remove(id)?;
     Ok(load())
 }
 
-pub fn remove_edge_theme(id: &str) -> ActionResult<PanelState> {
+pub(crate) fn remove_edge_theme(id: &str) -> ActionResult<PanelState> {
     theme_library::remove_edge(id)?;
     Ok(load())
 }
 
-pub fn reorder_themes(ids: &[String]) -> ActionResult<PanelState> {
+pub(crate) fn reorder_themes(ids: &[String]) -> ActionResult<PanelState> {
     theme_library::reorder(ids)?;
     Ok(load())
 }
 
 /// Moves a theme up (negative) or down the combined list, stopping at either end.
-pub fn move_theme(id: &str, offset: i32) -> ActionResult<PanelState> {
+pub(crate) fn move_theme(id: &str, offset: i32) -> ActionResult<PanelState> {
     let theming = Settings::load().theming;
     let edge = theme_library::edge_themes_not_in(&theming);
     let ids: Vec<String> = theme_order::combined(&theming.themes, &edge, &theming.order)
@@ -114,14 +114,14 @@ pub fn move_theme(id: &str, offset: i32) -> ActionResult<PanelState> {
     Ok(load())
 }
 
-pub fn assign_theme(mode: ColorMode, id: &str) -> ActionResult<PanelState> {
+pub(crate) fn assign_theme(mode: ColorMode, id: &str) -> ActionResult<PanelState> {
     theme_library::assign(mode, id)?;
     Ok(load())
 }
 
 /// Puts the downloaded release in place and starts it; the caller then ends
 /// this process. The new exe swaps its own DLL into Edge, so no Edge restart.
-pub fn restart_to_update() -> ActionResult<()> {
+pub(crate) fn restart_to_update() -> ActionResult<()> {
     let update = background_service::pending_update()
         .ok_or_else(|| ActionError::Internal("no update is ready to install".to_owned()))?;
     update_watch::restart_into(&update)?;

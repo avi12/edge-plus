@@ -6,8 +6,8 @@ use crate::platform::settings::{Feature, Features, Theming};
 use crate::themes::sources::installed_themes::InstalledTheme;
 
 #[derive(Clone, Debug)]
-#[allow(clippy::struct_excessive_bools, reason = "each is an independent fact")]
-pub struct PanelState {
+#[expect(clippy::struct_excessive_bools, reason = "each is an independent fact")]
+pub(crate) struct PanelState {
     pub features: Features,
     pub theming: Theming,
     /// Themes installed in Edge that the panel did not add.
@@ -31,13 +31,13 @@ pub struct PanelState {
 
 impl PanelState {
     #[must_use]
-    pub fn state_of(&self, feature: Feature) -> FeatureState {
+    pub(crate) fn state_of(&self, feature: Feature) -> FeatureState {
         edge_support::state_of(&self.features, feature, self.support)
     }
 
     /// A paused or unavailable switch is held as it is until a supported build.
     #[must_use]
-    pub fn is_locked(&self, feature: Feature) -> bool {
+    pub(crate) fn is_locked(&self, feature: Feature) -> bool {
         matches!(
             self.state_of(feature),
             FeatureState::Paused | FeatureState::Unavailable
@@ -45,7 +45,7 @@ impl PanelState {
     }
 
     #[must_use]
-    pub fn paused(&self) -> Vec<Feature> {
+    pub(crate) fn paused(&self) -> Vec<Feature> {
         edge_support::paused(&self.features, self.support)
     }
 }

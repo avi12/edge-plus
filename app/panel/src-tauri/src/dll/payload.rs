@@ -11,11 +11,11 @@ use crate::platform::paths;
 const DLL: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/edgeplus-split.dll"));
 
 #[must_use]
-pub fn is_unpacked_current() -> bool {
+pub(crate) fn is_unpacked_current() -> bool {
     fs::read(paths::split_dll()).is_ok_and(|unpacked| unpacked == DLL)
 }
 
-pub fn unpack() {
+pub(crate) fn unpack() {
     if is_unpacked_current() {
         return;
     }

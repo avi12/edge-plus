@@ -11,7 +11,7 @@ use crate::platform::paths;
 
 /// The settings come last, so a copy cut short is tried again on the next
 /// start.
-pub fn carry(
+pub(crate) fn carry(
     legacy_root: &Path,
     root: &Path,
     settings_file_name: &str,

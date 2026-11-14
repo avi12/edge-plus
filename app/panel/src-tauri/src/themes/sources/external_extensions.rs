@@ -21,14 +21,14 @@ const VERSION_VALUE: &str = "version";
 /// The store's update endpoint, which Edge installs from and which also serves
 /// the theme's package.
 #[must_use]
-pub fn update_url(store: ThemeStore) -> &'static str {
+pub(crate) fn update_url(store: ThemeStore) -> &'static str {
     match store {
         ThemeStore::Edge => EDGE_STORE_UPDATE_URL,
         ThemeStore::Chrome => CHROME_STORE_UPDATE_URL,
     }
 }
 
-pub fn install_store(extension_id: &str, store: ThemeStore) -> io::Result<()> {
+pub(crate) fn install_store(extension_id: &str, store: ThemeStore) -> io::Result<()> {
     edge_native::write_string(
         Hive::CurrentUser,
         &key_path(extension_id),
@@ -37,7 +37,7 @@ pub fn install_store(extension_id: &str, store: ThemeStore) -> io::Result<()> {
     )
 }
 
-pub fn install_local(extension_id: &str, crx_path: &Path, version: &str) -> io::Result<()> {
+pub(crate) fn install_local(extension_id: &str, crx_path: &Path, version: &str) -> io::Result<()> {
     let key = key_path(extension_id);
     edge_native::write_string(
         Hive::CurrentUser,
@@ -49,7 +49,7 @@ pub fn install_local(extension_id: &str, crx_path: &Path, version: &str) -> io::
 }
 
 /// Edge removes the extension on its next start.
-pub fn uninstall(extension_id: &str) -> io::Result<()> {
+pub(crate) fn uninstall(extension_id: &str) -> io::Result<()> {
     match edge_native::delete_tree(Hive::CurrentUser, &key_path(extension_id)) {
         Err(error) if error.kind() == io::ErrorKind::PermissionDenied => Ok(()),
         result => result,
@@ -60,7 +60,7 @@ pub fn uninstall(extension_id: &str) -> io::Result<()> {
 /// Secure Preferences), so deleting the key uninstalls it. One installed from a
 /// store inside Edge has no key.
 #[must_use]
-pub fn is_registered(extension_id: &str) -> bool {
+pub(crate) fn is_registered(extension_id: &str) -> bool {
     let key = key_path(extension_id);
     [UPDATE_URL_VALUE, PATH_VALUE]
         .iter()

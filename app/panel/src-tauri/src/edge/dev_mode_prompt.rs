@@ -29,11 +29,11 @@ const POLL_INTERVAL: Duration = Duration::from_secs(2);
 const SHARE_NONE: u32 = 0;
 
 #[must_use]
-pub fn waiter_command_line(executable: &Path) -> String {
+pub(crate) fn waiter_command_line(executable: &Path) -> String {
     format!("\"{}\" {}", executable.display(), switches::DEV_MODE_WAITER)
 }
 
-pub fn wait_for_edge_exit_then_snooze(user_data: &Path) {
+pub(crate) fn wait_for_edge_exit_then_snooze(user_data: &Path) {
     let Some(_waiter) = edge_native::NamedMutex::acquire_sole(WAITER_MUTEX) else {
         return;
     };
@@ -54,7 +54,7 @@ pub fn wait_for_edge_exit_then_snooze(user_data: &Path) {
 
 /// In Edge's units: microseconds since 1601, as text.
 #[must_use]
-pub fn snooze_end(now: SystemTime) -> String {
+pub(crate) fn snooze_end(now: SystemTime) -> String {
     (microseconds_since_1601(now) + SNOOZE_MICROSECONDS).to_string()
 }
 
@@ -66,7 +66,7 @@ fn microseconds_since_1601(now: SystemTime) -> u64 {
 }
 
 /// Creates the objects on the path, replacing any that are not objects.
-pub fn set_snooze(preferences: &mut Map<String, Value>, snooze_end: &str) {
+pub(crate) fn set_snooze(preferences: &mut Map<String, Value>, snooze_end: &str) {
     let [parent_keys @ .., last_key] = SNOOZE_KEY_PATH;
     let mut parent = preferences;
     for key in parent_keys {

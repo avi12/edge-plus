@@ -7,7 +7,7 @@ use crate::ui::panel_state::PanelState;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
-pub enum InjectOffer {
+pub(crate) enum InjectOffer {
     /// Not shown: auto-inject is on, Edge is closed, or no switch needs the DLL.
     #[default]
     Hidden,
@@ -20,7 +20,7 @@ pub enum InjectOffer {
 
 /// `previous` is what the window showed before this state arrived.
 #[must_use]
-pub fn next(previous: InjectOffer, state: &PanelState) -> InjectOffer {
+pub(crate) fn next(previous: InjectOffer, state: &PanelState) -> InjectOffer {
     let is_offered = !state.is_auto_inject && state.is_edge_running && state.is_split_wanted;
     if !is_offered {
         return InjectOffer::Hidden;

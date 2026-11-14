@@ -4,14 +4,14 @@
 use crate::themes::package::extension_id;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ThemeStore {
+pub(crate) enum ThemeStore {
     Chrome,
     Edge,
 }
 
 /// `name` is the link's slug as a title, or None when the link has none.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ParsedStoreTheme {
+pub(crate) struct ParsedStoreTheme {
     pub id: String,
     pub name: Option<String>,
     pub store: ThemeStore,
@@ -58,7 +58,7 @@ const SITES: [StoreSite; 3] = [
 /// None for any other text. Surrounding space, http, a missing scheme, "www.",
 /// a trailing slash, a query (such as ?hl=en) and a fragment are tolerated.
 #[must_use]
-pub fn parse(url: &str) -> Option<ParsedStoreTheme> {
+pub(crate) fn parse(url: &str) -> Option<ParsedStoreTheme> {
     let trimmed = url.trim();
     let absolute = if trimmed.contains(SCHEME_SEPARATOR) {
         trimmed.to_owned()

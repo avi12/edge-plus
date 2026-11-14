@@ -21,7 +21,7 @@ const UNLOAD_EVENT: &str = r"Local\fixedge-split-unload";
 const UNLOAD_POLLS: u32 = 40;
 const UNLOAD_POLL_INTERVAL: Duration = Duration::from_millis(100);
 
-pub fn run() {
+pub(crate) fn run() {
     if edge_install::is_simulated() {
         return;
     }
@@ -32,7 +32,7 @@ pub fn run() {
 /// A process the old DLL is still hooked in is left alone: injecting the new
 /// one there would hook it twice. It clears when that Edge restarts.
 #[must_use]
-pub fn is_dll_loaded_in(pid: u32) -> bool {
+pub(crate) fn is_dll_loaded_in(pid: u32) -> bool {
     edge_native::module_path(pid, DLL_NAME).is_some()
 }
 

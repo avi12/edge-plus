@@ -27,7 +27,7 @@ use winui_svelte_launcher::Version;
 /// Long enough for start-up's work to settle before the working set is trimmed.
 const TRIM_DELAY: Duration = Duration::from_secs(5);
 
-pub fn run(is_boot_launch: bool) {
+pub(crate) fn run(is_boot_launch: bool) {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(
             |_app, command_line, _folder| {

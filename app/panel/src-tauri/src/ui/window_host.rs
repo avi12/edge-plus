@@ -36,7 +36,7 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 static NEXT_REQUEST_ID: AtomicU32 = AtomicU32::new(1);
 
 /// How the core decides what to do once the last window closes.
-pub type OnLastClose = fn();
+pub(crate) type OnLastClose = fn();
 
 struct Session {
     id: u64,
@@ -70,7 +70,7 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 /// Once, at start.
-pub fn init(on_last_close: OnLastClose) {
+pub(crate) fn init(on_last_close: OnLastClose) {
     let _ = HOST.set(Host {
         session: Mutex::new(None),
         next_id: Mutex::new(0),
@@ -80,12 +80,12 @@ pub fn init(on_last_close: OnLastClose) {
 }
 
 #[must_use]
-pub fn is_open() -> bool {
+pub(crate) fn is_open() -> bool {
     lock(&host().session).is_some()
 }
 
 /// Opens the window, or brings back the one already open.
-pub fn show() {
+pub(crate) fn show() {
     if is_open() {
         send(&CoreMessage::BringBack);
         return;
@@ -94,7 +94,7 @@ pub fn show() {
 }
 
 /// The watchers' news, for the window while one is open.
-pub fn on_service_event(event: &ServiceEvent) {
+pub(crate) fn on_service_event(event: &ServiceEvent) {
     match event {
         ServiceEvent::ToastClicked => show(),
         ServiceEvent::ThemeRefreshed(theme) => {

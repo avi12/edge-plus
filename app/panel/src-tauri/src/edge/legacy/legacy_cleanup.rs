@@ -15,7 +15,7 @@ const EXTENSION_FOLDER: &str = "extension";
 const HOST_EXECUTABLE_PREFIX: &str = "fixedge-host.exe";
 const FILES: [&str; 3] = ["native-host.json", "status.json", "extension.stamp"];
 
-pub fn run() {
+pub(crate) fn run() {
     let data_root = paths::data_root();
     delete_directory(&data_root.join(EXTENSION_FOLDER));
     for name in FILES {

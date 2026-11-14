@@ -9,19 +9,19 @@ use crate::setup::install_layout;
 use crate::setup::startup_entry::{self, StartupKeys};
 
 #[must_use]
-pub fn is_enabled() -> bool {
+pub(crate) fn is_enabled() -> bool {
     startup_entry::is_enabled(&StartupKeys::user(), startup_entry::NAME)
 }
 
 /// What the Run entry starts for this copy.
-pub fn entry_target() -> io::Result<PathBuf> {
+pub(crate) fn entry_target() -> io::Result<PathBuf> {
     if install_layout::is_installed_run() {
         return Ok(install_layout::launcher(&install_layout::root()));
     }
     std::env::current_exe()
 }
 
-pub fn set(is_on: bool) -> io::Result<()> {
+pub(crate) fn set(is_on: bool) -> io::Result<()> {
     let keys = StartupKeys::user();
     if !is_on {
         return startup_entry::disable(&keys, startup_entry::NAME);

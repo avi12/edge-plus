@@ -11,10 +11,10 @@ use serde::Deserialize;
 use ureq::http::Uri;
 use winui_svelte_launcher::Version;
 
-pub const DEFAULT_URL: &str =
+pub(crate) const DEFAULT_URL: &str =
     "https://github.com/avi12/edge-plus/releases/latest/download/releases.json";
 /// Set by a test to point the check at a local stand-in for GitHub.
-pub const URL_VARIABLE: &str = "EDGEPLUS_UPDATE_FEED";
+pub(crate) const URL_VARIABLE: &str = "EDGEPLUS_UPDATE_FEED";
 
 const SHA256_HEX_LENGTH: usize = 64;
 const HTTPS_SCHEME: &str = "https";
@@ -25,7 +25,7 @@ const PATH_SEPARATOR: char = '/';
 /// A release newer than the running one: its zip, where it is and how to check
 /// it.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct UpdateOffer {
+pub(crate) struct UpdateOffer {
     pub version: Version,
     pub file: String,
     pub download: String,
@@ -48,7 +48,7 @@ struct Release {
 }
 
 #[must_use]
-pub fn url() -> String {
+pub(crate) fn url() -> String {
     std::env::var(URL_VARIABLE)
         .ok()
         .filter(|custom| !custom.is_empty())
@@ -57,7 +57,7 @@ pub fn url() -> String {
 
 /// The newest release of the feed at `feed_url` when it is newer than `current`.
 #[must_use]
-pub fn parse(json: &str, feed_url: &str, current: Version) -> Option<UpdateOffer> {
+pub(crate) fn parse(json: &str, feed_url: &str, current: Version) -> Option<UpdateOffer> {
     let feed: Feed = serde_json::from_str(json).ok()?;
     let newest = feed
         .releases

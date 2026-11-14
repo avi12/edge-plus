@@ -37,7 +37,7 @@ const KIT: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/window-kit.zip"));
 const KIT_NAME: &str = env!("EDGEPLUS_WINDOW_KIT_NAME");
 
 /// The program to start and its arguments.
-pub struct WindowCommand {
+pub(crate) struct WindowCommand {
     pub program: PathBuf,
     pub arguments: Vec<String>,
     /// The kit's folder, which holds the runtime packages; None in a dev run.
@@ -46,7 +46,7 @@ pub struct WindowCommand {
 
 /// The window's scripts in this checkout, when this exe was built from one.
 #[must_use]
-pub fn dev_sources() -> Option<PathBuf> {
+pub(crate) fn dev_sources() -> Option<PathBuf> {
     let checkout = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .canonicalize()
@@ -59,7 +59,7 @@ pub fn dev_sources() -> Option<PathBuf> {
 }
 
 #[must_use]
-pub fn locate() -> Option<WindowCommand> {
+pub(crate) fn locate() -> Option<WindowCommand> {
     if let Some(sources) = dev_sources() {
         if let Some(command) = command_from_environment() {
             return Some(command);
@@ -150,7 +150,7 @@ fn remove_other_kits(current: &Path) {
 }
 
 /// Installs the Windows App runtime the kit carries, for this user.
-pub fn install_runtime(kit: &Path) -> io::Result<()> {
+pub(crate) fn install_runtime(kit: &Path) -> io::Result<()> {
     let packages: Vec<PathBuf> = RUNTIME_PACKAGES
         .iter()
         .map(|name| kit.join(RUNTIME_FOLDER).join(name))

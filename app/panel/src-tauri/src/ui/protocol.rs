@@ -13,7 +13,7 @@ use crate::ui::inject_offer::InjectOffer;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(TS))]
-pub enum ThemeBadge {
+pub(crate) enum ThemeBadge {
     Store,
     Local,
     InUse,
@@ -27,7 +27,7 @@ pub enum ThemeBadge {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(TS))]
-pub struct ThemeRow {
+pub(crate) struct ThemeRow {
     pub id: String,
     pub name: String,
     pub badges: Vec<ThemeBadge>,
@@ -39,7 +39,7 @@ pub struct ThemeRow {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(TS))]
-pub struct ThemeOption {
+pub(crate) struct ThemeOption {
     pub id: String,
     pub name: String,
 }
@@ -49,7 +49,7 @@ pub struct ThemeOption {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(TS))]
-pub struct ThemingView {
+pub(crate) struct ThemingView {
     pub options: Vec<ThemeOption>,
     pub light: String,
     pub dark: String,
@@ -65,7 +65,7 @@ pub struct ThemingView {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(TS))]
-pub enum SwitchKey {
+pub(crate) enum SwitchKey {
     NativeSplit,
     Theming,
     QuietDevMode,
@@ -85,7 +85,7 @@ pub enum SwitchKey {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(TS))]
-pub struct EdgeBuild {
+pub(crate) struct EdgeBuild {
     pub version: String,
     pub is_updated: bool,
 }
@@ -98,7 +98,7 @@ pub struct EdgeBuild {
     rename_all_fields = "camelCase"
 )]
 #[cfg_attr(test, derive(TS))]
-pub enum CardHold {
+pub(crate) enum CardHold {
     /// On, and held until Edge+ supports this build.
     Paused { edge: EdgeBuild },
     /// Off, and cannot be turned on until Edge+ supports this build.
@@ -110,7 +110,7 @@ pub enum CardHold {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(TS))]
-pub struct CardView {
+pub(crate) struct CardView {
     pub key: SwitchKey,
     pub is_on: bool,
     pub is_locked: bool,
@@ -120,14 +120,14 @@ pub struct CardView {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(TS))]
-pub struct UpdateView {
+pub(crate) struct UpdateView {
     pub version: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(TS))]
-pub struct FooterView {
+pub(crate) struct FooterView {
     pub author: String,
     pub author_uri: String,
     pub version: String,
@@ -137,7 +137,7 @@ pub struct FooterView {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(TS))]
-pub struct View {
+pub(crate) struct View {
     pub product_name: String,
     /// The id the core registered (name and icon) for its toasts; the window
     /// takes it too, so the taskbar shows it as Edge+.
@@ -163,7 +163,7 @@ pub struct View {
     rename_all_fields = "camelCase"
 )]
 #[cfg_attr(test, derive(TS))]
-pub enum Action {
+pub(crate) enum Action {
     SetSwitch {
         key: SwitchKey,
         is_on: bool,
@@ -206,7 +206,7 @@ pub enum Action {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS))]
-pub struct Bounds {
+pub(crate) struct Bounds {
     pub x: i32,
     pub y: i32,
     pub width: i32,
@@ -218,7 +218,7 @@ pub struct Bounds {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "camelCase")]
 #[cfg_attr(test, derive(TS))]
-pub enum CoreMessage {
+pub(crate) enum CoreMessage {
     /// Before the first view, on a dev swap: where the window it replaces was.
     Place(Bounds),
     View(Box<View>),
@@ -232,7 +232,7 @@ pub enum CoreMessage {
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(tag = "type", content = "data", rename_all = "camelCase")]
 #[cfg_attr(test, derive(TS))]
-pub enum UiMessage {
+pub(crate) enum UiMessage {
     /// Sent instead of opening when the Windows App runtime is not installed;
     /// the window's process then ends.
     RuntimeMissing,
@@ -243,7 +243,7 @@ pub enum UiMessage {
 
 /// A request frame: `{"id":N,"type":..,"data":..,"timestamp":ms}`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RequestFrame<Message> {
+pub(crate) struct RequestFrame<Message> {
     pub id: u32,
     #[serde(flatten)]
     pub message: Message,
@@ -253,7 +253,7 @@ pub struct RequestFrame<Message> {
 
 /// A response frame: `{"id":N,"response":..}` or `{"id":N,"error":".."}`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub struct ResponseFrame {
+pub(crate) struct ResponseFrame {
     pub id: u32,
     #[serde(flatten)]
     pub outcome: Outcome,
@@ -261,7 +261,7 @@ pub struct ResponseFrame {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(untagged)]
-pub enum Outcome {
+pub(crate) enum Outcome {
     Answered { response: serde_json::Value },
     Failed { error: String },
 }
@@ -270,7 +270,7 @@ impl ResponseFrame {
     /// The answer to a request that returns nothing: `response: null`, or the
     /// error's sentence.
     #[must_use]
-    pub fn of(id: u32, error: Option<String>) -> Self {
+    pub(crate) fn of(id: u32, error: Option<String>) -> Self {
         let outcome = match error {
             Some(error) => Outcome::Failed { error },
             None => Outcome::Answered {
@@ -284,13 +284,13 @@ impl ResponseFrame {
 /// One line from the window: a request to answer, or the answer to one of the
 /// core's own requests (which the core does not track).
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Incoming {
+pub(crate) enum Incoming {
     Request(RequestFrame<UiMessage>),
     Response,
 }
 
 /// A frame with a `type` is a request; one without answers a request.
-pub fn parse_incoming(line: &str) -> Result<Incoming, serde_json::Error> {
+pub(crate) fn parse_incoming(line: &str) -> Result<Incoming, serde_json::Error> {
     let value: serde_json::Value = serde_json::from_str(line)?;
     let is_request = value.get("type").is_some();
     if is_request {

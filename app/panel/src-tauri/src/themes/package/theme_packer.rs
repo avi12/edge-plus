@@ -21,7 +21,7 @@ use crate::themes::package::theme_manifest::{self, ThemeFileResult, invalid};
 use crate::ui::wording;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PackedTheme {
+pub(crate) struct PackedTheme {
     pub id: String,
     pub version: String,
     pub crx: Vec<u8>,
@@ -35,7 +35,7 @@ const REVISION_EXTENSION: &str = "rev";
 const ZIP_SEPARATOR: &str = "/";
 
 /// `source` is a folder, or a .zip with its manifest.json at the top.
-pub fn pack(source: &Path, key_directory: &Path) -> ThemeFileResult<PackedTheme> {
+pub(crate) fn pack(source: &Path, key_directory: &Path) -> ThemeFileResult<PackedTheme> {
     let zip_bytes = if source.is_dir() {
         zip_folder(source)?
     } else {
@@ -77,7 +77,7 @@ pub fn pack(source: &Path, key_directory: &Path) -> ThemeFileResult<PackedTheme>
 
 /// What a CRX3 signature covers: the fixed prefix, the signed header data's
 /// length and bytes, then the ZIP.
-pub fn signed_payload(signed_header_data: &[u8], zip: &[u8]) -> ThemeFileResult<Vec<u8>> {
+pub(crate) fn signed_payload(signed_header_data: &[u8], zip: &[u8]) -> ThemeFileResult<Vec<u8>> {
     let mut payload = crx::SIGNED_DATA_PREFIX.to_vec();
     payload.extend_from_slice(&little_endian_length(signed_header_data.len())?);
     payload.extend_from_slice(signed_header_data);
@@ -86,7 +86,7 @@ pub fn signed_payload(signed_header_data: &[u8], zip: &[u8]) -> ThemeFileResult<
 }
 
 #[must_use]
-pub fn key_file_name(source: &Path) -> String {
+pub(crate) fn key_file_name(source: &Path) -> String {
     let normalized = source.to_string_lossy().to_lowercase();
     let hash = Sha256::digest(normalized.as_bytes());
     let mut prefix = [0u8; KEY_FILE_NAME_BYTES];

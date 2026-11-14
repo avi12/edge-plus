@@ -3,10 +3,10 @@
 include!("background_switch.rs");
 
 /// Re-run headless as the dev-mode waiter (`dev_mode_prompt`).
-pub const DEV_MODE_WAITER: &str = "--quiet-dev-mode-after-exit";
+pub(crate) const DEV_MODE_WAITER: &str = "--quiet-dev-mode-after-exit";
 
 #[must_use]
-pub fn is_present(command_line: &[String], name: &str) -> bool {
+pub(crate) fn is_present(command_line: &[String], name: &str) -> bool {
     command_line.iter().any(|argument| argument == name)
 }
 

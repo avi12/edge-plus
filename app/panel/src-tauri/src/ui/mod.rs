@@ -2,11 +2,11 @@
 //! protocol) and the sentences the core says itself (wording). The window's
 //! own text is in its markup.
 
-pub mod inject_offer;
-pub mod panel_layout;
-pub mod panel_state;
-pub mod protocol;
-pub mod view;
-pub mod window_host;
-pub mod window_kit;
-pub mod wording;
+pub(crate) mod inject_offer;
+pub(crate) mod panel_layout;
+pub(crate) mod panel_state;
+pub(crate) mod protocol;
+pub(crate) mod view;
+pub(crate) mod window_host;
+pub(crate) mod window_kit;
+pub(crate) mod wording;

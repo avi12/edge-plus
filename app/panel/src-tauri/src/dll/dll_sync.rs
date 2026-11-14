@@ -31,7 +31,7 @@ enum Reach {
 
 /// A settings change: with auto-inject off it reaches only the processes that
 /// already hold the DLL, and an Edge without one waits for the Inject button.
-pub fn apply(settings: &Settings) {
+pub(crate) fn apply(settings: &Settings) {
     if settings.auto_inject {
         apply_to(settings, Reach::EveryBrowser, &[]);
         return;
@@ -76,7 +76,7 @@ fn apply_to(settings: &Settings, reach: Reach, holders: &[u32]) {
 /// a rebuilt core takes effect with no Edge restart. With auto-inject off a DLL
 /// already loaded is still replaced, but an Edge without one waits for the
 /// Inject button.
-pub fn sync_on_start() {
+pub(crate) fn sync_on_start() {
     if edge_install::is_simulated() {
         return;
     }
@@ -107,7 +107,7 @@ pub fn sync_on_start() {
 /// returns once the DLL is live, or after a bounded wait when it never comes
 /// up. `DllMain` creates the unload event before `LoadLibrary` returns, so the wait
 /// is normally over at the first poll.
-pub fn apply_and_wait_for_load(settings: &Settings) {
+pub(crate) fn apply_and_wait_for_load(settings: &Settings) {
     apply_to(settings, Reach::EveryBrowser, &[]);
     let is_load_expected = !edge_install::is_simulated()
         && is_wanted(settings)
@@ -119,7 +119,7 @@ pub fn apply_and_wait_for_load(settings: &Settings) {
 
 /// Whether the settings want the DLL in Edge at all.
 #[must_use]
-pub fn is_wanted(settings: &Settings) -> bool {
+pub(crate) fn is_wanted(settings: &Settings) -> bool {
     effective(settings).needs_dll()
 }
 

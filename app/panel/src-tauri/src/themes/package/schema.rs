@@ -10,7 +10,7 @@ use serde_json::Deserializer as JsonDeserializer;
 
 /// Why a JSON text is not the shape the schema asks for.
 #[derive(Debug, PartialEq, Eq)]
-pub enum SchemaError {
+pub(crate) enum SchemaError {
     /// The text is not JSON; the line is where the parser gave up.
     Syntax { line: usize },
     /// The JSON is not the shape: where, and what was wrong there.
@@ -20,7 +20,7 @@ pub enum SchemaError {
 impl SchemaError {
     /// `path: reason`, or the reason alone for a problem with the whole value.
     #[must_use]
-    pub fn sentence(&self) -> String {
+    pub(crate) fn sentence(&self) -> String {
         match self {
             Self::Syntax { line } => format!("not valid JSON (line {line})"),
             Self::Shape { path, reason } if path == "." => reason.clone(),
@@ -32,7 +32,7 @@ impl SchemaError {
 const POSITION_MARKER: &str = " at line ";
 
 /// `schema.parse(bytes)`: the value, or the first thing wrong with it.
-pub fn parse<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, SchemaError> {
+pub(crate) fn parse<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, SchemaError> {
     let mut deserializer = JsonDeserializer::from_slice(bytes);
     serde_path_to_error::deserialize(&mut deserializer).map_err(|error| {
         let path = error.path().to_string();
@@ -54,6 +54,6 @@ pub fn parse<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, SchemaError> {
 
 /// `.refine(...)`: a refusal with a sentence of its own, for a `Deserialize`
 /// that checks what the type cannot.
-pub fn refuse<'de, D: Deserializer<'de>>(reason: impl std::fmt::Display) -> D::Error {
+pub(crate) fn refuse<'de, D: Deserializer<'de>>(reason: impl std::fmt::Display) -> D::Error {
     D::Error::custom(reason)
 }

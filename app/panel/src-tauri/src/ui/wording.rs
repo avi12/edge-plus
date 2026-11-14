@@ -34,46 +34,46 @@ const EDGE_PLACEHOLDER: &str = "{edge}";
 const LEAD_PLACEHOLDER: &str = "{lead}";
 const TITLES_PLACEHOLDER: &str = "{titles}";
 
-pub const NOT_A_STORE_LINK: &str =
+pub(crate) const NOT_A_STORE_LINK: &str =
     "That is not a theme link from the Chrome Web Store or Edge Add-ons.";
-pub const EDGE_THEME_NOT_REMOVABLE: &str =
+pub(crate) const EDGE_THEME_NOT_REMOVABLE: &str =
     "Edge+ cannot remove this theme because Edge installed it from its own store.";
-pub const ACTION_FAILED: &str = "That did not work. Edge+ wrote the details to its log (panel.log in %LOCALAPPDATA%\\EdgePlus).";
-pub const THEME_FILES_UNREADABLE: &str = "Edge+ could not read or write that theme's files. Check the folder still exists and is not open elsewhere.";
-pub const MANIFEST_NOT_JSON: &str = "manifest.json is not valid JSON";
-pub const IDENTITY_CHANGED: &str = "The theme's identity changed; add it again.";
-pub const UPDATE_FAILED: &str = "Edge+ could not replace itself where it is installed. Get the new version from its GitHub releases page instead.";
+pub(crate) const ACTION_FAILED: &str = "That did not work. Edge+ wrote the details to its log (panel.log in %LOCALAPPDATA%\\EdgePlus).";
+pub(crate) const THEME_FILES_UNREADABLE: &str = "Edge+ could not read or write that theme's files. Check the folder still exists and is not open elsewhere.";
+pub(crate) const MANIFEST_NOT_JSON: &str = "manifest.json is not valid JSON";
+pub(crate) const IDENTITY_CHANGED: &str = "The theme's identity changed; add it again.";
+pub(crate) const UPDATE_FAILED: &str = "Edge+ could not replace itself where it is installed. Get the new version from its GitHub releases page instead.";
 
 // What is wrong with a local theme's files (theme_manifest, crx, protobuf).
-pub const THEME_TOO_LARGE: &str = "the theme is too large";
-pub const NOT_A_ZIP: &str = "not a valid ZIP";
-pub const MANIFEST_NOT_AN_OBJECT: &str = "manifest.json: not an object";
-pub const MANIFEST_HAS_NO_NAME: &str = "manifest.json has no name";
-pub const MANIFEST_HAS_NO_VERSION: &str = "manifest.json has no version";
-pub const COLOR_NEEDS_CHANNELS: &str = "needs 3 or 4 numbers";
-pub const TINT_NEEDS_PARTS: &str = "needs 3 numbers";
-pub const VALUE_OUT_OF_RANGE: &str = "has a value out of range";
-pub const MANIFEST_VERSION_NOT_SUPPORTED: &str = "must be 2 or 3";
-pub const MANIFEST_HAS_NO_MANIFEST_VERSION: &str = "manifest.json has no manifest_version";
-pub const MANIFEST_HAS_NO_THEME: &str = "manifest.json has no \"theme\" section";
-pub const NOT_A_CRX3: &str = "not a CRX3 file";
-pub const TRUNCATED_CRX_HEADER: &str = "truncated CRX header";
-pub const TRUNCATED_VARINT: &str = "truncated varint";
-pub const UNEXPECTED_CRX_HEADER_FIELD: &str = "unexpected CRX header field";
-pub const NO_PUBLIC_KEY_IN_HEADER: &str = "no public key in CRX header";
-pub const NO_PUBLIC_KEY_IN_PROOF: &str = "no public key in key proof";
-pub const BAD_CRX_ZIP: &str = "bad .crx ZIP";
-pub const NO_MANIFEST_IN_CRX: &str = "no manifest.json in .crx";
-pub const BAD_CRX_MANIFEST: &str = "bad manifest.json";
-pub const NO_VERSION_IN_CRX_MANIFEST: &str = "no version in manifest.json";
+pub(crate) const THEME_TOO_LARGE: &str = "the theme is too large";
+pub(crate) const NOT_A_ZIP: &str = "not a valid ZIP";
+pub(crate) const MANIFEST_NOT_AN_OBJECT: &str = "manifest.json: not an object";
+pub(crate) const MANIFEST_HAS_NO_NAME: &str = "manifest.json has no name";
+pub(crate) const MANIFEST_HAS_NO_VERSION: &str = "manifest.json has no version";
+pub(crate) const COLOR_NEEDS_CHANNELS: &str = "needs 3 or 4 numbers";
+pub(crate) const TINT_NEEDS_PARTS: &str = "needs 3 numbers";
+pub(crate) const VALUE_OUT_OF_RANGE: &str = "has a value out of range";
+pub(crate) const MANIFEST_VERSION_NOT_SUPPORTED: &str = "must be 2 or 3";
+pub(crate) const MANIFEST_HAS_NO_MANIFEST_VERSION: &str = "manifest.json has no manifest_version";
+pub(crate) const MANIFEST_HAS_NO_THEME: &str = "manifest.json has no \"theme\" section";
+pub(crate) const NOT_A_CRX3: &str = "not a CRX3 file";
+pub(crate) const TRUNCATED_CRX_HEADER: &str = "truncated CRX header";
+pub(crate) const TRUNCATED_VARINT: &str = "truncated varint";
+pub(crate) const UNEXPECTED_CRX_HEADER_FIELD: &str = "unexpected CRX header field";
+pub(crate) const NO_PUBLIC_KEY_IN_HEADER: &str = "no public key in CRX header";
+pub(crate) const NO_PUBLIC_KEY_IN_PROOF: &str = "no public key in key proof";
+pub(crate) const BAD_CRX_ZIP: &str = "bad .crx ZIP";
+pub(crate) const NO_MANIFEST_IN_CRX: &str = "no manifest.json in .crx";
+pub(crate) const BAD_CRX_MANIFEST: &str = "bad manifest.json";
+pub(crate) const NO_VERSION_IN_CRX_MANIFEST: &str = "no version in manifest.json";
 
 #[must_use]
-pub fn theme_files_gone(name: &str) -> String {
+pub(crate) fn theme_files_gone(name: &str) -> String {
     format!("The files of {name} are gone, so Edge uses its default theme.")
 }
 
 #[must_use]
-pub fn edge_went_default(mode: ColorMode) -> String {
+pub(crate) fn edge_went_default(mode: ColorMode) -> String {
     let mode_name = match mode {
         ColorMode::Light => "light",
         ColorMode::Dark => "dark",
@@ -83,44 +83,44 @@ pub fn edge_went_default(mode: ColorMode) -> String {
     )
 }
 
-pub fn manifest_not_json_at(line: usize) -> String {
+pub(crate) fn manifest_not_json_at(line: usize) -> String {
     format!("{MANIFEST_NOT_JSON} (line {line})")
 }
 
 #[must_use]
-pub fn edge_rejected_theme(reason: &str) -> String {
+pub(crate) fn edge_rejected_theme(reason: &str) -> String {
     format!("Edge refused the theme: {reason}")
 }
 
 #[must_use]
-pub fn entry_missing(name: &str) -> String {
+pub(crate) fn entry_missing(name: &str) -> String {
     format!("{name} is missing")
 }
 
 #[must_use]
-pub fn entry_too_large(name: &str) -> String {
+pub(crate) fn entry_too_large(name: &str) -> String {
     format!("{name} is too large")
 }
 
 #[must_use]
-pub fn image_unreadable(key: &str, path: &str, reason: &str) -> String {
+pub(crate) fn image_unreadable(key: &str, path: &str, reason: &str) -> String {
     format!("image {key} ({path}): {reason}")
 }
 
 #[must_use]
-pub fn image_not_png_or_jpeg(key: &str, path: &str) -> String {
+pub(crate) fn image_not_png_or_jpeg(key: &str, path: &str) -> String {
     format!("image {key} ({path}) is not a PNG or JPEG")
 }
 
 #[must_use]
-pub fn not_a_valid_version(text: &str) -> String {
+pub(crate) fn not_a_valid_version(text: &str) -> String {
     format!("\"{text}\" is not a valid version")
 }
 
-pub const PAUSED_TOAST_TITLE: &str = "Edge+ paused features for this Edge version";
+pub(crate) const PAUSED_TOAST_TITLE: &str = "Edge+ paused features for this Edge version";
 
 #[must_use]
-pub fn feature_title(feature: Feature) -> &'static str {
+pub(crate) fn feature_title(feature: Feature) -> &'static str {
     SHARED
         .feature_titles
         .get(&feature)
@@ -129,7 +129,7 @@ pub fn feature_title(feature: Feature) -> &'static str {
 
 /// The toast's body; the window says the same from the same file.
 #[must_use]
-pub fn describe_paused(edge: &EdgeBuild, paused: &[Feature]) -> String {
+pub(crate) fn describe_paused(edge: &EdgeBuild, paused: &[Feature]) -> String {
     if paused.is_empty() {
         return String::new();
     }

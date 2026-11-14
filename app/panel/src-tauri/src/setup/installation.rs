@@ -28,7 +28,7 @@ const INSTALL_HOOK_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// What the launcher crate asks of Edge+: the program it starts, and what to do
 /// at each moment of its life.
-pub struct EdgePlus;
+pub(crate) struct EdgePlus;
 
 impl Application for EdgePlus {
     fn executable_name(&self) -> &str {
@@ -48,7 +48,7 @@ impl Application for EdgePlus {
 
 /// Runs the hook the arguments ask for; None is a normal start.
 #[must_use]
-pub fn dispatch_hook(arguments: &[String], running: &Version) -> Option<io::Result<()>> {
+pub(crate) fn dispatch_hook(arguments: &[String], running: &Version) -> Option<io::Result<()>> {
     dispatch(&EdgePlus, arguments, running)
 }
 
@@ -73,7 +73,7 @@ fn command_for(launcher: &Path, argument: &str) -> String {
 
 /// Idempotent: run again after an update to refresh the version Add or remove
 /// programs shows.
-pub fn register(root: &Path, version: Version) -> io::Result<()> {
+pub(crate) fn register(root: &Path, version: Version) -> io::Result<()> {
     let launcher = install_layout::launcher(root);
     let uninstall = command_for(&launcher, LifecycleEvent::Uninstall.switch());
     let icon = app_identity::icon_path();
@@ -122,7 +122,7 @@ fn write_shortcut(launcher: &Path, root: &Path, icon: &Path) -> io::Result<()> {
 
 /// Copies this exe and the launcher beside it into the root, runs the install
 /// hook in the new version and starts it. Run by the exe a user downloaded.
-pub fn install_here(version: Version) -> io::Result<()> {
+pub(crate) fn install_here(version: Version) -> io::Result<()> {
     let executable = std::env::current_exe()?;
     let source = executable
         .parent()
@@ -161,7 +161,7 @@ pub fn install_here(version: Version) -> io::Result<()> {
 /// from the root (Edge+'s own, never Edge's), tell a loaded DLL to unload
 /// itself from Edge, which keeps running, then delete the root.
 #[must_use]
-pub fn removal_script(root: &Path) -> String {
+pub(crate) fn removal_script(root: &Path) -> String {
     format!(
         "$root = {}\n\
          Get-CimInstance Win32_Process | Where-Object {{ $_.ExecutablePath -and \
@@ -179,7 +179,7 @@ pub fn removal_script(root: &Path) -> String {
 /// Removes the startup entry, the Add or remove programs entry, the shortcut and
 /// the toast registration, then leaves the deletion of the root, which holds the
 /// settings and the loaded DLL, to a script that outlives this process.
-pub fn uninstall() -> io::Result<()> {
+pub(crate) fn uninstall() -> io::Result<()> {
     let root = install_layout::root();
     startup_entry::disable(&StartupKeys::user(), startup_entry::NAME)?;
     edge_native::delete_tree(Hive::CurrentUser, UNINSTALL_KEY)?;

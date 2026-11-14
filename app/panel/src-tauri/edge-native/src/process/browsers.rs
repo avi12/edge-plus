@@ -86,6 +86,7 @@ pub fn module_path(pid: u32, module: &str) -> Option<PathBuf> {
     find_module(pid, module).map(|entry| PathBuf::from(from_wide(&entry.szExePath)))
 }
 
+/// The base address of `module` in the process `pid`
 #[must_use]
 pub fn module_base(pid: u32, module: &str) -> Option<usize> {
     find_module(pid, module).map(|entry| entry.modBaseAddr as usize)

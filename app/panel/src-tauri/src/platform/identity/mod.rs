@@ -1,6 +1,6 @@
 //! Who the exe is: its name and version, its identity to Windows, and the
 //! command-line switches it answers to.
 
-pub mod app_identity;
-pub mod product;
-pub mod switches;
+pub(crate) mod app_identity;
+pub(crate) mod product;
+pub(crate) mod switches;

@@ -16,7 +16,7 @@ const FIELD_BYTES: usize = size_of::<u32>();
 const WIRE_BYTES: usize = shared::STATUS_FIELD_COUNT as usize * FIELD_BYTES;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Mode {
+pub(crate) enum Mode {
     /// The build offsets.h is pinned to.
     Pinned,
     /// Another build; the hooks were found by signature.
@@ -26,7 +26,7 @@ pub enum Mode {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct DllStatus {
+pub(crate) struct DllStatus {
     pub mode: Mode,
     pub build: FileVersion,
     /// The `FEATURE_BIT_*` of every feature that can run in that build.
@@ -38,7 +38,7 @@ pub struct DllStatus {
 impl DllStatus {
     /// None for a file of the wrong size or a mode this panel does not know.
     #[must_use]
-    pub fn decode(bytes: &[u8]) -> Option<Self> {
+    pub(crate) fn decode(bytes: &[u8]) -> Option<Self> {
         if bytes.len() != WIRE_BYTES {
             return None;
         }
@@ -67,7 +67,7 @@ impl DllStatus {
 /// The bit the DLL gives a feature (`signature_table.h`); None for a feature that
 /// does not go through the DLL.
 #[must_use]
-pub fn feature_bit(feature: Feature) -> Option<u32> {
+pub(crate) fn feature_bit(feature: Feature) -> Option<u32> {
     match feature {
         Feature::NativeSplit => Some(shared::FEATURE_BIT_SPLIT),
         Feature::Theming => Some(shared::FEATURE_BIT_THEMING),
@@ -87,13 +87,13 @@ fn status_file() -> std::path::PathBuf {
 
 /// The DLL's last word; None while no DLL has reported on this machine.
 #[must_use]
-pub fn read() -> Option<DllStatus> {
+pub(crate) fn read() -> Option<DllStatus> {
     DllStatus::decode(&fs::read(status_file()).ok()?)
 }
 
 /// A word from a DLL that is no longer the one carried is not worth keeping:
 /// the next one may place what the last could not.
-pub fn forget() -> io::Result<()> {
+pub(crate) fn forget() -> io::Result<()> {
     match fs::remove_file(status_file()) {
         Err(error) if error.kind() != io::ErrorKind::NotFound => Err(error),
         _ => Ok(()),
