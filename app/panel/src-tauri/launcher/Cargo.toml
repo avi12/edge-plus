@@ -9,9 +9,10 @@ description = "The stable program in the install root: starts the newest app-x.y
 name = "edgeplus-launcher"
 path = "src/main.rs"
 
-[lints.clippy]
-all = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
-
 [dependencies]
 winui-svelte-launcher = { git = "https://github.com/avi12/winui-svelte", rev = "9bcd1ca2be103751397dded1d92e41c6a9850eed" }
+
+# avi12-lint:begin rust-config (generated from rust-config-avi12; edit avi12-rust.local.toml)
+[lints]
+workspace = true
+# avi12-lint:end

@@ -1,0 +1,23 @@
+# Exemptions of this workspace from the house lint levels (rust-config-avi12), each with its reason
+
+[clippy-config]
+# The idioms of the Win32 and COM code: hr is an HRESULT, of, On, by, BY and ui are words
+allowed-idents-below-min-chars = ["i", "j", "x", "y", "id", "to", "on", "ok", "T", "E", "hr", "of", "On", "by", "BY", "ui"]
+
+[member.edge-native.clippy]
+# Win32 and COM values cross between pointer and integer widths (usize, u32, LPARAM) where no TryFrom exists
+as_conversions = "allow"
+
+[member.edge-native.rust]
+# edge-native is the Win32 and COM layer
+unsafe_code = "allow"
+
+[member.edgeplus.clippy]
+# Flag structs mirror independent switches of the wire format and the settings file
+struct_excessive_bools = "allow"
+# Const items and repr enums convert integer widths and discriminants where From and TryFrom are not usable (const context, `self as u64`)
+as_conversions = "allow"
+
+[deny.sources]
+# The launcher crate is a git dependency of this workspace
+allow-git = ["https://github.com/avi12/winui-svelte"]
