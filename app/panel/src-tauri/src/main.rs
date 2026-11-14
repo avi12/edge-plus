@@ -1,5 +1,6 @@
-// The core decides the kind of launch before Tauri runs: the dev-mode waiter
-// never starts the app at all.
+//! The core decides the kind of launch before Tauri runs: the dev-mode waiter
+//! never starts the app at all.
+
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app;
@@ -41,7 +42,9 @@ fn main() {
         }
         return;
     }
-    app::run(switches::is_present(&command_line, switches::BACKGROUND));
+    if let Err(error) = app::run(switches::is_present(&command_line, switches::BACKGROUND)) {
+        panel_log::write_error("starting the app failed", &error);
+    }
 }
 
 /// A published exe run from anywhere but the install installs itself, so
