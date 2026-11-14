@@ -23,10 +23,7 @@ pub(crate) struct CrxInfo {
 
 /// The signature and what it covers are read back only by the packer's tests.
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the packer's tests verify the signature")
-)]
+#[cfg(test)]
 pub(crate) struct CrxProof {
     pub public_key: Vec<u8>,
     pub signature: Vec<u8>,
@@ -86,15 +83,15 @@ const HEADER_LENGTH_OFFSET: usize = 8;
 const U32_BYTES: usize = 4;
 
 pub(crate) fn read(bytes: &[u8]) -> ThemeFileResult<CrxInfo> {
-    let proof = read_proof(bytes)?;
+    let (_, _, key) = read_headers(bytes)?;
     Ok(CrxInfo {
-        id: extension_id::from_public_key(&proof.public_key),
+        id: extension_id::from_public_key(key.payload(bytes)),
         version: read_zip_version(zip(bytes)?)?,
     })
 }
 
-/// Only the first RSA proof is read.
-pub(crate) fn read_proof(bytes: &[u8]) -> ThemeFileResult<CrxProof> {
+/// The header's fields, the first RSA proof's fields and that proof's public key.
+fn read_headers(bytes: &[u8]) -> ThemeFileResult<(Vec<Field>, Vec<Field>, Field)> {
     let header_end = PREAMBLE_LENGTH + header_length(bytes)?;
     let header = protobuf::read_fields(bytes, PREAMBLE_LENGTH, header_end)?;
     let proof_field = first(&header, CrxHeaderField::RsaProof);
@@ -107,6 +104,12 @@ pub(crate) fn read_proof(bytes: &[u8]) -> ThemeFileResult<CrxProof> {
     let Some(key) = key.filter(|field| field.length > 0) else {
         return Err(invalid(wording::NO_PUBLIC_KEY_IN_PROOF));
     };
+    Ok((header, proof, key))
+}
+
+#[cfg(test)]
+pub(crate) fn read_proof(bytes: &[u8]) -> ThemeFileResult<CrxProof> {
+    let (header, proof, key) = read_headers(bytes)?;
     let payload_of = |field: Option<Field>| -> Vec<u8> {
         field
             .map(|field| field.payload(bytes).to_vec())
@@ -126,7 +129,9 @@ const MESSAGES_FILE: &str = "messages.json";
 const MESSAGE_FIELD: &str = "message";
 
 pub(crate) fn zip(bytes: &[u8]) -> ThemeFileResult<&[u8]> {
-    Ok(&bytes[PREAMBLE_LENGTH + header_length(bytes)?..])
+    bytes
+        .get(PREAMBLE_LENGTH + header_length(bytes)?..)
+        .ok_or_else(|| invalid(wording::TRUNCATED_CRX_HEADER))
 }
 
 pub(crate) fn read_zip_version(zip_bytes: &[u8]) -> ThemeFileResult<String> {
@@ -195,11 +200,15 @@ fn first(fields: &[Field], number: impl FieldNumber) -> Option<Field> {
 fn header_length(bytes: &[u8]) -> ThemeFileResult<usize> {
     let is_crx3 = bytes.len() > PREAMBLE_LENGTH
         && bytes.starts_with(MAGIC)
-        && read_u32(bytes, VERSION_OFFSET) == FORMAT_VERSION;
+        && read_u32(bytes, VERSION_OFFSET) == Some(FORMAT_VERSION);
     if !is_crx3 {
         return Err(invalid(wording::NOT_A_CRX3));
     }
-    let length = read_u32(bytes, HEADER_LENGTH_OFFSET) as usize;
+    let Some(length) =
+        read_u32(bytes, HEADER_LENGTH_OFFSET).and_then(|word| usize::try_from(word).ok())
+    else {
+        return Err(invalid(wording::TRUNCATED_CRX_HEADER));
+    };
     let is_inside = length <= bytes.len() - PREAMBLE_LENGTH;
     if !is_inside {
         return Err(invalid(wording::TRUNCATED_CRX_HEADER));
@@ -208,10 +217,9 @@ fn header_length(bytes: &[u8]) -> ThemeFileResult<usize> {
 }
 
 /// Little-endian, at an offset the preamble check has already bounded.
-fn read_u32(bytes: &[u8], offset: usize) -> u32 {
-    let mut word = [0u8; U32_BYTES];
-    word.copy_from_slice(&bytes[offset..offset + U32_BYTES]);
-    u32::from_le_bytes(word)
+fn read_u32(bytes: &[u8], offset: usize) -> Option<u32> {
+    let word: [u8; U32_BYTES] = bytes.get(offset..offset + U32_BYTES)?.try_into().ok()?;
+    Some(u32::from_le_bytes(word))
 }
 
 #[cfg(test)]

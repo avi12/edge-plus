@@ -81,10 +81,6 @@ pub(crate) enum ColorMode {
 /// unknown field is ignored.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "each is an independent switch"
-)]
 pub(crate) struct Features {
     pub native_split: bool,
     pub theming: bool,

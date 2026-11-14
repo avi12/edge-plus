@@ -6,7 +6,6 @@ use crate::platform::settings::{Feature, Features, Theming};
 use crate::themes::sources::installed_themes::InstalledTheme;
 
 #[derive(Clone, Debug)]
-#[expect(clippy::struct_excessive_bools, reason = "each is an independent fact")]
 pub(crate) struct PanelState {
     pub features: Features,
     pub theming: Theming,
