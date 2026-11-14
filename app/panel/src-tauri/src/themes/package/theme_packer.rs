@@ -49,7 +49,8 @@ pub(crate) fn pack(source: &Path, key_directory: &Path) -> ThemeFileResult<Packe
     let public_key = signer.public_key_der()?;
     let id = extension_id::from_public_key(&public_key);
 
-    let crx_id = &Sha256::digest(&public_key)[..CRX_ID_BYTES];
+    let digest = Sha256::digest(&public_key);
+    let crx_id = digest.get(..CRX_ID_BYTES).unwrap_or_default();
     let signed_header_data = length_delimited_field(SignedDataField::CrxId, crx_id);
     let signature = signer.sign_sha256(&signed_payload(&signed_header_data, &zip)?)?;
 
@@ -90,7 +91,9 @@ pub(crate) fn key_file_name(source: &Path) -> String {
     let normalized = source.to_string_lossy().to_lowercase();
     let hash = Sha256::digest(normalized.as_bytes());
     let mut prefix = [0u8; KEY_FILE_NAME_BYTES];
-    prefix.copy_from_slice(&hash[..KEY_FILE_NAME_BYTES]);
+    for (slot, byte) in prefix.iter_mut().zip(hash.iter()) {
+        *slot = *byte;
+    }
     format!("{:016x}.{KEY_EXTENSION}", u64::from_be_bytes(prefix))
 }
 

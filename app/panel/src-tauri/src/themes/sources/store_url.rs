@@ -105,22 +105,19 @@ pub(crate) fn parse(url: &str) -> Option<ParsedStoreTheme> {
     if !has_prefix {
         return None;
     }
-    let rest = &segments[site.prefix.len()..];
+    let (&first, after) = segments.get(site.prefix.len()..)?.split_first()?;
     // /<id>, or /<slug>/<id>; a tab after it (/reviews) is ignored.
-    if extension_id::is_valid(rest[0]) {
+    if extension_id::is_valid(first) {
         return Some(ParsedStoreTheme {
-            id: rest[0].to_owned(),
+            id: first.to_owned(),
             name: None,
             store: site.store,
         });
     }
-    let has_slug_and_id = rest.len() > 1 && extension_id::is_valid(rest[1]);
-    if !has_slug_and_id {
-        return None;
-    }
+    let id = after.first().filter(|id| extension_id::is_valid(id))?;
     Some(ParsedStoreTheme {
-        id: rest[1].to_owned(),
-        name: Some(title_from_slug(rest[0])),
+        id: (*id).to_owned(),
+        name: Some(title_from_slug(first)),
         store: site.store,
     })
 }

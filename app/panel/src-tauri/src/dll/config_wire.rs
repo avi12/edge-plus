@@ -8,10 +8,6 @@ use crate::platform::shared;
 
 /// A theme id is an extension id, or empty for the default theme.
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "each mirrors one flag of the wire"
-)]
 pub(crate) struct DllConfig {
     pub is_split_active: bool,
     pub is_theming_active: bool,
@@ -60,8 +56,10 @@ pub(crate) const LIGHT_ID_OFFSET: usize = DARK_LENGTH_OFFSET + FIELD_BYTES;
 pub(crate) const DARK_ID_OFFSET: usize = LIGHT_ID_OFFSET + ID_CAPACITY;
 pub(crate) const RESERVED_OFFSET: usize = DARK_ID_OFFSET + ID_CAPACITY;
 pub(crate) const ENHANCED_FIND_ACTIVE_OFFSET: usize = RESERVED_OFFSET + FIELD_BYTES;
-pub(crate) const WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET: usize = ENHANCED_FIND_ACTIVE_OFFSET + FIELD_BYTES;
-pub(crate) const LIVE_PREVIEW_ACTIVE_OFFSET: usize = WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET + FIELD_BYTES;
+pub(crate) const WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET: usize =
+    ENHANCED_FIND_ACTIVE_OFFSET + FIELD_BYTES;
+pub(crate) const LIVE_PREVIEW_ACTIVE_OFFSET: usize =
+    WEB_UI_FOLLOWS_THEME_ACTIVE_OFFSET + FIELD_BYTES;
 pub(crate) const CYBERPUNK_SKIN_ACTIVE_OFFSET: usize = LIVE_PREVIEW_ACTIVE_OFFSET + FIELD_BYTES;
 pub(crate) const READING_THEME_ACTIVE_OFFSET: usize = CYBERPUNK_SKIN_ACTIVE_OFFSET + FIELD_BYTES;
 pub(crate) const HOLD_LENGTH_OFFSET: usize = READING_THEME_ACTIVE_OFFSET + FIELD_BYTES;
@@ -135,7 +133,9 @@ pub(crate) fn encode(config: &DllConfig) -> [u8; SIZE] {
 }
 
 fn write_u32(wire: &mut [u8], offset: usize, value: u32) {
-    wire[offset..offset + FIELD_BYTES].copy_from_slice(&value.to_le_bytes());
+    if let Some(field) = wire.get_mut(offset..offset + FIELD_BYTES) {
+        field.copy_from_slice(&value.to_le_bytes());
+    }
 }
 
 fn write_flag(wire: &mut [u8], offset: usize, is_on: bool) {
@@ -146,9 +146,16 @@ fn write_flag(wire: &mut [u8], offset: usize, is_on: bool) {
 fn write_id(wire: &mut [u8], length_offset: usize, id_offset: usize, id: &str) {
     let bytes = id.as_bytes();
     let length = bytes.len().min(ID_CAPACITY);
-    let length_field = u32::try_from(length).expect("an id's field is far below 4 GB");
+    let Ok(length_field) = u32::try_from(length) else {
+        return;
+    };
     write_u32(wire, length_offset, length_field);
-    wire[id_offset..id_offset + length].copy_from_slice(&bytes[..length]);
+    if let (Some(field), Some(source)) = (
+        wire.get_mut(id_offset..id_offset + length),
+        bytes.get(..length),
+    ) {
+        field.copy_from_slice(source);
+    }
 }
 
 #[cfg(test)]

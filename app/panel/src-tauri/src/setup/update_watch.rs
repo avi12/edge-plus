@@ -258,7 +258,10 @@ impl Watcher {
             if read == 0 {
                 return destination.flush();
             }
-            destination.write_all(&chunk[..read])?;
+            let Some(received) = chunk.get(..read) else {
+                return Err(io::Error::from(io::ErrorKind::InvalidData));
+            };
+            destination.write_all(received)?;
         }
     }
 }

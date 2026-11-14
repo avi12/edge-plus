@@ -40,7 +40,7 @@ impl Wear {
         }
         let field = |index: usize| {
             let start = index * FIELD_BYTES;
-            let raw: [u8; FIELD_BYTES] = bytes[start..start + FIELD_BYTES].try_into().ok()?;
+            let raw: [u8; FIELD_BYTES] = bytes.get(start..start + FIELD_BYTES)?.try_into().ok()?;
             Some(u32::from_le_bytes(raw))
         };
         let cause = match field(1)? {

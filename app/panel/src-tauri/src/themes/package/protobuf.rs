@@ -38,7 +38,8 @@ impl Field {
 
     #[must_use]
     pub(crate) fn payload<'a>(&self, data: &'a [u8]) -> &'a [u8] {
-        &data[self.start..self.start + self.length]
+        data.get(self.start..self.start + self.length)
+            .unwrap_or_default()
     }
 }
 

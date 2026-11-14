@@ -11,8 +11,10 @@ const NIBBLE_MASK: u8 = 0xf;
 
 #[must_use]
 pub(crate) fn is_valid(value: &str) -> bool {
-    let first = char::from(ALPHABET[0]);
-    let last = char::from(ALPHABET[ALPHABET.len() - 1]);
+    let (Some(&first), Some(&last)) = (ALPHABET.first(), ALPHABET.last()) else {
+        return false;
+    };
+    let (first, last) = (char::from(first), char::from(last));
     value.len() == LENGTH && value.chars().all(|letter| (first..=last).contains(&letter))
 }
 
@@ -20,11 +22,17 @@ pub(crate) fn is_valid(value: &str) -> bool {
 pub(crate) fn from_public_key(public_key: &[u8]) -> String {
     let hash = Sha256::digest(public_key);
     let mut id = String::with_capacity(LENGTH);
-    for &byte in &hash[..HASH_BYTES] {
-        id.push(char::from(ALPHABET[usize::from(byte >> NIBBLE_BITS)]));
-        id.push(char::from(ALPHABET[usize::from(byte & NIBBLE_MASK)]));
+    for &byte in hash.iter().take(HASH_BYTES) {
+        id.extend(letter(byte >> NIBBLE_BITS));
+        id.extend(letter(byte & NIBBLE_MASK));
     }
     id
+}
+
+fn letter(nibble: u8) -> Option<char> {
+    ALPHABET
+        .get(usize::from(nibble))
+        .map(|&byte| char::from(byte))
 }
 
 #[cfg(test)]

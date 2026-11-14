@@ -31,21 +31,23 @@ fn base64(bytes: &[u8]) -> String {
     let mut encoded = String::with_capacity(bytes.len().div_ceil(BASE64_GROUP_BYTES) * 4);
     for group in bytes.chunks(BASE64_GROUP_BYTES) {
         let mut padded = [0_u8; BASE64_GROUP_BYTES];
-        padded[..group.len()].copy_from_slice(group);
+        for (slot, byte) in padded.iter_mut().zip(group) {
+            *slot = *byte;
+        }
         // Three bytes make 24 bits, read out as four six-bit letters.
-        let bits =
-            (u32::from(padded[0]) << 16) | (u32::from(padded[1]) << 8) | u32::from(padded[2]);
+        let bits = padded
+            .iter()
+            .fold(0_u32, |bits, &byte| (bits << 8) | u32::from(byte));
         let sextets = [18, 12, 6, 0].map(|shift| (bits >> shift) & BASE64_SEXTET_MASK);
         // A short last group carries one letter more than its bytes.
         let letter_count = group.len() + 1;
         for (index, sextet) in sextets.into_iter().enumerate() {
             let is_letter = index < letter_count;
-            if is_letter {
-                let position = usize::try_from(sextet).expect("a sextet fits usize");
-                encoded.push(char::from(BASE64_ALPHABET[position]));
-            } else {
-                encoded.push(BASE64_PADDING);
-            }
+            let letter = usize::try_from(sextet)
+                .ok()
+                .and_then(|position| BASE64_ALPHABET.get(position))
+                .filter(|_| is_letter);
+            encoded.push(letter.map_or(BASE64_PADDING, |&byte| char::from(byte)));
         }
     }
     encoded
