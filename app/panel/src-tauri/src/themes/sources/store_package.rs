@@ -6,6 +6,7 @@
 use std::time::Duration;
 
 use crate::themes::package::crx;
+use crate::themes::package::theme_manifest::{self, ThemeFileError};
 use crate::themes::sources::external_extensions;
 use crate::themes::sources::store_url::ThemeStore;
 
@@ -19,11 +20,22 @@ const PRODUCT_VERSION: &str = "150.0";
 /// has no such package.
 #[must_use]
 pub(crate) fn name(id: &str, store: ThemeStore) -> Option<String> {
-    let bytes = download(id, store)?;
+    let bytes = package(id, store)?;
     crx::read_zip_name(crx::zip(&bytes).ok()?)
 }
 
-fn download(id: &str, store: ThemeStore) -> Option<Vec<u8>> {
+/// Why Edge could not install the theme, found in its package (an image over
+/// what Edge decodes); None when it can, or when the store cannot be reached.
+#[must_use]
+pub(crate) fn refusal(id: &str, store: ThemeStore) -> Option<String> {
+    let bytes = package(id, store)?;
+    match theme_manifest::check_image_sizes(crx::zip(&bytes).ok()?) {
+        Err(ThemeFileError::Invalid(message)) => Some(message),
+        _ => None,
+    }
+}
+
+fn package(id: &str, store: ThemeStore) -> Option<Vec<u8>> {
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .timeout_global(Some(REQUEST_TIMEOUT))
         .build()

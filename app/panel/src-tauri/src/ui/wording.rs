@@ -115,7 +115,14 @@ pub(crate) fn image_not_png_or_jpeg(key: &str, path: &str) -> String {
 #[must_use]
 pub(crate) fn image_too_large(key: &str, path: &str, width: u32, height: u32) -> String {
     format!(
-        "image {key} ({path}) is {width}x{height}: Edge cannot install a theme image over about 4 megapixels (2560x1440). Make it smaller"
+        "image {key} ({path}) is {width}x{height}, over the 4 megapixels (2560x1440) Edge can install in a theme"
+    )
+}
+
+#[must_use]
+pub(crate) fn store_theme_refused(reason: &str) -> String {
+    format!(
+        "Edge cannot install this theme, so Edge+ did not add it: {reason}. Its author has to fix it."
     )
 }
 

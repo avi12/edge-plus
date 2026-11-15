@@ -49,6 +49,9 @@ pub(crate) fn add_store(url: &str, assign_to: Option<ColorMode>) -> ActionResult
     let Some(parsed) = store_url::parse(url) else {
         return Err(ActionError::User(wording::NOT_A_STORE_LINK.to_owned()));
     };
+    if let Some(reason) = store_package::refusal(&parsed.id, parsed.store) {
+        return Err(ActionError::User(wording::store_theme_refused(&reason)));
+    }
     hold_unless_used(&parsed.id, assign_to);
     external_extensions::install_store(&parsed.id, parsed.store)?;
     // The link's slug may be cut short, so the name comes from the theme's own

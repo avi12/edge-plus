@@ -190,6 +190,33 @@ fn manifest_bytes(archive: &mut Archive<'_>) -> ThemeFileResult<Vec<u8>> {
     Ok(text.to_vec())
 }
 
+/// Only the image sizes: for a theme Edge installs itself (a store theme),
+/// where the rest is Edge's own to judge but an image it cannot decode leaves
+/// the theme uninstalled without a word.
+pub(crate) fn check_image_sizes(zip_bytes: &[u8]) -> ThemeFileResult<()> {
+    let mut archive = open(zip_bytes)?;
+    let Some(theme) = read_manifest(&mut archive)?.theme else {
+        return Ok(());
+    };
+    for (key, path) in theme.images.iter().flatten() {
+        let Ok(bytes) = read_entry(&mut archive, path, MAX_IMAGE_BYTES) else {
+            continue;
+        };
+        check_size(&bytes, key, path)?;
+    }
+    Ok(())
+}
+
+fn check_size(bytes: &[u8], key: &str, path: &str) -> ThemeFileResult<()> {
+    if let Some((width, height)) = png_size(bytes) {
+        let is_too_large = u64::from(width) * u64::from(height) > MAX_IMAGE_PIXELS;
+        if is_too_large {
+            return Err(invalid(wording::image_too_large(key, path, width, height)));
+        }
+    }
+    Ok(())
+}
+
 fn check_image(archive: &mut Archive<'_>, key: &str, path: &str) -> ThemeFileResult<()> {
     let bytes = match read_entry(archive, path, MAX_IMAGE_BYTES) {
         Ok(bytes) => bytes,
@@ -202,13 +229,7 @@ fn check_image(archive: &mut Archive<'_>, key: &str, path: &str) -> ThemeFileRes
     if !is_image {
         return Err(invalid(wording::image_not_png_or_jpeg(key, path)));
     }
-    if let Some((width, height)) = png_size(&bytes) {
-        let is_too_large = u64::from(width) * u64::from(height) > MAX_IMAGE_PIXELS;
-        if is_too_large {
-            return Err(invalid(wording::image_too_large(key, path, width, height)));
-        }
-    }
-    Ok(())
+    check_size(&bytes, key, path)
 }
 
 /// The size in a PNG's header chunk; None for a JPEG or a PNG too short to say.
@@ -265,6 +286,22 @@ pub(crate) mod tests {
             matches!(refused, Err(ThemeFileError::Invalid(message)) if message.contains("3840x2160")),
             "4K is refused with its size"
         );
+    }
+
+    #[test]
+    fn only_the_image_sizes_are_checked_for_a_store_theme() {
+        let manifest = r#"{"theme":{"images":{"theme_ntp_background":"ntp.png"}}}"#;
+        let check = |image: &[u8]| {
+            check_image_sizes(&zip_of(&[
+                (MANIFEST_NAME, manifest.as_bytes()),
+                ("ntp.png", image),
+            ]))
+        };
+        assert!(
+            check(&png_of(1920, 1080)).is_ok(),
+            "no name or version needed"
+        );
+        assert!(check(&png_of(3840, 2160)).is_err(), "4K is refused");
     }
 
     fn refusal(manifest: &str) -> Option<String> {
