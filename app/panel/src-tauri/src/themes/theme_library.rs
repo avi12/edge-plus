@@ -23,7 +23,6 @@ use crate::ui::wording;
 /// put back the moment Edge reports wearing it.
 /// How long a removal waits for Edge to move off the theme before uninstalling it.
 const LEAVE_THEME_WAIT: Duration = Duration::from_secs(3);
-const EDGE_SWITCH_WAIT: Duration = Duration::from_secs(6);
 const INSTALL_WATCH_INTERVAL: Duration = Duration::from_millis(25);
 const RENAME_WATCH_POLLS: u32 = 60;
 const RENAME_WATCH_INTERVAL: Duration = Duration::from_millis(500);
@@ -43,8 +42,8 @@ struct LocalCrx {
     crx: Vec<u8>,
 }
 
-/// `assign_to` is the Windows mode the new theme is set for once Edge wears it, when there is one; without
-/// one the theme is installed and left off.
+/// `assign_to` is the Windows mode the new theme is set for, when there is one; without one the theme
+/// is installed and left off.
 pub(crate) fn add_store(url: &str, assign_to: Option<ColorMode>) -> ActionResult<()> {
     let Some(parsed) = store_url::parse(url) else {
         return Err(ActionError::User(wording::NOT_A_STORE_LINK.to_owned()));
@@ -53,7 +52,6 @@ pub(crate) fn add_store(url: &str, assign_to: Option<ColorMode>) -> ActionResult
         return Err(ActionError::User(wording::store_theme_refused(&reason)));
     }
     hold_unless_used(&parsed.id, assign_to);
-    external_extensions::install_store(&parsed.id, parsed.store)?;
     // The link's slug may be cut short, so the name comes from the theme's own
     // manifest, read from its package in the store; the slug stands in when the
     // store cannot be reached, and the name is put right once Edge has it.
@@ -66,6 +64,9 @@ pub(crate) fn add_store(url: &str, assign_to: Option<ColorMode>) -> ActionResult
     if !has_manifest_name {
         rename_when_installed(id.clone());
     }
+    // Listed and assigned before Edge is asked to install it: Edge builds the
+    // theme the moment it lands, and a theme already assigned to the mode is one
+    // Edge+ applies itself, so Edge's "Installed theme ... Undo" bar stays away.
     change(|theming| {
         theming.add_or_replace(ThemeEntry {
             id: parsed.id,
@@ -73,10 +74,11 @@ pub(crate) fn add_store(url: &str, assign_to: Option<ColorMode>) -> ActionResult
             source: ThemeSource::Store,
             origin: url.trim().to_owned(),
         });
+        if let Some(mode) = assign_to {
+            theming.assign(mode, &id);
+        }
     })?;
-    if let Some(mode) = assign_to {
-        assign_when_worn(id, mode);
-    }
+    external_extensions::install_store(&id, parsed.store)?;
     Ok(())
 }
 
@@ -87,7 +89,6 @@ pub(crate) fn add_local(path: &Path, assign_to: Option<ColorMode>) -> ActionResu
     fs::create_dir_all(paths::themes_root())?;
     fs::write(&stored, &local.crx)?;
     hold_unless_used(&local.id, assign_to);
-    external_extensions::install_local(&local.id, &stored, &local.version)?;
     let stem = path
         .file_stem()
         .map(|stem| stem.to_string_lossy().into_owned())
@@ -111,16 +112,19 @@ pub(crate) fn add_local(path: &Path, assign_to: Option<ColorMode>) -> ActionResu
             Some(old_id) => theming.relink(old_id, entry),
             None => theming.add_or_replace(entry),
         }
+        // Assigned before Edge is asked to install it, so Edge's "Installed
+        // theme ... Undo" bar stays away (see `add_store`).
+        if let Some(mode) = assign_to {
+            theming.assign(mode, &id);
+        }
     })?;
+    external_extensions::install_local(&id, &stored, &local.version)?;
     if let Some(old_id) = moved_from {
         // The theme is already in place under its new id; a failed clean-up of
         // the old copy must not fail the add.
         if let Err(error) = uninstall_once_not_worn(&old_id) {
             panel_log::write_error("removing the theme's old copy", &error);
         }
-    }
-    if let Some(mode) = assign_to {
-        assign_when_worn(id, mode);
     }
     Ok(())
 }
@@ -164,27 +168,6 @@ fn hold_unless_used(id: &str, assign_to: Option<ColorMode>) {
     if !is_used_now && !is_assigned {
         theme_hold::hold(id);
     }
-}
-
-/// With Shift, Edge's own behaviour is kept: it installs the theme and makes it
-/// active, and the theme is set for the Windows mode as soon as Edge reports
-/// wearing it, so a flip of the mode keeps it. A theme Edge already had is not
-/// installed again and so is not switched to: when Edge has not worn it after
-/// `EDGE_SWITCH_WAIT`, or there is no DLL in Edge to report, the theme is set
-/// for the mode and Edge+ puts it on.
-fn assign_when_worn(id: String, mode: ColorMode) {
-    thread::spawn(move || {
-        let polls = EDGE_SWITCH_WAIT.as_millis() / INSTALL_WATCH_INTERVAL.as_millis();
-        for _ in 0..polls {
-            thread::sleep(INSTALL_WATCH_INTERVAL);
-            let is_worn =
-                dll_channel::is_loaded() && worn_theme_id().as_deref() == Some(id.as_str());
-            if is_worn {
-                break;
-            }
-        }
-        let _ = change(|theming| theming.assign(mode, &id));
-    });
 }
 
 /// A store link names its theme by its slug, which the store may cut short;
