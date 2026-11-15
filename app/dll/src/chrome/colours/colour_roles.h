@@ -42,6 +42,9 @@ inline constexpr Entry kEntries[] = {
     {"kColorStatusBubbleBackgroundFrameActive", Role::kPanel},
     {"kColorStatusBubbleBackgroundFrameInactive", Role::kPanel},
     {"kColorToastBackground", Role::kPanel},
+    // The infobar ("Installed theme ... Undo"): its buttons take the skin's "on"
+    // colour, which reads only on the skin's own panel, not Edge's light bar.
+    {"kColorInfoBarBackground", Role::kPanel},
     {"kColorLocationBarBackground", Role::kPanel},
     {"kColorLocationBarBackgroundHovered", Role::kPanel},
     {"kColorToolbarSearchFieldBackground", Role::kPanel},
@@ -56,6 +59,7 @@ inline constexpr Entry kEntries[] = {
     {"kColorTextfieldForeground", Role::kForeground},
     {"kColorTextfieldSelectionForeground", Role::kForeground},
     {"kColorLabelForeground", Role::kForeground},
+    {"kColorInfoBarForeground", Role::kForeground},
     {"kColorLabelSelectionForeground", Role::kForeground},
     {"kColorPrimaryForeground", Role::kForeground},
     {"kColorTableForeground", Role::kForeground},
