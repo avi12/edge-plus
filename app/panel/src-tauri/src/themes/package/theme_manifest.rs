@@ -29,6 +29,12 @@ const MAX_IMAGE_BYTES: u64 = 16 * 1024 * 1024;
 const REVISION_PART: usize = 3;
 const VERSION_SEPARATOR: char = '.';
 const PNG_MAGIC: &[u8] = &[0x89, b'P', b'N', b'G'];
+/// Edge refuses to decode a theme image past this ("Could not decode image"),
+/// and so never installs the theme: 2560x1440 installs, 3200x1800 does not.
+const MAX_IMAGE_PIXELS: u64 = 4_194_304;
+const PNG_WIDTH_OFFSET: usize = 16;
+const PNG_HEIGHT_OFFSET: usize = 20;
+const PNG_HEADER_LENGTH: usize = 24;
 const JPEG_MAGIC: &[u8] = &[0xff, 0xd8, 0xff];
 const UTF8_BYTE_ORDER_MARK: &[u8] = &[0xef, 0xbb, 0xbf];
 
@@ -196,7 +202,27 @@ fn check_image(archive: &mut Archive<'_>, key: &str, path: &str) -> ThemeFileRes
     if !is_image {
         return Err(invalid(wording::image_not_png_or_jpeg(key, path)));
     }
+    if let Some((width, height)) = png_size(&bytes) {
+        let is_too_large = u64::from(width) * u64::from(height) > MAX_IMAGE_PIXELS;
+        if is_too_large {
+            return Err(invalid(wording::image_too_large(key, path, width, height)));
+        }
+    }
     Ok(())
+}
+
+/// The size in a PNG's header chunk; None for a JPEG or a PNG too short to say.
+fn png_size(bytes: &[u8]) -> Option<(u32, u32)> {
+    let header = bytes
+        .get(..PNG_HEADER_LENGTH)
+        .filter(|_| bytes.starts_with(PNG_MAGIC))?;
+    let read = |offset: usize| {
+        header
+            .get(offset..offset + 4)
+            .and_then(|field| field.try_into().ok())
+            .map(u32::from_be_bytes)
+    };
+    Some((read(PNG_WIDTH_OFFSET)?, read(PNG_HEIGHT_OFFSET)?))
 }
 
 #[cfg(test)]
@@ -214,6 +240,31 @@ pub(crate) mod tests {
             writer.write_all(bytes).expect("write");
         }
         writer.finish().expect("finish").into_inner()
+    }
+
+    fn png_of(width: u32, height: u32) -> Vec<u8> {
+        let mut bytes = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13];
+        bytes.extend_from_slice(b"IHDR");
+        bytes.extend_from_slice(&width.to_be_bytes());
+        bytes.extend_from_slice(&height.to_be_bytes());
+        bytes
+    }
+
+    #[test]
+    fn a_theme_image_past_four_megapixels_is_refused() {
+        let manifest = r#"{"manifest_version":3,"name":"T","version":"1.0.0","theme":{"images":{"theme_ntp_background":"ntp.png"}}}"#;
+        let check = |image: &[u8]| {
+            validate(&zip_of(&[
+                (MANIFEST_NAME, manifest.as_bytes()),
+                ("ntp.png", image),
+            ]))
+        };
+        assert!(check(&png_of(2560, 1440)).is_ok(), "2560x1440 installs");
+        let refused = check(&png_of(3840, 2160));
+        assert!(
+            matches!(refused, Err(ThemeFileError::Invalid(message)) if message.contains("3840x2160")),
+            "4K is refused with its size"
+        );
     }
 
     fn refusal(manifest: &str) -> Option<String> {
