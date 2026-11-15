@@ -45,6 +45,7 @@ inline constexpr Entry kEntries[] = {
     // The infobar ("Installed theme ... Undo"): its buttons take the skin's "on"
     // colour, which reads only on the skin's own panel, not Edge's light bar.
     {"kColorInfoBarBackground", Role::kPanel},
+    {"kColorButtonBackground", Role::kPanel},
     {"kColorLocationBarBackground", Role::kPanel},
     {"kColorLocationBarBackgroundHovered", Role::kPanel},
     {"kColorToolbarSearchFieldBackground", Role::kPanel},
