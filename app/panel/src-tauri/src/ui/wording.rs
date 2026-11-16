@@ -113,10 +113,9 @@ pub(crate) fn image_not_png_or_jpeg(key: &str, path: &str) -> String {
 }
 
 #[must_use]
-pub(crate) fn image_too_large(key: &str, path: &str, width: u32, height: u32) -> String {
-    format!(
-        "image {key} ({path}) is {width}x{height}, over the 4 megapixels (2560x1440) Edge can install in a theme"
-    )
+pub(crate) fn image_too_large(path: &str) -> String {
+    let file_name = path.rsplit('/').next().unwrap_or(path);
+    format!("Could not decode image: '{file_name}'")
 }
 
 #[must_use]

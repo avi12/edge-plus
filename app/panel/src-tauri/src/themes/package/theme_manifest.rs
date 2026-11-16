@@ -198,20 +198,20 @@ pub(crate) fn check_image_sizes(zip_bytes: &[u8]) -> ThemeFileResult<()> {
     let Some(theme) = read_manifest(&mut archive)?.theme else {
         return Ok(());
     };
-    for (key, path) in theme.images.iter().flatten() {
+    for path in theme.images.iter().flatten().map(|(_, path)| path) {
         let Ok(bytes) = read_entry(&mut archive, path, MAX_IMAGE_BYTES) else {
             continue;
         };
-        check_size(&bytes, key, path)?;
+        check_size(&bytes, path)?;
     }
     Ok(())
 }
 
-fn check_size(bytes: &[u8], key: &str, path: &str) -> ThemeFileResult<()> {
+fn check_size(bytes: &[u8], path: &str) -> ThemeFileResult<()> {
     if let Some((width, height)) = png_size(bytes) {
         let is_too_large = u64::from(width) * u64::from(height) > MAX_IMAGE_PIXELS;
         if is_too_large {
-            return Err(invalid(wording::image_too_large(key, path, width, height)));
+            return Err(invalid(wording::image_too_large(path)));
         }
     }
     Ok(())
@@ -229,7 +229,7 @@ fn check_image(archive: &mut Archive<'_>, key: &str, path: &str) -> ThemeFileRes
     if !is_image {
         return Err(invalid(wording::image_not_png_or_jpeg(key, path)));
     }
-    check_size(&bytes, key, path)
+    check_size(&bytes, path)
 }
 
 /// The size in a PNG's header chunk; None for a JPEG or a PNG too short to say.
@@ -283,8 +283,8 @@ pub(crate) mod tests {
         assert!(check(&png_of(2560, 1440)).is_ok(), "2560x1440 installs");
         let refused = check(&png_of(3840, 2160));
         assert!(
-            matches!(refused, Err(ThemeFileError::Invalid(message)) if message.contains("3840x2160")),
-            "4K is refused with its size"
+            matches!(refused, Err(ThemeFileError::Invalid(message)) if message == "Could not decode image: 'ntp.png'"),
+            "4K is refused in Edge's own words"
         );
     }
 
