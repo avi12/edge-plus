@@ -17,11 +17,36 @@ use crate::platform::paths;
 const COMMAND_VARIABLE: &str = "EDGEPLUS_WINDOW_COMMAND";
 const NODE: &str = "node";
 const NODE_FLAGS: [&str; 1] = ["--disable-warning=ExperimentalWarning"];
-const SOURCE_ENTRY: &str = "main.ts";
 #[cfg(window_kit)]
 const KIT_NODE: &str = "node.exe";
-#[cfg(window_kit)]
-const KIT_ENTRY: &str = "main.mjs";
+
+/// The kit's scripts the core starts as processes of their own.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Entry {
+    /// The window, which a dev run may start through `EDGEPLUS_WINDOW_COMMAND`.
+    Window,
+    /// The notification-area icon, kept for the core's whole life.
+    Tray,
+}
+
+impl Entry {
+    /// Under the checkout's `ui` folder.
+    const fn source(self) -> &'static str {
+        match self {
+            Self::Window => "main.ts",
+            Self::Tray => "tray/tray.ts",
+        }
+    }
+
+    /// In the kit, as `pnpm build:window` names the bundle.
+    #[cfg(window_kit)]
+    const fn bundle(self) -> &'static str {
+        match self {
+            Self::Window => "main.mjs",
+            Self::Tray => "tray.mjs",
+        }
+    }
+}
 const RUNTIME_FOLDER: &str = "runtime";
 /// In install order: the framework before the packages that depend on it.
 const RUNTIME_PACKAGES: [&str; 4] = [
@@ -54,25 +79,28 @@ pub(crate) fn dev_sources() -> Option<PathBuf> {
     let sources = checkout.join("ui");
     // Both canonical, so both carry the same \\?\ prefix.
     let executable = std::env::current_exe().ok()?.canonicalize().ok()?;
-    let is_dev_run = sources.join(SOURCE_ENTRY).exists() && executable.starts_with(&checkout);
+    let is_dev_run =
+        sources.join(Entry::Window.source()).exists() && executable.starts_with(&checkout);
     is_dev_run.then_some(sources)
 }
 
 #[must_use]
-pub(crate) fn locate() -> Option<WindowCommand> {
+pub(crate) fn locate(entry: Entry) -> Option<WindowCommand> {
     if let Some(sources) = dev_sources() {
-        if let Some(command) = command_from_environment() {
+        if entry == Entry::Window
+            && let Some(command) = command_from_environment()
+        {
             return Some(command);
         }
         let mut arguments: Vec<String> = NODE_FLAGS.iter().map(|&flag| flag.to_owned()).collect();
-        arguments.push(sources.join(SOURCE_ENTRY).to_string_lossy().into_owned());
+        arguments.push(sources.join(entry.source()).to_string_lossy().into_owned());
         return Some(WindowCommand {
             program: PathBuf::from(NODE),
             arguments,
             kit: None,
         });
     }
-    unpacked_kit()
+    unpacked_kit(entry)
 }
 
 /// Only a dev run honors it: a published exe never starts what its environment
@@ -95,9 +123,9 @@ fn command_from_environment() -> Option<WindowCommand> {
 }
 
 #[cfg(window_kit)]
-fn unpacked_kit() -> Option<WindowCommand> {
+fn unpacked_kit(entry: Entry) -> Option<WindowCommand> {
     let folder = paths::window_root().join(KIT_NAME);
-    if !folder.join(KIT_ENTRY).exists() {
+    if !folder.join(entry.bundle()).exists() {
         if let Err(error) = unpack(&folder) {
             panel_log::write_error("unpacking the window failed", &error);
             return None;
@@ -106,13 +134,13 @@ fn unpacked_kit() -> Option<WindowCommand> {
     remove_other_kits(&folder);
     Some(WindowCommand {
         program: folder.join(KIT_NODE),
-        arguments: vec![folder.join(KIT_ENTRY).to_string_lossy().into_owned()],
+        arguments: vec![folder.join(entry.bundle()).to_string_lossy().into_owned()],
         kit: Some(folder),
     })
 }
 
 #[cfg(not(window_kit))]
-fn unpacked_kit() -> Option<WindowCommand> {
+fn unpacked_kit(_entry: Entry) -> Option<WindowCommand> {
     panel_log::write(&format!(
         "this exe carries no window kit and runs outside its checkout ({})",
         paths::window_root().display()

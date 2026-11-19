@@ -15,7 +15,7 @@ import { z } from "zod";
 
 const ROOT = path.join(import.meta.dirname, "..");
 const KIT = path.join(ROOT, "dist", "window");
-const BUNDLES = ["main", path.join("window", "worker")];
+const BUNDLES = ["main", "tray", path.join("window", "worker")];
 const ARCHITECTURE = "x64";
 const RUNTIME_VERSION = "2.2.0";
 const RUNTIME_PACKAGES = [
@@ -65,6 +65,7 @@ await buildApp({
   root: ROOT,
   entries: {
     main: path.join(ROOT, "ui", "main.ts"),
+    tray: path.join(ROOT, "ui", "tray", "tray.ts"),
     "window/worker": path.join(ROOT, "ui", "window", "worker.ts")
   },
   outDirectory: KIT,
@@ -74,6 +75,9 @@ for (const name of BUNDLES) {
   renameSync(path.join(KIT, `${name}.js`), path.join(KIT, `${name}.mjs`));
 }
 
+// The tray's icon and its menu's pictures, which tray.mjs reads from beside it.
+cpSync(path.join(ROOT, "ui", "tray", "edgeplus.ico"), path.join(KIT, "tray", "edgeplus.ico"));
+cpSync(path.join(ROOT, "ui", "tray", "icons"), path.join(KIT, "tray", "icons"), { recursive: true });
 cpSync(process.execPath, path.join(KIT, "node.exe"));
 for (const name of RUNTIME_PACKAGES) {
   copyRuntimePackage(name);

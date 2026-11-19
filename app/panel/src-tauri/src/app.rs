@@ -14,14 +14,15 @@ use std::time::Duration;
 
 use tauri::RunEvent;
 
-use crate::dll::payload;
+use crate::dll::{dll_sync, payload};
 use crate::edge::legacy::{legacy_cleanup, legacy_install};
 use crate::platform::actions::panel_log;
 use crate::platform::identity::product;
 use crate::platform::identity::{app_identity, switches};
 use crate::platform::service::background_service;
 use crate::setup::{install_layout, start_with_windows, startup_entry, update_watch};
-use crate::ui::window_host;
+use crate::ui::protocol::TrayMessage;
+use crate::ui::{tray_host, window_host};
 use winui_svelte_launcher::Version;
 
 /// Long enough for start-up's work to settle before the working set is trimmed.
@@ -41,6 +42,7 @@ pub(crate) fn run(is_boot_launch: bool) -> tauri::Result<()> {
         .setup(move |_app| {
             start_background();
             window_host::init(on_window_closed);
+            tray_host::start(on_tray_pick);
             if !is_boot_launch {
                 window_host::show();
                 return Ok(());
@@ -121,6 +123,20 @@ fn on_window_closed() {
         exit();
     }
     trim_when_settled();
+}
+
+fn on_tray_pick(pick: TrayMessage) {
+    match pick {
+        TrayMessage::Open => window_host::show(),
+        TrayMessage::ExitAndRevert => exit_and_revert(),
+    }
+}
+
+/// The watcher stops first, so nothing injects the DLL again while it leaves.
+fn exit_and_revert() {
+    background_service::stop();
+    dll_sync::revert();
+    std::process::exit(0);
 }
 
 fn exit() {

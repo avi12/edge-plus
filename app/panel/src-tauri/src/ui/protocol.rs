@@ -241,6 +241,15 @@ pub(crate) enum UiMessage {
     Bounds(Bounds),
 }
 
+/// What the tray's process asks of the core: its menu's two lines.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(tag = "type", content = "data", rename_all = "camelCase")]
+#[cfg_attr(test, derive(TS))]
+pub(crate) enum TrayMessage {
+    Open,
+    ExitAndRevert,
+}
+
 /// A request frame: `{"id":N,"type":..,"data":..,"timestamp":ms}`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct RequestFrame<Message> {
@@ -321,6 +330,9 @@ const UI_MESSAGE_TYPES: [(&str, &str); 4] = [
 ];
 
 #[cfg(test)]
+const TRAY_MESSAGE_TYPES: [(&str, &str); 2] = [("open", "void"), ("exitAndRevert", "void")];
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::fmt::Write;
@@ -366,10 +378,12 @@ mod tests {
         }
         generated.push_str(&message_types("CoreMessageType", &CORE_MESSAGE_TYPES));
         generated.push_str(&message_types("UiMessageType", &UI_MESSAGE_TYPES));
+        generated.push_str(&message_types("TrayMessageType", &TRAY_MESSAGE_TYPES));
         generated.push_str("export interface EdgePlusProtocolMap {\n");
         for (constant, table) in [
             ("CoreMessageType", CORE_MESSAGE_TYPES.as_slice()),
             ("UiMessageType", UI_MESSAGE_TYPES.as_slice()),
+            ("TrayMessageType", TRAY_MESSAGE_TYPES.as_slice()),
         ] {
             for (name, data) in table {
                 let _ = writeln!(
@@ -394,6 +408,7 @@ mod tests {
         for (declaration, table) in [
             (CoreMessage::decl(), CORE_MESSAGE_TYPES.as_slice()),
             (UiMessage::decl(), UI_MESSAGE_TYPES.as_slice()),
+            (TrayMessage::decl(), TRAY_MESSAGE_TYPES.as_slice()),
         ] {
             assert_eq!(declaration.matches("\"type\":").count(), table.len());
             for (name, _) in table {

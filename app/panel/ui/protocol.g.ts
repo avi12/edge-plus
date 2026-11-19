@@ -83,6 +83,11 @@ export const UiMessageType = {
   bounds: "bounds",
 } as const;
 
+export const TrayMessageType = {
+  open: "open",
+  exitAndRevert: "exitAndRevert",
+} as const;
+
 export interface EdgePlusProtocolMap {
   [CoreMessageType.place]: ProtocolWithReturn<Bounds, void>;
   [CoreMessageType.view]: ProtocolWithReturn<View, void>;
@@ -94,4 +99,6 @@ export interface EdgePlusProtocolMap {
   [UiMessageType.refresh]: ProtocolWithReturn<void, void>;
   [UiMessageType.action]: ProtocolWithReturn<Action, void>;
   [UiMessageType.bounds]: ProtocolWithReturn<Bounds, void>;
+  [TrayMessageType.open]: ProtocolWithReturn<void, void>;
+  [TrayMessageType.exitAndRevert]: ProtocolWithReturn<void, void>;
 }

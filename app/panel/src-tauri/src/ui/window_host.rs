@@ -123,7 +123,7 @@ pub(crate) fn on_service_event(event: &ServiceEvent) {
 }
 
 fn open(placement: Option<Bounds>, status: Option<String>) {
-    let Some(command) = window_kit::locate() else {
+    let Some(command) = window_kit::locate(window_kit::Entry::Window) else {
         panel_log::write("the window's scripts are missing; no window opened");
         return;
     };

@@ -139,6 +139,17 @@ fn wait_for_load() {
     }
 }
 
+/// Takes the DLL out of every Edge, which puts back what it changed. The
+/// caller stops the watcher first, so nothing injects it again. A simulation
+/// never touched Edge.
+pub(crate) fn revert() {
+    if edge_install::is_simulated() {
+        return;
+    }
+    dll_channel::signal_unload();
+    wait_for_unload();
+}
+
 fn wait_for_unload() {
     for _ in 0..UNLOAD_POLLS {
         let is_gone = edge_native::pids_with_module(paths::SPLIT_DLL_NAME).is_empty();

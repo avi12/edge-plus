@@ -6,6 +6,7 @@ pub(crate) mod inject_offer;
 pub(crate) mod panel_layout;
 pub(crate) mod panel_state;
 pub(crate) mod protocol;
+pub(crate) mod tray_host;
 pub(crate) mod view;
 pub(crate) mod window_host;
 pub(crate) mod window_kit;
