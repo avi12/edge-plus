@@ -34,7 +34,7 @@ impl Entry {
     const fn source(self) -> &'static str {
         match self {
             Self::Window => "main.ts",
-            Self::Tray => "tray/tray.ts",
+            Self::Tray => "tray/run-tray.ts",
         }
     }
 

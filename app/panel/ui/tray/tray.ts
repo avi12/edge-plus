@@ -1,7 +1,7 @@
 import path from "node:path";
 
 import { defineMenu, MenuItemKind } from "winui-svelte/tray/menu";
-import { createStandaloneTray, menuIcons } from "winui-svelte/tray/standalone";
+import { defineTray, menuIcons } from "winui-svelte/tray/standalone";
 
 import { TrayMessageType } from "../protocol.g.ts";
 
@@ -10,8 +10,6 @@ import { TrayMessageType } from "../protocol.g.ts";
 // AnySTT uses. Windows' own popup menu, with Open and Exit and revert; a pick
 // goes to the core as one JSON line.
 
-const TOOLTIP = "Edge+";
-const ICON_FILE = "edgeplus.ico";
 const ICON_DIRECTORY = "icons";
 const SOURCE_EXTENSION = ".ts";
 const KIT_ASSETS_FOLDER = "tray";
@@ -30,9 +28,10 @@ function tell(type: string) {
 
 const open = () => tell(TrayMessageType.open);
 
-createStandaloneTray({
-  icon: path.join(assets, ICON_FILE),
-  tooltip: TOOLTIP,
+export default defineTray({
+  icon: "edgeplus.ico",
+  tooltip: "Edge+",
+  guid: "8d3a0c52-6e1b-4f7a-9b2e-5c4d1a7f3e90",
   ondoubleclick: open,
   extras: [menuIcons],
   menu: defineMenu([
