@@ -261,7 +261,7 @@
             {@const launch = launchOf(badge)}
             {#if launch !== null}
               <Button
-                class="badge"
+                class="badge badge-button"
                 automationId={launch.automationId}
                 automationName={launch.automationName}
                 onclick={launch.open}
@@ -494,6 +494,18 @@
     align-self: center;
     color: var(--text-fill-color-secondary);
     font-size: 10px;
+  }
+
+  /* The badge's own fill is a Style, which the template's hover animation only showed for a moment: the
+     hover and press brushes go to the template's states instead. */
+  .badge-button {
+    &:hover {
+      background-color: var(--control-fill-color-secondary);
+    }
+
+    &:active {
+      background-color: var(--control-fill-color-tertiary);
+    }
   }
 
   .badge-launch {
