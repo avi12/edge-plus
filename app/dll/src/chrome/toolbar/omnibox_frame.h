@@ -4,9 +4,9 @@
 // omnibox's background with EdgeCreateRoundRectBackground, which already draws
 // a 1px border in it when handed a stroke colour (only Edge's
 // kOmniboxLocationBarStrokeAndHoverRefresh feature does); the skin hands it
-// one, and the kit's field colour (Role::kPanel) for the fill, since the
-// theme's own omnibox fill (a pale cyan in the store theme) is not a kit
-// colour. The background is rebuilt on focus, hover and theme changes, so a
+// one, and the kit's field colour (Role::kField: a teal field in dark, the
+// panel in light) for the fill, so a theme whose omnibox fill is not a kit
+// colour still gets the kit's. The background is rebuilt on focus, hover and theme changes, so a
 // switch shows on the next of those. UI thread only.
 #pragma once
 #include <intrin.h>
@@ -36,7 +36,7 @@ inline void* __fastcall h_create_background(void* locationBar, void* out,
   if (isOmniboxBackground) {
     const theme_tone::Tone tone = skin_tone::Current();
     background =
-        cyberpunk_palette::ColourOf(cyberpunk_palette::Role::kPanel, tone);
+        cyberpunk_palette::ColourOf(cyberpunk_palette::Role::kField, tone);
     stroke = cyberpunk_skin::IdleLineFor(tone);
   }
   return o_create_background(locationBar, out, background, stroke, blendMode,

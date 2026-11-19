@@ -26,6 +26,7 @@ using theme_tone::Tone;
 enum class Role : uint8_t {
   kNone = 0,
   kPanel,            // floating and field surfaces: menus, bubbles, fields
+  kField,            // the omnibox's fill: teal washed over the panel (dark)
   kForeground,       // body text
   kForegroundMuted,  // secondary text, placeholders
   kOn,               // icons, values, links, the focus ring: cyan / ink
@@ -112,6 +113,11 @@ inline constexpr Palette kLight{
 // the panel.
 inline constexpr uint32_t kOnWashPercent = 22;
 
+// The omnibox's fill in dark: the kit's idle teal at 37% over the panel, the
+// blue-green field the Firefox build draws (#033134, the theme's own
+// omnibox_background). Light keeps the panel: ink frames it there.
+inline constexpr uint32_t kFieldWashPercent = 37;
+
 // A tone left unknown is taken as dark: the kit's neon register.
 [[nodiscard]] constexpr const Palette& PaletteFor(Tone tone) noexcept {
   return tone == Tone::kLight ? kLight : kDark;
@@ -122,6 +128,11 @@ inline constexpr uint32_t kOnWashPercent = 22;
   switch (role) {
     case Role::kPanel:
       return palette.panel;
+    case Role::kField:
+      if (tone == Tone::kLight) {
+        return palette.panel;
+      }
+      return Blend(palette.panel, palette.off, kFieldWashPercent);
     case Role::kForeground:
       return palette.foreground;
     case Role::kForegroundMuted:
