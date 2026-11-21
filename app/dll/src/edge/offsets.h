@@ -305,7 +305,7 @@ inline constexpr uintptr_t EdgeTabStyleViews_GetPath_rightEdge_return =
 inline constexpr uintptr_t EdgeTabStrip_UpdateDropShadow_activeTabPath_return =
     0x2750a27;
 inline constexpr uintptr_t
-    EdgeTabStrip_UpdateDropShadow_splitMemberPath_return = 0x480dc24;
+    EdgeTabStrip_UpdateDropShadow_splitMemberPath_return = 0xa34df76;
 // bool EdgeTabStyleViews::IsLeftSplitTab / IsRightSplitTab(Tab*): the tab is
 // the first of its TabStrip::GetTabsInSplit / the last. GetPath asks after the
 // top-left arc and again after the top-right one; for a first member it draws
@@ -392,7 +392,7 @@ inline constexpr uintptr_t TabStripModel_MoveWebContentsAt = 0x1001d25e;
 // WebContentsImpl::EdgeShouldCreateNewWindowAsync) once a page's new window is
 // allowed and before it is made; true = handled, make no window.
 inline constexpr uintptr_t
-    BrowserWebContentsDelegate_ShouldOverrideNewWindowCreation = 0x9b44170;
+    BrowserWebContentsDelegate_ShouldOverrideNewWindowCreation = 0xfd8d1b0;
 // WebContents* BrowserWebContentsDelegate::AddNewContents(this, WebContents*
 // source, unique_ptr<WebContents>* new_contents, const GURL& target_url,
 // WindowOpenDisposition, const WindowFeatures&, bool user_gesture, bool*
