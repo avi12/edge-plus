@@ -1043,7 +1043,7 @@ inline constexpr uintptr_t TabHoverCardController_OnCardClosing = 0xa551f00;
 // --force-ui-direction switch). Since 157 this is ICUIsRTL itself (156 had a
 // bare `jmp` to it), which asks GetForcedTextDirection and then the default ICU
 // locale; Views mirrors every tab by it.
-inline constexpr uintptr_t kBaseI18nIsRtl = 0x108dc50;
+inline constexpr uintptr_t kBaseI18nIsRtl = 0xfc6350;
 }  // namespace rva
 
 // --- entries the port to 158.0.4370.33 could not place (docs/re/port-4370-33.md) ---
@@ -1102,7 +1102,6 @@ inline constexpr uintptr_t kRvas[] = {
     rva::TabHoverCardController_OnCardClosing,
     rva::TabHoverCardThumbnailObserver_Observe,
     rva::WebContentsImpl_GetPrimaryMainFrame,
-    rva::kBaseI18nIsRtl,
 };
 }  // namespace unplaced
 
