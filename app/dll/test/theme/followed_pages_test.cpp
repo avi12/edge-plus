@@ -2,7 +2,18 @@
 #include <cstdio>
 #include "../../src/theme/followed_pages.h"
 
-using edgeplus::followed_pages::Follows;
+using edgeplus::followed_pages::IsAnyOn;
+using edgeplus::followed_pages::Switches;
+
+namespace {
+constexpr Switches kWebUiOnly{true, false};
+constexpr Switches kRemixOnly{false, true};
+constexpr Switches kBoth{true, true};
+
+bool Follows(const char* url) {
+  return edgeplus::followed_pages::Follows(url, kWebUiOnly);
+}
+}  // namespace
 
 namespace {
 
@@ -32,6 +43,23 @@ void RunChecks() {
   Check(!Follows("https://settings.example.com/"), "a web host");
   Check(!Follows(""), "no URL yet");
   Check(!Follows("edge://"), "the scheme alone");
+  Check(!Follows("edge://blueprint"), "remix pages need their own switch");
+  Check(!Follows("edge://remix/"), "the manager needs its own switch");
+}
+
+void RunRemixChecks() {
+  using edgeplus::followed_pages::Follows;
+  Check(Follows("edge://blueprint", kRemixOnly), "the bubble");
+  Check(Follows("edge://blueprint/?x=1#editor", kRemixOnly), "bubble route");
+  Check(Follows("edge://remix", kRemixOnly), "the manager");
+  Check(Follows("edge://remix/", kBoth), "the manager, both on");
+  Check(!Follows("edge://blueprintfoo", kRemixOnly), "another host");
+  Check(!Follows("edge://remixes/", kRemixOnly), "another host, remixes");
+  Check(!Follows("edge://settings", kRemixOnly), "settings needs its switch");
+  Check(Follows("edge://settings", kBoth), "settings, both on");
+  Check(!Follows("edge://blueprint", Switches{}), "all off");
+  Check(!IsAnyOn(Switches{}), "none on");
+  Check(IsAnyOn(kRemixOnly), "remix on");
 }
 
 }  // namespace
@@ -39,6 +67,7 @@ void RunChecks() {
 int main() {
   try {
     RunChecks();
+    RunRemixChecks();
   } catch (...) {
     return 1;
   }

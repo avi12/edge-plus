@@ -903,7 +903,10 @@ inline bool Install(edge155::signatures::Feature feature, uintptr_t rva,
   if (availability::IsAvailable(Feature::kEnhancedFind)) {
     find::Install();
   }
-  if (availability::IsAvailable(Feature::kWebUiFollowsTheme)) {
+  const bool isThemeFollowWanted =
+      availability::IsAvailable(Feature::kWebUiFollowsTheme) ||
+      availability::IsAvailable(Feature::kRemixTheme);
+  if (isThemeFollowWanted) {
     theme_follow::Install();
   }
   if (availability::IsAvailable(Feature::kLivePreview)) {

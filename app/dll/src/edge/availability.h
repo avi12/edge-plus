@@ -36,6 +36,7 @@ inline void Mask(config::Wire* wire) {
       {&config::Wire::livePreviewActive, signatures::Feature::kLivePreview},
       {&config::Wire::cyberpunkSkinActive, signatures::Feature::kCyberpunkSkin},
       {&config::Wire::readingThemeActive, signatures::Feature::kReadingTheme},
+      {&config::Wire::remixThemeActive, signatures::Feature::kRemixTheme},
   };
   for (const Switch& item : kSwitches) {
     if (!IsAvailable(item.feature)) {

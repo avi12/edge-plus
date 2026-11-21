@@ -1,4 +1,5 @@
-// theme_follow.h — make edge://settings and edge://extensions show the same
+// theme_follow.h — make edge://settings, edge://extensions (and, with their own
+// switch, Create a remix's pages, remix_mode.h) show the same
 // light or dark as the browser frame (docs/re/webui-color-scheme.md).
 //
 // Edge draws a page light or dark from its prefers-color-scheme and, for a
@@ -13,6 +14,7 @@
 #include "core/channel.h"
 #include "theme/followed_pages.h"
 #include "core/log.h"
+#include "theme/remix_mode.h"
 #include "theme/theme_tone.h"
 
 namespace edgeplus::theme_follow {
@@ -47,12 +49,18 @@ inline constinit ULONGLONG g_lastRedrawAskedAt = 0;
 inline constexpr int32_t kNoForcedMode = -1;
 inline constinit int32_t g_forcedColorMode = kNoForcedMode;
 
+// The switches that decide which pages follow (followed_pages.h).
+inline followed_pages::Switches CurrentSwitches() {
+  return {g_isActive, remix_mode::g_isActive};
+}
+
 inline theme_tone::Tone ToneForPage(void* webContents) {
-  if (!g_isActive || !webContents) {
+  const followed_pages::Switches switches = CurrentSwitches();
+  if (!followed_pages::IsAnyOn(switches) || !webContents) {
     return theme_tone::Tone::kUnknown;
   }
   const bool isFollowedPage =
-      followed_pages::Follows(edge::VisibleUrl(webContents));
+      followed_pages::Follows(edge::VisibleUrl(webContents), switches);
   if (!isFollowedPage) {
     return theme_tone::Tone::kUnknown;
   }
@@ -134,12 +142,13 @@ inline const void* __fastcall h_contents_provider(void* webContents) {
 // Returns how many pages that was.
 inline int RefreshPages(void* tsm) {
   int refreshed = 0;
+  const followed_pages::Switches switches = CurrentSwitches();
   const int tabCount = edge::TabCount(tsm);
   for (int i = 0; i < tabCount; i++) {
     void* webContents = edge::TabWebContentsAt(tsm, i);
     const bool isFollowedPage =
         (webContents != nullptr) &&
-        followed_pages::Follows(edge::VisibleUrl(webContents));
+        followed_pages::Follows(edge::VisibleUrl(webContents), switches);
     if (isFollowedPage) {
       edge::NotifyColorProviderChanged(webContents);
       edge::ReloadPage(webContents);

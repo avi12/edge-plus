@@ -268,6 +268,11 @@ inline void Teardown(HWND hwnd) {
   if (wasFollowingTheme) {
     RefreshThemeColors();
   }
+  const bool wasRemixFollowing = remix_mode::g_isActive;
+  remix_mode::g_isActive = false;
+  if (wasRemixFollowing) {
+    RefreshThemeColors();
+  }
   live_preview::g_isActive = false;
   live_preview::g_isCardOpen = false;
   drag::Cancel();
@@ -420,6 +425,13 @@ inline void ApplyReadingConfig(HWND hwnd, const config::Wire& wire) {
   }
 }
 
+inline void ApplyRemixConfig(const config::Wire& wire) {
+  const bool isRemixChanged = remix_mode::ApplyConfig(wire);
+  if (isRemixChanged) {
+    RefreshThemeColors();
+  }
+}
+
 inline void ApplyHandlersConfig(const config::Wire& wire) {
   const bool isTurningHandlersOn = protocol_handlers::ApplyConfig(wire);
   if (isTurningHandlersOn) {
@@ -457,6 +469,9 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
     if (isFollowChanged) {
       RefreshThemeColors();
     }
+  }
+  if (availability::IsAvailable(Feature::kRemixTheme)) {
+    ApplyRemixConfig(wire);
   }
   if (availability::IsAvailable(Feature::kLivePreview)) {
     live_preview::ApplyConfig(wire);

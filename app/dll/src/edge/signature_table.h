@@ -30,7 +30,9 @@ inline constexpr uint16_t kFeatureBitLivePreview = 32;
 inline constexpr uint16_t kFeatureBitCyberpunkSkin = 64;
 // @share FeatureBitReadingTheme
 inline constexpr uint16_t kFeatureBitReadingTheme = 128;
-inline constexpr uint16_t kEveryFeature = 255;
+// @share FeatureBitRemixTheme
+inline constexpr uint16_t kFeatureBitRemixTheme = 256;
+inline constexpr uint16_t kEveryFeature = 511;
 
 enum class Feature : uint16_t {
   kSplit = kFeatureBitSplit,
@@ -41,6 +43,7 @@ enum class Feature : uint16_t {
   kLivePreview = kFeatureBitLivePreview,
   kCyberpunkSkin = kFeatureBitCyberpunkSkin,
   kReadingTheme = kFeatureBitReadingTheme,
+  kRemixTheme = kFeatureBitRemixTheme,
 };
 
 [[nodiscard]] constexpr uint16_t BitOf(Feature feature) noexcept {

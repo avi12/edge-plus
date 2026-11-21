@@ -67,7 +67,7 @@ class FeatureRule {
     [FeatureRule]@{ Match = "a split's tabs in the tab list"; Features = @('Split') }
     [FeatureRule]@{ Match = 'theming'; Features = @('Theming') }
     [FeatureRule]@{ Match = "reading mode's page theme"; Features = @('ReadingTheme') }
-    [FeatureRule]@{ Match = 'WebUI pages follow the theme'; Features = @('WebUiFollowsTheme') }
+    [FeatureRule]@{ Match = 'WebUI pages follow the theme'; Features = @('WebUiFollowsTheme', 'RemixTheme') }
     [FeatureRule]@{ Match = 'web protocol handlers'; Features = @('ProtocolHandlers') }
     [FeatureRule]@{ Match = "the browser assistant's toolbar button"; Features = @('EnhancedFind') }
     [FeatureRule]@{ Match = 'running a script in a page, and reading a tab'; Features = @('EnhancedFind') }
@@ -105,8 +105,9 @@ class FeatureRule {
     [FeatureRule]@{ Match = 'theme/theme.h'; Features = @('Theming') }
     [FeatureRule]@{ Match = 'theme/theme_notice.h'; Features = @('Theming') }
     [FeatureRule]@{ Match = 'theme/protocol_handlers.h'; Features = @('ProtocolHandlers') }
-    [FeatureRule]@{ Match = 'theme/theme_follow.h'; Features = @('WebUiFollowsTheme') }
-    [FeatureRule]@{ Match = 'theme/followed_pages.h'; Features = @('WebUiFollowsTheme') }
+    [FeatureRule]@{ Match = 'theme/theme_follow.h'; Features = @('WebUiFollowsTheme', 'RemixTheme') }
+    [FeatureRule]@{ Match = 'theme/followed_pages.h'; Features = @('WebUiFollowsTheme', 'RemixTheme') }
+    [FeatureRule]@{ Match = 'theme/remix_'; Features = @('RemixTheme') }
     [FeatureRule]@{ Match = 'theme/reading_'; Features = @('ReadingTheme') }
     [FeatureRule]@{ Match = 'find/'; Features = @('EnhancedFind') }
     [FeatureRule]@{ Match = 'assistant/'; Features = @('EnhancedFind') }

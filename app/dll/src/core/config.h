@@ -38,12 +38,13 @@ struct Wire {
   // would make it the active one, theme_hold.h keeps it installed but off.
   uint32_t holdLength;  // 0 = none
   char holdId[kIdCapacity];
+  uint32_t remixThemeActive;  // Create a remix's pages, remix_mode.h
 };
 // ConfigWire.cs writes exactly this many bytes, so the struct must stay packed.
 // A panel that still writes the two reading themes after the switch (180 bytes)
 // is read for its first sizeof(Wire) bytes.
 // @share WireFieldCount
-inline constexpr size_t kWireFieldCount = 12;
+inline constexpr size_t kWireFieldCount = 13;
 // @share WireIdCount
 inline constexpr size_t kWireIdCount = 3;
 static_assert(sizeof(Wire) == kWireFieldCount * sizeof(uint32_t) +
@@ -61,6 +62,8 @@ inline constexpr DWORD kBeforeCyberpunkSkinWireSize =
     offsetof(Wire, cyberpunkSkinActive);
 inline constexpr DWORD kBeforeReadingThemeWireSize =
     offsetof(Wire, readingThemeActive);
+inline constexpr DWORD kBeforeRemixThemeWireSize =
+    offsetof(Wire, remixThemeActive);
 inline constexpr DWORD kBeforeHoldWireSize = offsetof(Wire, holdLength);
 
 // A DLL injected into an already-open Edge reads the current state here at
@@ -99,6 +102,7 @@ inline constexpr char kLocalAppDataVariable[] = "LOCALAPPDATA";
   const bool isKnownSize =
       isRead &&
       (read == sizeof(Wire) || read == kBeforeHoldWireSize ||
+       read == kBeforeRemixThemeWireSize ||
        read == kBeforeReadingThemeWireSize ||
        read == kBeforeCyberpunkSkinWireSize ||
        read == kBeforeLivePreviewWireSize || read == kBeforeWebUiWireSize ||
