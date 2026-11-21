@@ -31,7 +31,7 @@ const fn feature(feature: Feature) -> CardSlot {
     }
 }
 
-pub(crate) const CARDS: [CardSlot; 12] = [
+pub(crate) const CARDS: [CardSlot; 13] = [
     feature(Feature::NativeSplit),
     feature(Feature::LivePreview),
     feature(Feature::Theming),
@@ -42,6 +42,7 @@ pub(crate) const CARDS: [CardSlot; 12] = [
     },
     feature(Feature::WebUiFollowsTheme),
     feature(Feature::ReadingTheme),
+    feature(Feature::RemixTheme),
     feature(Feature::EnhancedFind),
     feature(Feature::ProtocolHandlers),
     feature(Feature::QuietDevMode),

@@ -77,6 +77,7 @@ pub(crate) fn feature_bit(feature: Feature) -> Option<u32> {
         Feature::LivePreview => Some(shared::FEATURE_BIT_LIVE_PREVIEW),
         Feature::CyberpunkSkin => Some(shared::FEATURE_BIT_CYBERPUNK_SKIN),
         Feature::ReadingTheme => Some(shared::FEATURE_BIT_READING_THEME),
+        Feature::RemixTheme => Some(shared::FEATURE_BIT_REMIX_THEME),
         Feature::QuietDevMode => None,
     }
 }
@@ -156,7 +157,7 @@ mod tests {
     #[test]
     fn every_dll_feature_has_a_distinct_bit() {
         let bits: Vec<u32> = Feature::ALL.into_iter().filter_map(feature_bit).collect();
-        assert_eq!(8, bits.len());
+        assert_eq!(9, bits.len());
         for (index, bit) in bits.iter().enumerate() {
             assert!(bit.is_power_of_two());
             assert!(!bits[..index].contains(bit));

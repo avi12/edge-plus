@@ -39,6 +39,7 @@ pub(crate) fn switch_key(slot: CardSlot) -> SwitchKey {
             Feature::LivePreview => SwitchKey::LivePreview,
             Feature::CyberpunkSkin => SwitchKey::CyberpunkSkin,
             Feature::ReadingTheme => SwitchKey::ReadingTheme,
+            Feature::RemixTheme => SwitchKey::RemixTheme,
         },
         CardSlot::Own(OwnCard::StartWithWindows) => SwitchKey::StartWithWindows,
         CardSlot::Own(OwnCard::AutoInject) => SwitchKey::AutoInject,

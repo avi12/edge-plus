@@ -39,7 +39,8 @@ pub(crate) fn depends_on_pinned_build(feature: Feature) -> bool {
         | Feature::WebUiFollowsTheme
         | Feature::LivePreview
         | Feature::CyberpunkSkin
-        | Feature::ReadingTheme => true,
+        | Feature::ReadingTheme
+        | Feature::RemixTheme => true,
         Feature::QuietDevMode => false,
     }
 }
@@ -62,7 +63,7 @@ mod tests {
     use crate::edge::version::edge_support;
     use crate::platform::settings::Features;
 
-    const DLL_FEATURES: [Feature; 8] = [
+    const DLL_FEATURES: [Feature; 9] = [
         Feature::NativeSplit,
         Feature::Theming,
         Feature::ProtocolHandlers,
@@ -71,6 +72,7 @@ mod tests {
         Feature::LivePreview,
         Feature::CyberpunkSkin,
         Feature::ReadingTheme,
+        Feature::RemixTheme,
     ];
 
     fn version(text: &str) -> FileVersion {

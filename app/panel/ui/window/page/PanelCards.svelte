@@ -86,6 +86,14 @@
         mode. Live, no restart.
       </CardDescription>
     </FeatureCard>
+    <FeatureCard card={cardOf("remixTheme")} glyph="Edit">
+      <CardTitle>{featureTitles.remixTheme}</CardTitle>
+      <CardDescription>
+        Makes Edge's Create a remix window and its remix manager light or dark to match Edge itself, not
+        Windows, and in your Edge+ theme's colors. Only those two pages change; websites and your remixes
+        are untouched. Live, no restart. Open Edge first.
+      </CardDescription>
+    </FeatureCard>
   </PanelSection>
   <PanelSection>
     <SectionHeader>Browsing</SectionHeader>

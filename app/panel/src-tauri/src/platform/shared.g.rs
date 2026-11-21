@@ -7,13 +7,13 @@
 // app/dll/src/core/config.h:15
 pub(crate) const WIRE_ID_CAPACITY: u32 = 64;
 
-// app/dll/src/core/config.h:46
-pub(crate) const WIRE_FIELD_COUNT: u32 = 12;
+// app/dll/src/core/config.h:47
+pub(crate) const WIRE_FIELD_COUNT: u32 = 13;
 
-// app/dll/src/core/config.h:48
+// app/dll/src/core/config.h:49
 pub(crate) const WIRE_ID_COUNT: u32 = 3;
 
-// app/dll/src/core/config.h:69
+// app/dll/src/core/config.h:72
 pub(crate) const CONFIG_FILE_RELATIVE_PATH: &str = "\\EdgePlus\\edgeplus-config.bin";
 
 // app/dll/src/core/status.h:19
@@ -81,6 +81,9 @@ pub(crate) const FEATURE_BIT_CYBERPUNK_SKIN: u32 = 64;
 
 // app/dll/src/edge/signature_table.h:32
 pub(crate) const FEATURE_BIT_READING_THEME: u32 = 128;
+
+// app/dll/src/edge/signature_table.h:34
+pub(crate) const FEATURE_BIT_REMIX_THEME: u32 = 256;
 
 // app/dll/src/theme/theme_wear.h:22
 pub(crate) const WEAR_CAUSE_EDGE_PLUS: u32 = 0;

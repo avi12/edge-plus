@@ -21,6 +21,7 @@ pub(crate) struct DllConfig {
     pub is_live_preview_active: bool,
     pub is_cyberpunk_skin_active: bool,
     pub is_reading_theme_active: bool,
+    pub is_remix_theme_active: bool,
 }
 
 impl DllConfig {
@@ -40,6 +41,7 @@ impl DllConfig {
             is_live_preview_active: features.live_preview,
             is_cyberpunk_skin_active: features.cyberpunk_skin,
             is_reading_theme_active: features.reading_theme,
+            is_remix_theme_active: features.remix_theme,
         }
     }
 }
@@ -64,7 +66,9 @@ pub(crate) const CYBERPUNK_SKIN_ACTIVE_OFFSET: usize = LIVE_PREVIEW_ACTIVE_OFFSE
 pub(crate) const READING_THEME_ACTIVE_OFFSET: usize = CYBERPUNK_SKIN_ACTIVE_OFFSET + FIELD_BYTES;
 pub(crate) const HOLD_LENGTH_OFFSET: usize = READING_THEME_ACTIVE_OFFSET + FIELD_BYTES;
 pub(crate) const HOLD_ID_OFFSET: usize = HOLD_LENGTH_OFFSET + FIELD_BYTES;
-pub(crate) const SIZE: usize = HOLD_ID_OFFSET + ID_CAPACITY;
+/// Appended after the hold, so a file written before it still loads as off.
+pub(crate) const REMIX_THEME_ACTIVE_OFFSET: usize = HOLD_ID_OFFSET + ID_CAPACITY;
+pub(crate) const SIZE: usize = REMIX_THEME_ACTIVE_OFFSET + FIELD_BYTES;
 
 /// What config.h asserts at compile time, from its own counts.
 pub(crate) const SIZE_CONFIG_H_EXPECTS: usize =
@@ -129,6 +133,11 @@ pub(crate) fn encode(config: &DllConfig) -> [u8; SIZE] {
         HOLD_ID_OFFSET,
         &config.hold_id,
     );
+    write_flag(
+        &mut wire,
+        REMIX_THEME_ACTIVE_OFFSET,
+        config.is_remix_theme_active,
+    );
     wire
 }
 
@@ -186,12 +195,13 @@ mod tests {
             is_live_preview_active: is_on,
             is_cyberpunk_skin_active: is_on,
             is_reading_theme_active: is_on,
+            is_remix_theme_active: is_on,
         }
     }
 
     #[test]
-    fn the_wire_is_config_hs_240_bytes() {
-        assert_eq!(240, SIZE);
+    fn the_wire_is_config_hs_244_bytes() {
+        assert_eq!(244, SIZE);
         assert_eq!(
             SIZE_CONFIG_H_EXPECTS, SIZE,
             "the layout matches config.h's own counts"
@@ -241,6 +251,15 @@ mod tests {
         assert_eq!(7, u32_at(&wire, HOLD_LENGTH_OFFSET));
         assert_eq!(b"held-id", &wire[HOLD_ID_OFFSET..HOLD_ID_OFFSET + 7]);
         assert_eq!(0, u32_at(&encode(&config("abc", true)), HOLD_LENGTH_OFFSET));
+    }
+
+    #[test]
+    fn the_remix_switch_ends_the_wire() {
+        let wire = encode(&config("abc", true));
+        assert_eq!(240, REMIX_THEME_ACTIVE_OFFSET, "the remix switch at 240");
+        assert_eq!(1, u32_at(&wire, REMIX_THEME_ACTIVE_OFFSET));
+        let defaults = encode(&from_settings(&Settings::default()));
+        assert_eq!(0, u32_at(&defaults, REMIX_THEME_ACTIVE_OFFSET), "off");
     }
 
     #[test]

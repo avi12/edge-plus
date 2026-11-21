@@ -75,6 +75,7 @@ pub(crate) enum SwitchKey {
     LivePreview,
     CyberpunkSkin,
     ReadingTheme,
+    RemixTheme,
     StartWithWindows,
     AutoInject,
     AutoUpdate,

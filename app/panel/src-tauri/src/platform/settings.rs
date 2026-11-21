@@ -45,10 +45,13 @@ pub(crate) enum Feature {
     /// `reading_mode.h`; the two themes are picked in reading mode itself and
     /// kept by the DLL.
     ReadingTheme,
+    /// `remix_mode.h`: Create a remix's pages follow Edge's light or dark and
+    /// the Edge+ theme.
+    RemixTheme,
 }
 
 impl Feature {
-    pub(crate) const ALL: [Self; 9] = [
+    pub(crate) const ALL: [Self; 10] = [
         Self::NativeSplit,
         Self::Theming,
         Self::QuietDevMode,
@@ -58,6 +61,7 @@ impl Feature {
         Self::LivePreview,
         Self::CyberpunkSkin,
         Self::ReadingTheme,
+        Self::RemixTheme,
     ];
 }
 
@@ -95,6 +99,7 @@ pub(crate) struct Features {
     #[serde(rename = "tabSpine")]
     pub cyberpunk_skin: bool,
     pub reading_theme: bool,
+    pub remix_theme: bool,
 }
 
 impl Default for Features {
@@ -109,6 +114,7 @@ impl Default for Features {
             live_preview: false,
             cyberpunk_skin: true,
             reading_theme: false,
+            remix_theme: false,
         }
     }
 }
@@ -136,6 +142,7 @@ impl Features {
             Feature::LivePreview => self.live_preview,
             Feature::CyberpunkSkin => self.cyberpunk_skin,
             Feature::ReadingTheme => self.reading_theme,
+            Feature::RemixTheme => self.remix_theme,
         }
     }
 
@@ -150,6 +157,7 @@ impl Features {
             Feature::LivePreview => &mut self.live_preview,
             Feature::CyberpunkSkin => &mut self.cyberpunk_skin,
             Feature::ReadingTheme => &mut self.reading_theme,
+            Feature::RemixTheme => &mut self.remix_theme,
         };
         *switch = is_on;
     }

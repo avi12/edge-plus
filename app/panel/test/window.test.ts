@@ -29,6 +29,7 @@ const SWITCH_KEYS = [
   "cyberpunkSkin",
   "webUiFollowsTheme",
   "readingTheme",
+  "remixTheme",
   "enhancedFind",
   "protocolHandlers",
   "quietDevMode",
