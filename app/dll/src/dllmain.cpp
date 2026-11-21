@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <cstdlib>
 #include <optional>
+#include "edge/availability.h"
 #include "edge/edge.h"
 #include "core/handles.h"
 #include "core/status.h"
@@ -15,6 +16,7 @@
 namespace edge = edgeplus::edge;
 namespace edge155 = edgeplus::edge155;
 namespace edge_build = edgeplus::edge_build;
+namespace availability = edgeplus::availability;
 namespace resolve = edgeplus::resolve;
 namespace status = edgeplus::status;
 namespace verify = edgeplus::verify;
@@ -97,7 +99,7 @@ constexpr wchar_t kForcePatchLineValue[] = L"patch";
   const bool isPinned = relation == edge_build::Relation::kPinned;
   if (isPinned) {
     wire.mode = status::kModePinned;
-    wire.availableFeatures = edge155::signatures::kEveryFeature;
+    wire.availableFeatures = availability::g_features;
     if (IsVariableSet(kResolveSelfTestVariable)) {
       const resolve::Outcome selfTest =
           resolve::Run(edge::g_base, ForcedRelation(kResolveSelfTestVariable),

@@ -46,8 +46,13 @@ inline void __fastcall h_stop_capture(void* tracker) {
     const bool isSite = (address != nullptr) &&
                         reinterpret_cast<uintptr_t>(address) == returnAddress;
     if (isSite) {
-      return std::memcmp(address, edge155::off::INLINEDSTOP_tail,
-                         sizeof(edge155::off::INLINEDSTOP_tail)) == 0;
+      const bool isRdiCopy =
+          std::memcmp(address, edge155::off::INLINEDSTOP_tail,
+                      sizeof(edge155::off::INLINEDSTOP_tail)) == 0;
+      const bool isRsiCopy =
+          std::memcmp(address, edge155::off::INLINEDSTOP_tail_rsi,
+                      sizeof(edge155::off::INLINEDSTOP_tail_rsi)) == 0;
+      return isRdiCopy || isRsiCopy;
     }
   }
   return false;

@@ -6,12 +6,14 @@
 #include <cstdint>
 #include "core/config.h"
 #include "edge/signature_table.h"
+#include "edge/signatures.g.h"
 
 namespace edgeplus::availability {
 
 namespace signatures = ::edgeplus::edge155::signatures;
 
-inline constinit uint16_t g_features = signatures::kEveryFeature;
+inline constinit uint16_t g_features =
+    signatures::kEveryFeature & ~signatures::kUnplacedFeatures;
 
 [[nodiscard]] inline bool IsAvailable(signatures::Feature feature) {
   return (g_features & signatures::BitOf(feature)) != 0;

@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <utility>
 #include <vector>
+#include "edge/offsets.h"
 
 namespace edgeplus::edge::translation {
 
@@ -30,10 +31,21 @@ inline void Fill(std::vector<Placement> placements) {
   g_table = std::move(placements);
 }
 
+// An entry a port could not place (offsets.h's unplaced::kRvas) still holds the
+// previous build's value, which on this one is some other code.
+[[nodiscard]] inline bool IsUnplaced(uintptr_t pinnedRva) noexcept {
+  for (const uintptr_t unplaced : edge155::unplaced::kRvas) {
+    if (unplaced == pinnedRva) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // The RVA in the running msedge.dll for an RVA of offsets.h.
 [[nodiscard]] inline uintptr_t Translate(uintptr_t pinnedRva) noexcept {
   if (!g_isActive) {
-    return pinnedRva;
+    return IsUnplaced(pinnedRva) ? kUnresolved : pinnedRva;
   }
   const auto found =
       std::lower_bound(g_table.begin(), g_table.end(), pinnedRva,

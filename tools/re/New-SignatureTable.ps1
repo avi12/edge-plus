@@ -98,6 +98,15 @@ $keys = @{}
 foreach ($entry in Get-OffsetEntries $keyText) {
     $keys[$entry.Name] = $entry.Rva
 }
+# Entries a port could not place: offsets.h's `unplaced::kRvas`. Each is written
+# as an unsigned row (its value is a stale one, so no signature of it is worth
+# anything) and its features are collected into kUnplacedFeatures.
+$unplacedNames = [Collections.Generic.HashSet[string]]::new()
+$unplacedBlock = [regex]::Match($sourceText, '(?s)namespace unplaced \{(.*?)\};')
+foreach ($reference in [regex]::Matches($unplacedBlock.Groups[1].Value, 'rva::(\w+(?:\[\d+\])?)')) {
+    [void]$unplacedNames.Add($reference.Groups[1].Value)
+}
+[int] $unplacedFeatures = 0
 $entries = @(Get-OffsetEntries $sourceText | Where-Object { $keys.ContainsKey($_.Name) })
 Write-Host "$($entries.Count) entries of $Offsets"
 
@@ -145,6 +154,12 @@ foreach ($entry in $entries) {
     # refers to a datum.
     $maskName = "kBodyMask$($lines.Count)"
     $body = $null
+    if ($unplacedNames.Contains($name)) {
+        $unplacedFeatures = $unplacedFeatures -bor $features
+        $lines.Add((Format-Entry $pinned 'kData' $features 0 0 0 @() $name))
+        $rowKinds['kData']++
+        continue
+    }
     switch ($kind) {
         'Function' {
             $probes = Get-Probes $image $scanner $rva $DefaultMaximumLength
@@ -251,6 +266,8 @@ $text = [Text.StringBuilder]::new()
 [void]$text.Append("// clang-format off`n")
 [void]$text.Append("namespace $tableNamespace {`n`n")
 [void]$text.Append("inline constexpr char kSignedBuild[] = `"$Version`";`n`n")
+[void]$text.Append("// The features that call an entry offsets.h lists as unplaced: stood down even on the pinned build.`n")
+[void]$text.Append("inline constexpr uint16_t kUnplacedFeatures = $unplacedFeatures;`n`n")
 [void]$text.Append("// Where each body's moving 4-byte fields sit (signature_table.h's Body).`n")
 [void]$text.Append(($maskLines -join "`n"))
 [void]$text.Append("`n`n")
