@@ -172,7 +172,7 @@ foreach ($name in $constants.Keys) {
     [string] $rustType = Get-RustType $constant.Value.Kind
     $rustLines.Add('')
     $rustLines.Add("// $($constant.Origin)")
-    $rustLines.Add("pub const ${rustName}: $rustType = $($constant.Value.RustLiteral);")
+    $rustLines.Add("pub(crate) const ${rustName}: $rustType = $($constant.Value.RustLiteral);")
 }
 [string] $rustGenerated = ($rustLines -join "`n") + "`n"
 
