@@ -9,7 +9,7 @@ namespace edgeplus::edge155::signatures {
 inline constexpr char kSignedBuild[] = "158.0.4370.33";
 
 // The features that call an entry offsets.h lists as unplaced: stood down even on the pinned build.
-inline constexpr uint16_t kUnplacedFeatures = 252;
+inline constexpr uint16_t kUnplacedFeatures = 188;
 
 // Where each body's moving 4-byte fields sit (signature_table.h's Body).
 inline constexpr uint32_t kBodyMask0[] = {13, 18};
@@ -232,6 +232,7 @@ inline constexpr uint32_t kBodyMask294[] = {15, 31, 41, 54, 77};
 inline constexpr uint32_t kBodyMask295[] = {9, 32, 37, 53, 83, 93, 107, 116, 147, 160, 183, 195};
 inline constexpr uint32_t kBodyMask296[] = {9, 32, 37, 53, 83, 93, 107, 116, 147, 160, 183, 195};
 inline constexpr uint32_t kBodyMask297[] = {41, 67, 90, 111};
+inline constexpr uint32_t kBodyMask300[] = {12, 25, 42, 58, 74, 96, 104, 130, 151, 160};
 
 inline constexpr Entry kEntries[] = {
     {0xff2eb4c, "", "MultiContentsView_SetWebContentsAtIndex", {{{"56 57 53 48 83 EC 20 41 83 F8 02 0F 83 ?? ?? ??", 0, 0, 2}, {"", 0, 0, 0}, {"", 0, 0, 0}, {"", 0, 0, 0}}}, {0x1b9e92c9f41e19e9ULL, kBodyMask0, 2, 22, 0, true}, 22, 0, 0, 0, 0x01, EntryKind::kFunction, 0},
@@ -534,7 +535,7 @@ inline constexpr Entry kEntries[] = {
     {0x69e428c, "", "ThumbnailCaptureDriver_OnCooldownEnded_stop_return", {{{"48 C7 46 48 00 00 00 00 48 81 C6 B8 00 00 00 48 89 F1 E8", 0, 0, 1}, {"48 C7 46 ?? ?? ?? ?? ?? 48 81 C6 ?? ?? ?? ?? 48 89 F1 E8 ?? ?? ?? ?? 48 8B 4F ?? 48 89 FA 45 31 C0 48 83 C4 28 5F 5E E9", 0, 0, 1}, {"", 0, 0, 0}, {"", 0, 0, 0}}}, {0x8050b3020bbf81efULL, kBodyMask297, 4, 115, 71, true}, 0, 0, 0, 0, 0x20, EntryKind::kSite, 0},
     {0x9140f94, "", "TabHoverCardThumbnailObserver_Observe", {{{"", 0, 0, 0}, {"", 0, 0, 0}, {"", 0, 0, 0}, {"", 0, 0, 0}}}, {0, nullptr, 0, 0, 0, false}, 0, 0, 0, 0, 0x20, EntryKind::kData, 0},
     {0xa551f00, "", "TabHoverCardController_OnCardClosing", {{{"", 0, 0, 0}, {"", 0, 0, 0}, {"", 0, 0, 0}, {"", 0, 0, 0}}}, {0, nullptr, 0, 0, 0, false}, 0, 0, 0, 0, 0x20, EntryKind::kData, 0},
-    {0x108dc50, "", "kBaseI18nIsRtl", {{{"", 0, 0, 0}, {"", 0, 0, 0}, {"", 0, 0, 0}, {"", 0, 0, 0}}}, {0, nullptr, 0, 0, 0, false}, 0, 0, 0, 0, 0x60, EntryKind::kData, 0},
+    {0xfc6350, "", "kBaseI18nIsRtl", {{{"41 56 56 57 53 48 83 EC 58 48 8B 05 ?? ?? ?? ?? 48 31 E0 48 89 44 24 50 E8 ?? ?? ?? ?? 85 C0 75 65 48 8D 74 24 28 48 89 F1 E8 ?? ?? ?? ?? 48 8D 7C 24 40 48 89 F1 48 89 FA E8 ?? ?? ?? ?? 48 8B 37 48 8B 7F 08 31 DB 4C 8D 35 ?? ?? ?? ?? 4A 39 7C 33 08 75 17 4A 8B 0C 33 48 89 F2 49 89 F8 E8 ?? ?? ?? ?? 85 C0 0F 84 ?? ?? ?? ?? 48 83 C3 10 48 83 FB 40 75 D8 B8 02 00 00 00 80 7C 24 38 01 0F 84", 0, 0, 1}, {"83 F8 01 0F 94 C0 48 8B 4C 24 50 48 31 E1 48 8B 15 ?? ?? ?? ?? 48 39 CA 0F 85 ?? ?? ?? ?? 48 83 C4 58 5B 5F", 134, 0, 1}, {"41 56 56 57 53 48 83 EC 58 48 8B 05 ?? ?? ?? ?? 48 31 E0 48 89 44 24 ?? E8 ?? ?? ?? ?? 85 C0 75 65 48 8D 74 24 ?? 48 89 F1 E8 ?? ?? ?? ?? 48 8D 7C 24 ?? 48 89 F1 48 89 FA E8 ?? ?? ?? ?? 48 8B 37 48 8B 7F ?? 31 DB 4C 8D 35 ?? ?? ?? ?? 4A 39 7C 33 ?? 75 17 4A 8B 0C 33 48 89 F2 49 89 F8 E8", 0, 0, 1}, {"85 C0 0F 84 ?? ?? ?? ?? 48 83 C3 10 48 83 FB 40 75 D8 B8", 100, 0, 1}}}, {0xe200d606a6d197dbULL, kBodyMask300, 10, 174, 0, true}, 174, 0, 0, 0, 0x60, EntryKind::kFunction, 0},
 };
 
 }  // namespace edgeplus::edge155::signatures
