@@ -66,13 +66,13 @@ inline theme_tone::Tone ToneForPage(void* webContents) {
 }
 
 // EdgeComputePreferredColorScheme: the page's prefers-color-scheme and root
-// scrollbar scheme.
-using Preferred_t = void*(__fastcall*)(void*, const void*, void*);
+// scrollbar scheme. 158 added a fourth argument, passed through untouched.
+using Preferred_t = void*(__fastcall*)(void*, const void*, void*, void*);
 inline constinit Preferred_t o_preferred = nullptr;
 
 inline void* __fastcall h_preferred(void* out, const void* siteInfo,
-                                    void* webContents) {
-  void* result = o_preferred(out, siteInfo, webContents);
+                                    void* webContents, void* extraArgument) {
+  void* result = o_preferred(out, siteInfo, webContents, extraArgument);
   const theme_tone::Tone tone = ToneForPage(webContents);
   if (tone == theme_tone::Tone::kUnknown) {
     return result;

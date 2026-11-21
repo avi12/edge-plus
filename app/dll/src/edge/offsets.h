@@ -641,12 +641,14 @@ inline constexpr uintptr_t DistilledPagePrefs_SetTheme = 0x10880350;
 // the page's prefers-color-scheme (computed per WebContents) and the colors
 // the WebUI draws with (chrome://theme/colors.css, built from the contents'
 // color provider, whose mode is the OS's or the Appearance setting's).
-// void* EdgeComputePreferredColorScheme(out, const SiteInfo*, WebContents*):
+// void* EdgeComputePreferredColorScheme(out, const SiteInfo*, WebContents*, void*):
+// (158 added the fourth argument, passed through untouched; its entry is a hot
+// stub that jumps into the cold body.)
 // the pair of answers behind one page's web preferences, called from
 // ChromeContentBrowserClient::OverrideWebPreferences (and its after-navigation
 // and need-update siblings); out->+0 is the preferred color scheme as blink
 // stores it (0 = dark, 1 = light), out->+4 the root scrollbar scheme (1 = dark).
-inline constexpr uintptr_t EdgeComputePreferredColorScheme = 0x5570ff9;
+inline constexpr uintptr_t EdgeComputePreferredColorScheme = 0xea3244a;
 // void WebContentsImpl::OnColorProviderChanged(this): `this` is the contents'
 // ColorProviderSourceObserver subobject (off::WEBCONTENTS_color_observer). It
 // tells the contents' observers, which makes a WebUI page fetch its colors.css
@@ -868,7 +870,7 @@ inline constexpr uintptr_t WebContentsImpl_GetPrimaryMainFrame = 0x1209210;
 inline constexpr uintptr_t WebContentsImpl_ForEachRenderFrameHost = 0x2583ac0;
 inline constexpr uintptr_t RenderFrameHostImpl_GetLastCommittedURL = 0x1208c80;
 // const std::string& GURL::spec(this).
-inline constexpr uintptr_t GURL_spec = 0x109278a;
+inline constexpr uintptr_t GURL_spec = 0xfccec4;
 // bool RenderFrameHostImpl::IsRenderFrameLive(this): false for a discarded tab.
 inline constexpr uintptr_t RenderFrameHostImpl_IsRenderFrameLive = 0x112e960;
 // void RenderFrameHostImpl::ExecuteJavaScriptInIsolatedWorld(this,
@@ -1076,7 +1078,6 @@ inline constexpr uintptr_t kRvas[] = {
     rva::CopilotUtils_CloseUndersideChat,
     rva::CopilotUtils_FrontLoadSidePaneImmediate,
     rva::CopilotUtils_SendPageContextualPromptToChatImpl,
-    rva::EdgeComputePreferredColorScheme,
     rva::EdgeToggleButton_GetIsOn,
     rva::EdgeToggleButton_SetIsOn,
     rva::FindBarController_EndFindSession,
@@ -1090,7 +1091,6 @@ inline constexpr uintptr_t kRvas[] = {
     rva::FindInPageOptionToggleView_EdgeOnActiveWebContentsChanged,
     rva::FindInPageOptionToggleView_OnButtonToggled,
     rva::FindOptionsControlView_AddFindInPageOptionChildView,
-    rva::GURL_spec,
     rva::IframelessPromptDispatcher_DispatchAskCopilotToDocument,
     rva::Label_SetText,
     rva::OptionalString_assignEmpty,
