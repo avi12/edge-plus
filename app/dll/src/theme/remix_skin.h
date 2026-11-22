@@ -483,11 +483,14 @@ inline constexpr char kSkinnedSelectorCss[] =
         button.setAttribute("aria-checked", button.dataset.mode === state.current ? "true" : "false");
       });
     }
-    function showMode(group) {
+    // Moving the wheel makes the editor apply the colour to the page, so it is
+    // done only for the user's own click; opening the section, or Edge's mode
+    // changing, only marks the selector and leaves the page and the wheel alone.
+    function showMode(group, isUserChoice) {
       mark(group);
       var colour = state.pair[state.current];
       var wheel = group.getRootNode().querySelector(".color-picker");
-      if (colour && wheel) { driveWheel(wheel, colour); }
+      if (isUserChoice && colour && wheel) { driveWheel(wheel, colour); }
     }
     function build(button) {
       var group = document.createElement("div");
@@ -503,16 +506,16 @@ inline constexpr char kSkinnedSelectorCss[] =
         choice.addEventListener("click", function () {
           state.isTouched = true;
           state.current = mode;
-          showMode(group);
+          showMode(group, true);
         });
         group.append(choice);
       });
       button.parentNode.insertBefore(group, button);
-      // A fresh Appearance section: Edge's mode, and its colour on the wheel.
+      // A fresh Appearance section: Edge's mode selected, nothing applied.
       state.isTouched = false;
       state.current = edgeMode();
       state.last = null;
-      showMode(group);
+      showMode(group, false);
       return group;
     }
     function visit(root) {
@@ -528,20 +531,20 @@ inline constexpr char kSkinnedSelectorCss[] =
         if (style.textContent !== css) { style.textContent = css; }
         var group = button.parentNode.querySelector("." + groupClass) || build(button);
         // Leaving the section only hides it, so each time it is shown again counts
-        // as opening it: Edge's mode, and its colour on the wheel.
+        // as opening it: Edge's mode selected, nothing applied.
         var isShown = picker.getClientRects().length > 0;
         if (isShown && !state.wasShown) {
           state.isTouched = false;
           state.current = edgeMode();
           state.last = null;
-          showMode(group);
+          showMode(group, false);
         }
         state.wasShown = isShown;
         isAnyShown = isAnyShown || isShown;
         var isFollowing = !state.isTouched && state.current !== edgeMode();
         if (isFollowing) {
           state.current = edgeMode();
-          showMode(group);
+          showMode(group, false);
         }
         mark(group);
         var wheel = readWheel(picker);
