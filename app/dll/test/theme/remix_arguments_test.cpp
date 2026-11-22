@@ -26,6 +26,22 @@ std::string Wrap(const std::string& call) {
          "); } catch(e) { console.error('Execute failed:', e); } })();";
 }
 
+void RunEmptyDarkmodeChecks() {
+  const std::string empty =
+      Wrap("applyColorWheelThemeV2(\"10\",\"20\",\"\",\"\",\"\"");
+  const auto dark = WithDarkmode(empty, true);
+  Check(dark.outcome == Outcome::kRewritten &&
+            dark.script ==
+                Wrap("applyColorWheelThemeV2(\"10\",\"20\",\"true\",\"\",\"\""),
+        "an empty darkmode becomes true in dark");
+  const auto light = WithDarkmode(empty, false);
+  Check(
+      light.outcome == Outcome::kRewritten &&
+          light.script ==
+              Wrap("applyColorWheelThemeV2(\"10\",\"20\",\"false\",\"\",\"\""),
+      "an empty darkmode becomes false in light");
+}
+
 void RunColourChecks() {
   const std::string quoted =
       Wrap("applyColorWheelThemeV2(\"10\",\"20\",\"true\",\"\",\"\"");
@@ -57,6 +73,7 @@ void RunColourChecks() {
 
 void RunChecks() {
   RunColourChecks();
+  RunEmptyDarkmodeChecks();
   const std::string darkQuoted =
       Wrap("applyColorWheelThemeV2(\"\",\"\",\"true\",\"\",\"\"");
   const auto toLight = WithDarkmode(darkQuoted, false);

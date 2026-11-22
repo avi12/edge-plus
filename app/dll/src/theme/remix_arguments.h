@@ -161,6 +161,18 @@ struct Span {
     quote = text.substr(0, 1);
     text = text.substr(1, text.size() - 2);
   }
+  // The editor leaves the argument empty until its Dark button was used: the
+  // page then reads it as light whatever Edge's mode is, so it is written out.
+  const bool isEmptyQuoted = isQuoted && text.empty();
+  if (isEmptyQuoted) {
+    const detail::Spelling& spelling = detail::kSpellings.front();
+    std::string rewritten(script.substr(0, span.begin));
+    rewritten += quote;
+    rewritten += isDark ? spelling.dark : spelling.light;
+    rewritten += quote;
+    rewritten += script.substr(span.end);
+    return {Outcome::kRewritten, std::move(rewritten)};
+  }
   for (const detail::Spelling& spelling : detail::kSpellings) {
     const bool isLight = text == spelling.light;
     const bool isDarkSpelled = text == spelling.dark;

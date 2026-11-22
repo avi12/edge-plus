@@ -443,7 +443,8 @@ inline constexpr char kSkinnedSelectorCss[] =
     var state = window[key];
     if (!state) {
       state = window[key] = {pair: parse(seed), last: null, settleUntil: 0,
-          current: edgeMode(), isTouched: false};
+          current: edgeMode(), isTouched: false, isSyncing: false,
+          wired: new WeakSet()};
     }
     function publish() {
       var fragment = fragmentKey + "light=" + formatOne(state.pair.light) +
@@ -478,6 +479,39 @@ inline constexpr char kSkinnedSelectorCss[] =
       picker.dispatchEvent(pointer("pointerup", x, y));
       state.settleUntil = Date.now() + 400;
     }
+    // The editor applies with its own darkmode (the hidden Dark button's pressed
+    // state), which is not Edge's mode. Before the user's first action on a
+    // control, that state is set to the selected mode by pressing the hidden
+    // button, so every apply after it carries the right darkmode. Opening the
+    // section never presses it: nothing is applied until the user acts.
+    function syncDarkmode(root) {
+      if (state.isSyncing) { return; }
+      var hidden = root.querySelector(".lights-button");
+      if (!hidden) { return; }
+      var isWanted = state.current === "dark";
+      var isHeld = hidden.getAttribute("aria-pressed") === "true";
+      if (isWanted !== isHeld) {
+        state.isSyncing = true;
+        hidden.click();
+        state.isSyncing = false;
+      }
+    }
+    function isOwnOrLeaving(event) {
+      return event.composedPath().some(function (node) {
+        var isOwn = node.classList && node.classList.contains(groupClass);
+        var label = node.getAttribute ? node.getAttribute("aria-label") : "";
+        return isOwn || label === "Back" || label === "Close";
+      });
+    }
+    function watchActions(root) {
+      if (state.wired.has(root)) { return; }
+      state.wired.add(root);
+      ["pointerdown", "keydown"].forEach(function (type) {
+        root.addEventListener(type, function (event) {
+          if (!isOwnOrLeaving(event)) { syncDarkmode(root); }
+        }, true);
+      });
+    }
     function mark(group) {
       group.querySelectorAll("button").forEach(function (button) {
         button.setAttribute("aria-checked", button.dataset.mode === state.current ? "true" : "false");
@@ -506,6 +540,7 @@ inline constexpr char kSkinnedSelectorCss[] =
         choice.addEventListener("click", function () {
           state.isTouched = true;
           state.current = mode;
+          syncDarkmode(group.getRootNode());
           showMode(group, true);
         });
         group.append(choice);
@@ -530,6 +565,7 @@ inline constexpr char kSkinnedSelectorCss[] =
         }
         if (style.textContent !== css) { style.textContent = css; }
         var group = button.parentNode.querySelector("." + groupClass) || build(button);
+        watchActions(root);
         // Leaving the section only hides it, so each time it is shown again counts
         // as opening it: Edge's mode selected, nothing applied.
         var isShown = picker.getClientRects().length > 0;
