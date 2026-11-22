@@ -18,8 +18,13 @@
 
 namespace edgeplus::remix_skin_mode {
 
-// Often enough that the editor is skinned as it opens.
-inline constexpr UINT kPollIntervalMs = 400;
+// A page is handed the script on every beat: it is idempotent and cheap (a walk
+// of a few shadow roots), and a page cannot be told from the last one at the
+// same address, since a reload or a bubble reopened keeps its contents. The
+// script keeps its own MutationObserver on every shadow root (remix_skin.h), so
+// a component built later is styled before it is painted; the beat only has to
+// find the page as soon as it is live.
+inline constexpr UINT kPollIntervalMs = 50;
 
 // True once the pages carry the skin, so the poll takes it off exactly once.
 inline constinit bool g_isPainted = false;

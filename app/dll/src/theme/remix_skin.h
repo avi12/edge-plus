@@ -32,6 +32,8 @@ using theme_tone::Tone;
 
 // The page script's marker on every <style> it adds, one per shadow root.
 inline constexpr char kStyleClass[] = "edgeplus-remix-skin";
+// The page script's state between runs (its observers and the current text).
+inline constexpr char kStateKey[] = "__edgeplusRemixSkin";
 
 inline constexpr uint32_t kChannelMask = 0xff;
 inline constexpr int kAlphaShift = 24;
@@ -247,14 +249,19 @@ widget-adjustment, blueprint-main {
 }
 
 // Adds (or refreshes) one <style> in the document and in every open shadow
-// root under it. Runs in our isolated world, which the page's CSP does not
-// govern; the DOM is shared. Idempotent: a root already carrying the same text
-// is left alone, so the visit every poll costs a walk and no style recalc.
+// root under it, and leaves a MutationObserver on each of them so a root built
+// later (the editor's components render after the script first runs) is styled
+// in the same microtask, before the browser paints it; C++ only has to deliver
+// this once per page. Runs in our isolated world, which the page's CSP does not
+// govern; the DOM is shared. Idempotent: running it again only swaps the text.
 [[nodiscard]] inline std::string PaintScript(Tone tone) {
   std::string script = "(function () {\n  var css = ";
   script += web_text::JsStringLiteral(StyleFor(tone));
   script += ";\n  var cls = " + web_text::JsStringLiteral(kStyleClass) + ";";
+  script += "\n  var key = " + web_text::JsStringLiteral(kStateKey) + ";";
   script += R"JS(
+    var state = window[key] || (window[key] = {css: css, watched: new WeakSet(), observers: []});
+    state.css = css;
     function paint(root, parent) {
       var style = null;
       for (var i = 0; i < parent.children.length; i++) {
@@ -263,12 +270,22 @@ widget-adjustment, blueprint-main {
       if (!style) {
         style = document.createElement("style");
         style.className = cls;
-        parent.append(style);
+        parent.prepend(style);
       }
-      if (style.textContent !== css) { style.textContent = css; }
+      if (style.textContent !== state.css) { style.textContent = state.css; }
+      watch(root);
       root.querySelectorAll("*").forEach(function (element) {
         if (element.shadowRoot) { paint(element.shadowRoot, element.shadowRoot); }
       });
+    }
+    function watch(root) {
+      if (state.watched.has(root)) { return; }
+      state.watched.add(root);
+      var observer = new MutationObserver(function () {
+        paint(document, document.head || document.documentElement);
+      });
+      observer.observe(root, {childList: true, subtree: true});
+      state.observers.push(observer);
     }
     paint(document, document.head || document.documentElement);
   })();)JS";
@@ -278,6 +295,7 @@ widget-adjustment, blueprint-main {
 [[nodiscard]] inline std::string RemoveScript() {
   std::string script = "(function () {\n  var cls = ";
   script += web_text::JsStringLiteral(kStyleClass);
+  script += ";\n  var key = " + web_text::JsStringLiteral(kStateKey);
   script += R"JS(;
     function strip(root) {
       root.querySelectorAll("style." + cls).forEach(function (style) { style.remove(); });
@@ -286,6 +304,11 @@ widget-adjustment, blueprint-main {
       });
     }
     strip(document);
+    var state = window[key];
+    if (state) {
+      state.observers.forEach(function (observer) { observer.disconnect(); });
+      delete window[key];
+    }
   })();)JS";
   return script;
 }
