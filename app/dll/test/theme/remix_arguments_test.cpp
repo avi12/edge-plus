@@ -4,6 +4,7 @@
 #include "../../src/theme/remix_arguments.h"
 
 using edgeplus::remix_arguments::Outcome;
+using edgeplus::remix_arguments::WithColour;
 using edgeplus::remix_arguments::WithDarkmode;
 
 namespace {
@@ -25,7 +26,37 @@ std::string Wrap(const std::string& call) {
          "); } catch(e) { console.error('Execute failed:', e); } })();";
 }
 
+void RunColourChecks() {
+  const std::string quoted =
+      Wrap("applyColorWheelThemeV2(\"10\",\"20\",\"true\",\"\",\"\"");
+  const auto coloured = WithColour(quoted, 210, 40);
+  Check(
+      coloured.outcome == Outcome::kRewritten &&
+          coloured.script ==
+              Wrap("applyColorWheelThemeV2(\"210\",\"40\",\"true\",\"\",\"\""),
+      "hue and saturation are replaced inside their quotes");
+  Check(WithColour(quoted, 10, 20).outcome == Outcome::kUnchanged,
+        "the colour already there is left alone");
+  const auto bare =
+      WithColour(Wrap("__edgeRemixApplyTheme( 5 , 6 ,false,\"\",\"\""), 300, 0);
+  Check(bare.outcome == Outcome::kRewritten &&
+            bare.script ==
+                Wrap("__edgeRemixApplyTheme( 300 , 0 ,false,\"\",\"\""),
+        "unquoted numbers stay unquoted and keep their spacing");
+  const auto empty = WithColour(
+      Wrap("applyColorWheelThemeV2(\"\",\"\",\"0\",\"\",\"\""), 1, 2);
+  Check(empty.outcome == Outcome::kRewritten &&
+            empty.script ==
+                Wrap("applyColorWheelThemeV2(\"1\",\"2\",\"0\",\"\",\"\""),
+        "an empty colour argument is filled");
+  Check(WithColour("unrelated()", 1, 2).outcome == Outcome::kNotThemeCall &&
+            WithColour(Wrap("applyColorWheelThemeV2(1"), 1, 2).outcome ==
+                Outcome::kUnknownShape,
+        "another script, or a call too short, is left alone");
+}
+
 void RunChecks() {
+  RunColourChecks();
   const std::string darkQuoted =
       Wrap("applyColorWheelThemeV2(\"\",\"\",\"true\",\"\",\"\"");
   const auto toLight = WithDarkmode(darkQuoted, false);

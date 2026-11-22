@@ -13,6 +13,8 @@
 #include "theme/blink_scheme.h"
 #include "theme/followed_pages.h"
 #include "theme/remix_arguments.h"
+#include "theme/remix_colors.h"
+#include "theme/remix_colors_store.h"
 #include "theme/remix_mode.h"
 #include "theme/theme_tone.h"
 
@@ -65,6 +67,20 @@ inline void RewriteScript(void* out) {
       remix_arguments::WithDarkmode(script, isDark);
   if (result.outcome == remix_arguments::Outcome::kNotThemeCall) {
     return;
+  }
+  // The colour picked for Edge's current mode, when there is one; a remix with
+  // none saved keeps its own.
+  const remix_colors::Colour colour =
+      remix_colors::ColourFor(remix_colors_store::g_pair, isDark);
+  if (colour.isSet) {
+    const bool isDarkmodeRewritten =
+        result.outcome == remix_arguments::Outcome::kRewritten;
+    const std::string current = isDarkmodeRewritten ? result.script : script;
+    remix_arguments::Result coloured =
+        remix_arguments::WithColour(current, colour.hue, colour.intensity);
+    if (coloured.outcome == remix_arguments::Outcome::kRewritten) {
+      result = std::move(coloured);
+    }
   }
   Log("[remix-theme] appearance script (edge %s): outcome %d, %.*s",
       isDark ? "dark" : "light", static_cast<int>(result.outcome),

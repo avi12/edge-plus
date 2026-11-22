@@ -18,7 +18,10 @@ namespace edgeplus::remix_arguments {
 inline constexpr std::array<std::string_view, 2> kThemeFunctions = {
     "__edgeRemixApplyTheme", "applyColorWheelThemeV2"};
 
-// (hue, saturation, darkmode, font, zoom).
+// (hue, saturation, darkmode, font, zoom). The editor's own "intensity" is
+// the second one, in percent.
+inline constexpr size_t kHueIndex = 0;
+inline constexpr size_t kSaturationIndex = 1;
 inline constexpr size_t kDarkmodeIndex = 2;
 
 enum class Outcome {
@@ -175,6 +178,51 @@ struct Span {
     return {Outcome::kRewritten, std::move(rewritten)};
   }
   return {Outcome::kUnknownShape, {}};
+}
+
+// `script` with the hue and saturation arguments of its Appearance call set to
+// `hue` degrees and `saturation` percent, each in the quotes it already has.
+[[nodiscard]] inline Result WithColour(std::string_view script, int hue,
+                                       int saturation) {
+  size_t argumentsAt = std::string_view::npos;
+  for (const std::string_view name : kThemeFunctions) {
+    argumentsAt = detail::FindCallArguments(script, name);
+    if (argumentsAt != std::string_view::npos) {
+      break;
+    }
+  }
+  if (argumentsAt == std::string_view::npos) {
+    return {Outcome::kNotThemeCall, {}};
+  }
+  const std::vector<detail::Span> arguments =
+      detail::SplitArguments(script, argumentsAt);
+  if (arguments.size() <= kDarkmodeIndex) {
+    return {Outcome::kUnknownShape, {}};
+  }
+  const std::string hueText = std::to_string(hue);
+  const std::string saturationText = std::to_string(saturation);
+  std::string rewritten;
+  size_t copiedTo = 0;
+  for (const size_t index : {kHueIndex, kSaturationIndex}) {
+    const detail::Span span = detail::Trimmed(script, arguments[index]);
+    std::string_view quote;
+    const bool isQuoted = span.end - span.begin >= 2 &&
+                          detail::IsQuote(script[span.begin]) &&
+                          script[span.end - 1] == script[span.begin];
+    if (isQuoted) {
+      quote = script.substr(span.begin, 1);
+    }
+    rewritten += script.substr(copiedTo, span.begin - copiedTo);
+    rewritten += quote;
+    rewritten += index == kHueIndex ? hueText : saturationText;
+    rewritten += quote;
+    copiedTo = span.end;
+  }
+  rewritten += script.substr(copiedTo);
+  if (rewritten == script) {
+    return {Outcome::kUnchanged, {}};
+  }
+  return {Outcome::kRewritten, std::move(rewritten)};
 }
 
 }  // namespace edgeplus::remix_arguments
