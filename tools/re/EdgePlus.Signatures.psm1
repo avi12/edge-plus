@@ -68,6 +68,7 @@ class FeatureRule {
     [FeatureRule]@{ Match = 'theming'; Features = @('Theming') }
     [FeatureRule]@{ Match = "reading mode's page theme"; Features = @('ReadingTheme') }
     [FeatureRule]@{ Match = 'WebUI pages follow the theme'; Features = @('WebUiFollowsTheme', 'RemixTheme') }
+    [FeatureRule]@{ Match = "Create a remix's Appearance script"; Features = @('RemixTheme') }
     [FeatureRule]@{ Match = 'web protocol handlers'; Features = @('ProtocolHandlers') }
     [FeatureRule]@{ Match = "the browser assistant's toolbar button"; Features = @('EnhancedFind') }
     [FeatureRule]@{ Match = 'running a script in a page, and reading a tab'; Features = @('EnhancedFind') }

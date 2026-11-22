@@ -909,6 +909,9 @@ inline bool Install(edge155::signatures::Feature feature, uintptr_t rva,
   if (isThemeFollowWanted) {
     theme_follow::Install();
   }
+  if (availability::IsAvailable(Feature::kRemixTheme)) {
+    remix_darkmode::Install();
+  }
   if (availability::IsAvailable(Feature::kLivePreview)) {
     live_preview::Install();
   }

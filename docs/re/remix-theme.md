@@ -49,23 +49,44 @@ The page's own colours come from `--smtc-*` / `--mai-smtc-*` custom properties
 (205 on the page), which Edge derives from the same provider, so no style injection
 is needed for light and dark.
 
-## The Appearance remix's `darkmode` (not shipped) [static]
+## The Appearance remix's `darkmode` [static, built; not seen firing live]
 
-The wrapper text `var __edgeRemixApplyTheme = (function(templateFunction) { return
-function(hue, saturation, darkmode, font, zoom) { return templateFunction(` is
-joined by one string concatenation (callee 0x104f260, pieces on the stack at
-0x820a4f7..0x820a63d) inside the function that builds the WebUI's load-time data
-(`remixThemeAdapterFunction`), **once per page load, not per apply**. `darkmode` is
-only a parameter name there; the value comes from the stored arguments. So the
-research's hook C1 (rewrite the emitted text per apply) does not hold: there is no
-per-apply emitter, and the literal is a fixed 120 bytes in `.rdata`.
+An Appearance remix is stored as plain JS plus its arguments (`default_arguments`
+row, function `applyColorWheelThemeV2`, `args` = JSON text per argument,
+`"\"true\""` for the third, `darkmode`); the load-time wrapper `__edgeRemixApplyTheme`
+(callee 0x104f260, once per page load) only names the parameter, so there is nothing to
+rewrite there. What does run per apply is the script builder:
+`RemixAction_BuildScript` (`offsets.h`, hot stub 0x100e633f into the body at
+0x820998e; one caller, the executor at 0xb7d7074, which hands the result to the
+page). It joins the action's function name and its arguments (each parsed from its JSON
+text and written back as a JS literal, `0x100e6288`) into
+`(function() { try { NAME(arg,arg,...); } catch(e) {...} })();`, UTF-8, then
+`UTF8ToUTF16` into its `std::u16string` result.
 
-Not done, and why: an Appearance remix cannot be created offline (generation is the
-cloud's), so a darkmode hook could not be run against a real remix. Open leads, in
-the order to try them: C3 (`SetArtifactActionParameters` / `SetDefaultBlueprintArguments`,
-needs the `EdgeBlueprintStorage*` owner, still unlocated); the editor's own toggle
-default, which may already follow `prefers-color-scheme` of `edge://blueprint` and so
-this switch (read the editor with a signed-in profile).
+`remix_darkmode.h` detours it, and with the remix switch on rewrites the third argument
+of a `__edgeRemixApplyTheme` / `applyColorWheelThemeV2` call to Edge's light or dark
+(`remix_arguments.h`, pure, `test/theme/remix_arguments_test.cpp`): `"true"`, `true`
+or `1` and their opposites, in the form already there; any other shape, or another
+remix's call, is left alone. The result string is replaced whole (freed with Edge's
+own `operator delete`, rebuilt with `UTF8ToUTF16`). "Edge's own mode" is the signal
+the followed pages use: the theme's tone, else Edge's own preferred scheme (which
+includes the Appearance setting), read in `theme_follow.h`'s
+`EdgeComputePreferredColorScheme` detour for every page that is not itself a followed
+page (`remix_darkmode::ObservePage`), so it is that of the page the script is about to
+run in. Until a page has been computed since the DLL loaded the mode is unknown and no
+argument is touched; Windows' setting is never consulted.
+
+Placement: the entry is in the signature table under the RemixTheme feature alone, so
+a build that cannot place it stands the remix switch down (the followed pages with it)
+and nothing is hooked.
+
+Not seen live: in a throwaway Edge 158 (fresh profile, Windows account signed in by
+single sign-on, the remix prefs and `edge-remix` labs flags set, a seeded Appearance
+remix whose row Edge's own manager `edge://remix` lists as "Always") no automatic
+remix ran on navigation and the builder was never called, so the argument was not
+seen flipping. The profile lacks whatever field trial turns Edge's trigger on; the
+on-demand route is behind the toolbar button's native menu. Try it in a profile where
+a remix already works.
 
 ## Not verified
 

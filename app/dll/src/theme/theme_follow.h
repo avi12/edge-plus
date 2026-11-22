@@ -15,6 +15,7 @@
 #include "theme/blink_scheme.h"
 #include "theme/followed_pages.h"
 #include "core/log.h"
+#include "theme/remix_darkmode.h"
 #include "theme/remix_mode.h"
 #include "theme/theme_tone.h"
 
@@ -67,6 +68,7 @@ inline constinit Preferred_t o_preferred = nullptr;
 inline void* __fastcall h_preferred(void* out, const void* siteInfo,
                                     void* webContents, void* extraArgument) {
   void* result = o_preferred(out, siteInfo, webContents, extraArgument);
+  remix_darkmode::ObservePage(webContents, out, CurrentSwitches());
   const theme_tone::Tone tone = ToneForPage(webContents);
   if (tone == theme_tone::Tone::kUnknown) {
     return result;

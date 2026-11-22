@@ -774,6 +774,17 @@ inline constexpr uintptr_t BubbleBorder_GetInsets = 0x3023490;
 // string's own fields, not a raw pointer, so this char-pointer one is used.
 inline constexpr uintptr_t BasicStringChar_append = 0x25ea69e;
 
+// --- Create a remix's Appearance script (docs/re/remix-theme.md) ---
+// std::u16string* RemixAction_BuildScript(out, ActionHolder* const* action): the
+// one place Edge builds the script of a remix it is about to run, from the
+// action's function name and its stored arguments: `(function() { try { NAME(
+// arg,arg,...); } catch(e) {...} })();`, UTF-8 joined, then UTF8ToUTF16 into
+// `out`, which is returned. Its one caller (rva 0xb7d7074) hands the result to
+// the page. The entry is a hot stub holding the prologue that jumps into the
+// body at 0x820998e. An Appearance remix's NAME is applyColorWheelThemeV2 and
+// its third argument the baked-in darkmode.
+inline constexpr uintptr_t RemixAction_BuildScript = 0x100e633f;
+
 // --- web protocol handlers (docs/re/protocol-handlers.md) ---
 // A site's registerProtocolHandler without a user gesture lights the omnibox
 // handler icon; its bubble (Allow / Deny / Ignore, Ignore preselected) commits

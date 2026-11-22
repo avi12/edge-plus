@@ -169,6 +169,7 @@ inline constexpr uint8_t kStockIndexCap = 2;
       edge155::rva::EdgeComputePreferredColorScheme,
       edge155::rva::WebContentsImpl_GetColorProvider,
       edge155::rva::ThemeService_GetColorProviderKey,
+      edge155::rva::RemixAction_BuildScript,
       edge155::rva::RegisterProtocolHandlerPermissionRequest_PermissionDecided,
       // The vertical-tab colour hooks, read on every paint.
       edge155::rva::BrowserThemePack_GetColor,
