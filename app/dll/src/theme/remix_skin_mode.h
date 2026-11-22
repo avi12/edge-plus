@@ -48,14 +48,20 @@ inline void Poll() {
   }
   const bool isSkinning = remix_skin::ShouldSkin(
       remix_mode::g_isActive, tab_shape::g_isCyberpunkSkinOn);
-  if (!isSkinning && !g_isPainted) {
-    return;
+  const bool isRemovingSkin = !isSkinning && g_isPainted;
+  std::string skinScript;
+  if (isSkinning) {
+    skinScript = remix_skin::PaintScript(skin_tone::Current());
+  } else if (isRemovingSkin) {
+    skinScript = remix_skin::RemoveScript();
   }
-  const std::string script = isSkinning
-                                 ? remix_skin::PaintScript(skin_tone::Current())
-                                 : remix_skin::RemoveScript();
+  // The mode note needs only the remix switch; the skin just restyles it.
+  const std::string noteScript = remix_skin::NoteScript(isSkinning);
   for (void* contents : RemixPages()) {
-    edge::RunScriptUnanswered(contents, script);
+    if (!skinScript.empty()) {
+      edge::RunScriptUnanswered(contents, skinScript);
+    }
+    edge::RunScriptUnanswered(contents, noteScript);
   }
   g_isPainted = isSkinning;
 }
@@ -67,10 +73,8 @@ inline void StartPolling(HWND window) {
 
 inline void Stop(HWND window) {
   KillTimer(window, channel::TimerIdOf(channel::WindowTimer::kRemixPoll));
-  if (!g_isPainted) {
-    return;
-  }
-  const std::string script = remix_skin::RemoveScript();
+  const std::string script =
+      remix_skin::RemoveScript() + remix_skin::NoteRemoveScript();
   for (void* contents : RemixPages()) {
     edge::RunScriptUnanswered(contents, script);
   }

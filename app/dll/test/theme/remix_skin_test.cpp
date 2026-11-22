@@ -72,6 +72,17 @@ void RunChecks() {
           !ShouldSkin(false, true) && !ShouldSkin(false, false),
       "the pages are skinned only with the remix switch and the skin both on");
 
+  const std::string neutral = NoteStyleFor(false);
+  const std::string skinned = NoteStyleFor(true);
+  Check(
+      Has(neutral, ".lights-button") && !Has(neutral, "--ep-") &&
+          Has(skinned, "--ep-label") && skinned.size() > neutral.size(),
+      "the mode note is neutral without the skin and takes its roles with it");
+  const std::string note = NoteScript(false);
+  Check(Has(note, "prefers-color-scheme") && Has(note, "Follows Edge: ") &&
+            Has(note, kNoteClass) && Has(NoteRemoveScript(), ".remove()"),
+        "the note reads Edge's mode live and can be taken away");
+
   const std::string paint = PaintScript(Tone::kDark);
   Check(Has(paint, kStyleClass) && Has(paint, "shadowRoot") &&
             Has(paint, "#05080c"),

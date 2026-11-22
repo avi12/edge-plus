@@ -358,6 +358,97 @@ mai-tab { border-radius: 0 !important; background: transparent !important; font-
   return script;
 }
 
+// --- the mode note (needs no skin) ---
+// With the remix switch on, an Appearance remix takes its darkmode from Edge's own
+// light or dark (remix_darkmode.h), so the editor's "Dark" button would lie. It is
+// hidden and a plain, non-interactive note takes its place, showing Edge's mode:
+// the page's own prefers-color-scheme, which the follow (theme_follow.h) already
+// drives, read again on every beat so it stays live.
+inline constexpr char kNoteClass[] = "edgeplus-mode-note";
+inline constexpr char kNoteStyleClass[] = "edgeplus-mode-style";
+inline constexpr char kFollowsLabel[] = "Follows Edge: ";
+inline constexpr char kDarkLabel[] = "Dark";
+inline constexpr char kLightLabel[] = "Light";
+
+// Neutral: the page's own tokens. The skin's roles are added on top of it.
+inline constexpr char kNoteCss[] =
+    ".lights-button { display: none !important; }"
+    ".edgeplus-mode-note { box-sizing: border-box; display: flex; align-items: "
+    "center;"
+    " justify-content: center; height: var(--smtc-size-ctrl-lg-default, 32px); "
+    "padding: 0 8px;"
+    " border: 1px dashed var(--smtc-stroke-ctrl-on-neutral-rest, currentColor);"
+    " color: var(--smtc-foreground-ctrl-neutral-secondary-rest, inherit);"
+    " font-size: 12px; white-space: nowrap; cursor: default; user-select: none;"
+    " pointer-events: none; }";
+inline constexpr char kSkinnedNoteCss[] =
+    ".edgeplus-mode-note { border: 2px dashed var(--ep-off); color: "
+    "var(--ep-label);"
+    " font-family: \"Share Tech Mono\", Consolas, monospace; letter-spacing: "
+    "0.06em;"
+    " text-transform: uppercase; clip-path: polygon(7px 0, 100% 0, 100% "
+    "calc(100% - 7px),"
+    " calc(100% - 7px) 100%, 0 100%, 0 7px); }";
+
+[[nodiscard]] inline std::string NoteStyleFor(bool isSkinned) {
+  return std::string(kNoteCss) + (isSkinned ? kSkinnedNoteCss : "");
+}
+
+[[nodiscard]] inline std::string NoteScript(bool isSkinned) {
+  std::string script = "(function () { var css = ";
+  script += web_text::JsStringLiteral(NoteStyleFor(isSkinned));
+  script += "; var prefix = " + web_text::JsStringLiteral(kFollowsLabel);
+  script += "; var darkLabel = " + web_text::JsStringLiteral(kDarkLabel);
+  script += "; var lightLabel = " + web_text::JsStringLiteral(kLightLabel);
+  script += "; var noteClass = " + web_text::JsStringLiteral(kNoteClass);
+  script += "; var styleClass = " + web_text::JsStringLiteral(kNoteStyleClass);
+  script += R"JS(;
+    var isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var text = prefix + (isDark ? darkLabel : lightLabel);
+    function visit(root) {
+      var button = root.querySelector(".lights-button");
+      if (button && button.parentNode) {
+        var style = root.querySelector("style." + styleClass);
+        if (!style) {
+          style = document.createElement("style");
+          style.className = styleClass;
+          root.prepend(style);
+        }
+        if (style.textContent !== css) { style.textContent = css; }
+        var note = button.parentNode.querySelector("." + noteClass);
+        if (!note) {
+          note = document.createElement("div");
+          note.className = noteClass;
+          note.setAttribute("role", "status");
+          button.parentNode.insertBefore(note, button);
+        }
+        if (note.textContent !== text) { note.textContent = text; }
+      }
+      root.querySelectorAll("*").forEach(function (element) {
+        if (element.shadowRoot) { visit(element.shadowRoot); }
+      });
+    }
+    visit(document);
+  })();)JS";
+  return script;
+}
+
+[[nodiscard]] inline std::string NoteRemoveScript() {
+  std::string script = "(function () { var selector = ";
+  script += web_text::JsStringLiteral(std::string(".") + kNoteClass +
+                                      ", style." + kNoteStyleClass);
+  script += R"JS(;
+    function strip(root) {
+      root.querySelectorAll(selector).forEach(function (node) { node.remove(); });
+      root.querySelectorAll("*").forEach(function (element) {
+        if (element.shadowRoot) { strip(element.shadowRoot); }
+      });
+    }
+    strip(document);
+  })();)JS";
+  return script;
+}
+
 [[nodiscard]] inline std::string RemoveScript() {
   std::string script = "(function () {\n  var cls = ";
   script += web_text::JsStringLiteral(kStyleClass);
