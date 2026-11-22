@@ -76,3 +76,31 @@ this switch (read the editor with a signed-in profile).
   so `RefreshPages` does not redraw it on a flip; reopening it does.
 - `edge://remix` (not opened).
 - Custom remixes: out of scope.
+
+## The Cyberpunk skin on these pages [run]
+
+`remix_skin.h` (pure: the style text from `cyberpunk_palette.h` roles, the paint and
+remove scripts) and `remix_skin_mode.h` (a 400 ms window timer, as reading mode's)
+inject one `<style class="edgeplus-remix-skin">` into the document and every open
+shadow root of each `edge://blueprint` / `edge://remix` page, through the isolated
+world (`RunScriptUnanswered`). Gate, `remix_skin::ShouldSkin`: remix switch AND
+`tab_shape::g_isCyberpunkSkinOn` (the flag every skin hook reads). Skin off: no
+style, stock look (captured, `out/shots-re/gate-skin0-1.png` vs `gate-skin1-1.png`).
+The light or dark follow does not depend on the skin.
+
+What the page is: `widget-adjustment` (the Appearance editor: `.color-picker` wheel,
+`.lights-button`, `.zoom-controls`, `.type-selector` of `mai-button.type-button`) and
+`blueprint-main` (`.card` choices), all Fluent `mai-button`s styled by `:host` rules
+and `--smtc-*` tokens; the "Dark" button is `appearance="Outline"` (capital O, so
+none of the component's `[appearance="outline"]` rules match) with `aria-pressed`.
+The skin repoints the tokens (`kPageTokens`, incl. the editor's `--blueprint-dark-*`)
+and restyles shapes with `!important`: no radius, 7px / 12px chamfers, 2px teal idle
+lines, mono labels, red wash plus red outline for the pressed/checked, 2px title rule
+with the 44px red stub. The hue wheel stays round and functional.
+
+Not reached: the real bubble (not a tab; needs the Remix cloud), the light tone live
+(a forced tone did not reach the poll in the throwaway), `edge://remix`.
+Placed for 158 to run scripts: `WebContentsImpl_GetPrimaryMainFrame` 0x1135fb0 (field
++0x968, next to GetController) and `RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld`
+0xf437d30 (hot stub into 0x5bc5e9a). A script with no answer builds no callback, so
+it needs no `BindStateBase_ctor` (still unplaced; reading mode stays down).
