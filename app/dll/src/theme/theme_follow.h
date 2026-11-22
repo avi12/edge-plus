@@ -12,6 +12,7 @@
 #include "core/config.h"
 #include "edge/edge.h"
 #include "core/channel.h"
+#include "theme/blink_scheme.h"
 #include "theme/followed_pages.h"
 #include "core/log.h"
 #include "theme/remix_mode.h"
@@ -20,21 +21,6 @@
 namespace edgeplus::theme_follow {
 
 inline constinit bool g_isActive = false;
-
-// Blink's PreferredColorScheme; the scrollbar scheme is the other way round.
-enum class BlinkScheme : int32_t {
-  kDark = 0,
-  kLight = 1,
-};
-
-[[nodiscard]] constexpr int32_t PageSchemeOf(bool isDark) noexcept {
-  return static_cast<int32_t>(isDark ? BlinkScheme::kDark
-                                     : BlinkScheme::kLight);
-}
-
-[[nodiscard]] constexpr int32_t ScrollbarSchemeOf(bool isDark) noexcept {
-  return PageSchemeOf(!isDark);
-}
 
 // A page keeps the colors it loaded with, so the first computation that sees a
 // new tone asks for a redraw (control.h), at most once per cooldown so a page
@@ -98,9 +84,9 @@ inline void* __fastcall h_preferred(void* out, const void* siteInfo,
     channel::Post(channel::CodeOf(channel::Command::kRedrawFollowedPages));
   }
   edge::Field<int32_t>(out, edge155::off::PREFERREDSCHEME_color_scheme) =
-      PageSchemeOf(isDark);
+      blink_scheme::PageSchemeOf(isDark);
   edge::Field<int32_t>(out, edge155::off::PREFERREDSCHEME_scrollbar_scheme) =
-      ScrollbarSchemeOf(isDark);
+      blink_scheme::ScrollbarSchemeOf(isDark);
   return result;
 }
 
