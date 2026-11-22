@@ -39,13 +39,17 @@ struct Switches {
   return url.starts_with(page) && IsHostEnd(url.substr(page.size()));
 }
 
+// Create a remix's own pages, which the Cyberpunk skin restyles (remix_skin.h).
+[[nodiscard]] inline bool IsRemixPage(std::string_view url) {
+  return IsPageOf(url, kBlueprint) || IsPageOf(url, kRemix);
+}
+
 [[nodiscard]] inline bool Follows(std::string_view url,
                                   const Switches& switches) {
   const bool isWebUiPage =
       IsPageOf(url, kSettings) || IsPageOf(url, kExtensions);
-  const bool isRemixPage = IsPageOf(url, kBlueprint) || IsPageOf(url, kRemix);
   return (switches.isWebUiFollowing && isWebUiPage) ||
-         (switches.isRemixFollowing && isRemixPage);
+         (switches.isRemixFollowing && IsRemixPage(url));
 }
 
 }  // namespace edgeplus::followed_pages

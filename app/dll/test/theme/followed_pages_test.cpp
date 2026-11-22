@@ -3,6 +3,7 @@
 #include "../../src/theme/followed_pages.h"
 
 using edgeplus::followed_pages::IsAnyOn;
+using edgeplus::followed_pages::IsRemixPage;
 using edgeplus::followed_pages::Switches;
 
 namespace {
@@ -60,6 +61,9 @@ void RunRemixChecks() {
   Check(!Follows("edge://blueprint", Switches{}), "all off");
   Check(!IsAnyOn(Switches{}), "none on");
   Check(IsAnyOn(kRemixOnly), "remix on");
+  Check(IsRemixPage("edge://blueprint/") && IsRemixPage("edge://remix") &&
+            !IsRemixPage("edge://settings") && !IsRemixPage("edge://remixfoo"),
+        "the skin's pages are the blueprint and the remix manager only");
 }
 
 }  // namespace

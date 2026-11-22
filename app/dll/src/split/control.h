@@ -34,6 +34,7 @@
 #include "theme/theme_follow.h"
 #include "chrome/tabs/live_preview.h"
 #include "theme/reading_mode.h"
+#include "theme/remix_skin_mode.h"
 #include "find/find.h"
 
 namespace edgeplus::control {
@@ -271,6 +272,7 @@ inline void Teardown(HWND hwnd) {
   const bool wasRemixFollowing = remix_mode::g_isActive;
   remix_mode::g_isActive = false;
   if (wasRemixFollowing) {
+    remix_skin_mode::Stop(hwnd);
     RefreshThemeColors();
   }
   live_preview::g_isActive = false;
@@ -425,10 +427,16 @@ inline void ApplyReadingConfig(HWND hwnd, const config::Wire& wire) {
   }
 }
 
-inline void ApplyRemixConfig(const config::Wire& wire) {
+inline void ApplyRemixConfig(HWND hwnd, const config::Wire& wire) {
   const bool isRemixChanged = remix_mode::ApplyConfig(wire);
-  if (isRemixChanged) {
-    RefreshThemeColors();
+  if (!isRemixChanged) {
+    return;
+  }
+  RefreshThemeColors();
+  if (remix_mode::g_isActive) {
+    remix_skin_mode::StartPolling(hwnd);
+  } else {
+    remix_skin_mode::Stop(hwnd);
   }
 }
 
@@ -471,7 +479,7 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
     }
   }
   if (availability::IsAvailable(Feature::kRemixTheme)) {
-    ApplyRemixConfig(wire);
+    ApplyRemixConfig(hwnd, wire);
   }
   if (availability::IsAvailable(Feature::kLivePreview)) {
     live_preview::ApplyConfig(wire);
@@ -731,6 +739,13 @@ inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
       wparam == channel::TimerIdOf(channel::WindowTimer::kReadingPoll);
   if (isReadingPoll) {
     reading_mode::Poll();
+    return 0;
+  }
+  const bool isRemixPoll =
+      message == WM_TIMER &&
+      wparam == channel::TimerIdOf(channel::WindowTimer::kRemixPoll);
+  if (isRemixPoll) {
+    remix_skin_mode::Poll();
     return 0;
   }
   const bool isRenderNudge = message == WM_TIMER && wparam == repaint::kTimerId;
