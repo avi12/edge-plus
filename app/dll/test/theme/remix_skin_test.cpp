@@ -79,7 +79,8 @@ void RunChecks() {
         "the selector is neutral without the skin and takes its roles with it");
   const std::string selector = SelectorScript(false, "light=1,2;dark=");
   Check(Has(selector, "light=1,2;dark=") && Has(selector, "pointerdown") &&
-            Has(selector, "replaceState") &&
+            Has(selector, "isTouched") && Has(selector, "wasShown") &&
+            Has(selector, "edgeMode()") && Has(selector, "replaceState") &&
             Has(selector, "#edgeplus-remix=") &&
             Has(SelectorRemoveScript(), ".remove()"),
         "the selector seeds the pair, drives the wheel and publishes the pair");

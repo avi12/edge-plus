@@ -434,10 +434,16 @@ inline constexpr char kSkinnedSelectorCss[] =
       return {light: parseOne(found[1]), dark: parseOne(found[2])};
     }
     function formatOne(colour) { return colour ? colour.h + "," + colour.i : ""; }
+    function edgeMode() {
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    // The pair outlives the editor; which mode is selected does not: each time
+    // the Appearance section is built (build below) it starts on Edge's mode, and
+    // follows Edge's flips until the selector is used.
     var state = window[key];
     if (!state) {
       state = window[key] = {pair: parse(seed), last: null, settleUntil: 0,
-          current: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"};
+          current: edgeMode(), isTouched: false};
     }
     function publish() {
       var fragment = fragmentKey + "light=" + formatOne(state.pair.light) +
@@ -477,6 +483,12 @@ inline constexpr char kSkinnedSelectorCss[] =
         button.setAttribute("aria-checked", button.dataset.mode === state.current ? "true" : "false");
       });
     }
+    function showMode(group) {
+      mark(group);
+      var colour = state.pair[state.current];
+      var wheel = group.getRootNode().querySelector(".color-picker");
+      if (colour && wheel) { driveWheel(wheel, colour); }
+    }
     function build(button) {
       var group = document.createElement("div");
       group.className = groupClass;
@@ -489,15 +501,18 @@ inline constexpr char kSkinnedSelectorCss[] =
         choice.dataset.mode = mode;
         choice.textContent = labels[mode];
         choice.addEventListener("click", function () {
+          state.isTouched = true;
           state.current = mode;
-          mark(group);
-          var colour = state.pair[mode];
-          var wheel = group.getRootNode().querySelector(".color-picker");
-          if (colour && wheel) { driveWheel(wheel, colour); }
+          showMode(group);
         });
         group.append(choice);
       });
       button.parentNode.insertBefore(group, button);
+      // A fresh Appearance section: Edge's mode, and its colour on the wheel.
+      state.isTouched = false;
+      state.current = edgeMode();
+      state.last = null;
+      showMode(group);
       return group;
     }
     function visit(root) {
@@ -512,6 +527,22 @@ inline constexpr char kSkinnedSelectorCss[] =
         }
         if (style.textContent !== css) { style.textContent = css; }
         var group = button.parentNode.querySelector("." + groupClass) || build(button);
+        // Leaving the section only hides it, so each time it is shown again counts
+        // as opening it: Edge's mode, and its colour on the wheel.
+        var isShown = picker.getClientRects().length > 0;
+        if (isShown && !state.wasShown) {
+          state.isTouched = false;
+          state.current = edgeMode();
+          state.last = null;
+          showMode(group);
+        }
+        state.wasShown = isShown;
+        isAnyShown = isAnyShown || isShown;
+        var isFollowing = !state.isTouched && state.current !== edgeMode();
+        if (isFollowing) {
+          state.current = edgeMode();
+          showMode(group);
+        }
         mark(group);
         var wheel = readWheel(picker);
         if (wheel) {
@@ -531,7 +562,10 @@ inline constexpr char kSkinnedSelectorCss[] =
         if (element.shadowRoot) { visit(element.shadowRoot); }
       });
     }
+    var isAnyShown = false;
     visit(document);
+    // The section is taken out of the page when the editor is left.
+    if (!isAnyShown) { state.wasShown = false; }
   })();)JS";
   return script;
 }
