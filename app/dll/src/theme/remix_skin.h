@@ -102,7 +102,7 @@ struct PageToken {
   std::string_view roleVariable;
 };
 
-inline constexpr std::array<PageToken, 21> kPageTokens = {{
+inline constexpr std::array<PageToken, 41> kPageTokens = {{
     {"--smtc-background-flyout-solid", "--ep-panel"},
     {"--smtc-background-ctrl-neutral-rest", "--ep-panel"},
     {"--smtc-background-ctrl-neutral-hover", "--ep-hover"},
@@ -117,6 +117,28 @@ inline constexpr std::array<PageToken, 21> kPageTokens = {{
     {"--smtc-stroke-ctrl-on-neutral-rest", "--ep-off"},
     {"--smtc-stroke-ctrl-divider-on-brand", "--ep-frame"},
     {"--smtc-ctrl-focus-outer-stroke", "--ep-on"},
+    // Fluent's brand blue, the pages' pale-blue fills and links: a mark in the
+    // skin's red (a selected tab, a checked box), links in the "on" colour.
+    {"--smtc-background-ctrl-brand-rest", "--ep-accent"},
+    {"--smtc-background-ctrl-brand-hover", "--ep-accent"},
+    {"--smtc-background-ctrl-brand-pressed", "--ep-accent"},
+    {"--smtc-background-ctrl-active-brand-rest", "--ep-accent"},
+    {"--smtc-background-ctrl-active-brand-hover", "--ep-accent"},
+    {"--smtc-background-ctrl-active-brand-pressed", "--ep-accent"},
+    {"--smtc-foreground-ctrl-brand-rest", "--ep-on"},
+    {"--smtc-foreground-ctrl-brand-hover", "--ep-on"},
+    {"--smtc-foreground-ctrl-brand-pressed", "--ep-on"},
+    {"--smtc-foreground-ctrl-active-brand-rest", "--ep-on"},
+    {"--smtc-foreground-ctrl-active-brand-hover", "--ep-on"},
+    {"--smtc-foreground-ctrl-active-brand-pressed", "--ep-on"},
+    {"--smtc-foreground-ctrl-on-brand-rest", "--ep-fg"},
+    {"--smtc-foreground-ctrl-on-brand-hover", "--ep-fg"},
+    {"--smtc-foreground-ctrl-on-brand-pressed", "--ep-fg"},
+    {"--smtc-foreground-ctrl-on-active-brand-rest", "--ep-fg"},
+    {"--smtc-foreground-ctrl-on-active-brand-hover", "--ep-fg"},
+    {"--smtc-foreground-ctrl-on-active-brand-pressed", "--ep-fg"},
+    {"--smtc-stroke-divider-default", "--ep-off"},
+    {"--smtc-stroke-divider-subtle", "--ep-off"},
     // The editor's own dark-mode rules read these, with fixed greys as
     // fallbacks.
     {"--blueprint-dark-flyout-background", "--ep-panel"},
@@ -215,6 +237,50 @@ widget-adjustment, blueprint-main {
   background: color-mix(in srgb, var(--ep-accent) 22%, transparent) !important;
   box-shadow: none !important;
 }
+mai-switch {
+  box-sizing: border-box !important;
+  width: 46px !important;
+  height: 22px !important;
+  padding: 0 3px !important;
+  border: 2px solid var(--ep-off) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+}
+mai-switch::before { display: none !important; }
+mai-switch:hover { border-color: var(--ep-on) !important; }
+mai-switch:focus-visible { outline: 2px solid var(--ep-on) !important; outline-offset: -5px !important; }
+mai-switch:is([state--checked], :state(checked)) {
+  border-color: var(--ep-on) !important;
+  background: color-mix(in srgb, var(--ep-on-fill) 22%, transparent) !important;
+}
+.checked-indicator {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+mai-switch .checked-indicator, .checked-indicator[part="checked-indicator"] {
+  width: 12px !important;
+  height: 12px !important;
+  background: var(--ep-off) !important;
+}
+:host(:is([state--checked], :state(checked))) .checked-indicator[part="checked-indicator"] {
+  background: var(--ep-on) !important;
+}
+mai-checkbox {
+  border-radius: 0 !important;
+  border-color: var(--ep-off) !important;
+  box-shadow: none !important;
+}
+mai-checkbox:hover { border-color: var(--ep-on) !important; }
+mai-checkbox:is([state--checked], :state(checked)) {
+  border-color: var(--ep-accent) !important;
+  background: color-mix(in srgb, var(--ep-accent) 22%, transparent) !important;
+}
+mai-link { color: var(--ep-on) !important; }
+mai-link:hover { color: var(--ep-fg) !important; }
+mai-tab { border-radius: 0 !important; background: transparent !important; font-family: "Share Tech Mono", Consolas, monospace !important; }
+.toast { border-radius: 0 !important; border: 2px solid var(--ep-off) !important; background: var(--ep-panel) !important; box-shadow: none !important; }
 .color-picker-inner { fill: var(--ep-panel) !important; stroke: var(--ep-frame) !important; stroke-width: 2px !important; }
 .color-picker-inner-shadow { box-shadow: none !important; }
 .color-picker:focus-visible { outline: 2px solid var(--ep-on); outline-offset: 2px; border-radius: 50%; }
