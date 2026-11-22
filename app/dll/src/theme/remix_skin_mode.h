@@ -12,6 +12,8 @@
 #include "core/channel.h"
 #include "edge/edge.h"
 #include "theme/followed_pages.h"
+#include "theme/remix_colors.h"
+#include "theme/remix_colors_store.h"
 #include "theme/remix_mode.h"
 #include "theme/remix_skin.h"
 #include "theme/skin_tone.h"
@@ -42,6 +44,17 @@ inline constinit bool g_isPainted = false;
   return pages;
 }
 
+// The page publishes the pair it holds in its address (remix_colors.h); a
+// changed one is kept in the DLL's file.
+inline void SavePairOf(void* contents) {
+  remix_colors::Pair published;
+  const bool isPublished =
+      remix_colors::PairFromUrl(edge::TabUrl(contents), &published);
+  if (isPublished && !(published == remix_colors_store::g_pair)) {
+    remix_colors_store::Save(published);
+  }
+}
+
 inline void Poll() {
   if (!remix_mode::g_isActive) {
     return;
@@ -55,13 +68,15 @@ inline void Poll() {
   } else if (isRemovingSkin) {
     skinScript = remix_skin::RemoveScript();
   }
-  // The mode note needs only the remix switch; the skin just restyles it.
-  const std::string noteScript = remix_skin::NoteScript(isSkinning);
+  // The colour selector needs only the remix switch; the skin just restyles it.
+  const std::string selectorScript = remix_skin::SelectorScript(
+      isSkinning, remix_colors::FormatPair(remix_colors_store::g_pair));
   for (void* contents : RemixPages()) {
     if (!skinScript.empty()) {
       edge::RunScriptUnanswered(contents, skinScript);
     }
-    edge::RunScriptUnanswered(contents, noteScript);
+    edge::RunScriptUnanswered(contents, selectorScript);
+    SavePairOf(contents);
   }
   g_isPainted = isSkinning;
 }
@@ -74,7 +89,7 @@ inline void StartPolling(HWND window) {
 inline void Stop(HWND window) {
   KillTimer(window, channel::TimerIdOf(channel::WindowTimer::kRemixPoll));
   const std::string script =
-      remix_skin::RemoveScript() + remix_skin::NoteRemoveScript();
+      remix_skin::RemoveScript() + remix_skin::SelectorRemoveScript();
   for (void* contents : RemixPages()) {
     edge::RunScriptUnanswered(contents, script);
   }

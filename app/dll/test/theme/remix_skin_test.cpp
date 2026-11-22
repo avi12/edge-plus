@@ -72,16 +72,17 @@ void RunChecks() {
           !ShouldSkin(false, true) && !ShouldSkin(false, false),
       "the pages are skinned only with the remix switch and the skin both on");
 
-  const std::string neutral = NoteStyleFor(false);
-  const std::string skinned = NoteStyleFor(true);
-  Check(
-      Has(neutral, ".lights-button") && !Has(neutral, "--ep-") &&
-          Has(skinned, "--ep-label") && skinned.size() > neutral.size(),
-      "the mode note is neutral without the skin and takes its roles with it");
-  const std::string note = NoteScript(false);
-  Check(Has(note, "prefers-color-scheme") && Has(note, "Follows Edge: ") &&
-            Has(note, kNoteClass) && Has(NoteRemoveScript(), ".remove()"),
-        "the note reads Edge's mode live and can be taken away");
+  const std::string neutral = SelectorStyleFor(false);
+  const std::string skinned = SelectorStyleFor(true);
+  Check(Has(neutral, ".lights-button") && !Has(neutral, "--ep-") &&
+            Has(skinned, "--ep-accent") && skinned.size() > neutral.size(),
+        "the selector is neutral without the skin and takes its roles with it");
+  const std::string selector = SelectorScript(false, "light=1,2;dark=");
+  Check(Has(selector, "light=1,2;dark=") && Has(selector, "pointerdown") &&
+            Has(selector, "replaceState") &&
+            Has(selector, "#edgeplus-remix=") &&
+            Has(SelectorRemoveScript(), ".remove()"),
+        "the selector seeds the pair, drives the wheel and publishes the pair");
 
   const std::string paint = PaintScript(Tone::kDark);
   Check(Has(paint, kStyleClass) && Has(paint, "shadowRoot") &&

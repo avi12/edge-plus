@@ -13,6 +13,7 @@
 #include <string_view>
 #include "find/web_text.h"
 #include "theme/cyberpunk_palette.h"
+#include "theme/remix_colors.h"
 #include "theme/theme_tone.h"
 
 namespace edgeplus::remix_skin {
@@ -358,56 +359,151 @@ mai-tab { border-radius: 0 !important; background: transparent !important; font-
   return script;
 }
 
-// --- the mode note (needs no skin) ---
-// With the remix switch on, an Appearance remix takes its darkmode from Edge's own
-// light or dark (remix_darkmode.h), so the editor's "Dark" button would lie. It is
-// hidden and a plain, non-interactive note takes its place, showing Edge's mode:
-// the page's own prefers-color-scheme, which the follow (theme_follow.h) already
-// drives, read again on every beat so it stays live.
-inline constexpr char kNoteClass[] = "edgeplus-mode-note";
-inline constexpr char kNoteStyleClass[] = "edgeplus-mode-style";
-inline constexpr char kFollowsLabel[] = "Follows Edge: ";
-inline constexpr char kDarkLabel[] = "Dark";
+// --- the light / dark colour selector (needs no skin) ---
+// With the remix switch on, an Appearance remix wears one colour for Edge's light
+// mode and another for its dark mode (remix_colors.h), as the Edge+ theme has a
+// pair. The editor's "Dark" button, which only toggled the remix's own darkmode
+// (now Edge's, remix_darkmode.h), is hidden and a Light | Dark selector takes
+// its place: it says which mode the wheel is editing, and switching it moves the
+// wheel to that mode's saved colour. Font and zoom stay shared. The page's own
+// wheel is read from its slider's text and driven with pointer events (our
+// isolated world cannot see the page's script objects, only the shared DOM). The
+// pair goes back to the DLL in the page's address fragment.
+inline constexpr char kSelectorClass[] = "edgeplus-mode-pick";
+inline constexpr char kSelectorStyleClass[] = "edgeplus-mode-style";
+inline constexpr char kSelectorStateKey[] = "__edgeplusRemixPick";
 inline constexpr char kLightLabel[] = "Light";
+inline constexpr char kDarkLabel[] = "Dark";
+inline constexpr char kSelectorLabel[] = "Colour for";
 
 // Neutral: the page's own tokens. The skin's roles are added on top of it.
-inline constexpr char kNoteCss[] =
+inline constexpr char kSelectorCss[] =
     ".lights-button { display: none !important; }"
-    ".edgeplus-mode-note { box-sizing: border-box; display: flex; align-items: "
-    "center;"
-    " justify-content: center; height: var(--smtc-size-ctrl-lg-default, 32px); "
-    "padding: 0 8px;"
-    " border: 1px dashed var(--smtc-stroke-ctrl-on-neutral-rest, currentColor);"
-    " color: var(--smtc-foreground-ctrl-neutral-secondary-rest, inherit);"
-    " font-size: 12px; white-space: nowrap; cursor: default; user-select: none;"
-    " pointer-events: none; }";
-inline constexpr char kSkinnedNoteCss[] =
-    ".edgeplus-mode-note { border: 2px dashed var(--ep-off); color: "
-    "var(--ep-label);"
-    " font-family: \"Share Tech Mono\", Consolas, monospace; letter-spacing: "
-    "0.06em;"
-    " text-transform: uppercase; clip-path: polygon(7px 0, 100% 0, 100% "
-    "calc(100% - 7px),"
-    " calc(100% - 7px) 100%, 0 100%, 0 7px); }";
+    ".edgeplus-mode-pick { box-sizing: border-box; display: flex; gap: 4px;"
+    " height: var(--smtc-size-ctrl-lg-default, 32px); }"
+    ".edgeplus-mode-pick button { flex: 1 1 0; min-width: 0; padding: 0;"
+    " font: inherit; font-size: 12px; color: inherit; cursor: pointer;"
+    " background: transparent;"
+    " border: 1px solid var(--smtc-stroke-ctrl-on-neutral-rest, currentColor); "
+    "}"
+    ".edgeplus-mode-pick button[aria-checked=\"true\"] {"
+    " background: var(--smtc-background-ctrl-subtle-hover, transparent);"
+    " border-color: currentColor; font-weight: 600; }";
+inline constexpr char kSkinnedSelectorCss[] =
+    ".edgeplus-mode-pick button { border: 2px solid var(--ep-off);"
+    " color: var(--ep-fg); border-radius: 0;"
+    " font-family: \"Share Tech Mono\", Consolas, monospace;"
+    " letter-spacing: 0.06em; text-transform: uppercase;"
+    " clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px),"
+    " calc(100% - 7px) 100%, 0 100%, 0 7px); }"
+    ".edgeplus-mode-pick button:hover { border-color: var(--ep-on); }"
+    ".edgeplus-mode-pick button:focus-visible { outline: 2px solid "
+    "var(--ep-on);"
+    " outline-offset: -5px; }"
+    ".edgeplus-mode-pick button[aria-checked=\"true\"] {"
+    " border-color: var(--ep-accent);"
+    " background: color-mix(in srgb, var(--ep-accent) 22%, transparent); }";
 
-[[nodiscard]] inline std::string NoteStyleFor(bool isSkinned) {
-  return std::string(kNoteCss) + (isSkinned ? kSkinnedNoteCss : "");
+[[nodiscard]] inline std::string SelectorStyleFor(bool isSkinned) {
+  return std::string(kSelectorCss) + (isSkinned ? kSkinnedSelectorCss : "");
 }
 
-[[nodiscard]] inline std::string NoteScript(bool isSkinned) {
+// `pairText` is remix_colors::FormatPair of the saved pair; it seeds the page
+// the first time only, the page's own state is the master after that.
+[[nodiscard]] inline std::string SelectorScript(bool isSkinned,
+                                                const std::string& pairText) {
   std::string script = "(function () { var css = ";
-  script += web_text::JsStringLiteral(NoteStyleFor(isSkinned));
-  script += "; var prefix = " + web_text::JsStringLiteral(kFollowsLabel);
-  script += "; var darkLabel = " + web_text::JsStringLiteral(kDarkLabel);
-  script += "; var lightLabel = " + web_text::JsStringLiteral(kLightLabel);
-  script += "; var noteClass = " + web_text::JsStringLiteral(kNoteClass);
-  script += "; var styleClass = " + web_text::JsStringLiteral(kNoteStyleClass);
+  script += web_text::JsStringLiteral(SelectorStyleFor(isSkinned));
+  script += "; var seed = " + web_text::JsStringLiteral(pairText);
+  script += "; var labels = {light: " + web_text::JsStringLiteral(kLightLabel);
+  script += ", dark: " + web_text::JsStringLiteral(kDarkLabel) + "};";
+  script += " var groupLabel = " + web_text::JsStringLiteral(kSelectorLabel);
+  script += "; var groupClass = " + web_text::JsStringLiteral(kSelectorClass);
+  script +=
+      "; var styleClass = " + web_text::JsStringLiteral(kSelectorStyleClass);
+  script += "; var key = " + web_text::JsStringLiteral(kSelectorStateKey);
+  script += "; var fragmentKey = " +
+            web_text::JsStringLiteral(remix_colors::kFragmentKey);
   script += R"JS(;
-    var isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    var text = prefix + (isDark ? darkLabel : lightLabel);
+    function parseOne(text) {
+      var found = /^(\d+),(\d+)$/.exec(text || "");
+      return found ? {h: Number(found[1]), i: Number(found[2])} : null;
+    }
+    function parse(text) {
+      var found = /^light=([^;]*);dark=(.*)$/.exec(text) || [];
+      return {light: parseOne(found[1]), dark: parseOne(found[2])};
+    }
+    function formatOne(colour) { return colour ? colour.h + "," + colour.i : ""; }
+    var state = window[key];
+    if (!state) {
+      state = window[key] = {pair: parse(seed), last: null, settleUntil: 0,
+          current: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"};
+    }
+    function publish() {
+      var fragment = fragmentKey + "light=" + formatOne(state.pair.light) +
+          ";dark=" + formatOne(state.pair.dark);
+      if (location.hash !== fragment) {
+        history.replaceState(null, "", location.pathname + location.search + fragment);
+      }
+    }
+    function readWheel(picker) {
+      var found = /(\d+)\D+(\d+)/.exec(picker.getAttribute("aria-valuetext") || "");
+      return found ? {h: Number(found[1]), i: Number(found[2])} : null;
+    }
+    // The knob sits at an angle and a distance from the picker's centre, in the
+    // picker's 172-unit box; 60 units is full intensity.
+    function driveWheel(picker, colour) {
+      var box = picker.getBoundingClientRect();
+      var scale = box.width / 172;
+      var middleX = box.left + box.width / 2;
+      var middleY = box.top + box.height / 2;
+      var radius = colour.i / 100 * 60 * scale;
+      var angle = colour.h * Math.PI / 180;
+      var x = middleX + Math.cos(angle) * radius;
+      var y = middleY + Math.sin(angle) * radius;
+      function pointer(type, pointX, pointY) {
+        return new PointerEvent(type, {bubbles: true, cancelable: true, composed: true,
+            clientX: pointX, clientY: pointY, pointerId: 1, pointerType: "mouse",
+            isPrimary: true, button: 0, buttons: type === "pointerup" ? 0 : 1});
+      }
+      var knob = picker.querySelector(".color-knob") || picker;
+      knob.dispatchEvent(pointer("pointerdown", middleX, middleY));
+      picker.dispatchEvent(pointer("pointermove", x, y));
+      picker.dispatchEvent(pointer("pointerup", x, y));
+      state.settleUntil = Date.now() + 400;
+    }
+    function mark(group) {
+      group.querySelectorAll("button").forEach(function (button) {
+        button.setAttribute("aria-checked", button.dataset.mode === state.current ? "true" : "false");
+      });
+    }
+    function build(button) {
+      var group = document.createElement("div");
+      group.className = groupClass;
+      group.setAttribute("role", "radiogroup");
+      group.setAttribute("aria-label", groupLabel);
+      ["light", "dark"].forEach(function (mode) {
+        var choice = document.createElement("button");
+        choice.type = "button";
+        choice.setAttribute("role", "radio");
+        choice.dataset.mode = mode;
+        choice.textContent = labels[mode];
+        choice.addEventListener("click", function () {
+          state.current = mode;
+          mark(group);
+          var colour = state.pair[mode];
+          var wheel = group.getRootNode().querySelector(".color-picker");
+          if (colour && wheel) { driveWheel(wheel, colour); }
+        });
+        group.append(choice);
+      });
+      button.parentNode.insertBefore(group, button);
+      return group;
+    }
     function visit(root) {
       var button = root.querySelector(".lights-button");
-      if (button && button.parentNode) {
+      var picker = root.querySelector(".color-picker");
+      if (button && button.parentNode && picker) {
         var style = root.querySelector("style." + styleClass);
         if (!style) {
           style = document.createElement("style");
@@ -415,14 +511,21 @@ inline constexpr char kSkinnedNoteCss[] =
           root.prepend(style);
         }
         if (style.textContent !== css) { style.textContent = css; }
-        var note = button.parentNode.querySelector("." + noteClass);
-        if (!note) {
-          note = document.createElement("div");
-          note.className = noteClass;
-          note.setAttribute("role", "status");
-          button.parentNode.insertBefore(note, button);
+        var group = button.parentNode.querySelector("." + groupClass) || build(button);
+        mark(group);
+        var wheel = readWheel(picker);
+        if (wheel) {
+          var isSame = state.last && state.last.h === wheel.h && state.last.i === wheel.i;
+          if (!isSame) {
+            var isOurs = Date.now() < state.settleUntil;
+            var isFirst = state.last === null;
+            state.last = wheel;
+            if (!isOurs && !isFirst) {
+              state.pair[state.current] = wheel;
+              publish();
+            }
+          }
         }
-        if (note.textContent !== text) { note.textContent = text; }
       }
       root.querySelectorAll("*").forEach(function (element) {
         if (element.shadowRoot) { visit(element.shadowRoot); }
@@ -433,10 +536,11 @@ inline constexpr char kSkinnedNoteCss[] =
   return script;
 }
 
-[[nodiscard]] inline std::string NoteRemoveScript() {
+[[nodiscard]] inline std::string SelectorRemoveScript() {
   std::string script = "(function () { var selector = ";
-  script += web_text::JsStringLiteral(std::string(".") + kNoteClass +
-                                      ", style." + kNoteStyleClass);
+  script += web_text::JsStringLiteral(std::string(".") + kSelectorClass +
+                                      ", style." + kSelectorStyleClass);
+  script += "; var key = " + web_text::JsStringLiteral(kSelectorStateKey);
   script += R"JS(;
     function strip(root) {
       root.querySelectorAll(selector).forEach(function (node) { node.remove(); });
@@ -445,6 +549,7 @@ inline constexpr char kSkinnedNoteCss[] =
       });
     }
     strip(document);
+    delete window[key];
   })();)JS";
   return script;
 }
