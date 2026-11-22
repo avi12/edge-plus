@@ -769,11 +769,9 @@ inline constexpr uintptr_t BubbleBorder_GetInsets = 0x3023490;
 // straight from the OS (HKCU Themes\Personalize\AppsUseLightTheme, 0 = dark).
 // No Edge theme-observer ABI is touched.
 
-// The libc++ std::string a theme id is built in (edge::ThemeIdString): the fill
-// assign(size_type n, char c) at n = 0 clears it, keeping any heap buffer, then
-// append(const char* s). The *string* overloads of assign/append read a source
-// string's own fields, not a raw pointer, so these char-pointer ones are used.
-inline constexpr uintptr_t BasicStringChar_assignFill = 0x106d6c06;
+// The libc++ std::string a theme id is built in (edge::ThemeIdString) is emptied in
+// place, then append(const char* s). The *string* overload reads a source
+// string's own fields, not a raw pointer, so this char-pointer one is used.
 inline constexpr uintptr_t BasicStringChar_append = 0x25ea69e;
 
 // --- web protocol handlers (docs/re/protocol-handlers.md) ---
@@ -861,8 +859,10 @@ inline constexpr uintptr_t Copilot_IsConsumerLabelButtonWithDropdownEnabled =
 inline constexpr uintptr_t EdgeToolbarView_CreateDiscoverButtonIfNecessary =
     0x2ff8300;
 // --- running a script in a page, and reading a tab ---
-// RenderFrameHost* WebContentsImpl::GetPrimaryMainFrame(this).
-inline constexpr uintptr_t WebContentsImpl_GetPrimaryMainFrame = 0x1209210;
+// RenderFrameHost* WebContentsImpl::GetPrimaryMainFrame(this): `mov rax,
+// [rcx+0x968]; ret`, the one-line getter in the block that also holds
+// GetController (158: it sat at +0x980 in 157, in the same block).
+inline constexpr uintptr_t WebContentsImpl_GetPrimaryMainFrame = 0x1135fb0;
 // WebContentsImpl::ForEachRenderFrameHost(this, FunctionRef<void(RenderFrameHost*)>*):
 // every frame of a page, main frame first. A FunctionRef is {object, invoker}:
 // the invoker is called (object, frame). RenderFrameHostImpl::GetLastCommittedURL
@@ -877,8 +877,10 @@ inline constexpr uintptr_t RenderFrameHostImpl_IsRenderFrameLive = 0x112e960;
 // const std::u16string*, JavaScriptResultCallback* (a OnceCallback<void(Value)>,
 // moved from), int worldId). The main-world ExecuteJavaScript CHECKs
 // CanExecuteJavaScript, which a web page fails, so this is the one to call.
+// 158's entry is a hot stub (the world-id and null-callback test) that jumps
+// into the cold body at 0x5bc5e9a, as 157's single function did.
 inline constexpr uintptr_t
-    RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld = 0x7a98ab0;
+    RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld = 0xf437d30;
 // BindStateBase::BindStateBase(this, polymorphic_invoke, destructor): refcount 1
 // at +0, invoke at +8, destructor at +0x10, the default cancellation query at
 // +0x18; a BindState's bound state starts at BINDSTATE_first_bound_argument.
@@ -1097,11 +1099,9 @@ inline constexpr uintptr_t kRvas[] = {
     rva::ProtocolHandlerRegistryFactory_GetForBrowserContext,
     rva::ProtocolHandlerRegistry_RemoveIgnoredHandler,
     rva::RegisterProtocolHandlerPermissionRequest_PermissionDecided,
-    rva::RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld,
     rva::RenderFrameHostImpl_GetLastCommittedURL,
     rva::TabHoverCardController_OnCardClosing,
     rva::TabHoverCardThumbnailObserver_Observe,
-    rva::WebContentsImpl_GetPrimaryMainFrame,
 };
 }  // namespace unplaced
 

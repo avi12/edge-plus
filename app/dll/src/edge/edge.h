@@ -1317,11 +1317,19 @@ inline void* ThemeServiceForWindow(void* hwnd) {
 // the id, so we never pair an operator delete ourselves and the one small
 // buffer is reclaimed when Edge exits. Not re-entrant, which the UI-thread-only
 // theme callers satisfy.
+inline constexpr char kNul = 0;
 inline const void* ThemeIdString(const char* themeId) {
   static uint64_t storage[3] = {0, 0, 0};  // an empty libc++ std::string
-  // assign(size_type n = 0, char)
-  using ClearFn = void(__fastcall*)(void*, size_t, char);
-  Callable<ClearFn>(edge155::rva::BasicStringChar_assignFill)(&storage, 0, 0);
+  // Emptied in place (libc++ layout: a heap string has its capacity's top bit
+  // set, and clearing keeps the buffer). Edge 158's assign(n, c) is not the
+  // function the 155 placement found: it left a NUL in front of the id.
+  const bool isHeapString = (storage[2] >> 63) != 0;
+  if (isHeapString) {
+    storage[1] = 0;
+    *reinterpret_cast<char*>(storage[0]) = kNul;
+  } else {
+    storage[0] = storage[1] = storage[2] = 0;
+  }
   using AppendFn = void(__fastcall*)(void*, const char*);
   Callable<AppendFn>(edge155::rva::BasicStringChar_append)(&storage, themeId);
   return &storage;
@@ -1900,6 +1908,22 @@ inline void FreeU16String(U16String* string) {
   }
 }
 
+// Hand `utf8Script` to Edge to run in `frame`, in our isolated world, with
+// `callbackSlot` as the callback Edge calls (null for none).
+inline void ExecuteScriptInFrame(const void* frame,
+                                 const std::string& utf8Script,
+                                 const void** callbackSlot) {
+  U16String script{};
+  const U8View scriptView{utf8Script.data(), utf8Script.size()};
+  Utf8ToUtf16(&script, &scriptView);
+  using ExecuteFn =
+      void(__fastcall*)(const void*, const U16String*, const void**, int);
+  Callable<ExecuteFn>(
+      edge155::rva::RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld)(
+      frame, &script, callbackSlot, edge155::off::kScriptWorldId);
+  FreeU16String(&script);
+}
+
 // Run `utf8Script` in `frame`, in our isolated world, and pass `done` the
 // script's string result on the UI thread later (pass an empty `done` to not
 // wait).
@@ -1920,15 +1944,21 @@ inline bool RunScriptInFrame(const void* frame, const std::string& utf8Script,
     // Edge owns it from here and frees it through DestroyScriptCallback.
     callbackSlot = state.release();
   }
-  U16String script{};
-  const U8View scriptView{utf8Script.data(), utf8Script.size()};
-  Utf8ToUtf16(&script, &scriptView);
-  using ExecuteFn =
-      void(__fastcall*)(const void*, const U16String*, const void**, int);
-  Callable<ExecuteFn>(
-      edge155::rva::RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld)(
-      frame, &script, &callbackSlot, edge155::off::kScriptWorldId);
-  FreeU16String(&script);
+  ExecuteScriptInFrame(frame, utf8Script, &callbackSlot);
+  return true;
+}
+
+// Run `utf8Script` in the page's main frame and never wait for an answer: no
+// callback is built, so this needs no BindStateBase.
+inline bool RunScriptUnanswered(void* webContents,
+                                const std::string& utf8Script) {
+  const void* frame =
+      IsPageLive(webContents) ? PrimaryMainFrame(webContents) : nullptr;
+  if (!frame) {
+    return false;
+  }
+  const void* noCallback = nullptr;
+  ExecuteScriptInFrame(frame, utf8Script, &noCallback);
   return true;
 }
 
