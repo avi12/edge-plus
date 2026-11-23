@@ -15,6 +15,7 @@
 #include "theme/remix/remix_arguments.h"
 #include "theme/remix/remix_colors.h"
 #include "theme/remix/remix_colors_store.h"
+#include "theme/remix/remix_follow_script.h"
 #include "theme/remix/pages/remix_editor.h"
 #include "theme/remix/remix_mode.h"
 #include "theme/remix/remix_template_copy.h"
@@ -147,7 +148,7 @@ inline void FollowModeFlip() {
   }
   const bool isDark = tone == theme_tone::Tone::kDark;
   const std::string script =
-      remix_arguments::FollowModeScript(isDark, remix_colors_store::g_pair);
+      remix_follow_script::FollowModeScript(isDark, remix_colors_store::g_pair);
   int asked = 0;
   for (void* contents : edge::AllWebContents()) {
     const bool isTab = edge::IsPageLive(contents) &&

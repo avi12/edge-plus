@@ -3,14 +3,12 @@
 #include <string>
 #include "../../../src/theme/remix/remix_arguments.h"
 
-using edgeplus::remix_arguments::FollowModeScript;
-using edgeplus::remix_arguments::kHelperScript;
-using edgeplus::remix_arguments::kRequestCall;
 using edgeplus::remix_arguments::Outcome;
-using edgeplus::remix_arguments::PairLiteral;
 using edgeplus::remix_arguments::WithColour;
 using edgeplus::remix_arguments::WithDarkmode;
 using edgeplus::remix_arguments::WithPageAwareTheme;
+using edgeplus::remix_page_helper::kHelperScript;
+using edgeplus::remix_page_helper::kRequestCall;
 
 namespace {
 
@@ -194,15 +192,6 @@ void RunLoadShapeChecks() {
             Outcome::kNotThemeCall,
         "and is left alone");
 }
-void RunPairLiteralChecks() {
-  edgeplus::remix_colors::Pair pair;
-  pair.light = {210, 40, true};
-  Check(PairLiteral(pair) == "{light: [210, 40], dark: null}",
-        "the pair goes to the page as numbers, an unset side as null");
-  pair.dark = edgeplus::remix_colors::kNoColour;
-  Check(PairLiteral(pair) == "{light: [210, 40], dark: [0, 0]}",
-        "a mode with no colour goes as the centre: a push asks saturation 0");
-}
 
 void RunNoColourChecks() {
   const std::string call =
@@ -212,43 +201,16 @@ void RunNoColourChecks() {
   Check(none.outcome == Outcome::kRewritten &&
             none.script.find("(\"0\", \"0\", \"true\"") != std::string::npos,
         "a mode with no colour gets saturation 0 in the call");
-  const std::string helper(kHelperScript);
-  Check(helper.find("helper.isNone = (want) => !(Number(want.saturation) > "
-                    "0);") != std::string::npos,
-        "the helper reads no colour as the template does: saturation not "
-        "above 0");
-  Check(helper.find("if (helper.none) {\n      await helper.wearOwnLook(") !=
-                std::string::npos &&
-            helper.find("helper.darkmode = \"false\";") != std::string::npos,
-        "and wears the page's own look for it, with darkmode false and no "
-        "check against the target");
 }
 
-void RunFollowModeChecks() {
-  edgeplus::remix_colors::Pair pair;
-  pair.dark = {228, 20, true};
-  const std::string script = FollowModeScript(true, pair);
-  Check(script.starts_with(
-            "(() => {\n  if (!globalThis.__blueprintParams) { return; }\n  (" +
-            std::string(kHelperScript) + ")({light: null, dark: [228, 20]})"),
-        "only a page wearing an Appearance remix installs the helper, with "
-        "the saved pair");
-  Check(script.ends_with(".push(true, \"applyColorWheelThemeV2\");\n})();"),
-        "and pushes the target mode to it, as one self-contained call");
-  Check(
-      FollowModeScript(false, pair).find(".push(false, ") != std::string::npos,
-      "a light flip pushes light");
-}
 }  // namespace
 
 int main() {
   try {
     RunChecks();
     RunPageAwareChecks();
-    RunPairLiteralChecks();
     RunNoColourChecks();
     RunLoadShapeChecks();
-    RunFollowModeChecks();
   } catch (...) {
     return 1;
   }

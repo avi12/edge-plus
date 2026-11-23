@@ -78,7 +78,7 @@ kept bundle row, 2026-11-23): with `"true"` every page colour's lightness is
 flipped (`l -> 1 - l`), so a page already dark from Edge's dark mode
 (`prefers-color-scheme`, e.g. google.com) comes out light, while a light page
 comes out dark. So the call becomes a request to a helper of the page's own
-(`remix_arguments::WithPageAwareTheme`, `kHelperScript`, installed in world 4
+(`remix_arguments::WithPageAwareTheme`, `remix_page_helper::kHelperScript`, installed in world 4
 before it): darkmode is `target-is-dark XOR page-is-dark`, the page's darkness
 first guessed by sampling rendered backgrounds at a few viewport points (the
 template's leftovers switched off), then checked after the asynchronous apply
@@ -116,7 +116,7 @@ at 0x73f5952 calls the main frame's `ExecuteJavaScriptInIsolatedWorld`, vtable
 slot 0x1d0, with 4; `kRemixWorldId`). A tab's `prefers-color-scheme` change
 event does fire when Edge's Appearance flips, but a background tab gets it only
 once it is shown. So the remix poll watches Edge's mode (`g_edgeTone`) and on a
-flip runs `FollowModeScript` in world 4 of every open tab: a page wearing an
+flip runs `remix_follow_script::FollowModeScript` in world 4 of every open tab: a page wearing an
 Appearance remix (`window.__blueprintParams`, any build or Edge alone) gets the
 helper and a request in the new mode's saved colour. The push is the one
 authority on the target (the rewritten calls use the same `g_edgeTone`); the
