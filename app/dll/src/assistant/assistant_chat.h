@@ -426,7 +426,7 @@ inline void StepStopping(void* mcv, Chat& chat, const void* frame,
   }
 }
 
-// find.h's timer.
+// find_poll.h's timer.
 inline void Tick() {
   DropStale();
   const ULONGLONG now = GetTickCount64();

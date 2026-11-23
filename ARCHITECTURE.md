@@ -264,7 +264,7 @@ and splits without clicks.
 | Tab list | `tabrows.h`, `tab_list.h`, `tab_views.h` | Shows a split's tabs in rows that follow the panes. |
 | Tab drags | `tabdrag.h`, `drag.h` | Drags a tab into a split, Alt drops, and pane drags. |
 | Tab look | `tab_shape.h`, `tab_edge.h`, `cyberpunk_skin.h`, `theme_tone.h` | The Cyberpunk skin: cut corners and the red selected tab. |
-| Find, links, handlers | `find.h`, `links.h`, `protocol_handlers.h` | The enhanced find bar, split links, handler prompts. |
+| Find, links, handlers | `find.h` and the other `find/find_*.h`, `links.h`, `protocol_handlers.h` | The enhanced find bar, split links, handler prompts. |
 | Repaint and motion | `repaint.h`, `anim.h`, `motion.h` | Forces panes to paint after a move; eases pane changes. |
 
 ## Split model

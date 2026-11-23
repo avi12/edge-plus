@@ -114,7 +114,7 @@ inline void Post(WPARAM code) {
 // The WM_TIMER ids on the subclassed browser window: one closed set, so no two
 // modules can pick the same id.
 enum class WindowTimer : UINT_PTR {
-  kFindPoll = 0xF1EC,        // find.h: the find bar's poll
+  kFindPoll = 0xF1EC,        // find_poll.h: the find bar's poll
   kAnimationFrame = 0xF1ED,  // anim.h: a pane transition's next frame
   kThemeRepaint = 0xF1EE,    // theme.h: the frame redraw after a theme swap
   kRenderNudge = 0xF1EF,     // repaint.h: the settled panes' paint nudge

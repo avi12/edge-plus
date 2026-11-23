@@ -14,6 +14,7 @@
 #include "edge/api/browser.h"
 #include "edge/offsets.h"
 #include "find/find.h"
+#include "find/find_poll.h"
 #include "layout/anim.h"
 #include "layout/dock.h"
 #include "layout/pane_tree.h"
