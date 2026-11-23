@@ -78,33 +78,62 @@ inline constexpr std::string_view kOwnScriptMark = "__edgePlusRemix";
 // longer script is passed on without being read.
 inline constexpr size_t kMaxThemeCallChars = 4096;
 
-// `script` as the page is to run it, or empty when it is left as it is.
-[[nodiscard]] inline std::string RewrittenScript(const std::string& script) {
-  // The mode the page is to wear: the open Appearance editor's preview, else
-  // Edge's own. Its colour comes from the pair the editor holds right now when
-  // one is open (the DLL's copy is saved a poll later), else the saved pair; a
-  // remix with that mode unset keeps its own, and one reset to no colour gets
-  // saturation 0, which the helper wears as the page's own look. Then the
-  // darkmode, relative to the page's own darkness (remix_arguments.h).
+// A mode's name in the log.
+[[nodiscard]] constexpr const char* ModeName(bool isDark) noexcept {
+  return isDark ? "dark" : "light";
+}
+
+// How much of `script` a log line shows.
+[[nodiscard]] inline int LoggedLength(std::string_view script) {
+  return static_cast<int>(std::min(script.size(), kLoggedScriptChars));
+}
+
+// The mode a page is to wear and the pair its colour comes from: the open
+// Appearance editor's preview and the pair it holds right now (the DLL's copy
+// is saved a poll later), else Edge's own mode and the saved pair.
+struct Target {
+  bool isPreviewing = false;
+  bool isDark = false;
+  remix_colors::Pair pair;
+};
+
+[[nodiscard]] inline Target TargetNow() {
   const remix_editor::Editor editor = remix_editor::OpenEditor();
-  const bool isPreviewing = editor.preview != theme_tone::Tone::kUnknown;
-  const bool isTargetDark = isPreviewing
-                                ? editor.preview == theme_tone::Tone::kDark
-                                : g_edgeTone == theme_tone::Tone::kDark;
-  const remix_colors::Pair& pair =
-      editor.hasPair ? editor.pair : remix_colors_store::g_pair;
-  std::string current = script;
-  const remix_colors::Colour colour =
-      remix_colors::ColourFor(pair, isTargetDark);
-  if (colour.isSet) {
-    remix_arguments::Result coloured =
-        remix_arguments::WithColour(current, colour.hue, colour.intensity);
-    if (coloured.outcome == remix_arguments::Outcome::kRewritten) {
-      current = std::move(coloured.script);
-    }
+  Target target;
+  target.isPreviewing = editor.preview != theme_tone::Tone::kUnknown;
+  target.isDark = target.isPreviewing
+                      ? editor.preview == theme_tone::Tone::kDark
+                      : g_edgeTone == theme_tone::Tone::kDark;
+  target.pair = editor.hasPair ? editor.pair : remix_colors_store::g_pair;
+  return target;
+}
+
+// `script` with its call in `colour`; as it is when the mode is unset (a remix
+// keeps its own colour then) or the call cannot take one. A mode reset to no
+// colour gets saturation 0, which the helper wears as the page's own look.
+[[nodiscard]] inline std::string InColour(std::string_view script,
+                                          const remix_colors::Colour& colour) {
+  if (!colour.isSet) {
+    return std::string(script);
   }
+  remix_arguments::Result coloured =
+      remix_arguments::WithColour(script, colour.hue, colour.intensity);
+  if (coloured.outcome != remix_arguments::Outcome::kRewritten) {
+    return std::string(script);
+  }
+  return std::move(coloured.script);
+}
+
+// `script` as the page is to run it, or empty when it is left as it is: in the
+// target's colour, then handed to the helper, which picks the darkmode
+// relative to the page's own darkness (remix_arguments.h).
+[[nodiscard]] inline std::string RewrittenScript(const std::string& script) {
+  const Target target = TargetNow();
+  const remix_colors::Colour colour =
+      remix_colors::ColourFor(target.pair, target.isDark);
+  const std::string current = InColour(script, colour);
   remix_arguments::Result result =
-      remix_arguments::WithPageAwareTheme(current, isTargetDark, pair);
+      remix_arguments::WithPageAwareTheme(current, target.isDark, target.pair);
   if (result.outcome == remix_arguments::Outcome::kNotThemeCall) {
     return std::string();
   }
@@ -117,17 +146,14 @@ inline constexpr size_t kMaxThemeCallChars = 4096;
   }
   Log("[remix-theme] appearance script (edge %s, target %s from %s%s): "
       "outcome %d, %.*s",
-      g_edgeTone == theme_tone::Tone::kDark ? "dark" : "light",
-      isTargetDark ? "dark" : "light", isPreviewing ? "the editor" : "edge",
+      ModeName(g_edgeTone == theme_tone::Tone::kDark), ModeName(target.isDark),
+      target.isPreviewing ? "the editor" : "edge",
       remix_colors::IsNoColour(colour) ? ", no colour" : "",
-      static_cast<int>(result.outcome),
-      static_cast<int>(std::min(script.size(), kLoggedScriptChars)),
-      script.c_str());
+      static_cast<int>(result.outcome), LoggedLength(script), script.c_str());
   if (result.outcome != remix_arguments::Outcome::kRewritten) {
     return std::string();
   }
-  Log("[remix-theme] appearance call, as run: %.*s",
-      static_cast<int>(std::min(current.size(), kLoggedScriptChars)),
+  Log("[remix-theme] appearance call, as run: %.*s", LoggedLength(current),
       current.c_str());
   return std::move(result.script);
 }
@@ -165,38 +191,45 @@ inline void FollowModeFlip() {
     }
   }
   Log("[remix-theme] edge went %s: %d page(s) asked to wear their remix in it",
-      isDark ? "dark" : "light", asked);
+      ModeName(isDark), asked);
 }
 
-// Every script any isolated world gets from the browser passes here, so a
-// script for another world, or with the remix switch off, goes straight on.
-// It counts itself (RunningDetour), so unload never frees it under a thread.
-inline void __fastcall h_execute_isolated(const void* frame,
-                                          const edge::U16String* script,
-                                          const void** callback, int worldId) {
-  const edge::RunningDetour running;
+// What world `worldId` is to run instead of `script`, or empty when it runs
+// `script` as it is: a script for another world, or with the remix switch off,
+// goes straight on, as do a long one and this DLL's own.
+[[nodiscard]] inline std::string ReplacementFor(const edge::U16String* script,
+                                                int worldId) {
   const bool isRemixWorld = worldId == edge155::off::kRemixWorldId &&
                             remix_mode::g_isActive && script != nullptr;
   if (!isRemixWorld) {
-    o_execute_isolated(frame, script, callback, worldId);
-    return;
+    return std::string();
   }
   const edge::U16View scriptView = edge::U16StringView(script);
   const bool isCandidate = g_edgeTone != theme_tone::Tone::kUnknown &&
                            scriptView.length <= kMaxThemeCallChars;
   if (!isCandidate) {
-    o_execute_isolated(frame, script, callback, worldId);
-    return;
+    return std::string();
   }
   const std::string text = edge::Utf16ToUtf8(scriptView);
   const bool isOwnScript = text.find(kOwnScriptMark) != std::string::npos;
-  const std::string rewritten =
-      isOwnScript ? std::string() : RewrittenScript(text);
-  if (rewritten.empty()) {
+  if (isOwnScript) {
+    return std::string();
+  }
+  return RewrittenScript(text);
+}
+
+// Every script any isolated world gets from the browser passes here. It counts
+// itself (RunningDetour), so unload never frees it under a thread.
+inline void __fastcall h_execute_isolated(const void* frame,
+                                          const edge::U16String* script,
+                                          const void** callback, int worldId) {
+  const edge::RunningDetour running;
+  const std::string replacement = ReplacementFor(script, worldId);
+  if (replacement.empty()) {
     o_execute_isolated(frame, script, callback, worldId);
     return;
   }
-  const edge::OwnedU16String fresh(rewritten);
+  const edge::OwnedU16String fresh(replacement);
   o_execute_isolated(frame, &fresh.text, callback, worldId);
 }
 
