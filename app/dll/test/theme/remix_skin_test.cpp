@@ -84,6 +84,18 @@ void RunChecks() {
             Has(selector, "#edgeplus-remix=") &&
             Has(SelectorRemoveScript(), ".remove()"),
         "the selector seeds the pair, drives the wheel and publishes the pair");
+  Check(Has(selector, kSelectorResetClass) &&
+            Has(selector, "\"Remove the {mode} colour\"") &&
+            Has(selector, "\"Remove both colours\"") &&
+            Has(selector, "var noColourText = \"0,0\"") &&
+            Has(selector, "aria-label") && Has(selector, "button[data-mode]"),
+        "the selector offers resets of the selected mode and of both, to the "
+        "wheel's centre, each with its full name");
+  Check(Has(neutral, ".edgeplus-mode-reset {") &&
+            Has(neutral, "button:disabled") &&
+            Has(skinned, "button:not(:disabled):hover"),
+        "the reset row is styled with and without the skin, its disabled "
+        "buttons quiet");
 
   const std::string paint = PaintScript(Tone::kDark);
   Check(Has(paint, kStyleClass) && Has(paint, "shadowRoot") &&

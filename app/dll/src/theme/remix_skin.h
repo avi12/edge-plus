@@ -366,7 +366,9 @@ mai-tab { border-radius: 0 !important; background: transparent !important; font-
 // (now Edge's, remix_darkmode.h), is hidden and a Light | Dark selector takes
 // its place: it says which mode the wheel is editing, and switching it moves the
 // wheel to that mode's colour (the saved one when editing a stored remix, none
-// yet in a new appearance until the user picks it). Font and zoom stay shared. The page's own
+// yet in a new appearance until the user picks it). A row under it resets the
+// selected mode's colour, or both, to no colour (the page's own look). Font and
+// zoom stay shared. The page's own
 // wheel is read from its slider's text and driven with pointer events (our
 // isolated world cannot see the page's script objects, only the shared DOM). The
 // pair goes back to the DLL in the page's address fragment.
@@ -379,6 +381,14 @@ inline constexpr char kSelectorStateKey[] = "__edgeplusRemixPick";
 inline constexpr char kLightLabel[] = "Light";
 inline constexpr char kDarkLabel[] = "Dark";
 inline constexpr char kSelectorLabel[] = "Colour for";
+// The reset row under the segments: one button for the selected mode, one for
+// both. A reset gives the mode no colour (remix_colors::kNoColour); the
+// remix's font and size stay. {mode} is the selected mode's label.
+inline constexpr char kSelectorResetClass[] = "edgeplus-mode-reset";
+inline constexpr char kResetGlyph[] = "\xE2\x86\xBA";  // anticlockwise arrow
+inline constexpr char kResetBothLabel[] = "Both";
+inline constexpr char kResetOneTitle[] = "Remove the {mode} colour";
+inline constexpr char kResetBothTitle[] = "Remove both colours";
 // On the segment of Edge's own mode: the one the page wears once the editor
 // closes.
 inline constexpr char kEdgeMarkerLabel[] = "Edge";
@@ -413,12 +423,15 @@ inline constexpr char kWheelBridgeKey[] = "__edgeplusWheelBridge";
 inline constexpr int kWheelSyncWindowMs = 1500;
 
 // Neutral: the page's own tokens. The skin's roles are added on top of it.
+// The editor's right column is exactly as tall as the wheel (172 px) and was
+// full with the 40 px Dark button the selector replaces; the zoom row below
+// gives up 8 px of its own (36 to 28), so the segments (30), the reset row
+// (16) and the gap between them (2) take 48 and the fonts stay whole.
 inline constexpr char kSelectorCss[] =
     ".lights-button { display: none !important; }"
     ".edgeplus-mode-pick { box-sizing: border-box; display: flex;"
-    " flex-direction: column; gap: 4px; }"
-    ".edgeplus-mode-row { display: flex; gap: 4px;"
-    " height: var(--smtc-size-ctrl-lg-default, 32px); }"
+    " flex-direction: column; gap: 2px; }"
+    ".edgeplus-mode-row { display: flex; gap: 4px; height: 30px; }"
     ".edgeplus-mode-edge { display: none; margin-inline-start: 6px;"
     " font-family: ui-monospace, Consolas, monospace; font-size: 10px;"
     " font-weight: 400; opacity: 0.75; }"
@@ -429,13 +442,16 @@ inline constexpr char kSelectorCss[] =
     " font-size: 11px; line-height: 1.3; opacity: 0.8; }"
     ".edgeplus-mode-hint[hidden] { display: none; }"
     ".edgeplus-mode-pick button { flex: 1 1 0; min-width: 0; padding: 0;"
-    " font: inherit; font-size: 12px; color: inherit; cursor: pointer;"
-    " background: transparent;"
+    " font: inherit; font-size: 12px; line-height: 1.1; color: inherit;"
+    " cursor: pointer; background: transparent;"
     " border: 1px solid var(--smtc-stroke-ctrl-on-neutral-rest, currentColor); "
     "}"
     ".edgeplus-mode-pick button[aria-checked=\"true\"] {"
     " background: var(--smtc-background-ctrl-subtle-hover, transparent);"
-    " border-color: currentColor; font-weight: 600; }";
+    " border-color: currentColor; font-weight: 600; }"
+    ".edgeplus-mode-reset { display: flex; gap: 4px; height: 16px; }"
+    ".edgeplus-mode-pick .edgeplus-mode-reset button { font-size: 10px; }"
+    ".edgeplus-mode-pick button:disabled { cursor: default; opacity: 0.4; }";
 inline constexpr char kSkinnedSelectorCss[] =
     ".edgeplus-mode-pick button { border: 2px solid var(--ep-off);"
     " color: var(--ep-fg); border-radius: 0;"
@@ -443,7 +459,8 @@ inline constexpr char kSkinnedSelectorCss[] =
     " letter-spacing: 0.06em; text-transform: uppercase;"
     " clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px),"
     " calc(100% - 7px) 100%, 0 100%, 0 7px); }"
-    ".edgeplus-mode-pick button:hover { border-color: var(--ep-on); }"
+    ".edgeplus-mode-pick button:not(:disabled):hover {"
+    " border-color: var(--ep-on); }"
     ".edgeplus-mode-pick button:focus-visible { outline: 2px solid "
     "var(--ep-on);"
     " outline-offset: -5px; }"
@@ -515,6 +532,68 @@ inline constexpr char kSkinnedSelectorCss[] =
 )JS";
 }
 
+// The part of the selector script that builds and runs the reset row (it runs
+// inside SelectorScript's function; build() places the row, mark() keeps it).
+[[nodiscard]] inline std::string SelectorResetScript() {
+  return R"JS(
+    // The reset buttons: the selected mode's, and both modes'.
+    var resetKind = {one: "one", both: "both"};
+    // A mode holds a colour to reset: set, and off the wheel's centre.
+    function hasTint(mode) {
+      var colour = state.pair[mode];
+      return !!colour && colour.i > 0;
+    }
+    function setText(element, text) {
+      if (element.textContent !== text) { element.textContent = text; }
+    }
+    function setTitle(button, title) {
+      if (button.title !== title) { button.title = title; }
+      if (button.getAttribute("aria-label") !== title) { button.setAttribute("aria-label", title); }
+    }
+    function setDisabled(button, isDisabled) {
+      if (button.disabled !== isDisabled) { button.disabled = isDisabled; }
+    }
+    // Each reset is offered only when there is a colour to take off.
+    function markResets(group) {
+      var one = group.querySelector('button[data-reset="' + resetKind.one + '"]');
+      var both = group.querySelector('button[data-reset="' + resetKind.both + '"]');
+      if (!one || !both) { return; }
+      var label = labelOf(state.current);
+      setText(one, resetGlyph + " " + label);
+      setTitle(one, resetOneTitle.replace("{mode}", label));
+      setDisabled(one, !hasTint(state.current));
+      setText(both, resetGlyph + " " + resetBothLabel);
+      setTitle(both, resetBothTitle);
+      setDisabled(both, !hasTint(modes.light) && !hasTint(modes.dark));
+    }
+    // A reset gives the mode (or both) no colour, the page's own look with the
+    // remix's font and size kept, and publishes the pair for the DLL to save.
+    // When the selected mode was reset it is applied once: the knob is pressed
+    // at the wheel's centre, which makes the editor apply with no colour.
+    function reset(resetModes) {
+      resetModes.forEach(function (mode) { state.pair[mode] = parseOne(noColourText); });
+      publish();
+      if (state.group) { mark(state.group); }
+      var isSelectedReset = resetModes.indexOf(state.current) !== -1;
+      if (isSelectedReset) { applySelected(); }
+    }
+    function buildResets() {
+      var resets = document.createElement("div");
+      resets.className = resetClass;
+      var one = document.createElement("button");
+      one.type = "button";
+      one.dataset.reset = resetKind.one;
+      one.addEventListener("click", function () { reset([state.current]); });
+      var both = document.createElement("button");
+      both.type = "button";
+      both.dataset.reset = resetKind.both;
+      both.addEventListener("click", function () { reset([modes.light, modes.dark]); });
+      resets.append(one, both);
+      return resets;
+    }
+)JS";
+}
+
 // The names and timings the selector script shares with the DLL and the
 // page's world, as the script's opening `var`s (each statement begins with
 // its `;`).
@@ -535,6 +614,18 @@ inline constexpr char kSkinnedSelectorCss[] =
       "; var edgeClass = " + web_text::JsStringLiteral(kSelectorEdgeClass);
   script +=
       "; var hintClass = " + web_text::JsStringLiteral(kSelectorHintClass);
+  script +=
+      "; var resetClass = " + web_text::JsStringLiteral(kSelectorResetClass);
+  script += "; var resetGlyph = " + web_text::JsStringLiteral(kResetGlyph);
+  script +=
+      "; var resetBothLabel = " + web_text::JsStringLiteral(kResetBothLabel);
+  script +=
+      "; var resetOneTitle = " + web_text::JsStringLiteral(kResetOneTitle);
+  script +=
+      "; var resetBothTitle = " + web_text::JsStringLiteral(kResetBothTitle);
+  script += "; var noColourText = " +
+            web_text::JsStringLiteral(
+                remix_colors::FormatColour(remix_colors::kNoColour));
   script += "; var previewDelay = " + std::to_string(kPreviewDelayMs);
   script += "; var restoreDelay = " + std::to_string(kRestoreDelayMs);
   script += "; var wheelEvent = " + web_text::JsStringLiteral(kWheelEventName);
@@ -701,7 +792,7 @@ inline constexpr char kSkinnedSelectorCss[] =
     function labelOf(mode) { return mode === modes.dark ? labels.dark : labels.light; }
     function mark(group) {
       var edge = edgeMode();
-      group.querySelectorAll("button").forEach(function (button) {
+      group.querySelectorAll("button[data-mode]").forEach(function (button) {
         var mode = button.dataset.mode;
         button.setAttribute("aria-checked", mode === state.current ? "true" : "false");
         button.dataset.edge = mode === edge ? "true" : "false";
@@ -714,6 +805,7 @@ inline constexpr char kSkinnedSelectorCss[] =
             .replace("{edge}", labelOf(edge)) : "";
         if (hint.textContent !== text) { hint.textContent = text; }
       }
+      markResets(group);
     }
     function build(button) {
       var group = document.createElement("div");
@@ -745,12 +837,13 @@ inline constexpr char kSkinnedSelectorCss[] =
       hint.className = hintClass;
       hint.setAttribute("role", "status");
       hint.hidden = true;
-      group.append(row, hint);
+      group.append(row, buildResets(), hint);
       button.parentNode.insertBefore(group, button);
       return group;
     }
 )JS";
   script += SelectorLeaveScript();
+  script += SelectorResetScript();
   script += R"JS(
     function visit(root) {
       var button = root.querySelector(".lights-button");
