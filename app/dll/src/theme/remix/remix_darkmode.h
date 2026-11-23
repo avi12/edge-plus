@@ -6,7 +6,11 @@
 // thread.
 #pragma once
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <string>
+#include <string_view>
+#include <utility>
 #include "MinHook.h"
 #include "edge/edge.h"
 #include "core/log.h"

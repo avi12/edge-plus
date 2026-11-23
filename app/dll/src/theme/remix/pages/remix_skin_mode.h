@@ -41,7 +41,7 @@ inline void SavePairOf(void* contents) {
   const bool isPublished =
       remix_colors::PairFromUrl(edge::TabUrl(contents), &published);
   const bool shouldSave = isPublished && remix_colors::HasColour(published) &&
-                          !(published == remix_colors_store::g_pair);
+                          published != remix_colors_store::g_pair;
   if (shouldSave) {
     remix_colors_store::Save(published);
   }

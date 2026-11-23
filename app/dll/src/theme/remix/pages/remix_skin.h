@@ -8,6 +8,7 @@
 // is picked. Every colour is a role of cyberpunk_palette.h. Pure: strings only.
 #pragma once
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <string_view>

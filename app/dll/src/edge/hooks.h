@@ -36,6 +36,7 @@
 #include "layout/state.h"
 #include "find/find.h"
 #include "theme/follow/theme_follow.h"
+#include "theme/remix/remix_darkmode.h"
 #include "chrome/tabs/live_preview.h"
 
 namespace edgeplus::hooks {

@@ -20,6 +20,7 @@
 // remix_wheel_bridge.h. Pure: strings only.
 #pragma once
 #include <string>
+#include <string_view>
 #include "find/web_text.h"
 #include "theme/remix/pages/remix_selector_leave.h"
 #include "theme/remix/pages/remix_selector_reset.h"
@@ -152,7 +153,7 @@ inline constexpr char kSkinnedSelectorCss[] =
 // `pairText` is remix_colors::FormatPair of the saved pair: what the section
 // opens on when it edits a stored remix. A new appearance opens on no colour.
 [[nodiscard]] inline std::string SelectorScript(bool isSkinned,
-                                                const std::string& pairText) {
+                                                std::string_view pairText) {
   std::string script = "(function () { var css = ";
   script += web_text::JsStringLiteral(SelectorStyleFor(isSkinned));
   script += "; var seed = " + web_text::JsStringLiteral(pairText);

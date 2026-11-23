@@ -34,6 +34,8 @@
 #include "theme/follow/theme_follow.h"
 #include "chrome/tabs/live_preview.h"
 #include "theme/reading/reading_mode.h"
+#include "theme/remix/remix_darkmode.h"
+#include "theme/remix/remix_mode.h"
 #include "theme/remix/pages/remix_skin_mode.h"
 #include "find/find.h"
 

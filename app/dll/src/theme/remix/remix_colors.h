@@ -6,6 +6,7 @@
 // the DLL as text, in the page's address fragment. Pure.
 #pragma once
 #include <charconv>
+#include <cstddef>
 #include <string>
 #include <string_view>
 #include <system_error>
