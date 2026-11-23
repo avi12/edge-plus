@@ -371,16 +371,45 @@ mai-tab { border-radius: 0 !important; background: transparent !important; font-
 // pair goes back to the DLL in the page's address fragment.
 inline constexpr char kSelectorClass[] = "edgeplus-mode-pick";
 inline constexpr char kSelectorStyleClass[] = "edgeplus-mode-style";
+inline constexpr char kSelectorRowClass[] = "edgeplus-mode-row";
+inline constexpr char kSelectorEdgeClass[] = "edgeplus-mode-edge";
+inline constexpr char kSelectorHintClass[] = "edgeplus-mode-hint";
 inline constexpr char kSelectorStateKey[] = "__edgeplusRemixPick";
 inline constexpr char kLightLabel[] = "Light";
 inline constexpr char kDarkLabel[] = "Dark";
 inline constexpr char kSelectorLabel[] = "Colour for";
+// On the segment of Edge's own mode: the one the page wears once the editor
+// closes.
+inline constexpr char kEdgeMarkerLabel[] = "Edge";
+// Under the selector while it previews the mode Edge is not in; {preview} and
+// {edge} are the two modes' labels.
+inline constexpr char kPreviewHint[] =
+    "Previewing {preview} \xC2\xB7 the page follows Edge ({edge}) when you "
+    "close";
+// A segment's apply waits this long after the page published the previewed
+// mode, so the DLL reads the new mode from the page's address when the
+// editor's apply reaches it.
+inline constexpr int kPreviewDelayMs = 150;
+// Leaving while previewing the other mode: Edge's mode is applied first, and
+// the Back or Close goes through this long after.
+inline constexpr int kRestoreDelayMs = 500;
 
 // Neutral: the page's own tokens. The skin's roles are added on top of it.
 inline constexpr char kSelectorCss[] =
     ".lights-button { display: none !important; }"
-    ".edgeplus-mode-pick { box-sizing: border-box; display: flex; gap: 4px;"
+    ".edgeplus-mode-pick { box-sizing: border-box; display: flex;"
+    " flex-direction: column; gap: 4px; }"
+    ".edgeplus-mode-row { display: flex; gap: 4px;"
     " height: var(--smtc-size-ctrl-lg-default, 32px); }"
+    ".edgeplus-mode-edge { display: none; margin-inline-start: 6px;"
+    " font-family: ui-monospace, Consolas, monospace; font-size: 10px;"
+    " font-weight: 400; opacity: 0.75; }"
+    ".edgeplus-mode-pick button[data-edge=\"true\"] .edgeplus-mode-edge {"
+    " display: inline; }"
+    ".edgeplus-mode-edge::before { content: \"\\2022  \"; }"
+    ".edgeplus-mode-hint { font-family: ui-monospace, Consolas, monospace;"
+    " font-size: 11px; line-height: 1.3; opacity: 0.8; }"
+    ".edgeplus-mode-hint[hidden] { display: none; }"
     ".edgeplus-mode-pick button { flex: 1 1 0; min-width: 0; padding: 0;"
     " font: inherit; font-size: 12px; color: inherit; cursor: pointer;"
     " background: transparent;"
@@ -402,7 +431,10 @@ inline constexpr char kSkinnedSelectorCss[] =
     " outline-offset: -5px; }"
     ".edgeplus-mode-pick button[aria-checked=\"true\"] {"
     " border-color: var(--ep-accent);"
-    " background: color-mix(in srgb, var(--ep-accent) 22%, transparent); }";
+    " background: color-mix(in srgb, var(--ep-accent) 22%, transparent); }"
+    ".edgeplus-mode-edge, .edgeplus-mode-hint {"
+    " font-family: \"Share Tech Mono\", Consolas, monospace;"
+    " letter-spacing: 0.06em; color: var(--ep-fg); }";
 
 [[nodiscard]] inline std::string SelectorStyleFor(bool isSkinned) {
   return std::string(kSelectorCss) + (isSkinned ? kSkinnedSelectorCss : "");
@@ -424,31 +456,53 @@ inline constexpr char kSkinnedSelectorCss[] =
   script += "; var key = " + web_text::JsStringLiteral(kSelectorStateKey);
   script += "; var fragmentKey = " +
             web_text::JsStringLiteral(remix_colors::kFragmentKey);
+  script += "; var previewKey = " +
+            web_text::JsStringLiteral(remix_colors::kPreviewKey);
+  script += "; var modes = {light: " +
+            web_text::JsStringLiteral(remix_colors::kLightName) +
+            ", dark: " + web_text::JsStringLiteral(remix_colors::kDarkName) +
+            "};";
+  script += " var edgeLabel = " + web_text::JsStringLiteral(kEdgeMarkerLabel);
+  script += "; var hintText = " + web_text::JsStringLiteral(kPreviewHint);
+  script += "; var rowClass = " + web_text::JsStringLiteral(kSelectorRowClass);
+  script +=
+      "; var edgeClass = " + web_text::JsStringLiteral(kSelectorEdgeClass);
+  script +=
+      "; var hintClass = " + web_text::JsStringLiteral(kSelectorHintClass);
+  script += "; var previewDelay = " + std::to_string(kPreviewDelayMs);
+  script += "; var restoreDelay = " + std::to_string(kRestoreDelayMs);
   script += R"JS(;
     function parseOne(text) {
       var found = /^(\d+),(\d+)$/.exec(text || "");
       return found ? {h: Number(found[1]), i: Number(found[2])} : null;
     }
     function parse(text) {
-      var found = /^light=([^;]*);dark=(.*)$/.exec(text) || [];
-      return {light: parseOne(found[1]), dark: parseOne(found[2])};
+      var found = /^light=([^;]*);dark=([^;]*)/.exec(text) || [];
+      var pair = {};
+      pair[modes.light] = parseOne(found[1]);
+      pair[modes.dark] = parseOne(found[2]);
+      return pair;
     }
     function formatOne(colour) { return colour ? colour.h + "," + colour.i : ""; }
     function edgeMode() {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? modes.dark : modes.light;
     }
     // The pair outlives the editor; which mode is selected does not: each time
-    // the Appearance section is built (build below) it starts on Edge's mode, and
-    // follows Edge's flips until the selector is used.
+    // the Appearance section is shown it starts on Edge's mode, and follows
+    // Edge's flips until the selector is used. The selected mode is the one the
+    // wheel edits and the page shows: it goes to the DLL with the pair.
     var state = window[key];
     if (!state) {
       state = window[key] = {pair: parse(seed), last: null, settleUntil: 0,
-          current: edgeMode(), isTouched: false, isSyncing: false,
+          current: edgeMode(), isTouched: false, wasShown: false,
+          publishedPreview: "", picker: null, group: null, isLeaving: false,
           wired: new WeakSet()};
     }
+    function previewNow() { return state.wasShown ? state.current : ""; }
     function publish() {
-      var fragment = fragmentKey + "light=" + formatOne(state.pair.light) +
-          ";dark=" + formatOne(state.pair.dark);
+      state.publishedPreview = previewNow();
+      var fragment = fragmentKey + "light=" + formatOne(state.pair[modes.light]) +
+          ";dark=" + formatOne(state.pair[modes.dark]) + previewKey + state.publishedPreview;
       if (location.hash !== fragment) {
         history.replaceState(null, "", location.pathname + location.search + fragment);
       }
@@ -479,79 +533,140 @@ inline constexpr char kSkinnedSelectorCss[] =
       picker.dispatchEvent(pointer("pointerup", x, y));
       state.settleUntil = Date.now() + 400;
     }
-    // The editor applies with its own darkmode (the hidden Dark button's pressed
-    // state), which is not Edge's mode. Before the user's first action on a
-    // control, that state is set to the selected mode by pressing the hidden
-    // button, so every apply after it carries the right darkmode. Opening the
-    // section never presses it: nothing is applied until the user acts.
-    function syncDarkmode(root) {
-      if (state.isSyncing) { return; }
-      var hidden = root.querySelector(".lights-button");
-      if (!hidden) { return; }
-      var isWanted = state.current === "dark";
-      var isHeld = hidden.getAttribute("aria-pressed") === "true";
-      if (isWanted !== isHeld) {
-        state.isSyncing = true;
-        hidden.click();
-        state.isSyncing = false;
+    // One apply of the selected mode: the wheel is driven to that mode's colour
+    // (or pressed where it is, when the mode has none yet), which makes the
+    // editor apply; the DLL gives the apply the selected mode. It waits for the
+    // mode published just before to reach the DLL.
+    function applySelected() {
+      setTimeout(function () {
+        var picker = state.picker;
+        if (!picker || !picker.isConnected) { return; }
+        var colour = state.pair[state.current] || readWheel(picker);
+        if (colour) { driveWheel(picker, colour); }
+      }, previewDelay);
+    }
+    // The wheel's own value, as the user moves it: kept for the selected mode
+    // and published at once, so the DLL has it when the editor's apply comes.
+    function takeWheel(picker) {
+      var wheel = readWheel(picker);
+      if (!wheel) { return; }
+      var isSame = state.last && state.last.h === wheel.h && state.last.i === wheel.i;
+      if (isSame) { return; }
+      var isOurs = Date.now() < state.settleUntil;
+      var isFirst = state.last === null;
+      state.last = wheel;
+      if (!isOurs && !isFirst) {
+        state.pair[state.current] = wheel;
+        publish();
       }
     }
-    function isOwnOrLeaving(event) {
-      return event.composedPath().some(function (node) {
-        var isOwn = node.classList && node.classList.contains(groupClass);
-        var label = node.getAttribute ? node.getAttribute("aria-label") : "";
-        return isOwn || label === "Back" || label === "Close";
-      });
+    function watchWheel(picker) {
+      if (state.wired.has(picker)) { return; }
+      state.wired.add(picker);
+      new MutationObserver(function () {
+        if (window[key] === state) { takeWheel(picker); }
+      }).observe(picker, {attributes: true, attributeFilter: ["aria-valuetext"]});
     }
-    function watchActions(root) {
-      if (state.wired.has(root)) { return; }
-      state.wired.add(root);
-      ["pointerdown", "keydown"].forEach(function (type) {
-        root.addEventListener(type, function (event) {
-          if (!isOwnOrLeaving(event)) { syncDarkmode(root); }
-        }, true);
-      });
-    }
+    function labelOf(mode) { return mode === modes.dark ? labels.dark : labels.light; }
     function mark(group) {
+      var edge = edgeMode();
       group.querySelectorAll("button").forEach(function (button) {
-        button.setAttribute("aria-checked", button.dataset.mode === state.current ? "true" : "false");
+        var mode = button.dataset.mode;
+        button.setAttribute("aria-checked", mode === state.current ? "true" : "false");
+        button.dataset.edge = mode === edge ? "true" : "false";
       });
-    }
-    // Moving the wheel makes the editor apply the colour to the page, so it is
-    // done only for the user's own click; opening the section, or Edge's mode
-    // changing, only marks the selector and leaves the page and the wheel alone.
-    function showMode(group, isUserChoice) {
-      mark(group);
-      var colour = state.pair[state.current];
-      var wheel = group.getRootNode().querySelector(".color-picker");
-      if (isUserChoice && colour && wheel) { driveWheel(wheel, colour); }
+      var hint = group.querySelector("." + hintClass);
+      if (hint) {
+        var isOther = state.current !== edge;
+        hint.hidden = !isOther;
+        var text = isOther ? hintText.replace("{preview}", labelOf(state.current))
+            .replace("{edge}", labelOf(edge)) : "";
+        if (hint.textContent !== text) { hint.textContent = text; }
+      }
     }
     function build(button) {
       var group = document.createElement("div");
       group.className = groupClass;
-      group.setAttribute("role", "radiogroup");
-      group.setAttribute("aria-label", groupLabel);
-      ["light", "dark"].forEach(function (mode) {
+      var row = document.createElement("div");
+      row.className = rowClass;
+      row.setAttribute("role", "radiogroup");
+      row.setAttribute("aria-label", groupLabel);
+      [modes.light, modes.dark].forEach(function (mode) {
         var choice = document.createElement("button");
         choice.type = "button";
         choice.setAttribute("role", "radio");
         choice.dataset.mode = mode;
-        choice.textContent = labels[mode];
+        choice.append(labelOf(mode));
+        var marker = document.createElement("span");
+        marker.className = edgeClass;
+        marker.textContent = edgeLabel;
+        choice.append(marker);
         choice.addEventListener("click", function () {
           state.isTouched = true;
           state.current = mode;
-          syncDarkmode(group.getRootNode());
-          showMode(group, true);
+          publish();
+          mark(group);
+          applySelected();
         });
-        group.append(choice);
+        row.append(choice);
       });
+      var hint = document.createElement("div");
+      hint.className = hintClass;
+      hint.setAttribute("role", "status");
+      hint.hidden = true;
+      group.append(row, hint);
       button.parentNode.insertBefore(group, button);
-      // A fresh Appearance section: Edge's mode selected, nothing applied.
-      state.isTouched = false;
-      state.current = edgeMode();
-      state.last = null;
-      showMode(group, false);
       return group;
+    }
+    // Leaving the section (Back) or the editor (Close, Esc) while the other mode
+    // is previewed: Edge's mode is applied first, and the leave goes through a
+    // moment later, re-sent by script. Best effort: a close Edge handles outside
+    // the page (a click outside the bubble) is not seen, and the next page
+    // load applies Edge's mode anyway.
+    function restoreBeforeLeaving() {
+      var edge = edgeMode();
+      var isPreviewingOther = state.wasShown && state.current !== edge;
+      if (!isPreviewingOther) { return false; }
+      state.current = edge;
+      state.isTouched = false;
+      publish();
+      if (state.group) { mark(state.group); }
+      applySelected();
+      return true;
+    }
+    function leavingControl(event) {
+      return event.composedPath().find(function (node) {
+        var label = node.getAttribute ? node.getAttribute("aria-label") : "";
+        return label === "Back" || label === "Close";
+      });
+    }
+    var leaveKey = key + "Leave";
+    if (!window[leaveKey]) {
+      window[leaveKey] = true;
+      document.addEventListener("click", function (event) {
+        var live = window[key];
+        if (!live || live !== state || state.isLeaving) { return; }
+        var control = leavingControl(event);
+        if (!control || !restoreBeforeLeaving()) { return; }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        state.isLeaving = true;
+        setTimeout(function () { control.click(); state.isLeaving = false; }, restoreDelay);
+      }, true);
+      document.addEventListener("keydown", function (event) {
+        var live = window[key];
+        if (!live || live !== state || state.isLeaving || event.key !== "Escape") { return; }
+        if (!restoreBeforeLeaving()) { return; }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        state.isLeaving = true;
+        var target = event.composedPath()[0];
+        setTimeout(function () {
+          target.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape",
+              keyCode: 27, bubbles: true, composed: true, cancelable: true}));
+          state.isLeaving = false;
+        }, restoreDelay);
+      }, true);
     }
     function visit(root) {
       var button = root.querySelector(".lights-button");
@@ -565,7 +680,9 @@ inline constexpr char kSkinnedSelectorCss[] =
         }
         if (style.textContent !== css) { style.textContent = css; }
         var group = button.parentNode.querySelector("." + groupClass) || build(button);
-        watchActions(root);
+        state.picker = picker;
+        state.group = group;
+        watchWheel(picker);
         // Leaving the section only hides it, so each time it is shown again counts
         // as opening it: Edge's mode selected, nothing applied.
         var isShown = picker.getClientRects().length > 0;
@@ -573,29 +690,13 @@ inline constexpr char kSkinnedSelectorCss[] =
           state.isTouched = false;
           state.current = edgeMode();
           state.last = null;
-          showMode(group, false);
         }
         state.wasShown = isShown;
         isAnyShown = isAnyShown || isShown;
         var isFollowing = !state.isTouched && state.current !== edgeMode();
-        if (isFollowing) {
-          state.current = edgeMode();
-          showMode(group, false);
-        }
+        if (isFollowing) { state.current = edgeMode(); }
         mark(group);
-        var wheel = readWheel(picker);
-        if (wheel) {
-          var isSame = state.last && state.last.h === wheel.h && state.last.i === wheel.i;
-          if (!isSame) {
-            var isOurs = Date.now() < state.settleUntil;
-            var isFirst = state.last === null;
-            state.last = wheel;
-            if (!isOurs && !isFirst) {
-              state.pair[state.current] = wheel;
-              publish();
-            }
-          }
-        }
+        takeWheel(picker);
       }
       root.querySelectorAll("*").forEach(function (element) {
         if (element.shadowRoot) { visit(element.shadowRoot); }
@@ -605,6 +706,7 @@ inline constexpr char kSkinnedSelectorCss[] =
     visit(document);
     // The section is taken out of the page when the editor is left.
     if (!isAnyShown) { state.wasShown = false; }
+    if (previewNow() !== state.publishedPreview) { publish(); }
   })();)JS";
   return script;
 }
