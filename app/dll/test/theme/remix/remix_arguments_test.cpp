@@ -5,7 +5,6 @@
 
 using edgeplus::remix_arguments::Outcome;
 using edgeplus::remix_arguments::WithColour;
-using edgeplus::remix_arguments::WithDarkmode;
 using edgeplus::remix_arguments::WithPageAwareTheme;
 using edgeplus::remix_page_helper::kHelperScript;
 using edgeplus::remix_page_helper::kRequestCall;
@@ -27,22 +26,6 @@ void Check(bool ok, const char* what) {
 std::string Wrap(const std::string& call) {
   return "(function() { try { " + call +
          "); } catch(e) { console.error('Execute failed:', e); } })();";
-}
-
-void RunEmptyDarkmodeChecks() {
-  const std::string empty =
-      Wrap("applyColorWheelThemeV2(\"10\",\"20\",\"\",\"\",\"\"");
-  const auto dark = WithDarkmode(empty, true);
-  Check(dark.outcome == Outcome::kRewritten &&
-            dark.script ==
-                Wrap("applyColorWheelThemeV2(\"10\",\"20\",\"true\",\"\",\"\""),
-        "an empty darkmode becomes true in dark");
-  const auto light = WithDarkmode(empty, false);
-  Check(
-      light.outcome == Outcome::kRewritten &&
-          light.script ==
-              Wrap("applyColorWheelThemeV2(\"10\",\"20\",\"false\",\"\",\"\""),
-      "an empty darkmode becomes false in light");
 }
 
 void RunColourChecks() {
@@ -72,58 +55,6 @@ void RunColourChecks() {
             WithColour(Wrap("applyColorWheelThemeV2(1"), 1, 2).outcome ==
                 Outcome::kUnknownShape,
         "another script, or a call too short, is left alone");
-}
-
-void RunChecks() {
-  RunColourChecks();
-  RunEmptyDarkmodeChecks();
-  const std::string darkQuoted =
-      Wrap("applyColorWheelThemeV2(\"\",\"\",\"true\",\"\",\"\"");
-  const auto toLight = WithDarkmode(darkQuoted, false);
-  Check(toLight.outcome == Outcome::kRewritten, "a quoted true is rewritten");
-  Check(toLight.script ==
-            Wrap("applyColorWheelThemeV2(\"\",\"\",\"false\",\"\",\"\""),
-        "to a quoted false, the rest untouched");
-  const auto toDark = WithDarkmode(toLight.script, true);
-  Check(toDark.script == darkQuoted, "and back");
-  Check(WithDarkmode(darkQuoted, true).outcome == Outcome::kUnchanged,
-        "already right");
-
-  const auto bare =
-      WithDarkmode(Wrap("__edgeRemixApplyTheme(1, 2, false, 4, 5"), true);
-  Check(bare.script == Wrap("__edgeRemixApplyTheme(1, 2, true, 4, 5"),
-        "a bare boolean with spaces keeps its spacing");
-  const auto number =
-      WithDarkmode(Wrap("__edgeRemixApplyTheme(1,2,1,4,5"), false);
-  Check(number.script == Wrap("__edgeRemixApplyTheme(1,2,0,4,5"), "a number");
-  const auto single =
-      WithDarkmode(Wrap("applyColorWheelThemeV2('a','b','1','c','d'"), false);
-  Check(single.script == Wrap("applyColorWheelThemeV2('a','b','0','c','d'"),
-        "a single-quoted number");
-
-  const auto commas = WithDarkmode(
-      Wrap("applyColorWheelThemeV2(\"a,b)\",[1,2],\"true\",\"\",\"\""), false);
-  Check(commas.script ==
-            Wrap("applyColorWheelThemeV2(\"a,b)\",[1,2],\"false\",\"\",\"\""),
-        "commas inside quotes and brackets do not split");
-  const auto escaped = WithDarkmode(
-      Wrap("applyColorWheelThemeV2(\"a\\\",\",\"\",\"true\",\"\",\"\""), false);
-  Check(escaped.outcome == Outcome::kRewritten, "an escaped quote");
-
-  Check(WithDarkmode(Wrap("hideGTA6Videos("), true).outcome ==
-            Outcome::kNotThemeCall,
-        "another remix is left alone");
-  Check(
-      WithDarkmode(Wrap("myapplyColorWheelThemeV2(1,2,true"), false).outcome ==
-          Outcome::kNotThemeCall,
-      "a longer name is not the function");
-  Check(WithDarkmode(Wrap("applyColorWheelThemeV2(\"\",\"\""), true).outcome ==
-            Outcome::kUnknownShape,
-        "too few arguments");
-  Check(WithDarkmode(Wrap("applyColorWheelThemeV2(1,2,\"dark\",4,5"), true)
-                .outcome == Outcome::kUnknownShape,
-        "an unknown word");
-  Check(WithDarkmode("", true).outcome == Outcome::kNotThemeCall, "empty");
 }
 
 const edgeplus::remix_colors::Pair kNoPair{};
@@ -207,7 +138,7 @@ void RunNoColourChecks() {
 
 int main() {
   try {
-    RunChecks();
+    RunColourChecks();
     RunPageAwareChecks();
     RunNoColourChecks();
     RunLoadShapeChecks();

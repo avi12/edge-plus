@@ -18,7 +18,7 @@ namespace edgeplus::remix_arguments {
 enum class Outcome {
   kNotThemeCall,  // not an Appearance remix's script: left alone
   kUnknownShape,  // a darkmode argument this does not understand: left alone
-  kUnchanged,     // already what Edge's mode says
+  kUnchanged,     // already what was asked
   kRewritten,
 };
 
@@ -26,59 +26,6 @@ struct Result {
   Outcome outcome = Outcome::kNotThemeCall;
   std::string script;  // the new text, only when kRewritten
 };
-
-// `script` with the darkmode argument of its Appearance call set to `isDark`,
-// written in the form it already has (`"true"`, `true` or `1`).
-[[nodiscard]] inline Result WithDarkmode(std::string_view script, bool isDark) {
-  const size_t argumentsAt = remix_call::FindThemeCall(script).argumentsAt;
-  if (argumentsAt == std::string_view::npos) {
-    return {Outcome::kNotThemeCall, {}};
-  }
-  const std::vector<remix_call::Span> arguments =
-      remix_call::SplitArguments(script, argumentsAt);
-  if (arguments.size() <= remix_call::kDarkmodeIndex) {
-    return {Outcome::kUnknownShape, {}};
-  }
-  const remix_call::Span span =
-      remix_call::Trimmed(script, arguments[remix_call::kDarkmodeIndex]);
-  std::string_view text = script.substr(span.begin, span.end - span.begin);
-  std::string_view quote;
-  const bool isQuoted = text.size() >= 2 && remix_call::IsQuote(text.front()) &&
-                        text.back() == text.front();
-  if (isQuoted) {
-    quote = text.substr(0, 1);
-    text = text.substr(1, text.size() - 2);
-  }
-  // The editor leaves the argument empty until its Dark button was used: the
-  // page then reads it as light whatever Edge's mode is, so it is written out.
-  const bool isEmptyQuoted = isQuoted && text.empty();
-  if (isEmptyQuoted) {
-    const remix_call::Spelling& spelling = remix_call::kSpellings.front();
-    std::string rewritten(script.substr(0, span.begin));
-    rewritten += quote;
-    rewritten += isDark ? spelling.dark : spelling.light;
-    rewritten += quote;
-    rewritten += script.substr(span.end);
-    return {Outcome::kRewritten, std::move(rewritten)};
-  }
-  for (const remix_call::Spelling& spelling : remix_call::kSpellings) {
-    const bool isLight = text == spelling.light;
-    const bool isDarkSpelled = text == spelling.dark;
-    if (!isLight && !isDarkSpelled) {
-      continue;
-    }
-    if (isDarkSpelled == isDark) {
-      return {Outcome::kUnchanged, {}};
-    }
-    std::string rewritten(script.substr(0, span.begin));
-    rewritten += quote;
-    rewritten += isDark ? spelling.dark : spelling.light;
-    rewritten += quote;
-    rewritten += script.substr(span.end);
-    return {Outcome::kRewritten, std::move(rewritten)};
-  }
-  return {Outcome::kUnknownShape, {}};
-}
 
 // `script` with its Appearance call handed to the helper as a request for the
 // target mode `isTargetDark` (the helper picks the darkmode), and the helper
