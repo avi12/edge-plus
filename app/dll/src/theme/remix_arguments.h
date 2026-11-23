@@ -10,6 +10,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include "theme/remix_colors.h"
 
 namespace edgeplus::remix_arguments {
 
@@ -218,9 +219,14 @@ struct Span {
 inline constexpr std::string_view kDarkmodeExpression =
     "globalThis.__edgePlusRemix.darkmode";
 
-// A function of `isTargetDark`, called before the theme call.
-inline constexpr std::string_view kPrepareScript = R"js((isTargetDark) => {
+// A function of `isTargetDark` and the saved pair (`{light: [hue, intensity]
+// or null, dark: ...}`), called before the theme call. It keeps itself on the
+// page so the page can apply again on its own when Edge's mode changes.
+inline constexpr std::string_view kPrepareScript =
+    R"js(function prepare(isTargetDark, pair) {
   const helper = globalThis.__edgePlusRemix || (globalThis.__edgePlusRemix = {learned: {}});
+  helper.prepare = prepare;
+  helper.pair = pair;
   helper.generation = (helper.generation || 0) + 1;
   helper.target = isTargetDark;
   helper.flipped = false;
@@ -352,6 +358,42 @@ inline constexpr std::string_view kPrepareScript = R"js((isTargetDark) => {
     };
     setTimeout(check, 150);
   };
+  // Applies the remix again for the prepared target: that mode's saved colour
+  // (else the last call's), the last call's font and zoom, and the check.
+  helper.applyPrepared = () => {
+    const params = globalThis.__blueprintParams || {};
+    const colour = helper.pair ? helper.pair[helper.target ? "dark" : "light"] : null;
+    const hue = colour ? String(colour[0]) : params.hue;
+    const saturation = colour ? String(colour[1]) : params.saturation;
+    applyColorWheelThemeV2(hue, saturation, helper.darkmode, params.font, params.zoom);
+    helper.verify();
+  };
+  // Edge's mode changing under an applied remix: the DLL pushes the new mode
+  // to every tab (kFollowModeScript); this is the page's own faster path, on
+  // its prefers-color-scheme flipping. Once per document, a quarter second
+  // after the last flip, never while the template is applying, and not when
+  // the DLL pushed a mode lately or the page already wears the new one.
+  helper.followScheme = () => {
+    const library = globalThis.__blueprintThemeLib__ || {};
+    const params = globalThis.__blueprintParams;
+    const canApply = params && typeof applyColorWheelThemeV2 === "function";
+    if (!canApply) { return; }
+    const isDark = helper.scheme() === "dark";
+    const isPushedLately = Date.now() - (helper.pushedAt || 0) < 2000;
+    if (isPushedLately || helper.target === isDark) { return; }
+    const isApplying = library.__observerState ? library.__observerState.isApplying === true : false;
+    if (isApplying) { helper.schemeTimer = setTimeout(() => helper.followScheme(), 250); return; }
+    helper.prepare(isDark, helper.pair);
+    helper.applyPrepared();
+  };
+  if (!helper.isFollowingScheme) {
+    helper.isFollowingScheme = true;
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+      const live = globalThis.__edgePlusRemix;
+      clearTimeout(live.schemeTimer);
+      live.schemeTimer = setTimeout(() => live.followScheme(), 250);
+    });
+  }
   const learned = helper.learned[helper.scheme()];
   helper.choose(typeof learned === "boolean" ? learned : helper.sampleOwn());
   helper.mark("pending");
@@ -360,12 +402,45 @@ inline constexpr std::string_view kPrepareScript = R"js((isTargetDark) => {
 inline constexpr std::string_view kVerifyScript =
     "globalThis.__edgePlusRemix && globalThis.__edgePlusRemix.verify();";
 
+// Run by the DLL in every open tab, in the world remixes run in, when Edge's
+// mode flips: a page wearing an Appearance remix (applied by any build of the
+// DLL, or by Edge alone) is applied again for the new mode, unless this build
+// already applied it for that mode. Laid out as the opening, the target, the
+// check, kPrepareScript, its arguments and the closing.
+inline constexpr std::string_view kFollowModeOpening = R"js((() => {
+  const isTargetDark = )js";
+inline constexpr std::string_view kFollowModeCheck = R"js(;
+  const params = globalThis.__blueprintParams;
+  if (!params || typeof applyColorWheelThemeV2 !== "function") { return; }
+  const current = globalThis.__edgePlusRemix;
+  const isWorn = current && typeof current.applyPrepared === "function" && current.target === isTargetDark;
+  if (isWorn) { return; }
+  ()js";
+inline constexpr std::string_view kFollowModeClosing = R"js();
+  globalThis.__edgePlusRemix.pushedAt = Date.now();
+  globalThis.__edgePlusRemix.applyPrepared();
+}))js";
+
+// The pair as the helper takes it: `{light: [210, 40], dark: null}`.
+[[nodiscard]] inline std::string PairLiteral(const remix_colors::Pair& pair) {
+  const auto side = [](const remix_colors::Colour& colour) {
+    if (!colour.isSet) {
+      return std::string("null");
+    }
+    return "[" + std::to_string(colour.hue) + ", " +
+           std::to_string(colour.intensity) + "]";
+  };
+  return "{light: " + side(pair.light) + ", dark: " + side(pair.dark) + "}";
+}
+
 // `script` with the darkmode argument of its Appearance call replaced by the
 // helper's choice for the target mode `isTargetDark`, and the helper around
-// it. Any argument that is a known spelling (or empty) is replaced; another
-// shape is left alone.
+// it, which also carries `pair` for a later change of Edge's mode. Any
+// argument that is a known spelling (or empty) is replaced; another shape is
+// left alone.
 [[nodiscard]] inline Result WithPageAwareTheme(std::string_view script,
-                                               bool isTargetDark) {
+                                               bool isTargetDark,
+                                               const remix_colors::Pair& pair) {
   size_t argumentsAt = std::string_view::npos;
   for (const std::string_view name : kThemeFunctions) {
     argumentsAt = detail::FindCallArguments(script, name);
@@ -402,6 +477,8 @@ inline constexpr std::string_view kVerifyScript =
   rewritten += kPrepareScript;
   rewritten += ")(";
   rewritten += isTargetDark ? "true" : "false";
+  rewritten += ", ";
+  rewritten += PairLiteral(pair);
   rewritten += ");\n";
   rewritten += script.substr(0, span.begin);
   rewritten += kDarkmodeExpression;
@@ -409,6 +486,21 @@ inline constexpr std::string_view kVerifyScript =
   rewritten += "\n";
   rewritten += kVerifyScript;
   return {Outcome::kRewritten, std::move(rewritten)};
+}
+
+// The script that applies a tab's Appearance remix again for Edge's new mode
+// `isTargetDark`, in `pair`'s colour for it.
+[[nodiscard]] inline std::string FollowModeScript(
+    bool isTargetDark, const remix_colors::Pair& pair) {
+  const std::string target = isTargetDark ? "true" : "false";
+  std::string script(kFollowModeOpening);
+  script += target;
+  script += kFollowModeCheck;
+  script += kPrepareScript;
+  script += ")(" + target + ", " + PairLiteral(pair);
+  script += kFollowModeClosing;
+  script += "();";
+  return script;
 }
 
 // `script` with the hue and saturation arguments of its Appearance call set to

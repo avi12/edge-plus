@@ -3,10 +3,12 @@
 #include <string>
 #include "../../src/theme/remix_arguments.h"
 
+using edgeplus::remix_arguments::FollowModeScript;
 using edgeplus::remix_arguments::kDarkmodeExpression;
 using edgeplus::remix_arguments::kPrepareScript;
 using edgeplus::remix_arguments::kVerifyScript;
 using edgeplus::remix_arguments::Outcome;
+using edgeplus::remix_arguments::PairLiteral;
 using edgeplus::remix_arguments::WithColour;
 using edgeplus::remix_arguments::WithDarkmode;
 using edgeplus::remix_arguments::WithPageAwareTheme;
@@ -127,32 +129,61 @@ void RunChecks() {
   Check(WithDarkmode("", true).outcome == Outcome::kNotThemeCall, "empty");
 }
 
+const edgeplus::remix_colors::Pair kNoPair{};
+
 void RunPageAwareChecks() {
   const std::string call =
       Wrap("applyColorWheelThemeV2(\"228\",\"20\",\"true\",\"\",\"\"");
-  const auto dark = WithPageAwareTheme(call, true);
+  const auto dark = WithPageAwareTheme(call, true, kNoPair);
   const std::string expectedCall =
       Wrap("applyColorWheelThemeV2(\"228\",\"20\"," +
            std::string(kDarkmodeExpression) + ",\"\",\"\"");
   Check(dark.outcome == Outcome::kRewritten, "a theme call is rewritten");
-  Check(dark.script.starts_with("(" + std::string(kPrepareScript) + ")(true);"),
-        "the helper is prepared first, for the target mode");
+  Check(dark.script.starts_with("(" + std::string(kPrepareScript) +
+                                ")(true, {light: null, dark: null});"),
+        "the helper is prepared first, for the target mode and the pair");
   Check(dark.script.find(expectedCall) != std::string::npos,
         "the darkmode argument names the helper's choice");
   Check(dark.script.ends_with(kVerifyScript), "and the outcome is verified");
   const auto fromEmpty = WithPageAwareTheme(
-      Wrap("applyColorWheelThemeV2(\"228\",\"20\",\"\",\"\",\"\""), true);
+      Wrap("applyColorWheelThemeV2(\"228\",\"20\",\"\",\"\",\"\""), true,
+      kNoPair);
   Check(fromEmpty.script == dark.script, "an empty darkmode too");
-  const auto light =
-      WithPageAwareTheme(Wrap("__edgeRemixApplyTheme(1, 2, 1, 4, 5"), false);
-  Check(light.script.find(")(false);") != std::string::npos,
+  const auto light = WithPageAwareTheme(
+      Wrap("__edgeRemixApplyTheme(1, 2, 1, 4, 5"), false, kNoPair);
+  Check(light.script.find(")(false, ") != std::string::npos,
         "a light target is prepared as light");
-  Check(WithPageAwareTheme(Wrap("applyColorWheelThemeV2(1,2,maybe,4,5"), true)
+  Check(WithPageAwareTheme(Wrap("applyColorWheelThemeV2(1,2,maybe,4,5"), true,
+                           kNoPair)
                 .outcome == Outcome::kUnknownShape,
         "an unknown word is left alone");
-  Check(WithPageAwareTheme(Wrap("hideGTA6Videos("), true).outcome ==
+  Check(WithPageAwareTheme(Wrap("hideGTA6Videos("), true, kNoPair).outcome ==
             Outcome::kNotThemeCall,
         "another remix is left alone");
+}
+
+void RunPairLiteralChecks() {
+  edgeplus::remix_colors::Pair pair;
+  pair.light = {210, 40, true};
+  Check(PairLiteral(pair) == "{light: [210, 40], dark: null}",
+        "the pair goes to the page as numbers, an unset side as null");
+}
+
+void RunFollowModeChecks() {
+  edgeplus::remix_colors::Pair pair;
+  pair.dark = {228, 20, true};
+  const std::string script = FollowModeScript(true, pair);
+  Check(script.starts_with("(() => {\n  const isTargetDark = true;"),
+        "the follow script names its target first, inside its own function");
+  Check(script.find(std::string(kPrepareScript) +
+                    ")(true, {light: null, dark: [228, 20]});") !=
+            std::string::npos,
+        "and prepares the helper for that target and the saved pair");
+  Check(script.ends_with("applyPrepared();\n})();"),
+        "then applies, as one self-contained call");
+  Check(FollowModeScript(false, pair).find("const isTargetDark = false;") !=
+            std::string::npos,
+        "a light flip targets light");
 }
 }  // namespace
 
@@ -160,6 +191,8 @@ int main() {
   try {
     RunChecks();
     RunPageAwareChecks();
+    RunPairLiteralChecks();
+    RunFollowModeChecks();
   } catch (...) {
     return 1;
   }

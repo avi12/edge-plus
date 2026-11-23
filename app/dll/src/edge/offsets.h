@@ -1590,6 +1590,12 @@ inline constexpr uint8_t VALUE_string_index = 4;
 // accepts 1..11 and an isolated world shares the page's DOM but not its
 // globals, so a page cannot see or tamper with our script.
 inline constexpr int kScriptWorldId = 11;
+// The isolated world Create a remix runs its scripts in: the remix executor
+// (0x73f5952, after RemixAction_BuildScript) hands its script to the main
+// frame's ExecuteJavaScriptInIsolatedWorld (RenderFrameHost vtable slot 0x1d0)
+// with world 4. A remix's functions and state (window.__blueprintParams, the
+// Appearance template) live there, so a script that re-applies one runs there.
+inline constexpr int kRemixWorldId = 4;
 // FindBarView: its views::Textfield* and its FindBarMatchCountLabel* (the
 // "n/m" label, a views::Label whose virtual at LABEL_set_text_slot takes a
 // const std::u16string_view*).

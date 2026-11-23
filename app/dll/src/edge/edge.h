@@ -1908,11 +1908,13 @@ inline void FreeU16String(U16String* string) {
   }
 }
 
-// Hand `utf8Script` to Edge to run in `frame`, in our isolated world, with
-// `callbackSlot` as the callback Edge calls (null for none).
+// Hand `utf8Script` to Edge to run in `frame`, in isolated world `worldId`
+// (ours unless named), with `callbackSlot` as the callback Edge calls (null
+// for none).
 inline void ExecuteScriptInFrame(const void* frame,
                                  const std::string& utf8Script,
-                                 const void** callbackSlot) {
+                                 const void** callbackSlot,
+                                 int worldId = edge155::off::kScriptWorldId) {
   U16String script{};
   const U8View scriptView{utf8Script.data(), utf8Script.size()};
   Utf8ToUtf16(&script, &scriptView);
@@ -1920,7 +1922,7 @@ inline void ExecuteScriptInFrame(const void* frame,
       void(__fastcall*)(const void*, const U16String*, const void**, int);
   Callable<ExecuteFn>(
       edge155::rva::RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld)(
-      frame, &script, callbackSlot, edge155::off::kScriptWorldId);
+      frame, &script, callbackSlot, worldId);
   FreeU16String(&script);
 }
 
@@ -1948,17 +1950,19 @@ inline bool RunScriptInFrame(const void* frame, const std::string& utf8Script,
   return true;
 }
 
-// Run `utf8Script` in the page's main frame and never wait for an answer: no
-// callback is built, so this needs no BindStateBase.
+// Run `utf8Script` in the page's main frame, in isolated world `worldId`
+// (ours unless named), and never wait for an answer: no callback is built, so
+// this needs no BindStateBase.
 inline bool RunScriptUnanswered(void* webContents,
-                                const std::string& utf8Script) {
+                                const std::string& utf8Script,
+                                int worldId = edge155::off::kScriptWorldId) {
   const void* frame =
       IsPageLive(webContents) ? PrimaryMainFrame(webContents) : nullptr;
   if (!frame) {
     return false;
   }
   const void* noCallback = nullptr;
-  ExecuteScriptInFrame(frame, utf8Script, &noCallback);
+  ExecuteScriptInFrame(frame, utf8Script, &noCallback, worldId);
   return true;
 }
 

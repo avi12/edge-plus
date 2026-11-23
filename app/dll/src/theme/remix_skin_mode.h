@@ -12,6 +12,7 @@
 #include "edge/edge.h"
 #include "theme/remix_colors.h"
 #include "theme/remix_colors_store.h"
+#include "theme/remix_darkmode.h"
 #include "theme/remix_editor.h"
 #include "theme/remix_mode.h"
 #include "theme/remix_skin.h"
@@ -45,6 +46,7 @@ inline void Poll() {
   if (!remix_mode::g_isActive) {
     return;
   }
+  remix_darkmode::FollowModeFlip();
   const bool isSkinning = remix_skin::ShouldSkin(
       remix_mode::g_isActive, tab_shape::g_isCyberpunkSkinOn);
   const bool isRemovingSkin = !isSkinning && g_isPainted;

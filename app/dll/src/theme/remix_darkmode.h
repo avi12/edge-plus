@@ -87,7 +87,7 @@ inline void RewriteScript(void* out) {
     }
   }
   remix_arguments::Result result =
-      remix_arguments::WithPageAwareTheme(current, isTargetDark);
+      remix_arguments::WithPageAwareTheme(current, isTargetDark, pair);
   if (result.outcome == remix_arguments::Outcome::kNotThemeCall) {
     return;
   }
@@ -116,6 +116,42 @@ inline void RewriteScript(void* out) {
   edge::Utf8ToUtf16(&fresh, &view);
   edge::FreeU16String(static_cast<edge::U16String*>(out));
   std::memcpy(out, &fresh, sizeof(fresh));
+}
+
+// Edge's mode as the last push found it. When Edge flips, every open tab
+// wearing an Appearance remix is applied again for the new mode, in the world
+// remixes run in, whichever build applied it: Edge itself only re-runs a
+// remix on the next load. UI thread, from the remix poll.
+inline constinit theme_tone::Tone g_followedTone = theme_tone::Tone::kUnknown;
+
+inline void FollowModeFlip() {
+  const theme_tone::Tone tone = g_edgeTone;
+  const bool isUnchanged =
+      tone == theme_tone::Tone::kUnknown || tone == g_followedTone;
+  if (isUnchanged) {
+    return;
+  }
+  const bool isFirstSeen = g_followedTone == theme_tone::Tone::kUnknown;
+  g_followedTone = tone;
+  if (isFirstSeen) {
+    return;
+  }
+  const bool isDark = tone == theme_tone::Tone::kDark;
+  const std::string script =
+      remix_arguments::FollowModeScript(isDark, remix_colors_store::g_pair);
+  int asked = 0;
+  for (void* contents : edge::AllWebContents()) {
+    const bool isTab = edge::IsPageLive(contents) &&
+                       !followed_pages::IsRemixPage(edge::TabUrl(contents));
+    const bool isAsked =
+        isTab && edge::RunScriptUnanswered(contents, script,
+                                           edge155::off::kRemixWorldId);
+    if (isAsked) {
+      asked++;
+    }
+  }
+  Log("[remix-theme] edge went %s: %d page(s) asked to wear their remix in it",
+      isDark ? "dark" : "light", asked);
 }
 
 inline void* __fastcall h_build_script(void* out, void* action) {

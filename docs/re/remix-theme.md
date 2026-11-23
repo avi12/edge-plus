@@ -83,6 +83,18 @@ at script build time with the pair it holds), else Edge's mode. Verified in a
 throwaway Edge: google dark + `"true"` -> body rgb(212,214,222); through the
 helper -> rgb(33,35,43).
 
+**Edge's mode flipping under an applied remix.** Edge re-runs a remix only on
+the next load. Create a remix runs its scripts in isolated world 4 (the executor
+at 0x73f5952 calls the main frame's `ExecuteJavaScriptInIsolatedWorld`, vtable
+slot 0x1d0, with 4; `kRemixWorldId`). A tab's `prefers-color-scheme` change
+event does fire when Edge's Appearance flips, but a background tab gets it only
+once it is shown. So the remix poll watches Edge's mode (`g_edgeTone`) and on a
+flip runs `FollowModeScript` in world 4 of every open tab: a page wearing an
+Appearance remix (`window.__blueprintParams`, any build or Edge alone) is
+applied again in the new mode's saved colour through the helper's choice and
+check; the helper's own `matchMedia` listener is the faster path for the shown
+tab and stands aside for two seconds after a push.
+
 `remix_darkmode.h` detours it, and with the remix switch on rewrites the third argument
 of a `__edgeRemixApplyTheme` / `applyColorWheelThemeV2` call to Edge's light or dark
 (`remix_arguments.h`, pure, `test/theme/remix_arguments_test.cpp`): `"true"`, `true`
