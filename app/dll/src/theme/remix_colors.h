@@ -9,6 +9,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include "theme/theme_tone.h"
 
 namespace edgeplus::remix_colors {
 
@@ -18,6 +19,13 @@ inline constexpr int kIntensityMax = 100;
 // What the page puts in its address after the page's own, so the DLL can read
 // it back without a script answer.
 inline constexpr std::string_view kFragmentKey = "#edgeplus-remix=";
+
+// After the pair the open editor names the mode it previews, the mode the wheel
+// edits and the page shows: "...;dark=7,8;preview=dark". Empty while the
+// Appearance section is not shown.
+inline constexpr std::string_view kPreviewKey = ";preview=";
+inline constexpr std::string_view kLightName = "light";
+inline constexpr std::string_view kDarkName = "dark";
 
 struct Colour {
   int hue = 0;        // degrees, 0..359
@@ -112,10 +120,13 @@ constexpr std::string_view kDarkKey = "dark=";
   if (!rest.starts_with(detail::kDarkKey)) {
     return false;
   }
+  // The dark side ends at the next field, when the text carries one.
+  const std::string_view darkText =
+      rest.substr(detail::kDarkKey.size(),
+                  rest.find(detail::kSideSeparator) - detail::kDarkKey.size());
   Pair parsed;
   if (!detail::ParseColour(lightText, &parsed.light) ||
-      !detail::ParseColour(rest.substr(detail::kDarkKey.size()),
-                           &parsed.dark)) {
+      !detail::ParseColour(darkText, &parsed.dark)) {
     return false;
   }
   *pair = parsed;
@@ -129,6 +140,28 @@ constexpr std::string_view kDarkKey = "dark=";
     return false;
   }
   return ParsePair(url.substr(fragmentAt + kFragmentKey.size()), pair);
+}
+
+// The mode the editor in `url` previews: kUnknown when it names none.
+[[nodiscard]] inline theme_tone::Tone PreviewFromUrl(std::string_view url) {
+  const size_t fragmentAt = url.find(kFragmentKey);
+  if (fragmentAt == std::string_view::npos) {
+    return theme_tone::Tone::kUnknown;
+  }
+  const size_t previewAt = url.find(kPreviewKey, fragmentAt);
+  if (previewAt == std::string_view::npos) {
+    return theme_tone::Tone::kUnknown;
+  }
+  const std::string_view rest = url.substr(previewAt + kPreviewKey.size());
+  const std::string_view name =
+      rest.substr(0, rest.find(detail::kSideSeparator));
+  if (name == kLightName) {
+    return theme_tone::Tone::kLight;
+  }
+  if (name == kDarkName) {
+    return theme_tone::Tone::kDark;
+  }
+  return theme_tone::Tone::kUnknown;
 }
 
 }  // namespace edgeplus::remix_colors

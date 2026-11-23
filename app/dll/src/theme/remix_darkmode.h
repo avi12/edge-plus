@@ -15,6 +15,7 @@
 #include "theme/remix_arguments.h"
 #include "theme/remix_colors.h"
 #include "theme/remix_colors_store.h"
+#include "theme/remix_editor.h"
 #include "theme/remix_mode.h"
 #include "theme/remix_template_copy.h"
 #include "theme/theme_tone.h"
@@ -63,12 +64,21 @@ inline constexpr size_t kLoggedScriptChars = 120;
 
 inline void RewriteScript(void* out) {
   const std::string script = edge::Utf16ToUtf8(edge::U16StringView(out));
-  const bool isDark = g_edgeTone == theme_tone::Tone::kDark;
-  // The colour picked for Edge's current mode, when there is one; a remix with
-  // none saved keeps its own. Then the darkmode, relative to the page's own.
+  // The mode the page is to wear: the open Appearance editor's preview, else
+  // Edge's own. Its colour comes from the pair the editor holds right now when
+  // one is open (the DLL's copy is saved a poll later), else the saved pair; a
+  // remix with none for that mode keeps its own. Then the darkmode, relative to
+  // the page's own darkness (remix_arguments.h).
+  const remix_editor::Editor editor = remix_editor::OpenEditor();
+  const bool isPreviewing = editor.preview != theme_tone::Tone::kUnknown;
+  const bool isTargetDark = isPreviewing
+                                ? editor.preview == theme_tone::Tone::kDark
+                                : g_edgeTone == theme_tone::Tone::kDark;
+  const remix_colors::Pair& pair =
+      editor.hasPair ? editor.pair : remix_colors_store::g_pair;
   std::string current = script;
   const remix_colors::Colour colour =
-      remix_colors::ColourFor(remix_colors_store::g_pair, isDark);
+      remix_colors::ColourFor(pair, isTargetDark);
   if (colour.isSet) {
     remix_arguments::Result coloured =
         remix_arguments::WithColour(current, colour.hue, colour.intensity);
@@ -77,7 +87,7 @@ inline void RewriteScript(void* out) {
     }
   }
   remix_arguments::Result result =
-      remix_arguments::WithPageAwareDarkmode(current, isDark);
+      remix_arguments::WithPageAwareTheme(current, isTargetDark);
   if (result.outcome == remix_arguments::Outcome::kNotThemeCall) {
     return;
   }
@@ -86,18 +96,21 @@ inline void RewriteScript(void* out) {
       result.outcome != remix_arguments::Outcome::kRewritten &&
       current != script;
   if (isOnlyColoured) {
-    result = {remix_arguments::Outcome::kRewritten, std::move(current)};
+    result = {remix_arguments::Outcome::kRewritten, current};
   }
-  Log("[remix-theme] appearance script (edge %s): outcome %d, %.*s",
-      isDark ? "dark" : "light", static_cast<int>(result.outcome),
+  Log("[remix-theme] appearance script (edge %s, target %s from %s): outcome "
+      "%d, %.*s",
+      g_edgeTone == theme_tone::Tone::kDark ? "dark" : "light",
+      isTargetDark ? "dark" : "light", isPreviewing ? "the editor" : "edge",
+      static_cast<int>(result.outcome),
       static_cast<int>(std::min(script.size(), kLoggedScriptChars)),
       script.c_str());
   if (result.outcome != remix_arguments::Outcome::kRewritten) {
     return;
   }
-  Log("[remix-theme] appearance script, as run: %.*s",
-      static_cast<int>(std::min(result.script.size(), kLoggedScriptChars)),
-      result.script.c_str());
+  Log("[remix-theme] appearance call, as run: %.*s",
+      static_cast<int>(std::min(current.size(), kLoggedScriptChars)),
+      current.c_str());
   edge::U16String fresh{};
   const edge::U8View view{result.script.data(), result.script.size()};
   edge::Utf8ToUtf16(&fresh, &view);

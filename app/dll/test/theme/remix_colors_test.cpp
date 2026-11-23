@@ -4,6 +4,7 @@
 #include "../../src/theme/remix_colors.h"
 
 using namespace edgeplus::remix_colors;
+using edgeplus::theme_tone::Tone;
 
 namespace {
 
@@ -48,6 +49,23 @@ void RunChecks() {
             fromUrl.dark.intensity == 8,
         "the pair is read from the address fragment");
   Check(!PairFromUrl("edge://blueprint/", &fromUrl), "no fragment, no pair");
+  Check(PairFromUrl("edge://blueprint/#edgeplus-remix=light=5,6;dark=7,8;"
+                    "preview=dark",
+                    &fromUrl) &&
+            fromUrl.dark.intensity == 8,
+        "the pair is read before the preview field");
+  Check(PreviewFromUrl("edge://blueprint/#edgeplus-remix=light=;dark=;"
+                       "preview=dark") == Tone::kDark,
+        "the previewed mode is read");
+  Check(PreviewFromUrl("edge://blueprint/#edgeplus-remix=light=;dark=;"
+                       "preview=light") == Tone::kLight,
+        "light too");
+  Check(PreviewFromUrl("edge://blueprint/#edgeplus-remix=light=;dark=;"
+                       "preview=") == Tone::kUnknown,
+        "an empty preview is none");
+  Check(PreviewFromUrl("edge://blueprint/#edgeplus-remix=light=;dark=") ==
+            Tone::kUnknown,
+        "an older fragment has none");
 }
 
 }  // namespace

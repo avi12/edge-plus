@@ -7,13 +7,12 @@
 #pragma once
 #include <windows.h>
 #include <string>
-#include <vector>
 #include "chrome/tabs/tab_shape.h"
 #include "core/channel.h"
 #include "edge/edge.h"
-#include "theme/followed_pages.h"
 #include "theme/remix_colors.h"
 #include "theme/remix_colors_store.h"
+#include "theme/remix_editor.h"
 #include "theme/remix_mode.h"
 #include "theme/remix_skin.h"
 #include "theme/skin_tone.h"
@@ -30,19 +29,6 @@ inline constexpr UINT kPollIntervalMs = 50;
 
 // True once the pages carry the skin, so the poll takes it off exactly once.
 inline constinit bool g_isPainted = false;
-
-[[nodiscard]] inline std::vector<void*> RemixPages() {
-  std::vector<void*> pages;
-  for (void* contents : edge::AllWebContents()) {
-    const bool isRemixPage =
-        edge::IsPageLive(contents) &&
-        followed_pages::IsRemixPage(edge::TabUrl(contents));
-    if (isRemixPage) {
-      pages.push_back(contents);
-    }
-  }
-  return pages;
-}
 
 // The page publishes the pair it holds in its address (remix_colors.h); a
 // changed one is kept in the DLL's file.
@@ -71,7 +57,7 @@ inline void Poll() {
   // The colour selector needs only the remix switch; the skin just restyles it.
   const std::string selectorScript = remix_skin::SelectorScript(
       isSkinning, remix_colors::FormatPair(remix_colors_store::g_pair));
-  for (void* contents : RemixPages()) {
+  for (void* contents : remix_editor::RemixPages()) {
     if (!skinScript.empty()) {
       edge::RunScriptUnanswered(contents, skinScript);
     }
@@ -90,7 +76,7 @@ inline void Stop(HWND window) {
   KillTimer(window, channel::TimerIdOf(channel::WindowTimer::kRemixPoll));
   const std::string script =
       remix_skin::RemoveScript() + remix_skin::SelectorRemoveScript();
-  for (void* contents : RemixPages()) {
+  for (void* contents : remix_editor::RemixPages()) {
     edge::RunScriptUnanswered(contents, script);
   }
   g_isPainted = false;

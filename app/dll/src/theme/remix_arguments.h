@@ -195,25 +195,177 @@ struct Span {
 // The template's `darkmode` does not mean "make the page dark": it inverts the
 // lightness of every colour the page has. A page that already follows Edge's
 // dark mode (prefers-color-scheme) is turned light by it, while a light page is
-// turned dark. So the argument becomes, in the page, `String(wanted !== the
-// page is dark)`: the page's own darkness is read from the background of its
-// body (else its root), else from its dark color-scheme. It is read at the
-// first apply in the document for each prefers-color-scheme (every apply runs
-// through this, so that read is of the untouched page) and kept for that
-// scheme: a later read would see the template's own recolouring, which also
-// writes custom properties inline that cannot be told from the page's. For a
-// page an older build already themed, what an apply leaves behind is switched
-// off for the read (the template's style elements, its marker attribute, the
-// background it writes inline on body and root) as the best available guess.
-// Seen live: google.com dark + "true" -> body rgb(212,214,222).
-inline constexpr std::string_view kPageIsDarkScript =
-    R"js((()=>{const scheme=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light",cache=globalThis.__edgePlusPageIsDarkByScheme??={};if(scheme in cache){return cache[scheme]}const root=document.documentElement,body=document.body,nodes=[body,root].filter(Boolean),styles=[...document.querySelectorAll("#theme-blueprint-styles,#theme-blueprint-override,style[data-cross-origin]")],wasApplied=root.hasAttribute("data-blueprint-cw-applied"),inline=nodes.map(node=>[node.style.getPropertyValue("background-color"),node.style.getPropertyPriority("background-color")]);styles.forEach(style=>style.disabled=true);root.removeAttribute("data-blueprint-cw-applied");nodes.forEach(node=>node.style.removeProperty("background-color"));let isDark=null;for(const node of nodes){const parts=getComputedStyle(node).backgroundColor.match(/[\d.]+/g);if(parts&&(parts.length<4||+parts[3]>0)){isDark=.299*parts[0]+.587*parts[1]+.114*parts[2]<128;break}}if(isDark===null){isDark=matchMedia("(prefers-color-scheme: dark)").matches&&/dark/.test(getComputedStyle(root).colorScheme)}styles.forEach(style=>style.disabled=false);if(wasApplied){root.setAttribute("data-blueprint-cw-applied","")}nodes.forEach((node,index)=>{if(inline[index][0]){node.style.setProperty("background-color",inline[index][0],inline[index][1])}});cache[scheme]=isDark;return isDark})())js";
+// turned dark. Seen live: google.com dark + "true" -> body rgb(212,214,222).
+// So the call is wrapped in a helper of the page's own (kPrepareScript before
+// it, kVerifyScript after it) and its darkmode argument names the helper's
+// choice, `target-is-dark XOR page-is-dark`:
+// - The first guess of the page's own darkness samples what is rendered at a
+//   few points of the viewport (each point's element, up to the first opaque
+//   background; else the canvas, read off a probe painted `Canvas`, which
+//   follows the page's color-scheme and prefers-color-scheme), with what an earlier
+//   apply left behind switched off for the read (the template's style elements,
+//   its marker attribute, the background it writes on body and root). Inline
+//   colours it rewrote on elements cannot be told from the page's, so a guess
+//   once confirmed (below) is kept per prefers-color-scheme for the document.
+// - After the template's asynchronous apply has settled the page is sampled
+//   again. When its darkness is not the target's, the apply is made once more
+//   with the opposite darkmode, through the template's own re-apply; when that
+//   misses too (a see-through page in the other prefers-color-scheme, a dark
+//   page with coloured backgrounds), root and body are tinted to the target.
+// - The outcome is left on the page for reading in DevTools:
+//   `<html data-edgeplus-remix="target=dark;pageDark=false;flipped=false;
+//   forced=false;matched=true">`.
+inline constexpr std::string_view kDarkmodeExpression =
+    "globalThis.__edgePlusRemix.darkmode";
+
+// A function of `isTargetDark`, called before the theme call.
+inline constexpr std::string_view kPrepareScript = R"js((isTargetDark) => {
+  const helper = globalThis.__edgePlusRemix || (globalThis.__edgePlusRemix = {learned: {}});
+  helper.generation = (helper.generation || 0) + 1;
+  helper.target = isTargetDark;
+  helper.flipped = false;
+  helper.scheme = () => (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  // A colour's luma, 0 to 255, or null for a see-through one.
+  helper.lumaOf = (colour) => {
+    const text = colour || "";
+    const numbers = text.slice(text.indexOf("(") + 1).replace(/^[a-z][\w-]*\s+/i, "").match(/-?[\d.]+%?/g);
+    if (!numbers || numbers.length < 3) { return null; }
+    const value = (number) => (number.endsWith("%") ? parseFloat(number) / 100 : parseFloat(number));
+    const alpha = numbers.length > 3 ? value(numbers[3]) : 1;
+    if (alpha < 0.5) { return null; }
+    if (/^ok(lch|lab)\(/i.test(text)) { return value(numbers[0]) * 255; }
+    const scale = /^color\(/i.test(text) ? 255 : 1;
+    return (0.299 * value(numbers[0]) + 0.587 * value(numbers[1]) + 0.114 * value(numbers[2])) * scale;
+  };
+  // The canvas as the page's colour scheme paints it (its color-scheme
+  // property or meta, with prefers-color-scheme choosing among them).
+  helper.canvasLuma = () => {
+    const probe = document.createElement("div");
+    probe.style.cssText = "position: absolute; width: 0; height: 0; visibility: hidden; background-color: Canvas;";
+    document.documentElement.append(probe);
+    const luma = helper.lumaOf(getComputedStyle(probe).backgroundColor);
+    probe.remove();
+    return luma === null ? 255 : luma;
+  };
+  // The luma of what is rendered at a few points of the viewport: each point's
+  // element, up to the first opaque background, else the canvas.
+  helper.sample = () => {
+    const points = [[0.5, 0.5], [0.15, 0.15], [0.85, 0.15], [0.15, 0.85], [0.85, 0.85], [0.5, 0.2], [0.5, 0.8]];
+    return points.map(([across, down]) => {
+      let node = document.elementFromPoint(innerWidth * across, innerHeight * down);
+      let luma = null;
+      while (node && luma === null) {
+        luma = helper.lumaOf(getComputedStyle(node).backgroundColor);
+        node = node.parentElement;
+      }
+      return luma === null ? helper.canvasLuma() : luma;
+    });
+  };
+  const countBelow = (lumas, limit) => lumas.filter((luma) => luma < limit).length;
+  helper.isDarkGuess = (lumas) => countBelow(lumas, 128) * 2 > lumas.length;
+  // Clearly the target: most points well on its side (a mid tone is neither).
+  helper.isTargetShown = (lumas) => {
+    const matching = helper.target ? countBelow(lumas, 100) : lumas.length - countBelow(lumas, 156);
+    return matching * 2 > lumas.length;
+  };  helper.sampleOwn = () => {
+    const root = document.documentElement;
+    const nodes = [document.body, root].filter(Boolean);
+    const styles = [...document.querySelectorAll("#theme-blueprint-styles, #theme-blueprint-override, style[data-cross-origin]")];
+    const wasApplied = root.hasAttribute("data-blueprint-cw-applied");
+    const inline = nodes.map((node) => [node.style.getPropertyValue("background-color"), node.style.getPropertyPriority("background-color")]);
+    styles.forEach((style) => { style.disabled = true; });
+    root.removeAttribute("data-blueprint-cw-applied");
+    nodes.forEach((node) => node.style.removeProperty("background-color"));
+    try {
+      return helper.isDarkGuess(helper.sample());
+    } finally {
+      styles.forEach((style) => { style.disabled = false; });
+      if (wasApplied) { root.setAttribute("data-blueprint-cw-applied", ""); }
+      nodes.forEach((node, index) => {
+        if (inline[index][0]) { node.style.setProperty("background-color", inline[index][0], inline[index][1]); }
+      });
+    }
+  };
+  helper.mark = (isMatched) => {
+    document.documentElement.dataset.edgeplusRemix = "target=" + (helper.target ? "dark" : "light") +
+        ";pageDark=" + helper.pageDark + ";flipped=" + helper.flipped + ";forced=" + helper.forced +
+        ";matched=" + isMatched;
+  };
+  // The last resort, when neither darkmode gives the target (the template
+  // paints a see-through page by prefers-color-scheme whatever its darkmode,
+  // and lifts a dark page's coloured backgrounds either way): the page's root
+  // and body get a tint of the hue in the target's lightness and the target's
+  // colour scheme. A style element marked as the template's own cross-origin
+  // copy, which its stylesheet rewrite and its observer leave alone; the
+  // background it wrote inline on root and body is taken off for it.
+  const forceSelector = 'style[data-cross-origin="edgeplus-remix-force"]';
+  document.querySelectorAll(forceSelector).forEach((style) => style.remove());
+  helper.forced = false;
+  helper.force = () => {
+    const hue = Number((globalThis.__blueprintParams || {}).hue) || 0;
+    const tint = helper.target ? "hsl(" + hue + ", 35%, 12%)" : "hsl(" + hue + ", 30%, 93%)";
+    const style = document.createElement("style");
+    style.dataset.crossOrigin = "edgeplus-remix-force";
+    style.textContent = "html, body { background-color: " + tint + " !important; }" +
+        " html[data-blueprint-cw-applied][data-edgeplus-remix], html { color-scheme: " +
+        (helper.target ? "dark" : "light") + " !important; }";
+    (document.head || document.documentElement).append(style);
+    [document.documentElement, document.body].filter(Boolean)
+        .forEach((node) => node.style.removeProperty("background-color"));
+    helper.forced = true;
+  };
+  helper.choose = (isPageDark) => {
+    helper.pageDark = isPageDark;
+    helper.darkmode = String(helper.target !== isPageDark);
+  };
+  helper.verify = () => {
+    const generation = helper.generation;
+    const startedAt = Date.now();
+    let calmBeats = 0;
+    const check = () => {
+      if (helper.generation !== generation) { return; }
+      const library = globalThis.__blueprintThemeLib__ || {};
+      const isApplying = library.__observerState ? library.__observerState.isApplying === true : false;
+      calmBeats = isApplying ? 0 : calmBeats + 1;
+      const isSettled = calmBeats >= 3 || Date.now() - startedAt > 5000;
+      if (!isSettled) { setTimeout(check, 100); return; }
+      const isMatched = helper.isTargetShown(helper.sample());
+      const params = globalThis.__blueprintParams;
+      const canFlip = !isMatched && !helper.flipped && params && typeof library.applyFromBlueprintParams === "function";
+      if (canFlip) {
+        helper.flipped = true;
+        helper.choose(!helper.pageDark);
+        params.darkmode = helper.darkmode;
+        helper.mark("pending");
+        library.applyFromBlueprintParams();
+        calmBeats = 0;
+        setTimeout(check, 150);
+        return;
+      }
+      if (!isMatched && !helper.forced) {
+        helper.force();
+        helper.mark(helper.isTargetShown(helper.sample()));
+        return;
+      }
+      if (isMatched && !helper.forced) { helper.learned[helper.scheme()] = helper.pageDark; }
+      helper.mark(isMatched);
+    };
+    setTimeout(check, 150);
+  };
+  const learned = helper.learned[helper.scheme()];
+  helper.choose(typeof learned === "boolean" ? learned : helper.sampleOwn());
+  helper.mark("pending");
+})js";
+
+inline constexpr std::string_view kVerifyScript =
+    "globalThis.__edgePlusRemix && globalThis.__edgePlusRemix.verify();";
 
 // `script` with the darkmode argument of its Appearance call replaced by the
-// page-relative expression above for Edge's mode `isDark`. Any argument that is
-// a known spelling (or empty) is replaced; another shape is left alone.
-[[nodiscard]] inline Result WithPageAwareDarkmode(std::string_view script,
-                                                  bool isDark) {
+// helper's choice for the target mode `isTargetDark`, and the helper around
+// it. Any argument that is a known spelling (or empty) is replaced; another
+// shape is left alone.
+[[nodiscard]] inline Result WithPageAwareTheme(std::string_view script,
+                                               bool isTargetDark) {
   size_t argumentsAt = std::string_view::npos;
   for (const std::string_view name : kThemeFunctions) {
     argumentsAt = detail::FindCallArguments(script, name);
@@ -246,13 +398,16 @@ inline constexpr std::string_view kPageIsDarkScript =
   if (!isKnown) {
     return {Outcome::kUnknownShape, {}};
   }
-  std::string rewritten(script.substr(0, span.begin));
-  rewritten += "String(";
-  rewritten += isDark ? "true" : "false";
-  rewritten += "!==";
-  rewritten += kPageIsDarkScript;
-  rewritten += ")";
+  std::string rewritten = "(";
+  rewritten += kPrepareScript;
+  rewritten += ")(";
+  rewritten += isTargetDark ? "true" : "false";
+  rewritten += ");\n";
+  rewritten += script.substr(0, span.begin);
+  rewritten += kDarkmodeExpression;
   rewritten += script.substr(span.end);
+  rewritten += "\n";
+  rewritten += kVerifyScript;
   return {Outcome::kRewritten, std::move(rewritten)};
 }
 

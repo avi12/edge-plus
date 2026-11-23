@@ -67,11 +67,21 @@ text and written back as a JS literal, `0x100e6288`) into
 kept bundle row, 2026-11-23): with `"true"` every page colour's lightness is
 flipped (`l -> 1 - l`), so a page already dark from Edge's dark mode
 (`prefers-color-scheme`, e.g. google.com) comes out light, while a light page
-comes out dark. The argument is therefore written as an in-page expression,
-`String(<Edge is dark> !== <the page is dark>)`, the page's darkness read once
-per page from its body / root background before the first apply
-(`remix_arguments::WithPageAwareDarkmode`). Verified in a throwaway Edge: google
-dark + `"true"` -> body rgb(212,214,222); with the expression -> rgb(33,35,43).
+comes out dark. So the call runs inside a helper of the page's own
+(`remix_arguments::WithPageAwareTheme`): darkmode is `target-is-dark XOR
+page-is-dark`, the page's darkness first guessed by sampling rendered
+backgrounds at a few viewport points (the template's leftovers switched off),
+then checked after the asynchronous apply settles: a miss re-applies once with
+the opposite darkmode through the template's `applyFromBlueprintParams`, and a
+second miss tints root and body (a see-through page under the other
+prefers-color-scheme is painted by prefers-color-scheme whatever darkmode says;
+a dark page's coloured backgrounds are lifted light either way). The outcome is
+left as `<html data-edgeplus-remix="target=..;pageDark=..;flipped=..;forced=..;
+matched=..">`. The target is the open editor's previewed mode (its Light | Dark
+selector, published as `;preview=` in the editor's address fragment and read
+at script build time with the pair it holds), else Edge's mode. Verified in a
+throwaway Edge: google dark + `"true"` -> body rgb(212,214,222); through the
+helper -> rgb(33,35,43).
 
 `remix_darkmode.h` detours it, and with the remix switch on rewrites the third argument
 of a `__edgeRemixApplyTheme` / `applyColorWheelThemeV2` call to Edge's light or dark
