@@ -257,7 +257,7 @@ and splits without clicks.
 | Edge access | `edge/api/*.h` | The only files that call into `msedge.dll` or read an Edge struct, one per area of Edge (`binding.h` under them all). |
 | ABI | `offsets.h` | Every RVA and struct offset, named after the PDB symbol. |
 | Build check | `verify.h` | Refuses any build the offsets were not reversed against. |
-| Split model | `pane_tree.h`, `dock.h`, `geom.h` | Pure logic: the layout tree, drop zones, rectangles. No Edge, no Win32. |
+| Split model | `pane_tree.h` and the other `pane_*.h`, `dock.h`, `geom.h` | Pure logic: the layout tree, drop zones, rectangles. No Edge, no Win32. |
 | Split state | `state.h` | The tree of each split, keyed by its id. |
 | Split data | `split_data.h`, `split_ops.h` | Grows, shrinks and rebuilds Edge's split through its own calls. |
 | Geometry | `geometry.h`, `dividers.h`, `grip.h` | Lays out panes and their dividers and grips. |

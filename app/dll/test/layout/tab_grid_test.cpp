@@ -1,6 +1,7 @@
 // Unit tests for tab_grid.h.
 #include <cstdio>
 #include <vector>
+#include "../../src/layout/pane_edits.h"
 #include "../../src/layout/tab_grid.h"
 
 using namespace edgeplus;

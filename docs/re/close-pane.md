@@ -2,7 +2,7 @@
 
 What Edge does when a pane's X is clicked, why that is wrong past two panes,
 and what the DLL does instead. Code: `split_ops::ClosePane`,
-`split_data::CloseMember`, `pane_tree.h`'s `RemovePane`, the
+`split_data::CloseMember`, `pane_edits.h`'s `RemovePane`, the
 `ControlButtons::HandleButtonClick` detour in `edge/detours/pane_input_detours.h`.
 
 ## What Edge does (msedge.dll 155.0.4283.45)

@@ -7,6 +7,8 @@
 #include "edge/api/binding.h"
 #include "edge/api/split_view.h"
 #include "edge/api/views.h"
+#include "layout/pane_edits.h"
+#include "layout/pane_layout.h"
 #include "layout/pane_tree.h"
 #include "split/split_data.h"
 #include "layout/state.h"

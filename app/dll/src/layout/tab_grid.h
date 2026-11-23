@@ -7,6 +7,7 @@
 #pragma once
 #include <algorithm>
 #include <vector>
+#include "layout/pane_layout.h"
 #include "layout/pane_tree.h"
 
 namespace edgeplus::tab_grid {

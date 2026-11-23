@@ -7,6 +7,8 @@
 #include "layout/anim.h"
 #include "edge/api/split_view.h"
 #include "edge/api/views.h"
+#include "layout/pane_layout.h"
+#include "layout/pane_seams.h"
 #include "layout/pane_tree.h"
 #include "split/split_data.h"
 #include "layout/state.h"

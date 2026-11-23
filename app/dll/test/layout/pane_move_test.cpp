@@ -1,11 +1,16 @@
-// Unit tests for the drag-and-drop tree edits in pane_tree.h.
+// Unit tests for pane_moves.h.
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <random>
 #include <string>
+#include <utility>
 #include <vector>
+#include "../../src/layout/pane_edits.h"
+#include "../../src/layout/pane_layout.h"
+#include "../../src/layout/pane_moves.h"
+#include "../../src/layout/pane_normalize.h"
 #include "../../src/layout/pane_tree.h"
 
 using namespace edgeplus;
@@ -54,6 +59,12 @@ std::string Layout(const Node& root, int width, int height) {
     text += buffer;
   }
   return text;
+}
+
+std::vector<int> Order(const Node& root) {
+  std::vector<int> order;
+  CollectLeaves(root, order);
+  return order;
 }
 
 // Float rounding, not a real drift.
@@ -118,6 +129,27 @@ constexpr unsigned kEditCount = 4;
 constexpr unsigned kDirectionCount = 4;
 
 void RunChecks() {
+  // Swap axis: in a horizontal row, a pane's swap faces left/right; after a
+  // down-split, pane 1's swap faces up/down (its parent is vertical).
+  {
+    Node tree = FlatTree(2, Axis::kHorizontal);
+    Check(SwapAxisOf(tree, 0) == Axis::kHorizontal,
+          "row pane swaps horizontally");
+    SplitPane(tree, 1, Direction::kDown, 2);
+    Check(SwapAxisOf(tree, 1) == Axis::kVertical,
+          "stacked pane swaps vertically");
+    Check(SwapAxisOf(tree, 0) == Axis::kHorizontal,
+          "outer pane still horizontal");
+  }
+
+  // Swap with counterpart exchanges adjacent siblings.
+  {
+    Node tree = FlatTree(3, Axis::kHorizontal);  // 0,1,2
+    Check(SwapWithCounterpart(tree, 0), "swap pane 0");
+    Check(Order(tree) == std::vector<int>({1, 0, 2}),
+          "0 swapped with next sibling");
+  }
+
   // The user's scenario (a): row 1..4, drop 4 on the bottom edge of 3 -> thirds
   // across, and 3 / 4 share the third column at equal heights.
   {
@@ -130,6 +162,7 @@ void RunChecks() {
               "3:[800,400,400,400] ",
           "drop below 3 geometry", Layout(tree, 1200, 800));
   }
+
   // The user's scenario (b): drop 4 on the bottom edge of the whole layout -> it
   // takes the full bottom half; 1..3 share the top half in thirds.
   {
@@ -142,6 +175,7 @@ void RunChecks() {
               "3:[0,400,1200,400] ",
           "root bottom geometry", Layout(tree, 1200, 800));
   }
+
   // No-ops leave the tree untouched.
   {
     Node tree = FlatTree(4, Axis::kHorizontal);
@@ -165,6 +199,7 @@ void RunChecks() {
     Check(!MovePane(column, 1, 0, Direction::kDown),
           "already below -> keeps 3:1");
   }
+
   // A reorder within one split carries the pane's own size.
   {
     Node tree = Weighted(3, Axis::kHorizontal, {3.f, 1.f, 1.f});
@@ -172,12 +207,14 @@ void RunChecks() {
     Check(Dump(tree) == "H[1(0.6) 2(0.6) 0(1.8)]", "reorder keeps weight",
           Dump(tree));
   }
+
   // A 2-pane column turned into a row (the emptied split collapses).
   {
     Node tree = FlatTree(2, Axis::kVertical);
     Check(MovePane(tree, 1, 0, Direction::kRight), "pair transpose moved");
     Check(Dump(tree) == "H[0(1) 1(1)]", "V[0,1] -> H[0,1]", Dump(tree));
   }
+
   // Removing a pane flattens what is left without changing on-screen widths.
   {
     Node tree = FlatTree(2, Axis::kHorizontal);
@@ -192,6 +229,7 @@ void RunChecks() {
               "1:[0,200,800,200] ",
           "flatten geometry", Layout(tree, 800, 400));
   }
+
   // Removal shares the freed space in proportion (a 2:1 pair stays 2:1).
   {
     Node tree = Weighted(3, Axis::kHorizontal, {2.f, 1.f, 1.f});
@@ -199,6 +237,7 @@ void RunChecks() {
     Check(Dump(tree) == "V[H[0(1.33) 1(0.667)](1) 2(1)]",
           "proportional removal", Dump(tree));
   }
+
   // Joining a resized row only halves the target; an equal row stays equal.
   {
     Node resized = Weighted(2, Axis::kHorizontal, {3.f, 1.f});
@@ -212,6 +251,7 @@ void RunChecks() {
     Check(Dump(equal) == "H[0(1) 1(1) 3(1) 2(1)]", "equal row: quarters",
           Dump(equal));
   }
+
   // A root along the drop axis gains the pane as an average-share end child.
   {
     Node tree = FlatTree(2, Axis::kHorizontal);
@@ -220,6 +260,7 @@ void RunChecks() {
     MovePaneToRootEdge(tree, 0, Direction::kDown);  // V[2,1,0]
     Check(Dump(tree) == "V[2(1) 1(1) 0(1)]", "root join -> thirds", Dump(tree));
   }
+
   // Centre drop: positions keep their sizes, the panes trade places.
   {
     Node tree = Weighted(3, Axis::kHorizontal, {2.f, 1.f, 1.f});
@@ -227,127 +268,7 @@ void RunChecks() {
     Check(Dump(tree) == "H[2(1.5) 1(0.75) 0(0.75)]",
           "swap keeps sizes with positions", Dump(tree));
   }
-  // Closing the bottom pane of V[H[0 1 2] 3]: the top row takes the full
-  // height.
-  {
-    Node tree = FlatTree(4, Axis::kHorizontal);
-    MovePaneToRootEdge(tree, 3, Direction::kDown);
-    Check(RemovePane(tree, 3), "close bottom pane");
-    Check(Dump(tree) == "H[0(1) 1(1) 2(1)]", "top row fills the split",
-          Dump(tree));
-  }
-  // Closing the top-right pane: the other two top panes split the row in
-  // halves, the bottom pane is untouched, and the bottom pane's id (3) closes
-  // the gap (2) because its container is re-fed one slot earlier.
-  {
-    Node tree = FlatTree(4, Axis::kHorizontal);
-    MovePaneToRootEdge(tree, 3, Direction::kDown);
-    Check(RemovePane(tree, 2), "close top-right pane");
-    Check(Dump(tree) == "V[H[0(1) 1(1)](1) 2(1)]",
-          "top halves, bottom unchanged", Dump(tree));
-    Check(Layout(tree, 1200, 800) ==
-              "0:[0,0,600,400] 1:[600,0,600,400] 2:[0,400,1200,400] ",
-          "close top-right geometry", Layout(tree, 1200, 800));
-  }
-  // Seams: a tree of N panes has N - 1, each between two neighbours.
-  {
-    Node tree = FlatTree(3, Axis::kHorizontal);
-    SplitPane(tree, 2, Direction::kDown, 3);  // H[0 1 V[2 3]]
-    const std::vector<Seam> seams = Seams(tree, Rect{0, 0, 900, 600}, 0);
-    Check(seams.size() == 3, "four panes, three seams");
-    Check(seams[0].axis == Axis::kHorizontal && seams[0].position == 300 &&
-              seams[0].crossLength == 600,
-          "seam between 0 and 1: x=300, full height");
-    Check(seams[2].axis == Axis::kVertical && seams[2].position == 300 &&
-              seams[2].crossStart == 600 && seams[2].crossLength == 300,
-          "seam between 2 and 3: y=300, the third column's width");
-  }
-  // Laid out kPaneGap apart, a seam is the strip between its two panes: no
-  // pane covers it (a page would take the pointer from its divider).
-  {
-    const Node tree = FlatTree(3, Axis::kHorizontal);
-    const Rect area{0, 0, 900 + 2 * kPaneGap, 600};
-    const std::vector<Seam> seams = Seams(tree, area, kPaneGap);
-    std::vector<LeafRect> leaves;
-    LayoutTree(tree, area, kPaneGap, leaves);
-    Check(seams[0].position == 300 && seams[0].thickness == kPaneGap,
-          "seam 0 starts where pane 0 ends");
-    Check(seams[0].position + seams[0].thickness == leaves[1].rect.x,
-          "and ends where pane 1 starts");
-    Check(seams[1].position == 600 + kPaneGap && seams[1].lengthBefore == 300,
-          "seam 1 follows pane 1, both panes 300 wide");
-    Node resized = tree;
-    Check(ResizeSeam(resized, seams[0], 60), "drag seam 0 by +60");
-    Check(Seams(resized, area, kPaneGap)[0].position == 360,
-          "the strip moves with the pointer");
-  }
-  // Dragging a seam trades length between its two panes only.
-  {
-    Node tree = FlatTree(3, Axis::kHorizontal);
-    const Seam seam = Seams(tree, Rect{0, 0, 900, 600}, 0)[0];
-    Check(ResizeSeam(tree, seam, 60), "drag seam 0 by +60");
-    Check(Layout(tree, 900, 600) ==
-              "0:[0,0,360,600] 1:[360,0,240,600] 2:[600,0,300,600] ",
-          "pane 0 grows, pane 1 shrinks, pane 2 untouched",
-          Layout(tree, 900, 600));
-    Check(Layout(tree, 1800, 600) ==
-              "0:[0,0,720,600] 1:[720,0,480,600] 2:[1200,0,600,600] ",
-          "the resized proportions hold in a wider window",
-          Layout(tree, 1800, 600));
-    Node clamped = FlatTree(3, Axis::kHorizontal);
-    ResizeSeam(clamped, seam, -1000);
-    Check(Layout(clamped, 900, 600).starts_with("0:[0,0,64,600]"),
-          "a pane is never dragged below the minimum",
-          Layout(clamped, 900, 600));
-  }
-  // Double-clicking a divider evens out exactly the split it divides.
-  {
-    Node tree = FlatTree(3, Axis::kHorizontal);
-    SplitPane(tree, 2, Direction::kDown, 3);  // H[0 1 V[2 3]]
-    const Rect area{0, 0, 900, 600};
-    std::vector<Seam> seams = Seams(tree, area, 0);
-    ResizeSeam(tree, seams[0], 120);   // widen pane 0
-    ResizeSeam(tree, seams[2], -100);  // shorten pane 2
-    Check(EqualizeSplit(tree, seams[2].path), "reset the column's heights");
-    Check(Layout(tree, 900, 600).find("2:[600,0,300,300]") != std::string::npos,
-          "the column is even again", Layout(tree, 900, 600));
-    Check(Layout(tree, 900, 600).starts_with("0:[0,0,420,600]"),
-          "the row's resize is untouched", Layout(tree, 900, 600));
-    Check(EqualizeSplit(tree, seams[0].path), "reset the row's widths");
-    Check(!EqualizeSplit(tree, seams[0].path), "already even: nothing to do");
-  }
-  // Closing a pane keeps the proportions the others were resized to.
-  {
-    Node tree = Weighted(3, Axis::kHorizontal, {2.f, 1.f, 1.f});
-    Check(RemovePane(tree, 2), "close in a resized row");
-    Check(Dump(tree) == "H[0(1.33) 1(0.667)]", "resized ratio 2:1 kept",
-          Dump(tree));
-    Node single = MakeLeaf(0);
-    Check(!RemovePane(single, 0), "the last pane is never removed");
-  }
-  // Directional neighbour (pane focus): the pane on each side, by on-screen
-  // rects. Tree H[0 1 V[2 3]] lays out as two tall columns (0, 1) and a stacked
-  // pair (2 over 3) in the third column.
-  {
-    Node tree = FlatTree(3, Axis::kHorizontal);
-    SplitPane(tree, 2, Direction::kDown, 3);  // H[0 1 V[2 3]]
-    std::vector<LeafRect> leaves;
-    LayoutTree(tree, Rect{0, 0, 900, 600}, 0, leaves);
-    const auto neighbour = [&](int from, Direction direction) {
-      return DirectionalNeighbour(leaves, from, direction);
-    };
-    Check(neighbour(0, Direction::kRight) == 1, "right of 0 is 1");
-    Check(neighbour(1, Direction::kLeft) == 0, "left of 1 is 0");
-    Check(neighbour(1, Direction::kRight) == 2, "right of 1 is the top stack");
-    Check(neighbour(2, Direction::kDown) == 3, "down of 2 is 3");
-    Check(neighbour(3, Direction::kUp) == 2, "up of 3 is 2");
-    Check(neighbour(2, Direction::kLeft) == 1, "left of a stacked pane is 1");
-    Check(neighbour(3, Direction::kLeft) == 1, "left of the lower stack is 1");
-    Check(neighbour(0, Direction::kUp) == kNoLeaf, "nothing above a column");
-    Check(neighbour(0, Direction::kLeft) == kNoLeaf, "nothing left of pane 0");
-    Check(neighbour(2, Direction::kRight) == kNoLeaf,
-          "nothing right of pane 2");
-  }
+
   // Random edits: the pane set never changes, the tree stays canonical, and a
   // second Normalize changes nothing.
   {

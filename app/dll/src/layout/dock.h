@@ -6,6 +6,9 @@
 #include <algorithm>
 #include <vector>
 #include "edge/geom.h"
+#include "layout/pane_edits.h"
+#include "layout/pane_layout.h"
+#include "layout/pane_moves.h"
 #include "layout/pane_tree.h"
 
 namespace edgeplus::dock {
