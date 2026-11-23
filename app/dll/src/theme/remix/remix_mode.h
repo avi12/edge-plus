@@ -5,7 +5,7 @@
 #pragma once
 #include "core/config.h"
 #include "core/log.h"
-#include "theme/remix_colors_store.h"
+#include "theme/remix/remix_colors_store.h"
 
 namespace edgeplus::remix_mode {
 

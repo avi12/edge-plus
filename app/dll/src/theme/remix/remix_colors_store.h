@@ -9,7 +9,7 @@
 #include "core/config.h"
 #include "core/handles.h"
 #include "core/log.h"
-#include "theme/remix_colors.h"
+#include "theme/remix/remix_colors.h"
 
 namespace edgeplus::remix_colors_store {
 

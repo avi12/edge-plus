@@ -1,7 +1,7 @@
 // Unit tests for remix_skin.h.
 #include <cstdio>
 #include <string>
-#include "../../src/theme/remix_skin.h"
+#include "../../../../src/theme/remix/pages/remix_skin.h"
 
 using namespace edgeplus::remix_skin;
 using edgeplus::theme_tone::Tone;

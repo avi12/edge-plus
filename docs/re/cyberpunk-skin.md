@@ -19,14 +19,14 @@ What the kit (the Cyberpunk UX kit's `README.md`, `primitives.css`,
 
 All of it rides `tab_shape::g_isCyberpunkSkinOn`; off is Edge's own look. The
 colours are `cyberpunk_skin.h`'s (`FramesFor`, `FieldFrameFor`,
-`TitleFontFamilyFor`), tested in `test/theme/cyberpunk_skin_test.cpp`.
+`TitleFontFamilyFor`), tested in `test/theme/skin/cyberpunk_skin_test.cpp`.
 
 ## 0. The rest of the browser: colour roles by name (157.0.4341.42)
 
 Beyond the tabs, the skin takes over ~230 of Edge's colours (menus, bubbles,
 dialogs, fields, buttons, checkboxes, switches, links, the toolbar's icons, the
 omnibox, tooltips, the focus ring) and gives each the kit's role for it
-(`theme/cyberpunk_palette.h`, the kit's `controls.css` / `primitives.css`
+(`theme/skin/cyberpunk_palette.h`, the kit's `controls.css` / `primitives.css`
 tokens: ink and cyan write, teal draws idle lines, red marks, amber labels; in
 light ink writes and cyan only fills; nothing floating is a cyan fill). The
 ids are Edge's own `ui::ColorId`s, answered in the `ColorProvider::GetColor`

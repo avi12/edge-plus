@@ -101,15 +101,15 @@ class FeatureRule {
     [FeatureRule]@{ Match = 'chrome/toolbar/'; Features = @('CyberpunkSkin') }
     [FeatureRule]@{ Match = 'chrome/menu/'; Features = @('CyberpunkSkin') }
     [FeatureRule]@{ Match = 'chrome/tabs/live_preview.h'; Features = @('LivePreview') }
-    [FeatureRule]@{ Match = 'theme/cyberpunk_skin.h'; Features = @('CyberpunkSkin') }
-    [FeatureRule]@{ Match = 'theme/skin_tone.h'; Features = @('CyberpunkSkin') }
+    [FeatureRule]@{ Match = 'theme/skin/cyberpunk_skin.h'; Features = @('CyberpunkSkin') }
+    [FeatureRule]@{ Match = 'theme/skin/skin_tone.h'; Features = @('CyberpunkSkin') }
     [FeatureRule]@{ Match = 'theme/theme.h'; Features = @('Theming') }
     [FeatureRule]@{ Match = 'theme/theme_notice.h'; Features = @('Theming') }
-    [FeatureRule]@{ Match = 'theme/protocol_handlers.h'; Features = @('ProtocolHandlers') }
-    [FeatureRule]@{ Match = 'theme/theme_follow.h'; Features = @('WebUiFollowsTheme', 'RemixTheme') }
-    [FeatureRule]@{ Match = 'theme/followed_pages.h'; Features = @('WebUiFollowsTheme', 'RemixTheme') }
-    [FeatureRule]@{ Match = 'theme/remix_'; Features = @('RemixTheme') }
-    [FeatureRule]@{ Match = 'theme/reading_'; Features = @('ReadingTheme') }
+    [FeatureRule]@{ Match = 'permissions/'; Features = @('ProtocolHandlers') }
+    [FeatureRule]@{ Match = 'theme/follow/theme_follow.h'; Features = @('WebUiFollowsTheme', 'RemixTheme') }
+    [FeatureRule]@{ Match = 'theme/follow/followed_pages.h'; Features = @('WebUiFollowsTheme', 'RemixTheme') }
+    [FeatureRule]@{ Match = 'theme/remix/'; Features = @('RemixTheme') }
+    [FeatureRule]@{ Match = 'theme/reading/'; Features = @('ReadingTheme') }
     [FeatureRule]@{ Match = 'find/'; Features = @('EnhancedFind') }
     [FeatureRule]@{ Match = 'assistant/'; Features = @('EnhancedFind') }
 )

@@ -12,8 +12,8 @@
 #include "edge/edge.h"
 #include "core/handles.h"
 #include "core/log.h"
-#include "theme/reading_scripts.h"
-#include "theme/reading_themes.h"
+#include "theme/reading/reading_scripts.h"
+#include "theme/reading/reading_themes.h"
 #include "theme/theme.h"
 #include "find/web_text.h"
 

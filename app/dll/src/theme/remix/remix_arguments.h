@@ -10,7 +10,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
-#include "theme/remix_colors.h"
+#include "theme/remix/remix_colors.h"
 
 namespace edgeplus::remix_arguments {
 

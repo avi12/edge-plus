@@ -67,7 +67,7 @@ hiding the developer-mode prompt, which only edits Edge's `Preferences`.
   reads on it, black on a dark theme and white on a light one's deeper red.
   Edge's own outline and colours are changed, so nothing is painted over the
   tab, and turning the skin off gives Edge's own tabs back
-  (`app/dll/src/chrome/tabs/tab_shape.h`, `app/dll/src/theme/cyberpunk_skin.h`).
+  (`app/dll/src/chrome/tabs/tab_shape.h`, `app/dll/src/theme/skin/cyberpunk_skin.h`).
 - **Settings and extensions pages follow the theme** — `edge://settings` and
   `edge://extensions` take their light or dark from Windows or Edge's
   Appearance setting, never from the theme, so a dark theme on a light Windows

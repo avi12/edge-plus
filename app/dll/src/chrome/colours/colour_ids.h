@@ -18,7 +18,7 @@
 #include "chrome/colours/colour_roles.h"
 #include "core/log.h"
 #include "edge/offsets.h"
-#include "theme/cyberpunk_palette.h"
+#include "theme/skin/cyberpunk_palette.h"
 
 namespace edgeplus::colour_ids {
 

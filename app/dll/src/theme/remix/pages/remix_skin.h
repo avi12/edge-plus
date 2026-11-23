@@ -12,8 +12,8 @@
 #include <string>
 #include <string_view>
 #include "find/web_text.h"
-#include "theme/cyberpunk_palette.h"
-#include "theme/remix_colors.h"
+#include "theme/skin/cyberpunk_palette.h"
+#include "theme/remix/remix_colors.h"
 #include "theme/theme_tone.h"
 
 namespace edgeplus::remix_skin {

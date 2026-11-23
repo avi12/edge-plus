@@ -10,13 +10,13 @@
 #include "chrome/tabs/tab_shape.h"
 #include "core/channel.h"
 #include "edge/edge.h"
-#include "theme/remix_colors.h"
-#include "theme/remix_colors_store.h"
-#include "theme/remix_darkmode.h"
-#include "theme/remix_editor.h"
-#include "theme/remix_mode.h"
-#include "theme/remix_skin.h"
-#include "theme/skin_tone.h"
+#include "theme/remix/remix_colors.h"
+#include "theme/remix/remix_colors_store.h"
+#include "theme/remix/remix_darkmode.h"
+#include "theme/remix/pages/remix_editor.h"
+#include "theme/remix/remix_mode.h"
+#include "theme/remix/pages/remix_skin.h"
+#include "theme/skin/skin_tone.h"
 
 namespace edgeplus::remix_skin_mode {
 

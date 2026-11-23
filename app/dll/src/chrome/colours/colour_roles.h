@@ -1,8 +1,8 @@
 // colour_roles.h — which of Edge's colours the Cyberpunk skin takes over and the
-// kit role (theme/cyberpunk_palette.h) each one plays. Edge names every colour
-// id (Chromium's `kColor...` enumerators, plus its own `kColorEdge...`) in a
-// table inside msedge.dll, so the ids are looked up by these names at run time
-// (colour_ids.h) and the skin follows an Edge update without a new number.
+// kit role (theme/skin/cyberpunk_palette.h) each one plays. Edge names every
+// colour id (Chromium's `kColor...` enumerators, plus its own `kColorEdge...`)
+// in a table inside msedge.dll, so the ids are looked up by these names at run
+// time (colour_ids.h) and the skin follows an Edge update without a new number.
 // Names are grouped by role, in the kit's order. Pure.
 //
 // What is left out on purpose: the tab strip's own ids (the tab skin owns
@@ -12,7 +12,7 @@
 // own look.
 #pragma once
 #include <string_view>
-#include "theme/cyberpunk_palette.h"
+#include "theme/skin/cyberpunk_palette.h"
 
 namespace edgeplus::colour_roles {
 

@@ -1,7 +1,7 @@
 // Unit tests for remix_arguments.h.
 #include <cstdio>
 #include <string>
-#include "../../src/theme/remix_arguments.h"
+#include "../../../src/theme/remix/remix_arguments.h"
 
 using edgeplus::remix_arguments::FollowModeScript;
 using edgeplus::remix_arguments::kHelperScript;

@@ -4,7 +4,7 @@
 // colour roles ask. UI thread.
 #pragma once
 #include <windows.h>
-#include "theme/cyberpunk_skin.h"
+#include "theme/skin/cyberpunk_skin.h"
 #include "theme/theme.h"
 #include "theme/theme_tone.h"
 

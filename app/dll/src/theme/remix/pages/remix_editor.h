@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 #include "edge/edge.h"
-#include "theme/followed_pages.h"
-#include "theme/remix_colors.h"
+#include "theme/follow/followed_pages.h"
+#include "theme/remix/remix_colors.h"
 #include "theme/theme_tone.h"
 
 namespace edgeplus::remix_editor {

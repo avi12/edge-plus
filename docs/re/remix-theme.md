@@ -8,7 +8,7 @@ Edge+ theme, the way `theme_follow.h` does for settings and extensions
 Evidence: **[run]** in a throwaway Edge 158 (own `--user-data-dir` marker, its own
 `LOCALAPPDATA`, the DLL as a timestamped copy from `app/dll/out/`, inspected over
 its own `--remote-debugging-port`, captured with `PrintWindow`); **[static]**
-msedge.dll 158 disassembly; **[unit]** `test/theme/followed_pages_test.cpp`.
+msedge.dll 158 disassembly; **[unit]** `test/theme/follow/followed_pages_test.cpp`.
 
 ## What ships
 
@@ -220,7 +220,7 @@ file as it was.
 
 `remix_darkmode.h` detours `ExecuteJavaScriptInIsolatedWorld`, and with the remix
 switch on rewrites a `__edgeRemixApplyTheme` / `applyColorWheelThemeV2` call into the
-helper's request (`remix_arguments.h`, pure, `test/theme/remix_arguments_test.cpp`):
+helper's request (`remix_arguments.h`, pure, `test/theme/remix/remix_arguments_test.cpp`):
 its darkmode argument (`"true"`, `true` or `1`, their opposites, or empty) is left
 to the helper and its colour set to the saved one for the target mode; any other
 shape, or another remix's call, is left alone. The rewritten script goes to the

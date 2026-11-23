@@ -1,6 +1,6 @@
 // Unit tests for followed_pages.h.
 #include <cstdio>
-#include "../../src/theme/followed_pages.h"
+#include "../../../src/theme/follow/followed_pages.h"
 
 using edgeplus::followed_pages::IsAnyOn;
 using edgeplus::followed_pages::IsRemixPage;

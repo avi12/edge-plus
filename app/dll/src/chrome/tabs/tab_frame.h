@@ -8,8 +8,8 @@
 // only.
 #pragma once
 #include "edge/edge.h"
-#include "theme/cyberpunk_skin.h"
-#include "theme/skin_tone.h"
+#include "theme/skin/cyberpunk_skin.h"
+#include "theme/skin/skin_tone.h"
 #include "chrome/tabs/tab_shape.h"
 
 namespace edgeplus::tab_frame {

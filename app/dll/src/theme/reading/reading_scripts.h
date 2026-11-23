@@ -6,7 +6,7 @@
 // tokens (docs/re/reading-mode-theme.md). Pure: strings only.
 #pragma once
 #include <string>
-#include "theme/reading_themes.h"
+#include "theme/reading/reading_themes.h"
 #include "find/web_text.h"
 
 namespace edgeplus::reading_scripts {

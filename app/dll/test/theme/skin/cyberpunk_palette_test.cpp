@@ -1,6 +1,6 @@
 // Unit tests for cyberpunk_palette.h: the kit's colour rules, as numbers.
 #include <cstdio>
-#include "../../src/theme/cyberpunk_palette.h"
+#include "../../../src/theme/skin/cyberpunk_palette.h"
 
 using namespace edgeplus::cyberpunk_palette;
 using edgeplus::theme_tone::Argb;

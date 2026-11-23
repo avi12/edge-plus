@@ -11,7 +11,7 @@
 #include <string>
 #include <string_view>
 #include "edge/edge.h"
-#include "theme/cyberpunk_skin.h"
+#include "theme/skin/cyberpunk_skin.h"
 #include "chrome/tabs/tab_shape.h"
 
 namespace edgeplus::tab_font {

@@ -43,7 +43,7 @@ reverse-engineered ABI). Authorized personal customization of the user's own Edg
 
 | folder | concern |
 |---|---|
-| `core/` | config wire, log, handles, control channel, verification |
+| `core/` | config wire, log, handles, control channel, verification, focus |
 | `edge/` | calls into msedge.dll, RVAs and offsets, hooks, Edge geometry |
 | `layout/` | pane tree, geometry, state, motion, docking, collapse, repaint |
 | `split/` | split data and operations, panes, tabs, control codes, links, offers |
@@ -51,7 +51,13 @@ reverse-engineered ABI). Authorized personal customization of the user's own Edg
 | `chrome/tabs/` | tab outline and edge, repaint, tab drags, the tab list's rows, live preview |
 | `find/` | find, its flags, scripts and text, tab list, web text |
 | `assistant/` | Ask / assistant chat, chat menu, scripts and target |
-| `theme/` | themes, following, tone, reading mode, focus, protocol handlers |
+| `theme/` | the light and dark theme pair: install, wear, hold, notice, tone |
+| `theme/follow/` | web UI pages (and Create a remix's) following the theme's light or dark |
+| `theme/skin/` | the Cyberpunk skin's palette, tabs and current tone |
+| `theme/reading/` | reading mode's page theme, its scripts and choices |
+| `theme/remix/` | Appearance remixes on sites: the switch, colour pair, call rewrite, page helper |
+| `theme/remix/pages/` | Create a remix's own pages: the skin, the colour selector, the wheel bridge |
+| `permissions/` | a site's protocol handler requests |
 
 ## Build
 

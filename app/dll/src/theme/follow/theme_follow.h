@@ -12,11 +12,11 @@
 #include "core/config.h"
 #include "edge/edge.h"
 #include "core/channel.h"
-#include "theme/blink_scheme.h"
-#include "theme/followed_pages.h"
+#include "theme/follow/blink_scheme.h"
+#include "theme/follow/followed_pages.h"
 #include "core/log.h"
-#include "theme/remix_darkmode.h"
-#include "theme/remix_mode.h"
+#include "theme/remix/remix_darkmode.h"
+#include "theme/remix/remix_mode.h"
 #include "theme/theme_tone.h"
 
 namespace edgeplus::theme_follow {

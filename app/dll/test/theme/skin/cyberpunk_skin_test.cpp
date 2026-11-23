@@ -1,6 +1,6 @@
 // Unit tests for cyberpunk_skin.h.
 #include <cstdio>
-#include "../../src/theme/cyberpunk_skin.h"
+#include "../../../src/theme/skin/cyberpunk_skin.h"
 
 using namespace edgeplus::cyberpunk_skin;
 using edgeplus::theme_tone::Argb;

@@ -1,7 +1,7 @@
 // Unit tests for remix_colors.h.
 #include <cstdio>
 #include <string>
-#include "../../src/theme/remix_colors.h"
+#include "../../../src/theme/remix/remix_colors.h"
 
 using namespace edgeplus::remix_colors;
 using edgeplus::theme_tone::Tone;
