@@ -1435,6 +1435,12 @@ inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetTabStripModel = 0x3b8;
 // complete) and OnMouseCaptureLost (capture lost) call.
 inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetDragController = 0x3c0;
 inline constexpr uintptr_t DRAGCONTEXT_vtbl_EndDrag = 0x418;
+// The four slots above are 155's, carried over unverified. On 158
+// GetTabStripModel's slot lands on a virtual that CHECKs, so every tab drag
+// crashed Edge (dumps of 2026-11-23: h_continue_dragging ->
+// DragContextTabStripModel -> int3). The drag hooks stay out until the slots
+// are re-read for this build.
+inline constexpr bool DRAGCONTEXT_vtbl_is_verified = false;
 
 // --- a press on a tab, as Tab::OnMousePressed makes it (docs/re/tab-drag.md) ---
 // A tab view's TabSlotController* (its TabStrip, seen through that base).

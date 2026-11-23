@@ -401,6 +401,10 @@ inline bool StartEdgeTabDrag(void* mcv, void* draggedContents,
 
 // Takes the pane out of its split and drags its tab (StartEdgeTabDrag).
 inline bool TakeOverPaneDrag(void* mcv, int pane, Point rootLocation) {
+  // Its tab drag goes through the drag context's virtuals (offsets.h).
+  if (!edge155::off::DRAGCONTEXT_vtbl_is_verified) {
+    return false;
+  }
   void* tsm = edge::McvTabStripModel(mcv);
   void* context = edge::BrowserViewDragContext(edge::McvBrowserView(mcv));
   const int panes = edge::McvActiveSplitPanes(mcv);
@@ -431,7 +435,9 @@ inline bool TakeOverPaneDrag(void* mcv, int pane, Point rootLocation) {
 // A grip's every drag move (hooks.h): the pane's own drag until it reaches the
 // tab list, which then takes it over.
 inline void OnGripDragged(Point rootLocation) {
-  if (!drag::IsReadyForTabList(rootLocation)) {
+  const bool canHandToTabList = edge155::off::DRAGCONTEXT_vtbl_is_verified &&
+                                drag::IsReadyForTabList(rootLocation);
+  if (!canHandToTabList) {
     drag::Move(rootLocation);
     return;
   }

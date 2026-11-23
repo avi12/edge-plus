@@ -782,15 +782,18 @@ inline bool Install(edge155::signatures::Feature feature, uintptr_t rva,
           reinterpret_cast<void*>(menu_border::h_get_insets),
           &menu_border::o_get_insets,
           "BubbleBorder::GetInsets (menu border's top edge)");
-  Install(Feature::kSplit, edge155::rva::TabDragController_ContinueDragging,
-          reinterpret_cast<void*>(tabdrag::h_continue_dragging),
-          &tabdrag::o_continue_dragging, "TabDragController::ContinueDragging");
-  Install(Feature::kSplit, edge155::rva::TabDragController_EndDrag,
-          reinterpret_cast<void*>(tabdrag::h_end_drag), &tabdrag::o_end_drag,
-          "TabDragController::EndDrag");
-  Install(Feature::kSplit, edge155::rva::EventTracker_OnEvent,
-          reinterpret_cast<void*>(tabdrag::h_tracker_event),
-          &tabdrag::o_tracker_event, "EventTracker::OnEvent");
+  if (edge155::off::DRAGCONTEXT_vtbl_is_verified) {
+    Install(Feature::kSplit, edge155::rva::TabDragController_ContinueDragging,
+            reinterpret_cast<void*>(tabdrag::h_continue_dragging),
+            &tabdrag::o_continue_dragging,
+            "TabDragController::ContinueDragging");
+    Install(Feature::kSplit, edge155::rva::TabDragController_EndDrag,
+            reinterpret_cast<void*>(tabdrag::h_end_drag), &tabdrag::o_end_drag,
+            "TabDragController::EndDrag");
+    Install(Feature::kSplit, edge155::rva::EventTracker_OnEvent,
+            reinterpret_cast<void*>(tabdrag::h_tracker_event),
+            &tabdrag::o_tracker_event, "EventTracker::OnEvent");
+  }
   Install(Feature::kSplit, edge155::rva::MenuItemView_CalculateProposedLayout,
           reinterpret_cast<void*>(menu::h_row_layout), &menu::o_row_layout,
           "MenuItemView::CalculateProposedLayout");
