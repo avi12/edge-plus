@@ -379,6 +379,7 @@ inline void SetSplitHooksEnabled(bool isEnabled) {
     protocol_handlers::EnableHooks();
     find::EnableAll();
     theme_follow::EnableAll();
+    remix_darkmode::EnableAll();
     live_preview::EnableAll();
   }
 }

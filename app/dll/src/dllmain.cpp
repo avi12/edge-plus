@@ -181,10 +181,15 @@ DWORD WINAPI Init(LPVOID) {
   Log("[unload] signalled; removing hooks");
   hooks::RemoveAll();
   ReleaseEvents();
-  // A script reply Edge still holds would jump into this DLL once it is gone:
-  // wait for them to finish, and stay loaded (harmlessly) if one never does.
+  // A script reply Edge still holds, or a detour a thread is still inside,
+  // would jump into this DLL once it is gone: wait for them to finish, and
+  // stay loaded (harmlessly) if one never does.
   if (!edge::WaitForScriptCallbacks(kScriptDrainTimeoutMilliseconds)) {
     Log("[unload] script replies still pending; staying loaded");
+    return 0;
+  }
+  if (!edge::WaitForRunningDetours(kScriptDrainTimeoutMilliseconds)) {
+    Log("[unload] a detour is still running; staying loaded");
     return 0;
   }
   Log("[unload] edgeplus-split detached");

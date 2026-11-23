@@ -1885,16 +1885,49 @@ inline void __fastcall DestroyScriptCallback(const void* bindState) {
   g_liveScriptCallbacks--;
 }
 
-// Whether every script callback has been destroyed within `timeoutMs`.
-[[nodiscard]] inline bool WaitForScriptCallbacks(DWORD timeoutMs) {
-  constexpr DWORD kStepMs = 20;
-  for (DWORD waited = 0; waited < timeoutMs; waited += kStepMs) {
-    if (g_liveScriptCallbacks == 0) {
+// Detours that count themselves while they run (RunningDetour): a hot one
+// Edge may be inside when the DLL unloads. Unload waits for none to be
+// running, as for the script callbacks, so no thread returns into freed code.
+inline constinit std::atomic<int> g_runningDetours{0};
+
+struct RunningDetour {
+  RunningDetour() {
+    g_runningDetours++;
+  }
+  ~RunningDetour() {
+    g_runningDetours--;
+  }
+  RunningDetour(const RunningDetour&) = delete;
+  RunningDetour& operator=(const RunningDetour&) = delete;
+  RunningDetour(RunningDetour&&) = delete;
+  RunningDetour& operator=(RunningDetour&&) = delete;
+};
+
+inline constexpr DWORD kDrainStepMs = 20;
+
+// Whether `count` reached zero within `timeoutMs`.
+[[nodiscard]] inline bool WaitForZero(const std::atomic<int>& count,
+                                      DWORD timeoutMs) {
+  for (DWORD waited = 0; waited < timeoutMs; waited += kDrainStepMs) {
+    if (count == 0) {
       return true;
     }
-    Sleep(kStepMs);
+    Sleep(kDrainStepMs);
   }
-  return g_liveScriptCallbacks == 0;
+  return count == 0;
+}
+
+// Whether every script callback has been destroyed within `timeoutMs`.
+[[nodiscard]] inline bool WaitForScriptCallbacks(DWORD timeoutMs) {
+  return WaitForZero(g_liveScriptCallbacks, timeoutMs);
+}
+
+// Whether no counted detour is running within `timeoutMs`, the hooks being
+// off. A step first: a thread MinHook let go of at a detour's first
+// instruction has counted itself by then.
+[[nodiscard]] inline bool WaitForRunningDetours(DWORD timeoutMs) {
+  Sleep(kDrainStepMs);
+  return WaitForZero(g_runningDetours, timeoutMs);
 }
 
 // Free a u16string we made with Utf8ToUtf16 (its text is on Edge's heap when

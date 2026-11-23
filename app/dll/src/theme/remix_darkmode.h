@@ -1,11 +1,11 @@
 // remix_darkmode.h — an Appearance remix takes the `darkmode` of its call from
 // Edge's own light or dark, not the one baked in when it was made
-// (docs/re/remix-theme.md). Edge builds the script text of every remix it runs
-// in one function; its result is rewritten here (remix_arguments.h) while the
-// remix switch is on. UI thread.
+// (docs/re/remix-theme.md). Every remix script reaches the page through one
+// call; an Appearance call among them is rewritten here (remix_arguments.h)
+// into a request to the page's own helper while the remix switch is on. UI
+// thread.
 #pragma once
 #include <algorithm>
-#include <cstring>
 #include <string>
 #include "MinHook.h"
 #include "edge/edge.h"
@@ -55,15 +55,26 @@ inline void ObservePage(void* webContents, const void* preferred,
   g_edgeTone = tone;
 }
 
-// The remix script builder: out (a std::u16string, returned) <- the script of
-// the action `action` points to.
-using BuildScript_t = void*(__fastcall*)(void*, void*);
-inline constinit BuildScript_t o_build_script = nullptr;
+// Every remix script reaches the page through RenderFrameHostImpl::
+// ExecuteJavaScriptInIsolatedWorld in the remix world: the editor's applies
+// (built by RemixAction_BuildScript) and a stored remix applied as its page
+// loads (built elsewhere, `(function(){try{NAME(...);return true;}catch(e)
+// {return false;}})();`, which never passed the builder). So the rewrite sits
+// there.
+using ExecuteIsolated_t = void(__fastcall*)(const void*, const edge::U16String*,
+                                            const void**, int);
+inline constinit ExecuteIsolated_t o_execute_isolated = nullptr;
 
 inline constexpr size_t kLoggedScriptChars = 120;
+// What this DLL's own remix scripts carry, so they pass untouched.
+inline constexpr std::string_view kOwnScriptMark = "__edgePlusRemix";
+// Edge's Appearance calls are a line of script, while the template itself and
+// Read Aloud's bundles, which run in the same world, are tens of kilobytes: a
+// longer script is passed on without being read.
+inline constexpr size_t kMaxThemeCallChars = 4096;
 
-inline void RewriteScript(void* out) {
-  const std::string script = edge::Utf16ToUtf8(edge::U16StringView(out));
+// `script` as the page is to run it, or empty when it is left as it is.
+[[nodiscard]] inline std::string RewrittenScript(const std::string& script) {
   // The mode the page is to wear: the open Appearance editor's preview, else
   // Edge's own. Its colour comes from the pair the editor holds right now when
   // one is open (the DLL's copy is saved a poll later), else the saved pair; a
@@ -89,7 +100,7 @@ inline void RewriteScript(void* out) {
   remix_arguments::Result result =
       remix_arguments::WithPageAwareTheme(current, isTargetDark, pair);
   if (result.outcome == remix_arguments::Outcome::kNotThemeCall) {
-    return;
+    return std::string();
   }
   remix_template_copy::KeepOnce();
   const bool isOnlyColoured =
@@ -106,16 +117,12 @@ inline void RewriteScript(void* out) {
       static_cast<int>(std::min(script.size(), kLoggedScriptChars)),
       script.c_str());
   if (result.outcome != remix_arguments::Outcome::kRewritten) {
-    return;
+    return std::string();
   }
   Log("[remix-theme] appearance call, as run: %.*s",
       static_cast<int>(std::min(current.size(), kLoggedScriptChars)),
       current.c_str());
-  edge::U16String fresh{};
-  const edge::U8View view{result.script.data(), result.script.size()};
-  edge::Utf8ToUtf16(&fresh, &view);
-  edge::FreeU16String(static_cast<edge::U16String*>(out));
-  std::memcpy(out, &fresh, sizeof(fresh));
+  return std::move(result.script);
 }
 
 // Edge's mode as the last push found it. When Edge flips, every open tab
@@ -154,27 +161,59 @@ inline void FollowModeFlip() {
       isDark ? "dark" : "light", asked);
 }
 
-inline void* __fastcall h_build_script(void* out, void* action) {
-  void* result = o_build_script(out, action);
-  const bool isKnown = g_edgeTone != theme_tone::Tone::kUnknown;
-  const bool shouldRewrite = remix_mode::g_isActive && isKnown;
-  if (shouldRewrite) {
-    RewriteScript(out);
+// Every script any isolated world gets from the browser passes here, so a
+// script for another world, or with the remix switch off, goes straight on.
+// It counts itself (RunningDetour), so unload never frees it under a thread.
+inline void __fastcall h_execute_isolated(const void* frame,
+                                          const edge::U16String* script,
+                                          const void** callback, int worldId) {
+  const edge::RunningDetour running;
+  const bool isRemixWorld = worldId == edge155::off::kRemixWorldId &&
+                            remix_mode::g_isActive && script != nullptr;
+  if (!isRemixWorld) {
+    o_execute_isolated(frame, script, callback, worldId);
+    return;
   }
-  return result;
+  const edge::U16View scriptView = edge::U16StringView(script);
+  const bool isCandidate = g_edgeTone != theme_tone::Tone::kUnknown &&
+                           scriptView.length <= kMaxThemeCallChars;
+  if (!isCandidate) {
+    o_execute_isolated(frame, script, callback, worldId);
+    return;
+  }
+  const std::string text = edge::Utf16ToUtf8(scriptView);
+  const bool isOwnScript = text.find(kOwnScriptMark) != std::string::npos;
+  const std::string rewritten =
+      isOwnScript ? std::string() : RewrittenScript(text);
+  if (rewritten.empty()) {
+    o_execute_isolated(frame, script, callback, worldId);
+    return;
+  }
+  edge::U16String fresh{};
+  const edge::U8View rewrittenView{rewritten.data(), rewritten.size()};
+  edge::Utf8ToUtf16(&fresh, &rewrittenView);
+  o_execute_isolated(frame, &fresh, callback, worldId);
+  edge::FreeU16String(&fresh);
+}
+
+// Its hook back on after the split's MH_ALL_HOOKS turned every hook off
+// (control.h, with the split switched off).
+inline void EnableAll() {
+  edge::EnableHookAt(
+      edge155::rva::RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld);
 }
 
 inline bool Install() {
+  const uintptr_t site =
+      edge155::rva::RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld;
   const bool isHooked =
-      MH_CreateHook(edge::At(edge155::rva::RemixAction_BuildScript),
-                    reinterpret_cast<void*>(h_build_script),
-                    reinterpret_cast<void**>(&o_build_script)) == MH_OK;
+      MH_CreateHook(edge::At(site), reinterpret_cast<void*>(h_execute_isolated),
+                    reinterpret_cast<void**>(&o_execute_isolated)) == MH_OK;
   if (!isHooked) {
     Log("[err] remix-darkmode hook failed");
     return false;
   }
-  const MH_STATUS status =
-      edge::EnableHookAt(edge155::rva::RemixAction_BuildScript);
+  const MH_STATUS status = edge::EnableHookAt(site);
   const bool isEnabled = status == MH_OK || status == MH_ERROR_ENABLED;
   Log("[ok] remix-darkmode hook installed (%d)", static_cast<int>(isEnabled));
   return isEnabled;
