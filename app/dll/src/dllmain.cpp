@@ -2,10 +2,10 @@
 // split beyond two panes; this file is the DLL lifecycle only. Everything N-pane
 // is gated on count > 2, so a stock two-pane split is untouched.
 #include <windows.h>
-#include <cstdlib>
 #include <optional>
 #include "edge/availability.h"
-#include "edge/edge.h"
+#include "edge/api/binding.h"
+#include "edge/api/scripts.h"
 #include "core/handles.h"
 #include "core/status.h"
 #include "core/verify.h"

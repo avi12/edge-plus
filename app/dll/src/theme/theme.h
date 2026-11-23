@@ -10,7 +10,8 @@
 #include <string_view>
 #include "core/channel.h"
 #include "core/config.h"
-#include "edge/edge.h"
+#include "edge/api/browser.h"
+#include "edge/api/theming.h"
 #include "core/log.h"
 #include "theme/theme_wear.h"
 

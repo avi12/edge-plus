@@ -5,7 +5,11 @@
 #pragma once
 #include <utility>
 #include "core/channel.h"
-#include "edge/edge.h"
+#include "edge/api/binding.h"
+#include "edge/api/browser.h"
+#include "edge/api/navigation.h"
+#include "edge/api/split_model.h"
+#include "edge/api/tab_strip.h"
 #include "split/split_data.h"
 #include "split/split_ops.h"
 #include "layout/state.h"

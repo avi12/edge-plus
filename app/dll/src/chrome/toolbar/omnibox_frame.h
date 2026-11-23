@@ -10,7 +10,7 @@
 // switch shows on the next of those. UI thread only.
 #pragma once
 #include <intrin.h>
-#include "edge/edge.h"
+#include "edge/api/binding.h"
 #include "theme/skin/cyberpunk_palette.h"
 #include "theme/skin/cyberpunk_skin.h"
 #include "theme/skin/skin_tone.h"

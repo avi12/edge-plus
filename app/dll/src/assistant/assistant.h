@@ -4,7 +4,8 @@
 #include <vector>
 #include "assistant/chat_menu.h"
 #include "assistant/chat_target.h"
-#include "edge/edge.h"
+#include "edge/api/assistant_button.h"
+#include "edge/api/views.h"
 
 namespace edgeplus::assistant {
 

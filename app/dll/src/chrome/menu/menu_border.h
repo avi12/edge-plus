@@ -10,7 +10,7 @@
 #pragma once
 #include "chrome/menu/menu_border_insets.h"
 #include "chrome/tabs/tab_shape.h"
-#include "edge/edge.h"
+#include "edge/api/menus.h"
 
 namespace edgeplus::menu_border {
 

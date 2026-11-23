@@ -254,7 +254,7 @@ and splits without clicks.
 
 | Area | Files | What it does |
 |---|---|---|
-| Edge access | `edge.h` | The only file that calls into `msedge.dll` or reads an Edge struct. |
+| Edge access | `edge/api/*.h` | The only files that call into `msedge.dll` or read an Edge struct, one per area of Edge (`binding.h` under them all). |
 | ABI | `offsets.h` | Every RVA and struct offset, named after the PDB symbol. |
 | Build check | `verify.h` | Refuses any build the offsets were not reversed against. |
 | Split model | `pane_tree.h`, `dock.h`, `geom.h` | Pure logic: the layout tree, drop zones, rectangles. No Edge, no Win32. |

@@ -5,7 +5,8 @@
 #include <map>
 #include <vector>
 #include "layout/anim.h"
-#include "edge/edge.h"
+#include "edge/api/split_view.h"
+#include "edge/api/views.h"
 #include "layout/pane_tree.h"
 #include "split/split_data.h"
 #include "layout/state.h"

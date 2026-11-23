@@ -36,7 +36,7 @@ features the DLL could not run
 | pattern scan; verdict on the hits | `signature.h`, `resolution.h` (tested) |
 | the body check | `body.h` (tested) |
 | scan the image, fill the translation and the availability | `resolve.h`, `translation.h`, `availability.h` |
-| `edge::At` / `edge::Callable` land where the build has the entry | `edge.h` |
+| `edge::At` / `edge::Callable` land where the build has the entry | `edge/api/binding.h` |
 | what the DLL tells the panel | `core/status.h` -> `dll_status.rs`, `edge_support.rs` |
 
 ## The body: why "found" is not enough across lines
@@ -62,7 +62,7 @@ generator adds up (it never takes one away):
 
 - the `offsets.h` banner it sits under (`EdgePlus.Signatures.psm1`);
 - usage: each feature's own source files (the same module lists them) and
-  every entry they reach, directly or through `edge.h`'s helpers;
+  every entry they reach, directly or through the `edge/api/` helpers;
 - `hooks.h`: every `Install(Feature::kX, ...)` names the feature its hook
   serves, and what that hook's detour reaches is that feature's too. The DLL
   skips the hooks of a feature that stood down.

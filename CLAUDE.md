@@ -126,9 +126,13 @@ choice:
 
 ## Structure
 
-- One concern per header, named in its top comment; `edge.h` is the only place
-  that calls into `msedge.dll` or reads an Edge struct field, and `offsets.h` is
-  the only place an RVA or offset is written.
+- One concern per header, named in its top comment; the `edge/api/` headers are
+  the only place that calls into `msedge.dll` or reads an Edge struct field, one
+  header per area of Edge (`binding.h` under them all: the base address, typed
+  calls and fields; then `tab_strip.h`, `split_view.h`, `views.h`,
+  `web_contents.h`, `scripts.h`, `theming.h` and so on), and `offsets.h` is the
+  only place an RVA or offset is written. A user includes the area it reaches,
+  never all of them.
 - Pure logic (no Edge, no Win32) lives in its own header with a unit test under
   `test/` (`pane_tree.h`, `dock.h`, `motion.h`).
 - West const: `const Rect rect`, never `Rect const rect`.

@@ -4,7 +4,7 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "edge/edge.h"
+#include "edge/api/web_contents.h"
 #include "theme/follow/followed_pages.h"
 #include "theme/remix/remix_colors.h"
 #include "theme/theme_tone.h"

@@ -14,7 +14,10 @@
 #include "assistant/ask_text.h"
 #include "assistant/chat_scripts.h"
 #include "assistant/chat_target.h"
-#include "edge/edge.h"
+#include "edge/api/browser.h"
+#include "edge/api/copilot_panel.h"
+#include "edge/api/scripts.h"
+#include "edge/api/split_view.h"
 
 namespace edgeplus::assistant_chat {
 

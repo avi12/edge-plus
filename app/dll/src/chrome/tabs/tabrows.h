@@ -13,7 +13,10 @@
 #include <windows.h>
 #include <algorithm>
 #include <vector>
-#include "edge/edge.h"
+#include "edge/api/binding.h"
+#include "edge/api/tab_layout.h"
+#include "edge/api/tab_objects.h"
+#include "edge/api/views.h"
 #include "core/log.h"
 #include "layout/pane_tree.h"
 #include "layout/tab_grid.h"

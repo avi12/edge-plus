@@ -12,7 +12,13 @@
 // docs/re/pane-menu.md.
 #pragma once
 #include <cstddef>
-#include "edge/edge.h"
+#include "edge/api/browser.h"
+#include "edge/api/menus.h"
+#include "edge/api/navigation.h"
+#include "edge/api/split_view.h"
+#include "edge/api/strings.h"
+#include "edge/api/tab_strip.h"
+#include "edge/api/web_contents.h"
 #include "split/links.h"
 #include "layout/pane_tree.h"
 #include "split/split_data.h"

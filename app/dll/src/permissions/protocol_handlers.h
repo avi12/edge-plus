@@ -15,7 +15,8 @@
 #include <vector>
 #include "MinHook.h"
 #include "core/config.h"
-#include "edge/edge.h"
+#include "edge/api/binding.h"
+#include "edge/api/protocol_registry.h"
 #include "core/log.h"
 
 namespace edgeplus::protocol_handlers {

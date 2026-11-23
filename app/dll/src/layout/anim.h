@@ -9,7 +9,8 @@
 #include <set>
 #include <vector>
 #include "core/channel.h"
-#include "edge/edge.h"
+#include "edge/api/split_view.h"
+#include "edge/api/views.h"
 #include "layout/motion.h"
 #include "layout/pane_tree.h"
 

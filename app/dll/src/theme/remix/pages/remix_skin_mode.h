@@ -9,7 +9,8 @@
 #include <string>
 #include "chrome/tabs/tab_shape.h"
 #include "core/channel.h"
-#include "edge/edge.h"
+#include "edge/api/scripts.h"
+#include "edge/api/web_contents.h"
 #include "theme/remix/remix_colors.h"
 #include "theme/remix/remix_colors_store.h"
 #include "theme/remix/remix_darkmode.h"

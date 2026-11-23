@@ -9,7 +9,7 @@
 #include <vector>
 #include "chrome/colours/colour_ids.h"
 #include "core/log.h"
-#include "edge/edge.h"
+#include "edge/api/views.h"
 
 namespace edgeplus::colour_dump {
 

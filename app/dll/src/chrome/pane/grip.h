@@ -6,7 +6,9 @@
 #include <cstdint>
 #include <functional>
 #include <map>
-#include "edge/edge.h"
+#include "edge/api/split_controls.h"
+#include "edge/api/split_view.h"
+#include "edge/api/views.h"
 #include "chrome/pane/icons.h"
 #include "split/split_data.h"
 

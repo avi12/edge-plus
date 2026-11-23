@@ -1,7 +1,10 @@
 // tabs.h — attaching a tab's WebContents to a pane's ContentsWebView
 // (docs/re/tab-wiring.md). UI thread only.
 #pragma once
-#include "edge/edge.h"
+#include "edge/api/browser.h"
+#include "edge/api/split_view.h"
+#include "edge/api/tab_strip.h"
+#include "edge/api/web_contents.h"
 
 namespace edgeplus::tabs {
 

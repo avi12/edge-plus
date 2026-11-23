@@ -1,7 +1,9 @@
 // tab_views.h — asking every tab view to paint again, so a change of tab
 // outline (tab_shape.h) shows at once. UI thread only.
 #pragma once
-#include "edge/edge.h"
+#include "edge/api/binding.h"
+#include "edge/api/tab_objects.h"
+#include "edge/api/views.h"
 
 namespace edgeplus::tab_views {
 

@@ -1,7 +1,8 @@
 // tab_list.h - a browser window's tabs by id, as the enhanced find reads them.
 #pragma once
 #include <string>
-#include "edge/edge.h"
+#include "edge/api/split_view.h"
+#include "edge/api/tab_strip.h"
 
 namespace edgeplus::tab_list {
 

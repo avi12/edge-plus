@@ -8,7 +8,8 @@
 #include <cstring>
 #include <initializer_list>
 #include <vector>
-#include "edge/edge.h"
+#include "edge/api/binding.h"
+#include "edge/api/memory.h"
 #include "layout/pane_tree.h"
 
 namespace edgeplus::icons {

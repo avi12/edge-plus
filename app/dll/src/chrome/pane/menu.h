@@ -5,7 +5,11 @@
 #include <algorithm>
 #include <cstddef>
 #include <iterator>
-#include "edge/edge.h"
+#include "edge/api/binding.h"
+#include "edge/api/menus.h"
+#include "edge/api/split_controls.h"
+#include "edge/api/strings.h"
+#include "edge/api/views.h"
 #include "chrome/pane/grip.h"
 #include "chrome/pane/icons.h"
 #include "split/offer.h"

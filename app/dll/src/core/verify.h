@@ -8,7 +8,8 @@
 #include <vector>
 #include "edge/availability.h"
 #include "edge/build_relation.h"
-#include "edge/edge.h"
+#include "edge/api/binding.h"
+#include "edge/api/protocol_registry.h"
 
 #pragma comment(lib, "version.lib")
 

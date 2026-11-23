@@ -10,7 +10,8 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include "edge/edge.h"
+#include "edge/api/fonts.h"
+#include "edge/api/tab_objects.h"
 #include "theme/skin/cyberpunk_skin.h"
 #include "chrome/tabs/tab_shape.h"
 

@@ -11,7 +11,7 @@
 #include <cstring>
 #include "MinHook.h"
 #include "core/config.h"
-#include "edge/edge.h"
+#include "edge/api/binding.h"
 #include "core/log.h"
 
 namespace edgeplus::live_preview {

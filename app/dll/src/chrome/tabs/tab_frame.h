@@ -7,7 +7,7 @@
 // never does. These hooks hand that stroke a thickness and a colour. UI thread
 // only.
 #pragma once
-#include "edge/edge.h"
+#include "edge/api/tab_objects.h"
 #include "theme/skin/cyberpunk_skin.h"
 #include "theme/skin/skin_tone.h"
 #include "chrome/tabs/tab_shape.h"

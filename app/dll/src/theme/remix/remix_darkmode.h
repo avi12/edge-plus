@@ -12,7 +12,11 @@
 #include <string_view>
 #include <utility>
 #include "MinHook.h"
-#include "edge/edge.h"
+#include "edge/api/binding.h"
+#include "edge/api/scripts.h"
+#include "edge/api/strings.h"
+#include "edge/api/theming.h"
+#include "edge/api/web_contents.h"
 #include "core/log.h"
 #include "theme/follow/blink_scheme.h"
 #include "theme/follow/followed_pages.h"

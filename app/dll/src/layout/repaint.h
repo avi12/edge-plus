@@ -6,7 +6,10 @@
 #pragma once
 #include <windows.h>
 #include "core/channel.h"
-#include "edge/edge.h"
+#include "edge/api/browser.h"
+#include "edge/api/split_view.h"
+#include "edge/api/views.h"
+#include "edge/api/web_contents.h"
 #include "layout/motion.h"
 
 namespace edgeplus::repaint {

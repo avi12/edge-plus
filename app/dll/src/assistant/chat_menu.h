@@ -1,7 +1,8 @@
 // chat_menu.h — the chevron (EdgeCopilotDropdownMenuButton) beside Edge's
 // toolbar chat button. UI thread only.
 #pragma once
-#include "edge/edge.h"
+#include "edge/api/assistant_button.h"
+#include "edge/api/views.h"
 
 namespace edgeplus::chat_menu {
 

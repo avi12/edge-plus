@@ -7,7 +7,10 @@
 #include <cstdlib>
 #include "core/channel.h"
 #include "layout/dock.h"
-#include "edge/edge.h"
+#include "edge/api/split_view.h"
+#include "edge/api/tab_drag.h"
+#include "edge/api/tab_strip.h"
+#include "edge/api/views.h"
 #include "layout/geometry.h"
 #include "chrome/pane/overlay.h"
 #include "layout/repaint.h"

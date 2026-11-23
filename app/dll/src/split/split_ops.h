@@ -2,7 +2,14 @@
 // feed and relayout that adding, moving or closing a pane takes. UI thread only.
 #pragma once
 #include <optional>
-#include "edge/edge.h"
+#include "edge/api/browser.h"
+#include "edge/api/split_controls.h"
+#include "edge/api/split_model.h"
+#include "edge/api/split_view.h"
+#include "edge/api/tab_drag.h"
+#include "edge/api/tab_strip.h"
+#include "edge/api/views.h"
+#include "edge/api/web_contents.h"
 #include "split/panes.h"
 #include "split/tabs.h"
 #include "layout/state.h"

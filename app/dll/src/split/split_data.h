@@ -8,7 +8,9 @@
 #include <cstring>
 #include <span>
 #include <vector>
-#include "edge/edge.h"
+#include "edge/api/binding.h"
+#include "edge/api/split_model.h"
+#include "edge/api/tab_strip.h"
 
 namespace edgeplus::split_data {
 

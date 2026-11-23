@@ -36,7 +36,7 @@ reasoned from disassembly, not run.
 | a question's steps: the hidden chat page (or the panel), arm, read the answer | `assistant_chat.h` | [run] |
 | scripts run in the searched tab (isolated world) | `find_scripts.h` | [run] |
 | the hooks on Edge's find bar and the flow | `find.h` | [run] |
-| the bar's RVAs / offsets / wrappers | `offsets.h`, `edge.h` | [run] |
+| the bar's RVAs / offsets / wrappers | `offsets.h`, `edge/api/find_bar.h`, `edge/api/find_bar_toggles.h` | [run] |
 
 ## The native bar (reverse engineered, Edge 155.0.4283.45)
 

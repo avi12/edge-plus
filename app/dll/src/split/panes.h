@@ -2,7 +2,11 @@
 // ctor's own per-pane block (docs/re/ctor.md). UI thread only.
 #pragma once
 #include <utility>
-#include "edge/edge.h"
+#include "edge/api/binding.h"
+#include "edge/api/memory.h"
+#include "edge/api/split_controls.h"
+#include "edge/api/split_view.h"
+#include "edge/api/views.h"
 
 namespace edgeplus::panes {
 

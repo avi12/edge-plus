@@ -4,7 +4,8 @@
 // third pane or later also needs the view re-fed: Edge's two-pane teardown then
 // shows the second pane's page (docs/re/collapse.md).
 #pragma once
-#include "edge/edge.h"
+#include "core/log.h"
+#include "edge/offsets.h"
 
 namespace edgeplus::collapse {
 

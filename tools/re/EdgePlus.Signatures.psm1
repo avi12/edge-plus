@@ -85,9 +85,9 @@ class FeatureRule {
 
 # The DLL's source files that belong to one feature (paths under app/dll/src,
 # a folder ending in /). Usage adds to the banner rules above, never takes away:
-# an entry a feature's code reaches (directly, or through edge.h's helpers)
+# an entry a feature's code reaches (directly, or through edge/api's helpers)
 # carries that feature, so the feature stands down when the entry is missing.
-# Files not listed (edge.h, hooks.h, control.h, core/) are shared.
+# Files not listed (edge/api/, hooks.h, core/) are shared.
 [FeatureRule[]] $script:FileFeatures = @(
     [FeatureRule]@{ Match = 'split/'; Features = @('Split') }
     [FeatureRule]@{ Match = 'layout/'; Features = @('Split') }
@@ -128,10 +128,11 @@ function Get-UsageFeatures {
     $root = (Resolve-Path $SourceRoot).Path
     $files = Get-ChildItem $root -Recurse -Include '*.h', '*.cpp' |
         Where-Object { $_.Name -notin 'offsets.h', 'signatures.g.h' }
-    # edge.h's helpers: name -> (entries it names, helpers it calls).
+    # edge/api's helpers: name -> (entries it names, helpers it calls).
     $helperEntries = @{}
     $helperCalls = @{}
-    $bindingText = Read-SourceText (Join-Path $root 'edge\edge.h')
+    $bindingText = (Get-ChildItem (Join-Path $root 'edge\api') -Filter '*.h' | Sort-Object Name |
+        ForEach-Object { Read-SourceText $_.FullName }) -join "`n"
     foreach ($function in [regex]::Matches($bindingText, $script:TopLevelFunctionPattern)) {
         $name = $function.Groups[1].Value
         $body = $function.Value
@@ -140,7 +141,7 @@ function Get-UsageFeatures {
             Where-Object { $_ -ne $name } | Select-Object -Unique)
     }
     $usage = @{}
-    # Reach every entry `text` names, directly or through edge.h's helpers.
+    # Reach every entry `text` names, directly or through edge/api's helpers.
     $addReach = {
         param([string] $Text, [int] $FeatureBits)
         $reached = [Collections.Generic.HashSet[string]]::new()

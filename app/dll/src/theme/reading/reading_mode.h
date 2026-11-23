@@ -9,7 +9,9 @@
 #include <vector>
 #include "core/channel.h"
 #include "core/config.h"
-#include "edge/edge.h"
+#include "edge/api/scripts.h"
+#include "edge/api/theming.h"
+#include "edge/api/web_contents.h"
 #include "core/handles.h"
 #include "core/log.h"
 #include "theme/reading/reading_scripts.h"

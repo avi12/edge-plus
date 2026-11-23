@@ -11,7 +11,10 @@
 #include <windows.h>
 #include <intrin.h>
 #include <utility>
-#include "edge/edge.h"
+#include "edge/api/binding.h"
+#include "edge/api/canvas.h"
+#include "edge/api/tab_objects.h"
+#include "edge/api/views.h"
 #include "edge/geom.h"
 #include "layout/state.h"
 #include "chrome/tabs/tab_edge.h"

@@ -6,7 +6,9 @@
 #include <cstring>
 #include <map>
 #include <optional>
-#include "edge/edge.h"
+#include "edge/api/split_model.h"
+#include "edge/api/split_view.h"
+#include "edge/api/tab_strip.h"
 #include "layout/pane_tree.h"
 
 namespace edgeplus {
