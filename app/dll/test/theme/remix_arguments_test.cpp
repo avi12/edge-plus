@@ -4,9 +4,8 @@
 #include "../../src/theme/remix_arguments.h"
 
 using edgeplus::remix_arguments::FollowModeScript;
-using edgeplus::remix_arguments::kDarkmodeExpression;
-using edgeplus::remix_arguments::kPrepareScript;
-using edgeplus::remix_arguments::kVerifyScript;
+using edgeplus::remix_arguments::kHelperScript;
+using edgeplus::remix_arguments::kRequestCall;
 using edgeplus::remix_arguments::Outcome;
 using edgeplus::remix_arguments::PairLiteral;
 using edgeplus::remix_arguments::WithColour;
@@ -136,23 +135,30 @@ void RunPageAwareChecks() {
       Wrap("applyColorWheelThemeV2(\"228\",\"20\",\"true\",\"\",\"\"");
   const auto dark = WithPageAwareTheme(call, true, kNoPair);
   const std::string expectedCall =
-      Wrap("applyColorWheelThemeV2(\"228\",\"20\"," +
-           std::string(kDarkmodeExpression) + ",\"\",\"\"");
+      Wrap(std::string(kRequestCall) +
+           "\"applyColorWheelThemeV2\", true, \"228\", \"20\", \"\", \"\"");
   Check(dark.outcome == Outcome::kRewritten, "a theme call is rewritten");
-  Check(dark.script.starts_with("(" + std::string(kPrepareScript) +
-                                ")(true, {light: null, dark: null});"),
-        "the helper is prepared first, for the target mode and the pair");
-  Check(dark.script.find(expectedCall) != std::string::npos,
-        "the darkmode argument names the helper's choice");
-  Check(dark.script.ends_with(kVerifyScript), "and the outcome is verified");
+  Check(dark.script.starts_with("(" + std::string(kHelperScript) +
+                                ")({light: null, dark: null});\n"),
+        "the helper is installed first, with the pair");
+  Check(dark.script.ends_with(expectedCall),
+        "the call becomes a request for the target mode, its darkmode left "
+        "to the helper and the rest of Edge's script kept");
   const auto fromEmpty = WithPageAwareTheme(
       Wrap("applyColorWheelThemeV2(\"228\",\"20\",\"\",\"\",\"\""), true,
       kNoPair);
   Check(fromEmpty.script == dark.script, "an empty darkmode too");
   const auto light = WithPageAwareTheme(
       Wrap("__edgeRemixApplyTheme(1, 2, 1, 4, 5"), false, kNoPair);
-  Check(light.script.find(")(false, ") != std::string::npos,
-        "a light target is prepared as light");
+  Check(light.script.ends_with(
+            Wrap(std::string(kRequestCall) +
+                 "\"__edgeRemixApplyTheme\", false, 1, 2, 4, 5")),
+        "a light target asks for light, through the function Edge named");
+  const auto withoutFontAndZoom = WithPageAwareTheme(
+      Wrap("applyColorWheelThemeV2(1, 2, true"), true, kNoPair);
+  Check(withoutFontAndZoom.script.find("true, 1, 2, undefined, undefined)") !=
+            std::string::npos,
+        "missing font and zoom are passed as undefined");
   Check(WithPageAwareTheme(Wrap("applyColorWheelThemeV2(1,2,maybe,4,5"), true,
                            kNoPair)
                 .outcome == Outcome::kUnknownShape,
@@ -162,6 +168,32 @@ void RunPageAwareChecks() {
         "another remix is left alone");
 }
 
+void RunLoadShapeChecks() {
+  // A stored remix applied as its page loads, and the template it calls.
+  const std::string load =
+      "(function(){try{applyColorWheelThemeV2(\"228\",\"20.5\",\"true\",\"\","
+      "\"\");return true;}catch(e){return false;}})();";
+  const auto coloured = WithColour(load, 120, 50);
+  Check(
+      coloured.script.find("applyColorWheelThemeV2(\"120\",\"50\",\"true\"") !=
+          std::string::npos,
+      "the load-time call takes the saved colour");
+  const auto requested = WithPageAwareTheme(load, true, kNoPair);
+  Check(requested.outcome == Outcome::kRewritten &&
+            requested.script.ends_with(
+                "(function(){try{" + std::string(kRequestCall) +
+                "\"applyColorWheelThemeV2\", true, \"228\", \"20.5\", \"\", "
+                "\"\");return true;}catch(e){return false;}})();"),
+        "and becomes a request, still answering Edge with true");
+  const std::string declaration =
+      "function applyColorWheelThemeV2(hue, saturation, darkmode, font, zoom) "
+      "{ window.__blueprintParams = {hue:hue}; }";
+  Check(WithColour(declaration, 120, 50).outcome == Outcome::kNotThemeCall,
+        "the template's own declaration is not a call");
+  Check(WithPageAwareTheme(declaration, true, kNoPair).outcome ==
+            Outcome::kNotThemeCall,
+        "and is left alone");
+}
 void RunPairLiteralChecks() {
   edgeplus::remix_colors::Pair pair;
   pair.light = {210, 40, true};
@@ -173,17 +205,16 @@ void RunFollowModeChecks() {
   edgeplus::remix_colors::Pair pair;
   pair.dark = {228, 20, true};
   const std::string script = FollowModeScript(true, pair);
-  Check(script.starts_with("(() => {\n  const isTargetDark = true;"),
-        "the follow script names its target first, inside its own function");
-  Check(script.find(std::string(kPrepareScript) +
-                    ")(true, {light: null, dark: [228, 20]});") !=
-            std::string::npos,
-        "and prepares the helper for that target and the saved pair");
-  Check(script.ends_with("applyPrepared();\n})();"),
-        "then applies, as one self-contained call");
-  Check(FollowModeScript(false, pair).find("const isTargetDark = false;") !=
-            std::string::npos,
-        "a light flip targets light");
+  Check(script.starts_with(
+            "(() => {\n  if (!globalThis.__blueprintParams) { return; }\n  (" +
+            std::string(kHelperScript) + ")({light: null, dark: [228, 20]})"),
+        "only a page wearing an Appearance remix installs the helper, with "
+        "the saved pair");
+  Check(script.ends_with(".push(true, \"applyColorWheelThemeV2\");\n})();"),
+        "and pushes the target mode to it, as one self-contained call");
+  Check(
+      FollowModeScript(false, pair).find(".push(false, ") != std::string::npos,
+      "a light flip pushes light");
 }
 }  // namespace
 
@@ -192,6 +223,7 @@ int main() {
     RunChecks();
     RunPageAwareChecks();
     RunPairLiteralChecks();
+    RunLoadShapeChecks();
     RunFollowModeChecks();
   } catch (...) {
     return 1;
