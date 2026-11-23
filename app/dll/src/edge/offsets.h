@@ -1427,20 +1427,17 @@ inline constexpr int TABDRAG_end_complete = 0;
 // EndDragReason::kCancel (Escape).
 inline constexpr int TABDRAG_end_cancel = 1;
 // TabDragContext virtuals: Tab* GetTabForContents(this, WebContents*) and
-// TabStripModel* GetTabStripModel(this).
+// TabStripModel* GetTabStripModel(this). 158 added two slots around
+// GetTabGroupHeader (now 0x3b8), so every slot after it moved +0x10; 157's
+// 0x3b8 there CHECKed on its junk group id and crashed every tab drag.
 inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetTabForContents = 0x398;
-inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetTabStripModel = 0x3b8;
-// TabDragController* GetDragController(this), null when no drag runs, and
-// void EndDrag(this, EndDragReason): what the strip's OnMouseReleased (reason
-// complete) and OnMouseCaptureLost (capture lost) call.
-inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetDragController = 0x3c0;
-inline constexpr uintptr_t DRAGCONTEXT_vtbl_EndDrag = 0x418;
-// The four slots above are 155's, carried over unverified. On 158
-// GetTabStripModel's slot lands on a virtual that CHECKs, so every tab drag
-// crashed Edge (dumps of 2026-11-23: h_continue_dragging ->
-// DragContextTabStripModel -> int3). The drag hooks stay out until the slots
-// are re-read for this build.
-inline constexpr bool DRAGCONTEXT_vtbl_is_verified = false;
+inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetTabStripModel = 0x3c8;
+// TabDragController* GetDragController(this), null when no drag runs (it
+// returns the context's +0x470), and void EndDrag(this, EndDragReason): what
+// the strip's OnMouseReleased (reason complete) and OnMouseCaptureLost
+// (capture lost) call.
+inline constexpr uintptr_t DRAGCONTEXT_vtbl_GetDragController = 0x3d0;
+inline constexpr uintptr_t DRAGCONTEXT_vtbl_EndDrag = 0x428;
 
 // --- a press on a tab, as Tab::OnMousePressed makes it (docs/re/tab-drag.md) ---
 // A tab view's TabSlotController* (its TabStrip, seen through that base).
@@ -1450,11 +1447,11 @@ inline constexpr uintptr_t TABVIEW_controller = 0x538;
 // const ui::LocatedEvent&, ui::ListSelectionModel by value: the caller's copy,
 // which the callee destroys). MaybeStartDrag drags the SELECTED tabs; the
 // event's location is the grab point in the tab's coordinates.
-inline constexpr uintptr_t SLOTCONTROLLER_vtbl_GetSelectionModel = 0x168;
-inline constexpr uintptr_t SLOTCONTROLLER_vtbl_MaybeStartDrag = 0x210;
+inline constexpr uintptr_t SLOTCONTROLLER_vtbl_GetSelectionModel = 0x160;
+inline constexpr uintptr_t SLOTCONTROLLER_vtbl_MaybeStartDrag = 0x208;
 // bool IsActiveTab(this, const Tab* view): the strip's one active tab. The
 // controller is the tab object's EDGETAB_layout_controller. Tab::IsActive
-// (rva::Tab_IsActive) asks TabStrip::GetTabsInSplit (slot +0x238) for a split
+// (rva::Tab_IsActive) asks TabStrip::GetTabsInSplit (slot +0x230) for a split
 // tab, which returns the tab and ONE neighbour of the same split (the previous,
 // else the next, through GetAdjacentTab), and calls the tab active if
 // either is: in a grown split a sliding pair lit up.
