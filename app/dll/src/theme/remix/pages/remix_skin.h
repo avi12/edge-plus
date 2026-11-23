@@ -36,17 +36,11 @@ inline constexpr char kStyleClass[] = "edgeplus-remix-skin";
 // The page script's state between runs (its observers and the current text).
 inline constexpr char kStateKey[] = "__edgeplusRemixSkin";
 
-inline constexpr uint32_t kChannelMask = 0xff;
-inline constexpr int kAlphaShift = 24;
-inline constexpr int kRedShift = 16;
-inline constexpr int kGreenShift = 8;
-inline constexpr uint32_t kOpaque = 0xff;
-inline constexpr double kAlphaUnit = 255.0;
 inline constexpr int kAlphaDigits = 3;
 
 [[nodiscard]] inline std::string Decimal(double value) {
   std::string text = std::to_string(value);
-  // "0.219608" -> "0.220": enough for a wash.
+  // "0.219608" -> "0.219": enough for a wash.
   const size_t point = text.find('.');
   if (point != std::string::npos) {
     text.resize(point + 1 + kAlphaDigits);
@@ -56,11 +50,15 @@ inline constexpr int kAlphaDigits = 3;
 
 // "#rrggbb" for an opaque colour, "rgb(r g b / a)" for one with alpha.
 [[nodiscard]] inline std::string CssColour(Argb colour) {
-  const uint32_t alpha = (colour >> kAlphaShift) & kChannelMask;
-  const uint32_t red = (colour >> kRedShift) & kChannelMask;
-  const uint32_t green = (colour >> kGreenShift) & kChannelMask;
-  const uint32_t blue = colour & kChannelMask;
-  if (alpha == kOpaque) {
+  const uint32_t alpha =
+      (colour >> theme_tone::kAlphaShift) & theme_tone::kChannelMask;
+  const uint32_t red =
+      (colour >> theme_tone::kRedShift) & theme_tone::kChannelMask;
+  const uint32_t green =
+      (colour >> theme_tone::kGreenShift) & theme_tone::kChannelMask;
+  const uint32_t blue = colour & theme_tone::kChannelMask;
+  const bool isOpaque = alpha == theme_tone::kChannelMax;
+  if (isOpaque) {
     constexpr char kDigits[] = "0123456789abcdef";
     std::string hex = "#";
     for (const uint32_t channel : {red, green, blue}) {
@@ -71,7 +69,7 @@ inline constexpr int kAlphaDigits = 3;
   }
   return "rgb(" + std::to_string(red) + " " + std::to_string(green) + " " +
          std::to_string(blue) + " / " +
-         Decimal(static_cast<double>(alpha) / kAlphaUnit) + ")";
+         Decimal(static_cast<double>(alpha) / theme_tone::kChannelUnit) + ")";
 }
 
 // One palette role, as the custom property the structure below reads.
