@@ -108,6 +108,16 @@ void RunWheelBridgeChecks() {
   Check(bridge.find("setKnobFromHueIntensity") != std::string::npos &&
             bridge.find("applyThemeCustomizer") == std::string::npos,
         "the bridge sets the knob and never applies");
+  Check(bridge.find(kArtifactEventName) != std::string::npos &&
+            selector.find(kArtifactEventName) != std::string::npos &&
+            bridge.find(kArtifactAttribute) != std::string::npos &&
+            selector.find(kArtifactAttribute) != std::string::npos,
+        "the bridge and the editor script name the same artifact question");
+  Check(bridge.find("artifactUid") != std::string::npos &&
+            selector.find("isNew") != std::string::npos &&
+            selector.find("isTrusted") != std::string::npos,
+        "the bridge answers with the component's artifactUid, and the editor "
+        "tells a new appearance and takes only the user's own picks");
 }
 int main() {
   try {

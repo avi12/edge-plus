@@ -35,6 +35,11 @@ void RunChecks() {
   Check(ParsePair("light=;dark=", &parsed) && !parsed.light.isSet &&
             !parsed.dark.isSet,
         "two unset sides");
+  Check(!HasColour(parsed) && HasColour(pair),
+        "a pair with no colour holds none, one with either side does");
+  Pair darkOnly;
+  darkOnly.dark = Colour{120, 50, true};
+  Check(HasColour(darkOnly), "the dark side alone is a colour");
   for (const char* bad :
        {"", "light=1,2", "dark=1,2;light=", "light=360,0;dark=",
         "light=0,101;dark=", "light=a,b;dark=", "light=1;dark=",

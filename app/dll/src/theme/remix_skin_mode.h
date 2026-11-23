@@ -32,12 +32,15 @@ inline constexpr UINT kPollIntervalMs = 50;
 inline constinit bool g_isPainted = false;
 
 // The page publishes the pair it holds in its address (remix_colors.h); a
-// changed one is kept in the DLL's file.
+// changed one is kept in the DLL's file, unless it holds no colour (a new
+// appearance before the user picks one).
 inline void SavePairOf(void* contents) {
   remix_colors::Pair published;
   const bool isPublished =
       remix_colors::PairFromUrl(edge::TabUrl(contents), &published);
-  if (isPublished && !(published == remix_colors_store::g_pair)) {
+  const bool shouldSave = isPublished && remix_colors::HasColour(published) &&
+                          !(published == remix_colors_store::g_pair);
+  if (shouldSave) {
     remix_colors_store::Save(published);
   }
 }

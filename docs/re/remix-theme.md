@@ -139,6 +139,24 @@ wears, so the helper counts it a skip and makes no apply. Create > Appearance
 made no call at all; the wheel bridge (`setKnobFromHueIntensity`) moved the
 knob with no apply either way.
 
+**A new appearance opens blank; an Edit opens on the saved pair.** The editor
+tells the two apart by `widget-adjustment.artifactUid`: the app shell sets it to
+the stored remix's id on More options > Edit (`onOpenEditSurface`,
+`handleEditArtifact`) and to null on Create > Appearance (`handleMainSelect`,
+also `handleCreateBlueprint` and `handleBack`), and the component sends it with
+every apply (`execute(..., this.artifactUid)`), so it is Edge's own switch
+between updating a remix and making a new one, not a guess from timing. The property lives in the page's world;
+the wheel bridge answers an `edgeplus-wheel-artifact` event on the component by
+writing it to `data-edgeplus-artifact` in the same dispatch, and the selector
+script asks once per opening (an unanswered opening is not counted as open). A
+new appearance starts with no colour for either mode: the wheel stays as Edge
+set it (blank, Hue 0 / intensity 0, untouched), a segment click with nothing
+picked applies nothing, and the page publishes `light=;dark=`, which the DLL
+never saves (`remix_colors::HasColour`), so cancelling a Create keeps the saved
+pair; the first pick replaces it with what that editor picked (an unpicked mode
+stays empty). An Edit starts from the saved pair and keeps the knob on the
+selected mode's colour, as before.
+
 Edge reuses one `widget-adjustment` for every opening of the section (it is
 taken out of the page and put back), and its stored colour lands on the knob
 whenever its parameters do: after Create, Back, Back, Edit it landed after the
@@ -147,6 +165,16 @@ and saved the stored remix's colour over the light one. A pick is now only a
 wheel change after the user's own (trusted) press or key on the wheel since the
 section opened. Checked in a throwaway Edge on the real bubble: Edit after
 Create, Back, Back kept the knob on the saved colour and the file unchanged.
+
+Checked in a throwaway Edge on the real bubble (saved pair Light 30,80 / Dark
+200,40): Create > Appearance on an unremixed page opened blank with 0 applies
+and the page unthemed, segment clicks applied nothing, Close left the file as it
+was; picking Light 270,60 then Dark 120,50 themed the page in each and saved
+`light=270,60;dark=` then both; after Delete, Create > Appearance opened blank
+again (0 applies, page unthemed) and a pick of 200,70 themed the page and saved
+`light=200,70;dark=`; Edit of a stored remix (stored 228,20) on another page
+showed 200,70 with 0 applies and the file unchanged, and so did the reused
+component's Create (blank) then Edit (200,70).
 
 `remix_darkmode.h` detours `ExecuteJavaScriptInIsolatedWorld`, and with the remix
 switch on rewrites a `__edgeRemixApplyTheme` / `applyColorWheelThemeV2` call into the
@@ -212,4 +240,4 @@ Placed for 158 to run scripts: `WebContentsImpl_GetPrimaryMainFrame` 0x1135fb0 (
 0xf437d30 (hot stub into 0x5bc5e9a). A script with no answer builds no callback, so
 it needs no `BindStateBase_ctor` (still unplaced; reading mode stays down).
 
-**The editor's wheel shows the selected mode's colour without applying.** The wheel is the `widget-adjustment` component (FAST) on edge://blueprint; its `setKnobFromHueIntensity(hue, intensity 0..1)` only moves the knob (`knobX`/`knobY`/`knobTouched`), while an apply happens only on a pointer release or a key (`applyThemeCustomizer`). The component lives in the page's own world, so the DLL runs a small bridge there through `RenderFrameHostImpl::ExecuteJavaScript` (0xf437ce0, the vtable slot before the isolated variant; it CHECKs `CanExecuteJavaScript`, 0xf437ca6, which is asked first and holds for a WebUI page), and the editor script asks it through an attribute and an event on the shared DOM, on opening, reopening and an Edge flip under an untouched selector. Checked in a throwaway Edge on the real editor: 0 applies on opening, reopening and flips; one per segment click.
+**The editor's wheel shows the selected mode's colour without applying.** The wheel is the `widget-adjustment` component (FAST) on edge://blueprint; its `setKnobFromHueIntensity(hue, intensity 0..1)` only moves the knob (`knobX`/`knobY`/`knobTouched`), while an apply happens only on a pointer release or a key (`applyThemeCustomizer`). The component lives in the page's own world, so the DLL runs a small bridge there through `RenderFrameHostImpl::ExecuteJavaScript` (0xf437ce0, the vtable slot before the isolated variant; it CHECKs `CanExecuteJavaScript`, 0xf437ca6, which is asked first and holds for a WebUI page), and the editor script asks it through an attribute and an event on the shared DOM, on opening, reopening and an Edge flip under an untouched selector, when the section edits a stored remix (a new appearance keeps Edge's blank wheel, see "A new appearance opens blank"). Checked in a throwaway Edge on the real editor: 0 applies on opening, reopening and flips; one per segment click.

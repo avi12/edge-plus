@@ -45,6 +45,12 @@ struct Pair {
   return isDark ? pair.dark : pair.light;
 }
 
+// A new appearance's editor holds no colour until the user picks one; a pair
+// with none is never saved, so cancelling it keeps the saved pair.
+[[nodiscard]] constexpr bool HasColour(const Pair& pair) noexcept {
+  return pair.light.isSet || pair.dark.isSet;
+}
+
 namespace detail {
 
 constexpr char kSideSeparator = ';';

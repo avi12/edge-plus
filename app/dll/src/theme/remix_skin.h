@@ -365,7 +365,8 @@ mai-tab { border-radius: 0 !important; background: transparent !important; font-
 // pair. The editor's "Dark" button, which only toggled the remix's own darkmode
 // (now Edge's, remix_darkmode.h), is hidden and a Light | Dark selector takes
 // its place: it says which mode the wheel is editing, and switching it moves the
-// wheel to that mode's saved colour. Font and zoom stay shared. The page's own
+// wheel to that mode's colour (the saved one when editing a stored remix, none
+// yet in a new appearance until the user picks it). Font and zoom stay shared. The page's own
 // wheel is read from its slider's text and driven with pointer events (our
 // isolated world cannot see the page's script objects, only the shared DOM). The
 // pair goes back to the DLL in the page's address fragment.
@@ -398,6 +399,12 @@ inline constexpr int kRestoreDelayMs = 500;
 // component, then this event on it.
 inline constexpr char kWheelEventName[] = "edgeplus-wheel";
 inline constexpr char kWheelAttribute[] = "data-edgeplus-wheel";
+// How the editor script asks the page's world what the opened section edits:
+// this event on the wheel's component, answered (in the same dispatch) in this
+// attribute of it: the component's artifactUid, the stored remix that More
+// options > Edit opened, or empty for a new appearance (Create > Appearance).
+inline constexpr char kArtifactEventName[] = "edgeplus-wheel-artifact";
+inline constexpr char kArtifactAttribute[] = "data-edgeplus-artifact";
 // After the section is shown, or Edge's mode flips under an untouched
 // selector, the wheel is kept on the saved colour this long (Edge sets the
 // remix's stored colour on it a moment after it is shown).
@@ -531,12 +538,16 @@ inline constexpr char kSkinnedSelectorCss[] =
   script += "; var wheelEvent = " + web_text::JsStringLiteral(kWheelEventName);
   script +=
       "; var wheelAttribute = " + web_text::JsStringLiteral(kWheelAttribute);
+  script +=
+      "; var artifactEvent = " + web_text::JsStringLiteral(kArtifactEventName);
+  script += "; var artifactAttribute = " +
+            web_text::JsStringLiteral(kArtifactAttribute);
   script += "; var wheelSyncWindow = " + std::to_string(kWheelSyncWindowMs);
   return script;
 }
 
-// `pairText` is remix_colors::FormatPair of the saved pair; it seeds the page
-// the first time only, the page's own state is the master after that.
+// `pairText` is remix_colors::FormatPair of the saved pair: what the section
+// opens on when it edits a stored remix. A new appearance opens on no colour.
 [[nodiscard]] inline std::string SelectorScript(bool isSkinned,
                                                 const std::string& pairText) {
   std::string script = "(function () { var css = ";
@@ -566,13 +577,14 @@ inline constexpr char kSkinnedSelectorCss[] =
     function edgeMode() {
       return window.matchMedia("(prefers-color-scheme: dark)").matches ? modes.dark : modes.light;
     }
-    // The pair outlives the editor; which mode is selected does not: each time
-    // the Appearance section is shown it starts on Edge's mode, and follows
-    // Edge's flips until the selector is used. The selected mode is the one the
-    // wheel edits and the page shows: it goes to the DLL with the pair.
+    // Each time the Appearance section is shown it starts on Edge's mode, and
+    // follows Edge's flips until the selector is used. The selected mode is the
+    // one the wheel edits and the page shows: it goes to the DLL with the pair.
+    // The pair is set as the section opens: the saved pair when it edits a
+    // stored remix, no colour when it is a new appearance (isNew).
     var state = window[key];
     if (!state) {
-      state = window[key] = {pair: parse(seed), last: null, settleUntil: 0,
+      state = window[key] = {pair: parse(""), isNew: false, last: null, settleUntil: 0,
           current: edgeMode(), isTouched: false, wasShown: false,
           publishedPreview: "", picker: null, group: null, isLeaving: false,
           syncUntil: 0, isWheelTouched: false, wired: new WeakSet()};
@@ -615,12 +627,14 @@ inline constexpr char kSkinnedSelectorCss[] =
     // One apply of the selected mode: the wheel is driven to that mode's colour
     // (or pressed where it is, when the mode has none yet), which makes the
     // editor apply; the DLL gives the apply the selected mode. It waits for the
-    // mode published just before to reach the DLL.
+    // mode published just before to reach the DLL. A new appearance with
+    // nothing picked yet has no colour to press: its wheel is Edge's blank one.
     function applySelected() {
       setTimeout(function () {
         var picker = state.picker;
         if (!picker || !picker.isConnected) { return; }
-        var colour = state.pair[state.current] || readWheel(picker);
+        var isWheelBlank = state.isNew && !state.pair[modes.light] && !state.pair[modes.dark];
+        var colour = state.pair[state.current] || (isWheelBlank ? null : readWheel(picker));
         if (colour) { driveWheel(picker, colour); }
       }, previewDelay);
     }
@@ -654,6 +668,16 @@ inline constexpr char kSkinnedSelectorCss[] =
       }
       picker.addEventListener("pointerdown", touch, true);
       picker.addEventListener("keydown", touch, true);
+    }
+    // What the section edits, from the page's world (the DLL's bridge,
+    // WheelBridgeScript): the stored remix's id, "" for a new appearance, or
+    // null while the bridge has not answered.
+    function askArtifact(picker) {
+      var host = picker.getRootNode().host;
+      if (!host) { return null; }
+      host.removeAttribute(artifactAttribute);
+      host.dispatchEvent(new Event(artifactEvent, {bubbles: true, composed: true}));
+      return host.getAttribute(artifactAttribute);
     }
     // The wheel shows the selected mode's saved colour, with no apply: the
     // wheel's own component sets its knob in the page's world (the DLL's
@@ -741,15 +765,28 @@ inline constexpr char kSkinnedSelectorCss[] =
         state.picker = picker;
         state.group = group;
         watchWheel(picker);
-        // Leaving the section only hides it, so each time it is shown again counts
-        // as opening it: Edge's mode selected, nothing applied.
+        // Leaving the section takes it out of the page (Edge keeps the component
+        // and shows it again), so each time it is shown again counts as opening
+        // it: Edge's mode selected, nothing applied. Editing a stored remix opens
+        // on the saved pair, the wheel kept on the selected mode's colour; a new
+        // appearance opens on no colour, the wheel as Edge set it. Until the
+        // page's world says which, the section is not counted as open.
         var isShown = picker.getClientRects().length > 0;
-        if (isShown && !state.wasShown) {
-          state.isTouched = false;
-          state.isWheelTouched = false;
-          state.current = edgeMode();
-          state.last = null;
-          state.syncUntil = Date.now() + wheelSyncWindow;
+        var isOpening = isShown && !state.wasShown;
+        if (isOpening) {
+          var artifact = askArtifact(picker);
+          var isAnswered = artifact !== null;
+          if (isAnswered) {
+            state.isNew = artifact === "";
+            state.pair = parse(state.isNew ? "" : seed);
+            state.isTouched = false;
+            state.isWheelTouched = false;
+            state.current = edgeMode();
+            state.last = null;
+            state.syncUntil = Date.now() + wheelSyncWindow;
+          } else {
+            isShown = false;
+          }
         }
         state.wasShown = isShown;
         isAnyShown = isAnyShown || isShown;
@@ -759,7 +796,7 @@ inline constexpr char kSkinnedSelectorCss[] =
           state.syncUntil = Date.now() + wheelSyncWindow;
         }
         mark(group);
-        var isSyncing = isShown && !state.isTouched && Date.now() < state.syncUntil;
+        var isSyncing = isShown && !state.isNew && !state.isTouched && Date.now() < state.syncUntil;
         if (isSyncing) { showSavedColour(picker); }
         if (isShown) { takeWheel(picker); }
       }
@@ -780,12 +817,19 @@ inline constexpr char kSkinnedSelectorCss[] =
 // is visible only there): sets the wheel's knob to the colour the editor script
 // asked for, through the component's own setKnobFromHueIntensity, which moves
 // the knob and its colour without the editor applying anything (it applies only
-// on a pointer release or a key). Installs itself once per page.
+// on a pointer release or a key), and says what the opened section edits: the
+// component's artifactUid, which Edge sets to the stored remix on More options >
+// Edit and to null on Create > Appearance (and sends with every apply, to update
+// that remix or make a new one). Installs itself once per page.
 [[nodiscard]] inline std::string WheelBridgeScript() {
   std::string script = "(function () { var wheelEvent = ";
   script += web_text::JsStringLiteral(kWheelEventName);
   script +=
       "; var wheelAttribute = " + web_text::JsStringLiteral(kWheelAttribute);
+  script +=
+      "; var artifactEvent = " + web_text::JsStringLiteral(kArtifactEventName);
+  script += "; var artifactAttribute = " +
+            web_text::JsStringLiteral(kArtifactAttribute);
   script += R"JS(;
     if (window.__edgeplusWheelBridge) { return; }
     window.__edgeplusWheelBridge = true;
@@ -797,6 +841,12 @@ inline constexpr char kSkinnedSelectorCss[] =
       if (!canSet) { return; }
       host.removeAttribute(wheelAttribute);
       host.setKnobFromHueIntensity(Number(found[1]), Number(found[2]) / 100);
+    }, true);
+    document.addEventListener(artifactEvent, function (event) {
+      var host = event.composedPath()[0];
+      var canAnswer = host && host.setAttribute && "artifactUid" in host;
+      if (!canAnswer) { return; }
+      host.setAttribute(artifactAttribute, host.artifactUid || "");
     }, true);
   })();)JS";
   return script;
