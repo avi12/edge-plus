@@ -1941,22 +1941,41 @@ inline void FreeU16String(U16String* string) {
   }
 }
 
+// A u16string made from UTF-8 for a call into Edge, freed when it goes out of
+// scope.
+struct OwnedU16String {
+  explicit OwnedU16String(std::string_view utf8) {
+    const U8View view{utf8.data(), utf8.size()};
+    Utf8ToUtf16(&text, &view);
+  }
+  ~OwnedU16String() {
+    FreeU16String(&text);
+  }
+  OwnedU16String(const OwnedU16String&) = delete;
+  OwnedU16String& operator=(const OwnedU16String&) = delete;
+  OwnedU16String(OwnedU16String&&) = delete;
+  OwnedU16String& operator=(OwnedU16String&&) = delete;
+
+  U16String text{};
+};
+
+// The page's main frame, or null when the page is not live.
+inline const void* LiveMainFrame(void* webContents) {
+  return IsPageLive(webContents) ? PrimaryMainFrame(webContents) : nullptr;
+}
+
 // Hand `utf8Script` to Edge to run in `frame`, in isolated world `worldId`
 // (ours unless named), with `callbackSlot` as the callback Edge calls (null
 // for none).
-inline void ExecuteScriptInFrame(const void* frame,
-                                 const std::string& utf8Script,
+inline void ExecuteScriptInFrame(const void* frame, std::string_view utf8Script,
                                  const void** callbackSlot,
                                  int worldId = edge155::off::kScriptWorldId) {
-  U16String script{};
-  const U8View scriptView{utf8Script.data(), utf8Script.size()};
-  Utf8ToUtf16(&script, &scriptView);
+  const OwnedU16String script(utf8Script);
   using ExecuteFn =
       void(__fastcall*)(const void*, const U16String*, const void**, int);
   Callable<ExecuteFn>(
       edge155::rva::RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld)(
-      frame, &script, callbackSlot, worldId);
-  FreeU16String(&script);
+      frame, &script.text, callbackSlot, worldId);
 }
 
 // Run `utf8Script` in `frame`, in our isolated world, and pass `done` the
@@ -1986,11 +2005,9 @@ inline bool RunScriptInFrame(const void* frame, const std::string& utf8Script,
 // Run `utf8Script` in the page's main frame, in isolated world `worldId`
 // (ours unless named), and never wait for an answer: no callback is built, so
 // this needs no BindStateBase.
-inline bool RunScriptUnanswered(void* webContents,
-                                const std::string& utf8Script,
+inline bool RunScriptUnanswered(void* webContents, std::string_view utf8Script,
                                 int worldId = edge155::off::kScriptWorldId) {
-  const void* frame =
-      IsPageLive(webContents) ? PrimaryMainFrame(webContents) : nullptr;
+  const void* frame = LiveMainFrame(webContents);
   if (!frame) {
     return false;
   }
@@ -2004,9 +2021,8 @@ inline bool RunScriptUnanswered(void* webContents,
 // ExecuteJavaScript CHECKs that and would bring Edge down. False when it is
 // not run.
 inline bool RunMainWorldScriptUnanswered(void* webContents,
-                                         const std::string& utf8Script) {
-  const void* frame =
-      IsPageLive(webContents) ? PrimaryMainFrame(webContents) : nullptr;
+                                         std::string_view utf8Script) {
+  const void* frame = LiveMainFrame(webContents);
   if (!frame) {
     return false;
   }
@@ -2016,23 +2032,19 @@ inline bool RunMainWorldScriptUnanswered(void* webContents,
   if (!canExecute) {
     return false;
   }
-  U16String script{};
-  const U8View scriptView{utf8Script.data(), utf8Script.size()};
-  Utf8ToUtf16(&script, &scriptView);
+  const OwnedU16String script(utf8Script);
   const void* noCallback = nullptr;
   using ExecuteFn =
       void(__fastcall*)(const void*, const U16String*, const void**);
   Callable<ExecuteFn>(edge155::rva::RenderFrameHostImpl_ExecuteJavaScript)(
-      frame, &script, &noCallback);
-  FreeU16String(&script);
+      frame, &script.text, &noCallback);
   return true;
 }
 
 inline bool RunScript(void* webContents, const std::string& utf8Script,
                       ScriptDone done) {
-  const void* frame =
-      IsPageLive(webContents) ? PrimaryMainFrame(webContents) : nullptr;
-  return RunScriptInFrame(frame, utf8Script, std::move(done));
+  return RunScriptInFrame(LiveMainFrame(webContents), utf8Script,
+                          std::move(done));
 }
 
 // Every frame of a page (the main frame first, then its iframes).

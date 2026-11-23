@@ -192,11 +192,8 @@ inline void __fastcall h_execute_isolated(const void* frame,
     o_execute_isolated(frame, script, callback, worldId);
     return;
   }
-  edge::U16String fresh{};
-  const edge::U8View rewrittenView{rewritten.data(), rewritten.size()};
-  edge::Utf8ToUtf16(&fresh, &rewrittenView);
-  o_execute_isolated(frame, &fresh, callback, worldId);
-  edge::FreeU16String(&fresh);
+  const edge::OwnedU16String fresh(rewritten);
+  o_execute_isolated(frame, &fresh.text, callback, worldId);
 }
 
 // Its hook back on after the split's MH_ALL_HOOKS turned every hook off
