@@ -192,6 +192,63 @@ struct Span {
   return {Outcome::kUnknownShape, {}};
 }
 
+// The template's `darkmode` does not mean "make the page dark": it inverts the
+// lightness of every colour the page has. A page that already follows Edge's
+// dark mode (prefers-color-scheme) is turned light by it, while a light page is
+// turned dark. So the argument becomes, in the page, `String(wanted !== the
+// page is dark)`: the page's own darkness is read once, before the first apply
+// recolours it, from the background of its body (else its root), else from its
+// dark color-scheme. Seen live: google.com dark + "true" -> body rgb(212,214,222).
+inline constexpr std::string_view kPageIsDarkScript =
+    R"js((globalThis.__edgePlusPageIsDark??=(()=>{for(const node of[document.body,document.documentElement]){const parts=node&&getComputedStyle(node).backgroundColor.match(/[\d.]+/g);if(parts&&(parts.length<4||+parts[3]>0)){return .299*parts[0]+.587*parts[1]+.114*parts[2]<128}}return matchMedia("(prefers-color-scheme: dark)").matches&&/dark/.test(getComputedStyle(document.documentElement).colorScheme)})()))js";
+
+// `script` with the darkmode argument of its Appearance call replaced by the
+// page-relative expression above for Edge's mode `isDark`. Any argument that is
+// a known spelling (or empty) is replaced; another shape is left alone.
+[[nodiscard]] inline Result WithPageAwareDarkmode(std::string_view script,
+                                                  bool isDark) {
+  size_t argumentsAt = std::string_view::npos;
+  for (const std::string_view name : kThemeFunctions) {
+    argumentsAt = detail::FindCallArguments(script, name);
+    if (argumentsAt != std::string_view::npos) {
+      break;
+    }
+  }
+  if (argumentsAt == std::string_view::npos) {
+    return {Outcome::kNotThemeCall, {}};
+  }
+  const std::vector<detail::Span> arguments =
+      detail::SplitArguments(script, argumentsAt);
+  if (arguments.size() <= kDarkmodeIndex) {
+    return {Outcome::kUnknownShape, {}};
+  }
+  const detail::Span span = detail::Trimmed(script, arguments[kDarkmodeIndex]);
+  std::string_view text = script.substr(span.begin, span.end - span.begin);
+  const bool isQuoted = text.size() >= 2 && detail::IsQuote(text.front()) &&
+                        text.back() == text.front();
+  if (isQuoted) {
+    text = text.substr(1, text.size() - 2);
+  }
+  bool isKnown = text.empty();
+  for (const detail::Spelling& spelling : detail::kSpellings) {
+    const bool isSpelling = text == spelling.light || text == spelling.dark;
+    if (isSpelling) {
+      isKnown = true;
+    }
+  }
+  if (!isKnown) {
+    return {Outcome::kUnknownShape, {}};
+  }
+  std::string rewritten(script.substr(0, span.begin));
+  rewritten += "String(";
+  rewritten += isDark ? "true" : "false";
+  rewritten += "!==";
+  rewritten += kPageIsDarkScript;
+  rewritten += ")";
+  rewritten += script.substr(span.end);
+  return {Outcome::kRewritten, std::move(rewritten)};
+}
+
 // `script` with the hue and saturation arguments of its Appearance call set to
 // `hue` degrees and `saturation` percent, each in the quotes it already has.
 [[nodiscard]] inline Result WithColour(std::string_view script, int hue,

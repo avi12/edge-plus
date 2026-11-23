@@ -63,6 +63,16 @@ text and written back as a JS literal, `0x100e6288`) into
 `(function() { try { NAME(arg,arg,...); } catch(e) {...} })();`, UTF-8, then
 `UTF8ToUTF16` into its `std::u16string` result.
 
+**The template's `darkmode` inverts, it does not darken** (template read from a
+kept bundle row, 2026-11-23): with `"true"` every page colour's lightness is
+flipped (`l -> 1 - l`), so a page already dark from Edge's dark mode
+(`prefers-color-scheme`, e.g. google.com) comes out light, while a light page
+comes out dark. The argument is therefore written as an in-page expression,
+`String(<Edge is dark> !== <the page is dark>)`, the page's darkness read once
+per page from its body / root background before the first apply
+(`remix_arguments::WithPageAwareDarkmode`). Verified in a throwaway Edge: google
+dark + `"true"` -> body rgb(212,214,222); with the expression -> rgb(33,35,43).
+
 `remix_darkmode.h` detours it, and with the remix switch on rewrites the third argument
 of a `__edgeRemixApplyTheme` / `applyColorWheelThemeV2` call to Edge's light or dark
 (`remix_arguments.h`, pure, `test/theme/remix_arguments_test.cpp`): `"true"`, `true`

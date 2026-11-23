@@ -3,9 +3,11 @@
 #include <string>
 #include "../../src/theme/remix_arguments.h"
 
+using edgeplus::remix_arguments::kPageIsDarkScript;
 using edgeplus::remix_arguments::Outcome;
 using edgeplus::remix_arguments::WithColour;
 using edgeplus::remix_arguments::WithDarkmode;
+using edgeplus::remix_arguments::WithPageAwareDarkmode;
 
 namespace {
 
@@ -123,11 +125,36 @@ void RunChecks() {
   Check(WithDarkmode("", true).outcome == Outcome::kNotThemeCall, "empty");
 }
 
+void RunPageAwareChecks() {
+  const std::string expected =
+      Wrap("applyColorWheelThemeV2(\"228\",\"20\",String(true!==" +
+           std::string(kPageIsDarkScript) + "),\"\",\"\"");
+  const auto dark = WithPageAwareDarkmode(
+      Wrap("applyColorWheelThemeV2(\"228\",\"20\",\"true\",\"\",\"\""), true);
+  Check(dark.outcome == Outcome::kRewritten && dark.script == expected,
+        "a stored true becomes the page-relative expression");
+  const auto fromEmpty = WithPageAwareDarkmode(
+      Wrap("applyColorWheelThemeV2(\"228\",\"20\",\"\",\"\",\"\""), true);
+  Check(fromEmpty.script == expected, "so does an empty darkmode");
+  const auto light =
+      WithPageAwareDarkmode(Wrap("__edgeRemixApplyTheme(1, 2, 1, 4, 5"), false);
+  Check(light.script.find("String(false!==") != std::string::npos,
+        "Edge light asks for false, relative to the page");
+  Check(
+      WithPageAwareDarkmode(Wrap("applyColorWheelThemeV2(1,2,maybe,4,5"), true)
+              .outcome == Outcome::kUnknownShape,
+      "an unknown word is left alone");
+  Check(WithPageAwareDarkmode(Wrap("hideGTA6Videos("), true).outcome ==
+            Outcome::kNotThemeCall,
+        "another remix is left alone");
+}
+
 }  // namespace
 
 int main() {
   try {
     RunChecks();
+    RunPageAwareChecks();
   } catch (...) {
     return 1;
   }

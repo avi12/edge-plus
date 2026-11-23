@@ -64,25 +64,29 @@ inline constexpr size_t kLoggedScriptChars = 120;
 inline void RewriteScript(void* out) {
   const std::string script = edge::Utf16ToUtf8(edge::U16StringView(out));
   const bool isDark = g_edgeTone == theme_tone::Tone::kDark;
+  // The colour picked for Edge's current mode, when there is one; a remix with
+  // none saved keeps its own. Then the darkmode, relative to the page's own.
+  std::string current = script;
+  const remix_colors::Colour colour =
+      remix_colors::ColourFor(remix_colors_store::g_pair, isDark);
+  if (colour.isSet) {
+    remix_arguments::Result coloured =
+        remix_arguments::WithColour(current, colour.hue, colour.intensity);
+    if (coloured.outcome == remix_arguments::Outcome::kRewritten) {
+      current = std::move(coloured.script);
+    }
+  }
   remix_arguments::Result result =
-      remix_arguments::WithDarkmode(script, isDark);
+      remix_arguments::WithPageAwareDarkmode(current, isDark);
   if (result.outcome == remix_arguments::Outcome::kNotThemeCall) {
     return;
   }
   remix_template_copy::KeepOnce();
-  // The colour picked for Edge's current mode, when there is one; a remix with
-  // none saved keeps its own.
-  const remix_colors::Colour colour =
-      remix_colors::ColourFor(remix_colors_store::g_pair, isDark);
-  if (colour.isSet) {
-    const bool isDarkmodeRewritten =
-        result.outcome == remix_arguments::Outcome::kRewritten;
-    const std::string current = isDarkmodeRewritten ? result.script : script;
-    remix_arguments::Result coloured =
-        remix_arguments::WithColour(current, colour.hue, colour.intensity);
-    if (coloured.outcome == remix_arguments::Outcome::kRewritten) {
-      result = std::move(coloured);
-    }
+  const bool isOnlyColoured =
+      result.outcome != remix_arguments::Outcome::kRewritten &&
+      current != script;
+  if (isOnlyColoured) {
+    result = {remix_arguments::Outcome::kRewritten, std::move(current)};
   }
   Log("[remix-theme] appearance script (edge %s): outcome %d, %.*s",
       isDark ? "dark" : "light", static_cast<int>(result.outcome),
