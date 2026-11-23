@@ -40,6 +40,17 @@ void RunChecks() {
   Pair darkOnly;
   darkOnly.dark = Colour{120, 50, true};
   Check(HasColour(darkOnly), "the dark side alone is a colour");
+  Check(IsNoColour(kNoColour) && !IsNoColour(Colour{}) &&
+            !IsNoColour(Colour{210, 40, true}) &&
+            IsNoColour(Colour{120, 0, true}),
+        "no colour is a set colour at the wheel's centre, whatever its hue");
+  Pair reset;
+  reset.light = kNoColour;
+  Check(HasColour(reset) && FormatPair(reset) == "light=0,0;dark=",
+        "a reset mode is saved, as the centre");
+  Check(ParsePair("light=0,0;dark=120,50", &parsed) &&
+            IsNoColour(parsed.light) && !IsNoColour(parsed.dark),
+        "and read back as no colour");
   for (const char* bad :
        {"", "light=1,2", "dark=1,2;light=", "light=360,0;dark=",
         "light=0,101;dark=", "light=a,b;dark=", "light=1;dark=",

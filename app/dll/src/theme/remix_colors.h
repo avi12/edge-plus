@@ -45,10 +45,21 @@ struct Pair {
   return isDark ? pair.dark : pair.light;
 }
 
-// A new appearance's editor holds no colour until the user picks one; a pair
-// with none is never saved, so cancelling it keeps the saved pair.
+// A new appearance's editor holds neither mode until the user picks one; a pair
+// with neither set is never saved, so cancelling it keeps the saved pair. A
+// mode reset to no colour (kNoColour) is set, so it is saved.
 [[nodiscard]] constexpr bool HasColour(const Pair& pair) noexcept {
   return pair.light.isSet || pair.dark.isSet;
+}
+
+// The wheel's centre: the template tints only when the intensity (its
+// saturation) is above 0, so a mode with this colour wears the page's own look,
+// the remix's font and size kept. Unlike an unset mode, which keeps the call's
+// own colour, it is the user's choice (the editor's reset sets it).
+inline constexpr Colour kNoColour{0, 0, true};
+
+[[nodiscard]] constexpr bool IsNoColour(const Colour& colour) noexcept {
+  return colour.isSet && colour.intensity == 0;
 }
 
 namespace detail {
@@ -93,23 +104,24 @@ constexpr std::string_view kDarkKey = "dark=";
   return true;
 }
 
+}  // namespace detail
+
+// "" is an unset colour; "210,40" a set one.
 [[nodiscard]] inline std::string FormatColour(const Colour& colour) {
   if (!colour.isSet) {
     return std::string();
   }
-  return std::to_string(colour.hue) + kNumberSeparator +
+  return std::to_string(colour.hue) + detail::kNumberSeparator +
          std::to_string(colour.intensity);
 }
-
-}  // namespace detail
 
 // "light=210,40;dark=" — an unset side is empty.
 [[nodiscard]] inline std::string FormatPair(const Pair& pair) {
   std::string text(detail::kLightKey);
-  text += detail::FormatColour(pair.light);
+  text += FormatColour(pair.light);
   text += detail::kSideSeparator;
   text += detail::kDarkKey;
-  text += detail::FormatColour(pair.dark);
+  text += FormatColour(pair.dark);
   return text;
 }
 
