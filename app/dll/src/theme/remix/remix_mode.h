@@ -16,7 +16,8 @@ inline constinit bool g_isActive = false;
 inline bool ApplyConfig(const config::Wire& wire) {
   const bool wasActive = g_isActive;
   g_isActive = wire.remixThemeActive != 0;
-  if (g_isActive && !wasActive) {
+  const bool isTurnedOn = g_isActive && !wasActive;
+  if (isTurnedOn) {
     remix_colors_store::Load();
   }
   const bool isChanged = wasActive != g_isActive;

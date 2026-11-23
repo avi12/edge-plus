@@ -77,7 +77,8 @@ constexpr std::string_view kDarkKey = "dark=";
       std::from_chars(text.data(), text.data() + text.size(), value);
   const bool isNumber =
       error == std::errc() && end == text.data() + text.size();
-  if (!isNumber || value < minimum || value > maximum) {
+  const bool isInRange = isNumber && value >= minimum && value <= maximum;
+  if (!isInRange) {
     return false;
   }
   *number = value;
@@ -96,9 +97,10 @@ constexpr std::string_view kDarkKey = "dark=";
   }
   Colour parsed;
   parsed.isSet = true;
-  if (!ParseNumber(text.substr(0, comma), 0, kHueDegrees - 1, &parsed.hue) ||
-      !ParseNumber(text.substr(comma + 1), 0, kIntensityMax,
-                   &parsed.intensity)) {
+  const bool isParsed =
+      ParseNumber(text.substr(0, comma), 0, kHueDegrees - 1, &parsed.hue) &&
+      ParseNumber(text.substr(comma + 1), 0, kIntensityMax, &parsed.intensity);
+  if (!isParsed) {
     return false;
   }
   *colour = parsed;
@@ -144,8 +146,9 @@ constexpr std::string_view kDarkKey = "dark=";
       rest.substr(detail::kDarkKey.size(),
                   rest.find(detail::kSideSeparator) - detail::kDarkKey.size());
   Pair parsed;
-  if (!detail::ParseColour(lightText, &parsed.light) ||
-      !detail::ParseColour(darkText, &parsed.dark)) {
+  const bool isParsed = detail::ParseColour(lightText, &parsed.light) &&
+                        detail::ParseColour(darkText, &parsed.dark);
+  if (!isParsed) {
     return false;
   }
   *pair = parsed;
