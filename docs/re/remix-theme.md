@@ -139,6 +139,15 @@ wears, so the helper counts it a skip and makes no apply. Create > Appearance
 made no call at all; the wheel bridge (`setKnobFromHueIntensity`) moved the
 knob with no apply either way.
 
+Edge reuses one `widget-adjustment` for every opening of the section (it is
+taken out of the page and put back), and its stored colour lands on the knob
+whenever its parameters do: after Create, Back, Back, Edit it landed after the
+section had been seen, and on fc259177 the script took it for the user's pick
+and saved the stored remix's colour over the light one. A pick is now only a
+wheel change after the user's own (trusted) press or key on the wheel since the
+section opened. Checked in a throwaway Edge on the real bubble: Edit after
+Create, Back, Back kept the knob on the saved colour and the file unchanged.
+
 `remix_darkmode.h` detours `ExecuteJavaScriptInIsolatedWorld`, and with the remix
 switch on rewrites a `__edgeRemixApplyTheme` / `applyColorWheelThemeV2` call into the
 helper's request (`remix_arguments.h`, pure, `test/theme/remix_arguments_test.cpp`):

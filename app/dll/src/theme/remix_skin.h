@@ -624,17 +624,20 @@ inline constexpr char kSkinnedSelectorCss[] =
         if (colour) { driveWheel(picker, colour); }
       }, previewDelay);
     }
-    // The wheel's own value, as the user moves it: kept for the selected mode
+    // The wheel's own value, as the user picks it: kept for the selected mode
     // and published at once, so the DLL has it when the editor's apply comes.
+    // Only the user's own press or key on the wheel since the section opened
+    // makes a pick; Edge setting the wheel (a stored remix's colour, restored
+    // whenever its component's parameters land) and the script's own moves
+    // never do, and a mode switched to keeps no colour it was not given.
     function takeWheel(picker) {
       var wheel = readWheel(picker);
       if (!wheel) { return; }
       var isSame = state.last && state.last.h === wheel.h && state.last.i === wheel.i;
       if (isSame) { return; }
-      var isOurs = Date.now() < state.settleUntil;
-      var isFirst = state.last === null;
       state.last = wheel;
-      if (!isOurs && !isFirst) {
+      var isPick = state.isWheelTouched && Date.now() >= state.settleUntil;
+      if (isPick) {
         state.pair[state.current] = wheel;
         publish();
       }
@@ -643,11 +646,14 @@ inline constexpr char kSkinnedSelectorCss[] =
       if (state.wired.has(picker)) { return; }
       state.wired.add(picker);
       new MutationObserver(function () {
-        if (window[key] === state) { takeWheel(picker); }
+        var isShown = window[key] === state && picker.getClientRects().length > 0;
+        if (isShown) { takeWheel(picker); }
       }).observe(picker, {attributes: true, attributeFilter: ["aria-valuetext"]});
-      picker.addEventListener("pointerdown", function (event) {
+      function touch(event) {
         if (event.isTrusted) { state.isWheelTouched = true; }
-      }, true);
+      }
+      picker.addEventListener("pointerdown", touch, true);
+      picker.addEventListener("keydown", touch, true);
     }
     // The wheel shows the selected mode's saved colour, with no apply: the
     // wheel's own component sets its knob in the page's world (the DLL's
@@ -755,7 +761,7 @@ inline constexpr char kSkinnedSelectorCss[] =
         mark(group);
         var isSyncing = isShown && !state.isTouched && Date.now() < state.syncUntil;
         if (isSyncing) { showSavedColour(picker); }
-        takeWheel(picker);
+        if (isShown) { takeWheel(picker); }
       }
       root.querySelectorAll("*").forEach(function (element) {
         if (element.shadowRoot) { visit(element.shadowRoot); }
