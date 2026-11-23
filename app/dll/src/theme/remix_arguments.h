@@ -196,11 +196,15 @@ struct Span {
 // lightness of every colour the page has. A page that already follows Edge's
 // dark mode (prefers-color-scheme) is turned light by it, while a light page is
 // turned dark. So the argument becomes, in the page, `String(wanted !== the
-// page is dark)`: the page's own darkness is read once, before the first apply
-// recolours it, from the background of its body (else its root), else from its
-// dark color-scheme. Seen live: google.com dark + "true" -> body rgb(212,214,222).
+// page is dark)`: the page's own darkness is read at every apply from the
+// background of its body (else its root), else from its dark color-scheme, with
+// whatever an earlier apply left switched off for the read (the template's
+// style elements, its `data-blueprint-cw-applied` marker and the background it
+// writes inline on the body and root), so a page an earlier apply darkened is
+// still read as its own light; not cached, so a change of Edge's mode is seen.
+// Seen live: google.com dark + "true" -> body rgb(212,214,222).
 inline constexpr std::string_view kPageIsDarkScript =
-    R"js((globalThis.__edgePlusPageIsDark??=(()=>{for(const node of[document.body,document.documentElement]){const parts=node&&getComputedStyle(node).backgroundColor.match(/[\d.]+/g);if(parts&&(parts.length<4||+parts[3]>0)){return .299*parts[0]+.587*parts[1]+.114*parts[2]<128}}return matchMedia("(prefers-color-scheme: dark)").matches&&/dark/.test(getComputedStyle(document.documentElement).colorScheme)})()))js";
+    R"js((()=>{const root=document.documentElement,body=document.body,nodes=[body,root].filter(Boolean),styles=[...document.querySelectorAll("#theme-blueprint-styles,#theme-blueprint-override,style[data-cross-origin]")],wasApplied=root.hasAttribute("data-blueprint-cw-applied"),inline=nodes.map(node=>[node.style.getPropertyValue("background-color"),node.style.getPropertyPriority("background-color")]);styles.forEach(style=>style.disabled=true);root.removeAttribute("data-blueprint-cw-applied");nodes.forEach(node=>node.style.removeProperty("background-color"));let isDark=null;for(const node of nodes){const parts=getComputedStyle(node).backgroundColor.match(/[\d.]+/g);if(parts&&(parts.length<4||+parts[3]>0)){isDark=.299*parts[0]+.587*parts[1]+.114*parts[2]<128;break}}if(isDark===null){isDark=matchMedia("(prefers-color-scheme: dark)").matches&&/dark/.test(getComputedStyle(root).colorScheme)}styles.forEach(style=>style.disabled=false);if(wasApplied){root.setAttribute("data-blueprint-cw-applied","")}nodes.forEach((node,index)=>{if(inline[index][0]){node.style.setProperty("background-color",inline[index][0],inline[index][1])}});return isDark})())js";
 
 // `script` with the darkmode argument of its Appearance call replaced by the
 // page-relative expression above for Edge's mode `isDark`. Any argument that is
