@@ -27,13 +27,9 @@ inline constexpr size_t kDarkmodeIndex = 2;
 inline constexpr size_t kFontIndex = 3;
 inline constexpr size_t kZoomIndex = 4;
 
-// The spellings a darkmode argument takes, as {light, dark}.
-struct Spelling {
-  std::string_view light;
-  std::string_view dark;
-};
-inline constexpr std::array<Spelling, 2> kSpellings = {
-    Spelling{"false", "true"}, Spelling{"0", "1"}};
+// The spellings a darkmode argument takes, unquoted: light, then dark.
+inline constexpr std::array<std::string_view, 4> kDarkmodeSpellings = {
+    "false", "true", "0", "1"};
 
 [[nodiscard]] constexpr bool IsIdentifierChar(char letter) noexcept {
   return (letter >= 'a' && letter <= 'z') || (letter >= 'A' && letter <= 'Z') ||
@@ -126,6 +122,40 @@ struct Span {
     argument.end--;
   }
   return argument;
+}
+
+// The text of `argument` in `script`, trimmed of white space.
+[[nodiscard]] inline std::string_view TextOf(std::string_view script,
+                                             Span argument) {
+  const Span trimmed = Trimmed(script, argument);
+  return script.substr(trimmed.begin, trimmed.end - trimmed.begin);
+}
+
+// Whether `text` is a string literal: one quote at each end.
+[[nodiscard]] constexpr bool IsQuoted(std::string_view text) noexcept {
+  return text.size() >= 2 && IsQuote(text.front()) &&
+         text.back() == text.front();
+}
+
+// `text` without its quotes, when it has them.
+[[nodiscard]] constexpr std::string_view Unquoted(
+    std::string_view text) noexcept {
+  return IsQuoted(text) ? text.substr(1, text.size() - 2) : text;
+}
+
+// Whether `text`, unquoted, is a darkmode this understands: a spelling of
+// light or dark, or empty (as the editor leaves it until its Dark button was
+// used).
+[[nodiscard]] constexpr bool IsKnownDarkmode(std::string_view text) noexcept {
+  if (text.empty()) {
+    return true;
+  }
+  for (const std::string_view spelling : kDarkmodeSpellings) {
+    if (text == spelling) {
+      return true;
+    }
+  }
+  return false;
 }
 
 // The first Appearance call in `script`: the function it names and where its

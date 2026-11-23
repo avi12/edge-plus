@@ -44,22 +44,9 @@ struct Result {
   if (arguments.size() <= remix_call::kDarkmodeIndex) {
     return {Outcome::kUnknownShape, {}};
   }
-  const remix_call::Span span =
-      remix_call::Trimmed(script, arguments[remix_call::kDarkmodeIndex]);
-  std::string_view text = script.substr(span.begin, span.end - span.begin);
-  const bool isQuoted = text.size() >= 2 && remix_call::IsQuote(text.front()) &&
-                        text.back() == text.front();
-  if (isQuoted) {
-    text = text.substr(1, text.size() - 2);
-  }
-  bool isKnown = text.empty();
-  for (const remix_call::Spelling& spelling : remix_call::kSpellings) {
-    const bool isSpelling = text == spelling.light || text == spelling.dark;
-    if (isSpelling) {
-      isKnown = true;
-    }
-  }
-  if (!isKnown) {
+  const std::string_view darkmode = remix_call::Unquoted(
+      remix_call::TextOf(script, arguments[remix_call::kDarkmodeIndex]));
+  if (!remix_call::IsKnownDarkmode(darkmode)) {
     return {Outcome::kUnknownShape, {}};
   }
   const size_t nameStart = call.argumentsAt - 1 - call.name.size();
@@ -84,9 +71,7 @@ struct Result {
       rewritten += "undefined";
       continue;
     }
-    const remix_call::Span argument =
-        remix_call::Trimmed(script, arguments[index]);
-    rewritten += script.substr(argument.begin, argument.end - argument.begin);
+    rewritten += remix_call::TextOf(script, arguments[index]);
   }
   rewritten += ")";
   rewritten += script.substr(closingAt + 1);
@@ -113,13 +98,9 @@ struct Result {
   for (const size_t index :
        {remix_call::kHueIndex, remix_call::kSaturationIndex}) {
     const remix_call::Span span = remix_call::Trimmed(script, arguments[index]);
-    std::string_view quote;
-    const bool isQuoted = span.end - span.begin >= 2 &&
-                          remix_call::IsQuote(script[span.begin]) &&
-                          script[span.end - 1] == script[span.begin];
-    if (isQuoted) {
-      quote = script.substr(span.begin, 1);
-    }
+    const std::string_view text = remix_call::TextOf(script, span);
+    const std::string_view quote =
+        remix_call::IsQuoted(text) ? text.substr(0, 1) : std::string_view();
     rewritten += script.substr(copiedTo, span.begin - copiedTo);
     rewritten += quote;
     rewritten += index == remix_call::kHueIndex ? hueText : saturationText;

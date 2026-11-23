@@ -6,10 +6,13 @@
 #include "../../../src/theme/remix/remix_call.h"
 
 using edgeplus::remix_call::FindThemeCall;
+using edgeplus::remix_call::IsKnownDarkmode;
+using edgeplus::remix_call::IsQuoted;
 using edgeplus::remix_call::Span;
 using edgeplus::remix_call::SplitArguments;
+using edgeplus::remix_call::TextOf;
 using edgeplus::remix_call::ThemeCall;
-using edgeplus::remix_call::Trimmed;
+using edgeplus::remix_call::Unquoted;
 
 namespace {
 
@@ -35,9 +38,7 @@ std::vector<std::string> ArgumentsOf(std::string_view script) {
   const ThemeCall call = FindThemeCall(script);
   std::vector<std::string> texts;
   for (const Span& argument : SplitArguments(script, call.argumentsAt)) {
-    const Span trimmed = Trimmed(script, argument);
-    texts.emplace_back(
-        script.substr(trimmed.begin, trimmed.end - trimmed.begin));
+    texts.emplace_back(TextOf(script, argument));
   }
   return texts;
 }
@@ -85,12 +86,27 @@ void RunSplitChecks() {
         "a call that never closes has none");
 }
 
+void RunQuoteChecks() {
+  Check(IsQuoted("\"true\"") && IsQuoted("'1'") && IsQuoted("``") &&
+            !IsQuoted("true") && !IsQuoted("\"") && !IsQuoted("\"a'"),
+        "a string literal has one quote at each end");
+  Check(Unquoted("\"true\"") == "true" && Unquoted("1") == "1" &&
+            Unquoted("\"\"").empty(),
+        "unquoting takes the quotes off, and only them");
+  Check(IsKnownDarkmode("true") && IsKnownDarkmode("false") &&
+            IsKnownDarkmode("1") && IsKnownDarkmode("0") &&
+            IsKnownDarkmode("") && !IsKnownDarkmode("dark") &&
+            !IsKnownDarkmode("maybe"),
+        "a darkmode is a spelling of light or dark, or empty");
+}
+
 }  // namespace
 
 int main() {
   try {
     RunFindChecks();
     RunSplitChecks();
+    RunQuoteChecks();
   } catch (...) {
     return 1;
   }
