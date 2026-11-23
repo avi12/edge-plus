@@ -193,7 +193,7 @@ inline BOOL CALLBACK RepaintWindowTabs(HWND hwnd, LPARAM /*unused*/) {
 }
 
 // Off is Edge's own look: its tab outline, and its selected tab's colours
-// (hooks.h h_getcolor), which the theme's re-apply rebuilds.
+// (colour_detours.h h_getcolor), which the theme's re-apply rebuilds.
 inline void ApplyCyberpunkSkin(bool isOn) {
   if (tab_shape::g_isCyberpunkSkinOn == isOn) {
     return;
@@ -472,8 +472,8 @@ inline void ApplyConfig(HWND hwnd, const config::Wire& wire) {
       availability::IsAvailable(Feature::kTheming);
   if (isSkinAvailable) {
     // The skin has its own switch, and needs theming: its colours are read
-    // with the theme's (hooks.h h_getcolor). It is set first, so the theme's
-    // re-apply below rebuilds the tab colours with the skin on or off.
+    // with the theme's (colour_detours.h h_getcolor). It is set first, so the
+    // theme's re-apply below rebuilds the tab colours with the skin on or off.
     const bool isSkinOn =
         wire.themingActive != 0 && wire.cyberpunkSkinActive != 0;
     ApplyCyberpunkSkin(isSkinOn);

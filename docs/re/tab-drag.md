@@ -239,7 +239,7 @@ page's visibility was `2` (visible, `WebContentsImpl+0xdf0`) and its
 it was just in no pane. That is why showing it again (`WasShown`, the repaint
 nudge) could not help. Why a focus change then paints it was not traced.
 
-**The fix** (`hooks.h` `h_close_split_view`, `panes::EmptyGrownContainers`)
+**The fix** (`split_view_detours.h` `h_close_split_view`, `panes::EmptyGrownContainers`)
 does for panes 2+ what Edge does for pane 1. Once `CloseSplitView` has run,
 every grown pane is emptied. Every way a split shrinks or goes comes through
 there:

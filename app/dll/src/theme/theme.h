@@ -40,10 +40,12 @@ inline constinit ThemeId g_darkTheme;
 inline constinit ThemeId g_heldTheme;
 inline constinit bool g_isActive = false;
 // Edge's own theme has no theme pack, so nothing re-reads the colours the
-// Cyberpunk skin chose from the last one (hooks.h): they are stale while set.
+// Cyberpunk skin chose from the last one (colour_detours.h): they are stale
+// while set.
 inline constinit bool g_isDefaultThemeApplied = false;
-// Read by the UseDefaultTheme detour (hooks.h) to tell Edge+'s own returns to
-// the default, and the drops Edge makes during Edge+'s switches, from the user's.
+// Read by the UseDefaultTheme detour (theme_detours.h) to tell Edge+'s own
+// returns to the default, and the drops Edge makes during Edge+'s switches, from
+// the user's.
 inline constinit bool g_isUsingDefaultOurselves = false;
 inline constinit theme_wear::OwnSwitch g_ownSwitch;
 

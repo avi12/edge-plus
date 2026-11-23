@@ -87,7 +87,7 @@ class FeatureRule {
 # a folder ending in /). Usage adds to the banner rules above, never takes away:
 # an entry a feature's code reaches (directly, or through edge/api's helpers)
 # carries that feature, so the feature stands down when the entry is missing.
-# Files not listed (edge/api/, hooks.h, core/) are shared.
+# Files not listed (edge/api/, edge/detours/, hooks.h, core/) are shared.
 [FeatureRule[]] $script:FileFeatures = @(
     [FeatureRule]@{ Match = 'split/'; Features = @('Split') }
     [FeatureRule]@{ Match = 'layout/'; Features = @('Split') }
@@ -171,10 +171,12 @@ function Get-UsageFeatures {
         }
     }
     # hooks.h tags each Install with its feature: the hooked entry, and what the
-    # detour (when hooks.h defines it) reaches, belong to that feature.
+    # detour (when edge/detours/ defines it) reaches, belong to that feature.
     $hooksText = Read-SourceText (Join-Path $root 'edge\hooks.h')
+    $detoursText = (Get-ChildItem (Join-Path $root 'edge\detours') -Filter '*.h' | Sort-Object Name |
+        ForEach-Object { Read-SourceText $_.FullName }) -join "`n"
     $detours = @{}
-    foreach ($function in [regex]::Matches($hooksText, $script:TopLevelFunctionPattern)) {
+    foreach ($function in [regex]::Matches($detoursText, $script:TopLevelFunctionPattern)) {
         $detours[$function.Groups[1].Value] = $function.Value
     }
     foreach ($install in [regex]::Matches($hooksText, $script:TaggedInstallPattern)) {

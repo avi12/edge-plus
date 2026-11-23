@@ -190,7 +190,7 @@ inline void ViewSetEnabled(void* view, bool isEnabled) {
 
 // A view's colour, as its widget's ColorProvider resolves `colorId`; nullopt
 // for a view in no widget. Goes through ColorProvider::GetColor's entry, so
-// hooks.h's h_getuicolor answers for the ids it recolours.
+// colour_detours.h's h_getuicolor answers for the ids it recolours.
 inline std::optional<uint32_t> ViewColor(void* view, int colorId) {
   using ProviderFn = const void*(__fastcall*)(void*);
   const void* const provider =

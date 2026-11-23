@@ -1,7 +1,7 @@
 // skin_tone.h — the tone the Cyberpunk skin draws in right now: the theme
-// pack's, recorded each time hooks.h reads its colours, else Windows' light or
-// dark. The one place the tab frames, titles, omnibox frame and the browser's
-// colour roles ask. UI thread.
+// pack's, recorded each time colour_detours.h reads its colours, else Windows'
+// light or dark. The one place the tab frames, titles, omnibox frame and the
+// browser's colour roles ask. UI thread.
 #pragma once
 #include <windows.h>
 #include "theme/skin/cyberpunk_skin.h"

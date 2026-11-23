@@ -612,8 +612,8 @@ inline constexpr uintptr_t ThemeService_UseDefaultTheme = 0x2dbeda0;
 // active theme extension and unloads every other theme from the profile, so the
 // two themes a user assigns to light and dark modes cannot both stay installed —
 // the moment one is applied the other is garbage-collected, and the next flip
-// finds it gone. The detour no-ops it while theming is active (hooks.h), so both
-// assigned themes remain installed and either mode's flip switches instantly.
+// finds it gone. The detour no-ops it while theming is active (theme_detours.h),
+// so both assigned themes stay installed and either mode's flip is instant.
 // Takes the primary `this` (rcx), reads large member offsets (+0x728, +0x6b8).
 inline constexpr uintptr_t ThemeService_RemoveUnusedThemes = 0x3097020;
 // ThemeService* ThemeServiceFactory::GetForProfile(Profile*): the per-profile
@@ -1185,7 +1185,7 @@ inline constexpr int THEMECOLOR_toolbar = 0x17;
 // GetColor reads them back when the colour mixer builds the vertical-tab views'
 // ColorProvider. The ids pair as a normal / an incognito profile, so an
 // unfocused window is not dimmed by Edge at all. The DLL overrides only the
-// selected tab, so it can carry the skin's plate (hooks.h h_getcolor).
+// selected tab, so it can carry the skin's plate (colour_detours.h h_getcolor).
 inline constexpr int VTABCOLOR_background = 0x23;  // the rail
 inline constexpr int VTABCOLOR_background_incognito = 0x24;
 inline constexpr int VTABCOLOR_selected_background = 0x25;  // selected tab

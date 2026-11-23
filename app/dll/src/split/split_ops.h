@@ -35,7 +35,7 @@ inline int LeafShowing(void* mcv, const void* webContents) {
 
 // The pane showing the strip's active tab, else 0. Not the panes' primary flag,
 // which can lag the strip: Edge may activate a pane while a rebuild has it
-// hidden, and hooks.h ignores that.
+// hidden, and split_view_detours.h ignores that.
 inline int ActiveLeaf(void* mcv) {
   void* tsm = edge::McvTabStripModel(mcv);
   void* active = tsm ? edge::ActiveTab(tsm) : nullptr;

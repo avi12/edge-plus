@@ -15,7 +15,7 @@ tabs, in which case every selected tab. A split of two has both members selected
 or more all members are selected, the count passes, and **every pane reloads**.
 Each tab goes through `NavigationControllerImpl::Reload` (`0x7940fd0`).
 
-The fix is a detour on `ReloadInternal` (`src/edge/hooks.h`,
+The fix is a detour on `ReloadInternal` (`src/edge/detours/split_view_detours.h`,
 `h_reload_internal`): for the current-tab disposition in a split of three or
 more, reload the active tab's page alone through `edge::ReloadPage` (normal, or
 bypassing the cache); everything else runs Edge's original.

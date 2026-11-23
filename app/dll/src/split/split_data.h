@@ -1,6 +1,7 @@
 // split_data.h — grow the native split's DATA MODEL by one member, the way Edge
 // itself does it (RemoveSplitImpl + AddToSplitImpl, docs/re/split-grow-impl.md),
-// so Edge feeds and controls every pane; hooks.h renders them. UI thread only.
+// so Edge feeds and controls every pane; split_view_detours.h renders them.
+// UI thread only.
 #pragma once
 #include <algorithm>
 #include <cstddef>

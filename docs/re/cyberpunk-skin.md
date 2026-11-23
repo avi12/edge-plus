@@ -30,7 +30,7 @@ omnibox, tooltips, the focus ring) and gives each the kit's role for it
 tokens: ink and cyan write, teal draws idle lines, red marks, amber labels; in
 light ink writes and cyan only fills; nothing floating is a cyan fill). The
 ids are Edge's own `ui::ColorId`s, answered in the `ColorProvider::GetColor`
-hook (`hooks.h h_getuicolor`) by an array read.
+hook (`colour_detours.h h_getuicolor`) by an array read.
 
 **Ids are found by name, at run time.** msedge.dll keeps the name of every
 colour id in tables of 16-byte entries `{const char* name, uint64 id + 1}`
@@ -138,7 +138,7 @@ The stroke goes along `GetPath`'s border, which `tab_shape.h` already squares,
 so the frame follows the outline with no extra work.
 
 The tone (dark or light) is `skin_tone.h`'s: the theme pack's, recorded when
-`hooks.h` reads its colours, else Windows' light or dark (Edge's own theme has
+`colour_detours.h` reads its colours, else Windows' light or dark (Edge's own theme has
 no pack).
 
 **Runtime finding: an idle vertical row clips half its stroke.** Measured at

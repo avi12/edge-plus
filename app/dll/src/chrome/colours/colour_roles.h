@@ -6,10 +6,10 @@
 // Names are grouped by role, in the kit's order. Pure.
 //
 // What is left out on purpose: the tab strip's own ids (the tab skin owns
-// them, hooks.h), the frame, the toolbar's and the omnibox's fills (the theme's
-// and Edge's own; the skin only frames them), and every `kColorWeb...` id,
-// which web pages' form controls and scrollbars draw with: a page keeps its
-// own look.
+// them, colour_detours.h), the frame, the toolbar's and the omnibox's fills
+// (the theme's and Edge's own; the skin only frames them), and every
+// `kColorWeb...` id, which web pages' form controls and scrollbars draw with:
+// a page keeps its own look.
 #pragma once
 #include <string_view>
 #include "theme/skin/cyberpunk_palette.h"

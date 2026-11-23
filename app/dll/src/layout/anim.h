@@ -95,7 +95,7 @@ inline void SetLive(void* mcv, bool isLive) {
 }
 
 // The split view is being destroyed: a flight still in the air would lay it
-// out on the next tick (hooks.h h_mcv_destroyed).
+// out on the next tick (split_view_detours.h h_mcv_dtor).
 inline void ForgetSplitView(void* mcv) {
   Flights().erase(mcv);
   Hosts().erase(mcv);

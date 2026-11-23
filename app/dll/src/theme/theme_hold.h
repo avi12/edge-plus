@@ -1,7 +1,8 @@
 // theme_hold.h — a theme Edge+ installs but does not wear. Edge makes a theme it
 // has just installed the active one; a theme the user added without Shift is to
 // stay installed and off, so when Edge's build of it lands for the held id, the
-// swap is not let through (hooks.h). Pure decision, no Edge and no Win32.
+// swap is not let through (theme_detours.h). Pure decision, no Edge and no
+// Win32.
 #pragma once
 #include <string_view>
 

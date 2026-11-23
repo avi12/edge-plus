@@ -36,7 +36,7 @@ void RunTableChecks() {
         "the skin takes over the browser, not a corner of it");
 }
 
-// What the tab skin owns (hooks.h) must not also be a role here.
+// What the tab skin owns (colour_detours.h) must not also be a role here.
 void RunTabsStayWithTheTabSkin() {
   for (const Entry& entry : kEntries) {
     const std::string name(entry.name);

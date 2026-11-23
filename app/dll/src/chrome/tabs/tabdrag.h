@@ -88,7 +88,7 @@ struct ShownPages {
 };
 inline constinit ShownPages g_shown;
 
-// Every layout of a window's split view (hooks.h h_calc).
+// Every layout of a window's split view (split_view_detours.h h_calc).
 inline void OnLaidOut(void* mcv) {
   void* tsm = edge::McvTabStripModel(mcv);
   void* tab = tsm ? edge::ActiveTab(tsm) : nullptr;
@@ -434,8 +434,8 @@ inline bool TakeOverPaneDrag(void* mcv, int pane, Point rootLocation) {
   return true;
 }
 
-// A grip's every drag move (hooks.h): the pane's own drag until it reaches the
-// tab list, which then takes it over.
+// A grip's every drag move (pane_input_detours.h): the pane's own drag until
+// it reaches the tab list, which then takes it over.
 inline void OnGripDragged(Point rootLocation) {
   if (!drag::IsReadyForTabList(rootLocation)) {
     drag::Move(rootLocation);

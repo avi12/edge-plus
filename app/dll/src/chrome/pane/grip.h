@@ -1,7 +1,7 @@
 // grip.h — the drag grip in each pane's hover bar, built with Edge's own
 // AddButton so it looks and hovers like ⋯ / X. It has no click handler: views
 // delivers its press, drags and release to views::Button's handlers, which
-// hooks.h detours into drag.h. UI thread only.
+// pane_input_detours.h detours into drag.h. UI thread only.
 #pragma once
 #include <cstdint>
 #include <functional>

@@ -1,6 +1,7 @@
 // drag.h — dragging a pane by its grip. Edge delivers the grip's mouse events
-// through views (hooks.h detours views::Button's handlers), so views owns the
-// mouse capture and every position arrives in the window's DIPs. UI thread.
+// through views (pane_input_detours.h detours views::Button's handlers), so
+// views owns the mouse capture and every position arrives in the window's
+// DIPs. UI thread.
 #pragma once
 #include <windows.h>
 #include <cmath>
