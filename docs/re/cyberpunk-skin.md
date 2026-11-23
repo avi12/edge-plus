@@ -51,7 +51,7 @@ ids only up to Edge's first insertions (`kColorMenuBackground` is 369 there,
 **Live repaint.** Views read a colour when their theme changes, so turning the
 skin on repaints nothing by itself. The panel's switch is followed by the theme
 re-apply, which notifies every view; a script's switch (`kForceCyberpunkSkin`)
-asks the default theme again to the same effect (`control.h NotifyColoursChanged`).
+asks the default theme again to the same effect (`control/appearance.h NotifyColoursChanged`).
 
 **Tools** (channel codes, a script's): `kDumpColours` (904) logs the provider's
 answer for every id; `kTraceColours` (906, lParam 1 then 0) logs which ids the
@@ -353,7 +353,7 @@ unit-tested), hover, a split group's tabs, RTL.
 - **Section-label amber / red accent stub**: no candidate in the browser chrome
   the skin touches (the vertical list has no section labels on this build);
   left out.
-- `control.h` `SetSplitHooksEnabled(false)` re-enables the skin's outline hooks
+- `control/config_apply.h` `SetSplitHooksEnabled(false)` re-enables the skin's outline hooks
   by name but not `SkRRect::setRectXY`, `IsLeftSplitTab` and `IsRightSplitTab`
   (found while testing, not changed here): with the split switched off, the
   vertical tab's cut may not show.

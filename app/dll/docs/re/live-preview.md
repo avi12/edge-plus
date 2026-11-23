@@ -44,7 +44,7 @@ more track whether a card is on screen so the capturer is held only then.
 
 Gated on the panel switch `live_preview::g_isActive` (config wire
 `livePreviewActive`). Like `theme_follow` it rides its own switch, not the split,
-so `control.h` re-enables it in `SetSplitHooksEnabled(false)`. None of the three
+so `control/config_apply.h` re-enables it in `SetSplitHooksEnabled(false)`. None of the three
 functions is identical-code-folded.
 
 ## Notes / risks
@@ -57,7 +57,7 @@ functions is identical-code-folded.
 - **Cost.** One small-resolution capture for the single hovered tab, only while
   hovering. Bounded.
 - **Teardown.** `g_isCardOpen` is cleared on card close, on the feature turning
-  off, and in `control.h`'s `Teardown`, so a stale flag never keeps a tab
+  off, and in `control/teardown.h`'s `Teardown`, so a stale flag never keeps a tab
   capturing; and on DLL unload the hook is removed, so Edge's own `StopCapture`
   resumes.
 - **Frame rate.** `ThumbnailCapturer::SetMaxFrameRate` (0x557fe90) is ICF-folded

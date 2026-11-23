@@ -238,7 +238,7 @@ inline void __fastcall h_execute_isolated(const void* frame,
 }
 
 // Its hook back on after the split's MH_ALL_HOOKS turned every hook off
-// (control.h, with the split switched off).
+// (config_apply.h, with the split switched off).
 inline void EnableAll() {
   edge::EnableHookAt(
       edge155::rva::RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld);

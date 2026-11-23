@@ -2,9 +2,9 @@
 // (cyberpunk_skin::TitleFontFamilyFor) at the size Edge gave them. A title is a
 // views::Label whose font Edge sets once, when the tab is built, so the skin
 // sets it as each tab paints: the tab's paint (EdgeTabStyleViews::PaintTab)
-// runs for every tab, again whenever the skin is switched (control.h repaints
-// the tabs), and a title already in the right font is left alone. Off puts
-// back the font Edge gave the titles. UI thread only.
+// runs for every tab, again whenever the skin is switched (appearance.h
+// repaints the tabs), and a title already in the right font is left alone.
+// Off puts back the font Edge gave the titles. UI thread only.
 #pragma once
 #include <windows.h>
 #include <optional>

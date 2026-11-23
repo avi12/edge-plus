@@ -259,7 +259,7 @@ side and must match the DLL's (`app/dll/src/{config.h,dllmain.cpp,log.h}`).
   overwritten) from `out/`, never from temp/scratchpad. Each new hash triggers a
   Defender cloud scan; `out/` is the one folder Avi excluded from Defender.
 - Capture the test window with `PrintWindow`, never the screen.
-- The DLL's control channel (`edgeplus.addpane`, codes in `src/split/control.h`) drives
+- The DLL's control channel (`edgeplus.addpane`, codes in `src/core/channel.h`) drives
   every pane action from a script, so changes can be verified without clicks.
 
 # Commits

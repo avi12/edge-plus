@@ -29,8 +29,8 @@ namespace edgeplus::hooks {
 // it cannot recurse.
 // The colour mixer reads this id when DoSetTheme (theme.h) rebuilds the
 // vertical-tab ColorProvider, so applying the theme repaints the rail at once;
-// control.h re-applies it when the skin is switched. Rides the skin, which
-// needs theming, not the split (control.h).
+// appearance.h re-applies it when the skin is switched. Rides the skin, which
+// needs theming, not the split (config_apply.h).
 // Set from the theme each time Edge rebuilds the colours.
 inline constinit theme_tone::OptionalColor g_idleLabel{};
 // The selected and the hovered tab both read the selected-fill id; only the

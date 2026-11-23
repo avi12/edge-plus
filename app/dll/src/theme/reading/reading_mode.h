@@ -152,8 +152,8 @@ inline void Stop(HWND window) {
   }
 }
 
-// True when it has just come on (control.h then sets the theme in every window
-// and starts the polling).
+// True when it has just come on (config_apply.h then sets the theme in every
+// window and starts the polling).
 [[nodiscard]] inline bool ApplyConfig(const config::Wire& wire) {
   const bool wasActive = g_isActive;
   g_isActive = wire.readingThemeActive != 0;

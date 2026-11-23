@@ -127,7 +127,7 @@ its style and its marks were gone]
 With the panel's switch on (`config.h`'s `readingThemeActive`; the two themes
 are no longer on the wire), the theme for the current Windows mode is set when
 the switch comes on, on every light/dark flip, on the signal theming already uses
-(`WM_SETTINGCHANGE "ImmersiveColorSet"` -> `kApplyTheme` -> `control.h`'s
+(`WM_SETTINGCHANGE "ImmersiveColorSet"` -> `kApplyTheme` -> `control/appearance.h`'s
 `ApplyForCurrentOsMode`), in the profile behind each browser window, and when the
 person picks a new theme for the current mode in the flyout. [run: the switch,
 the pick and `kApplyTheme`; the flip itself is the existing path, not run since

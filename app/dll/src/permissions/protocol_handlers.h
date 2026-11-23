@@ -115,7 +115,7 @@ inline void SetActive(bool isActive) {
   Log("[handlers] %s", isActive ? "on" : "off");
 }
 
-// The two detours are not split hooks: control.h re-enables them after it
+// The two detours are not split hooks: config_apply.h re-enables them after it
 // disables the split's.
 inline void EnableHooks() {
   edge::EnableHookAt(edge155::rva::ContentSettingRPHBubbleModel_CommitChanges);
@@ -123,7 +123,7 @@ inline void EnableHooks() {
       edge155::rva::RegisterProtocolHandlerPermissionRequest_PermissionDecided);
 }
 
-// Whether this config turns the feature on: control.h then lifts every
+// Whether this config turns the feature on: config_apply.h then lifts every
 // profile's blocks.
 inline bool ApplyConfig(const config::Wire& wire) {
   const bool wasActive = g_isActive;

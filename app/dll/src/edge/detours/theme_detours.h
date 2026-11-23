@@ -18,7 +18,7 @@ namespace edgeplus::hooks {
 // ThemeService::RemoveUnusedThemes: Chromium's one-active-theme garbage
 // collector. Theming keeps both the light and the dark theme installed so a mode
 // flip is instant, and the GC would unload whichever is not active. Not a split
-// hook: control.h keeps it enabled with the split off.
+// hook: config_apply.h keeps it enabled with the split off.
 using RemoveUnusedThemes_t = void(__fastcall*)(void*);
 inline constinit RemoveUnusedThemes_t o_remove_unused_themes = nullptr;
 inline void __fastcall h_remove_unused_themes(void* themeService) {
@@ -31,7 +31,8 @@ inline void __fastcall h_remove_unused_themes(void* themeService) {
 // ThemeService::OnThemeBuiltFromExtension(this, id, pack, suppress_infobar):
 // asks for no "Installed theme ... Undo" bubble when the theme is one Edge+
 // applies itself (theme_notice.h). A store install is any other id and passes
-// through untouched, bubble and all. Rides theming, not the split (control.h).
+// through untouched, bubble and all. Rides theming, not the split
+// (config_apply.h).
 using OnThemeBuilt_t = void(__fastcall*)(void*, const void*, void*, bool);
 inline constinit OnThemeBuilt_t o_on_theme_built = nullptr;
 inline void __fastcall h_on_theme_built(void* themeService, const void* themeId,
