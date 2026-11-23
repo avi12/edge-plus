@@ -393,4 +393,16 @@ inline constexpr std::string_view kRequestCall =
   return "{light: " + side(pair.light) + ", dark: " + side(pair.dark) + "}";
 }
 
+// The helper installed with `pair`, as an expression that returns it:
+// `(kHelperScript)({light: [210, 40], dark: null})`.
+[[nodiscard]] inline std::string InstalledHelper(
+    const remix_colors::Pair& pair) {
+  std::string expression = "(";
+  expression += kHelperScript;
+  expression += ")(";
+  expression += PairLiteral(pair);
+  expression += ")";
+  return expression;
+}
+
 }  // namespace edgeplus::remix_page_helper

@@ -9,6 +9,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include "find/web_text.h"
 #include "theme/remix/remix_call.h"
 #include "theme/remix/remix_colors.h"
 #include "theme/remix/remix_page_helper.h"
@@ -51,16 +52,12 @@ struct Result {
   }
   const size_t nameStart = call.argumentsAt - 1 - call.name.size();
   const size_t closingAt = arguments.back().end;
-  std::string rewritten = "(";
-  rewritten += remix_page_helper::kHelperScript;
-  rewritten += ")(";
-  rewritten += remix_page_helper::PairLiteral(pair);
-  rewritten += ");\n";
+  std::string rewritten = remix_page_helper::InstalledHelper(pair);
+  rewritten += ";\n";
   rewritten += script.substr(0, nameStart);
   rewritten += remix_page_helper::kRequestCall;
-  rewritten += "\"";
-  rewritten += call.name;
-  rewritten += "\", ";
+  rewritten += web_text::JsStringLiteral(call.name);
+  rewritten += ", ";
   rewritten += isTargetDark ? "true" : "false";
   for (const size_t index :
        {remix_call::kHueIndex, remix_call::kSaturationIndex,

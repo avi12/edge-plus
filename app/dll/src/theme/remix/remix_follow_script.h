@@ -4,19 +4,20 @@
 #pragma once
 #include <string>
 #include <string_view>
+#include "find/web_text.h"
 #include "theme/remix/remix_call.h"
 #include "theme/remix/remix_colors.h"
 #include "theme/remix/remix_page_helper.h"
 
 namespace edgeplus::remix_follow_script {
 
-// FollowModeScript's pieces, around remix_page_helper::kHelperScript: only a page wearing an
-// Appearance remix (applied by any build of the DLL, or by Edge alone) is
-// asked.
+// FollowModeScript's pieces, around remix_page_helper::InstalledHelper: only a
+// page wearing an Appearance remix (applied by any build of the DLL, or by Edge
+// alone) is asked.
 inline constexpr std::string_view kFollowModeOpening = R"js((() => {
   if (!globalThis.__blueprintParams) { return; }
-  ()js";
-inline constexpr std::string_view kFollowModePush = ").push(";
+  )js";
+inline constexpr std::string_view kFollowModePush = ".push(";
 inline constexpr std::string_view kFollowModeClosing = R"js();
 })();)js";
 
@@ -25,13 +26,11 @@ inline constexpr std::string_view kFollowModeClosing = R"js();
 [[nodiscard]] inline std::string FollowModeScript(
     bool isTargetDark, const remix_colors::Pair& pair) {
   std::string script(kFollowModeOpening);
-  script += remix_page_helper::kHelperScript;
-  script += ")(" + remix_page_helper::PairLiteral(pair);
+  script += remix_page_helper::InstalledHelper(pair);
   script += kFollowModePush;
   script += isTargetDark ? "true" : "false";
-  script += ", \"";
-  script += remix_call::kTemplateFunction;
-  script += "\"";
+  script += ", ";
+  script += web_text::JsStringLiteral(remix_call::kTemplateFunction);
   script += kFollowModeClosing;
   return script;
 }
