@@ -87,8 +87,8 @@ opposite darkmode; when neither reaches the target the nearer of the two is
 kept and root and body are tinted (a see-through page under the other
 prefers-color-scheme is painted by prefers-color-scheme whatever darkmode says;
 a dark page's coloured backgrounds are lifted to mid tones either way). The
-outcome is left as `<html data-edgeplus-remix="target=..;pageDark=..;flipped=..;
-reapplied=..;forced=..;matched=..;applies=..;skips=..">`.
+outcome is left as `<html data-edgeplus-remix="target=..;none=..;pageDark=..;
+flipped=..;reapplied=..;forced=..;matched=..;applies=..;skips=..">`.
 
 **Every apply is serialized through that helper's `request`.** The template's
 `me()` sets `__themeState.lastApplyKey` before its asynchronous work, restores
@@ -175,6 +175,48 @@ again (0 applies, page unthemed) and a pick of 200,70 themed the page and saved
 `light=200,70;dark=`; Edit of a stored remix (stored 228,20) on another page
 showed 200,70 with 0 applies and the file unchanged, and so did the reused
 component's Create (blank) then Edit (200,70).
+
+**Resetting a mode's colour keeps the remix's font and size.** The template
+tints only when the saturation is above 0 (`color = saturation > 0 ? hsl(...) :
+null`, then `me(color, {lightsOff: darkmode, zoom, font})`), so the wheel's
+centre is Edge's own "no colour": with darkmode `"false"` the page keeps its
+own look with the font and zoom applied, and with no font or zoom either the
+template takes its marks (`data-blueprint-cw-applied`, `#theme-blueprint-styles`)
+off the page. `"true"` would still invert the page's lightness, so a mode with no
+colour must not get the usual `target XOR page-dark` darkmode. A mode reset to no
+colour is saved as the centre (`light=0,0`, `remix_colors::kNoColour`): it is
+set, so it is saved and pushed, unlike an unset mode, which keeps the call's own
+colour. The rewritten call gets saturation 0 for it, and the helper reads a
+request with saturation not above 0 as no colour (the template's own test):
+darkmode `"false"` whatever the target, the page's own darkness accepted, nothing
+flipped, tinted or learned, and an unthemed page afterwards is not a stuck apply
+(`helper.wearOwnLook`; the outcome says `none=true`). The same holds for the
+DLL's push on a mode flip, the page's own scheme listener and a stored remix
+applied as its page loads, since all three go through `request`.
+
+The editor's selector has a row under its Light | Dark segments: `↺ Light` /
+`↺ Dark` (the selected mode, labelled with it) and `↺ Both`, each with a full
+`title` and `aria-label` ("Remove the Light colour", "Remove both colours"),
+each disabled when its mode(s) are unset or already at the centre, so both are
+disabled on a fresh Create. A click sets the pair entries to the centre,
+publishes the pair (the DLL saves it from the address fragment) and, when the
+selected mode was reset, applies it once through the usual segment apply: the
+knob is pressed at the wheel's centre, which makes the editor apply with
+intensity 0. The editor's right column is exactly as tall as the wheel (172 px)
+and was full, so the segments shrink from 40 px to 30, the row takes 16 and the
+zoom row gives up 8 of its own (36 to 28); the font grid stays whole.
+
+Checked in a throwaway Edge 158 on the real bubble (stored remix on a page that
+follows prefers-color-scheme and on one that is always light, Light 270,60 and
+Dark 120,50 picked, a font picked): `↺ Light` with Light selected made one apply
+(0,0), the knob went to the centre, the page lost its tint and kept the font
+(body #fff, `none=true`) and the file read `light=0,0;dark=120,50`; Edge dark put
+both pages in green, Edge light back in their own look. With Edge dark, `↺ Both`
+made one apply and saved `light=0,0;dark=0,0`; both pages kept their own look
+through flips both ways (the always-light page stayed light in Edge dark) and
+after reloads. A pick after the reset tinted the page and saved it; a fresh
+Create opened with both buttons disabled and 0 applies, and its Close left the
+file as it was.
 
 `remix_darkmode.h` detours `ExecuteJavaScriptInIsolatedWorld`, and with the remix
 switch on rewrites a `__edgeRemixApplyTheme` / `applyColorWheelThemeV2` call into the
