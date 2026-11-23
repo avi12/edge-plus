@@ -194,7 +194,9 @@ flipped, tinted or learned, and an unthemed page afterwards is not a stuck apply
 DLL's push on a mode flip, the page's own scheme listener and a stored remix
 applied as its page loads, since all three go through `request`.
 
-The editor's selector has a row under its Light | Dark segments: `↺ Light` /
+The editor's selector (`remix_selector.h`, with its reset row in
+`remix_selector_reset.h` and its leave guard in `remix_selector_leave.h`, all
+under `theme/remix/pages/`) has a row under its Light | Dark segments: `↺ Light` /
 `↺ Dark` (the selected mode, labelled with it) and `↺ Both`, each with a full
 `title` and `aria-label` ("Remove the Light colour", "Remove both colours"),
 each disabled when its mode(s) are unset or already at the centre, so both are
@@ -220,7 +222,9 @@ file as it was.
 
 `remix_darkmode.h` detours `ExecuteJavaScriptInIsolatedWorld`, and with the remix
 switch on rewrites a `__edgeRemixApplyTheme` / `applyColorWheelThemeV2` call into the
-helper's request (`remix_arguments.h`, pure, `test/theme/remix/remix_arguments_test.cpp`):
+helper's request (`remix_call.h` finds the call and splits its arguments,
+`remix_arguments.h` rewrites it, `remix_follow_script.h` re-applies it on a flip;
+all pure and tested under `test/theme/remix/`):
 its darkmode argument (`"true"`, `true` or `1`, their opposites, or empty) is left
 to the helper and its colour set to the saved one for the target mode; any other
 shape, or another remix's call, is left alone. The rewritten script goes to the
@@ -257,7 +261,7 @@ as the nearer darkmode and tinted).
 ## The Cyberpunk skin on these pages [run]
 
 `remix_skin.h` (pure: the style text from `cyberpunk_palette.h` roles, the paint and
-remove scripts) and `remix_skin_mode.h` (a 400 ms window timer, as reading mode's)
+remove scripts) and `remix_skin_mode.h` (a 50 ms window timer, as reading mode's)
 inject one `<style class="edgeplus-remix-skin">` into the document and every open
 shadow root of each `edge://blueprint` / `edge://remix` page, through the isolated
 world (`RunScriptUnanswered`). Gate, `remix_skin::ShouldSkin`: remix switch AND
@@ -282,4 +286,4 @@ Placed for 158 to run scripts: `WebContentsImpl_GetPrimaryMainFrame` 0x1135fb0 (
 0xf437d30 (hot stub into 0x5bc5e9a). A script with no answer builds no callback, so
 it needs no `BindStateBase_ctor` (still unplaced; reading mode stays down).
 
-**The editor's wheel shows the selected mode's colour without applying.** The wheel is the `widget-adjustment` component (FAST) on edge://blueprint; its `setKnobFromHueIntensity(hue, intensity 0..1)` only moves the knob (`knobX`/`knobY`/`knobTouched`), while an apply happens only on a pointer release or a key (`applyThemeCustomizer`). The component lives in the page's own world, so the DLL runs a small bridge there through `RenderFrameHostImpl::ExecuteJavaScript` (0xf437ce0, the vtable slot before the isolated variant; it CHECKs `CanExecuteJavaScript`, 0xf437ca6, which is asked first and holds for a WebUI page), and the editor script asks it through an attribute and an event on the shared DOM, on opening, reopening and an Edge flip under an untouched selector, when the section edits a stored remix (a new appearance keeps Edge's blank wheel, see "A new appearance opens blank"). Checked in a throwaway Edge on the real editor: 0 applies on opening, reopening and flips; one per segment click.
+**The editor's wheel shows the selected mode's colour without applying.** The wheel is the `widget-adjustment` component (FAST) on edge://blueprint; its `setKnobFromHueIntensity(hue, intensity 0..1)` only moves the knob (`knobX`/`knobY`/`knobTouched`), while an apply happens only on a pointer release or a key (`applyThemeCustomizer`). The component lives in the page's own world, so the DLL runs a small bridge there (`remix_wheel_bridge.h`) through `RenderFrameHostImpl::ExecuteJavaScript` (0xf437ce0, the vtable slot before the isolated variant; it CHECKs `CanExecuteJavaScript`, 0xf437ca6, which is asked first and holds for a WebUI page), and the editor script asks it through an attribute and an event on the shared DOM, on opening, reopening and an Edge flip under an untouched selector, when the section edits a stored remix (a new appearance keeps Edge's blank wheel, see "A new appearance opens blank"). Checked in a throwaway Edge on the real editor: 0 applies on opening, reopening and flips; one per segment click.
