@@ -242,9 +242,15 @@ struct ThemeCall {
 //   key returned at once: an apply in flight is let finish first, the key is
 //   forgotten whenever the page is not themed, the latest request wins, and a
 //   request for exactly what the page already wears makes no apply.
+// - A request with no colour (saturation 0, the template's own test, which a
+//   mode reset to remix_colors::kNoColour gets) wears the page's own look:
+//   darkmode "false" whatever the target, the page's own darkness accepted,
+//   nothing flipped or tinted. With no font or zoom either the template takes
+//   its marks off the page, so that is not a stuck apply.
 // - The outcome is left on the page for reading in DevTools:
-//   `<html data-edgeplus-remix="target=dark;pageDark=false;flipped=false;
-//   reapplied=false;forced=false;matched=true;applies=1;skips=0">`.
+//   `<html data-edgeplus-remix="target=dark;none=false;pageDark=false;
+//   flipped=false;reapplied=false;forced=false;matched=true;applies=1;
+//   skips=0">`.
 //
 // A function of the saved pair (`{light: [hue, intensity] or null, dark:
 // ...}`) that installs the helper once per document (its functions are
@@ -252,7 +258,7 @@ struct ThemeCall {
 inline constexpr std::string_view kHelperScript =
     R"js(function install(pair) {
   const helper = globalThis.__edgePlusRemix ||
-      (globalThis.__edgePlusRemix = {learned: {}, applies: 0, skips: 0, flipped: false, reapplied: false, forced: false});
+      (globalThis.__edgePlusRemix = {learned: {}, applies: 0, skips: 0, none: false, flipped: false, reapplied: false, forced: false});
   helper.pair = pair;
   helper.scheme = () => (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
   // A colour's luma, 0 to 255, or null for a see-through one.
@@ -319,7 +325,7 @@ inline constexpr std::string_view kHelperScript =
   helper.mark = (status) => {
     helper.status = status;
     document.documentElement.dataset.edgeplusRemix = "target=" + (helper.target ? "dark" : "light") +
-        ";pageDark=" + helper.pageDark + ";flipped=" + helper.flipped + ";reapplied=" + helper.reapplied + ";forced=" + helper.forced +
+        ";none=" + helper.none + ";pageDark=" + helper.pageDark + ";flipped=" + helper.flipped + ";reapplied=" + helper.reapplied + ";forced=" + helper.forced +
         ";matched=" + status + ";applies=" + helper.applies + ";skips=" + helper.skips;
   };
   helper.library = () => globalThis.__blueprintThemeLib__ || {};
@@ -333,6 +339,11 @@ inline constexpr std::string_view kHelperScript =
   // The marks the template leaves on a page it themes.
   helper.isThemed = () => document.documentElement.hasAttribute("data-blueprint-cw-applied") &&
       !!document.getElementById("theme-blueprint-styles");
+  // No colour: the template tints only above saturation 0.
+  helper.isNone = (want) => !(Number(want.saturation) > 0);
+  // What an apply of `want` leaves: the template's marks, which an apply with
+  // no colour, font or zoom takes off.
+  helper.isDressedFor = (want) => helper.isNone(want) || helper.isThemed();
   // The last resort, when neither darkmode gives the target (the template
   // paints a see-through page by prefers-color-scheme whatever its darkmode,
   // and lifts a dark page's coloured backgrounds either way): the page's root
@@ -395,15 +406,39 @@ inline constexpr std::string_view kHelperScript =
     helper.applies++;
     globalThis[want.name](want.hue, want.saturation, helper.darkmode, want.font, want.zoom);
   };
+  // A request with no colour: the page's own look whatever the target (no
+  // inversion, so a light page stays light in Edge's dark mode), the remix's
+  // font and zoom kept; nothing to check against the target, so nothing
+  // flipped, tinted or learned. Applied once more only when it never finished.
+  helper.wearOwnLook = async (want, isSuperseded) => {
+    helper.darkmode = "false";
+    helper.mark("pending");
+    helper.call(want, helper.isApplying() || !helper.isThemed());
+    await helper.calm(8000);
+    if (isSuperseded()) { return; }
+    if (helper.isApplying()) {
+      helper.reapplied = true;
+      helper.call(want, true);
+      await helper.calm(8000);
+      if (isSuperseded()) { return; }
+    }
+    helper.worn = want;
+    helper.mark(true);
+  };
   // Applies `want` and checks the end state (themed, the target's colour and
   // darkness), applying once more when it is not. Gives way the moment a newer
   // request comes.
   helper.wear = async (want) => {
     const isSuperseded = () => helper.want !== want;
     helper.target = want.target;
+    helper.none = helper.isNone(want);
     helper.flipped = false;
     helper.reapplied = false;
     helper.unforce();
+    if (helper.none) {
+      await helper.wearOwnLook(want, isSuperseded);
+      return;
+    }
     const learned = helper.learned[helper.scheme()];
     // Mid-apply the page is half restored, so the last guess stands then.
     const hasGuess = typeof helper.pageDark === "boolean";
@@ -501,7 +536,7 @@ inline constexpr std::string_view kHelperScript =
     const want = {name, target: isTargetDark, hue: String(hue), saturation: String(saturation), font, zoom};
     const scheme = helper.scheme();
     const isRepeat = helper.isSame(want, helper.want) && helper.wantScheme === scheme;
-    const isWorn = isRepeat && helper.worn === helper.want && helper.isThemed() && !helper.isApplying();
+    const isWorn = isRepeat && helper.worn === helper.want && helper.isDressedFor(want) && !helper.isApplying();
     if (isRepeat && (helper.isPumping || isWorn)) {
       helper.skips++;
       helper.mark(helper.status);

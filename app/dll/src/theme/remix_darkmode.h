@@ -78,8 +78,9 @@ inline constexpr size_t kMaxThemeCallChars = 4096;
   // The mode the page is to wear: the open Appearance editor's preview, else
   // Edge's own. Its colour comes from the pair the editor holds right now when
   // one is open (the DLL's copy is saved a poll later), else the saved pair; a
-  // remix with none for that mode keeps its own. Then the darkmode, relative to
-  // the page's own darkness (remix_arguments.h).
+  // remix with that mode unset keeps its own, and one reset to no colour gets
+  // saturation 0, which the helper wears as the page's own look. Then the
+  // darkmode, relative to the page's own darkness (remix_arguments.h).
   const remix_editor::Editor editor = remix_editor::OpenEditor();
   const bool isPreviewing = editor.preview != theme_tone::Tone::kUnknown;
   const bool isTargetDark = isPreviewing
@@ -109,10 +110,11 @@ inline constexpr size_t kMaxThemeCallChars = 4096;
   if (isOnlyColoured) {
     result = {remix_arguments::Outcome::kRewritten, current};
   }
-  Log("[remix-theme] appearance script (edge %s, target %s from %s): outcome "
-      "%d, %.*s",
+  Log("[remix-theme] appearance script (edge %s, target %s from %s%s): "
+      "outcome %d, %.*s",
       g_edgeTone == theme_tone::Tone::kDark ? "dark" : "light",
       isTargetDark ? "dark" : "light", isPreviewing ? "the editor" : "edge",
+      remix_colors::IsNoColour(colour) ? ", no colour" : "",
       static_cast<int>(result.outcome),
       static_cast<int>(std::min(script.size(), kLoggedScriptChars)),
       script.c_str());

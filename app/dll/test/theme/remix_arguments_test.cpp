@@ -199,6 +199,29 @@ void RunPairLiteralChecks() {
   pair.light = {210, 40, true};
   Check(PairLiteral(pair) == "{light: [210, 40], dark: null}",
         "the pair goes to the page as numbers, an unset side as null");
+  pair.dark = edgeplus::remix_colors::kNoColour;
+  Check(PairLiteral(pair) == "{light: [210, 40], dark: [0, 0]}",
+        "a mode with no colour goes as the centre: a push asks saturation 0");
+}
+
+void RunNoColourChecks() {
+  const std::string call =
+      "(function() { try { applyColorWheelThemeV2(\"270\", \"60\", \"true\", "
+      "\"\", \"\"); } catch(e) {} })();";
+  const auto none = WithColour(call, 0, 0);
+  Check(none.outcome == Outcome::kRewritten &&
+            none.script.find("(\"0\", \"0\", \"true\"") != std::string::npos,
+        "a mode with no colour gets saturation 0 in the call");
+  const std::string helper(kHelperScript);
+  Check(helper.find("helper.isNone = (want) => !(Number(want.saturation) > "
+                    "0);") != std::string::npos,
+        "the helper reads no colour as the template does: saturation not "
+        "above 0");
+  Check(helper.find("if (helper.none) {\n      await helper.wearOwnLook(") !=
+                std::string::npos &&
+            helper.find("helper.darkmode = \"false\";") != std::string::npos,
+        "and wears the page's own look for it, with darkmode false and no "
+        "check against the target");
 }
 
 void RunFollowModeChecks() {
@@ -223,6 +246,7 @@ int main() {
     RunChecks();
     RunPageAwareChecks();
     RunPairLiteralChecks();
+    RunNoColourChecks();
     RunLoadShapeChecks();
     RunFollowModeChecks();
   } catch (...) {
