@@ -393,6 +393,15 @@ inline constexpr int kPreviewDelayMs = 150;
 // Leaving while previewing the other mode: Edge's mode is applied first, and
 // the Back or Close goes through this long after.
 inline constexpr int kRestoreDelayMs = 500;
+// How the editor script asks the page's world to set the wheel without an
+// apply (WheelBridgeScript): the colour in this attribute of the wheel's
+// component, then this event on it.
+inline constexpr char kWheelEventName[] = "edgeplus-wheel";
+inline constexpr char kWheelAttribute[] = "data-edgeplus-wheel";
+// After the section is shown, or Edge's mode flips under an untouched
+// selector, the wheel is kept on the saved colour this long (Edge sets the
+// remix's stored colour on it a moment after it is shown).
+inline constexpr int kWheelSyncWindowMs = 1500;
 
 // Neutral: the page's own tokens. The skin's roles are added on top of it.
 inline constexpr char kSelectorCss[] =
@@ -440,20 +449,68 @@ inline constexpr char kSkinnedSelectorCss[] =
   return std::string(kSelectorCss) + (isSkinned ? kSkinnedSelectorCss : "");
 }
 
-// `pairText` is remix_colors::FormatPair of the saved pair; it seeds the page
-// the first time only, the page's own state is the master after that.
-[[nodiscard]] inline std::string SelectorScript(bool isSkinned,
-                                                const std::string& pairText) {
-  std::string script = "(function () { var css = ";
-  script += web_text::JsStringLiteral(SelectorStyleFor(isSkinned));
-  script += "; var seed = " + web_text::JsStringLiteral(pairText);
-  script += "; var labels = {light: " + web_text::JsStringLiteral(kLightLabel);
-  script += ", dark: " + web_text::JsStringLiteral(kDarkLabel) + "};";
-  script += " var groupLabel = " + web_text::JsStringLiteral(kSelectorLabel);
-  script += "; var groupClass = " + web_text::JsStringLiteral(kSelectorClass);
-  script +=
-      "; var styleClass = " + web_text::JsStringLiteral(kSelectorStyleClass);
-  script += "; var key = " + web_text::JsStringLiteral(kSelectorStateKey);
+// The part of the selector script that restores Edge's mode before the user
+// leaves the section or the editor (it runs inside SelectorScript's function).
+[[nodiscard]] inline std::string SelectorLeaveScript() {
+  return R"JS(
+    // Leaving the section (Back) or the editor (Close, Esc) while the other mode
+    // is previewed: Edge's mode is applied first, and the leave goes through a
+    // moment later, re-sent by script. Best effort: a close Edge handles outside
+    // the page (a click outside the bubble) is not seen, and the next page
+    // load applies Edge's mode anyway.
+    function restoreBeforeLeaving() {
+      var edge = edgeMode();
+      var isPreviewingOther = state.wasShown && state.current !== edge;
+      if (!isPreviewingOther) { return false; }
+      state.current = edge;
+      state.isTouched = false;
+      publish();
+      if (state.group) { mark(state.group); }
+      applySelected();
+      return true;
+    }
+    function leavingControl(event) {
+      return event.composedPath().find(function (node) {
+        var label = node.getAttribute ? node.getAttribute("aria-label") : "";
+        return label === "Back" || label === "Close";
+      });
+    }
+    var leaveKey = key + "Leave";
+    if (!window[leaveKey]) {
+      window[leaveKey] = true;
+      document.addEventListener("click", function (event) {
+        var live = window[key];
+        if (!live || live !== state || state.isLeaving) { return; }
+        var control = leavingControl(event);
+        if (!control || !restoreBeforeLeaving()) { return; }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        state.isLeaving = true;
+        setTimeout(function () { control.click(); state.isLeaving = false; }, restoreDelay);
+      }, true);
+      document.addEventListener("keydown", function (event) {
+        var live = window[key];
+        if (!live || live !== state || state.isLeaving || event.key !== "Escape") { return; }
+        if (!restoreBeforeLeaving()) { return; }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        state.isLeaving = true;
+        var target = event.composedPath()[0];
+        setTimeout(function () {
+          target.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape",
+              keyCode: 27, bubbles: true, composed: true, cancelable: true}));
+          state.isLeaving = false;
+        }, restoreDelay);
+      }, true);
+    }
+)JS";
+}
+
+// The names and timings the selector script shares with the DLL and the
+// page's world, as the script's opening `var`s (each statement begins with
+// its `;`).
+[[nodiscard]] inline std::string SelectorNames() {
+  std::string script;
   script += "; var fragmentKey = " +
             web_text::JsStringLiteral(remix_colors::kFragmentKey);
   script += "; var previewKey = " +
@@ -471,6 +528,28 @@ inline constexpr char kSkinnedSelectorCss[] =
       "; var hintClass = " + web_text::JsStringLiteral(kSelectorHintClass);
   script += "; var previewDelay = " + std::to_string(kPreviewDelayMs);
   script += "; var restoreDelay = " + std::to_string(kRestoreDelayMs);
+  script += "; var wheelEvent = " + web_text::JsStringLiteral(kWheelEventName);
+  script +=
+      "; var wheelAttribute = " + web_text::JsStringLiteral(kWheelAttribute);
+  script += "; var wheelSyncWindow = " + std::to_string(kWheelSyncWindowMs);
+  return script;
+}
+
+// `pairText` is remix_colors::FormatPair of the saved pair; it seeds the page
+// the first time only, the page's own state is the master after that.
+[[nodiscard]] inline std::string SelectorScript(bool isSkinned,
+                                                const std::string& pairText) {
+  std::string script = "(function () { var css = ";
+  script += web_text::JsStringLiteral(SelectorStyleFor(isSkinned));
+  script += "; var seed = " + web_text::JsStringLiteral(pairText);
+  script += "; var labels = {light: " + web_text::JsStringLiteral(kLightLabel);
+  script += ", dark: " + web_text::JsStringLiteral(kDarkLabel) + "};";
+  script += " var groupLabel = " + web_text::JsStringLiteral(kSelectorLabel);
+  script += "; var groupClass = " + web_text::JsStringLiteral(kSelectorClass);
+  script +=
+      "; var styleClass = " + web_text::JsStringLiteral(kSelectorStyleClass);
+  script += "; var key = " + web_text::JsStringLiteral(kSelectorStateKey);
+  script += SelectorNames();
   script += R"JS(;
     function parseOne(text) {
       var found = /^(\d+),(\d+)$/.exec(text || "");
@@ -496,7 +575,7 @@ inline constexpr char kSkinnedSelectorCss[] =
       state = window[key] = {pair: parse(seed), last: null, settleUntil: 0,
           current: edgeMode(), isTouched: false, wasShown: false,
           publishedPreview: "", picker: null, group: null, isLeaving: false,
-          wired: new WeakSet()};
+          syncUntil: 0, isWheelTouched: false, wired: new WeakSet()};
     }
     function previewNow() { return state.wasShown ? state.current : ""; }
     function publish() {
@@ -566,6 +645,26 @@ inline constexpr char kSkinnedSelectorCss[] =
       new MutationObserver(function () {
         if (window[key] === state) { takeWheel(picker); }
       }).observe(picker, {attributes: true, attributeFilter: ["aria-valuetext"]});
+      picker.addEventListener("pointerdown", function (event) {
+        if (event.isTrusted) { state.isWheelTouched = true; }
+      }, true);
+    }
+    // The wheel shows the selected mode's saved colour, with no apply: the
+    // wheel's own component sets its knob in the page's world (the DLL's
+    // bridge, WheelBridgeScript), asked through an attribute and an event on
+    // the shared DOM. On opening it is asked again for a moment, as Edge
+    // restores the remix's stored colour on the wheel a little later; never
+    // once the user has touched the wheel.
+    function showSavedColour(picker) {
+      var colour = state.pair[state.current];
+      var host = picker.getRootNode().host;
+      if (!colour || !host || state.isWheelTouched) { return; }
+      var wheel = readWheel(picker);
+      var isShown = wheel && Math.abs(wheel.h - colour.h) <= 1 && Math.abs(wheel.i - colour.i) <= 1;
+      if (isShown) { return; }
+      state.settleUntil = Date.now() + 400;
+      host.setAttribute(wheelAttribute, colour.h + "," + colour.i);
+      host.dispatchEvent(new Event(wheelEvent, {bubbles: true, composed: true}));
     }
     function labelOf(mode) { return mode === modes.dark ? labels.dark : labels.light; }
     function mark(group) {
@@ -618,56 +717,9 @@ inline constexpr char kSkinnedSelectorCss[] =
       button.parentNode.insertBefore(group, button);
       return group;
     }
-    // Leaving the section (Back) or the editor (Close, Esc) while the other mode
-    // is previewed: Edge's mode is applied first, and the leave goes through a
-    // moment later, re-sent by script. Best effort: a close Edge handles outside
-    // the page (a click outside the bubble) is not seen, and the next page
-    // load applies Edge's mode anyway.
-    function restoreBeforeLeaving() {
-      var edge = edgeMode();
-      var isPreviewingOther = state.wasShown && state.current !== edge;
-      if (!isPreviewingOther) { return false; }
-      state.current = edge;
-      state.isTouched = false;
-      publish();
-      if (state.group) { mark(state.group); }
-      applySelected();
-      return true;
-    }
-    function leavingControl(event) {
-      return event.composedPath().find(function (node) {
-        var label = node.getAttribute ? node.getAttribute("aria-label") : "";
-        return label === "Back" || label === "Close";
-      });
-    }
-    var leaveKey = key + "Leave";
-    if (!window[leaveKey]) {
-      window[leaveKey] = true;
-      document.addEventListener("click", function (event) {
-        var live = window[key];
-        if (!live || live !== state || state.isLeaving) { return; }
-        var control = leavingControl(event);
-        if (!control || !restoreBeforeLeaving()) { return; }
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        state.isLeaving = true;
-        setTimeout(function () { control.click(); state.isLeaving = false; }, restoreDelay);
-      }, true);
-      document.addEventListener("keydown", function (event) {
-        var live = window[key];
-        if (!live || live !== state || state.isLeaving || event.key !== "Escape") { return; }
-        if (!restoreBeforeLeaving()) { return; }
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        state.isLeaving = true;
-        var target = event.composedPath()[0];
-        setTimeout(function () {
-          target.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape",
-              keyCode: 27, bubbles: true, composed: true, cancelable: true}));
-          state.isLeaving = false;
-        }, restoreDelay);
-      }, true);
-    }
+)JS";
+  script += SelectorLeaveScript();
+  script += R"JS(
     function visit(root) {
       var button = root.querySelector(".lights-button");
       var picker = root.querySelector(".color-picker");
@@ -688,14 +740,21 @@ inline constexpr char kSkinnedSelectorCss[] =
         var isShown = picker.getClientRects().length > 0;
         if (isShown && !state.wasShown) {
           state.isTouched = false;
+          state.isWheelTouched = false;
           state.current = edgeMode();
           state.last = null;
+          state.syncUntil = Date.now() + wheelSyncWindow;
         }
         state.wasShown = isShown;
         isAnyShown = isAnyShown || isShown;
         var isFollowing = !state.isTouched && state.current !== edgeMode();
-        if (isFollowing) { state.current = edgeMode(); }
+        if (isFollowing) {
+          state.current = edgeMode();
+          state.syncUntil = Date.now() + wheelSyncWindow;
+        }
         mark(group);
+        var isSyncing = isShown && !state.isTouched && Date.now() < state.syncUntil;
+        if (isSyncing) { showSavedColour(picker); }
         takeWheel(picker);
       }
       root.querySelectorAll("*").forEach(function (element) {
@@ -707,6 +766,32 @@ inline constexpr char kSkinnedSelectorCss[] =
     // The section is taken out of the page when the editor is left.
     if (!isAnyShown) { state.wasShown = false; }
     if (previewNow() !== state.publishedPreview) { publish(); }
+  })();)JS";
+  return script;
+}
+
+// Run in the editor page's own world (the wheel's component, widget-adjustment,
+// is visible only there): sets the wheel's knob to the colour the editor script
+// asked for, through the component's own setKnobFromHueIntensity, which moves
+// the knob and its colour without the editor applying anything (it applies only
+// on a pointer release or a key). Installs itself once per page.
+[[nodiscard]] inline std::string WheelBridgeScript() {
+  std::string script = "(function () { var wheelEvent = ";
+  script += web_text::JsStringLiteral(kWheelEventName);
+  script +=
+      "; var wheelAttribute = " + web_text::JsStringLiteral(kWheelAttribute);
+  script += R"JS(;
+    if (window.__edgeplusWheelBridge) { return; }
+    window.__edgeplusWheelBridge = true;
+    document.addEventListener(wheelEvent, function (event) {
+      var host = event.composedPath()[0];
+      var text = host && host.getAttribute ? host.getAttribute(wheelAttribute) || "" : "";
+      var found = /^(\d+),(\d+)$/.exec(text);
+      var canSet = found && typeof host.setKnobFromHueIntensity === "function";
+      if (!canSet) { return; }
+      host.removeAttribute(wheelAttribute);
+      host.setKnobFromHueIntensity(Number(found[1]), Number(found[2]) / 100);
+    }, true);
   })();)JS";
   return script;
 }

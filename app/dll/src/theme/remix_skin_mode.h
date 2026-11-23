@@ -59,10 +59,13 @@ inline void Poll() {
   // The colour selector needs only the remix switch; the skin just restyles it.
   const std::string selectorScript = remix_skin::SelectorScript(
       isSkinning, remix_colors::FormatPair(remix_colors_store::g_pair));
+  const std::string wheelBridgeScript = remix_skin::WheelBridgeScript();
   for (void* contents : remix_editor::RemixPages()) {
     if (!skinScript.empty()) {
       edge::RunScriptUnanswered(contents, skinScript);
     }
+    // The bridge first: the selector script may ask it to set the wheel.
+    edge::RunMainWorldScriptUnanswered(contents, wheelBridgeScript);
     edge::RunScriptUnanswered(contents, selectorScript);
     SavePairOf(contents);
   }

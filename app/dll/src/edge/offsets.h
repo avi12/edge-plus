@@ -892,6 +892,14 @@ inline constexpr uintptr_t RenderFrameHostImpl_IsRenderFrameLive = 0x112e960;
 // into the cold body at 0x5bc5e9a, as 157's single function did.
 inline constexpr uintptr_t
     RenderFrameHostImpl_ExecuteJavaScriptInIsolatedWorld = 0xf437d30;
+// void RenderFrameHostImpl::ExecuteJavaScript(this, const std::u16string*,
+// JavaScriptResultCallback*): the page's own (main) world, the vtable slot just
+// before the isolated one (0x123b7b38 - 8). It CHECKs CanExecuteJavaScript
+// first (a failure is int3 / ud2 at 0x5bc5e93), so it is only ever called
+// after bool RenderFrameHostImpl::CanExecuteJavaScript(this) said yes, which
+// it does for a WebUI page such as edge://blueprint.
+inline constexpr uintptr_t RenderFrameHostImpl_ExecuteJavaScript = 0xf437ce0;
+inline constexpr uintptr_t RenderFrameHostImpl_CanExecuteJavaScript = 0xf437ca6;
 // BindStateBase::BindStateBase(this, polymorphic_invoke, destructor): refcount 1
 // at +0, invoke at +8, destructor at +0x10, the default cancellation query at
 // +0x18; a BindState's bound state starts at BINDSTATE_first_bound_argument.

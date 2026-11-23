@@ -1966,6 +1966,35 @@ inline bool RunScriptUnanswered(void* webContents,
   return true;
 }
 
+// Run `utf8Script` in the page's own (main) world of its main frame, never
+// waiting for an answer: only where Edge allows it (a WebUI page), since
+// ExecuteJavaScript CHECKs that and would bring Edge down. False when it is
+// not run.
+inline bool RunMainWorldScriptUnanswered(void* webContents,
+                                         const std::string& utf8Script) {
+  const void* frame =
+      IsPageLive(webContents) ? PrimaryMainFrame(webContents) : nullptr;
+  if (!frame) {
+    return false;
+  }
+  using CanExecuteFn = bool(__fastcall*)(const void*);
+  const bool canExecute = Callable<CanExecuteFn>(
+      edge155::rva::RenderFrameHostImpl_CanExecuteJavaScript)(frame);
+  if (!canExecute) {
+    return false;
+  }
+  U16String script{};
+  const U8View scriptView{utf8Script.data(), utf8Script.size()};
+  Utf8ToUtf16(&script, &scriptView);
+  const void* noCallback = nullptr;
+  using ExecuteFn =
+      void(__fastcall*)(const void*, const U16String*, const void**);
+  Callable<ExecuteFn>(edge155::rva::RenderFrameHostImpl_ExecuteJavaScript)(
+      frame, &script, &noCallback);
+  FreeU16String(&script);
+  return true;
+}
+
 inline bool RunScript(void* webContents, const std::string& utf8Script,
                       ScriptDone done) {
   const void* frame =

@@ -96,9 +96,23 @@ void RunChecks() {
 
 }  // namespace
 
+void RunWheelBridgeChecks() {
+  const std::string bridge = WheelBridgeScript();
+  const std::string selector = SelectorScript(false, "light=270,60;dark=");
+  Check(bridge.find(kWheelEventName) != std::string::npos &&
+            selector.find(kWheelEventName) != std::string::npos,
+        "the bridge and the editor script name the same wheel event");
+  Check(bridge.find(kWheelAttribute) != std::string::npos &&
+            selector.find(kWheelAttribute) != std::string::npos,
+        "and the same attribute");
+  Check(bridge.find("setKnobFromHueIntensity") != std::string::npos &&
+            bridge.find("applyThemeCustomizer") == std::string::npos,
+        "the bridge sets the knob and never applies");
+}
 int main() {
   try {
     RunChecks();
+    RunWheelBridgeChecks();
   } catch (...) {
     return 1;
   }
