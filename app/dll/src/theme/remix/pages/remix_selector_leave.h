@@ -10,6 +10,12 @@ namespace edgeplus::remix_selector_leave {
 // the Back or Close goes through this long after.
 inline constexpr int kRestoreDelayMs = 500;
 
+// The names the leave guard's script reads, as `var` statements for the
+// selector script's opening (each begins with its `;`).
+[[nodiscard]] inline std::string LeaveNames() {
+  return "; var restoreDelay = " + std::to_string(kRestoreDelayMs);
+}
+
 // The part of the selector script that restores Edge's mode before the user
 // leaves the section or the editor (it runs inside SelectorScript's function).
 [[nodiscard]] inline std::string SelectorLeaveScript() {

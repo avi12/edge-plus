@@ -21,6 +21,21 @@ inline constexpr char kArtifactAttribute[] = "data-edgeplus-artifact";
 // Where the bridge keeps itself in the page's own world, as {remove}.
 inline constexpr char kWheelBridgeKey[] = "__edgeplusWheelBridge";
 
+// The names both sides of the bridge ask and answer by, as the `var`
+// statements that open the bridge and the editor script (remix_selector.h)
+// alike, so the two can never name them apart.
+[[nodiscard]] inline std::string SharedNames() {
+  std::string names =
+      "var wheelEvent = " + web_text::JsStringLiteral(kWheelEventName);
+  names +=
+      "; var wheelAttribute = " + web_text::JsStringLiteral(kWheelAttribute);
+  names +=
+      "; var artifactEvent = " + web_text::JsStringLiteral(kArtifactEventName);
+  names += "; var artifactAttribute = " +
+           web_text::JsStringLiteral(kArtifactAttribute);
+  return names;
+}
+
 // Run in the editor page's own world (the wheel's component, widget-adjustment,
 // is visible only there): sets the wheel's knob to the colour the editor script
 // asked for, through the component's own setKnobFromHueIntensity, which moves
@@ -34,14 +49,7 @@ inline constexpr char kWheelBridgeKey[] = "__edgeplusWheelBridge";
 // from a build before that left a bare `true` it cannot remove; the new one goes
 // in beside it (the old one only sets the knob, and takes the attribute first).
 [[nodiscard]] inline std::string WheelBridgeScript() {
-  std::string script = "(function () { var wheelEvent = ";
-  script += web_text::JsStringLiteral(kWheelEventName);
-  script +=
-      "; var wheelAttribute = " + web_text::JsStringLiteral(kWheelAttribute);
-  script +=
-      "; var artifactEvent = " + web_text::JsStringLiteral(kArtifactEventName);
-  script += "; var artifactAttribute = " +
-            web_text::JsStringLiteral(kArtifactAttribute);
+  std::string script = "(function () { " + SharedNames();
   script += "; var key = " + web_text::JsStringLiteral(kWheelBridgeKey);
   script += R"JS(;
     var installed = window[key];

@@ -141,31 +141,10 @@ inline constexpr char kSkinnedSelectorCss[] =
             web_text::JsStringLiteral(kSelectorPreviewClass);
   script +=
       "; var statusClass = " + web_text::JsStringLiteral(kSelectorStatusClass);
-  script +=
-      "; var resetClass = " +
-      web_text::JsStringLiteral(remix_selector_reset::kSelectorResetClass);
-  script += "; var resetGlyph = " +
-            web_text::JsStringLiteral(remix_selector_reset::kResetGlyph);
-  script += "; var resetBothLabel = " +
-            web_text::JsStringLiteral(remix_selector_reset::kResetBothLabel);
-  script += "; var resetOneTitle = " +
-            web_text::JsStringLiteral(remix_selector_reset::kResetOneTitle);
-  script += "; var resetBothTitle = " +
-            web_text::JsStringLiteral(remix_selector_reset::kResetBothTitle);
-  script += "; var noColourText = " +
-            web_text::JsStringLiteral(
-                remix_colors::FormatColour(remix_colors::kNoColour));
+  script += remix_selector_reset::ResetNames();
   script += "; var previewDelay = " + std::to_string(kPreviewDelayMs);
-  script += "; var restoreDelay = " +
-            std::to_string(remix_selector_leave::kRestoreDelayMs);
-  script += "; var wheelEvent = " +
-            web_text::JsStringLiteral(remix_wheel_bridge::kWheelEventName);
-  script += "; var wheelAttribute = " +
-            web_text::JsStringLiteral(remix_wheel_bridge::kWheelAttribute);
-  script += "; var artifactEvent = " +
-            web_text::JsStringLiteral(remix_wheel_bridge::kArtifactEventName);
-  script += "; var artifactAttribute = " +
-            web_text::JsStringLiteral(remix_wheel_bridge::kArtifactAttribute);
+  script += remix_selector_leave::LeaveNames();
+  script += "; " + remix_wheel_bridge::SharedNames();
   script += "; var wheelSyncWindow = " + std::to_string(kWheelSyncWindowMs);
   return script;
 }

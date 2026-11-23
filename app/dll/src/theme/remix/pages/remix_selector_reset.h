@@ -5,6 +5,8 @@
 // selected mode's label. Pure: strings only.
 #pragma once
 #include <string>
+#include "find/web_text.h"
+#include "theme/remix/remix_colors.h"
 
 namespace edgeplus::remix_selector_reset {
 
@@ -13,6 +15,23 @@ inline constexpr char kResetGlyph[] = "\xE2\x86\xBA";  // anticlockwise arrow
 inline constexpr char kResetBothLabel[] = "Both";
 inline constexpr char kResetOneTitle[] = "Remove the {mode} colour";
 inline constexpr char kResetBothTitle[] = "Remove both colours";
+
+// The names the reset row's script reads, as `var` statements for the
+// selector script's opening (each begins with its `;`).
+[[nodiscard]] inline std::string ResetNames() {
+  std::string names =
+      "; var resetClass = " + web_text::JsStringLiteral(kSelectorResetClass);
+  names += "; var resetGlyph = " + web_text::JsStringLiteral(kResetGlyph);
+  names +=
+      "; var resetBothLabel = " + web_text::JsStringLiteral(kResetBothLabel);
+  names += "; var resetOneTitle = " + web_text::JsStringLiteral(kResetOneTitle);
+  names +=
+      "; var resetBothTitle = " + web_text::JsStringLiteral(kResetBothTitle);
+  names += "; var noColourText = " +
+           web_text::JsStringLiteral(
+               remix_colors::FormatColour(remix_colors::kNoColour));
+  return names;
+}
 
 // The part of the selector script that builds and runs the reset row (it runs
 // inside SelectorScript's function; build() places the row, mark() keeps it).

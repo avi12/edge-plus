@@ -30,6 +30,12 @@ void RunChecks() {
   Check(Has(neutral, ".lights-button") && !Has(neutral, "--ep-") &&
             Has(skinned, "--ep-accent") && skinned.size() > neutral.size(),
         "the selector is neutral without the skin and takes its roles with it");
+  for (const char* className :
+       {kSelectorClass, kSelectorRowClass, kSelectorEdgeClass,
+        kSelectorPreviewClass, kSelectorStatusClass, kSelectorResetClass}) {
+    Check(Has(neutral, std::string(".") + className),
+          "every class the script gives is one the style names");
+  }
   const std::string selector = SelectorScript(false, "light=1,2;dark=");
   Check(Has(selector, "light=1,2;dark=") && Has(selector, "pointerdown") &&
             Has(selector, "isTouched") && Has(selector, "wasShown") &&
