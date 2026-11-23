@@ -91,6 +91,21 @@ void RunChecks() {
             Has(selector, "aria-label") && Has(selector, "button[data-mode]"),
         "the selector offers resets of the selected mode and of both, to the "
         "wheel's centre, each with its full name");
+  Check(Has(selector, kSelectorPreviewClass) && Has(selector, "\"Preview\"") &&
+            Has(neutral,
+                "[aria-checked=\"true\"][data-edge=\"false\"] "
+                ".edgeplus-mode-preview { visibility: visible; }"),
+        "the previewed segment, selected and not Edge's, shows a Preview "
+        "sublabel as Edge's shows its own");
+  Check(Has(selector, kSelectorStatusClass) && Has(selector, "\"status\"") &&
+            Has(selector, "group.title") &&
+            Has(neutral, ".edgeplus-mode-status { position: absolute;") &&
+            Has(neutral, "clip-path: inset(50%)") &&
+            !Has(selector, "edgeplus-mode-hint"),
+        "the full preview sentence is the group's title and a visually hidden "
+        "live region, never a line of its own in the column");
+  Check(Has(neutral, "grid-row: 2; grid-column: 1; visibility: hidden;"),
+        "the sublabels share one line, kept when hidden, so nothing moves");
   Check(Has(neutral, ".edgeplus-mode-reset {") &&
             Has(neutral, "button:disabled") &&
             Has(skinned, "button:not(:disabled):hover"),

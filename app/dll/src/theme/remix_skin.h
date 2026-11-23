@@ -376,7 +376,8 @@ inline constexpr char kSelectorClass[] = "edgeplus-mode-pick";
 inline constexpr char kSelectorStyleClass[] = "edgeplus-mode-style";
 inline constexpr char kSelectorRowClass[] = "edgeplus-mode-row";
 inline constexpr char kSelectorEdgeClass[] = "edgeplus-mode-edge";
-inline constexpr char kSelectorHintClass[] = "edgeplus-mode-hint";
+inline constexpr char kSelectorPreviewClass[] = "edgeplus-mode-preview";
+inline constexpr char kSelectorStatusClass[] = "edgeplus-mode-status";
 inline constexpr char kSelectorStateKey[] = "__edgeplusRemixPick";
 inline constexpr char kLightLabel[] = "Light";
 inline constexpr char kDarkLabel[] = "Dark";
@@ -389,12 +390,15 @@ inline constexpr char kResetGlyph[] = "\xE2\x86\xBA";  // anticlockwise arrow
 inline constexpr char kResetBothLabel[] = "Both";
 inline constexpr char kResetOneTitle[] = "Remove the {mode} colour";
 inline constexpr char kResetBothTitle[] = "Remove both colours";
-// On the segment of Edge's own mode: the one the page wears once the editor
-// closes.
+// Each segment's sublabel, under its mode's name: on Edge's own mode, the one
+// the page wears once the editor closes, and on the selected mode while it is
+// not Edge's, the one the page shows until then.
 inline constexpr char kEdgeMarkerLabel[] = "Edge";
-// Under the selector while it previews the mode Edge is not in; {preview} and
-// {edge} are the two modes' labels.
-inline constexpr char kPreviewHint[] =
+inline constexpr char kPreviewMarkerLabel[] = "Preview";
+// The same in full while the selector previews the mode Edge is not in, as the
+// group's title and in a visually hidden live region (taking no room in the
+// column); {preview} and {edge} are the two modes' labels.
+inline constexpr char kPreviewStatus[] =
     "Previewing {preview} \xC2\xB7 the page follows Edge ({edge}) when you "
     "close";
 // A segment's apply waits this long after the page published the previewed
@@ -426,21 +430,27 @@ inline constexpr int kWheelSyncWindowMs = 1500;
 // The editor's right column is exactly as tall as the wheel (172 px) and was
 // full with the 40 px Dark button the selector replaces; the zoom row below
 // gives up 8 px of its own (36 to 28), so the segments (30), the reset row
-// (16) and the gap between them (2) take 48 and the fonts stay whole.
+// (16) and the gap between them (2) take 48 and the fonts stay whole. A
+// segment holds its mode's name and, under it, one line both sublabels share,
+// kept whether or not one shows, so selecting or previewing a mode moves
+// nothing; the full preview sentence takes no room at all.
 inline constexpr char kSelectorCss[] =
     ".lights-button { display: none !important; }"
     ".edgeplus-mode-pick { box-sizing: border-box; display: flex;"
     " flex-direction: column; gap: 2px; }"
     ".edgeplus-mode-row { display: flex; gap: 4px; height: 30px; }"
-    ".edgeplus-mode-edge { display: none; margin-inline-start: 6px;"
+    ".edgeplus-mode-pick button[data-mode] { display: grid;"
+    " align-content: center; justify-items: center; }"
+    ".edgeplus-mode-edge, .edgeplus-mode-preview { grid-row: 2;"
+    " grid-column: 1; visibility: hidden;"
     " font-family: ui-monospace, Consolas, monospace; font-size: 10px;"
     " font-weight: 400; opacity: 0.75; }"
-    ".edgeplus-mode-pick button[data-edge=\"true\"] .edgeplus-mode-edge {"
-    " display: inline; }"
-    ".edgeplus-mode-edge::before { content: \"\\2022  \"; }"
-    ".edgeplus-mode-hint { font-family: ui-monospace, Consolas, monospace;"
-    " font-size: 11px; line-height: 1.3; opacity: 0.8; }"
-    ".edgeplus-mode-hint[hidden] { display: none; }"
+    ".edgeplus-mode-pick button[data-edge=\"true\"] .edgeplus-mode-edge,"
+    " .edgeplus-mode-pick button[aria-checked=\"true\"][data-edge=\"false\"]"
+    " .edgeplus-mode-preview { visibility: visible; }"
+    ".edgeplus-mode-status { position: absolute; width: 1px; height: 1px;"
+    " margin: -1px; padding: 0; border: 0; overflow: hidden;"
+    " clip-path: inset(50%); white-space: nowrap; }"
     ".edgeplus-mode-pick button { flex: 1 1 0; min-width: 0; padding: 0;"
     " font: inherit; font-size: 12px; line-height: 1.1; color: inherit;"
     " cursor: pointer; background: transparent;"
@@ -467,7 +477,7 @@ inline constexpr char kSkinnedSelectorCss[] =
     ".edgeplus-mode-pick button[aria-checked=\"true\"] {"
     " border-color: var(--ep-accent);"
     " background: color-mix(in srgb, var(--ep-accent) 22%, transparent); }"
-    ".edgeplus-mode-edge, .edgeplus-mode-hint {"
+    ".edgeplus-mode-edge, .edgeplus-mode-preview {"
     " font-family: \"Share Tech Mono\", Consolas, monospace;"
     " letter-spacing: 0.06em; color: var(--ep-fg); }";
 
@@ -608,12 +618,16 @@ inline constexpr char kSkinnedSelectorCss[] =
             ", dark: " + web_text::JsStringLiteral(remix_colors::kDarkName) +
             "};";
   script += " var edgeLabel = " + web_text::JsStringLiteral(kEdgeMarkerLabel);
-  script += "; var hintText = " + web_text::JsStringLiteral(kPreviewHint);
+  script +=
+      "; var previewLabel = " + web_text::JsStringLiteral(kPreviewMarkerLabel);
+  script += "; var previewText = " + web_text::JsStringLiteral(kPreviewStatus);
   script += "; var rowClass = " + web_text::JsStringLiteral(kSelectorRowClass);
   script +=
       "; var edgeClass = " + web_text::JsStringLiteral(kSelectorEdgeClass);
+  script += "; var previewClass = " +
+            web_text::JsStringLiteral(kSelectorPreviewClass);
   script +=
-      "; var hintClass = " + web_text::JsStringLiteral(kSelectorHintClass);
+      "; var statusClass = " + web_text::JsStringLiteral(kSelectorStatusClass);
   script +=
       "; var resetClass = " + web_text::JsStringLiteral(kSelectorResetClass);
   script += "; var resetGlyph = " + web_text::JsStringLiteral(kResetGlyph);
@@ -797,15 +811,21 @@ inline constexpr char kSkinnedSelectorCss[] =
         button.setAttribute("aria-checked", mode === state.current ? "true" : "false");
         button.dataset.edge = mode === edge ? "true" : "false";
       });
-      var hint = group.querySelector("." + hintClass);
-      if (hint) {
-        var isOther = state.current !== edge;
-        hint.hidden = !isOther;
-        var text = isOther ? hintText.replace("{preview}", labelOf(state.current))
-            .replace("{edge}", labelOf(edge)) : "";
-        if (hint.textContent !== text) { hint.textContent = text; }
-      }
+      // The segments' sublabels say it in CSS; the sentence is for a hover
+      // and for a screen reader.
+      var isPreviewingOther = state.current !== edge;
+      var sentence = isPreviewingOther ? previewText
+          .replace("{preview}", labelOf(state.current)).replace("{edge}", labelOf(edge)) : "";
+      var status = group.querySelector("." + statusClass);
+      if (status) { setText(status, sentence); }
+      if (group.title !== sentence) { group.title = sentence; }
       markResets(group);
+    }
+    function sublabel(className, text) {
+      var span = document.createElement("span");
+      span.className = className;
+      span.textContent = text;
+      return span;
     }
     function build(button) {
       var group = document.createElement("div");
@@ -819,11 +839,8 @@ inline constexpr char kSkinnedSelectorCss[] =
         choice.type = "button";
         choice.setAttribute("role", "radio");
         choice.dataset.mode = mode;
-        choice.append(labelOf(mode));
-        var marker = document.createElement("span");
-        marker.className = edgeClass;
-        marker.textContent = edgeLabel;
-        choice.append(marker);
+        choice.append(labelOf(mode), sublabel(edgeClass, edgeLabel),
+            sublabel(previewClass, previewLabel));
         choice.addEventListener("click", function () {
           state.isTouched = true;
           state.current = mode;
@@ -833,11 +850,10 @@ inline constexpr char kSkinnedSelectorCss[] =
         });
         row.append(choice);
       });
-      var hint = document.createElement("div");
-      hint.className = hintClass;
-      hint.setAttribute("role", "status");
-      hint.hidden = true;
-      group.append(row, buildResets(), hint);
+      var status = document.createElement("div");
+      status.className = statusClass;
+      status.setAttribute("role", "status");
+      group.append(row, buildResets(), status);
       button.parentNode.insertBefore(group, button);
       return group;
     }
