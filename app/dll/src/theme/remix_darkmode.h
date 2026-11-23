@@ -89,6 +89,9 @@ inline void RewriteScript(void* out) {
   if (result.outcome != remix_arguments::Outcome::kRewritten) {
     return;
   }
+  Log("[remix-theme] appearance script, as run: %.*s",
+      static_cast<int>(std::min(result.script.size(), kLoggedScriptChars)),
+      result.script.c_str());
   edge::U16String fresh{};
   const edge::U8View view{result.script.data(), result.script.size()};
   edge::Utf8ToUtf16(&fresh, &view);
