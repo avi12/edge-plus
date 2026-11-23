@@ -118,6 +118,12 @@ void RunWheelBridgeChecks() {
             selector.find("isTrusted") != std::string::npos,
         "the bridge answers with the component's artifactUid, and the editor "
         "tells a new appearance and takes only the user's own picks");
+  const std::string bridgeRemove = WheelBridgeRemoveScript();
+  Check(bridge.find(kWheelBridgeKey) != std::string::npos &&
+            bridgeRemove.find(kWheelBridgeKey) != std::string::npos &&
+            bridgeRemove.find("removeEventListener") == std::string::npos &&
+            bridge.find("removeEventListener") != std::string::npos,
+        "the bridge keeps a remover under its key, which unloading calls");
 }
 int main() {
   try {

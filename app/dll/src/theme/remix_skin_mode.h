@@ -84,8 +84,11 @@ inline void Stop(HWND window) {
   KillTimer(window, channel::TimerIdOf(channel::WindowTimer::kRemixPoll));
   const std::string script =
       remix_skin::RemoveScript() + remix_skin::SelectorRemoveScript();
+  const std::string wheelBridgeRemoveScript =
+      remix_skin::WheelBridgeRemoveScript();
   for (void* contents : remix_editor::RemixPages()) {
     edge::RunScriptUnanswered(contents, script);
+    edge::RunMainWorldScriptUnanswered(contents, wheelBridgeRemoveScript);
   }
   g_isPainted = false;
 }
