@@ -15,7 +15,9 @@
 #include "theme/remix/remix_darkmode.h"
 #include "theme/remix/pages/remix_editor.h"
 #include "theme/remix/remix_mode.h"
+#include "theme/remix/pages/remix_selector.h"
 #include "theme/remix/pages/remix_skin.h"
+#include "theme/remix/pages/remix_wheel_bridge.h"
 #include "theme/skin/skin_tone.h"
 
 namespace edgeplus::remix_skin_mode {
@@ -60,9 +62,9 @@ inline void Poll() {
     skinScript = remix_skin::RemoveScript();
   }
   // The colour selector needs only the remix switch; the skin just restyles it.
-  const std::string selectorScript = remix_skin::SelectorScript(
+  const std::string selectorScript = remix_selector::SelectorScript(
       isSkinning, remix_colors::FormatPair(remix_colors_store::g_pair));
-  const std::string wheelBridgeScript = remix_skin::WheelBridgeScript();
+  const std::string wheelBridgeScript = remix_wheel_bridge::WheelBridgeScript();
   for (void* contents : remix_editor::RemixPages()) {
     if (!skinScript.empty()) {
       edge::RunScriptUnanswered(contents, skinScript);
@@ -83,9 +85,9 @@ inline void StartPolling(HWND window) {
 inline void Stop(HWND window) {
   KillTimer(window, channel::TimerIdOf(channel::WindowTimer::kRemixPoll));
   const std::string script =
-      remix_skin::RemoveScript() + remix_skin::SelectorRemoveScript();
+      remix_skin::RemoveScript() + remix_selector::SelectorRemoveScript();
   const std::string wheelBridgeRemoveScript =
-      remix_skin::WheelBridgeRemoveScript();
+      remix_wheel_bridge::WheelBridgeRemoveScript();
   for (void* contents : remix_editor::RemixPages()) {
     edge::RunScriptUnanswered(contents, script);
     edge::RunMainWorldScriptUnanswered(contents, wheelBridgeRemoveScript);
