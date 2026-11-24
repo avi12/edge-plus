@@ -195,7 +195,9 @@ inline constexpr Entry kEntries[] = {
     {"kColorButtonBackgroundProminentFocused", Role::kOnFill},
     {"kColorProgressBar", Role::kOnFill},
     {"kColorButtonForegroundProminent", Role::kInk},
-    {"kColorEdgePrimaryButtonForeground", Role::kInk},
+    // Not kColorEdgePrimaryButtonForeground: Edge's own primary button (the
+    // password bubble's "Update") fills with Edge's accent, which no name here
+    // reaches, so ink on it was dark text on blue. Edge's pair stays whole.
     {"kColorCheckboxCheck", Role::kInk},
 
     // --- State on a lit control: a faint cyan fill --------------------------
